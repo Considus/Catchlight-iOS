@@ -1,0 +1,188 @@
+//
+//  RootView.swift
+//  Catchlight (iOS app target) — Phase 6 UI
+//
+//  The top-level composition for the product UI. Decides onboarding vs. the main
+//  app, hosts the active tab (Dailies / Search / Sequence), the persistent bottom
+//  dock, and the modal overlays (petal fan, Take editor, add-bloom dim). All view
+//  models arrive via the environment from Wiring; this view owns no domain logic.
+//
+//  Spine ↔ dock alignment: the timeline spine and the dock's Add button share the
+//  same x. DailiesView draws the spine at `CatchlightLayout.spineLeading`; the dock
+//  places Add as its first (leftmost) column, whose centre we nudge to that x by
+//  giving the Add column the matching leading inset.
+//
+
+import SwiftUI
+import CatchlightCore
+
+struct RootView: View {
+    @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
+
+    var body: some View {
+        Group {
+            if app.needsOnboarding {
+                if let onboardingVM = app.onboardingVM {
+                    OnboardingView()
+                        .environment(onboardingVM)
+                        .transition(.opacity)
+                }
+            } else {
+                mainApp
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.4), value: app.needsOnboarding)
+    }
+
+    private var mainApp: some View {
+        // The body is assembled from small computed properties (`activeTab`,
+        // `addBloomDim`, `dock`) rather than a single large ZStack ViewBuilder —
+        // an inline switch + conditional dim + modifier chain produced a phantom
+        // "cannot convert Color to Bool" diagnostic from SwiftUI's type-checker.
+        ZStack(alignment: .bottom) {
+            Color.ckBackground.ignoresSafeArea()
+
+            activeTab
+                .opacity(fanOpacity)   // de-emphasise behind the fan
+                .animation(.easeInOut(duration: 0.2), value: ui.isPetalFanPresented)
+
+            addBloomDim
+
+            dock
+        }
+        .overlay { editorOverlay }
+        .overlay { petalFanOverlay }
+        .alert("Replace your Obie?",
+               isPresented: Binding(
+                get: { app.dailiesVM.pendingObieConflict != nil },
+                set: { if !$0 { app.dailiesVM.cancelObieReplacement() } }
+               )) {
+            Button("Replace", role: .destructive) { app.dailiesVM.confirmObieReplacement() }
+            Button("Keep current", role: .cancel) { app.dailiesVM.cancelObieReplacement() }
+        } message: {
+            Text("Only one Take can be your Obie. This will replace the current one.")
+        }
+    }
+
+    // MARK: - Active tab & chrome
+    //
+    // These are split into separate computed properties (rather than inlined in the
+    // `mainApp` ZStack) so each ViewBuilder stays simple enough for SwiftUI's
+    // type-checker — an inline switch + conditional dim + modifier chain produced a
+    // phantom "cannot convert Color to Bool" diagnostic.
+
+    /// Opacity for content behind the petal fan (de-emphasised while the fan is open).
+    private var fanOpacity: Double { ui.isPetalFanPresented ? 0.18 : 1 }
+
+    @ViewBuilder
+    private var activeTab: some View {
+        switch ui.tab {
+        case .dailies:
+            DailiesView().environment(app.dailiesVM)
+        case .search:
+            SearchView().environment(app.searchVM)
+        case .sequence:
+            SequenceView().environment(app.sequenceVM)
+        }
+    }
+
+    /// Dim layer behind the Add-button bloom; tapping it collapses the bloom.
+    @ViewBuilder
+    private var addBloomDim: some View {
+        if ui.isAddExpanded {
+            Color.ckDim.ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        ui.isAddExpanded = false
+                    }
+                }
+                .accessibilityLabel("Dismiss add menu")
+                .accessibilityHint("Double-tap to close.")
+                .transition(.opacity)
+        }
+    }
+
+    /// The persistent bottom navigation dock.
+    private var dock: some View {
+        BottomDockView(
+            onNewTake: { newTake() },
+            onNewSequence: { newSequence() }
+        )
+        .environment(ui)
+        .opacity(fanOpacity)
+    }
+
+    // MARK: - Overlays
+
+    @ViewBuilder
+    private var editorOverlay: some View {
+        if let take = ui.editorTake {
+            TakeEditView(take: take)
+                .environment(app.dailiesVM)
+                .environment(ui)
+                .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    @ViewBuilder
+    private var petalFanOverlay: some View {
+        if let take = ui.petalFanTake {
+            GeometryReader { geo in
+                PetalFanView(
+                    take: take,
+                    hubCentre: ui.petalFanOrigin == .zero
+                        ? CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+                        : ui.petalFanOrigin,
+                    onCommit: { isNote, isTask, hasReminder, isObie in
+                        app.dailiesVM.applyActivityTypes(
+                            to: take,
+                            isNote: isNote, isTask: isTask,
+                            hasReminder: hasReminder, isObie: isObie
+                        )
+                        app.searchVM.recompute()
+                        app.sequenceVM.recompute()
+                        ui.closePetalFan()
+                    },
+                    onDismiss: { ui.closePetalFan() }
+                )
+            }
+            .ignoresSafeArea()
+            .transition(.opacity)
+        }
+    }
+
+    // MARK: - New item actions
+
+    private func newTake() {
+        let take = app.dailiesVM.createTake()
+        ui.tab = .dailies
+        ui.openEditor(for: take)
+    }
+
+    private func newSequence() {
+        // Sequence creation UI is minimal in v1.0; jump to the Sequence tab. A full
+        // sequence-builder is a later iteration (not in this phase's screen list).
+        ui.tab = .sequence
+        app.sequenceVM.recompute()
+    }
+}
+
+#Preview("Root — main (Night)") {
+    let store = InMemoryTakeStore()
+    for t in SeedTakes.make() { try? store.upsert(t) }
+    let app = AppModel.preview(store: store, onboarded: true)
+    return RootView()
+        .environment(app)
+        .environment(app.ui)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Root — onboarding") {
+    let app = AppModel.preview(store: InMemoryTakeStore(), onboarded: false)
+    return RootView()
+        .environment(app)
+        .environment(app.ui)
+        .preferredColorScheme(.dark)
+}

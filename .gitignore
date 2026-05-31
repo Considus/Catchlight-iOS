@@ -1,0 +1,48 @@
+# Xcode build output
+.build/
+build/
+DerivedData/
+
+# XcodeGen — project is generated from project.yml, not checked in
+*.xcodeproj/
+Catchlight.xcodeproj/
+
+# Xcode user data
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.moved-aside
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+Package.resolved
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Instruments / Crashlytics / other tools
+*.dSYM/
+*.dSYM.zip
+
+# Fastlane (future use)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+
+# Environment / secrets — belt and braces
+*.env
+.env*
+secrets/
+*.p8
+*.p12
+*.mobileprovision
+AuthKey_*.p8
+
+# Claude Code working files
+.claude/

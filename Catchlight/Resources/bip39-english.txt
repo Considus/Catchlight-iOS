@@ -1,0 +1,11 @@
+# PLACEHOLDER — NOT THE OFFICIAL BIP-39 ENGLISH WORDLIST.
+#
+# Replace this file with the canonical 2048-word list before building:
+#   https://github.com/bitcoin/bips/blob/master/bip-0039/english.txt
+# Format: one lowercase word per line, exactly 2048 words, NFKD-normalised, no
+# comments. Then set EnglishWordlist.expectedSHA256 in
+# Catchlight/Security/BIP39Wordlist+English.swift to the verified digest.
+#
+# EnglishWordlist.load() recomputes the SHA-256 at runtime and refuses to proceed
+# unless it matches the configured digest, so this placeholder will (correctly)
+# fail the integrity check rather than be used by accident.
