@@ -1,0 +1,107 @@
+# project.yml — XcodeGen specification for the Catchlight iOS app.
+#
+# Why XcodeGen rather than a checked-in .xcodeproj: a hand-written project.pbxproj
+# is large, opaque, and merge-hostile. This declarative spec generates a correct,
+# reproducible Xcode project with `xcodegen generate`, and is the single source of
+# truth for deployment target, bundle id, entitlements, Info.plist, App Group, and
+# the dependency set required by Phase 5 (brief §3).
+#
+#   brew install xcodegen   # one-time
+#   xcodegen generate       # produces Catchlight.xcodeproj
+#
+# All settings here trace directly to Phase 5 brief §3.1–§3.4.
+
+name: Catchlight
+options:
+  bundleIdPrefix: com.considus
+  deploymentTarget:
+    iOS: "17.0"            # brief §3.1 — iOS 17.0 minimum (Secure Enclave guaranteed)
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: "" # <-- set to your Apple Developer Team ID (brief §3.1)
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+packages:
+  # The platform-agnostic core (this repo). Pure Swift + CryptoKit.
+  CatchlightCore:
+    path: .
+
+  # libargon2 — mnemonic → master key KDF (brief §3.2, §5.1). CryptoKit has no
+  # Argon2id; the reference implementation is required for cross-platform
+  # reproducibility.
+  #
+  # NOTE (Phase 6 build fix): the upstream repo
+  # https://github.com/P-H-C/phc-winner-argon2.git is a plain C library with NO
+  # Package.swift, so SwiftPM/xcodebuild cannot resolve it as a remote package —
+  # dependency resolution previously failed before any code compiled. We now consume
+  # it via a LOCAL SPM wrapper (Vendor/CArgon2) that vendors the REAL upstream
+  # reference sources (the portable ref.c path) and adds only a Package.swift +
+  # modulemap. The algorithm is unchanged. BEFORE RELEASE: pin the vendored sources
+  # to a reviewed commit and run the Argon2id KAT (Encryption Architecture §16).
+  CArgon2:
+    path: Vendor/CArgon2
+
+  # NOTE: SQLCipherStore.swift's dev fallback uses `import SQLite3`, which resolves
+  # against the iOS SDK's BUILT-IN `SQLite3` Clang module (declared in the SDK's
+  # usr/include/module.modulemap) and auto-links libsqlite3 — no wrapper package is
+  # needed. (An earlier local CSQLite3 wrapper caused a "redefinition of module
+  # 'SQLite3'" clash with the SDK module and was removed.)
+
+  # SQLCipher 4.x — encrypted on-device database (brief §3.2). The upstream repo
+  # https://github.com/sqlcipher/sqlcipher.git is ALSO not an SPM package (no
+  # Package.swift), so it cannot be a remote SwiftPM dependency here. For the v1.0
+  # security build it must be added as an AUDITED SQLCipher 4.x package (a vendored
+  # amalgamation target like CArgon2, or a reviewed CocoaPods/binary integration),
+  # NOT an unverified community fork (README non-negotiable).
+  #
+  # Until that audited integration is wired, the CSQLite3 wrapper above lets
+  # SQLCipherStore.swift's `#elseif canImport(SQLite3)` fallback compile and run so
+  # the app builds and the UI is fully exercisable on the simulator. The cipher
+  # PRAGMAs are inert under plain SQLite3 — this path is DEV-ONLY and must never ship.
+  # TODO(pre-release, brief §3.2): add the audited SQLCipher package + dependency.
+
+targets:
+  Catchlight:
+    type: application
+    platform: iOS
+    sources:
+      - path: Catchlight
+    info:
+      path: Catchlight/Resources/Info.plist
+    entitlements:
+      path: Catchlight/Resources/Catchlight.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight   # brief §3.1
+        CODE_SIGN_ENTITLEMENTS: Catchlight/Resources/Catchlight.entitlements
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        SWIFT_OBJC_BRIDGING_HEADER: ""   # libargon2 exposed via SPM module map; no bridging header
+    dependencies:
+      - package: CatchlightCore
+        product: CatchlightCore
+      - package: CArgon2
+      # SQLCipherStore.swift's dev fallback uses `import SQLite3`, resolved against the
+      # iOS SDK's built-in SQLite3 module (auto-links libsqlite3). No dependency entry
+      # is required here. When the audited SQLCipher package is added, the store's
+      # `#if canImport(SQLCipher)` branch wins automatically.
+      # - package: SQLCipher   # TODO(pre-release): audited SQLCipher 4.x integration.
+
+  CatchlightTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/CatchlightCoreTests
+    dependencies:
+      - target: Catchlight
+      - package: CatchlightCore
+        product: CatchlightCore
+
+# v1.1 extension targets (Share Extension, WidgetKit, App Intents) are NOT defined
+# here — they are out of scope for v1.0 (brief §14). Their PREREQUISITES (App Group
+# + shared Keychain access group) are already configured in the entitlements above,
+# so adding them later requires no migration (brief §10.1).
