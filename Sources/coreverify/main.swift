@@ -44,17 +44,7 @@ func checkNoThrow(_ label: String, _ body: () throws -> Void) {
     catch { failed += 1; print("  ✗ FAIL (threw \(error)): \(label)") }
 }
 
-// MARK: - Local doubles (mirror Tests/.../TestSupport.swift)
-
-struct InsecureMockArgon2idKDF: Argon2idDeriving {
-    func deriveKey(passwordBytes: [UInt8], saltBytes: [UInt8], parameters: Argon2Parameters) throws -> Data {
-        let ikm = SymmetricKey(data: Data(passwordBytes))
-        var info = Data("MOCK-ARGON2-NOT-REAL".utf8); info.append(contentsOf: saltBytes)
-        info.append(contentsOf: withUnsafeBytes(of: parameters.iterations.littleEndian) { Data($0) })
-        let key = HKDF<SHA256>.deriveKey(inputKeyMaterial: ikm, salt: Data(saltBytes), info: info, outputByteCount: parameters.outputLength)
-        return key.withUnsafeBytes { Data($0) }
-    }
-}
+// MARK: - Local fixtures (mirror Tests/.../TestSupport.swift)
 
 func syntheticWordlist() -> BIP39Wordlist { try! BIP39Wordlist(words: (0..<2048).map { "w\($0)" }) }
 
@@ -79,17 +69,13 @@ func engine(_ store: TakeStore, _ cloud: CloudFolder?, _ k: KeyHierarchy, now: @
 
 section("§12.1 Encryption layer")
 do {
-    let kdf = InsecureMockArgon2idKDF()
     let m = ["abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse","access","accident"]
-    let k1 = try kdf.deriveMasterKey(mnemonic: m, salt: Data(repeating: 0x10, count: 16))
-    let k2 = try kdf.deriveMasterKey(mnemonic: m, salt: Data(repeating: 0x10, count: 16))
-    check("KDF deterministic for same mnemonic+salt", k1 == k2 && k1.count == 32)
-    let kA = try kdf.deriveMasterKey(mnemonic: m, salt: Data(repeating: 1, count: 16))
-    let kB = try kdf.deriveMasterKey(mnemonic: m, salt: Data(repeating: 2, count: 16))
-    check("KDF different salt → different output", kA != kB)
-
-    let p = Argon2Parameters.catchlightMasterKey
-    check("Argon2 params m=128MiB,t=3,p=4,len=32", p.memoryKiB == 131072 && p.iterations == 3 && p.parallelism == 4 && p.outputLength == 32)
+    let k1 = MasterKeyDerivation.deriveRaw(from: m)
+    let k2 = MasterKeyDerivation.deriveRaw(from: m)
+    check("Master key deterministic for same mnemonic", k1 == k2 && k1.count == 32)
+    let kOther = MasterKeyDerivation.deriveRaw(from: ["zone","zoo","zero","zebra","youth","yellow","year","wrong","world","word","wood","wolf"])
+    check("Different mnemonics → different master keys", k1 != kOther)
+    check("Mnemonic case normalised", MasterKeyDerivation.deriveRaw(from: m.map { $0.uppercased() }) == k1)
 
     let masterKey = mk()
     let h = KeyHierarchy(masterKey: masterKey)

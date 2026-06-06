@@ -3,9 +3,11 @@
 // Catchlight — CatchlightCore
 //
 // The platform-agnostic heart of Catchlight. Pure Swift + Apple CryptoKit only.
-// No UIKit, no SwiftUI, no SQLCipher, no libargon2 inside this package — every
-// platform-specific dependency is injected through a protocol (see Storage/ and
-// Crypto/Argon2id.swift). This is what makes the Roadmap §4 cross-platform
+// No UIKit, no SwiftUI, no SQLCipher, no third-party crypto inside this package —
+// every platform-specific dependency (storage, cloud folder) is injected through
+// a protocol (see Storage/ and Sync/). Master-key derivation is HKDF-SHA-256 via
+// CryptoKit (see Crypto/MasterKeyDerivation.swift). This is what makes the
+// Roadmap §4 cross-platform
 // constraint real rather than aspirational: the exact same source compiles for
 // iOS, macOS, and (with swift-crypto) Linux, and the file format it produces is
 // readable by a future WebCrypto/WASM or Android/Tink client.

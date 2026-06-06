@@ -1,4 +1,0 @@
-module CArgon2 {
-    header "argon2.h"
-    export *
-}

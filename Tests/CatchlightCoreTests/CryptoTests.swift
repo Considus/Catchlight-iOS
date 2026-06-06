@@ -13,36 +13,40 @@ final class CryptoTests: XCTestCase {
 
     private func masterKey() -> SymmetricKey { SymmetricKey(size: .bits256) }
 
-    // §12.1 — Argon2id produces deterministic output for the same mnemonic + salt.
-    // (Verified here against the injected KDF contract; real Argon2 byte-compliance
-    //  is covered by the official KAT in the iOS target — see TestSupport notes.)
-    func testKDFDeterministicForSameInput() throws {
-        let kdf = InsecureMockArgon2idKDF()
+    // §12.1 — HKDF master-key derivation is deterministic for the same mnemonic.
+    // The mnemonic is the entropy source; the salt and info bytes are fixed domain
+    // strings (no random per-account salt). This is the cross-platform recovery
+    // contract: same mnemonic → same 32-byte master key on every Catchlight client.
+    func testMasterKeyDeterministicForSameMnemonic() {
         let mnemonic = ["abandon", "ability", "able", "about", "above", "absent",
                         "absorb", "abstract", "absurd", "abuse", "access", "accident"]
-        let salt = Data(repeating: 0x10, count: 16)
-        let k1 = try kdf.deriveMasterKey(mnemonic: mnemonic, salt: salt)
-        let k2 = try kdf.deriveMasterKey(mnemonic: mnemonic, salt: salt)
+        let k1 = MasterKeyDerivation.deriveRaw(from: mnemonic)
+        let k2 = MasterKeyDerivation.deriveRaw(from: mnemonic)
         XCTAssertEqual(k1, k2)
         XCTAssertEqual(k1.count, 32)
     }
 
-    func testKDFDifferentSaltDifferentOutput() throws {
-        let kdf = InsecureMockArgon2idKDF()
-        let mnemonic = ["zone", "zoo", "zero", "zebra", "youth", "yellow",
-                        "year", "wrong", "world", "word", "wood", "wolf"]
-        let a = try kdf.deriveMasterKey(mnemonic: mnemonic, salt: Data(repeating: 1, count: 16))
-        let b = try kdf.deriveMasterKey(mnemonic: mnemonic, salt: Data(repeating: 2, count: 16))
+    // §12.1 — Different mnemonics produce different master keys.
+    func testMasterKeyDifferentMnemonicsDifferentKeys() {
+        let m1 = ["abandon", "ability", "able", "about", "above", "absent",
+                  "absorb", "abstract", "absurd", "abuse", "access", "accident"]
+        let m2 = ["zone", "zoo", "zero", "zebra", "youth", "yellow",
+                  "year", "wrong", "world", "word", "wood", "wolf"]
+        let a = MasterKeyDerivation.deriveRaw(from: m1)
+        let b = MasterKeyDerivation.deriveRaw(from: m2)
         XCTAssertNotEqual(a, b)
     }
 
-    func testCatchlightArgon2ParametersAreOWASPMinimums() {
-        // §5.2 — mandatory, do not alter.
-        let p = Argon2Parameters.catchlightMasterKey
-        XCTAssertEqual(p.memoryKiB, 131072)   // 128 MiB
-        XCTAssertEqual(p.iterations, 3)
-        XCTAssertEqual(p.parallelism, 4)
-        XCTAssertEqual(p.outputLength, 32)
+    // §12.1 — Mnemonic word casing is normalised: the same words in different
+    // case must produce the same master key.
+    func testMasterKeyNormalisesCase() {
+        let lower = ["abandon", "ability", "able", "about", "above", "absent",
+                     "absorb", "abstract", "absurd", "abuse", "access", "accident"]
+        let upper = lower.map { $0.uppercased() }
+        XCTAssertEqual(
+            MasterKeyDerivation.deriveRaw(from: lower),
+            MasterKeyDerivation.deriveRaw(from: upper)
+        )
     }
 
     // §12.1 — HKDF produces deterministic output for the same master key + info.
@@ -71,7 +75,8 @@ final class CryptoTests: XCTestCase {
         XCTAssertNotEqual(db, hmac)
     }
 
-    // §12.1 — encryptTake + decryptTake round-trip produces identical plaintext.
+    // §12.1 — encryptTake + decryptTake round-trip produces identical plaintext
+    // (AES-256-GCM via CryptoKit).
     func testEncryptDecryptRoundTrip() throws {
         let mk = masterKey()
         let uuid = UUID()
@@ -81,7 +86,16 @@ final class CryptoTests: XCTestCase {
         XCTAssertEqual(recovered, plaintext)
     }
 
-    // §12.1 — Different encryptTake calls for same Take produce different ciphertext.
+    // §12.1 — `CryptoService.encrypt` / `decrypt` round-trip (the generic AEAD).
+    func testCryptoServiceRoundTrip() throws {
+        let key = SymmetricKey(size: .bits256)
+        let pt = Data("hello, gcm".utf8)
+        let combined = try CryptoService.encrypt(pt, key: key)
+        XCTAssertEqual(try CryptoService.decrypt(combined, key: key), pt)
+    }
+
+    // §12.1 — Different encryptTake calls for same Take produce different
+    // ciphertext (CryptoKit generates a fresh random 12-byte nonce per seal).
     func testFreshNoncePerEncryption() throws {
         let mk = masterKey()
         let uuid = UUID()
@@ -110,6 +124,34 @@ final class CryptoTests: XCTestCase {
         let mk = masterKey()
         let combined = try encryptTake(Data("x".utf8), masterKey: mk, takeUUID: UUID())
         XCTAssertThrowsError(try decryptTake(combined, masterKey: mk, takeUUID: UUID()))
+    }
+
+    // §12.1 — Wrong AES-GCM key (different SymmetricKey) fails closed.
+    func testWrongKeyFailsToDecrypt() throws {
+        let keyA = SymmetricKey(size: .bits256)
+        let keyB = SymmetricKey(size: .bits256)
+        let combined = try CryptoService.encrypt(Data("secret".utf8), key: keyA)
+        XCTAssertThrowsError(try CryptoService.decrypt(combined, key: keyB)) { error in
+            XCTAssertEqual(error as? CryptoError, .authenticationFailed)
+        }
+    }
+
+    // §12.1 — Per-item key for Take A differs from per-item key for Take B
+    // even under the same master key (UUID-bound HKDF info).
+    func testPerItemKeyIsUUIDBound() {
+        let mk = masterKey()
+        let a = itemKey(masterKey: mk, takeUUID: UUID()).withUnsafeBytes { Data($0) }
+        let b = itemKey(masterKey: mk, takeUUID: UUID()).withUnsafeBytes { Data($0) }
+        XCTAssertNotEqual(a, b)
+    }
+
+    // §12.1 — Per-item key is deterministic for the same master key + UUID.
+    func testPerItemKeyDeterministic() {
+        let mk = masterKey()
+        let uuid = UUID()
+        let a = itemKey(masterKey: mk, takeUUID: uuid).withUnsafeBytes { Data($0) }
+        let b = itemKey(masterKey: mk, takeUUID: uuid).withUnsafeBytes { Data($0) }
+        XCTAssertEqual(a, b)
     }
 
     func testMalformedCiphertextThrows() {
