@@ -1,0 +1,101 @@
+name: CI
+
+# Task 6.17 — run the full test suite on every push to main and every PR
+# targeting main. Two jobs run in parallel:
+#
+#   core-tests  — `swift test` + `swift run coreverify` against the
+#                 CatchlightCore SPM package. No Xcode project needed.
+#   xcode-tests — `xcodebuild test` against the iOS simulator, covering the
+#                 iOS-only tests gated by `#if canImport(Catchlight)`
+#                 (FileProtectionTests, ErrorStateTests, ConflictQueueTests,
+#                 FirstRunOrientationTests).
+#
+# Both jobs must pass before this commit is mergeable — these are the status
+# checks wired into branch protection in 6.18.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel an in-flight run for the same branch / PR when a new commit arrives —
+# saves runner minutes without losing the final-commit signal.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-tests:
+    name: Core (swift test + coreverify)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      # SPM resolves CryptoKit (system) and no third-party deps today, so the
+      # cache mostly saves index/build artefacts between runs.
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: swift test
+        run: swift test --enable-code-coverage
+
+      - name: swift run coreverify
+        run: swift run coreverify
+
+  xcode-tests:
+    name: iOS (xcodebuild test)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Install XcodeGen
+        # XcodeGen is not pre-installed on the macos-15 image. Brew is fastest.
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Developer/Xcode/DerivedData/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-xcode-spm-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-spm-
+
+      - name: List available simulators (debug)
+        # Surfaced in the run log so future failures pinning a destination are
+        # easy to diagnose without re-running.
+        run: xcrun simctl list devices available | grep -E "iPhone|iOS" | head -30
+
+      - name: xcodebuild test
+        # CODE_SIGNING_ALLOWED=NO is required on the runner (no signing
+        # identities installed) and safe for simulator builds. The destination
+        # pins to iPhone 16 / OS=latest — newer than the iOS 17 deployment
+        # target, stable across runner image bumps. FileProtectionTests
+        # self-skips on simulator via XCTSkip (#if targetEnvironment(simulator)).
+        run: |
+          xcodebuild test \
+            -project Catchlight.xcodeproj \
+            -scheme Catchlight \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            CODE_SIGNING_ALLOWED=NO
