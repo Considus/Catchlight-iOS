@@ -6,7 +6,7 @@
 //  (Phase 5 brief §5.6). This is the ONLY format written for Take blobs — no binary
 //  property lists, no NSKeyedArchiver, no Core Data formats. A future web/Android
 //  client reads this file, Base64-decodes `encryptedPayload`, and runs the same
-//  ChaCha20-Poly1305 open with the per-item key derived from the same `uuid`.
+//  AES-256-GCM open with the per-item key derived from the same `uuid`.
 //
 //  Cloud filename: `{uuid}.clk` — UUID only, no metadata in the filename
 //  (Encryption Architecture §10.5).
@@ -29,7 +29,7 @@ public struct CloudBlob: Codable, Equatable, Sendable {
     /// ISO-8601 string. Explicit string field (not Date) for cross-platform clarity;
     /// mirrors `Take.modifiedAt`.
     public let modified: String
-    /// Base64 of the ChaCha20-Poly1305 combined form (nonce + ciphertext + tag).
+    /// Base64 of the AES-256-GCM combined form (nonce + ciphertext + tag).
     public let encryptedPayload: String
 
     public init(version: Int = CloudBlob.currentVersion, uuid: UUID, modified: String, encryptedPayload: String) {

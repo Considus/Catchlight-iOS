@@ -19,7 +19,7 @@ public enum CryptoError: Error, Equatable, Sendable {
     case authenticationFailed
     /// Ciphertext was malformed (e.g. too short to contain nonce + tag).
     case malformedCiphertext
-    /// Argon2id derivation failed at the C boundary (out of memory, bad params).
+    /// A key derivation failed (e.g. PIN PBKDF2 reported an error, policy rejection).
     case kdfFailed(String)
     /// A BIP-39 mnemonic failed checksum/wordlist validation.
     case invalidMnemonic(String)

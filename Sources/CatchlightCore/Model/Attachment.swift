@@ -18,7 +18,7 @@ public struct Attachment: Identifiable, Codable, Equatable, Sendable {
     /// e.g. "image/jpeg", "application/pdf".
     public var mimeType: String
 
-    /// Encrypted binary blob (ChaCha20-Poly1305 combined form). Already ciphertext.
+    /// Encrypted binary blob (AES-256-GCM combined form). Already ciphertext.
     public var encryptedData: Data
 
     /// HMAC-SHA-256 of `encryptedData`, for integrity verification before decrypt.

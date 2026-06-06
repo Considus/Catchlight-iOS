@@ -46,6 +46,7 @@ public final class SyncEngine {
     private let schemaVersion: Int
     private let appVersion: String
     private let argon2Salt: Data
+    private let deviceId: UUID
     private let now: () -> Date
 
     public init(
@@ -55,6 +56,7 @@ public final class SyncEngine {
         argon2Salt: Data,
         schemaVersion: Int = 1,
         appVersion: String = "1.0.0",
+        deviceId: UUID = UUID(),
         now: @escaping () -> Date = Date.init
     ) {
         self.store = store
@@ -64,6 +66,7 @@ public final class SyncEngine {
         self.schemaVersion = schemaVersion
         self.appVersion = appVersion
         self.argon2Salt = argon2Salt
+        self.deviceId = deviceId
         self.now = now
     }
 
@@ -75,6 +78,11 @@ public final class SyncEngine {
     @discardableResult
     public func pushOutbound() throws -> SyncReport {
         guard let cloud else { throw SyncError.noCloudFolderConfigured }
+        try acquireLock(on: cloud)
+        // Release on success OR failure — never leave a lock behind. NSFileCoordinator
+        // serialises the underlying file operations on iOS (see FileCloudFolder).
+        defer { try? releaseLock(on: cloud) }
+
         var report = SyncReport()
 
         ensureAccountMetadata(cloud)
@@ -205,6 +213,38 @@ public final class SyncEngine {
         let out = try pushOutbound()
         report.uploaded = out.uploaded
         return report
+    }
+
+    // MARK: - Lock file
+
+    /// Acquire `catchlight.lock` in the cloud folder. Throws
+    /// `SyncLockError.heldByOtherDevice` if a fresh lock from a different device is
+    /// already present. A stale lock (>5 min) is overwritten. A lock previously
+    /// orphaned by this same device is also overwritten (no-op recovery).
+    func acquireLock(on cloud: CloudFolder) throws {
+        let nowDate = now()
+        if let data = try cloud.read(SyncLock.fileName),
+           let existing = try? PlatformJSON.decode(SyncLock.self, from: data) {
+            let isOurs = existing.deviceId == deviceId
+            if !isOurs && !existing.isStale(now: nowDate) {
+                throw SyncLockError.heldByOtherDevice(holder: existing.deviceId, retryAfterSeconds: 45)
+            }
+            // Fall through and overwrite: stale lock OR our own previously-orphaned lock.
+        }
+        let lock = SyncLock(deviceId: deviceId, acquiredAt: ISO8601.string(from: nowDate))
+        try cloud.write(try PlatformJSON.encode(lock), to: SyncLock.fileName)
+    }
+
+    /// Release `catchlight.lock`. No-op if missing or owned by another device
+    /// (defence against deleting a fresh lock acquired between our acquire and
+    /// release because a stale-window overlapped).
+    func releaseLock(on cloud: CloudFolder) throws {
+        guard let data = try cloud.read(SyncLock.fileName),
+              let lock = try? PlatformJSON.decode(SyncLock.self, from: data),
+              lock.deviceId == deviceId else {
+            return
+        }
+        try cloud.delete(SyncLock.fileName)
     }
 
     // MARK: - Account metadata

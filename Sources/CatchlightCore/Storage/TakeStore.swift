@@ -3,7 +3,7 @@
 //  CatchlightCore
 //
 //  The persistence abstraction. The portable core depends only on this protocol;
-//  the iOS app provides the real `SQLCipherTakeStore` (AES-256-CBC encrypted SQLite
+//  the iOS app provides the real `SQLiteTakeStore` (AES-256-CBC encrypted SQLite
 //  with the FTS5 search index — see Catchlight/Database/SQLCipherStore.swift). The
 //  in-memory implementation here mirrors the same semantics so the sync engine,
 //  conflict resolver, and Obie/search rules can be unit-tested without SQLCipher.
