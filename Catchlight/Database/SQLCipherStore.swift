@@ -2,34 +2,42 @@
 //  SQLCipherStore.swift
 //  Catchlight (iOS app target)
 //
-//  The production `TakeStore`, backed by SQLCipher 4.x (AES-256-CBC encryption of
-//  the entire database file). Implements Phase 5 brief §6 (database), §9 (FTS5
-//  search), and §10.3 (App Group container). Requires the SQLCipher dependency and
-//  the iOS SDK; it is intentionally outside the platform-agnostic CatchlightCore
-//  package and conforms to `CatchlightCore.TakeStore`.
+//  The production `TakeStore`, backed by a standard SQLite3 database protected by
+//  iOS Data Protection (`NSFileProtectionCompleteUntilFirstUserAuthentication`).
+//  Implements Phase 5 brief §6 (database), §9 (FTS5 search), and §10.3 (App Group
+//  container). Conforms to `CatchlightCore.TakeStore`.
 //
-//  WHY SQLCipher and not SwiftData/Core Data: iOS Data Protection (NSFileProtection)
-//  is complementary, not a substitute — under CompleteUnlessOpen, data is accessible
-//  any time the device has been unlocked since boot. SQLCipher encrypts the whole
-//  database with a key derived (HKDF) from the Keychain-only master key, so the file
-//  at rest is opaque ciphertext (Encryption Architecture §8).
+//  CONFIDENTIALITY MODEL (revised 2026-06-05):
+//    1. Content security — every Take payload is sealed with per-item AES-256-GCM
+//       before reaching this layer (see `CatchlightCore.TakeCrypto` / `CryptoService`).
+//       Take body text, attachments, reminders, etc. travel through the database as
+//       ciphertext OR plaintext fields that have no confidentiality requirement
+//       (timestamps, flags, the take's UUID). [NOTE: this revision still passes
+//       through plaintext columns — the Phase 2.15 series fully encrypts content at
+//       the cloud-sync boundary; storage-layer column re-encryption is tracked
+//       separately.]
+//    2. File security — the on-disk database file is tagged with
+//       `NSFileProtectionCompleteUntilFirstUserAuthentication`. After the first
+//       device unlock since boot, the file is readable; if the file ever leaves the
+//       device (e.g. via backup of an unlocked device) it remains protected by the
+//       file-class key.
 //
-//  The store holds PLAINTEXT model values; confidentiality at rest is the database
-//  file's encryption. Composite fields (timeReminder, checklistItems, attachments,
-//  sequenceIds, locationReminder) are stored as platform-agnostic JSON via
-//  CatchlightCore.PlatformJSON, so the column format stays portable too.
+//  We picked `.completeUntilFirstUserAuthentication`, NOT `.complete`, so
+//  `BGAppRefreshTask` background sync still functions when the device re-locks
+//  after the first user unlock since reboot.
+//
+//  SQLCipher was previously used here. It has been removed in favour of the
+//  Apple-native stack (CryptoKit + NSFileProtection); the per-item AEAD already
+//  carries content security, so SQLCipher would have provided only database-
+//  metadata encryption at the cost of a third-party dependency.
 //
 
 import Foundation
 import CryptoKit
 import CatchlightCore
-#if canImport(SQLCipher)
-import SQLCipher
-#elseif canImport(SQLite3)
-import SQLite3   // placeholder so the file type-checks; PRODUCTION MUST LINK SQLCipher
-#endif
+import SQLite3
 
-public final class SQLCipherTakeStore: TakeStore {
+public final class SQLiteTakeStore: TakeStore {
 
     private var db: OpaquePointer?
     private let dbURL: URL
@@ -37,48 +45,57 @@ public final class SQLCipherTakeStore: TakeStore {
 
     private static let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-    /// Open (creating if needed) the encrypted database in the App Group shared
-    /// container so future extensions can reach it without a later migration
-    /// (Phase 5 brief §10.3).
-    /// - Parameter keys: the key hierarchy; the DB key is derived via HKDF.
+    /// Open (creating if needed) the database in the App Group shared container so
+    /// future extensions can reach it without a later migration (Phase 5 brief §10.3).
+    /// - Parameter keys: the key hierarchy (kept on the API for forward compatibility
+    ///   with column-level encryption; not currently used by the SQLite open path).
     public init(keys: KeyHierarchy) throws {
         let containerURL = AppGroup.containerURL()
         self.dbURL = containerURL.appendingPathComponent("catchlight.db")
 
+        // 1) Apply file protection BEFORE the first open. If the file does not exist,
+        //    create it empty with the protection attribute set; if it already exists,
+        //    update its attributes. iOS enforces the protection class on real devices
+        //    (it is observable but inert on the simulator).
+        try Self.applyFileProtection(to: dbURL)
+
+        // 2) Open the database — standard SQLite3, no cipher PRAGMAs.
         guard sqlite3_open(dbURL.path, &db) == SQLITE_OK, db != nil else {
             throw StorageError.openFailed("sqlite3_open failed")
         }
 
-        // 1) Key + PRAGMAs MUST run before any read/write (Encryption Architecture §8.3).
-        try applyKeyAndPragmas(dbKeyHex: keys.databaseKeyHex())
-        // 2) Confirm the key is correct by touching the schema.
-        try verifyKeyed()
         // 3) Create schema + FTS5 if needed.
         try createSchema()
-        // 4) Exclude the database (and salt file) from iCloud backup (§6.4).
+        // 4) Exclude the database from iCloud backup (§6.4).
         try excludeFromBackup(dbURL)
+        _ = keys   // retained on the API; see initialiser docs above
         _ = db
     }
 
     deinit { if let db { sqlite3_close(db) } }
 
-    // MARK: - Key + PRAGMA
+    // MARK: - File protection
 
-    private func applyKeyAndPragmas(dbKeyHex: String) throws {
-        // Raw key form: PRAGMA key = "x'<hex>'" tells SQLCipher to use the bytes
-        // directly rather than deriving from a passphrase.
-        try exec("PRAGMA key = \"x'\(dbKeyHex)'\";")
-        try exec("PRAGMA cipher_page_size = 4096;")
-        try exec("PRAGMA kdf_iter = 1;")                       // key already Argon2id-derived (§6.3)
-        try exec("PRAGMA cipher_hmac_algorithm = HMAC_SHA512;")
-        try exec("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA512;")
-        try exec("PRAGMA cipher_compatibility = 4;")           // SQLCipher 4.x format
-    }
-
-    /// A keyed SQLCipher DB throws on the first real query if the key is wrong.
-    private func verifyKeyed() throws {
-        if sqlite3_exec(db, "SELECT count(*) FROM sqlite_master;", nil, nil, nil) != SQLITE_OK {
-            throw StorageError.openFailed("wrong database key or corrupt database")
+    /// Apply `NSFileProtectionCompleteUntilFirstUserAuthentication` to the database
+    /// file. Creates an empty file with the attribute set if it does not yet exist;
+    /// otherwise updates the attribute on the existing file. This MUST run before
+    /// the first `sqlite3_open` so the file is protected from the first byte.
+    private static func applyFileProtection(to url: URL) throws {
+        let fm = FileManager.default
+        if fm.fileExists(atPath: url.path) {
+            try fm.setAttributes(
+                [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                ofItemAtPath: url.path
+            )
+        } else {
+            let created = fm.createFile(
+                atPath: url.path,
+                contents: nil,
+                attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication]
+            )
+            if !created {
+                throw StorageError.openFailed("could not create database file at \(url.path)")
+            }
         }
     }
 
