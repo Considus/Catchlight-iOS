@@ -121,6 +121,12 @@ targets:
     platform: iOS
     sources:
       - path: Tests/CatchlightCoreTests
+      # `EnglishWordlistTests` loads bip39-english.txt from
+      # `Bundle(for: Self.self)` (the test bundle). Without this entry the
+      # resource is only in the app bundle and the test fails on CI with
+      # "bip39-english.txt missing from app bundle".
+      - path: Catchlight/Resources/bip39-english.txt
+        buildPhase: resources
     settings:
       base:
         # Device code-signing requires an Info.plist on the test bundle. We don't
