@@ -2,13 +2,18 @@
 //  PINService.swift
 //  Catchlight (iOS app target)
 //
-//  Local PIN / biometric app lock (Encryption Architecture §13, Phase 5 brief §5.10).
+//  Local PIN / biometric app lock (Encryption Architecture §13).
 //
-//  The PIN locks the APP on this device. It is INDEPENDENT of the mnemonic →
-//  master-key derivation — losing the PIN does not lose data (recover via mnemonic).
-//  The PIN itself is never stored; only Argon2id(PIN, pin_salt) is kept in the
-//  Keychain (WhenUnlockedThisDeviceOnly, non-synchronisable). The PIN salt is a
-//  DIFFERENT random value from the master-key Argon2id salt.
+//  IMPORTANT SCOPE: the PIN protects APP ACCESS on this device only — it is NOT
+//  part of the encryption key chain. Data confidentiality is provided by the
+//  Keychain-stored master key (HKDF-derived from the BIP-39 mnemonic) and by
+//  SQLCipher. Losing the PIN does not lose data; recovery is via the mnemonic.
+//
+//  KDF CHOICE: the PIN is low-entropy (6+ alphanumeric or 8+ digit) and therefore
+//  requires a slow KDF to resist on-device offline brute force. Apple-native
+//  PBKDF2-HMAC-SHA-256 via CommonCrypto is the right tool here — slower than
+//  Argon2id, but Argon2id is no longer available in the codebase and PBKDF2 is
+//  acceptable for protecting UI access (NOT for key derivation).
 //
 //  Policy:
 //    • Minimum 6 alphanumeric characters OR an 8-digit numeric PIN. 4-digit PINs
@@ -18,7 +23,7 @@
 
 import Foundation
 import Security
-import CryptoKit
+import CommonCrypto
 import CatchlightCore
 
 public struct PINPolicy {
@@ -37,28 +42,27 @@ public struct PINPolicy {
 }
 
 public final class PINService {
-    private let kdf: Argon2idDeriving
     private let service = "com.considus.catchlight"
     private let hashAccount = "pin-hash"
     private let saltAccount = "pin-salt"
     private let accessGroup = "$(AppIdentifierPrefix)com.considus.catchlight"
 
-    /// PIN hashing uses the same Argon2id cost as the master key; the security
-    /// requirement is identical (resist offline brute force of a low-entropy secret).
-    private let params = Argon2Parameters.catchlightMasterKey
+    /// PBKDF2 parameters. 600_000 iterations matches OWASP 2023 guidance for
+    /// PBKDF2-HMAC-SHA-256. 32-byte output.
+    private static let pbkdf2Iterations: UInt32 = 600_000
+    private static let pbkdf2OutputLength: Int = 32
 
     public private(set) var failedAttempts = 0
 
-    public init(kdf: Argon2idDeriving) { self.kdf = kdf }
+    public init() {}
 
-    /// Set or change the PIN. Generates a fresh random salt distinct from the
-    /// master-key salt.
+    /// Set or change the PIN. Generates a fresh random salt.
     public func setPIN(_ pin: String) throws {
         if let reason = PINPolicy.rejectionReason(for: pin) {
             throw CryptoError.kdfFailed(reason)
         }
         let salt = SecureRandom.bytes(16)
-        let hash = try kdf.deriveKey(passwordBytes: Array(pin.utf8), saltBytes: Array(salt), parameters: params)
+        let hash = try Self.pbkdf2(password: pin, salt: salt)
         try storeItem(hash, account: hashAccount)
         try storeItem(salt, account: saltAccount)
         failedAttempts = 0
@@ -72,7 +76,7 @@ public final class PINService {
               let salt = readItem(account: saltAccount) else {
             throw KeychainError.notFound
         }
-        let candidate = try kdf.deriveKey(passwordBytes: Array(pin.utf8), saltBytes: Array(salt), parameters: params)
+        let candidate = try Self.pbkdf2(password: pin, salt: salt)
         // Constant-time comparison.
         let match = constantTimeEqual(candidate, storedHash)
         if match { failedAttempts = 0 } else { failedAttempts += 1 }
@@ -85,6 +89,33 @@ public final class PINService {
         deleteItem(account: hashAccount)
         deleteItem(account: saltAccount)
         failedAttempts = 0
+    }
+
+    // MARK: - PBKDF2 (Apple-native via CommonCrypto)
+
+    private static func pbkdf2(password: String, salt: Data) throws -> Data {
+        let pwBytes = Array(password.utf8)
+        var output = Data(count: pbkdf2OutputLength)
+        let status = output.withUnsafeMutableBytes { outRaw -> Int32 in
+            guard let outPtr = outRaw.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                return Int32(kCCParamError)
+            }
+            return salt.withUnsafeBytes { saltRaw -> Int32 in
+                let saltPtr = saltRaw.baseAddress?.assumingMemoryBound(to: UInt8.self)
+                return CCKeyDerivationPBKDF(
+                    CCPBKDFAlgorithm(kCCPBKDF2),
+                    pwBytes, pwBytes.count,
+                    saltPtr, salt.count,
+                    CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
+                    pbkdf2Iterations,
+                    outPtr, pbkdf2OutputLength
+                )
+            }
+        }
+        guard status == kCCSuccess else {
+            throw CryptoError.kdfFailed("CCKeyDerivationPBKDF returned \(status)")
+        }
+        return output
     }
 
     // MARK: - Keychain helpers (WhenUnlockedThisDeviceOnly, non-synchronisable)

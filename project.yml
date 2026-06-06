@@ -21,7 +21,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    DEVELOPMENT_TEAM: "" # <-- set to your Apple Developer Team ID (brief §3.1)
+    DEVELOPMENT_TEAM: YTPP9HU9F9 # Mark Stradling (brief §3.1)
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
@@ -31,71 +31,104 @@ packages:
   CatchlightCore:
     path: .
 
-  # libargon2 — mnemonic → master key KDF (brief §3.2, §5.1). CryptoKit has no
-  # Argon2id; the reference implementation is required for cross-platform
-  # reproducibility.
-  #
-  # NOTE (Phase 6 build fix): the upstream repo
-  # https://github.com/P-H-C/phc-winner-argon2.git is a plain C library with NO
-  # Package.swift, so SwiftPM/xcodebuild cannot resolve it as a remote package —
-  # dependency resolution previously failed before any code compiled. We now consume
-  # it via a LOCAL SPM wrapper (Vendor/CArgon2) that vendors the REAL upstream
-  # reference sources (the portable ref.c path) and adds only a Package.swift +
-  # modulemap. The algorithm is unchanged. BEFORE RELEASE: pin the vendored sources
-  # to a reviewed commit and run the Argon2id KAT (Encryption Architecture §16).
-  CArgon2:
-    path: Vendor/CArgon2
+  # NOTE (2026-06-05): the previous `CArgon2` vendored package has been removed.
+  # Master-key derivation now uses HKDF-SHA-256 via CryptoKit (see
+  # CatchlightCore/Crypto/MasterKeyDerivation.swift); the BIP-39 mnemonic already
+  # carries 128 bits of entropy so a memory-hard KDF is unnecessary. No third-party
+  # crypto library is required for the master key.
 
-  # NOTE: SQLCipherStore.swift's dev fallback uses `import SQLite3`, which resolves
-  # against the iOS SDK's BUILT-IN `SQLite3` Clang module (declared in the SDK's
-  # usr/include/module.modulemap) and auto-links libsqlite3 — no wrapper package is
-  # needed. (An earlier local CSQLite3 wrapper caused a "redefinition of module
-  # 'SQLite3'" clash with the SDK module and was removed.)
-
-  # SQLCipher 4.x — encrypted on-device database (brief §3.2). The upstream repo
-  # https://github.com/sqlcipher/sqlcipher.git is ALSO not an SPM package (no
-  # Package.swift), so it cannot be a remote SwiftPM dependency here. For the v1.0
-  # security build it must be added as an AUDITED SQLCipher 4.x package (a vendored
-  # amalgamation target like CArgon2, or a reviewed CocoaPods/binary integration),
-  # NOT an unverified community fork (README non-negotiable).
-  #
-  # Until that audited integration is wired, the CSQLite3 wrapper above lets
-  # SQLCipherStore.swift's `#elseif canImport(SQLite3)` fallback compile and run so
-  # the app builds and the UI is fully exercisable on the simulator. The cipher
-  # PRAGMAs are inert under plain SQLite3 — this path is DEV-ONLY and must never ship.
-  # TODO(pre-release, brief §3.2): add the audited SQLCipher package + dependency.
+  # NOTE (2026-06-05, revised): the SQLCipher SPM dependency has been removed.
+  # Content security is provided by per-item AES-256-GCM (CatchlightCore.TakeCrypto)
+  # and file security by `NSFileProtectionCompleteUntilFirstUserAuthentication` on
+  # the database file (see Catchlight/Database/SQLCipherStore.swift). The store
+  # opens the iOS SDK's built-in `SQLite3` Clang module — no third-party crypto
+  # library is required.
 
 targets:
   Catchlight:
     type: application
     platform: iOS
+    # CAPABILITIES NOTE (2026-06-06): the App Groups + Keychain Sharing capabilities
+    # are configured solely via the entitlements file (`Catchlight.entitlements`),
+    # NOT via XcodeGen's `attributes.SystemCapabilities` block. We tried the
+    # SystemCapabilities approach and it serialised as a quoted JSON string in
+    # `project.pbxproj` (XcodeGen limitation with nested dicts under `attributes`),
+    # which confused Xcode and caused it to offer to "fix" the project — accepting
+    # that prompt wiped the entitlements file back to `<dict/>`.
+    #
+    # Modern Xcode (14+) reads capabilities from the entitlements file directly, so
+    # the Signing & Capabilities tab will display App Groups + Keychain Sharing
+    # correctly as long as `Catchlight.entitlements` has the right keys.
+    #
+    # If you EVER see Xcode prompt to "Fix" a capability or the team — cancel.
+    # Re-running `xcodegen generate` is safe; it does not touch the entitlements
+    # file.
     sources:
       - path: Catchlight
     info:
       path: Catchlight/Resources/Info.plist
+      properties:
+        UIAppFonts:
+          - "CormorantGaramond[wght].ttf"
+          - "CormorantGaramond-Italic[wght].ttf"
+          - "DMSans[opsz,wght].ttf"
+        # Without UILaunchScreen, iOS 13+ runs the app in legacy compatibility mode
+        # (letterboxed, doesn't fill the screen). An empty UILaunchScreen dict is
+        # enough to opt in to full-screen modern scene sizing.
+        UILaunchScreen:
+          UIColorName: ""
+        UIApplicationSupportsIndirectInputEvents: true
+        # Required so BGTaskScheduler will register the sync refresh task —
+        # without this, BackgroundTasks rejects the registration at launch
+        # ("com.considus.catchlight.sync is not advertised in the application's
+        # Info.plist").
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.considus.catchlight.sync
+        # Portrait-only — onboarding layout (StepScaffold, Dynamic Island padding,
+        # ScrollView safe-area handling) is designed for portrait. UIRequiresFullScreen
+        # is needed alongside a restricted orientation set to silence Xcode's
+        # "All interface orientations must be supported unless the app requires
+        # full screen" validation warning.
+        UIRequiresFullScreen: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        "UISupportedInterfaceOrientations~ipad":
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
     entitlements:
+      # XcodeGen rewrites this file on every `generate` run. The contents below
+      # ARE the source of truth — do not hand-edit Catchlight.entitlements; edit
+      # the properties here and re-run xcodegen. (Hand-edits get wiped on the
+      # next generate; we hit this on 2026-06-06.)
       path: Catchlight/Resources/Catchlight.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.considus.catchlight
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.considus.catchlight
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight   # brief §3.1
         CODE_SIGN_ENTITLEMENTS: Catchlight/Resources/Catchlight.entitlements
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
-        SWIFT_OBJC_BRIDGING_HEADER: ""   # libargon2 exposed via SPM module map; no bridging header
+        SWIFT_OBJC_BRIDGING_HEADER: ""
     dependencies:
       - package: CatchlightCore
         product: CatchlightCore
-      - package: CArgon2
-      # SQLCipherStore.swift's dev fallback uses `import SQLite3`, resolved against the
-      # iOS SDK's built-in SQLite3 module (auto-links libsqlite3). No dependency entry
-      # is required here. When the audited SQLCipher package is added, the store's
-      # `#if canImport(SQLCipher)` branch wins automatically.
-      # - package: SQLCipher   # TODO(pre-release): audited SQLCipher 4.x integration.
 
   CatchlightTests:
     type: bundle.unit-test
     platform: iOS
     sources:
       - path: Tests/CatchlightCoreTests
+    settings:
+      base:
+        # Device code-signing requires an Info.plist on the test bundle. We don't
+        # need any custom keys, so let Xcode synthesize one. Without this, running
+        # tests on a physical iPhone fails with "Cannot code sign because the
+        # target does not have an Info.plist file…" (hit 2026-06-06 on iPhone 17).
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.tests
     dependencies:
       - target: Catchlight
       - package: CatchlightCore

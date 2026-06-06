@@ -2,20 +2,19 @@
 //  OnboardingViewModel.swift
 //  Catchlight (iOS app target) — Phase 6 UI
 //
-//  Owns first-launch onboarding: generating the BIP-39 recovery phrase, driving the
-//  write-it-down confirmation friction step, and — on completion — deriving and
-//  storing the master key, then seeding the first Takes. @Observable (iOS 17+).
+//  Owns first-launch onboarding (UX Session Decisions v2.5 §15, six screens):
+//    1. welcome         — calm framing + "privacy phrase" intro
+//    2. storageChoice   — local-only vs cloud-backed (user choice, branches flow)
+//    3. localWarning    — shown only on the local path
+//    4. reveal          — the 12-word privacy phrase
+//    5. confirm         — free-selection: tap 3 target words from the bank
+//    6. complete        — "You're ready." → tap to derive + store master key
+//    Plus `.failure` — Keychain or derivation failure with a Start-over escape hatch.
 //
-//  WORDLIST SOURCING (flagged decision):
-//    The production path is `EnglishWordlist.load()`, which verifies the bundled
-//    official 2048-word list against a pinned SHA-256 and throws loudly until both
-//    are present (a deliberate security guard — see BIP39Wordlist+English.swift and
-//    README "Before release" steps 2). Those artefacts CANNOT be produced offline.
-//    To keep onboarding functional in development WITHOUT defeating that guard, we
-//    fall back to a synthetic 2048-word list and surface a visible debug banner
-//    (`usingNonStandardWordlist == true`). The moment the official list + digest are
-//    bundled, `load()` succeeds and the real path takes over automatically with no
-//    code change.
+//  WORDLIST: the bundled official 2048-word list is loaded by
+//  `EnglishWordlist.load()` and verified against a pinned SHA-256 on every start.
+//  A missing or corrupt resource is a fatal build error — recovery across clients
+//  depends on byte-identical wordlists, so we refuse to proceed with anything else.
 //
 
 import Foundation
@@ -27,121 +26,178 @@ import CatchlightCore
 final class OnboardingViewModel {
 
     enum Step {
-        case intro          // calm framing: why a recovery phrase exists
-        case reveal         // the 12 words, numbered
-        case confirm        // tap each word in order (friction, not skippable)
-        case finishing      // deriving + storing the key
+        case welcome
+        case storageChoice
+        case localWarning
+        case reveal
+        case confirm
+        case complete
+        case failure
     }
 
-    private(set) var step: Step = .intro
+    enum StoragePath {
+        case local
+        case cloud
+    }
 
-    /// The generated 12-word mnemonic.
+    private(set) var step: Step = .welcome
+
+    /// The user's storage choice. Set on Screen 2; controls the local-warning
+    /// branch and varies the copy on Screens 4 and 6.
+    private(set) var storagePath: StoragePath = .local
+
+    /// The generated 12-word mnemonic ("privacy phrase").
     private(set) var mnemonic: [String] = []
 
-    /// True when the dev/synthetic wordlist is in use (official list not bundled).
-    /// Drives a visible "#DEBUG — non-standard recovery phrase" banner.
-    private(set) var usingNonStandardWordlist: Bool = false
+    // MARK: - Confirm (free-selection model — Pass 1, unchanged)
 
-    /// Confirmation state: the shuffled word bank the user taps from, and the words
-    /// they have correctly tapped so far (in order).
-    private(set) var shuffledBank: [String] = []
-    private(set) var confirmedCount: Int = 0
-    private(set) var confirmError: Bool = false
+    private(set) var targetPositions: [Int] = []
+    private(set) var bank: [String] = []
+    private(set) var slots: [String?] = [nil, nil, nil]
+    private(set) var usedWords: Set<String> = []
+    private(set) var flashError: Bool = false
 
     private(set) var failure: String?
+    private(set) var failureDetail: String?
 
     private let bip39: BIP39
-    private let argon2: Argon2idDeriving
     private let onComplete: () -> Void
 
-    /// - Parameters:
-    ///   - argon2: KDF binding (Wiring injects the real LibArgon2).
-    ///   - onComplete: called after the master key is stored and seeds are written;
-    ///     the app then transitions to Dailies.
-    init(argon2: Argon2idDeriving, onComplete: @escaping () -> Void) {
-        self.argon2 = argon2
+    init(onComplete: @escaping () -> Void) {
         self.onComplete = onComplete
-
-        // Prefer the verified official wordlist; fall back to synthetic in dev.
-        if let official = try? EnglishWordlist.load() {
-            self.bip39 = BIP39(wordlist: official)
-            self.usingNonStandardWordlist = false
-        } else {
-            self.bip39 = BIP39(wordlist: Self.syntheticWordlist())
-            self.usingNonStandardWordlist = true
+        do {
+            self.bip39 = BIP39(wordlist: try EnglishWordlist.load())
+        } catch {
+            fatalError("BIP-39 wordlist missing or corrupt: \(error)")
         }
     }
 
     // MARK: - Flow
 
-    func begin() {
-        do {
-            mnemonic = try bip39.generateMnemonic()
-            shuffledBank = mnemonic.shuffled()
-            confirmedCount = 0
-            step = .reveal
-        } catch {
-            failure = "Couldn't generate a recovery phrase."
+    /// Screen 1 → Screen 2.
+    func beginStorageChoice() { step = .storageChoice }
+
+    /// Screen 2 → Screen 3 (local) or Screen 4 (cloud).
+    func chooseStorage(_ path: StoragePath) {
+        storagePath = path
+        switch path {
+        case .local: step = .localWarning
+        case .cloud: revealPhrase()
         }
     }
 
+    /// Screen 3 secondary action — go back to storage choice.
+    func backToStorageChoice() { step = .storageChoice }
+
+    /// Screen 3 → Screen 4.
+    func continueLocally() { revealPhrase() }
+
+    private func revealPhrase() {
+        do {
+            mnemonic = try bip39.generateMnemonic()
+            step = .reveal
+        } catch {
+            failure = "Couldn't generate a privacy phrase."
+            failureDetail = "\(error)"
+            step = .failure
+        }
+    }
+
+    /// Screen 4 → Screen 5.
     func proceedToConfirm() {
-        confirmedCount = 0
-        confirmError = false
-        shuffledBank = mnemonic.shuffled()
+        targetPositions = Array(0..<mnemonic.count).shuffled().prefix(3).sorted()
+        bank = mnemonic.shuffled()
+        slots = [nil, nil, nil]
+        usedWords = []
+        flashError = false
+        failure = nil
         step = .confirm
     }
 
-    /// Called when the user taps a word in the confirmation bank. Must be the next
-    /// word in the original order; otherwise it's a (recoverable) mistake.
-    func tapConfirmWord(_ word: String) {
-        guard confirmedCount < mnemonic.count else { return }
-        if word == mnemonic[confirmedCount] {
-            confirmedCount += 1
-            confirmError = false
-            if confirmedCount == mnemonic.count {
-                finish()
-            }
-        } else {
-            confirmError = true
+    var targetPositionsForDisplay: [Int] { targetPositions.map { $0 + 1 } }
+    var nextSlotIndex: Int? { slots.firstIndex(where: { $0 == nil }) }
+    var isLocked: Bool { flashError }
+
+    /// Free-selection tap handler — Pass 1 logic, unchanged.
+    func tapBankWord(_ word: String) {
+        guard !flashError else { return }
+        guard !usedWords.contains(word) else { return }
+        guard let slot = nextSlotIndex else { return }
+        slots[slot] = word
+        usedWords.insert(word)
+        if nextSlotIndex == nil {
+            validateSlots()
         }
     }
 
-    /// The next word the user must tap (for the accessibility hint / progress copy).
-    var nextExpectedIndex: Int { confirmedCount }
+    private func validateSlots() {
+        let expected = targetPositions.map { mnemonic[$0] }
+        let got = slots.compactMap { $0 }
+        if got == expected {
+            // Screen 5 → Screen 6 (the user taps through Screen 6 to finalize).
+            step = .complete
+        } else {
+            flashError = true
+            failure = "Those aren't quite right — try again."
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                guard let self else { return }
+                self.slots = [nil, nil, nil]
+                self.usedWords = []
+                self.flashError = false
+            }
+        }
+    }
 
-    var isConfirmed: Bool { confirmedCount == mnemonic.count && !mnemonic.isEmpty }
+    var isConfirmed: Bool {
+        guard slots.allSatisfy({ $0 != nil }) else { return false }
+        return slots.compactMap { $0 } == targetPositions.map { mnemonic[$0] }
+    }
 
     // MARK: - Completion
 
-    private func finish() {
-        step = .finishing
+    /// Screen 6 "Start using Catchlight" — derive + store master key.
+    func finishOnboarding() {
         do {
-            // Generate (or reuse) the per-account Argon2 salt.
-            let salt = SecureRandom.bytes(16)
-            let masterKeyData = try argon2.deriveMasterKey(mnemonic: mnemonic, salt: salt)
+            let masterKeyData = MasterKeyDerivation.deriveRaw(from: mnemonic)
             try MasterKeyKeychain.store(masterKeyData)
-            persistSalt(salt)
+            persistMetadataSalt(SecureRandom.bytes(16))
             onComplete()
-        } catch {
-            // Surface, and let the user retry from confirm.
+        } catch let error as KeychainError {
             failure = "Couldn't secure your account on this device."
-            step = .confirm
+            failureDetail = describe(error)
+            step = .failure
+        } catch {
+            failure = "Couldn't secure your account on this device."
+            failureDetail = "\(error)"
+            step = .failure
         }
     }
 
-    private func persistSalt(_ salt: Data) {
-        UserDefaults(suiteName: AppGroup.identifier)?
-            .set(salt.base64EncodedString(), forKey: "catchlight.argon2SaltB64")
+    private func describe(_ error: KeychainError) -> String {
+        switch error {
+        case .storeFailed(let status):       return "Keychain store failed (OSStatus \(status))."
+        case .retrieveFailed(let status):    return "Keychain retrieve failed (OSStatus \(status))."
+        case .accessControlCreationFailed:   return "Keychain access control could not be created."
+        case .notFound:                      return "Keychain item not found."
+        }
     }
 
-    // MARK: - Dev synthetic wordlist
+    /// Escape hatch — returns the user to welcome so they can restart cleanly.
+    func restartFromError() {
+        mnemonic = []
+        targetPositions = []
+        bank = []
+        slots = [nil, nil, nil]
+        usedWords = []
+        flashError = false
+        failure = nil
+        failureDetail = nil
+        step = .welcome
+    }
 
-    /// A deterministic synthetic 2048-word list ("w0"..."w2047"). Proves the BIP-39
-    /// algorithm end-to-end; NOT standard-compliant (hence the visible banner). The
-    /// official list replaces this automatically once bundled + digest-pinned.
-    static func syntheticWordlist() -> BIP39Wordlist {
-        // swiftlint:disable:next force_try
-        try! BIP39Wordlist(words: (0..<2048).map { "w\($0)" })
+    private func persistMetadataSalt(_ salt: Data) {
+        UserDefaults(suiteName: AppGroup.identifier)?
+            .set(salt.base64EncodedString(), forKey: "catchlight.argon2SaltB64")
     }
 }

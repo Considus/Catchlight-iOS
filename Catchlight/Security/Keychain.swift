@@ -16,7 +16,11 @@
 //    • .userPresence — Face ID / Touch ID / passcode required before retrieval.
 //    • .privateKeyUsage — binds to the Secure Enclave.
 //    • access group "$(AppIdentifierPrefix)com.considus.catchlight" — shared with
-//      future extensions (Share Sheet, Widgets, Shortcuts), configured now.
+//      future extensions (Share Sheet, Widgets, Shortcuts). Requires the
+//      `keychain-access-groups` entitlement on the build; without that, queries
+//      fail with OSStatus -34018. Configured in Catchlight.entitlements
+//      (Keychain Sharing capability) and signed with the team prefix at build
+//      time.
 //
 
 import Foundation
@@ -34,7 +38,17 @@ public enum KeychainError: Error {
 public struct MasterKeyKeychain {
     private static let service = "com.considus.catchlight"
     private static let account = "master-key"
-    private static let accessGroup = "$(AppIdentifierPrefix)com.considus.catchlight"
+    // Keychain access group — must EXACTLY match the entitled string in the signed
+    // binary. The entitlements file uses `$(AppIdentifierPrefix)com.considus.catchlight`,
+    // which Xcode resolves at build time to `<TEAM_ID>.com.considus.catchlight`. That
+    // substitution only happens for plist/entitlements files, NOT in Swift source —
+    // passing the literal `"$(AppIdentifierPrefix)..."` here would fail with
+    // OSStatus -34018 because the binary is entitled to the *resolved* group, not
+    // the unresolved template string.
+    //
+    // Team prefix YTPP9HU9F9 = Mark Stradling (project.yml DEVELOPMENT_TEAM).
+    // If the team changes, update both this constant AND project.yml.
+    private static let accessGroup = "YTPP9HU9F9.com.considus.catchlight"
 
     /// Build the access-control object. On Secure-Enclave-capable hardware the full
     /// flag set is used; on the Simulator (no Secure Enclave) `.privateKeyUsage` is
