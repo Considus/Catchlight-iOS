@@ -19,9 +19,15 @@ import CatchlightCore
 struct RootView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
+    @Environment(FirstRunOrientationState.self) private var orientation
 
     var body: some View {
-        Group {
+        // ZStack with a full-bleed background guarantees children receive a full-screen
+        // size proposal. A bare Group inherits the parent's bounded proposal, which left
+        // OnboardingView's StepScaffold with a partial-height frame (half-screen
+        // background, mid-screen floating button, clipped ScrollView).
+        ZStack {
+            Color.ckBackground.ignoresSafeArea()
             if app.needsOnboarding {
                 if let onboardingVM = app.onboardingVM {
                     OnboardingView()
@@ -33,15 +39,17 @@ struct RootView: View {
                     .transition(.opacity)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.4), value: app.needsOnboarding)
     }
 
     private var mainApp: some View {
+        @Bindable var ui = ui
         // The body is assembled from small computed properties (`activeTab`,
         // `addBloomDim`, `dock`) rather than a single large ZStack ViewBuilder —
         // an inline switch + conditional dim + modifier chain produced a phantom
         // "cannot convert Color to Bool" diagnostic from SwiftUI's type-checker.
-        ZStack(alignment: .bottom) {
+        return ZStack(alignment: .bottom) {
             Color.ckBackground.ignoresSafeArea()
 
             activeTab
@@ -54,13 +62,27 @@ struct RootView: View {
         }
         .overlay { editorOverlay }
         .overlay { petalFanOverlay }
+        .overlay { obieIntroOverlay }
+        .sheet(isPresented: $ui.isSettingsPresented) {
+            SettingsView()
+        }
+        .sheet(isPresented: $ui.isConflictSheetPresented) {
+            ConflictResolutionView()
+                .environment(app.dailiesVM)
+        }
         .alert("Replace your Obie?",
                isPresented: Binding(
                 get: { app.dailiesVM.pendingObieConflict != nil },
                 set: { if !$0 { app.dailiesVM.cancelObieReplacement() } }
                )) {
-            Button("Replace", role: .destructive) { app.dailiesVM.confirmObieReplacement() }
-            Button("Keep current", role: .cancel) { app.dailiesVM.cancelObieReplacement() }
+            Button("Replace", role: .destructive) {
+                app.dailiesVM.confirmObieReplacement()
+                orientation.didDismissObieIntro()
+            }
+            Button("Keep current", role: .cancel) {
+                app.dailiesVM.cancelObieReplacement()
+                orientation.didDismissObieIntro()
+            }
         } message: {
             Text("Only one Take can be your Obie. This will replace the current one.")
         }
@@ -153,6 +175,33 @@ struct RootView: View {
         }
     }
 
+    /// Hint 4 — the Obie introduction. A floating tooltip that sits lightly on top
+    /// of the live UI (no dim overlay). Tapping anywhere dismisses; the dailies VM's
+    /// own confirm/cancel alert ALSO dismisses (wired via the alert's button actions).
+    @ViewBuilder
+    private var obieIntroOverlay: some View {
+        if orientation.showObieIntro {
+            ZStack(alignment: .top) {
+                // Transparent catcher so a tap anywhere off the bubble counts as
+                // "tapping elsewhere" and dismisses the hint.
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { orientation.didDismissObieIntro() }
+
+                OrientationTooltip(
+                    text: "This is your Obie — your one most important Take. It stays at the top of everything until it's done. Long press the Iris to instantly make any Take an Obie.",
+                    arrowEdge: .top,
+                    maxWidth: 300
+                )
+                .padding(.top, 80)
+                .padding(.horizontal, 24)
+                .onTapGesture { orientation.didDismissObieIntro() }
+            }
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.2), value: orientation.showObieIntro)
+        }
+    }
+
     // MARK: - New item actions
 
     private func newTake() {
@@ -176,6 +225,8 @@ struct RootView: View {
     return RootView()
         .environment(app)
         .environment(app.ui)
+        .environment(app.orientation)
+        .environment(app.conflictQueue)
         .preferredColorScheme(.dark)
 }
 
@@ -184,5 +235,7 @@ struct RootView: View {
     return RootView()
         .environment(app)
         .environment(app.ui)
+        .environment(app.orientation)
+        .environment(app.conflictQueue)
         .preferredColorScheme(.dark)
 }

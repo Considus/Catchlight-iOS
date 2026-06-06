@@ -18,11 +18,17 @@ import CatchlightCore
 
 struct BottomDockView: View {
     @Environment(UIState.self) private var ui
+    @Environment(FirstRunOrientationState.self) private var orientation
 
     var onNewTake: () -> Void
     var onNewSequence: () -> Void
 
     private let buttonSize: CGFloat = CatchlightLayout.minTouchTarget
+
+    /// Number of completed pulses for the first-run Add hint. We pulse exactly twice
+    /// then stop — never loop. Re-set to 0 if the hint is dismissed and re-armed.
+    @State private var addPulseScale: CGFloat = 1.0
+    @State private var addPulsesDone = 0
 
     var body: some View {
         @Bindable var ui = ui
@@ -31,7 +37,7 @@ struct BottomDockView: View {
             HStack(spacing: 0) {
                 addButton
                     .frame(maxWidth: .infinity)
-                navButton(.dailies, system: "list.bullet", label: "Dailies")
+                dailiesNavButton
                     .frame(maxWidth: .infinity)
                     .opacity(ui.isAddExpanded ? 0 : 1)
                 navButton(.search, system: "magnifyingglass", label: "Search")
@@ -58,6 +64,8 @@ struct BottomDockView: View {
 
     private var addButton: some View {
         Button {
+            // Tapping Add dismisses Hint 1 (state machine ignores if not active).
+            orientation.didTapAdd()
             withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                 ui.isAddExpanded.toggle()
             }
@@ -70,12 +78,45 @@ struct BottomDockView: View {
                     .rotationEffect(.degrees(ui.isAddExpanded ? 45 : 0))   // + → ×
             }
             .frame(width: buttonSize, height: buttonSize)
+            .scaleEffect(addPulseScale)
+            .overlay(alignment: .top) {
+                if orientation.showAddPulse {
+                    OrientationTooltip(text: "What's your first Take?", arrowEdge: .bottom)
+                        .fixedSize()
+                        .offset(y: -(buttonSize / 2 + 32))
+                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
+                }
+            }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(ui.isAddExpanded ? "Cancel" : "Add")
         .accessibilityHint(ui.isAddExpanded
                            ? "Double-tap to close the add menu."
                            : "Double-tap to create a new take or sequence.")
+        .onChange(of: orientation.showAddPulse, initial: true) { _, showing in
+            if showing { startAddPulseIfAllowed() } else { addPulsesDone = 2; addPulseScale = 1.0 }
+        }
+    }
+
+    /// Two-cycle pulse on the Add button for first-run Hint 1. Respects Reduce Motion
+    /// (skips the animation but leaves the tooltip visible).
+    private func startAddPulseIfAllowed() {
+        addPulsesDone = 0
+        addPulseScale = 1.0
+        if UIAccessibility.isReduceMotionEnabled { return }
+        runPulseCycle()
+    }
+
+    private func runPulseCycle() {
+        guard orientation.showAddPulse, addPulsesDone < 2 else { return }
+        withAnimation(.easeInOut(duration: 0.45)) { addPulseScale = 1.18 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            withAnimation(.easeInOut(duration: 0.45)) { addPulseScale = 1.0 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                addPulsesDone += 1
+                runPulseCycle()
+            }
+        }
     }
 
     private var bloom: some View {
@@ -121,6 +162,62 @@ struct BottomDockView: View {
 
     // MARK: - Nav buttons
 
+    /// The Dailies nav button — same visual as the others, plus a dashed ring and
+    /// tooltip when first-run Hint 3 is active. The real long-press settings gesture
+    /// (which opens the settings sheet) lives elsewhere; while Hint 3 is visible we
+    /// short-circuit it here — a long-press dismisses the hint without activating
+    /// settings, matching the spec's "visual only" rule.
+    private var dailiesNavButton: some View {
+        let active = ui.tab == .dailies
+        return Button {
+            ui.tab = .dailies
+            if orientation.showSettingsHint { orientation.didDismissSettingsHint() }
+        } label: {
+            ZStack {
+                if orientation.showSettingsHint {
+                    Circle()
+                        .strokeBorder(
+                            Color.ckAdd.opacity(0.6),
+                            style: StrokeStyle(lineWidth: 2, dash: [5, 4])
+                        )
+                        .frame(width: buttonSize, height: buttonSize)
+                        .transition(.opacity)
+                }
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(active ? Color.ckNavActive : Color.ckNavInactive)
+                    .frame(width: buttonSize, height: buttonSize)
+                    .contentShape(Rectangle())
+            }
+            .overlay(alignment: .top) {
+                if orientation.showSettingsHint {
+                    OrientationTooltip(text: "Long press here for settings.", arrowEdge: .bottom)
+                        .fixedSize()
+                        .offset(y: -(buttonSize / 2 + 32))
+                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                if orientation.showSettingsHint {
+                    // Hint 3 still up — dismiss the hint visually without opening
+                    // Settings (spec: "Long-press gesture is DISABLED during this
+                    // hint — visual only, cannot activate settings").
+                    orientation.didDismissSettingsHint()
+                } else {
+                    // Orientation complete: long-press opens the Settings sheet (6.14).
+                    ui.isSettingsPresented = true
+                }
+            }
+        )
+        .accessibilityLabel("Dailies")
+        .accessibilityValue(active ? "selected" : "")
+        .accessibilityHint("Double-tap to open Dailies.")
+        .accessibilityAddTraits(active ? [.isSelected] : [])
+    }
+
     private func navButton(_ tab: UIState.Tab, system: String, label: String) -> some View {
         let active = ui.tab == tab
         return Button {
@@ -153,6 +250,7 @@ struct BottomDockView: View {
         Spacer()
         BottomDockView(onNewTake: {}, onNewSequence: {})
             .environment(UIState())
+            .environment(FirstRunOrientationState())
     }
     .background(Color.ckBackground)
     .preferredColorScheme(.dark)
@@ -165,6 +263,7 @@ struct BottomDockView: View {
         Spacer()
         BottomDockView(onNewTake: {}, onNewSequence: {})
             .environment(ui)
+            .environment(FirstRunOrientationState())
     }
     .background(Color.ckBackground)
     .preferredColorScheme(.dark)
@@ -175,6 +274,7 @@ struct BottomDockView: View {
         Spacer()
         BottomDockView(onNewTake: {}, onNewSequence: {})
             .environment(UIState())
+            .environment(FirstRunOrientationState())
     }
     .background(Color.ckBackground)
     .preferredColorScheme(.light)

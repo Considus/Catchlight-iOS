@@ -31,6 +31,14 @@ final class UIState {
     // Add-button bloom (New Take / New Sequence).
     var isAddExpanded = false
 
+    /// Settings sheet — long-press on the Dailies dock button toggles this once the
+    /// first-run orientation has finished (step >= 4 in `FirstRunOrientationState`).
+    var isSettingsPresented = false
+
+    /// Sync-conflict resolution sheet — opened from the timeline's "Review" banner
+    /// when `AppModel.conflictQueue.pending` is non-empty (Task 6.15).
+    var isConflictSheetPresented = false
+
     /// Animation for the surrounding-content fade when the petal fan appears or
     /// dismisses. Driven from the mutation site via `withAnimation` rather than a
     /// `.animation(_:value:)` view modifier, so the fade animates without coupling the
