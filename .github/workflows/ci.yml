@@ -33,8 +33,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+      # Intentionally not pinning the Xcode version — the macos-15 image ships
+      # multiple side-by-side Xcodes (16.x and newer). Letting the runner use
+      # its default keeps `OS=latest` and the newer simulator runtimes
+      # resolvable. If a future image bump removes a needed runtime, pin here.
 
       # SPM resolves CryptoKit (system) and no third-party deps today, so the
       # cache mostly saves index/build artefacts between runs.
@@ -61,8 +63,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+      # Intentionally not pinning the Xcode version — the macos-15 image ships
+      # multiple side-by-side Xcodes (16.x and newer). Letting the runner use
+      # its default keeps `OS=latest` and the newer simulator runtimes
+      # resolvable. If a future image bump removes a needed runtime, pin here.
 
       - name: Install XcodeGen
         # XcodeGen is not pre-installed on the macos-15 image. Brew is fastest.
