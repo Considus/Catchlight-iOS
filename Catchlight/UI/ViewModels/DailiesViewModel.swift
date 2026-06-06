@@ -24,7 +24,9 @@ final class DailiesViewModel {
     /// Surfaced to the UI when a store operation fails; views may show a quiet note.
     private(set) var lastError: String?
 
-    private let store: TakeStore
+    /// The underlying store. Exposed so conflict resolution (Task 6.15) can write
+    /// the winning version through the same backend the timeline reads from.
+    let store: TakeStore
 
     init(store: TakeStore) {
         self.store = store
@@ -48,6 +50,11 @@ final class DailiesViewModel {
 
     /// True when the store holds nothing at all — drives the first-launch empty state.
     var isEmpty: Bool { obie == nil && takes.isEmpty }
+
+    /// Clear the last storage error string (Task 3.9). Called by the error strip's
+    /// Dismiss button and by the 5-second auto-dismiss timer. A no-op if no error
+    /// is currently surfaced.
+    func clearError() { lastError = nil }
 
     // MARK: - Create / edit
 

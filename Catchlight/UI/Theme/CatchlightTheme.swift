@@ -61,7 +61,10 @@ extension Color {
 
     // Daylight-only swatches.
     static let ckPaper = Color(hex: 0xF7F4EF)
-    static let ckObieDaylight = Color(hex: 0xA07840)
+    /// Accessible amber for text on Paper — WCAG AA (4.5:1+). Matches website `--ember-text`.
+    static let ckEmberText = Color(hex: 0x856539)
+    /// Accessible warm-grey for secondary text on Paper — WCAG AA. Replaces Fog in Daylight.
+    static let ckSlate = Color(hex: 0x5C5650)
     // "Stone" is the Daylight petal fill. The brief names it without a hex, so this
     // is a deliberate, documented choice: a warm light stone that reads as a filled
     // chip against Paper. TODO: confirm exact Stone hex with design before release.
@@ -80,7 +83,10 @@ private enum Palette {
     static let shadow = UIColor(hex: 0x0A0908)
     static let paper = UIColor(hex: 0xF7F4EF)
     static let white = UIColor.white
-    static let obieDaylight = UIColor(hex: 0xA07840)
+    /// Accessible secondary text on Paper — WCAG AA. Replaces fog in Daylight (fog fails on Paper at body size).
+    static let slate = UIColor(hex: 0x5C5650)
+    /// Accessible amber text on Paper — WCAG AA. Matches website `--ember-text: #856539`.
+    static let emberText = UIColor(hex: 0x856539)
     static let stone = UIColor(hex: 0xE7E1D5)
 }
 
@@ -98,11 +104,12 @@ extension Color {
     /// Primary text — Catchlight cream (Night) / Ink (Daylight).
     static let ckTextPrimary = Color(uiColor: .adaptive(dark: Palette.catchlight, light: Palette.ink))
 
-    /// Obie-emphasis text — Glow (Night) / #A07840 (Daylight).
-    static let ckTextObie = Color(uiColor: .adaptive(dark: Palette.glow, light: Palette.obieDaylight))
+    /// Obie-emphasis text — Glow (Night) / Ember Text #856539 (Daylight, WCAG AA on Paper).
+    static let ckTextObie = Color(uiColor: .adaptive(dark: Palette.glow, light: Palette.emberText))
 
-    /// Secondary / muted text — Fog (both modes).
-    static let ckTextSecondary = Color(uiColor: .adaptive(dark: Palette.fog, light: Palette.fog))
+    /// Secondary / muted text — Fog (Night) / Slate #5C5650 (Daylight, WCAG AA on Paper).
+    /// Fog (#B8B0A3) fails WCAG AA for body text on Paper; Slate is the accessible replacement.
+    static let ckTextSecondary = Color(uiColor: .adaptive(dark: Palette.fog, light: Palette.slate))
 
     /// The timeline spine — Catchlight @ 18% (Night) / Ink @ 13% (Daylight).
     static let ckSpine = Color(uiColor: .adaptive(
@@ -126,6 +133,15 @@ extension Color {
     static let ckDim = Color(uiColor: .adaptive(
         dark: Palette.ink.withAlphaComponent(0.80),
         light: Palette.paper.withAlphaComponent(0.88)
+    ))
+
+    /// Error / warning accent — used by the non-blocking error strips on the
+    /// timeline (Task 3.9). Same hue in both modes so the strip reads as an
+    /// alert regardless of theme; brightness chosen to remain WCAG AA against
+    /// `ckTextPrimary`. Strips themselves use this colour at ~12–15% opacity.
+    static let ckRuby = Color(uiColor: .adaptive(
+        dark: UIColor(red: 0.86, green: 0.32, blue: 0.32, alpha: 1.0),
+        light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
     ))
 }
 
@@ -157,23 +173,44 @@ enum Quadrant {
 // MARK: - Typography
 
 enum CatchlightFont {
-    // TODO: BEFORE RELEASE — bundle these fonts as app resources and register them in
-    // Info.plist (UIAppFonts). Until then `isAvailable` is false and the helpers fall
-    // back to system serif / system sans, which keeps the UI legible in development.
-    static let displayName = "CormorantGaramond-LightItalic"
-    static let uiLightName = "DMSans-Light"
-    static let uiRegularName = "DMSans-Regular"
-    static let uiMediumName = "DMSans-Medium"
+    // Cormorant Garamond and DM Sans are bundled as variable TTFs under
+    // `Catchlight/Resources/Fonts/` and registered in `Info.plist` (UIAppFonts).
+    // Variable TTFs expose only their *default* instance's PostScript name to
+    // UIFont; the per-weight names (e.g. "DMSans-Light") don't resolve. We probe
+    // a candidate list per weight and use the first that registers — defence in
+    // depth against minor PostScript-name drift across font releases.
 
-    private static func isAvailable(_ name: String) -> Bool {
-        UIFont(name: name, size: 12) != nil
+    // Actual PostScript names (probed from bundled variable TTFs via name table ID 6):
+    //   CormorantGaramond-Italic[wght].ttf  → CormorantGaramond-LightItalic
+    //   CormorantGaramond[wght].ttf         → CormorantGaramond-Light
+    //   DMSans[opsz,wght].ttf               → DMSans-9ptRegular (default instance;
+    //                                          variable font also registers named
+    //                                          instances such as DMSans-Regular)
+    private static let displayCandidates = [
+        "CormorantGaramond-LightItalic",   // confirmed PS name — matches first
+        "CormorantGaramond-Italic",
+        "CormorantGaramond-Light",
+        "CormorantGaramond"
+    ]
+    private static let uiLightCandidates = [
+        "DMSans-Light", "DMSans18pt-Light", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"
+    ]
+    private static let uiRegularCandidates = [
+        "DMSans-Regular", "DMSans18pt-Regular", "DMSans-9ptRegular", "DMSans"
+    ]
+    private static let uiMediumCandidates = [
+        "DMSans-Medium", "DMSans18pt-Medium", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"
+    ]
+
+    private static func firstAvailable(_ names: [String]) -> String? {
+        names.first { UIFont(name: $0, size: 12) != nil }
     }
 
-    /// Display / Take text — Cormorant Garamond Light Italic, scaling with Dynamic
+    /// Display / Take text — Cormorant Garamond Italic, scaling with Dynamic
     /// Type. Falls back to the system serif (italic) when the font is not bundled.
     static func display(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
-        if isAvailable(displayName) {
-            return .custom(displayName, size: size, relativeTo: style)
+        if let name = firstAvailable(displayCandidates) {
+            return .custom(name, size: size, relativeTo: style)
         }
         return .system(style, design: .serif).italic()
     }
@@ -183,14 +220,14 @@ enum CatchlightFont {
     static func ui(_ weight: Font.Weight = .regular,
                    size: CGFloat,
                    relativeTo style: Font.TextStyle = .body) -> Font {
-        let name: String
+        let candidates: [String]
         switch weight {
-        case .light: name = uiLightName
-        case .medium, .semibold, .bold: name = uiMediumName
-        default: name = uiRegularName
+        case .light: candidates = uiLightCandidates
+        case .medium, .semibold, .bold: candidates = uiMediumCandidates
+        default: candidates = uiRegularCandidates
         }
-        if isAvailable(name) {
-            return .custom(name, size: size, relativeTo: style)
+        if let name = firstAvailable(candidates) {
+            return .custom(name, size: size, relativeTo: style).weight(weight)
         }
         return .system(style, design: .default).weight(weight)
     }
