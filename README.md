@@ -25,8 +25,8 @@ CatchlightApp/
 ├── Tests/CatchlightCoreTests/    # canonical XCTest suite (Phase 5 brief §12)
 └── Catchlight/                   # iOS APP TARGET — platform-specific layers
     ├── App/                      # entry point, composition root, scene lifecycle
-    ├── Security/                 # Keychain, libargon2 bridge, PIN, jailbreak, session
-    ├── Database/                 # SQLCipher-backed TakeStore (PRAGMA, FTS5)
+    ├── Security/                 # Keychain, PIN (PBKDF2), jailbreak, session
+    ├── Database/                 # SQLite3 + NSFileProtection TakeStore (FTS5)
     ├── Sync/                     # Files-API cloud folder, BGTaskScheduler
     ├── Notifications/            # UNUserNotificationCenter reminders
     └── Resources/                # Info.plist, entitlements, wordlist resource
@@ -36,8 +36,8 @@ CatchlightApp/
 
 `CatchlightCore` contains everything that must run identically on every future
 platform (Roadmap §4): the data model, the platform-agnostic JSON file format, and
-the full crypto chain except Argon2id. Every platform-specific dependency —
-Keychain, Secure Enclave, SQLCipher, libargon2, `UNUserNotificationCenter`,
+the full crypto chain (CryptoKit HKDF + AES-256-GCM). Every platform-specific
+dependency — Keychain, NSFileProtection, SQLite3, `UNUserNotificationCenter`,
 `BGTaskScheduler`, the Files API — is injected through a protocol and implemented in
 the `Catchlight/` app target. This is what makes "platform-agnostic from day one" a
 structural fact rather than a promise: the iOS app depends on the core, never the
@@ -67,29 +67,14 @@ open Catchlight.xcodeproj  # set DEVELOPMENT_TEAM, then build/run on a device
 
 ## Before release — required external steps
 
-These cannot be completed in an offline environment and are flagged in the code:
-
-1. **Argon2id KAT** — `LibArgon2.verifyAgainstKnownAnswerVector()` must be populated
-   with the official RFC 9106 / reference vector and pass, confirming the linked
-   `libargon2` produces standard-compliant bytes (Encryption Architecture §16).
-2. **BIP-39 wordlist** — replace `Resources/bip39-english.txt` with the official
-   2048-word list and set `EnglishWordlist.expectedSHA256` to the verified digest.
-   `OnboardingViewModel` uses a synthetic dev wordlist with a visible `#DEBUG` banner
-   until the real list is bundled — it switches automatically on detection.
-3. **Replace `Vendor/CArgon2` shim** — the upstream `phc-winner-argon2` repo has no
-   `Package.swift`, so a thin local shim was vendored for dev builds (real upstream
-   reference sources, `ARGON2_NO_THREADS`, byte-identical output). Before release,
-   either upstream adds SPM support or the shim must be security-audited and pinned
-   to a reviewed commit.
-4. **Replace `Vendor/CSQLite3` shim + enable SQLCipher** — dev builds use the iOS SDK's
-   plain `sqlite3` via a system-library modulemap shim. SQLCipher is flagged in
-   `project.yml` but is not an SPM package and no unaudited fork is acceptable. Before
-   release: source a reviewed SQLCipher 4.x build, wire it in, and confirm all
-   `PRAGMA` cipher settings apply. The `SQLCipherStore` cipher PRAGMAs are inert in
-   dev builds — this is marked `DEV-ONLY` in the code and must not ship.
-5. **Dependency pinning + audit** — pin SQLCipher and libargon2 to reviewed commits
-   in `project.yml` (brief §3.2).
-6. **Set `DEVELOPMENT_TEAM`** in `project.yml` for App Group / Keychain entitlements.
+1. **Confirm database file protection on a real device** — the database file is
+   tagged with `NSFileProtectionCompleteUntilFirstUserAuthentication`. `FileProtectionTests`
+   verifies the attribute is set, but iOS enforces the protection class only on real
+   hardware (it is observable but inert on the simulator). Before release, run the
+   app on a passcode-protected device, lock it once after first unlock, and confirm
+   that the database file remains accessible to `BGAppRefreshTask` while remaining
+   inaccessible across reboots until the user enters their passcode.
+2. **Set `DEVELOPMENT_TEAM`** in `project.yml` for App Group / Keychain entitlements.
 
 ## Non-negotiables enforced here
 

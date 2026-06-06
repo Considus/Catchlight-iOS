@@ -8,16 +8,11 @@
 //  silently produce non-standard mnemonics that fail to round-trip on other BIP-39
 //  implementations (Web/Android), breaking cross-platform recovery.
 //
-//  SETUP (one-time, on a networked machine):
-//    1. Download the canonical list:
-//       https://github.com/bitcoin/bips/blob/master/bip-0039/english.txt
-//    2. Add it to the app target as `bip39-english.txt` (one word per line, 2048
-//       lines, lowercase, NFKD).
-//    3. Confirm its digest and paste it into `expectedSHA256` below. The official
-//       file's SHA-256 is widely published; verify against a trusted source.
-//
-//  At runtime, `load()` recomputes the digest and refuses to proceed if it does not
-//  match — so a corrupted or substituted resource fails loudly rather than silently.
+//  The bundled `bip39-english.txt` is the canonical 2048-word list from the BIP-39
+//  reference, sourced from `trezor/python-mnemonic` (the upstream maintained by the
+//  Bitcoin community). Its SHA-256 is pinned in `expectedSHA256` below; `load()`
+//  recomputes the digest at runtime and refuses to proceed if it does not match —
+//  a corrupted or substituted resource fails loudly rather than silently.
 //
 
 import Foundation
@@ -32,10 +27,9 @@ public enum EnglishWordlist {
         case malformed(String)
     }
 
-    /// Official BIP-39 english.txt SHA-256. MUST be filled in during setup (above).
-    /// Left empty so an unverified build fails the check rather than trusting an
-    /// unconfirmed value baked in from memory.
-    public static let expectedSHA256 = ""   // TODO(setup): paste the verified digest
+    /// Official BIP-39 english.txt SHA-256.
+    /// Source: https://raw.githubusercontent.com/trezor/python-mnemonic/master/src/mnemonic/wordlist/english.txt
+    public static let expectedSHA256 = "2f5eed53a4727b4bf8880d8f3f199efc90e58503646d9ff8eff3a2ed3b24dbda"
 
     public static func load(bundle: Bundle = .main) throws -> BIP39Wordlist {
         guard let url = bundle.url(forResource: "bip39-english", withExtension: "txt") else {
@@ -43,9 +37,6 @@ public enum EnglishWordlist {
         }
         let data = try Data(contentsOf: url)
         let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        guard !expectedSHA256.isEmpty else {
-            throw LoadError.malformed("expectedSHA256 not configured — see setup notes")
-        }
         guard digest == expectedSHA256 else {
             throw LoadError.digestMismatch(expected: expectedSHA256, got: digest)
         }
@@ -53,6 +44,9 @@ public enum EnglishWordlist {
             .split(separator: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
+        guard words.count == 2048 else {
+            throw LoadError.malformed("expected exactly 2048 words, got \(words.count)")
+        }
         return try BIP39Wordlist(words: words)
     }
 }

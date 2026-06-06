@@ -2,17 +2,9 @@
 //  OnboardingView.swift
 //  Catchlight (iOS app target) — Phase 6 UI
 //
-//  First-launch onboarding. Tone: calm and clear — privacy as infrastructure, not a
-//  threat warning. Four steps (intro → reveal → confirm → finishing):
-//    • intro:    why a recovery phrase exists, framed plainly.
-//    • reveal:   the 12 numbered words in a readable Cormorant layout, with the one
-//                non-negotiable instruction: write these down; they can't be recovered.
-//    • confirm:  tap each word in order — a deliberate friction step, not skippable.
-//    • finishing: derive + store the master key, then transition to Dailies.
-//
-//  A visible "#DEBUG — non-standard recovery phrase" banner appears when the
-//  synthetic dev wordlist is in use (official list not yet bundled). See
-//  OnboardingViewModel for the sourcing decision.
+//  Six-screen onboarding (UX Session Decisions v2.5 §15):
+//    1. welcome → 2. storageChoice → (3. localWarning) → 4. reveal → 5. confirm → 6. complete
+//  All copy in this file is the locked spec text — do not paraphrase.
 //
 
 import SwiftUI
@@ -20,191 +12,54 @@ import CatchlightCore
 
 struct OnboardingView: View {
     @Environment(OnboardingViewModel.self) private var vm
-    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        Group {
+            switch vm.step {
+            case .welcome:        WelcomeStep()
+            case .storageChoice:  StorageChoiceStep()
+            case .localWarning:   LocalWarningStep()
+            case .reveal:         RevealStep()
+            case .confirm:        ConfirmStep()
+            case .complete:       CompleteStep()
+            case .failure:        FailureStep()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Shared chrome
+
+/// Wraps a step's content with a full-bleed background, edge-padded body, and an
+/// optional bottom-pinned button row (above the home indicator). Every step uses
+/// this so the layout pattern is consistent and no screen ever clips its button.
+private struct StepScaffold<Content: View, Bottom: View>: View {
+    @ViewBuilder var content: () -> Content
+    @ViewBuilder var bottom: () -> Bottom
 
     var body: some View {
         ZStack {
-            Color.ckBackground.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                if vm.usingNonStandardWordlist {
-                    debugBanner
-                }
-
-                switch vm.step {
-                case .intro:     intro
-                case .reveal:    reveal
-                case .confirm:   confirm
-                case .finishing: finishing
-                }
-            }
-            .padding(.horizontal, 24)
+            content()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.ckBackground.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom) {
+            bottom()
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
+                .frame(maxWidth: .infinity)
+                .background(Color.ckBackground.ignoresSafeArea(edges: .bottom))
         }
     }
+}
 
-    // MARK: - Debug banner
-
-    private var debugBanner: some View {
-        Text("#DEBUG — non-standard recovery phrase (official wordlist not bundled)")
-            .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption2))
-            .foregroundStyle(Color.ckInk)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
-            .background(Color.ckEmber)
-            .accessibilityLabel("Debug: non-standard recovery phrase in use. The official wordlist is not bundled.")
-    }
-
-    // MARK: - Intro
-
-    private var intro: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            Text("catchlight")
-                .font(CatchlightFont.display(size: 44, relativeTo: .largeTitle))
-                .foregroundStyle(Color.ckTextPrimary)
-            Text("Your takes are encrypted on this device and only this device. No account, no server, no one else — not even us.")
-                .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
-                .foregroundStyle(Color.ckTextSecondary)
-                .multilineTextAlignment(.center)
-            Text("So that you never lose access, you'll get a 12-word recovery phrase. It's the one and only key. Keep it somewhere safe.")
-                .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
-                .foregroundStyle(Color.ckTextSecondary)
-                .multilineTextAlignment(.center)
-            Spacer()
-            primaryButton("Show my recovery phrase") { vm.begin() }
-        }
-        .padding(.vertical, 32)
-    }
-
-    // MARK: - Reveal
-
-    private var reveal: some View {
-        VStack(spacing: 20) {
-            Text("Your recovery phrase")
-                .font(CatchlightFont.display(size: 30, relativeTo: .title))
-                .foregroundStyle(Color.ckTextPrimary)
-                .padding(.top, 24)
-
-            Text("Write these twelve words down, in order, and store them somewhere safe. They cannot be recovered if lost.")
-                .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
-                .foregroundStyle(Color.ckTextObie)
-                .multilineTextAlignment(.center)
-
-            wordGrid(words: vm.mnemonic, numbered: true)
-
-            Spacer()
-            primaryButton("I've written it down") { vm.proceedToConfirm() }
-        }
-        .padding(.vertical, 16)
-    }
-
-    private func wordGrid(words: [String], numbered: Bool) -> some View {
-        let columns = [GridItem(.flexible()), GridItem(.flexible())]
-        return LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(Array(words.enumerated()), id: \.offset) { idx, word in
-                HStack(spacing: 8) {
-                    if numbered {
-                        Text("\(idx + 1)")
-                            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                            .foregroundStyle(Color.ckTextSecondary)
-                            .frame(width: 22, alignment: .trailing)
-                    }
-                    Text(word)
-                        .font(CatchlightFont.display(size: 20, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextPrimary)
-                    Spacer()
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.ckSurface)
-                )
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Word \(idx + 1): \(word)")
-            }
-        }
-    }
-
-    // MARK: - Confirm
-
-    private var confirm: some View {
-        VStack(spacing: 20) {
-            Text("Confirm your phrase")
-                .font(CatchlightFont.display(size: 30, relativeTo: .title))
-                .foregroundStyle(Color.ckTextPrimary)
-                .padding(.top, 24)
-
-            Text("Tap the words in order, from first to last.")
-                .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
-                .foregroundStyle(Color.ckTextSecondary)
-                .multilineTextAlignment(.center)
-
-            // Progress.
-            Text("\(vm.confirmedCount) of \(vm.mnemonic.count)")
-                .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .subheadline))
-                .foregroundStyle(vm.confirmError ? Color.ckEmber : Color.ckTextObie)
-                .accessibilityLabel(vm.confirmError
-                                    ? "Wrong word. \(vm.confirmedCount) of \(vm.mnemonic.count) confirmed."
-                                    : "\(vm.confirmedCount) of \(vm.mnemonic.count) confirmed.")
-
-            if vm.confirmError {
-                Text("That's not the next word — try again.")
-                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                    .foregroundStyle(Color.ckEmber)
-            }
-
-            // Word bank.
-            let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(Array(vm.shuffledBank.enumerated()), id: \.offset) { _, word in
-                    Button { vm.tapConfirmWord(word) } label: {
-                        Text(word)
-                            .font(CatchlightFont.display(size: 18, relativeTo: .body))
-                            .foregroundStyle(Color.ckTextPrimary)
-                            .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(Color.ckSurface)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(word)
-                    .accessibilityHint("Double-tap if this is the next word in your phrase.")
-                }
-            }
-
-            if let failure = vm.failure {
-                Text(failure)
-                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                    .foregroundStyle(Color.ckEmber)
-                    .multilineTextAlignment(.center)
-            }
-
-            Spacer()
-        }
-        .padding(.vertical, 16)
-    }
-
-    // MARK: - Finishing
-
-    private var finishing: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            ProgressView()
-                .tint(Color.ckTextObie)
-            Text("Securing your account on this device…")
-                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                .foregroundStyle(Color.ckTextSecondary)
-            Spacer()
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Securing your account on this device.")
-    }
-
-    // MARK: - Shared
-
-    private func primaryButton(_ title: String, action: @escaping () -> Void) -> some View {
+private struct PrimaryButton: View {
+    let title: String
+    let action: () -> Void
+    var body: some View {
         Button(action: action) {
             Text(title)
                 .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
@@ -218,33 +73,452 @@ struct OnboardingView: View {
     }
 }
 
-#Preview("Onboarding — intro (Night)") {
-    let vm = OnboardingViewModel(argon2: PreviewArgon2(), onComplete: {})
+private struct SecondaryButton: View {
+    let title: String
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
+                .foregroundStyle(Color.ckTextPrimary)
+                .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
+                .background(
+                    Capsule().stroke(Color.ckTextPrimary.opacity(0.4), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+    }
+}
+
+// MARK: - Screen 1: Welcome
+
+private struct WelcomeStep: View {
+    @Environment(OnboardingViewModel.self) private var vm
+
+    var body: some View {
+        StepScaffold {
+            VStack(spacing: 24) {
+                Spacer()
+                Image("catchlight-icon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 72, height: 72)
+                    .accessibilityHidden(true)
+                Image("catchlight-wordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 32)
+                    .accessibilityLabel("Catchlight")
+                Text("You don't need to choose privacy, it's your right and you never need to ask for it.")
+                    .font(CatchlightFont.display(size: 26, relativeTo: .title2))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 8)
+                VStack(spacing: 16) {
+                    (Text("First, we'll create your privacy phrase — 12 words that are the ")
+                     + Text("only").bold()
+                     + Text(" key to your data."))
+                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("We never see them, store them, or ask for them.")
+                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+            .padding(.top, 32)
+        } bottom: {
+            PrimaryButton(title: "Create my privacy phrase") { vm.beginStorageChoice() }
+        }
+    }
+}
+
+// MARK: - Screen 2: Storage choice
+
+private struct StorageChoiceStep: View {
+    @Environment(OnboardingViewModel.self) private var vm
+
+    var body: some View {
+        StepScaffold {
+            VStack(spacing: 24) {
+                Spacer().frame(height: 8)
+                Text("Takes belong to you and so does the choice of how they are stored.")
+                    .font(CatchlightFont.display(size: 26, relativeTo: .title2))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 24)
+
+                Spacer(minLength: 0)
+
+                StorageOptionCard(
+                    title: "Local — on this device only",
+                    description: "Your Takes stay on this device. If you lose it without a backup, they're gone."
+                ) { vm.chooseStorage(.local) }
+
+                StorageOptionCard(
+                    title: "Cloud — backed up and restorable",
+                    description: "Connect a cloud folder you control. Your Takes sync encrypted — we never see them."
+                ) { vm.chooseStorage(.cloud) }
+
+                Spacer(minLength: 0)
+            }
+        } bottom: {
+            EmptyView()
+        }
+    }
+}
+
+private struct StorageOptionCard: View {
+    let title: String
+    let description: String
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(description)
+                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.ckSurface)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(description)")
+    }
+}
+
+// MARK: - Screen 3: Local warning
+
+private struct LocalWarningStep: View {
+    @Environment(OnboardingViewModel.self) private var vm
+
+    var body: some View {
+        StepScaffold {
+            VStack(spacing: 24) {
+                Spacer()
+                Text("One thing before we continue.")
+                    .font(CatchlightFont.display(size: 28, relativeTo: .title))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Without cloud backup, your Takes exist only on this device. If you lose access to it and haven't set up a second device, your data cannot be recovered.")
+                    .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+            }
+        } bottom: {
+            VStack(spacing: 12) {
+                PrimaryButton(title: "Continue locally") { vm.continueLocally() }
+                SecondaryButton(title: "Go back") { vm.backToStorageChoice() }
+            }
+        }
+    }
+}
+
+// MARK: - Screen 4: Reveal
+
+private struct RevealStep: View {
+    @Environment(OnboardingViewModel.self) private var vm
+
+    private var bodyText: String {
+        switch vm.storagePath {
+        case .local:
+            return "Write these 12 words down and keep them somewhere safe. They encrypt your Takes and enable a second device."
+        case .cloud:
+            return "Write these 12 words down and keep them somewhere safe. Together with your cloud folder, they're how you restore your Takes on any device."
+        }
+    }
+
+    var body: some View {
+        StepScaffold {
+            ScrollView {
+                VStack(spacing: 20) {
+                    Text("Your privacy phrase")
+                        .font(CatchlightFont.display(size: 30, relativeTo: .title))
+                        .foregroundStyle(Color.ckTextPrimary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 48) // clear the dynamic island
+
+                    Text(bodyText)
+                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                        .foregroundStyle(Color.ckTextObie)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    wordGrid(words: vm.mnemonic)
+                        .padding(.top, 4)
+                }
+                .padding(.bottom, 100) // clear the pinned button
+            }
+        } bottom: {
+            PrimaryButton(title: "I've written them down") { vm.proceedToConfirm() }
+        }
+    }
+
+    private func wordGrid(words: [String]) -> some View {
+        let columns = [GridItem(.flexible()), GridItem(.flexible())]
+        return LazyVGrid(columns: columns, spacing: 12) {
+            ForEach(Array(words.enumerated()), id: \.offset) { idx, word in
+                HStack(spacing: 8) {
+                    Text("\(idx + 1)")
+                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .frame(width: 22, alignment: .trailing)
+                    Text(word)
+                        .font(CatchlightFont.display(size: 20, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Spacer()
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.ckSurface)
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Word \(idx + 1): \(word)")
+            }
+        }
+    }
+}
+
+// MARK: - Screen 5: Confirm
+
+private struct ConfirmStep: View {
+    @Environment(OnboardingViewModel.self) private var vm
+
+    var body: some View {
+        StepScaffold {
+            ScrollView {
+                VStack(spacing: 20) {
+                    Text("Confirm three words")
+                        .font(CatchlightFont.display(size: 30, relativeTo: .title))
+                        .foregroundStyle(Color.ckTextPrimary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 48) // clear the dynamic island
+
+                    Text(promptCopy)
+                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    slotsRow
+
+                    if let failure = vm.failure {
+                        Text(failure)
+                            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                            .foregroundStyle(Color.ckEmber)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    bankGrid
+                }
+                .padding(.bottom, 24)
+            }
+        } bottom: {
+            // A 1-pt clear strip rather than EmptyView. On iOS 26, a ScrollView
+            // inside StepScaffold whose `.safeAreaInset(.bottom)` closure returns
+            // EmptyView lays its content above the top safe-area edge (off-screen).
+            // Giving the inset a real (zero-visual) view restores normal layout.
+            Color.clear.frame(height: 1)
+        }
+    }
+
+    private var promptCopy: String {
+        let positions = vm.targetPositionsForDisplay
+        guard positions.count == 3 else {
+            return "Tap the words from your phrase, in order."
+        }
+        return "Tap words \(positions[0]), \(positions[1]) and \(positions[2]) from your phrase, in order."
+    }
+
+    private var slotsRow: some View {
+        HStack(spacing: 12) {
+            ForEach(0..<vm.slots.count, id: \.self) { i in
+                let value = vm.slots[i]
+                let positionLabel = vm.targetPositionsForDisplay.indices.contains(i)
+                    ? "\(vm.targetPositionsForDisplay[i])"
+                    : ""
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(vm.flashError ? Color.ckEmber : Color.ckSpine, lineWidth: 1.5)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(vm.flashError ? Color.ckEmber.opacity(0.18) : Color.ckSurface.opacity(0.6))
+                        )
+                    VStack(spacing: 2) {
+                        Text(positionLabel)
+                            .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
+                            .foregroundStyle(Color.ckTextSecondary)
+                        Text(value ?? "—")
+                            .font(CatchlightFont.display(size: 18, relativeTo: .body))
+                            .foregroundStyle(value == nil ? Color.ckTextSecondary : Color.ckTextPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 6)
+                }
+                .frame(minHeight: 56)
+                .frame(maxWidth: .infinity)
+                .animation(.easeInOut(duration: 0.18), value: vm.flashError)
+            }
+        }
+    }
+
+    private var bankGrid: some View {
+        let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+        return LazyVGrid(columns: columns, spacing: 12) {
+            ForEach(Array(vm.bank.enumerated()), id: \.offset) { _, word in
+                let used = vm.usedWords.contains(word)
+                Button { vm.tapBankWord(word) } label: {
+                    Text(word)
+                        .font(CatchlightFont.display(size: 18, relativeTo: .body))
+                        .foregroundStyle(used ? Color.ckTextSecondary.opacity(0.4) : Color.ckTextPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.ckSurface.opacity(used ? 0.35 : 1.0))
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(used || vm.isLocked)
+                .accessibilityLabel(word)
+                .accessibilityHint(used ? "Already placed." : "Double-tap to place in the next slot.")
+            }
+        }
+    }
+}
+
+// MARK: - Screen 6: Complete
+
+private struct CompleteStep: View {
+    @Environment(OnboardingViewModel.self) private var vm
+
+    private var bodyText: String {
+        switch vm.storagePath {
+        case .local:
+            return "Your Takes are yours. Encrypted on this device, readable only by you."
+        case .cloud:
+            return "Your Takes are yours. Encrypted on this device and backed up to your cloud folder — readable only by you."
+        }
+    }
+
+    var body: some View {
+        StepScaffold {
+            VStack(spacing: 24) {
+                Spacer()
+                Image("catchlight-icon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 72, height: 72)
+                    .accessibilityHidden(true)
+                Text("You're ready.")
+                    .font(CatchlightFont.display(size: 32, relativeTo: .largeTitle))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(bodyText)
+                    .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+            }
+        } bottom: {
+            PrimaryButton(title: "Start using Catchlight") { vm.finishOnboarding() }
+        }
+    }
+}
+
+// MARK: - Failure (escape hatch)
+
+private struct FailureStep: View {
+    @Environment(OnboardingViewModel.self) private var vm
+
+    var body: some View {
+        StepScaffold {
+            VStack(spacing: 20) {
+                Spacer()
+                Text(vm.failure ?? "Something went wrong.")
+                    .font(CatchlightFont.display(size: 26, relativeTo: .title2))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let detail = vm.failureDetail {
+                    Text(detail)
+                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 8)
+                }
+                Text("You can start over and try again. Your phrase hasn't been saved anywhere.")
+                    .font(CatchlightFont.ui(.light, size: 15, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+            }
+        } bottom: {
+            PrimaryButton(title: "Start over") { vm.restartFromError() }
+        }
+    }
+}
+
+// MARK: - Previews
+
+#Preview("Onboarding — welcome (Night)") {
+    let vm = OnboardingViewModel(onComplete: {})
     return OnboardingView()
         .environment(vm)
         .preferredColorScheme(.dark)
 }
 
 #Preview("Onboarding — reveal (Night)") {
-    let vm = OnboardingViewModel(argon2: PreviewArgon2(), onComplete: {})
-    vm.begin()
+    let vm = OnboardingViewModel(onComplete: {})
+    vm.beginStorageChoice()
+    vm.chooseStorage(.cloud)
     return OnboardingView()
         .environment(vm)
         .preferredColorScheme(.dark)
 }
 
 #Preview("Onboarding — confirm (Daylight)") {
-    let vm = OnboardingViewModel(argon2: PreviewArgon2(), onComplete: {})
-    vm.begin()
+    let vm = OnboardingViewModel(onComplete: {})
+    vm.beginStorageChoice()
+    vm.chooseStorage(.cloud)
     vm.proceedToConfirm()
     return OnboardingView()
         .environment(vm)
         .preferredColorScheme(.light)
-}
-
-/// A deterministic Argon2 double for previews only — never used in the app.
-private struct PreviewArgon2: Argon2idDeriving {
-    func deriveKey(passwordBytes: [UInt8], saltBytes: [UInt8], parameters: Argon2Parameters) throws -> Data {
-        Data(repeating: 0x42, count: parameters.outputLength)
-    }
 }
