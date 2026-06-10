@@ -216,7 +216,13 @@ final class CoreFlowsUITests: XCTestCase {
 
         let field = app.textFields["search-field"]
         field.tap()
-        field.typeText("framer")
+        // Type via the APP, not the element (2026-06-10): the field is
+        // auto-focused, and `field.typeText` first performs an AX
+        // scroll-to-visible that intermittently fails on CI simulators
+        // (kAXErrorCannotComplete — runs 27280916290 / 27282283829).
+        // `app.typeText` sends keys to the already-focused responder and
+        // skips that step.
+        app.typeText("framer")
 
         XCTAssertTrue(
             takeRow(in: app, withLabelStarting: "Call the framer back").waitForExistence(timeout: 2),
