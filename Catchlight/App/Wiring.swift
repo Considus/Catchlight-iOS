@@ -99,6 +99,16 @@ enum Wiring {
 
     // MARK: - Phase 6 UI composition
 
+    /// In-memory key hierarchy cached after the user's interactive unlock
+    /// (2026-06-10, foreground-sync support). The master key itself carries
+    /// `.userPresence`, so every fresh Keychain retrieve costs a Face ID
+    /// prompt — and is impossible in a background task. Foreground sync
+    /// triggers reuse the keys already unlocked for the session instead of
+    /// prompting again. Process-lifetime only; never persisted. Main-thread
+    /// confined (set in makeStore / read in makeSyncEngine, both main-actor
+    /// call paths).
+    nonisolated(unsafe) private static var sessionKeys: KeyHierarchy?
+
     /// Open the production SQLite store, deriving its key from the Keychain master
     /// key. Returns nil before onboarding (no master key yet) or if the store can't
     /// be opened. The UI falls back to an in-memory store in that window so the app
@@ -109,7 +119,9 @@ enum Wiring {
             return nil
         }
         let keys = KeyHierarchy(masterKey: masterKey)
-        return try? EncryptedTakeStore(keys: keys)
+        guard let store = try? EncryptedTakeStore(keys: keys) else { return nil }
+        sessionKeys = keys
+        return store
     }
 
     /// Build the application-scope model that drives the whole UI. Decides onboarding
@@ -201,13 +213,30 @@ enum Wiring {
     /// domain salt, so the per-account salt had no function. Previously this
     /// guard could silently disable sync if the legacy defaults key was absent.)
     static func makeSyncEngine() -> SyncEngine? {
+        #if DEBUG
+        // UI-test runs must never touch a real cloud folder or keychain —
+        // the foreground triggers fire on every launch/background transition,
+        // so without this guard a dev simulator with live data would sync
+        // during XCUITest runs.
+        if ProcessInfo.processInfo.arguments.contains("--uitesting") { return nil }
+        #endif
         guard MasterKeyKeychain.exists() else { return nil }
         guard let cloud = makeCloudFolder() else {
             return nil   // local-only mode
         }
-        guard let masterKey = try? MasterKeyKeychain.retrieve(reason: "Sync your Takes") else { return nil }
-
-        let keys = KeyHierarchy(masterKey: masterKey)
+        // Prefer the session's already-unlocked keys (no prompt; works in
+        // foreground triggers and in any background window the session is
+        // still alive). Fall back to a fresh Keychain retrieve, which on
+        // hardware demands user presence — a true cold background task fails
+        // that gracefully and the coordinator treats it as "locked: skip".
+        let keys: KeyHierarchy
+        if let cached = sessionKeys {
+            keys = cached
+        } else if let masterKey = try? MasterKeyKeychain.retrieve(reason: "Sync your Takes") {
+            keys = KeyHierarchy(masterKey: masterKey)
+        } else {
+            return nil
+        }
         let store = try? EncryptedTakeStore(keys: keys)
         guard let store else { return nil }
         return SyncEngine(store: store, cloud: cloud, keys: keys, deviceId: deviceId())
