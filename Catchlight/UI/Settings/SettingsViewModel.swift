@@ -11,6 +11,7 @@
 import SwiftUI
 import Observation
 import UserNotifications
+import Security
 
 @Observable
 @MainActor
@@ -45,10 +46,42 @@ final class SettingsViewModel {
     var notificationStatus: UNAuthorizationStatus = .notDetermined
     var notificationStatusLoading: Bool = false
 
+    // MARK: - Sub-sheet presentation (Task 3.12)
+
+    var isPINSheetPresented: Bool = false
+    var isPhraseSheetPresented: Bool = false
+    var isCloudStorageSheetPresented: Bool = false
+    var isAboutSheetPresented: Bool = false
+
+    /// Whether a PIN currently exists in the Keychain. Driven by a salt-slot
+    /// probe so the lookup never triggers a biometric prompt.
+    var hasPIN: Bool = false
+
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        self.hasPIN = Self.probePINPresence()
+    }
+
+    /// Re-read PIN presence after the PIN sheet closes.
+    func refreshPINState() {
+        hasPIN = Self.probePINPresence()
+    }
+
+    private static func probePINPresence() -> Bool {
+        let service = "com.considus.catchlight"
+        let account = "pin-salt"
+        let accessGroup = "YTPP9HU9F9.com.considus.catchlight"
+        let query: [String: Any] = [
+            kSecClass as String:           kSecClassGenericPassword,
+            kSecAttrService as String:     service,
+            kSecAttrAccount as String:     account,
+            kSecAttrAccessGroup as String: accessGroup,
+            kSecMatchLimit as String:      kSecMatchLimitOne,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+        ]
+        return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
     }
 
     // MARK: - Notifications

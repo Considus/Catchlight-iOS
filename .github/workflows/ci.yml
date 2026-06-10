@@ -97,6 +97,13 @@ jobs:
         # pins to iPhone 16 / OS=latest — newer than the iOS 17 deployment
         # target, stable across runner image bumps. FileProtectionTests
         # self-skips on simulator via XCTSkip (#if targetEnvironment(simulator)).
+        #
+        # The Catchlight scheme's test action runs BOTH `CatchlightTests`
+        # (unit tests — Tests/CatchlightCoreTests) and `CatchlightUITests`
+        # (XCUITest for the six core flows + the two-tap regression anchor,
+        # workplan 7.4 / 7.5). The scheme is declared explicitly in
+        # project.yml because XcodeGen's auto-scheme does NOT include the
+        # `bundle.ui-testing` target.
         run: |
           xcodebuild test \
             -project Catchlight.xcodeproj \

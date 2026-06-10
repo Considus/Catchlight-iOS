@@ -29,6 +29,7 @@ struct SequenceView: View {
                         .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                         .foregroundStyle(Color.ckTextSecondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .accessibilityIdentifier("sequence-empty")
                         .accessibilityLabel("Nothing here yet.")
                 } else {
                     ScrollView {

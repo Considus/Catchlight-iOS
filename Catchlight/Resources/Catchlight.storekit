@@ -1,0 +1,52 @@
+{
+  "identifier" : "B9F1C2D3-CA7C-4A1D-9A0E-CATCHLIGHT01",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_applicationInternalID" : "",
+    "_developerTeamID" : "YTPP9HU9F9",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 760000000,
+    "_locale" : "en_GB",
+    "_storefront" : "GBR",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21560001",
+      "localizations" : [],
+      "name" : "Catchlight",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "14.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "21560002",
+          "introductoryOffer" : {
+            "internalID" : "21560003",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P14D"
+          },
+          "localizations" : [
+            {
+              "description" : "Unlimited Takes, Notes, Reminders, and encrypted cloud sync.",
+              "displayName" : "Catchlight Annual",
+              "locale" : "en_GB"
+            }
+          ],
+          "productID" : "com.considus.catchlight.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Catchlight Annual",
+          "subscriptionGroupID" : "21560001",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

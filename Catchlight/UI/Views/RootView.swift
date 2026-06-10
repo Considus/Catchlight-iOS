@@ -70,6 +70,21 @@ struct RootView: View {
             ConflictResolutionView()
                 .environment(app.dailiesVM)
         }
+        .sheet(isPresented: $ui.isPaywallPresented) {
+            PaywallView()
+                .environment(app)
+        }
+        .onChange(of: app.needsOnboarding) { _, isOnboarding in
+            // Post-onboarding paywall trigger (Task 6.20). When the flag flips
+            // false we've just exited onboarding; surface the paywall if the
+            // user isn't entitled. Wrapped in a brief delay so the onboarding
+            // dismiss animation finishes first.
+            guard !isOnboarding else { return }
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                app.presentPaywallIfNeededAfterOnboarding()
+            }
+        }
         .alert("Replace your Obie?",
                isPresented: Binding(
                 get: { app.dailiesVM.pendingObieConflict != nil },
@@ -158,6 +173,11 @@ struct RootView: View {
                         ? CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
                         : ui.petalFanOrigin,
                     onCommit: { isNote, isTask, hasReminder, isObie in
+                        // Task 6.20: petal-fan commit is a mutation — gate it.
+                        guard app.ensureEntitled() else {
+                            ui.closePetalFan()
+                            return
+                        }
                         app.dailiesVM.applyActivityTypes(
                             to: take,
                             isNote: isNote, isTask: isTask,
@@ -205,6 +225,8 @@ struct RootView: View {
     // MARK: - New item actions
 
     private func newTake() {
+        // Task 6.20: lapsed users hit the paywall instead of creating a Take.
+        guard app.ensureEntitled() else { return }
         let take = app.dailiesVM.createTake()
         ui.tab = .dailies
         ui.openEditor(for: take)
@@ -213,6 +235,7 @@ struct RootView: View {
     private func newSequence() {
         // Sequence creation UI is minimal in v1.0; jump to the Sequence tab. A full
         // sequence-builder is a later iteration (not in this phase's screen list).
+        guard app.ensureEntitled() else { return }
         ui.tab = .sequence
         app.sequenceVM.recompute()
     }

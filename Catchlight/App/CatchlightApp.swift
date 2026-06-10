@@ -12,6 +12,8 @@
 //
 
 import SwiftUI
+import CoreSpotlight
+import CatchlightCore
 
 @main
 struct CatchlightApp: App {
@@ -52,6 +54,34 @@ struct CatchlightApp: App {
         backgroundSync.registerLaunchHandler()
     }
 
+    /// Capture the app handle so the scenePhase observer can drive subscription
+    /// refreshes off the same instance without re-reading `_app` (which would
+    /// strip @MainActor isolation inside the closure).
+    private var subscriptionRef: SubscriptionManager { app.subscription }
+
+    /// Task 6.19 — extract the Take UUID from a Spotlight activity payload and
+    /// route the UI to it. Handles both the CSSearchableItem default activity
+    /// (UUID under `CSSearchableItemActivityIdentifier`) and the named
+    /// `viewTake` activity (UUID under `takeID`). Fails silently if the Take
+    /// no longer exists in the store — Spotlight may surface a deleted item
+    /// before its async deindex propagates.
+    @MainActor
+    private func handleSpotlight(_ activity: NSUserActivity) {
+        let raw = (activity.userInfo?[CSSearchableItemActivityIdentifier] as? String)
+            ?? (activity.userInfo?[SpotlightConstants.userInfoTakeIDKey] as? String)
+        guard let raw, let uuid = UUID(uuidString: raw) else { return }
+
+        // Switch to the timeline and signal the target row. DailiesView reads
+        // `ui.spotlightTargetTakeID` to scroll-and-flash. We deliberately do
+        // not open the editor here — editing is gated for lapsed users, and a
+        // Spotlight tap shouldn't surface the paywall.
+        app.ui.tab = .dailies
+        // Verify the Take still exists; fail silently if not.
+        let allTakes = (try? app.dailiesVM.store.allTakes()) ?? []
+        guard allTakes.contains(where: { $0.id == uuid }) else { return }
+        app.ui.spotlightTargetTakeID = uuid
+    }
+
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -77,11 +107,42 @@ struct CatchlightApp: App {
             .preferredColorScheme(
                 (SettingsViewModel.AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme
             )
+            .task {
+                // Task 6.21: kick off the subscription state machine on first
+                // launch. `startObservingUpdates` is idempotent; entitlements
+                // are then re-checked on every scenePhase → .active.
+                subscriptionRef.startObservingUpdates()
+                await subscriptionRef.loadProduct()
+                await subscriptionRef.refreshEntitlements()
+            }
+            // Task 6.19 — Spotlight deep link. iOS routes a Spotlight tap on
+            // a Catchlight result through this activity type; we pull the
+            // Take UUID out of userInfo and let DailiesView focus the row.
+            // `CSSearchableItemActionType` covers taps on `CSSearchableItem`s
+            // directly; the named activity type catches the equivalent
+            // NSUserActivity path if we ever swap mechanisms.
+            .onContinueUserActivity(CSSearchableItemActionType) { activity in
+                handleSpotlight(activity)
+            }
+            .onContinueUserActivity(SpotlightConstants.userActivityType) { activity in
+                handleSpotlight(activity)
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             session.handleScenePhase(newPhase)
             if newPhase == .background {
                 backgroundSync.scheduleNext()
+            }
+            if newPhase == .active {
+                Task { @MainActor in
+                    await subscriptionRef.refreshEntitlements()
+                }
+                // Task 6.13 — surface a stale/unresolvable cloud-folder
+                // bookmark through the existing sync-error strip. Cheap to
+                // run on every activation; no-op when sync is not configured.
+                if let bookmarkError = Wiring.checkCloudBookmarkHealth() {
+                    app.reportBookmarkError(bookmarkError)
+                }
             }
         }
     }

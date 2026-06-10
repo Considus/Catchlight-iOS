@@ -11,9 +11,10 @@
 //  See Encryption Specialist review 2026-06-05.
 //
 //  Cross-platform contract: every client must produce identical 32 bytes from
-//  the same mnemonic. The mnemonic is canonicalised to lowercase, NFKD-normalised,
-//  single-space-joined UTF-8 — exactly the form used by the previous Argon2id
-//  derivation, preserving the on-the-wire input shape across the family of
+//  the same mnemonic. The mnemonic is canonicalised to lowercase, NFD-normalised
+//  (decomposedStringWithCanonicalMapping), single-space-joined UTF-8 — exactly
+//  the form used by the previous Argon2id derivation, preserving the on-the-wire
+//  input shape across the family of
 //  Catchlight clients.
 //
 

@@ -23,6 +23,7 @@ struct TakeRowView: View {
     var onTapText: () -> Void = {}
 
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.dynamicTypeSize) private var dynamicSize
 
     private var firstLine: String {
         let line = take.bodyText
@@ -31,6 +32,18 @@ struct TakeRowView: View {
             .map(String.init) ?? ""
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         return trimmed.isEmpty ? "Untitled take" : trimmed
+    }
+
+    /// Composed VoiceOver label: text + status + reminder date.
+    /// Example: "Buy milk. Task. Complete." or "The north star. Obie, your pinned Take. Note. Reminder: Tomorrow at 3 PM."
+    private var rowAccessibilityLabel: String {
+        var parts: [String] = [firstLine]
+        if take.isObie { parts.append("Obie, your pinned Take") }
+        if take.isTask { parts.append(take.isComplete ? "Task, complete" : "Task") }
+        if take.timeReminder != nil { parts.append("Reminder set") }
+        if take.isNote && !take.isTask && take.timeReminder == nil { parts.append("Note") }
+        if let when = reminderLabel { parts.append(when) }
+        return parts.joined(separator: ". ")
     }
 
     private var reminderLabel: String? {
@@ -55,15 +68,25 @@ struct TakeRowView: View {
             .onTapGesture { onTapCircle() }
             .onLongPressGesture(minimumDuration: 0.45) { onLongPressCircle() }
             .accessibilityElement()
-            .accessibilityLabel("Take circle. \(TakeCircleView.activityDescription(for: take))")
-            .accessibilityHint("Double-tap to choose activity types. Long-press to make this your Obie.")
+            .accessibilityIdentifier("take-iris")
+            .accessibilityLabel(take.isObie
+                ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
+                : "Iris. \(TakeCircleView.activityDescription(for: take))")
+            .accessibilityHint("Double-tap to open actions. Long press to make this your Obie.")
+            // VoiceOver intercepts long-press, so expose the Obie designation as a
+            // named action too. The tap-to-open path stays on .onTapGesture above.
+            .accessibilityAction(named: "Make Obie") { onLongPressCircle() }
+            .accessibilityAddTraits(.isButton)
 
             // Text column.
             VStack(alignment: .leading, spacing: 4) {
                 Text(firstLine)
                     .font(CatchlightFont.display(size: 20, relativeTo: .body))
                     .foregroundStyle(take.isObie ? Color.ckTextObie : Color.ckTextPrimary)
-                    .lineLimit(2)
+                    // Compact 2-line preview at default sizes; let the row grow
+                    // up to 4 lines at accessibility text sizes so a Take's first
+                    // sentence is never cut off mid-word.
+                    .lineLimit(dynamicSize.isAccessibilitySize ? 4 : 2)
                     .multilineTextAlignment(.leading)
                     .strikethrough(take.isTask && take.isComplete, color: .ckTextSecondary)
 
@@ -78,7 +101,8 @@ struct TakeRowView: View {
             .contentShape(Rectangle())
             .onTapGesture { onTapText() }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel(firstLine)
+            .accessibilityIdentifier("take-row")
+            .accessibilityLabel(rowAccessibilityLabel)
             .accessibilityHint("Double-tap to edit this take.")
         }
         .padding(.vertical, 6)

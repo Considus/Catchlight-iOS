@@ -23,6 +23,8 @@ struct SettingsView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
     @AppStorage(SettingsViewModel.appearanceDefaultsKey) private var appearanceModeRaw: String = SettingsViewModel.AppearanceMode.system.rawValue
 
     @State private var vm = SettingsViewModel()
@@ -33,11 +35,13 @@ struct SettingsView: View {
                 appearanceSection
                 securitySection
                 syncSection
+                subscriptionSection
                 systemSection
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(Color.ckBackground)
+            .accessibilityIdentifier("settings-sheet")
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -49,12 +53,33 @@ struct SettingsView: View {
             }
         }
         .presentationDragIndicator(.visible)
-        .task { await vm.refreshNotificationStatus() }
+        .task {
+            await vm.refreshNotificationStatus()
+            vm.refreshPINState()
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 // Returning from iOS Settings: re-poll in case the user toggled.
                 Task { await vm.refreshNotificationStatus() }
+                vm.refreshPINState()
             }
+        }
+        // Sub-screen sheets (Task 3.12). Each presents on its own bool so they
+        // never compete with one another and each can be drag-dismissed.
+        .sheet(isPresented: $vm.isPINSheetPresented) {
+            PINSetupView(
+                initialMode: vm.hasPIN ? .manage : .create,
+                onDidChangePINState: { vm.refreshPINState() }
+            )
+        }
+        .sheet(isPresented: $vm.isPhraseSheetPresented) {
+            PrivacyPhraseView()
+        }
+        .sheet(isPresented: $vm.isCloudStorageSheetPresented) {
+            CloudStorageView()
+        }
+        .sheet(isPresented: $vm.isAboutSheetPresented) {
+            AboutView()
         }
     }
 
@@ -110,16 +135,18 @@ struct SettingsView: View {
             SettingsRow(icon: "lock",
                         label: "PIN / biometrics",
                         chevron: true,
-                        disabled: true)
-                .accessibilityHint("Coming soon.")
+                        action: { vm.isPINSheetPresented = true }) {
+                SettingsDetailLabel(text: vm.hasPIN ? "On" : "Off")
+            }
+            .accessibilityHint(vm.hasPIN ? "Change or remove your PIN." : "Set a PIN to lock the app.")
 
             SettingsRow(icon: "key.horizontal",
                         label: "Privacy phrase",
                         chevron: true,
-                        disabled: true)
-                .accessibilityHint("Coming soon.")
+                        action: { vm.isPhraseSheetPresented = true })
+                .accessibilityHint("Double-tap to view your phrase. PIN confirmation required.")
 
-            // 6.12 — Blocked. Surface as a stub so the sheet layout is complete.
+            // 6.12 — Blocked on Phase 2. Stub stays visible so the layout is complete.
             SettingsRow(icon: "iphone.and.arrow.forward",
                         label: "Second device",
                         chevron: true,
@@ -136,16 +163,71 @@ struct SettingsView: View {
 
     private var syncSection: some View {
         Section {
-            // 6.13 — Blocked on Phase 2 cloud-folder selection. Stub for now.
             SettingsRow(icon: "icloud",
                         label: "Cloud Storage",
                         chevron: true,
-                        disabled: true) {
-                SettingsDetailLabel(text: "Coming soon")
+                        action: { vm.isCloudStorageSheetPresented = true }) {
+                SettingsDetailLabel(text: cloudStorageDetail)
             }
-            .accessibilityHint("Coming soon.")
+            .accessibilityIdentifier("settings-cloud-storage")
+            .accessibilityHint("Choose where encrypted Takes are stored.")
+            .accessibilityValue(cloudStorageDetail)
         } header: {
             sectionHeader("Sync")
+        }
+    }
+
+    /// Task 6.13 — Detail label for the Cloud Storage row. Shows the picked
+    /// folder's last path component when configured, or "Not configured" when
+    /// running in local-only mode. Refreshed via `scenePhase` so a folder
+    /// picked or removed in the sub-sheet reflects when the sheet dismisses.
+    private var cloudStorageDetail: String {
+        if let url = try? Wiring.resolveCloudFolderURL()?.url, !url.path.isEmpty {
+            // Last path component reads better than a deep iCloud path; the
+            // sub-sheet shows the full path for users who need to verify it.
+            // (User-provided folder name — not localised by definition.)
+            return url.lastPathComponent
+        }
+        return String(localized: "Not configured",
+                      comment: "Cloud Storage row detail label when no folder is picked.")
+    }
+
+    // MARK: - Subscription (Task 6.20)
+
+    private var subscriptionSection: some View {
+        Section {
+            SettingsRow(icon: "sparkle",
+                        label: "Manage Subscription",
+                        chevron: true,
+                        action: {
+                            dismiss()
+                            // Defer so the Settings sheet finishes dismissing
+                            // before the paywall sheet presents.
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                ui.isPaywallPresented = true
+                            }
+                        }) {
+                SettingsDetailLabel(text: subscriptionRowDetail)
+            }
+            .accessibilityHint("View your subscription or restore purchases.")
+        } header: {
+            sectionHeader("Subscription")
+        }
+    }
+
+    private var subscriptionRowDetail: String {
+        switch app.subscriptionStatus {
+        case .subscribed:
+            return String(localized: "Active",
+                          comment: "Subscription status — currently subscribed.")
+        case .trial:
+            return String(localized: "Free trial",
+                          comment: "Subscription status — currently in the intro trial.")
+        case .lapsed:
+            return String(localized: "Inactive",
+                          comment: "Subscription status — lapsed, in read-only mode.")
+        case .unknown:
+            return ""
         }
     }
 
@@ -154,13 +236,37 @@ struct SettingsView: View {
     private var systemSection: some View {
         Section {
             notificationsRow
-            SettingsRow(icon: "info.circle", label: "About") {
+            // Task 6.22 — always available, regardless of subscription status.
+            // Decisions doc §5: "your data is yours, always" must hold even in
+            // lapsed read-only mode. Do NOT wrap this in `ensureEntitled`.
+            SettingsRow(icon: "square.and.arrow.up",
+                        label: "Export Takes",
+                        chevron: false,
+                        action: { exportTakes() }) {
+                SettingsDetailLabel(text: "Markdown")
+            }
+            .accessibilityIdentifier("settings-export-takes")
+            .accessibilityHint("Export all your Takes as a Markdown file.")
+            SettingsRow(icon: "info.circle",
+                        label: "About",
+                        chevron: true,
+                        action: { vm.isAboutSheetPresented = true }) {
                 SettingsDetailLabel(text: aboutString)
             }
             .accessibilityLabel("About. \(aboutString)")
         } header: {
             sectionHeader("System")
         }
+    }
+
+    @MainActor
+    private func exportTakes() {
+        // Reads through the live DailiesViewModel's store so the export reflects
+        // whatever the user can see in the timeline (one store, one source of
+        // truth). `allTakes()` already returns `createdAt` ascending; the
+        // exporter re-sorts defensively.
+        let takes = (try? app.dailiesVM.store.allTakes()) ?? []
+        ExportCoordinator.presentShareSheet(takes: takes)
     }
 
     private var aboutString: String {

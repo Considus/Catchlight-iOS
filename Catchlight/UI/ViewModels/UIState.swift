@@ -39,6 +39,18 @@ final class UIState {
     /// when `AppModel.conflictQueue.pending` is non-empty (Task 6.15).
     var isConflictSheetPresented = false
 
+    /// Paywall sheet (Task 6.20). Surfaced post-onboarding when the user has no
+    /// entitlement, on any create/edit attempt while lapsed, and from the
+    /// Settings → Manage Subscription row. Not a hard gate — users can dismiss
+    /// and continue using the app in read-only mode.
+    var isPaywallPresented = false
+
+    /// Task 6.19 — Spotlight deep-link target. Set by the app's
+    /// `onContinueUserActivity` handler when a Take is tapped in Spotlight;
+    /// DailiesView reads this to scroll-and-flash the matching row. The
+    /// handler clears it after the highlight fires so a re-tap re-targets.
+    var spotlightTargetTakeID: UUID?
+
     /// Animation for the surrounding-content fade when the petal fan appears or
     /// dismisses. Driven from the mutation site via `withAnimation` rather than a
     /// `.animation(_:value:)` view modifier, so the fade animates without coupling the
