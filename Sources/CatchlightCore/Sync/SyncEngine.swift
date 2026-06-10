@@ -123,10 +123,23 @@ public final class SyncEngine {
         // readable, which other devices then interpreted as deletions.)
         var entries: [UUID: ManifestEntry] = [:]
         var mergedTombstones: [UUID: ManifestTombstone] = [:]
-        if let data = try cloud.read(Manifest.fileName),
-           let prev = try? Manifest.parse(data),
-           Manifest.supportedVersions.contains(prev.version),
-           (try? signer.verify(prev)) == true {
+        if let data = try cloud.read(Manifest.fileName) {
+            // FAIL CLOSED on an existing-but-bad manifest (2026-06-10): pushing
+            // over an unverifiable or future-version manifest would silently
+            // rebuild with empty carry-forward — dropping other devices'
+            // not-yet-pulled entries and EVERY tombstone (resurrection), or
+            // destructively downgrading a newer client's format. A genuinely
+            // malformed manifest (unparseable JSON) gets the same treatment as
+            // a bad signature: stop and surface, never overwrite.
+            guard let prev = try? Manifest.parse(data) else {
+                throw SyncError.manifestSignatureInvalid
+            }
+            guard Manifest.supportedVersions.contains(prev.version) else {
+                throw SyncError.unsupportedManifestVersion(prev.version)
+            }
+            guard try signer.verify(prev) else {
+                throw SyncError.manifestSignatureInvalid
+            }
             for e in prev.takes { entries[e.uuid] = e }
             for t in prev.tombstones { mergedTombstones[t.uuid] = t }
         }
@@ -192,9 +205,18 @@ public final class SyncEngine {
         let signed = try signer.sign(manifest)
         try cloud.writeAtomically(try signed.serialise(), to: Manifest.fileName)
 
-        // 6. Local tombstones are now durably recorded in (or superseded by an
-        //    edit in) the uploaded manifest.
-        try store.purgeTombstones(ids: localTombstones.map(\.id))
+        // 6. Local tombstones are NOT purged here (2026-06-10). Two devices can
+        //    pass the advisory lock during cloud propagation delay and the later
+        //    manifest write clobbers the earlier one — if we purged now, a
+        //    clobbered tombstone would never re-propagate (the deletion would
+        //    silently resurrect). Tombstones are purged only when OBSERVED in a
+        //    PULLED manifest (see pullInbound); until then each push idempotently
+        //    re-merges them. Tombstones superseded by a local edit (edit-wins
+        //    above) ARE purged — the live Take is authoritative.
+        let supersededByEdit = localTombstones.map(\.id).filter { id in
+            !tombstonedIds.contains(id) && localById[id] != nil
+        }
+        try store.purgeTombstones(ids: supersededByEdit)
 
         // 7. Watermark — the pre-query timestamp, NOT "now".
         store.setLastSyncDate(watermark)
@@ -250,11 +272,29 @@ public final class SyncEngine {
             let deletedAt = ISO8601.date(from: t.deletedAt) ?? .distantPast
             if let local = try store.take(id: t.uuid), local.modifiedAt <= deletedAt {
                 try store.delete(id: t.uuid)
-                // The deletion is already carried by the manifest — no need for
-                // this device to re-propagate it.
+                // (The delete just recorded a fresh local tombstone; the purge
+                // below removes it — the manifest already carries the record.)
                 try store.purgeTombstones(ids: [t.uuid])
                 report.deletedLocally.append(t.uuid)
             }
+        }
+
+        // 2b. Purge local pending tombstones now OBSERVED in a pulled manifest
+        //     (2026-06-10). Push deliberately does NOT purge after writing —
+        //     a concurrent device's manifest write can clobber ours during
+        //     cloud propagation, and a purged-but-clobbered tombstone would
+        //     never re-propagate (silent resurrection). Observation in a pulled
+        //     manifest is the durable confirmation. Only purge when the
+        //     manifest's record is at least as new as ours.
+        let pendingLocal = try store.tombstones()
+        if !pendingLocal.isEmpty {
+            let remoteTombstones = Dictionary(uniqueKeysWithValues: manifest.tombstones.map { ($0.uuid, $0) })
+            let confirmed = pendingLocal.filter { local in
+                guard let remote = remoteTombstones[local.id],
+                      let remoteDeletedAt = ISO8601.date(from: remote.deletedAt) else { return false }
+                return remoteDeletedAt >= local.deletedAt
+            }
+            try store.purgeTombstones(ids: confirmed.map(\.id))
         }
 
         // 3–6. Per-entry verify, decrypt, conflict-detect, merge.
@@ -363,8 +403,14 @@ public final class SyncEngine {
 
     private func ensureAccountMetadata(_ cloud: CloudFolder) {
         let name = "catchlight-account-metadata.json"
-        // `try?` flattens `Data?` → binding succeeds only if the file already exists.
-        if (try? cloud.read(name)) != nil { return }
+        // Only write when the file is confirmed ABSENT (read returned nil). A
+        // read ERROR must not be treated as absence — rewriting on a transient
+        // I/O failure would clobber the original accountCreatedAt.
+        do {
+            if try cloud.read(name) != nil { return }
+        } catch {
+            return
+        }
         let meta = AccountMetadata(
             schemaVersion: schemaVersion,
             accountCreatedAt: ISO8601.string(from: now()),

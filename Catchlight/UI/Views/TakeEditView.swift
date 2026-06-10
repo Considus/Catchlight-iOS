@@ -118,13 +118,22 @@ struct TakeEditView: View {
             return
         }
         let t = currentTake
-        // Blank-Take discard (2026-06-10): a dismissed editor with no text and
-        // no shaping leaves nothing behind. Previously a blank Take was persisted
-        // the moment the editor opened, so cancelling accumulated permanent
-        // "Untitled take" rows with no way to remove them.
+        // Blank-Take discard (2026-06-10): a NEW Take dismissed with no text
+        // and no shaping leaves nothing behind (previously the blank row was
+        // persisted the moment the editor opened, accumulating permanent
+        // "Untitled take" rows). Scope deliberately narrow:
+        //   • every content field must be empty (incl. checklist/attachments a
+        //     future client may have synced — clearing visible text must not
+        //     destroy invisible content), AND
+        //   • the Take must not already exist in the store with content —
+        //     deliberately erasing an old note keeps an "Untitled take" row the
+        //     user can delete explicitly, rather than silently destroying it.
         let isBlank = t.bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !t.isTask && t.timeReminder == nil && !t.isObie
-        if isBlank {
+            && t.checklistItems.isEmpty && t.attachments.isEmpty && t.locationReminder == nil
+        let storedCopy = try? vm.store.take(id: t.id)
+        let storedHadContent = (storedCopy?.bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+        if isBlank && !storedHadContent {
             vm.discardIfPresent(t)
         } else {
             vm.save(t)

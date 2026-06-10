@@ -91,7 +91,9 @@ struct RootView: View {
             // user launching while lapsed never saw the auto-present (only the
             // banner). Idempotent — no-ops when entitled or still onboarding;
             // launch-time `.unknown` is permissive so real users aren't flashed
-            // a paywall before entitlements resolve.
+            // a paywall before entitlements resolve. Same 400 ms grace as the
+            // onChange path so the sheet never races an appearance transition.
+            try? await Task.sleep(nanoseconds: 400_000_000)
             app.presentPaywallIfNeededAfterOnboarding()
         }
         .alert("Replace your Obie?",

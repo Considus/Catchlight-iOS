@@ -78,6 +78,15 @@ public final class InMemoryTakeStore: TakeStore {
     public init() {}
 
     public func upsert(_ take: Take) throws {
+        // Single-Obie invariant under last-write-wins: an incoming Obie demotes
+        // any existing one (mirrors EncryptedTakeStore so the two
+        // implementations stay contract-identical for sync-applied rows).
+        if take.isObie {
+            for (id, var other) in takes where other.isObie && id != take.id {
+                other.isObie = false
+                takes[id] = other
+            }
+        }
         takes[take.id] = take
         // Re-creating an item supersedes any pending tombstone for it.
         tombstoneMap[take.id] = nil

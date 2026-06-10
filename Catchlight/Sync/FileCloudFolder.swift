@@ -72,8 +72,10 @@ public final class FileCloudFolder: CloudFolder {
     /// (On iOS, document-picker bookmarks are implicitly security-scoped;
     /// `.withSecurityScope` is a macOS-only option.)
     public static func makeBookmark(for pickedURL: URL) throws -> Data {
-        _ = pickedURL.startAccessingSecurityScopedResource()
-        defer { pickedURL.stopAccessingSecurityScopedResource() }
+        // Balance start/stop: an unbalanced stop (when start returned false)
+        // is a documented programming error.
+        let started = pickedURL.startAccessingSecurityScopedResource()
+        defer { if started { pickedURL.stopAccessingSecurityScopedResource() } }
         return try pickedURL.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
     }
 
@@ -156,15 +158,25 @@ public final class FileCloudFolder: CloudFolder {
     }
 
     public func delete(_ name: String) throws {
+        // No `fileExists` pre-check (2026-06-10): an EVICTED iCloud file exists
+        // only as a `.name.icloud` placeholder, for which the pre-check returned
+        // false and silently skipped the delete — orphaning user-deleted blobs
+        // in the cloud forever. The coordinated `.forDeleting` write handles
+        // placeholders; not-found is a legitimate no-op.
         let fileURL = folderURL.appendingPathComponent(name)
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         var coordError: NSError?
         var rmError: Error?
         coordinator.coordinate(writingItemAt: fileURL, options: [.forDeleting], error: &coordError) { url in
             do { try FileManager.default.removeItem(at: url) } catch { rmError = error }
         }
-        if let coordError { throw coordError }
-        if let rmError { throw rmError }
+        if let coordError {
+            if Self.isFileNotFound(coordError) { return }
+            throw coordError
+        }
+        if let rmError {
+            if Self.isFileNotFound(rmError as NSError) { return }
+            throw rmError
+        }
     }
 
     public func secureDelete(_ name: String) throws {

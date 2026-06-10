@@ -145,13 +145,12 @@ public struct MasterKeyKeychain {
                 let detail = (error?.takeRetainedValue()).map(String.init(describing:)) ?? "unknown"
                 throw KeychainError.secureEnclaveFailed("unwrap failed: \(detail)")
             }
-            defer {
-                // Best-effort zeroization of the intermediate plaintext copy.
-                var p = plain
-                p.withUnsafeMutableBytes { raw in
-                    if let base = raw.baseAddress { memset_s(base, raw.count, 0, raw.count) }
-                }
-            }
+            // NOTE: no zeroization attempted on `plain` — `SecKeyCreateDecryptedData`
+            // returns bridged CFData whose backing buffer we cannot reliably
+            // overwrite from Swift (a `var` copy + memset_s only zeroes a CoW
+            // duplicate, which is security theater). The bytes are immediately
+            // wrapped in a SymmetricKey (zeroed on dealloc by CryptoKit); the
+            // transient CFData copy is an accepted platform limitation.
             return SymmetricKey(data: plain)
         }
     }
@@ -202,7 +201,15 @@ public struct MasterKeyKeychain {
         return access
     }
 
+    /// Serialises SE key creation: two concurrent `store()` calls could both
+    /// miss the fetch and both create a key under the same application tag
+    /// (Security does not enforce tag uniqueness) — a blob wrapped under key A
+    /// with later fetches returning key B would be permanently unwrappable.
+    private static let seKeyCreationLock = NSLock()
+
     private static func fetchOrCreateSEKey() throws -> SecKey {
+        seKeyCreationLock.lock()
+        defer { seKeyCreationLock.unlock() }
         if let existing = try? fetchSEKey(context: nil) { return existing }
 
         // .privateKeyUsage is REQUIRED (and only valid) here: this is a Secure

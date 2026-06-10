@@ -112,6 +112,14 @@ public final class ReminderScheduler {
         center.removePendingNotificationRequests(withIdentifiers: [reminder.notificationIdentifier])
     }
 
+    /// Cancel by raw identifier — used when the Take no longer carries its
+    /// `timeReminder` (reminder removed via the petal fan, Take deleted) so
+    /// `cancelReminder(for:)` has nothing to read the identifier from. The app
+    /// uses the Take's UUID string as the notification identifier.
+    public func cancelReminder(identifier: String) {
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+    }
+
     /// Reschedule on edit: cancel the prior request and add the current one.
     public func reschedule(for take: Take) {
         cancelReminder(for: take)
