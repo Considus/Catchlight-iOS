@@ -8,7 +8,8 @@
 //    • jailbreak warning surface (brief §5.11)
 //
 //  Phase 6 adds the product UI: the AppModel (built by Wiring) is injected into the
-//  environment and `RootView` renders onboarding or the Dailies/Search/Sequence app.
+//  environment and `RootView` renders onboarding or the one-surface timeline app
+//  (dock redesign 2026-06-10 — the dock morphs; there are no separate screens).
 //
 
 import SwiftUI
@@ -50,12 +51,12 @@ struct CatchlightApp: App {
                 app.reportQuarantined(ids)
             },
             // Foreground sync (2026-06-10) — when a pass applied remote
-            // changes, refresh the view-model snapshots so the timeline /
-            // search / sequences show them without a tab switch.
+            // changes, refresh the timeline snapshot so they show immediately.
+            // (Dock redesign: the timeline is the ONE surface; its live filter
+            // re-derives from the same snapshot, so this reload covers all
+            // dock states.)
             onRemoteChanges: { _ in
                 app.dailiesVM.reload()
-                app.searchVM.recompute()
-                app.sequenceVM.recompute()
             }
         )
         // Must register before the app finishes launching.
@@ -79,11 +80,13 @@ struct CatchlightApp: App {
             ?? (activity.userInfo?[SpotlightConstants.userInfoTakeIDKey] as? String)
         guard let raw, let uuid = UUID(uuidString: raw) else { return }
 
-        // Switch to the timeline and signal the target row. DailiesView reads
-        // `ui.spotlightTargetTakeID` to scroll-and-flash. We deliberately do
-        // not open the editor here — editing is gated for lapsed users, and a
-        // Spotlight tap shouldn't surface the paywall.
-        app.ui.tab = .dailies
+        // Return the dock to RESTING (clearing any live filter) BEFORE setting
+        // the target, so the row is guaranteed visible on the unfiltered
+        // timeline. DailiesView reads `ui.spotlightTargetTakeID` to
+        // scroll-and-flash. We deliberately do not open the editor here —
+        // editing is gated for lapsed users, and a Spotlight tap shouldn't
+        // surface the paywall.
+        app.ui.exitToResting()
         // Verify the Take still exists; fail silently if not.
         let allTakes = (try? app.dailiesVM.store.allTakes()) ?? []
         guard allTakes.contains(where: { $0.id == uuid }) else { return }
@@ -111,7 +114,14 @@ struct CatchlightApp: App {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .ignoresSafeArea()
+            // `.container` ONLY (2026-06-10 dock redesign): the bare
+            // `.ignoresSafeArea()` also ignored the KEYBOARD region, which
+            // pinned the bottom dock underneath the software keyboard — fatal
+            // once the dock hosts the search field and its ×/confirm buttons
+            // (the keyboard's emoji key sat exactly over ×). Container edges
+            // keep the full-bleed layout; the keyboard inset now lifts the
+            // dock above the keyboard while searching.
+            .ignoresSafeArea(.container)
             .preferredColorScheme(
                 (SettingsViewModel.AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme
             )

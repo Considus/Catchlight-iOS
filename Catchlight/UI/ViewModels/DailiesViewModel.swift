@@ -34,12 +34,6 @@ final class DailiesViewModel {
     /// delete through `delete(_:)`, so wiring at the VM level covers all paths.
     private let spotlight: SpotlightIndexing
 
-    /// Invoked after every successful mutation (save / delete / Obie change) so
-    /// sibling view models (Search, Sequence) can recompute their snapshots.
-    /// Previously each call site had to remember to recompute manually — search
-    /// results silently went stale after edits made from a result row.
-    var onMutation: (() -> Void)?
-
     /// Local-notification scheduling (2026-06-10). Previously NOTHING invoked
     /// ReminderScheduler's schedule/cancel paths — a Take shaped into a
     /// Reminder showed its date label and no notification ever fired. Every
@@ -144,7 +138,6 @@ final class DailiesViewModel {
             spotlight.index(updated)
             reconcileNotification(for: updated)
             reload()
-            onMutation?()
         } catch {
             lastError = "Couldn't save that Take."
         }
@@ -158,7 +151,6 @@ final class DailiesViewModel {
             spotlight.deindex(takeID: take.id)
             reminders.cancelReminder(identifier: take.id.uuidString)
             reload()
-            onMutation?()
         } catch {
             lastError = "Couldn't delete that Take."
         }
@@ -174,7 +166,6 @@ final class DailiesViewModel {
         spotlight.deindex(takeID: take.id)
         reminders.cancelReminder(identifier: take.id.uuidString)
         reload()
-        onMutation?()
     }
 
     /// Toggle a Task's completion state. No-op for non-Tasks (completion is
@@ -227,7 +218,6 @@ final class DailiesViewModel {
         do {
             try store.setObie(id: take.id, replaceExisting: replaceExisting)
             reload()
-            onMutation?()
         } catch StorageError.obieConflict(let existing) {
             pendingObieConflict = (newTake: take.id, existing: existing)
         } catch {
@@ -245,7 +235,6 @@ final class DailiesViewModel {
         do {
             try store.setObie(id: pending.newTake, replaceExisting: true)
             reload()
-            onMutation?()
         } catch {
             lastError = "Couldn't set Obie."
         }

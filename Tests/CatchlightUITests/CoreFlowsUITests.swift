@@ -22,21 +22,21 @@ final class CoreFlowsUITests: XCTestCase {
 
     // MARK: - Flow 1 — Create a Take
 
-    /// Tap Add (1) → Tap "New Take" bloom option (2) → editor opens. Type body
-    /// text, dismiss → the new Take appears in the Dailies list.
-    func testFlow1_createTake_isReachableInTwoTaps_andAppearsInList() {
+    /// Tap Add (1) → editor opens DIRECTLY (dock redesign 2026-06-10 — the old
+    /// "New Take"/"New Sequence" bloom is gone). Type body text, dismiss →
+    /// the new Take appears in the Dailies list. Capture is genuinely two taps
+    /// including the typing commit.
+    func testFlow1_createTake_opensEditorInOneTap_andAppearsInList() {
         let app = launchAppForUITesting()
 
-        // Two-tap rule: from resting Dailies, the editor is two taps away.
         let addButton = app.buttons["add-button"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 3), "Dock did not load")
 
-        assertReachableInTwoInteractions(
+        assertReachableInOneInteraction(
             "Flow 1: create Take",
-            firstInteraction: { addButton.tap() },
-            expectedElement: app.buttons["bloom-new-take"]
+            interaction: { addButton.tap() },
+            expectedElement: app.textViews["take-edit-body"]
         )
-        app.buttons["bloom-new-take"].tap()
 
         let body = app.textViews["take-edit-body"]
         XCTAssertTrue(body.waitForExistence(timeout: 2), "Editor body field did not appear")
@@ -200,8 +200,10 @@ final class CoreFlowsUITests: XCTestCase {
 
     // MARK: - Flow 5 — Search
 
-    /// Tap Search dock button (1) → search field appears → type a term (2) →
-    /// matching result visible.
+    /// Tap Search dock button (1) → the dock morphs to SEARCHING and the
+    /// capsule field appears in the dock → type a term (2) → the timeline
+    /// narrows live to the match. Then × (search-cancel) returns the dock to
+    /// RESTING (sequence-tab visible again).
     func testFlow5_search_isReachableInTwoTaps_andReturnsMatches() {
         let app = launchAppForUITesting()
 
@@ -215,8 +217,8 @@ final class CoreFlowsUITests: XCTestCase {
         )
 
         // Do NOT tap the field and type via the APP, not the element
-        // (2026-06-10): SearchView auto-focuses the field on appear, and both
-        // `field.tap()` and `field.typeText` first perform an AX
+        // (2026-06-10): the dock's search field auto-focuses on appear, and
+        // both `field.tap()` and `field.typeText` first perform an AX
         // scroll-to-visible that deterministically fails on CI simulators
         // (kAXErrorCannotComplete — runs 27280916290 / 27282283829 /
         // 27283050148). `app.typeText` sends keys to the already-focused
@@ -229,7 +231,20 @@ final class CoreFlowsUITests: XCTestCase {
 
         XCTAssertTrue(
             takeRow(in: app, withLabelStarting: "Call the framer back").waitForExistence(timeout: 2),
-            "Search did not return the seeded match for 'framer'"
+            "Live search did not narrow the timeline to the seeded match for 'framer'"
+        )
+
+        // Dismiss the keyboard via the Search confirm button first (that's its
+        // job in this state) — tapping × with the keyboard still up is flaky:
+        // keyboard avoidance is repositioning the dock at that moment.
+        app.buttons["search-tab"].tap()
+        _ = app.keyboards.firstMatch.waitForNonExistence(timeout: 3)
+
+        // × exits to RESTING and clears the query — the resting dock returns.
+        app.buttons["search-cancel"].tap()
+        XCTAssertTrue(
+            app.buttons["sequence-tab"].waitForExistence(timeout: 3),
+            "Cancelling search did not return the dock to its resting state"
         )
     }
 

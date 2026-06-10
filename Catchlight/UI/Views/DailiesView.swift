@@ -2,10 +2,19 @@
 //  DailiesView.swift
 //  Catchlight (iOS app target) — Phase 6 UI
 //
-//  The homepage timeline. A vertical scroll of TakeRowViews threaded by a 2px spine
-//  aligned to each circle's centre. The Obie (if any) is pinned at the top with a
-//  small gap before the regular list. Month markers ghost in only while scrolling
-//  (they are never static). First-launch empty state is a single Fog line.
+//  The homepage timeline — the ONE surface (dock redesign 2026-06-10). A vertical
+//  scroll of TakeRowViews threaded by a 2px spine aligned to each circle's centre.
+//  The Obie (if any) is pinned at the top with a small gap before the regular
+//  list — ALWAYS, even when it doesn't match the active filter. Month markers
+//  ghost in only while scrolling (they are never static). First-launch empty
+//  state is a single Fog line.
+//
+//  Live filtering (2026-06-10): the dock's FILTERING toggles and SEARCHING query
+//  produce `ui.activeTimelineFilter`; the non-Obie rows are narrowed through
+//  `SequenceFilter.matches` before month-grouping. When a filter is active but
+//  nothing matches, a quiet "Nothing here yet." line replaces the grouped list.
+//  In FILTERING, tapping empty timeline background (not rows/Irises) exits to
+//  RESTING and clears all filters.
 //
 //  Petal fan and edit surfaces are presented by the parent RootView via the shared
 //  UIState, so this view stays focused on layout + the spine geometry.
@@ -46,7 +55,10 @@ struct DailiesView: View {
                 .offset(x: spineX - CatchlightLayout.spineWidth / 2)
                 .accessibilityHidden(true)
 
-            if vm.isEmpty {
+            // A first-launch-empty store shows the Fog line; but when a dock
+            // filter is active the timeline (with its own filter-empty line)
+            // always wins, so the background-tap exit remains available.
+            if vm.isEmpty && activeFilter.isEmpty {
                 emptyState
             } else {
                 timeline
@@ -299,11 +311,24 @@ struct DailiesView: View {
                 .frame(height: 0)
 
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    // Pinned Obie.
+                    // Pinned Obie — ALWAYS shown, even when it doesn't match
+                    // the active filter (dock redesign 2026-06-10).
                     if let obie = vm.obie {
                         row(for: obie, isFirst: true)
                             .id(obie.id)
                         Color.clear.frame(height: 18)   // gap below the Obie
+                    }
+
+                    // Filter active but no non-Obie Take matches: quiet line in
+                    // place of the grouped list (NOT the first-run empty state).
+                    if !activeFilter.isEmpty && filteredTakes.isEmpty {
+                        Text("Nothing here yet.")
+                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 48)
+                            .accessibilityIdentifier("timeline-filter-empty")
+                            .accessibilityLabel("Nothing here yet.")
                     }
 
                     ForEach(Array(monthGroups.enumerated()), id: \.element.month) { groupIndex, group in
@@ -328,6 +353,21 @@ struct DailiesView: View {
                 }
                 .padding(.top, 12)
                 .padding(.bottom, 120)   // clearance for the dock
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // FILTERING exit: tapping empty timeline background (not rows /
+                // Irises — they stay fully interactive and win hit-testing)
+                // returns the dock to RESTING and clears all filters. A
+                // .background tap catcher (not an overlay) so row gestures and
+                // scrolling are unaffected; attached only in FILTERING.
+                .background {
+                    if ui.dockMode == .filtering {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { ui.exitToResting() }
+                            .accessibilityLabel("Clear filters")
+                            .accessibilityHint("Double-tap the timeline background to clear all filters.")
+                    }
+                }
             }
             .coordinateSpace(name: "dailies")
             .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
@@ -411,6 +451,19 @@ struct DailiesView: View {
         }
     }
 
+    // MARK: - Live filter (dock redesign 2026-06-10)
+
+    /// The filter the dock's current state describes (empty in RESTING).
+    private var activeFilter: SequenceFilter { ui.activeTimelineFilter }
+
+    /// Non-Obie Takes narrowed through the live filter, newest-first order
+    /// preserved from the VM. The Obie is pinned separately and never filtered.
+    private var filteredTakes: [Take] {
+        let filter = activeFilter
+        guard !filter.isEmpty else { return vm.takes }
+        return vm.takes.filter { filter.matches($0) }
+    }
+
     // MARK: - Month grouping
 
     private struct MonthGroup { let month: String; let takes: [Take] }
@@ -427,7 +480,7 @@ struct DailiesView: View {
     private var monthGroups: [MonthGroup] {
         var order: [String] = []
         var map: [String: [Take]] = [:]
-        for take in vm.takes {
+        for take in filteredTakes {
             let key = Self.monthFormatter.string(from: take.createdAt)
             if map[key] == nil { order.append(key); map[key] = [] }
             map[key]?.append(take)
