@@ -17,6 +17,7 @@
 import Foundation
 import BackgroundTasks
 import CatchlightCore
+import os
 
 public final class BackgroundSyncCoordinator {
 
@@ -68,11 +69,44 @@ public final class BackgroundSyncCoordinator {
         }
     }
 
+    private static let logger = Logger(subsystem: "com.considus.catchlight", category: "background-sync")
+
     /// Schedule the next refresh. Call on every foreground → background transition.
     public func scheduleNext(earliestInterval: TimeInterval = 15 * 60) {
         let request = BGAppRefreshTaskRequest(identifier: Self.taskIdentifier)
         request.earliestBeginDate = Date(timeIntervalSinceNow: earliestInterval)
-        try? BGTaskScheduler.shared.submit(request)
+        do {
+            try BGTaskScheduler.shared.submit(request)
+        } catch {
+            // Surfacing this matters: a silently-swallowed submit error (e.g. an
+            // Info.plist identifier mismatch) is the classic "background sync
+            // never runs and nobody can tell why" failure.
+            Self.logger.error("BGTaskScheduler.submit failed: \(String(describing: error))")
+        }
+    }
+
+    /// One-shot completion guard. Apple's BGTask contract requires
+    /// `setTaskCompleted` to be called EXACTLY ONCE on every path — including
+    /// expiration. The previous implementation cancelled a not-yet-started work
+    /// item on expiry, after which nothing ever completed the task (an API
+    /// contract violation that deprioritises future background allotment).
+    private final class TaskCompletion: @unchecked Sendable {
+        private let lock = NSLock()
+        private var done = false
+        func complete(_ task: BGAppRefreshTask, success: Bool) {
+            lock.lock(); defer { lock.unlock() }
+            guard !done else { return }
+            done = true
+            task.setTaskCompleted(success: success)
+        }
+    }
+
+    /// Cooperative cancellation flag checked by the sync engine between items.
+    private final class CancelFlag: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = false
+        func cancel() { lock.lock(); value = true; lock.unlock() }
+        var isCancelled: Bool { lock.lock(); defer { lock.unlock() }; return value }
     }
 
     private func handle(task: BGAppRefreshTask) {
@@ -83,9 +117,22 @@ public final class BackgroundSyncCoordinator {
         let onConflicts = self.onConflicts
         let onSyncError = self.onSyncError
         let onQuarantined = self.onQuarantined
-        let work = DispatchWorkItem {
+        let completion = TaskCompletion()
+        let cancel = CancelFlag()
+
+        task.expirationHandler = {
+            // Ask the in-flight sync to stop at the next item boundary, and
+            // complete the task NOW — whether or not the work ever started.
+            cancel.cancel()
+            completion.complete(task, success: false)
+        }
+
+        DispatchQueue.global(qos: .background).async {
             do {
-                let report = try engine.sync()   // pull + push; idempotent
+                // pull + push; idempotent. Checks `cancel` between items so an
+                // expiring task lets go of cloud-file access promptly instead of
+                // running on past expiry (a 0xdead10cc termination risk).
+                let report = try engine.sync(isCancelled: { cancel.isCancelled })
                 if let onConflicts, !report.conflicts.isEmpty {
                     let conflicts = report.conflicts
                     Task { @MainActor in onConflicts(conflicts) }
@@ -94,15 +141,15 @@ public final class BackgroundSyncCoordinator {
                     let quarantined = report.quarantined
                     Task { @MainActor in onQuarantined(quarantined) }
                 }
-                task.setTaskCompleted(success: true)
+                completion.complete(task, success: true)
+            } catch is CancellationError {
+                // Expiration already completed the task.
             } catch {
                 if let onSyncError {
                     Task { @MainActor in onSyncError(error) }
                 }
-                task.setTaskCompleted(success: false)
+                completion.complete(task, success: false)
             }
         }
-        task.expirationHandler = { work.cancel() }
-        DispatchQueue.global(qos: .background).async(execute: work)
     }
 }

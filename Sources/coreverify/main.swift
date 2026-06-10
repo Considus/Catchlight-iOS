@@ -60,9 +60,10 @@ func richTake(id: UUID = UUID()) -> Take {
 
 func mk() -> SymmetricKey { SymmetricKey(size: .bits256) }
 func keys() -> KeyHierarchy { KeyHierarchy(masterKey: mk()) }
-let salt = Data(repeating: 0x07, count: 16)
-func engine(_ store: TakeStore, _ cloud: CloudFolder?, _ k: KeyHierarchy, now: @escaping () -> Date = Date.init) -> SyncEngine {
-    SyncEngine(store: store, cloud: cloud, keys: k, argon2Salt: salt, now: now)
+// deviceId is REQUIRED by SyncEngine (a defaulted fresh UUID per engine was a
+// footgun — see SyncEngine init docs); the helper supplies one per scenario.
+func engine(_ store: TakeStore, _ cloud: CloudFolder?, _ k: KeyHierarchy, deviceId: UUID = UUID(), now: @escaping () -> Date = Date.init) -> SyncEngine {
+    SyncEngine(store: store, cloud: cloud, keys: k, deviceId: deviceId, now: now)
 }
 
 // MARK: - §12.1 Encryption layer

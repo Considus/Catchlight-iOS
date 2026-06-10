@@ -24,12 +24,19 @@ final class ConflictQueue {
     /// pair is the same shape produced by `SyncEngine.pullInbound()`.
     private(set) var pending: [(local: Take, remote: Take)] = []
 
-    /// Add new conflicts, skipping any whose `local.id` is already pending. Safe to
-    /// call repeatedly — the same SyncReport can be enqueued without growing the queue.
+    /// Add new conflicts. Dedup is by Take id, but an INCOMING pair REPLACES a
+    /// pending pair for the same id (2026-06-10): if either side changed between
+    /// syncs, the user must resolve against the newest snapshot — the previous
+    /// keep-the-old-pair behaviour could upsert a stale winner over a newer row.
+    /// Safe to call repeatedly with the same SyncReport (idempotent).
     func enqueue(_ conflicts: [(local: Take, remote: Take)]) {
-        let existing = Set(pending.map(\.local.id))
-        let fresh = conflicts.filter { !existing.contains($0.local.id) }
-        pending.append(contentsOf: fresh)
+        for pair in conflicts {
+            if let idx = pending.firstIndex(where: { $0.local.id == pair.local.id }) {
+                pending[idx] = pair
+            } else {
+                pending.append(pair)
+            }
+        }
     }
 
     /// Resolve a single conflict by writing the chosen winner to the store and
