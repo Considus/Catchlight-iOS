@@ -16,6 +16,7 @@
 
 import Foundation
 import BackgroundTasks
+import UIKit
 import CatchlightCore
 import os
 
@@ -43,6 +44,12 @@ public final class BackgroundSyncCoordinator {
     /// the UI never exposes the UUIDs themselves.
     private let onQuarantined: (@MainActor ([UUID]) -> Void)?
 
+    /// Invoked on the main actor after a sync pass that CHANGED local state
+    /// (applied remote versions or applied remote deletions), so the UI layer
+    /// can reload its view-model snapshots. Foreground-sync support
+    /// (2026-06-10); nil for callers that don't render.
+    private let onRemoteChanges: (@MainActor (SyncReport) -> Void)?
+
     /// - Parameter makeEngine: builds a SyncEngine if a cloud folder is configured
     ///   and the master key is available; returns nil in local-only/locked states.
     /// - Parameter onConflicts: hand-off for conflicts detected during the sync.
@@ -52,11 +59,13 @@ public final class BackgroundSyncCoordinator {
     public init(makeEngine: @escaping () -> SyncEngine?,
                 onConflicts: (@MainActor ([(local: Take, remote: Take)]) -> Void)? = nil,
                 onSyncError: (@MainActor (Error) -> Void)? = nil,
-                onQuarantined: (@MainActor ([UUID]) -> Void)? = nil) {
+                onQuarantined: (@MainActor ([UUID]) -> Void)? = nil,
+                onRemoteChanges: (@MainActor (SyncReport) -> Void)? = nil) {
         self.makeEngine = makeEngine
         self.onConflicts = onConflicts
         self.onSyncError = onSyncError
         self.onQuarantined = onQuarantined
+        self.onRemoteChanges = onRemoteChanges
     }
 
     /// Call once at launch (before app finishes launching).
@@ -109,6 +118,117 @@ public final class BackgroundSyncCoordinator {
         var isCancelled: Bool { lock.lock(); defer { lock.unlock() }; return value }
     }
 
+    // MARK: - Foreground sync (2026-06-10)
+    //
+    // The master key carries `.userPresence`, so a cold BGAppRefreshTask on
+    // hardware can never unwrap it — background refresh is a best-effort
+    // bonus, not the primary sync path. These triggers run sync while the
+    // session keys are already in memory (no prompt):
+    //   • app became active   (throttled — `.inactive → .active` flips happen
+    //     for Face ID sheets, Notification Centre, the app switcher…)
+    //   • app entering background (un-throttled — pushes the session's edits
+    //     out under a UIKit background-task assertion before suspension)
+
+    public enum ForegroundSyncTrigger {
+        case appBecameActive
+        case appEnteringBackground
+    }
+
+    /// Minimum spacing between consecutive `appBecameActive` syncs.
+    public static let autoSyncMinimumInterval: TimeInterval = 60
+
+    private let stateLock = NSLock()
+    private var isSyncing = false
+    private var lastActivationSync: Date?
+
+    /// Pure throttle decision — extracted for unit testing.
+    static func shouldRunActivationSync(lastRun: Date?, now: Date,
+                                        minimumInterval: TimeInterval) -> Bool {
+        guard let lastRun else { return true }
+        return now.timeIntervalSince(lastRun) >= minimumInterval
+    }
+
+    /// Run a sync pass now, off the main thread, reusing the session's
+    /// in-memory keys (via `makeEngine`). Single-flight: a trigger arriving
+    /// while a pass is in flight is dropped (the running pass already covers
+    /// it; sync is idempotent). Call from the main thread.
+    public func syncNow(trigger: ForegroundSyncTrigger, now: Date = Date()) {
+        stateLock.lock()
+        if trigger == .appBecameActive,
+           !Self.shouldRunActivationSync(lastRun: lastActivationSync, now: now,
+                                         minimumInterval: Self.autoSyncMinimumInterval) {
+            stateLock.unlock()
+            return
+        }
+        guard !isSyncing else { stateLock.unlock(); return }
+        isSyncing = true
+        if trigger == .appBecameActive { lastActivationSync = now }
+        stateLock.unlock()
+
+        guard let engine = makeEngine() else {
+            stateLock.lock(); isSyncing = false; stateLock.unlock()
+            return   // local-only mode, locked, or pre-onboarding — nothing to do
+        }
+
+        // Background-task assertion: the entering-background trigger must be
+        // allowed to finish its (short, idempotent) pass after suspension
+        // starts. The engine is crash-safe regardless — an interrupted push
+        // self-heals on the next pass.
+        var assertion: UIBackgroundTaskIdentifier = .invalid
+        let cancel = CancelFlag()
+        assertion = UIApplication.shared.beginBackgroundTask(withName: "catchlight.foreground-sync") {
+            cancel.cancel()
+        }
+        let finish: () -> Void = { [weak self] in
+            if let self {
+                self.stateLock.lock(); self.isSyncing = false; self.stateLock.unlock()
+            }
+            DispatchQueue.main.async {
+                if assertion != .invalid { UIApplication.shared.endBackgroundTask(assertion) }
+            }
+        }
+
+        let onConflicts = self.onConflicts
+        let onSyncError = self.onSyncError
+        let onQuarantined = self.onQuarantined
+        let onRemoteChanges = self.onRemoteChanges
+
+        DispatchQueue.global(qos: .utility).async {
+            defer { finish() }
+            do {
+                let report = try engine.sync(isCancelled: { cancel.isCancelled })
+                Self.deliver(report,
+                             onConflicts: onConflicts,
+                             onQuarantined: onQuarantined,
+                             onRemoteChanges: onRemoteChanges)
+            } catch is CancellationError {
+                // Assertion expired mid-pass; the next trigger resumes cleanly.
+            } catch {
+                if let onSyncError {
+                    Task { @MainActor in onSyncError(error) }
+                }
+            }
+        }
+    }
+
+    /// Shared report fan-out for both the BGTask and foreground paths.
+    private static func deliver(_ report: SyncReport,
+                                onConflicts: (@MainActor ([(local: Take, remote: Take)]) -> Void)?,
+                                onQuarantined: (@MainActor ([UUID]) -> Void)?,
+                                onRemoteChanges: (@MainActor (SyncReport) -> Void)?) {
+        if let onConflicts, !report.conflicts.isEmpty {
+            let conflicts = report.conflicts
+            Task { @MainActor in onConflicts(conflicts) }
+        }
+        if let onQuarantined, !report.quarantined.isEmpty {
+            let quarantined = report.quarantined
+            Task { @MainActor in onQuarantined(quarantined) }
+        }
+        if let onRemoteChanges, !report.applied.isEmpty || !report.deletedLocally.isEmpty {
+            Task { @MainActor in onRemoteChanges(report) }
+        }
+    }
+
     private func handle(task: BGAppRefreshTask) {
         scheduleNext()   // always reschedule
 
@@ -117,6 +237,7 @@ public final class BackgroundSyncCoordinator {
         let onConflicts = self.onConflicts
         let onSyncError = self.onSyncError
         let onQuarantined = self.onQuarantined
+        let onRemoteChanges = self.onRemoteChanges
         let completion = TaskCompletion()
         let cancel = CancelFlag()
 
@@ -133,14 +254,10 @@ public final class BackgroundSyncCoordinator {
                 // expiring task lets go of cloud-file access promptly instead of
                 // running on past expiry (a 0xdead10cc termination risk).
                 let report = try engine.sync(isCancelled: { cancel.isCancelled })
-                if let onConflicts, !report.conflicts.isEmpty {
-                    let conflicts = report.conflicts
-                    Task { @MainActor in onConflicts(conflicts) }
-                }
-                if let onQuarantined, !report.quarantined.isEmpty {
-                    let quarantined = report.quarantined
-                    Task { @MainActor in onQuarantined(quarantined) }
-                }
+                Self.deliver(report,
+                             onConflicts: onConflicts,
+                             onQuarantined: onQuarantined,
+                             onRemoteChanges: onRemoteChanges)
                 completion.complete(task, success: true)
             } catch is CancellationError {
                 // Expiration already completed the task.

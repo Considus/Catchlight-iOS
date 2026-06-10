@@ -48,6 +48,14 @@ struct CatchlightApp: App {
             // Task 3.9 — quarantine notice strip.
             onQuarantined: { ids in
                 app.reportQuarantined(ids)
+            },
+            // Foreground sync (2026-06-10) — when a pass applied remote
+            // changes, refresh the view-model snapshots so the timeline /
+            // search / sequences show them without a tab switch.
+            onRemoteChanges: { _ in
+                app.dailiesVM.reload()
+                app.searchVM.recompute()
+                app.sequenceVM.recompute()
             }
         )
         // Must register before the app finishes launching.
@@ -135,9 +143,20 @@ struct CatchlightApp: App {
         .onChange(of: scenePhase) { _, newPhase in
             session.handleScenePhase(newPhase)
             if newPhase == .background {
+                // Push this session's edits out before suspension (runs under
+                // a background-task assertion with the in-memory keys), then
+                // schedule the opportunistic BG refresh.
+                backgroundSync.syncNow(trigger: .appEnteringBackground)
                 backgroundSync.scheduleNext()
             }
             if newPhase == .active {
+                // Foreground sync is the PRIMARY sync path on hardware: the
+                // `.userPresence` master key cannot be unwrapped by a cold
+                // background task, so opening the app is when changes from
+                // other devices arrive. Throttled internally (60 s) because
+                // `.inactive → .active` also fires for Face ID sheets,
+                // Notification Centre, and the app switcher.
+                backgroundSync.syncNow(trigger: .appBecameActive)
                 Task { @MainActor in
                     await subscriptionRef.refreshEntitlements()
                 }
