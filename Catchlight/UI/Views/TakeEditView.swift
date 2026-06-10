@@ -117,7 +117,18 @@ struct TakeEditView: View {
             ui.closeEditor()
             return
         }
-        vm.save(currentTake)
+        let t = currentTake
+        // Blank-Take discard (2026-06-10): a dismissed editor with no text and
+        // no shaping leaves nothing behind. Previously a blank Take was persisted
+        // the moment the editor opened, so cancelling accumulated permanent
+        // "Untitled take" rows with no way to remove them.
+        let isBlank = t.bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !t.isTask && t.timeReminder == nil && !t.isObie
+        if isBlank {
+            vm.discardIfPresent(t)
+        } else {
+            vm.save(t)
+        }
         ui.closeEditor()
     }
 }

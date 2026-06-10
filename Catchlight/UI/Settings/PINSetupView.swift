@@ -46,6 +46,7 @@ struct PINSetupView: View {
     @State private var entryResetId = UUID()
     @State private var biometricsEnabled: Bool = BiometricsPreference.isEnabled
     @State private var biometricsAvailability: BiometricsAvailability = .check()
+    @Environment(\.scenePhase) private var scenePhase
 
     private let pinService = PINService()
 
@@ -73,6 +74,13 @@ struct PINSetupView: View {
                 .background(Color.ckBackground.ignoresSafeArea())
         }
         .presentationDragIndicator(.visible)
+        // Re-probe biometric availability when the user returns from Settings
+        // (e.g. after enrolling Face ID as the footer suggests) — the @State
+        // initialiser only ran once, so the toggle stayed disabled until the
+        // sheet was reopened.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { biometricsAvailability = .check() }
+        }
     }
 
     private var title: String {

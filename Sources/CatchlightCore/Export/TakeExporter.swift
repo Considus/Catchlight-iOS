@@ -63,12 +63,13 @@ public enum TakeExporter {
     /// Always `.md`. Single timestamp granularity (day) — multiple same-day
     /// exports are disambiguated by the OS's "Save As" dialog.
     public static func suggestedFilename(exportedAt: Date = Date()) -> String {
-        let fmt = DateFormatter()
-        fmt.calendar = Calendar(identifier: .gregorian)
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd"
-        return "catchlight-\(fmt.string(from: exportedAt)).md"
+        "catchlight-\(ymdFormatter.string(from: exportedAt)).md"
+    }
+
+    /// Whether a filename matches the export naming pattern. Used by the app
+    /// target's stale-tmp-file sweep so it only ever deletes Catchlight exports.
+    public static func isExportFilename(_ name: String) -> Bool {
+        name.hasPrefix("catchlight-") && name.hasSuffix(".md")
     }
 
     // MARK: - Heading
@@ -91,37 +92,34 @@ public enum TakeExporter {
     }
 
     // MARK: - Date helpers
+    //
+    // Formatters are CACHED as statics (2026-06-10): `DateFormatter` init is one
+    // of Foundation's most expensive allocations, and `ymd` previously built a
+    // fresh one per Take per export. `DateFormatter` is thread-safe on modern
+    // OS releases, matching the pattern already used by `ISO8601.formatter`.
 
-    /// `yyyy-MM-ddTHH:mm:ssZ` — ISO 8601 in UTC, no fractional seconds.
-    /// Uses POSIX locale + Gregorian calendar so the output is stable
-    /// regardless of the device's region / calendar settings.
-    static func isoUTC(_ date: Date) -> String {
+    private static func makeUTCFormatter(_ format: String) -> DateFormatter {
         let fmt = DateFormatter()
         fmt.calendar = Calendar(identifier: .gregorian)
         fmt.locale = Locale(identifier: "en_US_POSIX")
         fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
-        return fmt.string(from: date)
+        fmt.dateFormat = format
+        return fmt
     }
+
+    private static let isoUTCFormatter = makeUTCFormatter("yyyy-MM-dd'T'HH:mm:ss'Z'")
+    private static let ymdFormatter = makeUTCFormatter("yyyy-MM-dd")
+    private static let ymdHmFormatter = makeUTCFormatter("yyyy-MM-dd HH:mm")
+
+    /// `yyyy-MM-ddTHH:mm:ssZ` — ISO 8601 in UTC, no fractional seconds.
+    /// POSIX locale + Gregorian calendar so the output is stable regardless of
+    /// the device's region / calendar settings.
+    static func isoUTC(_ date: Date) -> String { isoUTCFormatter.string(from: date) }
 
     /// `yyyy-MM-dd` in UTC. Creation dates in the heading are always rendered
     /// in UTC so an export looks identical regardless of where the device is.
-    static func ymd(_ date: Date) -> String {
-        let fmt = DateFormatter()
-        fmt.calendar = Calendar(identifier: .gregorian)
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd"
-        return fmt.string(from: date)
-    }
+    static func ymd(_ date: Date) -> String { ymdFormatter.string(from: date) }
 
     /// `yyyy-MM-dd HH:mm` in UTC. Used for the reminder bell stamp.
-    static func ymdHm(_ date: Date) -> String {
-        let fmt = DateFormatter()
-        fmt.calendar = Calendar(identifier: .gregorian)
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd HH:mm"
-        return fmt.string(from: date)
-    }
+    static func ymdHm(_ date: Date) -> String { ymdHmFormatter.string(from: date) }
 }

@@ -85,6 +85,15 @@ struct RootView: View {
                 app.presentPaywallIfNeededAfterOnboarding()
             }
         }
+        .task {
+            // Lapsed COLD-LAUNCH paywall (2026-06-10): the onChange above only
+            // fires on the onboarding → main transition; an already-onboarded
+            // user launching while lapsed never saw the auto-present (only the
+            // banner). Idempotent — no-ops when entitled or still onboarding;
+            // launch-time `.unknown` is permissive so real users aren't flashed
+            // a paywall before entitlements resolve.
+            app.presentPaywallIfNeededAfterOnboarding()
+        }
         .alert("Replace your Obie?",
                isPresented: Binding(
                 get: { app.dailiesVM.pendingObieConflict != nil },
@@ -183,8 +192,17 @@ struct RootView: View {
                             isNote: isNote, isTask: isTask,
                             hasReminder: hasReminder, isObie: isObie
                         )
-                        app.searchVM.recompute()
-                        app.sequenceVM.recompute()
+                        // If the editor is open behind the fan for this same
+                        // Take, refresh its snapshot — otherwise the editor's
+                        // auto-save on dismiss would write the PRE-fan struct
+                        // back over the changes the fan just persisted (the
+                        // typed text survives; it lives in the editor's own
+                        // @State). Sibling-VM recompute now fans out from the
+                        // DailiesViewModel mutation hook.
+                        if ui.editorTake?.id == take.id,
+                           let fresh = try? app.dailiesVM.store.take(id: take.id) {
+                            ui.editorTake = fresh
+                        }
                         ui.closePetalFan()
                     },
                     onDismiss: { ui.closePetalFan() }

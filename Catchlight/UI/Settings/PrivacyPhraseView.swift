@@ -145,9 +145,9 @@ private enum PINSetupAvailability {
         // PINService.verify throws .notFound if no PIN is set; a cheaper check is
         // to look directly for the salt slot. We mirror PINService internals only
         // here, deliberately keeping the rest of the file off any Keychain detail.
-        let service = "com.considus.catchlight"
+        let service = KeychainConfig.service
         let account = "pin-salt"
-        let accessGroup = "YTPP9HU9F9.com.considus.catchlight"
+        let accessGroup = KeychainConfig.accessGroup
         let query: [String: Any] = [
             kSecClass as String:           kSecClassGenericPassword,
             kSecAttrService as String:     service,

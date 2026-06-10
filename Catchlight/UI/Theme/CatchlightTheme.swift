@@ -202,8 +202,20 @@ enum CatchlightFont {
         "DMSans-Medium", "DMSans18pt-Medium", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"
     ]
 
+    /// Resolution cache — `firstAvailable` is called for every `Text` on every
+    /// render, and `UIFont(name:)` probing is not free. The installed font set
+    /// cannot change mid-process, so the first resolution is authoritative.
+    private static var resolvedNames: [String: String?] = [:]
+    private static let resolveLock = NSLock()
+
     private static func firstAvailable(_ names: [String]) -> String? {
-        names.first { UIFont(name: $0, size: 12) != nil }
+        let key = names.joined(separator: "|")
+        resolveLock.lock()
+        defer { resolveLock.unlock() }
+        if let cached = resolvedNames[key] { return cached }
+        let resolved = names.first { UIFont(name: $0, size: 12) != nil }
+        resolvedNames[key] = resolved
+        return resolved
     }
 
     /// Display / Take text — Cormorant Garamond Italic, scaling with Dynamic

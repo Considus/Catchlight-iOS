@@ -50,10 +50,11 @@ extension SubscriptionStatus {
         if let active {
             return active.isInTrial ? .trial : .subscribed
         }
-        return everSubscribed ? .lapsed : .lapsed
-        // NOTE: a user who has never been entitled (post-onboarding pre-subscribe)
-        // is still in the "must subscribe" lane — the UI treats this identically
-        // to lapsed (paywall surfaces on create/edit). We keep one terminal state
-        // for both rather than introducing a fifth value.
+        // A user who has never been entitled (post-onboarding pre-subscribe) is
+        // in the same "must subscribe" lane as a lapsed subscriber — the UI
+        // treats both identically (paywall on create/edit), so one terminal
+        // state covers both rather than a fifth value. (The previous
+        // `everSubscribed ? .lapsed : .lapsed` ternary said this confusingly.)
+        return .lapsed
     }
 }

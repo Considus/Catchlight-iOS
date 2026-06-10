@@ -210,9 +210,20 @@ struct CloudStorageView: View {
     private func commitURLString() {
         let trimmed = folderURLString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        appGroupDefaults?.set(trimmed, forKey: Wiring.cloudFolderURLStringDefaultsKey)
+        // Validate before persisting (2026-06-10). Previously ANY string was
+        // saved with implicit success while the sync engine never read this key
+        // at all — the user believed sync was configured and the app silently
+        // ran local-only. The engine now consumes this slot (see
+        // Wiring.makeSyncEngine), so reject inputs that can't possibly work:
+        // the URL must point at a folder this app can actually read.
+        guard let url = Wiring.usableFolderURL(from: trimmed) else {
+            errorText = "That location couldn't be opened. For iCloud Drive or other Files-app providers, use \u{201C}Choose Folder\u{201D} instead."
+            return
+        }
+        appGroupDefaults?.set(url.absoluteString, forKey: Wiring.cloudFolderURLStringDefaultsKey)
         errorText = nil
     }
+
 
     // MARK: - Display helpers
 

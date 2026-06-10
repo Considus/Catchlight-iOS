@@ -21,6 +21,14 @@ struct TakeRowView: View {
     var onTapCircle: () -> Void = {}
     var onLongPressCircle: () -> Void = {}
     var onTapText: () -> Void = {}
+    /// Optional row actions (2026-06-10): when supplied, a context menu on the
+    /// TEXT column offers "Mark as done" (Tasks only) and "Delete take". The
+    /// menu is deliberately NOT attached to the whole row — a row-level context
+    /// menu's long-press recognizer preempts the circle's long-press (Obie
+    /// designation). VoiceOver gets the same actions as named accessibility
+    /// actions on the combined row element.
+    var onToggleComplete: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var dynamicSize
@@ -46,17 +54,31 @@ struct TakeRowView: View {
         return parts.joined(separator: ". ")
     }
 
-    private var reminderLabel: String? {
-        guard let r = take.timeReminder else { return nil }
+    /// Cached formatter — this label is evaluated twice per row render (body +
+    /// accessibility label), and a fresh `DateFormatter` per evaluation is one
+    /// of Foundation's most expensive allocations.
+    private static let reminderFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         f.timeStyle = .short
-        return f.string(from: r.scheduledDate)
+        return f
+    }()
+
+    private var reminderLabel: String? {
+        guard let r = take.timeReminder else { return nil }
+        return Self.reminderFormatter.string(from: r.scheduledDate)
     }
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            // Circle column — fixed width so every circle's centre lands on the spine.
+            // Circle column — fixed width so every circle's centre lands on the
+            // spine. Gestures are UIKit recognizers (2026-06-10): SwiftUI's
+            // `LongPressGesture` (plain or simultaneous, with or without a
+            // Button) never fires for synthesized presses inside this
+            // ScrollView on the current runtime — while UIKit long-press
+            // interactions (e.g. the context menu's) work for both real and
+            // synthesized touches. `tap.require(toFail: long)` preserves the
+            // original exclusive semantics.
             ZStack {
                 TakeCircleView(take: take)
             }
@@ -65,8 +87,13 @@ struct TakeRowView: View {
             .frame(minWidth: CatchlightLayout.minTouchTarget,
                    minHeight: CatchlightLayout.minTouchTarget)
             .contentShape(Rectangle())
-            .onTapGesture { onTapCircle() }
-            .onLongPressGesture(minimumDuration: 0.45) { onLongPressCircle() }
+            .overlay(
+                TapAndLongPressRecognizer(
+                    minimumDuration: 0.45,
+                    onTap: onTapCircle,
+                    onLongPress: onLongPressCircle
+                )
+            )
             .accessibilityElement()
             .accessibilityIdentifier("take-iris")
             .accessibilityLabel(take.isObie
@@ -74,7 +101,7 @@ struct TakeRowView: View {
                 : "Iris. \(TakeCircleView.activityDescription(for: take))")
             .accessibilityHint("Double-tap to open actions. Long press to make this your Obie.")
             // VoiceOver intercepts long-press, so expose the Obie designation as a
-            // named action too. The tap-to-open path stays on .onTapGesture above.
+            // named action too. VO activation lands as a tap on the recognizer.
             .accessibilityAction(named: "Make Obie") { onLongPressCircle() }
             .accessibilityAddTraits(.isButton)
 
@@ -100,12 +127,86 @@ struct TakeRowView: View {
             .frame(minHeight: CatchlightLayout.minTouchTarget, alignment: .center)
             .contentShape(Rectangle())
             .onTapGesture { onTapText() }
+            .contextMenu { rowMenuItems }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("take-row")
             .accessibilityLabel(rowAccessibilityLabel)
             .accessibilityHint("Double-tap to edit this take.")
+            .accessibilityActions { rowAccessibilityActions }
         }
         .padding(.vertical, 6)
+    }
+
+    @ViewBuilder
+    private var rowMenuItems: some View {
+        if take.isTask, let onToggleComplete {
+            Button {
+                onToggleComplete()
+            } label: {
+                Label(take.isComplete ? "Mark as not done" : "Mark as done",
+                      systemImage: take.isComplete ? "circle" : "checkmark.circle")
+            }
+        }
+        if let onDelete {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete take", systemImage: "trash")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var rowAccessibilityActions: some View {
+        if take.isTask, let onToggleComplete {
+            Button(take.isComplete ? "Mark as not done" : "Mark as done") { onToggleComplete() }
+        }
+        if let onDelete {
+            Button("Delete take") { onDelete() }
+        }
+    }
+}
+
+/// UIKit tap + long-press recognizers bridged into SwiftUI. Exists because
+/// SwiftUI's `LongPressGesture` does not fire for synthesized presses inside a
+/// ScrollView on the current runtime (UIKit recognizers do — the context menu
+/// proves it). `tap.require(toFail: long)` keeps the two mutually exclusive,
+/// and the long press fires at `.began` (i.e. at the duration threshold while
+/// the finger is still down), matching the previous SwiftUI behaviour.
+private struct TapAndLongPressRecognizer: UIViewRepresentable {
+    var minimumDuration: TimeInterval
+    var onTap: () -> Void
+    var onLongPress: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        let long = UILongPressGestureRecognizer(target: context.coordinator,
+                                                action: #selector(Coordinator.longPressed(_:)))
+        long.minimumPressDuration = minimumDuration
+        let tap = UITapGestureRecognizer(target: context.coordinator,
+                                         action: #selector(Coordinator.tapped))
+        tap.require(toFail: long)
+        view.addGestureRecognizer(long)
+        view.addGestureRecognizer(tap)
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.parent = self
+    }
+
+    final class Coordinator: NSObject {
+        var parent: TapAndLongPressRecognizer
+        init(_ parent: TapAndLongPressRecognizer) { self.parent = parent }
+
+        @objc func tapped() { parent.onTap() }
+
+        @objc func longPressed(_ recognizer: UILongPressGestureRecognizer) {
+            if recognizer.state == .began { parent.onLongPress() }
+        }
     }
 }
 

@@ -70,9 +70,9 @@ final class SettingsViewModel {
     }
 
     private static func probePINPresence() -> Bool {
-        let service = "com.considus.catchlight"
+        let service = KeychainConfig.service
         let account = "pin-salt"
-        let accessGroup = "YTPP9HU9F9.com.considus.catchlight"
+        let accessGroup = KeychainConfig.accessGroup
         let query: [String: Any] = [
             kSecClass as String:           kSecClassGenericPassword,
             kSecAttrService as String:     service,

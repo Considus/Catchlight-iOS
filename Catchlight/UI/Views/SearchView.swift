@@ -81,7 +81,13 @@ struct SearchView: View {
                 }
             }
         }
-        .onAppear { focused = true }
+        .onAppear {
+            focused = true
+            // Refresh results against the live store: an edit made from a
+            // result row (or any other tab) since the last keystroke would
+            // otherwise keep showing stale text here.
+            vm.recompute()
+        }
     }
 }
 

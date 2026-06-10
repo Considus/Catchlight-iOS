@@ -69,10 +69,14 @@ final class AppModel {
     /// SubscriptionManager uses it to deindex everything on lapse.
     let spotlight: SpotlightIndexing
 
+    // `subscription` has no default value: SubscriptionManager.init is
+    // @MainActor-isolated and a default argument evaluates in a nonisolated
+    // context (compile error under the current toolchain). Callers construct it
+    // explicitly (Wiring does; previews use `AppModel.preview`).
     init(needsOnboarding: Bool,
          initialStore: TakeStore,
          storeProvider: @escaping () -> TakeStore?,
-         subscription: SubscriptionManager = SubscriptionManager(),
+         subscription: SubscriptionManager,
          spotlight: SpotlightIndexing = NoopSpotlightIndexer()) {
         self.needsOnboarding = needsOnboarding
         self.storeProvider = storeProvider
@@ -84,6 +88,7 @@ final class AppModel {
         // Hand the indexer to the subscription manager so the lapse transition
         // triggers a deindex-all without AppModel needing to observe status.
         subscription.attachSpotlightIndexer(spotlight)
+        wireMutationFanout()
 
         if needsOnboarding {
             self.onboardingVM = nil
@@ -100,6 +105,14 @@ final class AppModel {
         if let store = storeProvider() {
             seedIfEmpty(store)
             rebind(to: store)
+        } else {
+            // The master key was stored but the encrypted store failed to open.
+            // Previously this fell through SILENTLY onto the launch in-memory
+            // store — everything the user wrote was lost on the next launch with
+            // zero indication. Surface it through the existing non-blocking
+            // notice strip; data recovery is via restart (or, worst case, the
+            // privacy phrase).
+            lastSyncError = "Your encrypted library couldn't be opened, so changes aren't being saved to this device yet. Please restart Catchlight."
         }
         onboardingVM = nil
         needsOnboarding = false
@@ -118,6 +131,18 @@ final class AppModel {
         dailiesVM = DailiesViewModel(store: store, spotlight: spotlight)
         searchVM = SearchViewModel(store: store)
         sequenceVM = SequenceViewModel(store: store)
+        wireMutationFanout()
+    }
+
+    /// Every Dailies mutation invalidates the Search and Sequence snapshots —
+    /// they hold independent copies of the same store, and without a fan-out
+    /// each call site had to remember to recompute (search results went stale
+    /// after editing a Take from a result row).
+    private func wireMutationFanout() {
+        dailiesVM.onMutation = { [weak self] in
+            self?.searchVM.recompute()
+            self?.sequenceVM.recompute()
+        }
     }
 
     // MARK: - Task 3.9 — sync error & quarantine reporting
@@ -211,7 +236,8 @@ final class AppModel {
         AppModel(
             needsOnboarding: !onboarded,
             initialStore: store,
-            storeProvider: { store }
+            storeProvider: { store },
+            subscription: SubscriptionManager()
         )
     }
 }

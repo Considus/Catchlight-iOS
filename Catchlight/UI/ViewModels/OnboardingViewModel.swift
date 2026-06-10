@@ -54,7 +54,13 @@ final class OnboardingViewModel {
     private(set) var targetPositions: [Int] = []
     private(set) var bank: [String] = []
     private(set) var slots: [String?] = [nil, nil, nil]
-    private(set) var usedWords: Set<String> = []
+    /// Bank-tile usage is tracked BY INDEX, not by word value (2026-06-10).
+    /// ~3% of BIP-39 phrases legitimately contain a duplicate word; tracking by
+    /// string greyed both copies on one tap and made the confirm step
+    /// unwinnable when a duplicated word was required twice — with no escape on
+    /// that screen. (Generation now also avoids duplicate-word phrases, so this
+    /// is defence in depth.)
+    private(set) var usedBankIndices: Set<Int> = []
     private(set) var flashError: Bool = false
 
     private(set) var failure: String?
@@ -94,7 +100,15 @@ final class OnboardingViewModel {
 
     private func revealPhrase() {
         do {
-            mnemonic = try bip39.generateMnemonic()
+            // Resample until the 12 words are distinct. ~3% of phrases contain a
+            // duplicate, which complicates the confirm step (two identical bank
+            // tiles) for a negligible entropy cost (≈0.04 bits). Bounded retries:
+            // statistically 1–2 iterations; the cap only guards against a broken
+            // RNG, where generation would have trapped anyway.
+            for _ in 0..<32 {
+                mnemonic = try bip39.generateMnemonic()
+                if Set(mnemonic).count == mnemonic.count { break }
+            }
             step = .reveal
         } catch {
             failure = "Couldn't generate a privacy phrase."
@@ -108,7 +122,7 @@ final class OnboardingViewModel {
         targetPositions = Array(0..<mnemonic.count).shuffled().prefix(3).sorted()
         bank = mnemonic.shuffled()
         slots = [nil, nil, nil]
-        usedWords = []
+        usedBankIndices = []
         flashError = false
         failure = nil
         step = .confirm
@@ -118,16 +132,24 @@ final class OnboardingViewModel {
     var nextSlotIndex: Int? { slots.firstIndex(where: { $0 == nil }) }
     var isLocked: Bool { flashError }
 
-    /// Free-selection tap handler — Pass 1 logic, unchanged.
-    func tapBankWord(_ word: String) {
+    /// Free-selection tap handler, indexed into `bank`.
+    func tapBankWord(at index: Int) {
         guard !flashError else { return }
-        guard !usedWords.contains(word) else { return }
+        guard bank.indices.contains(index) else { return }
+        guard !usedBankIndices.contains(index) else { return }
         guard let slot = nextSlotIndex else { return }
-        slots[slot] = word
-        usedWords.insert(word)
+        slots[slot] = bank[index]
+        usedBankIndices.insert(index)
         if nextSlotIndex == nil {
             validateSlots()
         }
+    }
+
+    /// Convenience for tests / callers holding only the word value: taps the
+    /// first unused bank tile showing that word.
+    func tapBankWord(_ word: String) {
+        guard let index = bank.indices.first(where: { bank[$0] == word && !usedBankIndices.contains($0) }) else { return }
+        tapBankWord(at: index)
     }
 
     private func validateSlots() {
@@ -143,15 +165,10 @@ final class OnboardingViewModel {
                 try? await Task.sleep(nanoseconds: 600_000_000)
                 guard let self else { return }
                 self.slots = [nil, nil, nil]
-                self.usedWords = []
+                self.usedBankIndices = []
                 self.flashError = false
             }
         }
-    }
-
-    var isConfirmed: Bool {
-        guard slots.allSatisfy({ $0 != nil }) else { return false }
-        return slots.compactMap { $0 } == targetPositions.map { mnemonic[$0] }
     }
 
     // MARK: - Completion
@@ -162,10 +179,10 @@ final class OnboardingViewModel {
             let masterKeyData = MasterKeyDerivation.deriveRaw(from: mnemonic)
             try MasterKeyKeychain.store(masterKeyData)
             // Persist the mnemonic so Settings → Privacy phrase can re-display it
-            // (Task 3.12). Same access tier as the master key; access is gated by
-            // the in-app PIN at the call site.
+            // (Task 3.12). Carries `.userPresence` access control plus the in-app
+            // PIN gate at the call site. (The Argon2 metadata salt is no longer
+            // written — HKDF derivation uses a fixed domain salt.)
             try MnemonicKeychain.store(mnemonic)
-            persistMetadataSalt(SecureRandom.bytes(16))
             onComplete()
         } catch let error as KeychainError {
             failure = "Couldn't secure your account on this device."
@@ -184,6 +201,8 @@ final class OnboardingViewModel {
         case .retrieveFailed(let status):    return "Keychain retrieve failed (OSStatus \(status))."
         case .accessControlCreationFailed:   return "Keychain access control could not be created."
         case .notFound:                      return "Keychain item not found."
+        case .secureEnclaveFailed(let detail): return "Secure Enclave operation failed: \(detail)"
+        case .malformedStoredKey:            return "Stored key data was malformed."
         }
     }
 
@@ -193,15 +212,10 @@ final class OnboardingViewModel {
         targetPositions = []
         bank = []
         slots = [nil, nil, nil]
-        usedWords = []
+        usedBankIndices = []
         flashError = false
         failure = nil
         failureDetail = nil
         step = .welcome
-    }
-
-    private func persistMetadataSalt(_ salt: Data) {
-        UserDefaults(suiteName: AppGroup.identifier)?
-            .set(salt.base64EncodedString(), forKey: "catchlight.argon2SaltB64")
     }
 }

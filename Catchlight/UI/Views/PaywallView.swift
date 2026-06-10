@@ -23,6 +23,7 @@
 //
 
 import SwiftUI
+import CatchlightCore
 import StoreKit
 
 struct PaywallView: View {
@@ -53,13 +54,18 @@ struct PaywallView: View {
                 .padding(.bottom, 32)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            // The sheet marker lives on the ScrollView, NOT the container
+            // ZStack (2026-06-10): a container-level accessibilityIdentifier
+            // propagates onto every descendant accessibility element on the
+            // current SwiftUI runtime, which overwrote the dismiss button's
+            // own "paywall-dismiss" identifier and broke the UI tests.
+            .accessibilityIdentifier("paywall-sheet")
 
             dismissButton
         }
         .task {
             await manager.loadProduct()
         }
-        .accessibilityIdentifier("paywall-sheet")
     }
 
     // MARK: - Sections
@@ -176,7 +182,11 @@ struct PaywallView: View {
             }
             HStack {
                 Button("Restore Purchases") {
-                    Task { await manager.restore() }
+                    // A successful restore now confirms itself by dismissing
+                    // the paywall (the user is entitled; there is nothing left
+                    // to do here). Failure surfaces via `manager.lastError`
+                    // above — previously success and failure looked identical.
+                    Task { if await manager.restore() { dismiss() } }
                 }
                 .accessibilityIdentifier("paywall-restore")
                 Spacer()

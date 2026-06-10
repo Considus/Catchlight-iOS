@@ -15,6 +15,7 @@
 import Foundation
 import StoreKit
 import Observation
+import CatchlightCore
 
 @Observable
 @MainActor
@@ -44,7 +45,10 @@ final class SubscriptionManager {
     private let defaults: UserDefaults
     private static let everSubscribedKey = "catchlight.subscription.everEntitled"
 
-    private var updatesTask: Task<Void, Never>?
+    // `nonisolated(unsafe)`: deinit is nonisolated and may not touch
+    // MainActor-isolated state under the current toolchain; access is confined
+    // to startObservingUpdates (MainActor) + cancel-on-deinit, which is safe.
+    nonisolated(unsafe) private var updatesTask: Task<Void, Never>?
 
     /// Task 6.19 — Spotlight indexer attached by AppModel. The manager is
     /// constructable before AppModel exists (Wiring builds it first, then
@@ -87,14 +91,29 @@ final class SubscriptionManager {
         do {
             let products = try await Product.products(for: [Self.annualProductID])
             annual = products.first
+            // `isEligibleForIntroOffer` is an async StoreKit property on the
+            // current SDK — resolve it once here and cache, so the paywall's
+            // synchronous view code can read it.
+            introOfferEligible = await annual?.subscription?.isEligibleForIntroOffer ?? false
         } catch {
             lastError = "Couldn't reach the App Store. Check your connection."
         }
     }
 
+    /// Cached at `loadProduct()` time (the underlying StoreKit property is async).
+    private(set) var introOfferEligible = false
+
     /// Walk `Transaction.currentEntitlements` and update `status`. Called on
     /// launch, on scenePhase → active, and after every purchase / restore.
     func refreshEntitlements() async {
+        #if DEBUG
+        // A status forced by `forceStatusForTesting` is authoritative for the
+        // whole run. Without this guard, the unconditional launch refresh walked
+        // the (empty) real entitlements and overwrote the forced `.subscribed`
+        // with `.lapsed` — so every "entitled" UI-test flow actually ran
+        // paywalled, silently defeating the test hook.
+        if statusIsForcedForTesting { return }
+        #endif
         var snapshots: [EntitlementSnapshot] = []
         for await result in Transaction.currentEntitlements {
             guard case .verified(let txn) = result else { continue }
@@ -146,7 +165,13 @@ final class SubscriptionManager {
                 }
                 await refreshEntitlements()
                 return status.isEntitled && status != .unknown
-            case .pending, .userCancelled:
+            case .pending:
+                // Ask to Buy / SCA: the purchase is awaiting approval. Surface
+                // it — previously this returned false with no message, so the
+                // button just stopped spinning and nothing else happened.
+                lastError = "Your purchase is awaiting approval. You'll get access as soon as it's confirmed."
+                return false
+            case .userCancelled:
                 return false
             @unknown default:
                 return false
@@ -158,16 +183,23 @@ final class SubscriptionManager {
     }
 
     /// Apple-required restore flow — forces a sync with the App Store and
-    /// re-checks entitlements.
-    func restore() async {
+    /// re-checks entitlements. Returns true when the restore produced an
+    /// active entitlement so the paywall can dismiss and confirm success
+    /// (previously the sheet stayed open with no feedback either way).
+    @discardableResult
+    func restore() async -> Bool {
         isWorking = true
         defer { isWorking = false }
         lastError = nil
         do {
             try await AppStore.sync()
             await refreshEntitlements()
+            if status.isEntitled { return true }
+            lastError = "No active subscription was found for this Apple ID."
+            return false
         } catch {
             lastError = "Couldn't restore purchases. Please try again."
+            return false
         }
     }
 
@@ -179,16 +211,17 @@ final class SubscriptionManager {
 
     #if DEBUG
     /// Test-only escape hatch — UI tests set a deterministic status without
-    /// touching StoreKit. Compiled out of Release builds.
+    /// touching StoreKit. Compiled out of Release builds. Once forced, the
+    /// status is pinned: `refreshEntitlements()` becomes a no-op for the run.
+    private var statusIsForcedForTesting = false
     func forceStatusForTesting(_ value: SubscriptionStatus) {
+        statusIsForcedForTesting = true
         status = value
     }
     #endif
 
     /// Trial-eligible callers see the trial CTA; otherwise the plain subscribe one.
-    var isEligibleForIntroOffer: Bool {
-        annual?.subscription?.isEligibleForIntroOffer ?? false
-    }
+    var isEligibleForIntroOffer: Bool { introOfferEligible }
 
     /// Human-readable trial length, e.g. "14 days" — pulled live from the
     /// product's intro offer rather than hard-coded.

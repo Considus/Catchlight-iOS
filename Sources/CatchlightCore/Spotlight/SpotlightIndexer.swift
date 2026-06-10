@@ -36,9 +36,14 @@ public enum SpotlightConstants {
     /// path so we never accidentally touch another app's items.
     public static let domainIdentifier = "com.considus.catchlight"
 
-    /// Type string declared in `NSUserActivityTypes` (Info.plist) and used as
-    /// the `relatedUniqueIdentifier` on the CSSearchableItem. iOS routes
-    /// Spotlight taps to `application(_:continue:)` carrying this type.
+    /// Type string declared in `NSUserActivityTypes` (Info.plist). Deep-link
+    /// routing from a Spotlight tap arrives as an `NSUserActivity` of type
+    /// `CSSearchableItemActionType` whose userInfo carries the item's
+    /// `uniqueIdentifier` (the Take UUID) — see `CatchlightApp.onContinueUserActivity`.
+    /// (An earlier comment here claimed this string was set as
+    /// `relatedUniqueIdentifier` on the CSSearchableItem; it never was — that
+    /// property links an item to a separately-donated NSUserActivity, which
+    /// this app does not use.)
     public static let userActivityType = "com.considus.catchlight.viewTake"
 
     /// Key for the Take UUID inside `NSUserActivity.userInfo`. Deep-link
@@ -102,6 +107,11 @@ public enum SpotlightAttributes {
             domainIdentifier: SpotlightConstants.domainIdentifier,
             attributeSet: attributes
         )
+        // CoreSpotlight items default-expire after ~30 days, after which old
+        // Takes silently vanish from Spotlight until re-indexed. A Take should
+        // stay findable for as long as it exists — deindexing on delete is the
+        // explicit removal path.
+        item.expirationDate = .distantFuture
         return item
     }
     #endif
