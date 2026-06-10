@@ -16,8 +16,9 @@
 //  acceptable for protecting UI access (NOT for key derivation).
 //
 //  Policy:
-//    • Minimum 6 alphanumeric characters OR an 8-digit numeric PIN. 4-digit PINs
-//      are rejected.
+//    • Minimum 6 alphanumeric characters OR a 6-digit numeric PIN. Sub-6 PINs
+//      are rejected. The 10-attempt lockout is the primary defence against
+//      brute force at this entropy floor.
 //    • After 10 consecutive failed attempts the app locks and requires the mnemonic.
 //
 
@@ -33,7 +34,7 @@ public struct PINPolicy {
     public static func rejectionReason(for pin: String) -> String? {
         let digitsOnly = pin.allSatisfy { $0.isNumber }
         if digitsOnly {
-            if pin.count < 8 { return "Numeric passcodes must be at least 8 digits." }
+            if pin.count < 6 { return "Numeric passcodes must be at least 6 digits." }
         } else {
             if pin.count < 6 { return "Passcodes must be at least 6 characters." }
         }
@@ -45,7 +46,12 @@ public final class PINService {
     private let service = "com.considus.catchlight"
     private let hashAccount = "pin-hash"
     private let saltAccount = "pin-salt"
-    private let accessGroup = "$(AppIdentifierPrefix)com.considus.catchlight"
+    // Must match the RESOLVED entitlement string in the signed binary. See the
+    // long comment in `MasterKeyKeychain.accessGroup` — the literal
+    // `"$(AppIdentifierPrefix)…"` form is only substituted in plist/entitlements
+    // files, never in Swift, and using it here returns -34018 at runtime.
+    // Team prefix YTPP9HU9F9 = Mark Stradling (project.yml DEVELOPMENT_TEAM).
+    private let accessGroup = "YTPP9HU9F9.com.considus.catchlight"
 
     /// PBKDF2 parameters. 600_000 iterations matches OWASP 2023 guidance for
     /// PBKDF2-HMAC-SHA-256. 32-byte output.

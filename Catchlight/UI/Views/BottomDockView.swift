@@ -19,6 +19,7 @@ import CatchlightCore
 struct BottomDockView: View {
     @Environment(UIState.self) private var ui
     @Environment(FirstRunOrientationState.self) private var orientation
+    @Environment(\.dynamicTypeSize) private var dynamicSize
 
     var onNewTake: () -> Void
     var onNewSequence: () -> Void
@@ -89,10 +90,12 @@ struct BottomDockView: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(ui.isAddExpanded ? "Cancel" : "Add")
+        .accessibilityIdentifier("add-button")
+        .accessibilityLabel(ui.isAddExpanded ? "Cancel" : "Add Take")
         .accessibilityHint(ui.isAddExpanded
                            ? "Double-tap to close the add menu."
-                           : "Double-tap to create a new take or sequence.")
+                           : "Double-tap to open the add menu.")
+        .accessibilityAddTraits(.isButton)
         .onChange(of: orientation.showAddPulse, initial: true) { _, showing in
             if showing { startAddPulseIfAllowed() } else { addPulsesDone = 2; addPulseScale = 1.0 }
         }
@@ -143,12 +146,20 @@ struct BottomDockView: View {
                         .foregroundStyle(Color.ckAdd)
                 }
                 .frame(width: buttonSize, height: buttonSize)
-                Text(title)
-                    .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
-                    .foregroundStyle(Color.ckTextSecondary)
+                // At AX3+ the caption2 label overflows the bloom column. Standard
+                // iOS pattern at very large text sizes: icon only, label remains
+                // available to VoiceOver via the button's accessibilityLabel.
+                if dynamicSize < .accessibility3 {
+                    Text(title)
+                        .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
             }
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(title == "New Take" ? "bloom-new-take" : "bloom-new-sequence")
         .accessibilityLabel(title)
         .accessibilityHint("Double-tap to create.")
     }
@@ -212,10 +223,14 @@ struct BottomDockView: View {
                 }
             }
         )
+        .accessibilityIdentifier("dailies-tab")
         .accessibilityLabel("Dailies")
         .accessibilityValue(active ? "selected" : "")
-        .accessibilityHint("Double-tap to open Dailies.")
-        .accessibilityAddTraits(active ? [.isSelected] : [])
+        .accessibilityHint("Double-tap to view your Takes. Long press to open Settings.")
+        // Long-press → Settings is a VoiceOver-incompatible gesture (VO intercepts
+        // long press), so expose Settings as an explicit named action too.
+        .accessibilityAction(named: "Open Settings") { ui.isSettingsPresented = true }
+        .accessibilityAddTraits(active ? [.isSelected, .isButton] : [.isButton])
     }
 
     private func navButton(_ tab: UIState.Tab, system: String, label: String) -> some View {
@@ -230,10 +245,13 @@ struct BottomDockView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(tab == .search ? "search-tab" : "sequence-tab")
         .accessibilityLabel(label)
         .accessibilityValue(active ? "selected" : "")
-        .accessibilityHint("Double-tap to open \(label).")
-        .accessibilityAddTraits(active ? [.isSelected] : [])
+        .accessibilityHint(label == "Search"
+                           ? "Double-tap to search your Takes."
+                           : "Double-tap to open \(label).")
+        .accessibilityAddTraits(active ? [.isSelected, .isButton] : [.isButton])
     }
 
     /// The x of the Add button's centre within the dock's coordinate space, so the

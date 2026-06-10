@@ -208,11 +208,27 @@ enum CatchlightFont {
 
     /// Display / Take text — Cormorant Garamond Italic, scaling with Dynamic
     /// Type. Falls back to the system serif (italic) when the font is not bundled.
+    /// Use for USER CONTENT rendered in the display face (e.g. Take body text on
+    /// rows / edit sheet) — content must respect the user's text size preference.
     static func display(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
         if let name = firstAvailable(displayCandidates) {
             return .custom(name, size: size, relativeTo: style)
         }
         return .system(style, design: .serif).italic()
+    }
+
+    /// Display / brand headings — Cormorant Garamond Italic at a FIXED point size
+    /// that does NOT respond to Dynamic Type. Use ONLY for brand display: the
+    /// wordmark, onboarding headings, the Obie title treatment, BIP-39 word chips.
+    /// Everything else (including Take user content rendered in the display face)
+    /// must use `display(size:relativeTo:)` so the user's text-size preference is
+    /// honoured.
+    static func displayFixed(size: CGFloat) -> Font {
+        if let name = firstAvailable(displayCandidates) {
+            return .custom(name, fixedSize: size)
+        }
+        // System-serif fallback has no fixedSize counterpart; clamp via .system.
+        return .system(size: size, weight: .regular, design: .serif).italic()
     }
 
     /// Interface text — DM Sans, scaling with Dynamic Type. Falls back to the

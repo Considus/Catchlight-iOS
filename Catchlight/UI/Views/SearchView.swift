@@ -34,8 +34,9 @@ struct SearchView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .submitLabel(.search)
-                        .accessibilityLabel("Search field")
-                        .accessibilityHint("Type to find takes by their text.")
+                        .accessibilityIdentifier("search-field")
+                        .accessibilityLabel("Search Takes")
+                        .accessibilityHint("Type to find Takes by their text.")
                     if !vm.query.isEmpty {
                         Button { vm.query = "" } label: {
                             Image(systemName: "xmark.circle.fill")
@@ -61,7 +62,7 @@ struct SearchView: View {
                         .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                         .foregroundStyle(Color.ckTextSecondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .accessibilityLabel("No takes match.")
+                        .accessibilityLabel("No results.")
                 } else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {

@@ -22,6 +22,12 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>com.considus.catchlight.viewTake</string>
+	</array>
 	<key>UIAppFonts</key>
 	<array>
 		<string>CormorantGaramond[wght].ttf</string>
@@ -33,7 +39,11 @@
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
-		<string></string>
+		<string>ck-background</string>
+		<key>UIImageName</key>
+		<string>catchlight-icon</string>
+		<key>UIImageRespectsSafeAreaInsets</key>
+		<false/>
 	</dict>
 	<key>UIRequiresFullScreen</key>
 	<true/>

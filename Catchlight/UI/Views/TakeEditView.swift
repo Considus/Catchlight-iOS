@@ -20,6 +20,7 @@ import CatchlightCore
 struct TakeEditView: View {
     @Environment(DailiesViewModel.self) private var vm
     @Environment(UIState.self) private var ui
+    @Environment(AppModel.self) private var app
     @Environment(\.colorScheme) private var scheme
 
     let take: Take
@@ -39,8 +40,10 @@ struct TakeEditView: View {
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture { saveAndDismiss() }
+                .accessibilityIdentifier("editor-done")
                 .accessibilityLabel("Done editing")
                 .accessibilityHint("Double-tap to save this take and close.")
+                .accessibilityAddTraits(.isButton)
 
             card
                 .padding(.horizontal, 16)
@@ -59,6 +62,7 @@ struct TakeEditView: View {
                 .frame(minHeight: 160, maxHeight: 260)
                 .padding(.horizontal, 12)
                 .padding(.top, 12)
+                .accessibilityIdentifier("take-edit-body")
                 .accessibilityLabel("Take text")
                 .accessibilityHint("Write your take. It saves automatically.")
 
@@ -104,6 +108,15 @@ struct TakeEditView: View {
 
     private func saveAndDismiss() {
         focused = false
+        // Task 6.20: the gate lives at the commit, not the navigation. Any path
+        // that reaches the editor (Dailies, Search, Sequence, future deep links)
+        // funnels through here; lapsed users have their edit redirected to the
+        // paywall without losing what they typed (the close still happens so the
+        // dim layer and keyboard get released — the paywall overlays cleanly).
+        guard app.ensureEntitled() else {
+            ui.closeEditor()
+            return
+        }
         vm.save(currentTake)
         ui.closeEditor()
     }

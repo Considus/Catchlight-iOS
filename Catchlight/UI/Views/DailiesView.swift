@@ -83,9 +83,60 @@ struct DailiesView: View {
     private var topStrips: some View {
         VStack(spacing: 0) {
             conflictBanner
+            lapseBanner
             storageErrorStrip
             syncErrorStrip
             quarantineNoticeStrip
+        }
+    }
+
+    /// Read-only banner shown while the user is `.lapsed` (Tasks 6.20 / 6.22).
+    /// Offers two parallel actions: resubscribe (opens the paywall) and export
+    /// (subscription-independent — never gated). This is the lapse-mode entry
+    /// point the decisions doc §5 specifically calls out.
+    @ViewBuilder
+    private var lapseBanner: some View {
+        if app.subscriptionStatus == .lapsed {
+            HStack(spacing: 10) {
+                Image(systemName: "lock")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(Color.ckEmber)
+                    .accessibilityHidden(true)
+                Text("Read-only — your data is still yours.")
+                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .lineLimit(2)
+                Spacer(minLength: 8)
+                Button {
+                    let takes = (try? vm.store.allTakes()) ?? []
+                    ExportCoordinator.presentShareSheet(takes: takes)
+                } label: {
+                    Text("Export")
+                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .foregroundStyle(Color.ckEmber)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("lapse-banner-export")
+                .accessibilityLabel("Export your Takes")
+                Button {
+                    ui.isPaywallPresented = true
+                } label: {
+                    Text("Subscribe")
+                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .foregroundStyle(Color.ckEmber)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("lapse-banner-subscribe")
+                .accessibilityLabel("Resubscribe to Catchlight")
+            }
+            .padding(.horizontal, 16)
+            .frame(minHeight: 44)
+            .frame(maxWidth: .infinity)
+            .background(scheme == .dark
+                        ? Color.ckGlow.opacity(0.12)
+                        : Color.ckEmber.opacity(0.15))
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .accessibilityElement(children: .contain)
         }
     }
 
@@ -101,6 +152,10 @@ struct DailiesView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckEmber)
                     .accessibilityHidden(true)
+                // L10N: pluralisation done inline via `count == 1`. Future
+                // pass should move to a Stringsdict / .xcstrings plural rule
+                // — many locales don't pluralise on the singular/plural axis
+                // alone (e.g. Polish, Arabic). Tracked but not blocking.
                 Text("\(count) take\(count == 1 ? "" : "s") changed on another device.")
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                     .foregroundStyle(Color.ckTextPrimary)
@@ -114,7 +169,7 @@ struct DailiesView: View {
                         .foregroundStyle(Color.ckEmber)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Review sync conflicts")
+                .accessibilityLabel("\(count) Take\(count == 1 ? "" : "s") changed on another device. Double-tap to review.")
             }
             .padding(.horizontal, 16)
             .frame(height: 44)
@@ -145,6 +200,11 @@ struct DailiesView: View {
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextPrimary)
                 .lineLimit(2)
+                // Compose the message + Dismiss button into one VO element so the
+                // user hears the full notice and then lands on the action, instead
+                // of stepping through "exclamationmark, body text, Dismiss" hops.
+                .accessibilityLabel("\(accessibilityLabel). \(text)")
+                .accessibilityAddTraits(.isStaticText)
             Spacer(minLength: 8)
             Button(action: onDismiss) {
                 Text("Dismiss")
@@ -156,6 +216,7 @@ struct DailiesView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss \(accessibilityLabel)")
+            .accessibilityHint("Double-tap to dismiss this notice.")
         }
         .padding(.horizontal, 16)
         .frame(minHeight: 44)
@@ -224,47 +285,67 @@ struct DailiesView: View {
     }
 
     private var timeline: some View {
-        ScrollView {
-            // Track scroll offset to ghost month markers in/out.
-            GeometryReader { proxy in
-                Color.clear.preference(
-                    key: ScrollOffsetKey.self,
-                    value: proxy.frame(in: .named("dailies")).minY
-                )
-            }
-            .frame(height: 0)
-
-            LazyVStack(alignment: .leading, spacing: 0) {
-                // Pinned Obie.
-                if let obie = vm.obie {
-                    row(for: obie, isFirst: true)
-                    Color.clear.frame(height: 18)   // gap below the Obie
+        // ScrollViewReader wraps the timeline so the Spotlight deep-link handler
+        // (Task 6.19) can scroll programmatically to a target Take id.
+        ScrollViewReader { proxy in
+            ScrollView {
+                // Track scroll offset to ghost month markers in/out.
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: ScrollOffsetKey.self,
+                        value: geo.frame(in: .named("dailies")).minY
+                    )
                 }
+                .frame(height: 0)
 
-                ForEach(Array(monthGroups.enumerated()), id: \.element.month) { groupIndex, group in
-                    // Ghosted month marker — appears only while scrolling.
-                    Text(group.month)
-                        .font(CatchlightFont.ui(.medium, size: 12, relativeTo: .caption))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .padding(.leading, spineX + 22)
-                        .padding(.vertical, 6)
-                        .opacity(scrolling ? 0.8 : 0)
-                        .animation(.easeInOut(duration: 0.25), value: scrolling)
-                        .accessibilityHidden(!scrolling)
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    // Pinned Obie.
+                    if let obie = vm.obie {
+                        row(for: obie, isFirst: true)
+                            .id(obie.id)
+                        Color.clear.frame(height: 18)   // gap below the Obie
+                    }
 
-                    ForEach(Array(group.takes.enumerated()), id: \.element.id) { takeIndex, take in
-                        // The very first row across all months (when there's no Obie)
-                        // anchors the Iris hint tooltip in Hint 2.
-                        let isFirstOverall = (vm.obie == nil) && groupIndex == 0 && takeIndex == 0
-                        row(for: take, isFirst: isFirstOverall)
+                    ForEach(Array(monthGroups.enumerated()), id: \.element.month) { groupIndex, group in
+                        // Ghosted month marker — appears only while scrolling.
+                        Text(group.month)
+                            .font(CatchlightFont.ui(.medium, size: 12, relativeTo: .caption))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .padding(.leading, spineX + 22)
+                            .padding(.vertical, 6)
+                            .opacity(scrolling ? 0.8 : 0)
+                            .animation(.easeInOut(duration: 0.25), value: scrolling)
+                            .accessibilityHidden(!scrolling)
+
+                        ForEach(Array(group.takes.enumerated()), id: \.element.id) { takeIndex, take in
+                            // The very first row across all months (when there's no Obie)
+                            // anchors the Iris hint tooltip in Hint 2.
+                            let isFirstOverall = (vm.obie == nil) && groupIndex == 0 && takeIndex == 0
+                            row(for: take, isFirst: isFirstOverall)
+                                .id(take.id)
+                        }
                     }
                 }
+                .padding(.top, 12)
+                .padding(.bottom, 120)   // clearance for the dock
             }
-            .padding(.top, 12)
-            .padding(.bottom, 120)   // clearance for the dock
+            .coordinateSpace(name: "dailies")
+            .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
+            .onChange(of: ui.spotlightTargetTakeID) { _, newTarget in
+                // Task 6.19 — Spotlight tap deep-link. Scroll the matching row
+                // into view and let the row's own opacity flash do the rest.
+                guard let id = newTarget else { return }
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    proxy.scrollTo(id, anchor: .center)
+                }
+                // Clear the target after the flash has time to start so a
+                // subsequent tap on the same item re-triggers the highlight.
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 1_400_000_000)
+                    if ui.spotlightTargetTakeID == id { ui.spotlightTargetTakeID = nil }
+                }
+            }
         }
-        .coordinateSpace(name: "dailies")
-        .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
     }
 
     private func row(for take: Take, isFirst: Bool = false) -> some View {
@@ -281,9 +362,23 @@ struct DailiesView: View {
                 // context "before the action takes effect" (and persists over the
                 // confirmation alert when one Obie already exists).
                 orientation.triggerObieIntro()
+                // Task 6.20: Obie designation is a mutation — gate it.
+                guard app.ensureEntitled() else { return }
                 vm.designateObie(take, replaceExisting: false)
             },
-            onTapText: { ui.openEditor(for: take) }
+            onTapText: {
+                // Task 6.20: editing is gated for lapsed users — paywall opens instead.
+                guard app.ensureEntitled() else { return }
+                ui.openEditor(for: take)
+            }
+        )
+        .background(
+            // Task 6.19 — brief flash when this row is the Spotlight deep-link
+            // target. Uses the ember accent at low opacity so it reads as a
+            // gentle pulse, not a notification.
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.ckEmber.opacity(ui.spotlightTargetTakeID == take.id ? 0.18 : 0))
+                .animation(.easeInOut(duration: 0.4), value: ui.spotlightTargetTakeID)
         )
         .padding(.leading, spineX - CatchlightLayout.circleDiameter / 2
                  - (CatchlightLayout.minTouchTarget - CatchlightLayout.circleDiameter) / 2)

@@ -161,6 +161,10 @@ final class OnboardingViewModel {
         do {
             let masterKeyData = MasterKeyDerivation.deriveRaw(from: mnemonic)
             try MasterKeyKeychain.store(masterKeyData)
+            // Persist the mnemonic so Settings → Privacy phrase can re-display it
+            // (Task 3.12). Same access tier as the master key; access is gated by
+            // the in-app PIN at the call site.
+            try MnemonicKeychain.store(mnemonic)
             persistMetadataSalt(SecureRandom.bytes(16))
             onComplete()
         } catch let error as KeychainError {

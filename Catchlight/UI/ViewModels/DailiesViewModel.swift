@@ -28,8 +28,15 @@ final class DailiesViewModel {
     /// the winning version through the same backend the timeline reads from.
     let store: TakeStore
 
-    init(store: TakeStore) {
+    /// Task 6.19 — Spotlight surface. Injected so previews and tests can opt out
+    /// of indexing (NoopSpotlightIndexer); production uses CoreSpotlightIndexer
+    /// from Wiring. Every create/update goes through `save(_:)` and every
+    /// delete through `delete(_:)`, so wiring at the VM level covers all paths.
+    private let spotlight: SpotlightIndexing
+
+    init(store: TakeStore, spotlight: SpotlightIndexing = NoopSpotlightIndexer()) {
         self.store = store
+        self.spotlight = spotlight
         reload()
     }
 
@@ -77,6 +84,10 @@ final class DailiesViewModel {
         updated.normaliseActivityFloor()
         do {
             try store.upsert(updated)
+            // Spotlight (Task 6.19) — re-index every save (covers both create
+            // and update paths since both funnel here). Fire-and-forget; the
+            // store write is the authoritative outcome.
+            spotlight.index(updated)
             reload()
         } catch {
             lastError = "Couldn't save that Take."
@@ -86,6 +97,9 @@ final class DailiesViewModel {
     func delete(_ take: Take) {
         do {
             try store.delete(id: take.id)
+            // Spotlight (Task 6.19) — drop the item from the OS index so a
+            // deleted Take can't be discovered via search.
+            spotlight.deindex(takeID: take.id)
             reload()
         } catch {
             lastError = "Couldn't delete that Take."

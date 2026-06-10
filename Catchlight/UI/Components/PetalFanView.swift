@@ -100,6 +100,15 @@ struct PetalFanView: View {
             case .task: return "checkmark.circle"
             }
         }
+        /// Stable suffix for the XCUITest accessibilityIdentifier ("dial-petal-task" etc.).
+        var identifierSuffix: String {
+            switch self {
+            case .note: return "note"
+            case .obie: return "obie"
+            case .remind: return "remind"
+            case .task: return "task"
+            }
+        }
     }
 
     private func isActive(_ kind: PetalKind) -> Bool {
@@ -120,13 +129,21 @@ struct PetalFanView: View {
 
     var body: some View {
         ZStack {
-            // Dim overlay — tap to dismiss without selection.
+            // Dim overlay — tap to COMMIT the current selection and dismiss.
+            // Petal taps toggle the working state but never close the fan on
+            // their own (the user may toggle multiple types in one session),
+            // so the dim tap is the commit gesture. Before the 4.5/7.4 audit
+            // this called `retractAndDismiss()` with the default commit=false,
+            // which silently dropped every Dial edit; that path is the bug
+            // referenced in the post-7.4 fix-up.
             Color.ckDim
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
-                .onTapGesture { retractAndDismiss() }
-                .accessibilityLabel("Dismiss")
-                .accessibilityHint("Double-tap to close without changing activity types.")
+                .onTapGesture { retractAndDismiss(commit: true) }
+                .accessibilityIdentifier("dial-dim")
+                .accessibilityLabel("Save and close")
+                .accessibilityHint("Double-tap to apply your selection and close.")
+                .accessibilityAddTraits(.isButton)
 
             ZStack {
                 // Petals.
@@ -148,6 +165,8 @@ struct PetalFanView: View {
                 .accessibilityLabel("Selected: \(TakeCircleView.activityDescription(for: workingTake))")
             }
             .position(hubCentre)
+            // Let VoiceOver navigate into the hub + each petal as siblings.
+            .accessibilityElement(children: .contain)
         }
         .onAppear { deploy() }
     }
@@ -187,10 +206,13 @@ struct PetalFanView: View {
                    minHeight: CatchlightLayout.minTouchTarget)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("dial-petal-\(kind.identifierSuffix)")
         .accessibilityLabel(kind.title)
         .accessibilityValue(active ? "active" : "inactive")
         .accessibilityHint("Double-tap to \(active ? "remove" : "add") \(kind.title).")
-        .accessibilityAddTraits(active ? [.isSelected] : [])
+        // .isButton is redundant under a Button{} but the spec asks for it
+        // explicitly so the role is preserved if this view is ever rebuilt.
+        .accessibilityAddTraits(active ? [.isSelected, .isButton] : [.isButton])
     }
 
     // MARK: - Petal styling (mode-dependent, per brief)

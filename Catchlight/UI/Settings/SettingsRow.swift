@@ -40,7 +40,9 @@ struct SettingsRow<Accessory: View>: View {
                     .accessibilityHidden(true)
             }
         }
-        .frame(height: 52)
+        // minHeight (not fixed) so the row grows at accessibility text sizes
+        // instead of clipping the label or its trailing accessory.
+        .frame(minHeight: 52)
         .contentShape(Rectangle())
         .opacity(disabled ? 0.38 : 1)
 
@@ -53,6 +55,13 @@ struct SettingsRow<Accessory: View>: View {
             }
         }
         .listRowBackground(Color.ckSurface)
+        // Compose icon + label + accessory text into a single VoiceOver element so
+        // VO reads "Mode. System." rather than three separate hops. The icon is
+        // already accessibilityHidden above; chevron likewise. Disabled rows ("Coming
+        // soon") are non-interactive — surface a hint so VO explains why they don't
+        // respond to a double-tap.
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(disabled ? "Not available yet." : "")
     }
 }
 
@@ -80,6 +89,11 @@ struct SettingsDetailLabel: View {
         Text(text)
             .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
             .foregroundStyle(Color.ckTextSecondary)
+            // Truncate trailing accessory values ("Coming soon", "1.0.0", "System")
+            // at the tail at large Dynamic Type sizes rather than wrapping inside
+            // the row.
+            .lineLimit(1)
+            .truncationMode(.tail)
     }
 }
 

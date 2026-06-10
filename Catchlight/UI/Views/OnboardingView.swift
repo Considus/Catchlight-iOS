@@ -38,11 +38,29 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
 
+    // At accessibility text sizes (AX1+) wrap the content in a ScrollView so tall
+    // onboarding screens (Welcome, Storage Choice, Cloud Reminder) don't clip
+    // behind the bottom safe-area inset. At default sizes the existing
+    // Spacer-centred ZStack is preserved so visuals are unchanged. Steps 4–5
+    // already contain their own ScrollView; SwiftUI nests these cleanly.
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
     var body: some View {
-        ZStack {
-            content()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.horizontal, 24)
+        Group {
+            if dynamicSize.isAccessibilitySize {
+                ScrollView {
+                    content()
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 16)
+                }
+            } else {
+                ZStack {
+                    content()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal, 24)
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.ckBackground.ignoresSafeArea())
@@ -111,11 +129,12 @@ private struct WelcomeStep: View {
                     .frame(height: 32)
                     .accessibilityLabel("Catchlight")
                 Text("You don't need to choose privacy, it's your right and you never need to ask for it.")
-                    .font(CatchlightFont.display(size: 26, relativeTo: .title2))
+                    .font(CatchlightFont.displayFixed(size: 26))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 8)
+                    .accessibilityAddTraits(.isHeader)
                 VStack(spacing: 16) {
                     (Text("First, we'll create your privacy phrase — 12 words that are the ")
                      + Text("only").bold()
@@ -149,11 +168,12 @@ private struct StorageChoiceStep: View {
             VStack(spacing: 24) {
                 Spacer().frame(height: 8)
                 Text("Takes belong to you and so does the choice of how they are stored.")
-                    .font(CatchlightFont.display(size: 26, relativeTo: .title2))
+                    .font(CatchlightFont.displayFixed(size: 26))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 24)
+                    .accessibilityAddTraits(.isHeader)
 
                 Spacer(minLength: 0)
 
@@ -216,10 +236,11 @@ private struct LocalWarningStep: View {
             VStack(spacing: 24) {
                 Spacer()
                 Text("One thing before we continue.")
-                    .font(CatchlightFont.display(size: 28, relativeTo: .title))
+                    .font(CatchlightFont.displayFixed(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
                 Text("Without cloud backup, your Takes exist only on this device. If you lose access to it and haven't set up a second device, your data cannot be recovered.")
                     .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
@@ -255,10 +276,11 @@ private struct RevealStep: View {
             ScrollView {
                 VStack(spacing: 20) {
                     Text("Your privacy phrase")
-                        .font(CatchlightFont.display(size: 30, relativeTo: .title))
+                        .font(CatchlightFont.displayFixed(size: 30))
                         .foregroundStyle(Color.ckTextPrimary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
                         .padding(.top, 48) // clear the dynamic island
 
                     Text(bodyText)
@@ -287,7 +309,7 @@ private struct RevealStep: View {
                         .foregroundStyle(Color.ckTextSecondary)
                         .frame(width: 22, alignment: .trailing)
                     Text(word)
-                        .font(CatchlightFont.display(size: 20, relativeTo: .body))
+                        .font(CatchlightFont.displayFixed(size: 20))
                         .foregroundStyle(Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -316,10 +338,11 @@ private struct ConfirmStep: View {
             ScrollView {
                 VStack(spacing: 20) {
                     Text("Confirm three words")
-                        .font(CatchlightFont.display(size: 30, relativeTo: .title))
+                        .font(CatchlightFont.displayFixed(size: 30))
                         .foregroundStyle(Color.ckTextPrimary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
                         .padding(.top, 48) // clear the dynamic island
 
                     Text(promptCopy)
@@ -378,7 +401,7 @@ private struct ConfirmStep: View {
                             .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
                             .foregroundStyle(Color.ckTextSecondary)
                         Text(value ?? "—")
-                            .font(CatchlightFont.display(size: 18, relativeTo: .body))
+                            .font(CatchlightFont.displayFixed(size: 18))
                             .foregroundStyle(value == nil ? Color.ckTextSecondary : Color.ckTextPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
@@ -389,6 +412,13 @@ private struct ConfirmStep: View {
                 .frame(minHeight: 56)
                 .frame(maxWidth: .infinity)
                 .animation(.easeInOut(duration: 0.18), value: vm.flashError)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(
+                    value.map { "Slot \(positionLabel): \($0). Double-tap to deselect." }
+                    ?? "Slot \(positionLabel), empty"
+                )
+                .accessibilityHint(value == nil ? "Pick a word from the bank below." : "")
+                .accessibilityAddTraits(value != nil ? [.isButton] : [])
             }
         }
     }
@@ -400,7 +430,7 @@ private struct ConfirmStep: View {
                 let used = vm.usedWords.contains(word)
                 Button { vm.tapBankWord(word) } label: {
                     Text(word)
-                        .font(CatchlightFont.display(size: 18, relativeTo: .body))
+                        .font(CatchlightFont.displayFixed(size: 18))
                         .foregroundStyle(used ? Color.ckTextSecondary.opacity(0.4) : Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -412,7 +442,7 @@ private struct ConfirmStep: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(used || vm.isLocked)
-                .accessibilityLabel(word)
+                .accessibilityLabel(used ? "\(word), already placed" : "Select \(word)")
                 .accessibilityHint(used ? "Already placed." : "Double-tap to place in the next slot.")
             }
         }
@@ -443,10 +473,11 @@ private struct CompleteStep: View {
                     .frame(width: 72, height: 72)
                     .accessibilityHidden(true)
                 Text("You're ready.")
-                    .font(CatchlightFont.display(size: 32, relativeTo: .largeTitle))
+                    .font(CatchlightFont.displayFixed(size: 32))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
                 Text(bodyText)
                     .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
@@ -470,9 +501,10 @@ private struct FailureStep: View {
             VStack(spacing: 20) {
                 Spacer()
                 Text(vm.failure ?? "Something went wrong.")
-                    .font(CatchlightFont.display(size: 26, relativeTo: .title2))
+                    .font(CatchlightFont.displayFixed(size: 26))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
+                    .accessibilityAddTraits(.isHeader)
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail = vm.failureDetail {
                     Text(detail)

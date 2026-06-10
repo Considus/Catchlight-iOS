@@ -65,6 +65,17 @@ targets:
     # file.
     sources:
       - path: Catchlight
+        # Task 6.20 — exclude the StoreKit configuration from the default
+        # recursive include so it doesn't get bundled as a resource in Release.
+        excludes:
+          - "Resources/Catchlight.storekit"
+      # Local StoreKit configuration for sandbox testing of the paywall. The
+      # file is referenced in the project so the Debug scheme can bind to it,
+      # but `buildPhase: none` keeps it out of the built bundle. Release
+      # archives have no scheme pointing here, so production sales go through
+      # the real App Store.
+      - path: Catchlight/Resources/Catchlight.storekit
+        buildPhase: none
     info:
       path: Catchlight/Resources/Info.plist
       properties:
@@ -72,18 +83,38 @@ targets:
           - "CormorantGaramond[wght].ttf"
           - "CormorantGaramond-Italic[wght].ttf"
           - "DMSans[opsz,wght].ttf"
-        # Without UILaunchScreen, iOS 13+ runs the app in legacy compatibility mode
-        # (letterboxed, doesn't fill the screen). An empty UILaunchScreen dict is
-        # enough to opt in to full-screen modern scene sizing.
+        # UILaunchScreen: opts into modern full-screen scene sizing (required, see
+        # gotcha #1 in iOS gotchas). UIColorName references the ck-background colour
+        # set in Assets.xcassets (light: Paper #F7F4EF, dark: Ink #0F0E0C) — this
+        # colour set was added 2026-06-07 specifically for the launch screen, since
+        # UIColorName resolves against the asset catalog, not Swift colour extensions.
+        # UIImageName centers the composite splash (icon + wordmark + tagline) on the
+        # background. launch-splash.imageset added 2026-06-09 (task 4.7): two path-only
+        # SVGs (190×280pt viewBox), dark/light adaptive, original rendering intent.
         UILaunchScreen:
-          UIColorName: ""
+          UIColorName: "ck-background"
+          UIImageName: "launch-splash"
+          UIImageRespectsSafeAreaInsets: false
         UIApplicationSupportsIndirectInputEvents: true
+        # App uses only standard iOS encryption (AES-256-GCM via CryptoKit,
+        # HKDF/HMAC-SHA-256). No proprietary crypto, no export-controlled
+        # algorithms beyond what's exempt under US BIS 740.17(b)(2). Declaring
+        # this here lets TestFlight/App Store skip the annual export-compliance
+        # questionnaire on every upload.
+        ITSAppUsesNonExemptEncryption: false
         # Required so BGTaskScheduler will register the sync refresh task —
         # without this, BackgroundTasks rejects the registration at launch
         # ("com.considus.catchlight.sync is not advertised in the application's
         # Info.plist").
         BGTaskSchedulerPermittedIdentifiers:
           - com.considus.catchlight.sync
+        # Task 6.19 — Spotlight deep-link activity type. iOS uses this to
+        # dispatch `application(_:continue:)` (SwiftUI's
+        # `.onContinueUserActivity`) when the user taps a Catchlight result
+        # in Spotlight search. Must match
+        # `SpotlightConstants.userActivityType` in CatchlightCore.
+        NSUserActivityTypes:
+          - com.considus.catchlight.viewTake
         # Portrait-only — onboarding layout (StepScaffold, Dynamic Island padding,
         # ScrollView safe-area handling) is designed for portrait. UIRequiresFullScreen
         # is needed alongside a restricted orientation set to silence Xcode's
@@ -110,6 +141,10 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight   # brief §3.1
         CODE_SIGN_ENTITLEMENTS: Catchlight/Resources/Catchlight.entitlements
+        # Pin signing to Automatic so the Xcode UI can't silently flip the app
+        # target to Manual on a future fix-warning prompt. Pre-archive audit
+        # 2026-06-07.
+        CODE_SIGN_STYLE: Automatic
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         SWIFT_OBJC_BRIDGING_HEADER: ""
     dependencies:
@@ -139,6 +174,48 @@ targets:
       - target: Catchlight
       - package: CatchlightCore
         product: CatchlightCore
+
+  # Task 7.4 / 7.5 — XCUITest target for the six core flows + the two-tap
+  # regression anchor. UI tests drive the real app via `XCUIApplication`; the app
+  # detects the `--uitesting` launch argument (see Wiring.makeAppModel) and skips
+  # onboarding into an InMemoryTakeStore seeded with two known Takes, so every
+  # test starts from a known resting state without touching Keychain or SQLite.
+  CatchlightUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/CatchlightUITests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.uitests
+    dependencies:
+      - target: Catchlight
+
+# XcodeGen auto-discovery puts `CatchlightTests` into the Catchlight scheme's
+# test action but does NOT add the `bundle.ui-testing` target. We declare the
+# scheme so a single `xcodebuild test -scheme Catchlight` invocation runs both
+# the unit-test bundle and the UI-test bundle (Workplan 7.4 / 7.5). Nothing else
+# about the scheme is customised — build/run/profile/analyse use XcodeGen
+# defaults.
+schemes:
+  Catchlight:
+    build:
+      targets:
+        Catchlight: all
+    run:
+      # Task 6.20 — Debug run action uses the local StoreKit config so the
+      # paywall can be exercised in the simulator without sandbox-tester
+      # accounts. Production sales (Release archives) go through the real
+      # App Store; this binding is on the Debug scheme only.
+      storeKitConfiguration: Catchlight/Resources/Catchlight.storekit
+    test:
+      # Tests also use the local StoreKit config so any test that touches the
+      # paywall isn't talking to live App Store servers.
+      storeKitConfiguration: Catchlight/Resources/Catchlight.storekit
+      targets:
+        - CatchlightTests
+        - CatchlightUITests
 
 # v1.1 extension targets (Share Extension, WidgetKit, App Intents) are NOT defined
 # here — they are out of scope for v1.0 (brief §14). Their PREREQUISITES (App Group

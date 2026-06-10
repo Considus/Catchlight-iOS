@@ -32,6 +32,15 @@ final class AppModel {
     /// conflicts re-detect on the next sync if dismissed without resolving.
     let conflictQueue = ConflictQueue()
 
+    /// Subscription manager (Tasks 6.20 / 6.21). Owns StoreKit access and
+    /// exposes the current `SubscriptionStatus` to the UI. Constructed by
+    /// Wiring so previews can inject a stand-in that reports any state.
+    let subscription: SubscriptionManager
+
+    /// Convenience: the current entitlement state. Mirrors `subscription.status`
+    /// so views can read a single ergonomic property.
+    var subscriptionStatus: SubscriptionStatus { subscription.status }
+
     /// User-readable summary of the most recent sync failure (Task 3.9). Drives
     /// the non-blocking ruby error strip in `DailiesView`. nil = no current error.
     /// Set by BackgroundSync via `reportSyncError(_:)`; cleared by the strip's
@@ -55,14 +64,26 @@ final class AppModel {
     /// Supplies the production store after the master key exists. Injected by Wiring.
     private let storeProvider: () -> TakeStore?
 
+    /// Task 6.19 — Spotlight indexer. Held here so the same instance is shared
+    /// across the lifetime of the app: DailiesViewModel uses it on save/delete,
+    /// SubscriptionManager uses it to deindex everything on lapse.
+    let spotlight: SpotlightIndexing
+
     init(needsOnboarding: Bool,
          initialStore: TakeStore,
-         storeProvider: @escaping () -> TakeStore?) {
+         storeProvider: @escaping () -> TakeStore?,
+         subscription: SubscriptionManager = SubscriptionManager(),
+         spotlight: SpotlightIndexing = NoopSpotlightIndexer()) {
         self.needsOnboarding = needsOnboarding
         self.storeProvider = storeProvider
-        self.dailiesVM = DailiesViewModel(store: initialStore)
+        self.subscription = subscription
+        self.spotlight = spotlight
+        self.dailiesVM = DailiesViewModel(store: initialStore, spotlight: spotlight)
         self.searchVM = SearchViewModel(store: initialStore)
         self.sequenceVM = SequenceViewModel(store: initialStore)
+        // Hand the indexer to the subscription manager so the lapse transition
+        // triggers a deindex-all without AppModel needing to observe status.
+        subscription.attachSpotlightIndexer(spotlight)
 
         if needsOnboarding {
             self.onboardingVM = nil
@@ -91,7 +112,10 @@ final class AppModel {
     }
 
     private func rebind(to store: TakeStore) {
-        dailiesVM = DailiesViewModel(store: store)
+        // Carry the same Spotlight indexer through the store swap that follows
+        // onboarding completion — without this, post-onboarding Takes wouldn't
+        // be indexed until the next app launch.
+        dailiesVM = DailiesViewModel(store: store, spotlight: spotlight)
         searchVM = SearchViewModel(store: store)
         sequenceVM = SequenceViewModel(store: store)
     }
@@ -133,6 +157,23 @@ final class AppModel {
         }
     }
 
+    /// Task 6.13 — friendly string for a stale or unresolvable cloud-folder
+    /// bookmark. Exposed for testability.
+    static func friendlyBookmarkErrorMessage(for error: Wiring.CloudBookmarkError) -> String {
+        switch error {
+        case .stale:
+            return "Your cloud folder is no longer available. Open Settings → Cloud Storage to re-pick it."
+        case .unresolvable:
+            return "Your cloud folder couldn't be opened. Open Settings → Cloud Storage to choose a new one."
+        }
+    }
+
+    /// Report a bookmark-health issue through the same non-blocking strip the
+    /// sync engine uses. Called by CatchlightApp on scenePhase → active.
+    func reportBookmarkError(_ error: Wiring.CloudBookmarkError) {
+        lastSyncError = Self.friendlyBookmarkErrorMessage(for: error)
+    }
+
     /// Add to the running quarantine count from the latest sync pass.
     func reportQuarantined(_ ids: [UUID]) {
         guard !ids.isEmpty else { return }
@@ -142,6 +183,27 @@ final class AppModel {
     /// Strip-side actions — clear the matching state.
     func clearSyncError() { lastSyncError = nil }
     func clearQuarantineNotice() { quarantinedCount = 0 }
+
+    // MARK: - Task 6.20 / 6.21 — subscription gating
+
+    /// Returns true if the caller may proceed with a create/edit action.
+    /// When false, opens the paywall as a side-effect so the call-site can
+    /// simply branch on the bool.
+    @discardableResult
+    func ensureEntitled() -> Bool {
+        if subscriptionStatus.isEntitled { return true }
+        ui.isPaywallPresented = true
+        return false
+    }
+
+    /// Post-onboarding hook: if the user is unentitled, surface the paywall.
+    /// Idempotent — safe to call from any "main app appeared" code path.
+    func presentPaywallIfNeededAfterOnboarding() {
+        guard !needsOnboarding else { return }
+        if !subscriptionStatus.isEntitled {
+            ui.isPaywallPresented = true
+        }
+    }
 
     // MARK: - Previews
 
