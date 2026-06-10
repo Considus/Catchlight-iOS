@@ -5,10 +5,12 @@ name: CI
 #
 #   core-tests  — `swift test` + `swift run coreverify` against the
 #                 CatchlightCore SPM package. No Xcode project needed.
-#   xcode-tests — `xcodebuild test` against the iOS simulator, covering the
-#                 iOS-only tests gated by `#if canImport(Catchlight)`
-#                 (FileProtectionTests, ErrorStateTests, ConflictQueueTests,
-#                 FirstRunOrientationTests).
+#   xcode-tests — `xcodebuild test` against the iOS simulator. This is the job
+#                 that runs the iOS-only suites gated by
+#                 `#if canImport(Catchlight)` — roughly half the test files
+#                 (Keychain, PIN, SQLite store, file protection, settings,
+#                 subscription, reminders, UI state, plus the XCUITest bundle).
+#                 The macOS `swift test` job alone is NOT a full signal.
 #
 # Both jobs must pass before this commit is mergeable — these are the status
 # checks wired into branch protection in 6.18.
@@ -39,14 +41,18 @@ jobs:
       # resolvable. If a future image bump removes a needed runtime, pin here.
 
       # SPM resolves CryptoKit (system) and no third-party deps today, so the
-      # cache mostly saves index/build artefacts between runs.
+      # cache mostly saves index/build artefacts between runs. The key hashes
+      # Package.swift only — Package.resolved is gitignored so it never exists
+      # at checkout (the previous key listed it, which silently degenerated to
+      # the same thing). Commit Package.resolved and add it back here the day a
+      # third-party dependency lands.
       - name: Cache SwiftPM
         uses: actions/cache@v4
         with:
           path: |
             .build
             ~/Library/Caches/org.swift.swiftpm
-          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.swift') }}
           restore-keys: |
             ${{ runner.os }}-spm-
 
@@ -75,14 +81,16 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
+      # Cache only the swiftpm download cache for the xcodebuild job: the
+      # previous cache listed `.build` (which xcodebuild never touches) and a
+      # `DerivedData/SourcePackages` path that doesn't exist (Xcode nests
+      # SourcePackages under DerivedData/<Project>-<hash>/), so it restored
+      # nothing while costing save/restore time.
       - name: Cache SwiftPM
         uses: actions/cache@v4
         with:
-          path: |
-            .build
-            ~/Library/Developer/Xcode/DerivedData/SourcePackages
-            ~/Library/Caches/org.swift.swiftpm
-          key: ${{ runner.os }}-xcode-spm-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-xcode-spm-${{ hashFiles('Package.swift') }}
           restore-keys: |
             ${{ runner.os }}-xcode-spm-
 
@@ -92,11 +100,16 @@ jobs:
         run: xcrun simctl list devices available | grep -E "iPhone|iOS" | head -30
 
       - name: xcodebuild test
-        # CODE_SIGNING_ALLOWED=NO is required on the runner (no signing
-        # identities installed) and safe for simulator builds. The destination
-        # pins to iPhone 16 / OS=latest — newer than the iOS 17 deployment
-        # target, stable across runner image bumps. FileProtectionTests
-        # self-skips on simulator via XCTSkip (#if targetEnvironment(simulator)).
+        # NOTE (2026-06-10): do NOT pass CODE_SIGNING_ALLOWED=NO. Simulator
+        # builds use default AD-HOC signing, which needs no identities on the
+        # runner but DOES embed the entitlements — with signing fully disabled
+        # the app has no application-identifier and EVERY keychain operation
+        # fails with errSecMissingEntitlement (-34018) on current runtimes,
+        # taking the PIN/mnemonic keychain suites down with it.
+        #
+        # The destination pins to iPhone 16 / OS=latest — newer than the iOS 17
+        # deployment target, stable across runner image bumps.
+        # FileProtectionTests self-skips on simulator via XCTSkip.
         #
         # The Catchlight scheme's test action runs BOTH `CatchlightTests`
         # (unit tests — Tests/CatchlightCoreTests) and `CatchlightUITests`
@@ -108,5 +121,4 @@ jobs:
           xcodebuild test \
             -project Catchlight.xcodeproj \
             -scheme Catchlight \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
-            CODE_SIGNING_ALLOWED=NO
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest'

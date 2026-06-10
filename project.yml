@@ -37,12 +37,12 @@ packages:
   # carries 128 bits of entropy so a memory-hard KDF is unnecessary. No third-party
   # crypto library is required for the master key.
 
-  # NOTE (2026-06-05, revised): the SQLCipher SPM dependency has been removed.
-  # Content security is provided by per-item AES-256-GCM (CatchlightCore.TakeCrypto)
-  # and file security by `NSFileProtectionCompleteUntilFirstUserAuthentication` on
-  # the database file (see Catchlight/Database/SQLCipherStore.swift). The store
-  # opens the iOS SDK's built-in `SQLite3` Clang module — no third-party crypto
-  # library is required.
+  # NOTE (2026-06-05, revised 2026-06-10): the SQLCipher SPM dependency has been
+  # removed. Content security is provided by per-item AES-256-GCM sealed payload
+  # columns (see Catchlight/Database/EncryptedTakeStore.swift) and file security
+  # by `NSFileProtectionCompleteUntilFirstUserAuthentication` on the database
+  # directory. The store opens the iOS SDK's built-in `SQLite3` Clang module —
+  # no third-party crypto library is required.
 
 targets:
   Catchlight:
@@ -79,6 +79,12 @@ targets:
     info:
       path: Catchlight/Resources/Info.plist
       properties:
+        # Version strings reference the build settings (single source of truth
+        # in `settings.base` above) — previously the generated plist hardcoded
+        # "1.0"/"1", so a TestFlight build bump needed two edits and the
+        # MARKETING_VERSION/CURRENT_PROJECT_VERSION settings were dead.
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UIAppFonts:
           - "CormorantGaramond[wght].ttf"
           - "CormorantGaramond-Italic[wght].ttf"
