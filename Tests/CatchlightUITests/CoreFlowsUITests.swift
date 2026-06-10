@@ -214,14 +214,17 @@ final class CoreFlowsUITests: XCTestCase {
             expectedElement: app.textFields["search-field"]
         )
 
+        // Do NOT tap the field and type via the APP, not the element
+        // (2026-06-10): SearchView auto-focuses the field on appear, and both
+        // `field.tap()` and `field.typeText` first perform an AX
+        // scroll-to-visible that deterministically fails on CI simulators
+        // (kAXErrorCannotComplete — runs 27280916290 / 27282283829 /
+        // 27283050148). `app.typeText` sends keys to the already-focused
+        // responder and skips that step entirely.
         let field = app.textFields["search-field"]
-        field.tap()
-        // Type via the APP, not the element (2026-06-10): the field is
-        // auto-focused, and `field.typeText` first performs an AX
-        // scroll-to-visible that intermittently fails on CI simulators
-        // (kAXErrorCannotComplete — runs 27280916290 / 27282283829).
-        // `app.typeText` sends keys to the already-focused responder and
-        // skips that step.
+        XCTAssertTrue(field.waitForExistence(timeout: 3))
+        // Give the auto-focus + keyboard a beat to settle before typing.
+        _ = app.keyboards.firstMatch.waitForExistence(timeout: 3)
         app.typeText("framer")
 
         XCTAssertTrue(
