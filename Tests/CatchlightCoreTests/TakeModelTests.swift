@@ -31,7 +31,6 @@ final class TakeModelTests: XCTestCase {
         XCTAssertNil(take.locationReminder)
         XCTAssertTrue(take.checklistItems.isEmpty)
         XCTAssertTrue(take.attachments.isEmpty)
-        XCTAssertTrue(take.sequenceIds.isEmpty)
         XCTAssertFalse(take.isSeeded)
     }
 

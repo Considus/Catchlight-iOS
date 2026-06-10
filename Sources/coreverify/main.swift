@@ -133,8 +133,12 @@ do {
     var t = Take(bodyText: "x", isTask: true, isComplete: true); t.isTask = false; t.normaliseActivityFloor()
     check("Note is the floor (re-asserts; completion cleared)", t.isNote && !t.isComplete)
 
-    check("CatchlightSequence round-trips (reserved-name workaround)",
-          try PlatformJSON.decode(CatchlightSequence.self, from: try PlatformJSON.encode(CatchlightSequence(name: "Weekend", takeIds: [UUID(), UUID()]))).takeIds.count == 2)
+    // Sequences are saved searches (filter-based, 2026-06-10).
+    let seqFilter = SequenceFilter(text: "darkroom", requireTask: true, months: ["2026-06"])
+    let seqRT = try PlatformJSON.decode(CatchlightSequence.self,
+        from: try PlatformJSON.encode(CatchlightSequence(name: "Weekend", filter: seqFilter)))
+    check("CatchlightSequence round-trips its saved filter (reserved-name workaround)",
+          seqRT.filter == seqFilter && seqRT.schemaVersion == CatchlightSequence.currentSchemaVersion)
 
     let canon = ISO8601.date(from: "2026-05-28T07:00:00.000Z")!
     check("Canonical date format + tolerant seconds-only parse",

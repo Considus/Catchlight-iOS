@@ -91,15 +91,29 @@ final class DataModelTests: XCTestCase {
         // detection), so a raw Date() is not bit-exact after a round-trip — see
         // testEmptyTakeRoundTrip above, which documents the same constraint.
         let nowMs = ISO8601.date(from: ISO8601.string(from: Date()))!
+        let filter = SequenceFilter(text: "shoot", requireTask: true, months: ["2026-06"])
         let seq = CatchlightSequence(
             name: "Weekend shoot",
             createdAt: nowMs,
             modifiedAt: nowMs,
-            takeIds: [UUID(), UUID()]
+            filter: filter
         )
         let decoded = try PlatformJSON.decode(CatchlightSequence.self, from: try PlatformJSON.encode(seq))
         XCTAssertEqual(decoded, seq)
-        XCTAssertEqual(decoded.takeIds.count, 2)
+        XCTAssertEqual(decoded.filter, filter)
+        XCTAssertEqual(decoded.schemaVersion, CatchlightSequence.currentSchemaVersion)
+    }
+
+    /// A v1 Sequence payload (ordered takeIds list, no filter) decodes into the
+    /// v2 model: the dead list is ignored and the filter defaults to empty.
+    func testLegacySequencePayload_decodesWithEmptyFilter() throws {
+        let legacy = """
+        {"createdAt":"2026-05-28T07:00:00.000Z","id":"550E8400-E29B-41D4-A716-446655440000","modifiedAt":"2026-05-28T07:00:00.000Z","name":"Old list","takeIds":["550E8400-E29B-41D4-A716-446655440001"]}
+        """
+        let decoded = try PlatformJSON.decode(CatchlightSequence.self, from: Data(legacy.utf8))
+        XCTAssertEqual(decoded.name, "Old list")
+        XCTAssertTrue(decoded.filter.isEmpty)
+        XCTAssertEqual(decoded.schemaVersion, CatchlightSequence.currentSchemaVersion)
     }
 
     // Account metadata is the only plaintext cloud file; round-trips with ISO-8601.
@@ -146,7 +160,6 @@ final class DataModelTests: XCTestCase {
         XCTAssertEqual(decoded.bodyText, "legacy")
         XCTAssertEqual(decoded.checklistItems, [])
         XCTAssertEqual(decoded.attachments, [])
-        XCTAssertEqual(decoded.sequenceIds, [])
         XCTAssertFalse(decoded.isSeeded)
         XCTAssertNil(decoded.timeReminder)
     }

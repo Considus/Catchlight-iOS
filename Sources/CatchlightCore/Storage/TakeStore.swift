@@ -47,10 +47,13 @@ public protocol TakeStore: AnyObject {
     /// case-insensitive substring here). Search scope per Phase 5 brief §9.
     func search(_ query: String) throws -> [Take]
 
-    // Sequences
+    // Sequences (saved searches — filter-based, 2026-06-10)
     func upsert(_ sequence: CatchlightSequence) throws
     func sequence(id: UUID) throws -> CatchlightSequence?
     func allSequences() throws -> [CatchlightSequence]
+    /// Remove a saved Sequence (the filter definition only — never any Takes).
+    /// Throws `StorageError.notFound` for an unknown id.
+    func deleteSequence(id: UUID) throws
 
     // Obie — exactly one Obie across the whole store (UX §7).
     func currentObie() throws -> Take?
@@ -126,6 +129,11 @@ public final class InMemoryTakeStore: TakeStore {
 
     public func upsert(_ sequence: CatchlightSequence) throws { sequences[sequence.id] = sequence }
     public func sequence(id: UUID) throws -> CatchlightSequence? { sequences[id] }
+
+    public func deleteSequence(id: UUID) throws {
+        guard sequences[id] != nil else { throw StorageError.notFound(id) }
+        sequences[id] = nil
+    }
     public func allSequences() throws -> [CatchlightSequence] {
         sequences.values.sorted { $0.createdAt < $1.createdAt }
     }

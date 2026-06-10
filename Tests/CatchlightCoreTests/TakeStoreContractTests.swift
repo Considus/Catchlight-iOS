@@ -177,14 +177,29 @@ class TakeStoreContractTests: XCTestCase {
 
     // MARK: - Sequences
 
-    func testContract_sequence_roundTripPreservesOrder() throws {
-        let ids = (0..<10).map { _ in UUID() }
+    func testContract_sequence_roundTripPreservesFilter() throws {
         let t0 = ISO8601.date(from: "2026-05-01T09:00:00.000Z")!
-        let seq = CatchlightSequence(name: "Weekend shoot", createdAt: t0, modifiedAt: t0, takeIds: ids)
+        let filter = SequenceFilter(text: "shoot", requireTask: true, months: ["2026-05"])
+        let seq = CatchlightSequence(name: "Weekend shoot", createdAt: t0, modifiedAt: t0, filter: filter)
         try store.upsert(seq)
         let read = try XCTUnwrap(try store.sequence(id: seq.id))
         XCTAssertEqual(read, seq)
-        XCTAssertEqual(read.takeIds, ids, "narrative order must round-trip exactly")
+        XCTAssertEqual(read.filter, filter, "the saved filter IS the Sequence — must round-trip exactly")
+    }
+
+    func testContract_deleteSequence_removesDefinitionOnly() throws {
+        let take = Take(bodyText: "darkroom session")
+        try store.upsert(take)
+        let seq = CatchlightSequence(name: "kept", filter: SequenceFilter(text: "darkroom"))
+        try store.upsert(seq)
+        try store.deleteSequence(id: seq.id)
+        XCTAssertNil(try store.sequence(id: seq.id))
+        XCTAssertNotNil(try store.take(id: take.id))
+        XCTAssertThrowsError(try store.deleteSequence(id: seq.id)) { error in
+            guard case StorageError.notFound = error else {
+                return XCTFail("Expected .notFound, got \(error)")
+            }
+        }
     }
 
     func testContract_allSequences_emptyStoreReturnsEmpty() throws {

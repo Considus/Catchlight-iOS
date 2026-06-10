@@ -209,19 +209,38 @@ final class TakeStoreBehaviourTests: XCTestCase {
     func testSequence_upsertAndFetch_roundTrip() throws {
         let seq = CatchlightSequence(
             name: "Weekend shoot",
-            takeIds: [UUID(), UUID(), UUID()]
+            filter: SequenceFilter(text: "shoot", requireTask: true)
         )
         try store.upsert(seq)
         let read = try XCTUnwrap(try store.sequence(id: seq.id))
         XCTAssertEqual(read, seq)
     }
 
-    /// Sequence order is the user's narrative — must round-trip exactly.
-    func testSequence_takeIdsOrderIsPreserved() throws {
-        let ids = (0..<10).map { _ in UUID() }
-        let seq = CatchlightSequence(name: "ordered", takeIds: ids)
+    /// The saved filter is the Sequence — it must round-trip exactly.
+    func testSequence_savedFilterRoundTripsExactly() throws {
+        let filter = SequenceFilter(text: "darkroom", requireReminder: true,
+                                    requireCompleted: true, months: ["2026-05", "2026-06"])
+        let seq = CatchlightSequence(name: "kept", filter: filter)
         try store.upsert(seq)
-        XCTAssertEqual(try store.sequence(id: seq.id)?.takeIds, ids)
+        XCTAssertEqual(try store.sequence(id: seq.id)?.filter, filter)
+    }
+
+    func testSequence_delete_removesOnlyTheFilter() throws {
+        let take = Take(bodyText: "darkroom session")
+        try store.upsert(take)
+        let seq = CatchlightSequence(name: "kept", filter: SequenceFilter(text: "darkroom"))
+        try store.upsert(seq)
+        try store.deleteSequence(id: seq.id)
+        XCTAssertNil(try store.sequence(id: seq.id))
+        XCTAssertNotNil(try store.take(id: take.id), "deleting a Sequence must never touch Takes")
+    }
+
+    func testSequence_deleteUnknownId_throwsNotFound() {
+        XCTAssertThrowsError(try store.deleteSequence(id: UUID())) { error in
+            guard case StorageError.notFound = error else {
+                return XCTFail("Expected .notFound, got \(error)")
+            }
+        }
     }
 
     func testSequence_allSequences_emptyStoreReturnsEmpty() throws {
