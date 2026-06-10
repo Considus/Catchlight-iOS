@@ -3,17 +3,36 @@
 //  CatchlightCore
 //
 //  The persistence abstraction. The portable core depends only on this protocol;
-//  the iOS app provides the real `SQLiteTakeStore` (AES-256-CBC encrypted SQLite
-//  with the FTS5 search index — see Catchlight/Database/SQLCipherStore.swift). The
-//  in-memory implementation here mirrors the same semantics so the sync engine,
-//  conflict resolver, and Obie/search rules can be unit-tested without SQLCipher.
+//  the iOS app provides the real `EncryptedTakeStore` (SQLite3 with per-item
+//  AES-256-GCM sealed payload columns — see Catchlight/Database/
+//  EncryptedTakeStore.swift). The in-memory implementation here mirrors the same
+//  semantics so the sync engine, conflict resolver, and Obie/search rules can be
+//  unit-tested without SQLite.
 //
-//  The store holds PLAINTEXT Takes. Confidentiality at rest is provided entirely
-//  by SQLCipher encrypting the whole database file (Encryption Architecture §8) —
-//  the store API itself deals in cleartext model values.
+//  The store API deals in PLAINTEXT model values; the production implementation
+//  seals each Take's content under its per-item key before it touches disk
+//  (Encryption Architecture §8, revised 2026-06-10) and exposes only the id,
+//  timestamps, and the Obie flag as queryable plaintext columns.
+//
+//  TOMBSTONES (2026-06-10): `delete(id:)` records a tombstone so the sync engine
+//  can PROPAGATE deletions instead of inferring them from absence — inference
+//  caused deleted Takes to be resurrected by the next pull, and transient blob
+//  read failures to cascade into fleet-wide deletions.
 //
 
 import Foundation
+
+/// A record that a Take was deleted locally and the deletion still needs to be
+/// propagated to (or retained in) the cloud manifest.
+public struct Tombstone: Codable, Equatable, Sendable {
+    public let id: UUID
+    public let deletedAt: Date
+
+    public init(id: UUID, deletedAt: Date) {
+        self.id = id
+        self.deletedAt = ISO8601.truncateToMilliseconds(deletedAt)
+    }
+}
 
 public protocol TakeStore: AnyObject {
     // Takes
@@ -40,6 +59,13 @@ public protocol TakeStore: AnyObject {
     // Sync bookkeeping
     func lastSyncDate() -> Date?
     func setLastSyncDate(_ date: Date)
+
+    // Tombstones — deletion propagation (2026-06-10).
+    /// All tombstones not yet purged. `delete(id:)` records one automatically.
+    func tombstones() throws -> [Tombstone]
+    /// Remove tombstones once the deletion is durably recorded in the uploaded
+    /// cloud manifest (or applied from a remote tombstone).
+    func purgeTombstones(ids: [UUID]) throws
 }
 
 /// In-memory `TakeStore` for tests and previews. Not used in production.
@@ -47,14 +73,28 @@ public final class InMemoryTakeStore: TakeStore {
     private var takes: [UUID: Take] = [:]
     private var sequences: [UUID: CatchlightSequence] = [:]
     private var lastSync: Date?
+    private var tombstoneMap: [UUID: Tombstone] = [:]
 
     public init() {}
 
-    public func upsert(_ take: Take) throws { takes[take.id] = take }
+    public func upsert(_ take: Take) throws {
+        takes[take.id] = take
+        // Re-creating an item supersedes any pending tombstone for it.
+        tombstoneMap[take.id] = nil
+    }
 
     public func delete(id: UUID) throws {
         guard takes[id] != nil else { throw StorageError.notFound(id) }
         takes[id] = nil
+        tombstoneMap[id] = Tombstone(id: id, deletedAt: Date())
+    }
+
+    public func tombstones() throws -> [Tombstone] {
+        tombstoneMap.values.sorted { $0.deletedAt < $1.deletedAt }
+    }
+
+    public func purgeTombstones(ids: [UUID]) throws {
+        for id in ids { tombstoneMap[id] = nil }
     }
 
     public func take(id: UUID) throws -> Take? { takes[id] }
