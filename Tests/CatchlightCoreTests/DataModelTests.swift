@@ -103,15 +103,92 @@ final class DataModelTests: XCTestCase {
     }
 
     // Account metadata is the only plaintext cloud file; round-trips with ISO-8601.
+    // `argon2Salt` was REMOVED 2026-06-10 (HKDF uses a fixed domain salt).
     func testAccountMetadataRoundTrip() throws {
         let meta = AccountMetadata(
             schemaVersion: 1,
             accountCreatedAt: "2026-05-28T07:00:00.000Z",
-            argon2Salt: Data(repeating: 9, count: 16).base64EncodedString(),
             appVersion: "1.0.0"
         )
         let decoded = try PlatformJSON.decode(AccountMetadata.self, from: try PlatformJSON.encode(meta))
         XCTAssertEqual(decoded, meta)
+    }
+
+    // A metadata file written by an earlier dev build (with the removed
+    // `argon2Salt` field) still decodes — the field is simply ignored.
+    func testAccountMetadataDecodingIgnoresLegacyArgon2SaltField() throws {
+        let json = """
+        {"accountCreatedAt":"2026-05-28T07:00:00.000Z","appVersion":"0.9.0",\
+        "argon2Salt":"CQkJCQkJCQkJCQkJCQkJCQ==","schemaVersion":1}
+        """
+        let decoded = try PlatformJSON.decode(AccountMetadata.self, from: Data(json.utf8))
+        XCTAssertEqual(decoded.schemaVersion, 1)
+        XCTAssertEqual(decoded.appVersion, "0.9.0")
+    }
+
+    // Take payloads carry the schemaVersion stamp (2026-06-10) and decode old
+    // payloads without one as version 1.
+    func testTakeJSONIncludesSchemaVersion_andDefaultsWhenAbsent() throws {
+        let take = TestFixtures.richTake()
+        let json = String(data: try PlatformJSON.encode(take), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"schemaVersion\":1"), "encoded Take must carry the version stamp")
+
+        // A pre-2026-06-10 payload (no schemaVersion key) decodes as v1, with
+        // decodeIfPresent defaults for the optional/array fields.
+        let legacy = """
+        {"id":"6B4D9E20-1A2B-4C3D-8E5F-001122334455",\
+        "createdAt":"2026-05-01T09:00:00.000Z","modifiedAt":"2026-05-02T10:30:00.000Z",\
+        "bodyText":"legacy","contentType":"plain",\
+        "isNote":true,"isTask":false,"isComplete":false,"isObie":false}
+        """
+        let decoded = try PlatformJSON.decode(Take.self, from: Data(legacy.utf8))
+        XCTAssertEqual(decoded.schemaVersion, 1)
+        XCTAssertEqual(decoded.bodyText, "legacy")
+        XCTAssertEqual(decoded.checklistItems, [])
+        XCTAssertEqual(decoded.attachments, [])
+        XCTAssertEqual(decoded.sequenceIds, [])
+        XCTAssertFalse(decoded.isSeeded)
+        XCTAssertNil(decoded.timeReminder)
+    }
+
+    // ISO8601.date(from:) tolerant INPUT parsing (2026-06-10): 0–9 fractional
+    // digits and ±HH:MM offsets all parse; canonical OUTPUT stays `.SSS'Z'`.
+    func testISO8601TolerantParsing_fractionalDigitsAndOffsets() {
+        let expected = ISO8601.date(from: "2026-05-28T07:00:00.123Z")!
+
+        XCTAssertEqual(ISO8601.date(from: "2026-05-28T07:00:00.123456Z"), expected,
+                       "6 fractional digits truncate to milliseconds")
+        XCTAssertEqual(ISO8601.date(from: "2026-05-28T07:00:00.123456789Z"), expected,
+                       "9 fractional digits truncate to milliseconds")
+        XCTAssertEqual(ISO8601.date(from: "2026-05-28T07:00:00.1Z"),
+                       ISO8601.date(from: "2026-05-28T07:00:00.100Z"),
+                       "'.1' means 100 ms, not 1 ms")
+
+        // Zero fractional digits.
+        let secondsOnly = ISO8601.date(from: "2026-05-28T07:00:00Z")
+        XCTAssertEqual(secondsOnly, ISO8601.date(from: "2026-05-28T07:00:00.000Z"))
+
+        // ±HH:MM (and ±HHMM) offsets.
+        XCTAssertEqual(ISO8601.date(from: "2026-05-28T07:00:00+00:00"), secondsOnly)
+        XCTAssertEqual(ISO8601.date(from: "2026-05-28T09:00:00+02:00"), secondsOnly)
+        XCTAssertEqual(ISO8601.date(from: "2026-05-28T02:00:00-05:00"), secondsOnly)
+        XCTAssertEqual(ISO8601.date(from: "2026-05-28T09:00:00+0200"), secondsOnly)
+        XCTAssertEqual(ISO8601.date(from: "2026-05-28T08:30:00.123456+01:30"), expected)
+
+        // Garbage still rejected.
+        XCTAssertNil(ISO8601.date(from: "not-a-date"))
+        XCTAssertNil(ISO8601.date(from: "2026-05-28T07:00:00"))
+        XCTAssertNil(ISO8601.date(from: "2026-05-28"))
+    }
+
+    // truncateToMilliseconds: a Take's timestamps are ms-aligned at init, so it
+    // compares equal to itself after a wire round-trip even from a raw Date().
+    func testTakeTimestampsTruncatedToMilliseconds() throws {
+        let raw = Date(timeIntervalSince1970: 1_700_000_000.123_456_789)
+        let take = Take(createdAt: raw, modifiedAt: raw, bodyText: "ms")
+        let decoded = try PlatformJSON.decode(Take.self, from: try PlatformJSON.encode(take))
+        XCTAssertEqual(decoded, take, "ms-truncation at init makes round-trips bit-exact")
+        XCTAssertEqual(take.createdAt, ISO8601.truncateToMilliseconds(raw))
     }
 
     // Deterministic key ordering (needed for reproducible HMAC + cross-platform).

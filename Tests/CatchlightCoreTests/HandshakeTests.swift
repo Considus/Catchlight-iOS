@@ -76,4 +76,28 @@ final class HandshakeTests: XCTestCase {
         XCTAssertNil(try folder.read(name), "file removed")
         XCTAssertEqual(folder.secureDeleteOverwroteBytes[name], 256, "overwritten with equal-length random bytes first")
     }
+
+    // MARK: - Short authentication string (2026-06-10 hardening)
+
+    /// `confirmationCode(for:)` is exactly 6 decimal digits and deterministic
+    /// for the same request — both devices must display the SAME code.
+    func testConfirmationCode_sixDigits_andDeterministicPerRequest() {
+        let (request, _) = DeviceHandshake.makeRequest(deviceIdentifier: "iPhone-15")
+        let code = DeviceHandshake.confirmationCode(for: request)
+
+        XCTAssertEqual(code.count, 6)
+        XCTAssertTrue(code.allSatisfy(\.isNumber), "code must be decimal digits only: \(code)")
+        XCTAssertEqual(DeviceHandshake.confirmationCode(for: request), code,
+                       "same request must always yield the same code")
+    }
+
+    /// Different requests (a substituted request file) yield different codes —
+    /// the user-visible mismatch is the whole defence.
+    func testConfirmationCode_differsForDifferentRequests() {
+        let (a, _) = DeviceHandshake.makeRequest(deviceIdentifier: "real-device")
+        let (b, _) = DeviceHandshake.makeRequest(deviceIdentifier: "attacker-device")
+        XCTAssertNotEqual(DeviceHandshake.confirmationCode(for: a),
+                          DeviceHandshake.confirmationCode(for: b),
+                          "fresh request id + ephemeral key must produce a different code")
+    }
 }

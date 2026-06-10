@@ -220,4 +220,17 @@ final class TakeExporterTests: XCTestCase {
         XCTAssertEqual(TakeExporter.suggestedFilename(exportedAt: exportedAt),
                        "catchlight-2026-06-09.md")
     }
+
+    /// `isExportFilename` gates the stale-tmp-file sweep — it must match every
+    /// name `suggestedFilename` can produce and nothing else.
+    func testIsExportFilename_matchesExportsOnly() {
+        XCTAssertTrue(TakeExporter.isExportFilename(
+            TakeExporter.suggestedFilename(exportedAt: exportedAt)))
+        XCTAssertTrue(TakeExporter.isExportFilename("catchlight-2026-01-01.md"))
+
+        XCTAssertFalse(TakeExporter.isExportFilename("catchlight-2026-01-01.txt"))
+        XCTAssertFalse(TakeExporter.isExportFilename("notes-2026-01-01.md"))
+        XCTAssertFalse(TakeExporter.isExportFilename("catchlight.db"))
+        XCTAssertFalse(TakeExporter.isExportFilename(""))
+    }
 }

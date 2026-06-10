@@ -10,6 +10,19 @@ import CryptoKit
 @testable import CatchlightCore
 
 enum TestFixtures {
+    /// Build a SyncEngine with test defaults. `deviceId` is REQUIRED by the
+    /// production initialiser (2026-06-10 remediation) — a fresh UUID default is
+    /// fine for single-engine tests; multi-device tests pass explicit ids.
+    static func engine(
+        store: TakeStore,
+        cloud: CloudFolder?,
+        keys: KeyHierarchy,
+        deviceId: UUID = UUID(),
+        now: @escaping () -> Date = Date.init
+    ) -> SyncEngine {
+        SyncEngine(store: store, cloud: cloud, keys: keys, deviceId: deviceId, now: now)
+    }
+
     /// A deterministic synthetic 2048-word "wordlist" to exercise the BIP-39
     /// ALGORITHM (entropy ⇄ checksum ⇄ indices). NOT the official English wordlist;
     /// it only needs 2048 unique tokens.

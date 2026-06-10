@@ -18,6 +18,7 @@
 
 #if canImport(Catchlight)
 import XCTest
+import CatchlightCore
 @testable import Catchlight
 
 final class CloudBookmarkTests: XCTestCase {

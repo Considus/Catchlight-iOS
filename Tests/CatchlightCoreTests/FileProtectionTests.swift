@@ -9,7 +9,7 @@
 //  that the attribute is correctly written — confirming on a real device is on the
 //  pre-release checklist.
 //
-//  The store under test lives in the iOS app target (`SQLiteTakeStore`), so
+//  The store under test lives in the iOS app target (`EncryptedTakeStore`), so
 //  this test is gated by `#if canImport(Catchlight)` and runs inside the iOS test
 //  bundle. Under `swift test` on macOS, where the iOS app target is not built,
 //  the file compiles to nothing and the Core tests run unchanged.
@@ -31,14 +31,24 @@ final class FileProtectionTests: XCTestCase {
         #endif
         let keys = KeyHierarchy(masterKey: SymmetricKey(size: .bits256))
 
+        // ISOLATION: a temp directory, never the App Group container — the
+        // protection attribute is applied by the initialiser regardless of
+        // where the database lives, and live user data must never be touched.
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("catchlight-protection-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
         // Open (or create) — applyFileProtection runs in the initialiser before
         // sqlite3_open, so this side-effect is what we are verifying.
         do {
-            let store = try SQLiteTakeStore(keys: keys)
+            let store = try EncryptedTakeStore(keys: keys, directoryURL: tempDir)
             try store.upsert(TestFixtures.richTake())
         }   // close
 
-        let dbURL = AppGroup.containerURL().appendingPathComponent("catchlight.db")
+        let dbURL = tempDir
+            .appendingPathComponent("Database", isDirectory: true)
+            .appendingPathComponent("catchlight.db")
         let attrs = try FileManager.default.attributesOfItem(atPath: dbURL.path)
         let protection = attrs[.protectionKey] as? FileProtectionType
         XCTAssertEqual(
