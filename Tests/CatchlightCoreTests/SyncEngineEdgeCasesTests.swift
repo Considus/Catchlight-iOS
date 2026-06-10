@@ -73,7 +73,10 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
     /// the `.clk` blob is removed, the manifest entry is dropped, AND the
     /// manifest's `tombstones` array carries the uuid + deletion timestamp.
     /// Deletion-by-absence is gone — absence now means "unknown here".
-    /// The local tombstone is purged after the push records it in the manifest.
+    /// The local tombstone is retained through the push (a concurrent device's
+    /// manifest write can clobber ours during cloud propagation, and a purged
+    /// tombstone would never re-propagate) and purged only once OBSERVED in a
+    /// PULLED manifest.
     func testSyncEngine_deletedTake_removesBlobAndRecordsManifestTombstone() throws {
         let k = makeKeys()
         let store = InMemoryTakeStore()
@@ -99,8 +102,16 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
                        "manifest must carry an explicit tombstone for the deleted uuid")
         XCTAssertNotNil(ISO8601.date(from: manifest.tombstones[0].deletedAt),
                         "tombstone deletedAt must be a parseable ISO-8601 stamp")
+        // Push does NOT purge — the local tombstone re-merges idempotently on
+        // every push until a PULL observes it in the manifest.
+        XCTAssertEqual(try store.tombstones().map(\.id), [take.id],
+                       "local tombstone is retained until observed in a pulled manifest")
+
+        // Pull our own manifest back: the tombstone is now durably observed →
+        // purged locally.
+        try makeEngine(store: store, cloud: cloud, keys: k, now: Date.init).pullInbound()
         XCTAssertTrue(try store.tombstones().isEmpty,
-                      "local tombstone is purged once durably recorded in the manifest")
+                      "local tombstone is purged once observed in a pulled manifest")
     }
 
     /// A local Take ABSENT from the remote manifest is NOT deleted on pull

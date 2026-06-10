@@ -4,7 +4,7 @@
 //
 //  Full-text search over Takes. A single autofocused field at the top; matching
 //  Takes appear below as a LazyVStack of TakeRowViews (the same component used on
-//  the timeline). Matching is delegated to TakeStore.search (FTS5 in production).
+//  the timeline). Matching is delegated to TakeStore.search (decrypt-side substring matching; the plaintext FTS index was removed 2026-06-10).
 //  Empty/no-match state: "No takes match." in Fog, centred.
 //
 

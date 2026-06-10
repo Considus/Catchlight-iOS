@@ -3,7 +3,7 @@
 //  Catchlight (iOS app target) — Phase 6 UI
 //
 //  Owns the search surface: the query string and the matching Takes. @Observable
-//  (iOS 17+). Delegates the actual matching to TakeStore.search — FTS5 in the
+//  (iOS 17+). Delegates the actual matching to TakeStore.search — decrypt-side substring matching in the
 //  production SQLCipher store, case-insensitive substring in the in-memory store.
 //
 

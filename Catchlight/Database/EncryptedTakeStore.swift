@@ -340,6 +340,18 @@ public final class EncryptedTakeStore: TakeStore {
             try exec("BEGIN IMMEDIATE;")
             var committed = false
             defer { if !committed { try? exec("ROLLBACK;") } }
+            // Single-Obie invariant under last-write-wins: an incoming Obie
+            // (e.g. applied from another device by sync) demotes any existing
+            // one. Without this, the partial unique index rejected the row with
+            // an opaque writeFailed and the whole upsert rolled back — and the
+            // in-memory store (no index) silently accepted it, so the two
+            // implementations diverged on the same input.
+            if take.isObie {
+                let demote = try prepare("UPDATE takes SET is_obie = 0 WHERE is_obie = 1 AND id != ?1;")
+                defer { sqlite3_finalize(demote) }
+                bindText(demote, 1, take.id.uuidString)
+                guard sqlite3_step(demote) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
+            }
             try insertOrReplace(take)
             // Re-creating an item supersedes any pending tombstone for it.
             let ts = try prepare("DELETE FROM tombstones WHERE id = ?1;")

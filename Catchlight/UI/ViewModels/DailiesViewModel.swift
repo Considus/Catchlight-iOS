@@ -40,10 +40,44 @@ final class DailiesViewModel {
     /// results silently went stale after edits made from a result row.
     var onMutation: (() -> Void)?
 
-    init(store: TakeStore, spotlight: SpotlightIndexing = NoopSpotlightIndexer()) {
+    /// Local-notification scheduling (2026-06-10). Previously NOTHING invoked
+    /// ReminderScheduler's schedule/cancel paths — a Take shaped into a
+    /// Reminder showed its date label and no notification ever fired. Every
+    /// save reconciles the pending request with the Take's current
+    /// `timeReminder`; deletes cancel it. (Sync-applied writes go straight to
+    /// the store and are reconciled when they next pass through this VM —
+    /// acknowledged v1.0 limitation.)
+    private let reminders: ReminderScheduler
+    private var didRequestNotificationAuth = false
+
+    init(store: TakeStore,
+         spotlight: SpotlightIndexing = NoopSpotlightIndexer(),
+         reminders: ReminderScheduler = ReminderScheduler()) {
         self.store = store
         self.spotlight = spotlight
+        self.reminders = reminders
         reload()
+    }
+
+    /// Reconcile the OS notification request with the Take's current state.
+    /// Cancel-then-schedule by the Take's UUID (the notification identifier),
+    /// so a removed reminder cancels and an added/changed one re-registers.
+    /// First-ever schedule requests authorization (§8.3: ask when the user
+    /// adds their first reminder, not at launch).
+    private func reconcileNotification(for take: Take) {
+        reminders.cancelReminder(identifier: take.id.uuidString)
+        guard take.timeReminder != nil else { return }
+        if !didRequestNotificationAuth {
+            didRequestNotificationAuth = true
+            let reminders = self.reminders
+            let snapshot = take
+            Task {
+                _ = await reminders.requestAuthorization()
+                reminders.scheduleReminder(for: snapshot)
+            }
+        } else {
+            reminders.scheduleReminder(for: take)
+        }
     }
 
     // MARK: - Loading
@@ -108,6 +142,7 @@ final class DailiesViewModel {
             // and update paths since both funnel here). Fire-and-forget; the
             // store write is the authoritative outcome.
             spotlight.index(updated)
+            reconcileNotification(for: updated)
             reload()
             onMutation?()
         } catch {
@@ -121,6 +156,7 @@ final class DailiesViewModel {
             // Spotlight (Task 6.19) — drop the item from the OS index so a
             // deleted Take can't be discovered via search.
             spotlight.deindex(takeID: take.id)
+            reminders.cancelReminder(identifier: take.id.uuidString)
             reload()
             onMutation?()
         } catch {
@@ -136,6 +172,7 @@ final class DailiesViewModel {
         guard (try? store.take(id: take.id)) != nil else { return }
         try? store.delete(id: take.id)
         spotlight.deindex(takeID: take.id)
+        reminders.cancelReminder(identifier: take.id.uuidString)
         reload()
         onMutation?()
     }
