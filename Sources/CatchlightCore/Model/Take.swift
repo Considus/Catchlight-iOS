@@ -89,11 +89,6 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
     /// Must be present as an empty array in v1.0; do not remove (Roadmap §4).
     public var attachments: [Attachment]
 
-    // MARK: - Organisation
-
-    /// Sequences this Take belongs to (empty if none). A Take may belong to many.
-    public var sequenceIds: [UUID]
-
     // MARK: - Onboarding
 
     /// `true` for the five system-authored seed Takes created on first launch
@@ -116,7 +111,6 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         locationReminder: LocationTrigger? = nil,
         checklistItems: [ChecklistItem] = [],
         attachments: [Attachment] = [],
-        sequenceIds: [UUID] = [],
         isSeeded: Bool = false
     ) {
         self.schemaVersion = Self.currentSchemaVersion
@@ -133,7 +127,6 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         self.locationReminder = locationReminder
         self.checklistItems = checklistItems
         self.attachments = attachments
-        self.sequenceIds = sequenceIds
         self.isSeeded = isSeeded
     }
 
@@ -143,7 +136,11 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         case schemaVersion, id, createdAt, modifiedAt, bodyText, contentType
         case isNote, isTask, isComplete, isObie
         case timeReminder, locationReminder, checklistItems, attachments
-        case sequenceIds, isSeeded
+        case isSeeded
+        // `sequenceIds` REMOVED 2026-06-10 (filter-based Sequences): membership
+        // is computed from the Sequence's saved filter, never stored on the
+        // Take. Old payloads carrying the key decode fine (unknown keys are
+        // ignored).
     }
 
     public init(from decoder: Decoder) throws {
@@ -163,7 +160,6 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         self.locationReminder = try c.decodeIfPresent(LocationTrigger.self, forKey: .locationReminder)
         self.checklistItems = try c.decodeIfPresent([ChecklistItem].self, forKey: .checklistItems) ?? []
         self.attachments = try c.decodeIfPresent([Attachment].self, forKey: .attachments) ?? []
-        self.sequenceIds = try c.decodeIfPresent([UUID].self, forKey: .sequenceIds) ?? []
         self.isSeeded = try c.decodeIfPresent(Bool.self, forKey: .isSeeded) ?? false
         // NOTE for future versions: new fields added here MUST use
         // `decodeIfPresent` with a default so older payloads keep decoding.

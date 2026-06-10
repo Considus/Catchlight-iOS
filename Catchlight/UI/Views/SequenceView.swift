@@ -1,11 +1,12 @@
 //
 //  SequenceView.swift
-//  Catchlight (iOS app target) — Phase 6 UI
+//  Catchlight (iOS app target) — filter-based Sequences (2026-06-10)
 //
-//  The filtered view. Pill tabs at the top select one of three modes — Reminders,
-//  Tasks, Notes — each with its own ordering (see SequenceViewModel). The Obie (if
-//  any) is pinned at the top of every mode. Rows reuse TakeRowView. Empty state for
-//  a filter with no results: "Nothing here yet." in Fog, centred.
+//  The user's saved searches. Pills at the top are the user's OWN kept filters
+//  (created from Search via "Keep as Sequence") — the previous three
+//  hard-coded modes are gone. Selecting a pill shows the LIVE results of that
+//  filter; the Obie (if any) stays pinned at the top. Rows reuse TakeRowView.
+//  Long-press a pill to remove the Sequence (the filter only — never Takes).
 //
 
 import SwiftUI
@@ -19,31 +20,35 @@ struct SequenceView: View {
         ZStack {
             Color.ckBackground.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                filterPills
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
+            if vm.hasNoSequences {
+                createHint
+            } else {
+                VStack(spacing: 0) {
+                    sequencePills
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
 
-                if vm.isEmpty {
-                    Text("Nothing here yet.")
-                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .accessibilityIdentifier("sequence-empty")
-                        .accessibilityLabel("Nothing here yet.")
-                } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            if let obie = vm.obie {
-                                row(for: obie)
-                                Color.clear.frame(height: 14)
+                    if vm.isEmpty {
+                        Text("Nothing here yet.")
+                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .accessibilityIdentifier("sequence-empty")
+                            .accessibilityLabel("Nothing here yet.")
+                    } else {
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                if let obie = vm.obie {
+                                    row(for: obie)
+                                    Color.clear.frame(height: 14)
+                                }
+                                ForEach(vm.results) { take in
+                                    row(for: take)
+                                }
                             }
-                            ForEach(vm.results) { take in
-                                row(for: take)
-                            }
+                            .padding(.top, 10)
+                            .padding(.bottom, 120)
                         }
-                        .padding(.top, 10)
-                        .padding(.bottom, 120)
                     }
                 }
             }
@@ -51,30 +56,62 @@ struct SequenceView: View {
         .onAppear { vm.recompute() }
     }
 
-    private var filterPills: some View {
-        HStack(spacing: 8) {
-            ForEach(SequenceViewModel.Filter.allCases) { filter in
-                let selected = vm.filter == filter
-                Button {
-                    vm.filter = filter
-                } label: {
-                    Text(filter.rawValue)
-                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .subheadline))
-                        .foregroundStyle(selected ? Color.ckBackground : Color.ckTextPrimary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .frame(minHeight: CatchlightLayout.minTouchTarget)
-                        .background(
-                            Capsule().fill(selected ? Color.ckAdd : Color.ckSurface)
-                        )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(filter.rawValue)
-                .accessibilityValue(selected ? "selected" : "")
-                .accessibilityHint("Double-tap to show \(filter.rawValue.lowercased()).")
-                .accessibilityAddTraits(selected ? [.isSelected] : [])
+    /// First-run state: no saved Sequences. Creation lives on the Search
+    /// surface, in the user's own words — point there.
+    private var createHint: some View {
+        VStack(spacing: 10) {
+            Text("A Sequence is a search you keep.")
+                .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                .foregroundStyle(Color.ckTextSecondary)
+            Button {
+                ui.tab = .search
+            } label: {
+                Text("Search, then tap Keep")
+                    .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .subheadline))
+                    .foregroundStyle(Color.ckTextObie)
+                    .frame(minHeight: CatchlightLayout.minTouchTarget)
             }
-            Spacer()
+            .buttonStyle(.plain)
+            .accessibilityHint("Double-tap to open Search and build your first Sequence.")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("sequence-create-hint")
+    }
+
+    private var sequencePills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(vm.sequences) { sequence in
+                    let selected = vm.selectedId == sequence.id
+                    Button {
+                        vm.selectedId = sequence.id
+                    } label: {
+                        Text(sequence.name)
+                            .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .subheadline))
+                            .foregroundStyle(selected ? Color.ckBackground : Color.ckTextPrimary)
+                            .lineLimit(1)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .frame(minHeight: CatchlightLayout.minTouchTarget)
+                            .background(
+                                Capsule().fill(selected ? Color.ckAdd : Color.ckSurface)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            vm.deleteSequence(sequence)
+                        } label: {
+                            Label("Remove Sequence", systemImage: "trash")
+                        }
+                    }
+                    .accessibilityLabel("Sequence: \(sequence.name)")
+                    .accessibilityValue(selected ? "selected" : "")
+                    .accessibilityHint("Double-tap to show this Sequence.")
+                    .accessibilityAction(named: "Remove Sequence") { vm.deleteSequence(sequence) }
+                    .accessibilityAddTraits(selected ? [.isSelected] : [])
+                }
+            }
         }
     }
 
@@ -88,31 +125,20 @@ struct SequenceView: View {
     }
 }
 
-#Preview("Sequence — Reminders (Night)") {
+#Preview("Sequence — saved filters (Night)") {
     let store = InMemoryTakeStore()
     for t in SeedTakes.make() { try? store.upsert(t) }
+    try? store.upsert(CatchlightSequence(name: "Tasks", filter: SequenceFilter(requireTask: true)))
+    try? store.upsert(CatchlightSequence(name: "first", filter: SequenceFilter(text: "first")))
     let vm = SequenceViewModel(store: store)
-    vm.filter = .reminders
     return SequenceView()
         .environment(vm)
         .environment(UIState())
         .preferredColorScheme(.dark)
 }
 
-#Preview("Sequence — Tasks (Daylight)") {
-    let store = InMemoryTakeStore()
-    for t in SeedTakes.make() { try? store.upsert(t) }
-    let vm = SequenceViewModel(store: store)
-    vm.filter = .tasks
-    return SequenceView()
-        .environment(vm)
-        .environment(UIState())
-        .preferredColorScheme(.light)
-}
-
-#Preview("Sequence — empty filter") {
+#Preview("Sequence — no sequences yet") {
     let vm = SequenceViewModel(store: InMemoryTakeStore())
-    vm.filter = .notes
     return SequenceView()
         .environment(vm)
         .environment(UIState())

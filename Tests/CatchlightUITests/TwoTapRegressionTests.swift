@@ -40,13 +40,13 @@ final class TwoTapRegressionTests: XCTestCase {
     func testReachability_sequence_inOneTap() {
         let app = launchAppForUITesting()
         XCTAssertTrue(app.buttons["dailies-tab"].waitForExistence(timeout: 3))
-        // SequenceView's default `.reminders` filter is empty (the seeded Takes
-        // carry no reminder), so the "sequence-empty" Text is the resting state.
+        // Sequences are saved searches (2026-06-10): with none kept yet, the
+        // tab's resting state is the create-from-Search hint.
         assertReachableInOneInteraction(
             "Sequence",
             interaction: { app.buttons["sequence-tab"].tap() },
             expectedElement: app.descendants(matching: .any)
-                .matching(identifier: "sequence-empty")
+                .matching(identifier: "sequence-create-hint")
                 .firstMatch
         )
     }

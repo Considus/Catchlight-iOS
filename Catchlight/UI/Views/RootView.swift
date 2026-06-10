@@ -253,11 +253,11 @@ struct RootView: View {
     }
 
     private func newSequence() {
-        // Sequence creation UI is minimal in v1.0; jump to the Sequence tab. A full
-        // sequence-builder is a later iteration (not in this phase's screen list).
+        // A Sequence is a saved search (2026-06-10): creation lives on the
+        // Search surface, in the user's own words — route there. (Previously
+        // this jumped to the Sequence tab, which has no creation affordance.)
         guard app.ensureEntitled() else { return }
-        ui.tab = .sequence
-        app.sequenceVM.recompute()
+        ui.tab = .search
     }
 }
 

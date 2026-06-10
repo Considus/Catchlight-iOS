@@ -278,7 +278,6 @@ public final class EncryptedTakeStore: TakeStore {
                 locationReminder: optJSON(11, LocationTrigger.self),
                 checklistItems: arrJSON(12, ChecklistItem.self),
                 attachments: arrJSON(13, Attachment.self),
-                sequenceIds: arrJSON(14, UUID.self),
                 isSeeded: sqlite3_column_int(stmt, 9) == 1
             ))
         }
@@ -289,7 +288,6 @@ public final class EncryptedTakeStore: TakeStore {
         guard try tableExists("sequences"), try columnExists("sequences", "name") else { return [] }
         let stmt = try prepare("SELECT id, name, created_at, modified_at, take_ids FROM sequences;")
         defer { sqlite3_finalize(stmt) }
-        let decoder = PlatformJSON.makeDecoder()
         var out: [CatchlightSequence] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
             guard let id = UUID(uuidString: columnText(stmt, 0)),
@@ -297,13 +295,13 @@ public final class EncryptedTakeStore: TakeStore {
                   let modified = ISO8601.date(from: columnText(stmt, 3)) else {
                 throw StorageError.corruptRow("legacy sequence row has unparseable id/date")
             }
-            let takeIds = (try? decoder.decode([UUID].self, from: Data(columnText(stmt, 4).utf8))) ?? []
+            // Legacy `take_ids` (col 4) is intentionally DROPPED: Sequences are
+            // filter-based as of 2026-06-10; v1 lists migrate to an empty filter.
             out.append(CatchlightSequence(
                 id: id,
                 name: columnText(stmt, 1),
                 createdAt: created,
-                modifiedAt: modified,
-                takeIds: takeIds
+                modifiedAt: modified
             ))
         }
         return out
@@ -469,6 +467,16 @@ public final class EncryptedTakeStore: TakeStore {
             bindText(stmt, 1, id.uuidString)
             guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
             return try decodeSequenceRow(stmt)
+        }
+    }
+
+    public func deleteSequence(id: UUID) throws {
+        try queue.sync {
+            let stmt = try prepare("DELETE FROM sequences WHERE id = ?1;")
+            defer { sqlite3_finalize(stmt) }
+            bindText(stmt, 1, id.uuidString)
+            guard sqlite3_step(stmt) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
+            guard sqlite3_changes(db) > 0 else { throw StorageError.notFound(id) }
         }
     }
 

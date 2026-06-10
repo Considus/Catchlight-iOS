@@ -54,7 +54,6 @@ enum TestFixtures {
                 ChecklistItem(text: "Lens cloth", isComplete: true)
             ],
             attachments: [],
-            sequenceIds: [],
             isSeeded: false
         )
     }
