@@ -1,18 +1,19 @@
 //
 //  ReminderSchedulerTests.swift
-//  CatchlightCoreTests — Task 7.2
+//  CatchlightCoreTests — Task 7.2, revised for the 2026-06-10 remediation
 //
-//  Covers `ReminderScheduler` via the `NotificationScheduling` seam added in
-//  Task 7.2 (default is `UNUserNotificationCenter.current()`; tests inject a
-//  fake). No real UNNotificationCenter calls; no permission prompt; no real
-//  notifications fire.
+//  Covers `ReminderScheduler` via the `NotificationScheduling` seam (default is
+//  `UNUserNotificationCenter.current()`; tests inject a fake). No real
+//  UNNotificationCenter calls; no permission prompt; no real notifications fire.
+//
+//  2026-06-10 changes covered here:
+//    • `NotificationScheduling` gained `requestAuthorization(options:)` — the
+//      scheduler's own `requestAuthorization()` now goes through the seam.
+//    • `scheduleReminder` REFUSES past-dated reminders (injectable `now:`).
+//    • The calendar trigger pins `components.timeZone` (absolute-instant
+//      semantics — reminders no longer drift when the device changes zones).
 //
 //  iOS-only — gated on `canImport(Catchlight)`.
-//
-//  PAST-DATE BEHAVIOUR: the current implementation has NO guard against past
-//  scheduled dates. `UNCalendarNotificationTrigger` silently drops past
-//  triggers, but the scheduler still calls `center.add(_:)`. The test below
-//  documents this current behaviour; a follow-up could add an explicit guard.
 //
 
 #if canImport(Catchlight)
@@ -24,6 +25,8 @@ import UserNotifications
 private final class FakeNotificationCenter: NotificationScheduling {
     private(set) var added: [UNNotificationRequest] = []
     private(set) var removedIdentifiers: [[String]] = []
+    private(set) var authorizationRequests: [UNAuthorizationOptions] = []
+    var authorizationResult: Result<Bool, Error> = .success(true)
 
     func add(_ request: UNNotificationRequest) {
         added.append(request)
@@ -33,9 +36,17 @@ private final class FakeNotificationCenter: NotificationScheduling {
         removedIdentifiers.append(identifiers)
         added.removeAll { identifiers.contains($0.identifier) }
     }
+
+    func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
+        authorizationRequests.append(options)
+        return try authorizationResult.get()
+    }
 }
 
 final class ReminderSchedulerTests: XCTestCase {
+
+    /// Fixed, injected "now" — no wall-clock dependence.
+    private let now = Date(timeIntervalSince1970: 1_780_000_000)
 
     private var center: FakeNotificationCenter!
     private var scheduler: ReminderScheduler!
@@ -43,7 +54,7 @@ final class ReminderSchedulerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         center = FakeNotificationCenter()
-        scheduler = ReminderScheduler(center: center)
+        scheduler = ReminderScheduler(center: center, now: { [now] in now })
     }
 
     override func tearDown() {
@@ -66,7 +77,7 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - Scheduling
 
     func testSchedule_futureDate_addsRequestWithIdentifier() {
-        let take = takeWithReminder(at: Date().addingTimeInterval(3600))
+        let take = takeWithReminder(at: now.addingTimeInterval(3600))
         scheduler.scheduleReminder(for: take)
         XCTAssertEqual(center.added.count, 1)
         XCTAssertEqual(center.added.first?.identifier, take.timeReminder?.notificationIdentifier)
@@ -74,7 +85,7 @@ final class ReminderSchedulerTests: XCTestCase {
 
     func testSchedule_identifierMatchesTimeReminder() {
         let id = "custom-id-123"
-        let take = takeWithReminder(at: Date().addingTimeInterval(60), identifier: id)
+        let take = takeWithReminder(at: now.addingTimeInterval(60), identifier: id)
         scheduler.scheduleReminder(for: take)
         XCTAssertEqual(center.added.first?.identifier, id)
     }
@@ -86,7 +97,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func testSchedule_setsCategoryAndBody() {
-        let take = takeWithReminder(at: Date().addingTimeInterval(60),
+        let take = takeWithReminder(at: now.addingTimeInterval(60),
                                     body: "buy milk and bread")
         scheduler.scheduleReminder(for: take)
         let request = try? XCTUnwrap(center.added.first)
@@ -98,25 +109,72 @@ final class ReminderSchedulerTests: XCTestCase {
     /// (and to limit how much Take content surfaces outside the app boundary).
     func testSchedule_longBodyTruncatedAt100Chars() {
         let longBody = String(repeating: "a", count: 250)
-        let take = takeWithReminder(at: Date().addingTimeInterval(60), body: longBody)
+        let take = takeWithReminder(at: now.addingTimeInterval(60), body: longBody)
         scheduler.scheduleReminder(for: take)
         XCTAssertEqual(center.added.first?.content.body.count, 100)
     }
 
-    /// Documents current behaviour: a past scheduled date STILL produces an
-    /// `add()` call (UNCalendarNotificationTrigger then drops it). If the
-    /// scheduler ever grows an explicit past-date guard, flip this assertion.
-    func testSchedule_pastDate_currentlyStillCallsAdd() {
-        let take = takeWithReminder(at: Date().addingTimeInterval(-3600))
+    // MARK: - Past-date refusal (2026-06-10)
+
+    /// A past-dated reminder is REFUSED at the boundary: no `add()` call. A
+    /// non-repeating calendar trigger in the past never fires, so scheduling it
+    /// would leave the model holding a reminder that silently never delivers.
+    func testSchedule_pastDate_isRefused() {
+        let take = takeWithReminder(at: now.addingTimeInterval(-3600))
         scheduler.scheduleReminder(for: take)
-        XCTAssertEqual(center.added.count, 1,
-                       "Past-date guard is not implemented. Update this test if that changes.")
+        XCTAssertEqual(center.added.count, 0,
+                       "past-dated reminders must not reach the notification center")
+    }
+
+    /// Boundary: a reminder exactly AT `now` is also refused (the guard is
+    /// strictly `scheduledDate > now`).
+    func testSchedule_exactlyNow_isRefused() {
+        let take = takeWithReminder(at: now)
+        scheduler.scheduleReminder(for: take)
+        XCTAssertEqual(center.added.count, 0)
+    }
+
+    // MARK: - Time-zone pinning (2026-06-10)
+
+    /// The calendar trigger pins `timeZone` so the date components are evaluated
+    /// in the zone they were computed in — absolute-instant semantics; the
+    /// reminder no longer drifts when a travelling user changes zones.
+    func testSchedule_triggerPinsTimeZone() throws {
+        let take = takeWithReminder(at: now.addingTimeInterval(3600))
+        scheduler.scheduleReminder(for: take)
+
+        let request = try XCTUnwrap(center.added.first)
+        let trigger = try XCTUnwrap(request.trigger as? UNCalendarNotificationTrigger)
+        XCTAssertEqual(trigger.dateComponents.timeZone, TimeZone.current,
+                       "components.timeZone must be pinned, not left floating")
+        XCTAssertFalse(trigger.repeats)
+    }
+
+    // MARK: - Authorization (through the seam, 2026-06-10)
+
+    func testRequestAuthorization_goesThroughSeam_andReturnsGrant() async {
+        center.authorizationResult = .success(true)
+        let granted = await scheduler.requestAuthorization()
+        XCTAssertTrue(granted)
+        XCTAssertEqual(center.authorizationRequests.count, 1)
+        XCTAssertEqual(center.authorizationRequests.first, [.alert, .sound, .badge])
+    }
+
+    func testRequestAuthorization_deniedOrThrowing_returnsFalse() async {
+        center.authorizationResult = .success(false)
+        let denied = await scheduler.requestAuthorization()
+        XCTAssertFalse(denied)
+
+        struct AuthError: Error {}
+        center.authorizationResult = .failure(AuthError())
+        let errored = await scheduler.requestAuthorization()
+        XCTAssertFalse(errored, "an authorization error must map to a calm false")
     }
 
     // MARK: - Cancellation
 
     func testCancel_removesByIdentifier() {
-        let take = takeWithReminder(at: Date().addingTimeInterval(60))
+        let take = takeWithReminder(at: now.addingTimeInterval(60))
         scheduler.scheduleReminder(for: take)
         scheduler.cancelReminder(for: take)
         XCTAssertEqual(center.added.count, 0)
@@ -137,11 +195,11 @@ final class ReminderSchedulerTests: XCTestCase {
     func testReschedule_replacesNotDuplicates() {
         let id = UUID()
         var take = Take(id: id, bodyText: "x", timeReminder: TimeReminder(
-            scheduledDate: Date().addingTimeInterval(60),
+            scheduledDate: now.addingTimeInterval(60),
             notificationIdentifier: id.uuidString
         ))
         scheduler.scheduleReminder(for: take)
-        take.timeReminder?.scheduledDate = Date().addingTimeInterval(3600)
+        take.timeReminder?.scheduledDate = now.addingTimeInterval(3600)
         scheduler.reschedule(for: take)
         XCTAssertEqual(center.added.count, 1, "Only the latest request should be pending")
         XCTAssertEqual(center.added.first?.identifier, id.uuidString)

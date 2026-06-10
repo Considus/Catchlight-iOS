@@ -14,10 +14,9 @@ import CryptoKit
 final class SyncEngineTests: XCTestCase {
 
     private func keys() -> KeyHierarchy { KeyHierarchy(masterKey: SymmetricKey(size: .bits256)) }
-    private let salt = Data(repeating: 0x07, count: 16)
 
     private func makeEngine(store: TakeStore, cloud: CloudFolder?, keys: KeyHierarchy, now: @escaping () -> Date = Date.init) -> SyncEngine {
-        SyncEngine(store: store, cloud: cloud, keys: keys, argon2Salt: salt, now: now)
+        TestFixtures.engine(store: store, cloud: cloud, keys: keys, now: now)
     }
 
     // Outbound writes envelopes + a signed manifest + the plaintext metadata file.
@@ -142,7 +141,8 @@ final class SyncEngineTests: XCTestCase {
         storeB.setLastSyncDate(t0.addingTimeInterval(5))
         XCTAssertNotNil(try storeB.take(id: take.id))
 
-        // Device A deletes the Take and pushes (removes blob + manifest entry).
+        // Device A deletes the Take and pushes (removes blob, records a manifest
+        // tombstone — explicit-deletion model, 2026-06-10).
         try storeA.delete(id: take.id)
         try makeEngine(store: storeA, cloud: cloud, keys: k, now: { t0.addingTimeInterval(10) }).pushOutbound()
 

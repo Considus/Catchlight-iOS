@@ -22,14 +22,7 @@ final class SyncLockTests: XCTestCase {
         deviceId: UUID,
         now: @escaping () -> Date = Date.init
     ) -> SyncEngine {
-        SyncEngine(
-            store: store,
-            cloud: cloud,
-            keys: makeKeys(),
-            argon2Salt: Data(repeating: 0x07, count: 16),
-            deviceId: deviceId,
-            now: now
-        )
+        TestFixtures.engine(store: store, cloud: cloud, keys: makeKeys(), deviceId: deviceId, now: now)
     }
 
     /// A fresh lock owned by another device blocks push and surfaces
@@ -117,6 +110,50 @@ final class SyncLockTests: XCTestCase {
         XCTAssertNoThrow(try engine.pushOutbound())
         XCTAssertNil(try cloud.read(SyncLock.fileName))
     }
+
+    /// Read-back verification (2026-06-10): if another device's lock write lands
+    /// in the same window — i.e. the read-back after our write returns THEIR
+    /// lock — `acquireLock` backs off with `heldByOtherDevice` rather than
+    /// proceeding on a stolen lock.
+    func testAcquireLock_readBackShowsOtherDevice_backsOff() throws {
+        let other = UUID()
+        let cloud = LostWriteCloudFolder(
+            winnerLock: SyncLock(deviceId: other, acquiredAt: ISO8601.string(from: Date()))
+        )
+        let engine = makeEngine(store: InMemoryTakeStore(), cloud: cloud, deviceId: deviceA)
+
+        XCTAssertThrowsError(try engine.acquireLock(on: cloud)) { err in
+            guard case let SyncLockError.heldByOtherDevice(holder, _) = err else {
+                return XCTFail("expected heldByOtherDevice, got \(err)")
+            }
+            XCTAssertEqual(holder, other)
+        }
+    }
+}
+
+/// Test double simulating a write race: writes to the lock file are LOST (the
+/// other device's write wins), so the post-write read-back returns the winner's
+/// lock instead of ours.
+private final class LostWriteCloudFolder: CloudFolder {
+    private let inner = InMemoryCloudFolder()
+    private let winnerLock: SyncLock
+    private var lockWritten = false
+
+    init(winnerLock: SyncLock) { self.winnerLock = winnerLock }
+
+    func listFiles() throws -> [String] { try inner.listFiles() }
+    func read(_ name: String) throws -> Data? {
+        if name == SyncLock.fileName, lockWritten {
+            return try PlatformJSON.encode(winnerLock)   // their write won
+        }
+        return try inner.read(name)
+    }
+    func write(_ data: Data, to name: String) throws {
+        if name == SyncLock.fileName { lockWritten = true; return }   // our write lost
+        try inner.write(data, to: name)
+    }
+    func writeAtomically(_ data: Data, to name: String) throws { try write(data, to: name) }
+    func delete(_ name: String) throws { try inner.delete(name) }
 }
 
 /// Test double: throws on the manifest atomic write so we can verify lock release

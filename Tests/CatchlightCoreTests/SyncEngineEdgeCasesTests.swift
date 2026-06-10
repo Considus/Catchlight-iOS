@@ -16,8 +16,6 @@ import CryptoKit
 
 final class SyncEngineEdgeCasesTests: XCTestCase {
 
-    private let salt = Data(repeating: 0x07, count: 16)
-
     private func makeKeys() -> KeyHierarchy { KeyHierarchy(masterKey: SymmetricKey(size: .bits256)) }
 
     private func makeEngine(
@@ -27,14 +25,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         deviceId: UUID = UUID(),
         now: @escaping () -> Date = Date.init
     ) -> SyncEngine {
-        SyncEngine(
-            store: store,
-            cloud: cloud,
-            keys: keys,
-            argon2Salt: salt,
-            deviceId: deviceId,
-            now: now
-        )
+        TestFixtures.engine(store: store, cloud: cloud, keys: keys, deviceId: deviceId, now: now)
     }
 
     // MARK: - Push: updated Take overwrites cloud blob
@@ -76,16 +67,14 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         XCTAssertEqual(try cloud.clkFiles().count, 1, "no orphan blob left behind")
     }
 
-    // MARK: - Push: deletion shape
+    // MARK: - Push: deletion shape (explicit manifest tombstones, 2026-06-10)
 
-    /// **Spec deviation flagged** — the spec describes a deleted Take as producing
-    /// a "tombstone entry in the manifest." The actual implementation expresses
-    /// deletion as the COMBINATION of (a) the `.clk` blob being securely deleted
-    /// from the cloud folder, and (b) the rebuilt manifest having no entry for the
-    /// uuid. Inbound sync interprets "previously synced uuid absent from remote
-    /// manifest" as a remote-side deletion. Both representations are equivalent
-    /// from a correctness standpoint; this test pins the actual on-disk shape.
-    func testSyncEngine_deletedTake_removesBlobAndOmitsManifestEntry() throws {
+    /// A deleted Take produces an EXPLICIT `ManifestTombstone` (manifest v2):
+    /// the `.clk` blob is removed, the manifest entry is dropped, AND the
+    /// manifest's `tombstones` array carries the uuid + deletion timestamp.
+    /// Deletion-by-absence is gone — absence now means "unknown here".
+    /// The local tombstone is purged after the push records it in the manifest.
+    func testSyncEngine_deletedTake_removesBlobAndRecordsManifestTombstone() throws {
         let k = makeKeys()
         let store = InMemoryTakeStore()
         let cloud = InMemoryCloudFolder()
@@ -99,12 +88,186 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
 
         // Delete locally and push.
         try store.delete(id: take.id)
-        try makeEngine(store: store, cloud: cloud, keys: k, now: { t0.addingTimeInterval(2) }).pushOutbound()
+        try makeEngine(store: store, cloud: cloud, keys: k, now: Date.init).pushOutbound()
 
         XCTAssertNil(try cloud.read("\(take.id.uuidString).clk"), "blob must be removed")
         let manifest = try Manifest.parse(try cloud.read(Manifest.fileName)!)
+        XCTAssertEqual(manifest.version, Manifest.currentVersion)
         XCTAssertTrue(manifest.takes.allSatisfy { $0.uuid != take.id },
-                      "manifest must omit the deleted uuid (tombstone-by-absence)")
+                      "manifest must omit the deleted uuid from `takes`")
+        XCTAssertEqual(manifest.tombstones.map(\.uuid), [take.id],
+                       "manifest must carry an explicit tombstone for the deleted uuid")
+        XCTAssertNotNil(ISO8601.date(from: manifest.tombstones[0].deletedAt),
+                        "tombstone deletedAt must be a parseable ISO-8601 stamp")
+        XCTAssertTrue(try store.tombstones().isEmpty,
+                      "local tombstone is purged once durably recorded in the manifest")
+    }
+
+    /// A local Take ABSENT from the remote manifest is NOT deleted on pull
+    /// (deletion-by-absence is gone); the next push uploads it (self-heal).
+    func testSyncEngine_localTakeAbsentFromManifest_survivesPullAndSelfHealsOnPush() throws {
+        let k = makeKeys()
+        let cloud = InMemoryCloudFolder()
+        let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+
+        // Remote manifest knows only X.
+        let remoteStore = InMemoryTakeStore()
+        let x = TestFixtures.richTake(id: UUID())
+        try remoteStore.upsert(x)
+        try makeEngine(store: remoteStore, cloud: cloud, keys: k, now: { t0 }).pushOutbound()
+
+        // Local has X (synced) and Y — previously synced, but somehow missing
+        // from the remote manifest (e.g. an earlier watermark race). Y's
+        // modifiedAt is BELOW the watermark, which under the old absence model
+        // meant "remotely deleted".
+        let local = InMemoryTakeStore()
+        try local.upsert(x)
+        var y = TestFixtures.richTake(id: UUID())
+        y.modifiedAt = t0.addingTimeInterval(-100)
+        try local.upsert(y)
+        local.setLastSyncDate(t0.addingTimeInterval(50))
+
+        let pull = try makeEngine(store: local, cloud: cloud, keys: k, now: { t0.addingTimeInterval(60) }).pullInbound()
+        XCTAssertTrue(pull.deletedLocally.isEmpty, "absence must never be read as deletion")
+        XCTAssertNotNil(try local.take(id: y.id))
+
+        // Self-heal: the next push uploads Y even though it is below the watermark.
+        let push = try makeEngine(store: local, cloud: cloud, keys: k, now: { t0.addingTimeInterval(70) }).pushOutbound()
+        XCTAssertTrue(push.uploaded.contains(y.id), "missing manifest entry must be re-uploaded")
+        XCTAssertNotNil(try cloud.read("\(y.id.uuidString).clk"))
+    }
+
+    /// Edit-wins: a remote tombstone whose deletedAt is OLDER than the local
+    /// edit's modifiedAt does not delete the local Take.
+    func testSyncEngine_remoteTombstoneOlderThanLocalEdit_editWins() throws {
+        let k = makeKeys()
+        let cloud = InMemoryCloudFolder()
+        let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+
+        // Device A pushes, then deletes at t0+10 and pushes the tombstone.
+        let storeA = InMemoryTakeStore()
+        var take = TestFixtures.richTake()
+        take.modifiedAt = t0
+        try storeA.upsert(take)
+        try makeEngine(store: storeA, cloud: cloud, keys: k, now: { t0.addingTimeInterval(1) }).pushOutbound()
+        try storeA.delete(id: take.id)   // tombstone deletedAt ≈ real now
+        try makeEngine(store: storeA, cloud: cloud, keys: k, now: Date.init).pushOutbound()
+
+        // Device B edited the same Take AFTER the deletion timestamp.
+        let storeB = InMemoryTakeStore()
+        var edited = take
+        edited.bodyText = "edited after the delete"
+        edited.modifiedAt = Date().addingTimeInterval(3600)   // strictly after deletedAt
+        try storeB.upsert(edited)
+
+        let report = try makeEngine(store: storeB, cloud: cloud, keys: k, now: Date.init).pullInbound()
+        XCTAssertTrue(report.deletedLocally.isEmpty, "edit made after deletion must survive")
+        XCTAssertEqual(try storeB.take(id: take.id)?.bodyText, "edited after the delete")
+    }
+
+    /// `upsert` clears a pending tombstone for the same id — re-creating an item
+    /// supersedes its deletion record.
+    func testTakeStore_upsertAfterDelete_clearsPendingTombstone() throws {
+        let store = InMemoryTakeStore()
+        let take = TestFixtures.richTake()
+        try store.upsert(take)
+        try store.delete(id: take.id)
+        XCTAssertEqual(try store.tombstones().map(\.id), [take.id])
+
+        try store.upsert(take)
+        XCTAssertTrue(try store.tombstones().isEmpty,
+                      "re-creating an item must supersede its pending tombstone")
+    }
+
+    // MARK: - Push: watermark semantics (2026-06-10)
+
+    /// The lastSync watermark is captured BEFORE the changed-Takes query and
+    /// persisted as-is — not sampled again after the uploads finish. With an
+    /// injected constant clock the persisted watermark equals that constant.
+    func testSyncEngine_pushWatermark_isPreQueryTimestamp() throws {
+        let k = makeKeys()
+        let store = InMemoryTakeStore()
+        let cloud = InMemoryCloudFolder()
+        try store.upsert(TestFixtures.richTake())
+
+        let frozen = Date(timeIntervalSince1970: 1_700_000_000)
+        try makeEngine(store: store, cloud: cloud, keys: k, now: { frozen }).pushOutbound()
+        XCTAssertEqual(store.lastSyncDate(), frozen,
+                       "watermark must be the pre-query `now()`, not a post-I/O resample")
+    }
+
+    // MARK: - sync(): lock contention defers the push, never throws
+
+    /// `sync()` no longer surfaces SyncLockError from the push half — the pull
+    /// results stand and `pushDeferred` is set.
+    func testSync_lockHeldByOtherDevice_setsPushDeferredInsteadOfThrowing() throws {
+        let k = makeKeys()
+        let cloud = InMemoryCloudFolder()
+        let nowDate = Date(timeIntervalSince1970: 1_700_000_000)
+
+        // Remote content to pull.
+        let remoteStore = InMemoryTakeStore()
+        let take = TestFixtures.richTake()
+        try remoteStore.upsert(take)
+        try makeEngine(store: remoteStore, cloud: cloud, keys: k, now: { nowDate }).pushOutbound()
+
+        // A FRESH lock owned by another device.
+        let otherDevice = UUID()
+        let lock = SyncLock(deviceId: otherDevice, acquiredAt: ISO8601.string(from: nowDate))
+        try cloud.write(try PlatformJSON.encode(lock), to: SyncLock.fileName)
+
+        let local = InMemoryTakeStore()
+        let report = try makeEngine(store: local, cloud: cloud, keys: k,
+                                    now: { nowDate.addingTimeInterval(30) }).sync()
+        XCTAssertTrue(report.pushDeferred, "lock contention is a routine, reported outcome")
+        XCTAssertEqual(report.applied, [take.id], "the pull half's results remain valid")
+        XCTAssertTrue(report.uploaded.isEmpty)
+    }
+
+    // MARK: - Manifest forward-compat + v1 parse compatibility
+
+    /// A manifest declaring version 3 (signed correctly, so it gets past the
+    /// signature check shape) is rejected with `unsupportedManifestVersion`.
+    func testPullInbound_manifestVersion3_throwsUnsupportedManifestVersion() throws {
+        let k = makeKeys()
+        let cloud = InMemoryCloudFolder()
+        let signer = ManifestSigner(keys: k)
+
+        var manifest = Manifest(updated: "2026-06-10T00:00:00.000Z", takes: [])
+        manifest.version = 3   // set BEFORE signing — version is part of the signed body
+        let signed = try signer.sign(manifest)
+        try cloud.write(try signed.serialise(), to: Manifest.fileName)
+
+        let engine = makeEngine(store: InMemoryTakeStore(), cloud: cloud, keys: k)
+        XCTAssertThrowsError(try engine.pullInbound()) { error in
+            XCTAssertEqual(error as? SyncError, .unsupportedManifestVersion(3))
+        }
+    }
+
+    /// A v1-style manifest JSON without a `tombstones` field still parses,
+    /// decoding `tombstones == []`.
+    func testManifest_v1JSONWithoutTombstonesField_parsesWithEmptyTombstones() throws {
+        let json = """
+        {"manifestHmac":"","schemaVersion":1,"takes":[],"updated":"2026-05-28T07:00:00.000Z","version":1}
+        """
+        let manifest = try Manifest.parse(Data(json.utf8))
+        XCTAssertEqual(manifest.version, 1)
+        XCTAssertEqual(manifest.tombstones, [])
+    }
+
+    /// With EMPTY tombstones the canonical signed bytes contain no `tombstones`
+    /// key at all — byte-identical to the pre-v2 format, so old signatures and
+    /// other clients keep verifying.
+    func testManifest_emptyTombstones_omittedFromCanonicalBytes() throws {
+        let manifest = Manifest(updated: "2026-05-28T07:00:00.000Z", takes: [], tombstones: [])
+        let bytes = try manifest.bodyForSigning().serialise()
+        let json = String(data: bytes, encoding: .utf8)!
+        XCTAssertFalse(json.contains("tombstones"), "empty tombstones must be omitted: \(json)")
+
+        var withTombstone = manifest
+        withTombstone.tombstones = [ManifestTombstone(uuid: UUID(), deletedAt: "2026-05-28T07:00:00.000Z")]
+        let json2 = String(data: try withTombstone.bodyForSigning().serialise(), encoding: .utf8)!
+        XCTAssertTrue(json2.contains("tombstones"), "non-empty tombstones must be encoded")
     }
 
     // MARK: - Push: no-changes behaviour
@@ -235,9 +398,10 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         XCTAssertNil(try local.take(id: badId), "quarantined Take is never written to local")
     }
 
-    /// A blob declared in the manifest but missing from the folder is quarantined,
-    /// not silently dropped — and the rest of the pull continues normally.
-    func testSyncEngine_missingBlobIsQuarantined() throws {
+    /// A blob declared in the manifest but missing from the folder is SKIPPED
+    /// (provider propagation lag — retried next pass), NOT quarantined: it is no
+    /// integrity failure. The rest of the pull continues normally.
+    func testSyncEngine_missingBlobIsSkippedNotQuarantined() throws {
         let k = makeKeys()
         let cloud = InMemoryCloudFolder()
 
@@ -254,7 +418,8 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         let local = InMemoryTakeStore()
         let report = try makeEngine(store: local, cloud: cloud, keys: k).pullInbound()
 
-        XCTAssertEqual(report.quarantined, [lose.id])
+        XCTAssertEqual(report.skipped, [lose.id], "missing blob is skipped, not quarantined")
+        XCTAssertTrue(report.quarantined.isEmpty)
         XCTAssertEqual(report.applied, [keep.id])
     }
 
@@ -282,22 +447,23 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
     }
 
     /// Both sides UNCHANGED since the watermark (modifiedAt ≤ watermark) but the
-    /// content differs — fall back to most-recent-write; equal modifiedAt keeps
-    /// LOCAL to avoid churn. This deterministic tiebreak lives in
-    /// ConflictResolver.swift; this test pins it.
-    func testConflictResolver_bothUnchanged_identicalModifiedAt_keepsLocal() {
+    /// content differs — the bookkeeping is confused (clock skew / watermark
+    /// drift). As of 2026-06-10 this surfaces as a CONFLICT instead of the old
+    /// silent most-recent-write fallback: "never silently discards a user's edit".
+    func testConflictResolver_bothUnchangedButDiffering_returnsConflict() {
         let lastSync = Date(timeIntervalSince1970: 1_700_000_000)
         var local = TestFixtures.richTake()
         local.bodyText = "local"
         local.modifiedAt = lastSync.addingTimeInterval(-10)  // before watermark
         var remote = local
         remote.bodyText = "remote"
-        // Same modifiedAt, both before lastSync.
+        // Same modifiedAt, both before lastSync — yet the content differs.
 
-        guard case .keepLocal(let kept) = ConflictResolver.decide(local: local, remote: remote, lastSync: lastSync) else {
-            return XCTFail("expected .keepLocal as the documented tie-break")
+        guard case .conflict(let l, let r) = ConflictResolver.decide(local: local, remote: remote, lastSync: lastSync) else {
+            return XCTFail("expected .conflict for the (false,false)-but-differing branch")
         }
-        XCTAssertEqual(kept.bodyText, "local")
+        XCTAssertEqual(l.bodyText, "local")
+        XCTAssertEqual(r.bodyText, "remote")
     }
 
     /// A single resolver call yields exactly one `SyncDecision`. Trivial by type,

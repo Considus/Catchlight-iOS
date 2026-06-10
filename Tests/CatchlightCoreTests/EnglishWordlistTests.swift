@@ -55,5 +55,39 @@ final class EnglishWordlistTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - Official BIP-39 test vectors (Trezor reference vectors)
+    //
+    // With the REAL English wordlist, pin the entropy → mnemonic mapping against
+    // the published standard vectors. This is the interoperability contract: a
+    // phrase generated here must recover the same key on any compliant client.
+
+    func testOfficialVector_allZeroEntropy_isAbandonTimes11About() throws {
+        let wl = try EnglishWordlist.load(bundle: Bundle(for: Self.self))
+        let bip = BIP39(wordlist: wl)
+        let entropy = Data(repeating: 0x00, count: 16)
+
+        let mnemonic = try bip.mnemonic(fromEntropy: entropy)
+        XCTAssertEqual(
+            mnemonic.joined(separator: " "),
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        )
+        XCTAssertEqual(try bip.validate(mnemonic: mnemonic), entropy,
+                       "round trip must recover the exact entropy")
+    }
+
+    func testOfficialVector_7fEntropy_isLegalWinnerVector() throws {
+        let wl = try EnglishWordlist.load(bundle: Bundle(for: Self.self))
+        let bip = BIP39(wordlist: wl)
+        let entropy = Data(repeating: 0x7f, count: 16)
+
+        let mnemonic = try bip.mnemonic(fromEntropy: entropy)
+        XCTAssertEqual(
+            mnemonic.joined(separator: " "),
+            "legal winner thank year wave sausage worth useful legal winner thank yellow"
+        )
+        XCTAssertEqual(try bip.validate(mnemonic: mnemonic), entropy,
+                       "round trip must recover the exact entropy")
+    }
 }
 #endif

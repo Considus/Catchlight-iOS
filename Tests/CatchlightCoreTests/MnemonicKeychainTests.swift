@@ -21,13 +21,25 @@ final class MnemonicKeychainTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        // Start every test from a clean slot — a leftover phrase from a previous
-        // run would mask an "exists() == false" expectation.
+        // TEST SEAM (2026-06-10): redirect to a throwaway service so the suite
+        // can NEVER touch (or delete!) the production privacy-phrase slot —
+        // deleting the real phrase would be unrecoverable for a real user.
+        // User presence is disabled: a .userPresence item cannot be read
+        // headlessly and the simulator may have no enrolled biometrics.
+        var config = MnemonicKeychain.Configuration()
+        config.service = "com.considus.catchlight.tests"
+        config.requireUserPresence = false
+        MnemonicKeychain.configuration = config
+
+        // Start every test from a clean (test-service) slot — a leftover phrase
+        // from a previous run would mask an "exists() == false" expectation.
         MnemonicKeychain.delete()
     }
 
     override func tearDown() {
         MnemonicKeychain.delete()
+        // Restore production defaults so no other suite inherits the test seam.
+        MnemonicKeychain.configuration = MnemonicKeychain.Configuration()
         super.tearDown()
     }
 

@@ -3,9 +3,10 @@
 //  CatchlightCoreTests — Task 7.2
 //
 //  Behaviour-level tests against the `TakeStore` protocol contract, driven by
-//  the in-memory implementation. The production `SQLiteTakeStore` (iOS target)
-//  must satisfy the same contract — see `SQLiteTakeStoreTests` for the
-//  SQLite-side round-trip coverage.
+//  the in-memory implementation. The production `EncryptedTakeStore` (iOS
+//  target) must satisfy the same contract — the SHARED suite in
+//  `TakeStoreContractTests.swift` now runs identical assertions against both
+//  implementations; this file keeps the original behaviour-level coverage.
 //
 //  Each test is fully isolated: a fresh `InMemoryTakeStore` per `setUp`. No
 //  shared fixture state, so tests are order-independent.
