@@ -56,10 +56,11 @@ final class AppModel {
     private(set) var needsOnboarding: Bool
     private(set) var onboardingVM: OnboardingViewModel?
 
-    // Feature view models. Available once a store is bound (after onboarding).
+    // Feature view model. Available once a store is bound (after onboarding).
+    // (Dock redesign 2026-06-10: the timeline is the ONE surface; the former
+    // Search/Sequence view models are gone — the dock's live filter narrows
+    // the Dailies snapshot directly via SequenceFilter.)
     private(set) var dailiesVM: DailiesViewModel
-    private(set) var searchVM: SearchViewModel
-    private(set) var sequenceVM: SequenceViewModel
 
     /// Supplies the production store after the master key exists. Injected by Wiring.
     private let storeProvider: () -> TakeStore?
@@ -83,12 +84,9 @@ final class AppModel {
         self.subscription = subscription
         self.spotlight = spotlight
         self.dailiesVM = DailiesViewModel(store: initialStore, spotlight: spotlight)
-        self.searchVM = SearchViewModel(store: initialStore)
-        self.sequenceVM = SequenceViewModel(store: initialStore)
         // Hand the indexer to the subscription manager so the lapse transition
         // triggers a deindex-all without AppModel needing to observe status.
         subscription.attachSpotlightIndexer(spotlight)
-        wireMutationFanout()
 
         if needsOnboarding {
             self.onboardingVM = nil
@@ -99,7 +97,7 @@ final class AppModel {
     }
 
     /// Called by OnboardingViewModel after the master key is stored. Rebinds the
-    /// feature view models to the now-openable production store and seeds the first
+    /// feature view model to the now-openable production store and seeds the first
     /// Takes, then flips to the main app.
     private func completeOnboarding() {
         if let store = storeProvider() {
@@ -129,20 +127,6 @@ final class AppModel {
         // onboarding completion — without this, post-onboarding Takes wouldn't
         // be indexed until the next app launch.
         dailiesVM = DailiesViewModel(store: store, spotlight: spotlight)
-        searchVM = SearchViewModel(store: store)
-        sequenceVM = SequenceViewModel(store: store)
-        wireMutationFanout()
-    }
-
-    /// Every Dailies mutation invalidates the Search and Sequence snapshots —
-    /// they hold independent copies of the same store, and without a fan-out
-    /// each call site had to remember to recompute (search results went stale
-    /// after editing a Take from a result row).
-    private func wireMutationFanout() {
-        dailiesVM.onMutation = { [weak self] in
-            self?.searchVM.recompute()
-            self?.sequenceVM.recompute()
-        }
     }
 
     // MARK: - Task 3.9 — sync error & quarantine reporting

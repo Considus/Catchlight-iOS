@@ -1,12 +1,27 @@
 //
 //  UIState.swift
-//  Catchlight (iOS app target) — Phase 6 UI
+//  Catchlight (iOS app target) — Phase 6 UI, one-surface dock redesign 2026-06-10
 //
 //  Cross-cutting, presentation-only UI coordination shared by RootView and its
-//  children: which tab is active, whether the petal fan / editor / add-fan are
-//  presented, and the Take they target. @Observable (iOS 17+). It owns NO domain
-//  data — the feature view models do — so it stays a thin coordinator that any
-//  screen can read via the environment.
+//  children. The app has ONE surface — the timeline — and the bottom dock MORPHS
+//  between three states (resting / filtering / searching) instead of switching
+//  tabs. This class owns the dock mode, the live filter toggles, and the search
+//  query, plus the petal fan / editor / settings / paywall / conflict / spotlight
+//  presentation state. @Observable (iOS 17+). It owns NO domain data — the feature
+//  view models do — so it stays a thin coordinator any screen can read via the
+//  environment.
+//
+//  Filter toggle semantics (owner decision 2026-06-10):
+//    • tap   = off ↔ on (plain). Tapping while ON — modified or not — turns OFF
+//              and clears the modifier.
+//    • long-press = on + modifier ("Done" for Tasks, "Expired" for Reminders).
+//              Long-pressing while already modified returns to plain ON.
+//    • Notes is mutually exclusive with Tasks/Reminders (a pure note can't also
+//      be a task/reminder): turning Notes on clears the other two (and their
+//      modifiers); turning Tasks or Reminders on clears Notes.
+//    • All toggles off keeps the dock in FILTERING (unfiltered timeline) — the
+//      user may be composing another combination. Exit is the timeline
+//      background tap (DailiesView) or implicit via exitToResting().
 //
 
 import SwiftUI
@@ -15,9 +30,25 @@ import CatchlightCore
 @Observable
 final class UIState {
 
-    enum Tab: Hashable { case dailies, search, sequence }
+    /// The dock's three morph states. There are no separate screens — the
+    /// timeline is always behind the dock; only the dock contents and the
+    /// active timeline filter change.
+    enum DockMode: Hashable { case resting, filtering, searching }
 
-    var tab: Tab = .dailies
+    var dockMode: DockMode = .resting
+
+    // FILTERING-state toggles. Modifiers are meaningful only while their
+    // parent toggle is on (the mutation funcs maintain that invariant).
+    var filterNotes = false
+    var filterTasks = false
+    /// "Done" modifier — completed tasks only. Implies `filterTasks`.
+    var filterTasksDone = false
+    var filterReminders = false
+    /// "Expired" modifier — reminder date already passed. Implies `filterReminders`.
+    var filterRemindersExpired = false
+
+    // SEARCHING-state live query. Every keystroke narrows the timeline.
+    var searchQuery = ""
 
     // Petal fan.
     var petalFanTake: Take?
@@ -27,9 +58,6 @@ final class UIState {
     // Take editor.
     var editorTake: Take?
     var isEditorPresented: Bool { editorTake != nil }
-
-    // Add-button bloom (New Take / New Sequence).
-    var isAddExpanded = false
 
     /// Settings sheet — long-press on the Dailies dock button toggles this once the
     /// first-run orientation has finished (step >= 4 in `FirstRunOrientationState`).
@@ -51,6 +79,125 @@ final class UIState {
     /// handler clears it after the highlight fires so a re-tap re-targets.
     var spotlightTargetTakeID: UUID?
 
+    // MARK: - Dock mode transitions
+
+    /// Enter FILTERING (the Sequence dock button). Toggles start from whatever
+    /// they last were within this entry — entering always starts clean because
+    /// exitToResting() is the only way back and it clears everything.
+    func enterFiltering() {
+        dockMode = .filtering
+    }
+
+    /// Enter SEARCHING (the Search dock button). The query starts empty.
+    func enterSearching() {
+        searchQuery = ""
+        dockMode = .searching
+    }
+
+    /// Return the dock to RESTING and clear every filter/search input, so the
+    /// timeline is unfiltered. Safe to call from any state (idempotent).
+    func exitToResting() {
+        dockMode = .resting
+        filterNotes = false
+        filterTasks = false
+        filterTasksDone = false
+        filterReminders = false
+        filterRemindersExpired = false
+        searchQuery = ""
+    }
+
+    // MARK: - Filter toggle mutations (semantics documented in the header)
+
+    /// Tap on the Notes toggle: off ↔ on. Turning ON clears Tasks/Reminders
+    /// (and their modifiers) — a pure note can't also be a task/reminder.
+    func tapNotesFilter() {
+        if filterNotes {
+            filterNotes = false
+        } else {
+            filterNotes = true
+            filterTasks = false
+            filterTasksDone = false
+            filterReminders = false
+            filterRemindersExpired = false
+        }
+    }
+
+    /// Tap on the Tasks toggle: off ↔ on (plain). Tapping while ON — whether
+    /// plain or Done-modified — turns OFF and clears the modifier.
+    func tapTasksFilter() {
+        if filterTasks {
+            filterTasks = false
+            filterTasksDone = false
+        } else {
+            filterTasks = true
+            filterTasksDone = false
+            filterNotes = false
+        }
+    }
+
+    /// Long-press on the Tasks toggle: ON + "Done" modifier (from off or plain
+    /// on). Long-pressing while already Done-modified returns to plain ON.
+    func longPressTasksFilter() {
+        if filterTasks && filterTasksDone {
+            filterTasksDone = false           // back to plain on
+        } else {
+            filterTasks = true
+            filterTasksDone = true
+            filterNotes = false
+        }
+    }
+
+    /// Tap on the Reminders toggle: off ↔ on (plain). Tapping while ON —
+    /// whether plain or Expired-modified — turns OFF and clears the modifier.
+    func tapRemindersFilter() {
+        if filterReminders {
+            filterReminders = false
+            filterRemindersExpired = false
+        } else {
+            filterReminders = true
+            filterRemindersExpired = false
+            filterNotes = false
+        }
+    }
+
+    /// Long-press on the Reminders toggle: ON + "Expired" modifier (from off
+    /// or plain on). Long-pressing while already Expired-modified returns to
+    /// plain ON.
+    func longPressRemindersFilter() {
+        if filterReminders && filterRemindersExpired {
+            filterRemindersExpired = false    // back to plain on
+        } else {
+            filterReminders = true
+            filterRemindersExpired = true
+            filterNotes = false
+        }
+    }
+
+    // MARK: - Live timeline filter
+
+    /// The filter the current dock state describes — applied live by
+    /// DailiesView. Empty (matches everything) in RESTING, built from the
+    /// toggles in FILTERING, and from the typed query in SEARCHING. Matching
+    /// is the pure `SequenceFilter.matches` with AND semantics.
+    var activeTimelineFilter: SequenceFilter {
+        switch dockMode {
+        case .resting:
+            return SequenceFilter()
+        case .filtering:
+            return SequenceFilter(
+                requireTask: filterTasks,
+                requireReminder: filterReminders,
+                requireNoteOnly: filterNotes,
+                requireCompleted: filterTasksDone,
+                requireExpiredReminder: filterRemindersExpired
+            )
+        case .searching:
+            return SequenceFilter(text: searchQuery)
+        }
+    }
+
+    // MARK: - Petal fan / editor
+
     /// Animation for the surrounding-content fade when the petal fan appears or
     /// dismisses. Driven from the mutation site via `withAnimation` rather than a
     /// `.animation(_:value:)` view modifier, so the fade animates without coupling the
@@ -67,7 +214,6 @@ final class UIState {
     }
 
     func openEditor(for take: Take) {
-        isAddExpanded = false
         editorTake = take
     }
 

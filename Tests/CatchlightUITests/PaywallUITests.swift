@@ -43,17 +43,13 @@ final class PaywallUITests: XCTestCase {
         XCTAssertTrue(dismiss.waitForExistence(timeout: 3))
         dismiss.tap()
 
-        // Open the Add bloom, then tap "New Take". The gate fires inside
-        // RootView.newTake() — the editor must NOT open; the paywall must.
+        // Tap Add (dock redesign 2026-06-10: no bloom — Add creates directly).
+        // The gate fires inside RootView.newTake() — the editor must NOT open;
+        // the paywall must.
         let addButton = app.descendants(matching: .any)
             .matching(identifier: "add-button").firstMatch
         XCTAssertTrue(addButton.waitForExistence(timeout: 2))
         addButton.tap()
-
-        let newTake = app.descendants(matching: .any)
-            .matching(identifier: "bloom-new-take").firstMatch
-        XCTAssertTrue(newTake.waitForExistence(timeout: 2))
-        newTake.tap()
 
         let sheet = app.descendants(matching: .any)
             .matching(identifier: "paywall-sheet").firstMatch

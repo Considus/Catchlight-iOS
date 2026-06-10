@@ -3,9 +3,10 @@
 //  Catchlight (iOS app target) — Phase 6 UI
 //
 //  The top-level composition for the product UI. Decides onboarding vs. the main
-//  app, hosts the active tab (Dailies / Search / Sequence), the persistent bottom
-//  dock, and the modal overlays (petal fan, Take editor, add-bloom dim). All view
-//  models arrive via the environment from Wiring; this view owns no domain logic.
+//  app, hosts the ONE surface (the timeline — the dock morphs instead of tabs
+//  switching, redesign 2026-06-10), the persistent bottom dock, and the modal
+//  overlays (petal fan, Take editor). All view models arrive via the environment
+//  from Wiring; this view owns no domain logic.
 //
 //  Spine ↔ dock alignment: the timeline spine and the dock's Add button share the
 //  same x. DailiesView draws the spine at `CatchlightLayout.spineLeading`; the dock
@@ -45,18 +46,16 @@ struct RootView: View {
 
     private var mainApp: some View {
         @Bindable var ui = ui
-        // The body is assembled from small computed properties (`activeTab`,
-        // `addBloomDim`, `dock`) rather than a single large ZStack ViewBuilder —
-        // an inline switch + conditional dim + modifier chain produced a phantom
-        // "cannot convert Color to Bool" diagnostic from SwiftUI's type-checker.
+        // The body is assembled from small computed properties (`timeline`,
+        // `dock`) rather than a single large ZStack ViewBuilder — an inline
+        // conditional + modifier chain produced a phantom "cannot convert Color
+        // to Bool" diagnostic from SwiftUI's type-checker.
         return ZStack(alignment: .bottom) {
             Color.ckBackground.ignoresSafeArea()
 
-            activeTab
+            timeline
                 .opacity(fanOpacity)   // de-emphasise behind the fan
                 .animation(.easeInOut(duration: 0.2), value: ui.isPetalFanPresented)
-
-            addBloomDim
 
             dock
         }
@@ -114,52 +113,26 @@ struct RootView: View {
         }
     }
 
-    // MARK: - Active tab & chrome
+    // MARK: - Surface & chrome
     //
     // These are split into separate computed properties (rather than inlined in the
     // `mainApp` ZStack) so each ViewBuilder stays simple enough for SwiftUI's
-    // type-checker — an inline switch + conditional dim + modifier chain produced a
-    // phantom "cannot convert Color to Bool" diagnostic.
+    // type-checker.
 
     /// Opacity for content behind the petal fan (de-emphasised while the fan is open).
     private var fanOpacity: Double { ui.isPetalFanPresented ? 0.18 : 1 }
 
-    @ViewBuilder
-    private var activeTab: some View {
-        switch ui.tab {
-        case .dailies:
-            DailiesView().environment(app.dailiesVM)
-        case .search:
-            SearchView().environment(app.searchVM)
-        case .sequence:
-            SequenceView().environment(app.sequenceVM)
-        }
+    /// The ONE surface — the timeline. The dock's filtering/searching states
+    /// narrow it live via `ui.activeTimelineFilter` (read inside DailiesView).
+    private var timeline: some View {
+        DailiesView().environment(app.dailiesVM)
     }
 
-    /// Dim layer behind the Add-button bloom; tapping it collapses the bloom.
-    @ViewBuilder
-    private var addBloomDim: some View {
-        if ui.isAddExpanded {
-            Color.ckDim.ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        ui.isAddExpanded = false
-                    }
-                }
-                .accessibilityLabel("Dismiss add menu")
-                .accessibilityHint("Double-tap to close.")
-                .transition(.opacity)
-        }
-    }
-
-    /// The persistent bottom navigation dock.
+    /// The persistent bottom dock (morphs between resting / filtering / searching).
     private var dock: some View {
-        BottomDockView(
-            onNewTake: { newTake() },
-            onNewSequence: { newSequence() }
-        )
-        .environment(ui)
-        .opacity(fanOpacity)
+        BottomDockView(onNewTake: { newTake() })
+            .environment(ui)
+            .opacity(fanOpacity)
     }
 
     // MARK: - Overlays
@@ -244,20 +217,13 @@ struct RootView: View {
 
     // MARK: - New item actions
 
+    /// Invoked directly by the dock's Add button (RESTING and FILTERING states —
+    /// redesign 2026-06-10, no bloom). Creates a blank Take and opens the editor.
     private func newTake() {
         // Task 6.20: lapsed users hit the paywall instead of creating a Take.
         guard app.ensureEntitled() else { return }
         let take = app.dailiesVM.createTake()
-        ui.tab = .dailies
         ui.openEditor(for: take)
-    }
-
-    private func newSequence() {
-        // A Sequence is a saved search (2026-06-10): creation lives on the
-        // Search surface, in the user's own words — route there. (Previously
-        // this jumped to the Sequence tab, which has no creation affordance.)
-        guard app.ensureEntitled() else { return }
-        ui.tab = .search
     }
 }
 

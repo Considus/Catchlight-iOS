@@ -22,13 +22,14 @@ final class SequenceFilterTests: XCTestCase {
                       task: Bool = false,
                       complete: Bool = false,
                       reminder: Bool = false,
+                      reminderDate: Date = Date(timeIntervalSince1970: 2_000_000_000),
                       createdAt: String = "2026-06-05T09:00:00.000Z") -> Take {
         Take(createdAt: ISO8601.date(from: createdAt)!,
              bodyText: body,
              isTask: task,
              isComplete: complete,
              timeReminder: reminder
-                ? TimeReminder(scheduledDate: Date(timeIntervalSince1970: 2_000_000_000),
+                ? TimeReminder(scheduledDate: reminderDate,
                                notificationIdentifier: "x")
                 : nil)
     }
@@ -64,6 +65,34 @@ final class SequenceFilterTests: XCTestCase {
         XCTAssertTrue(SequenceFilter(requireCompleted: true).matches(take(task: true, complete: true), calendar: utc))
         XCTAssertFalse(SequenceFilter(requireCompleted: true).matches(take(task: true), calendar: utc))
         XCTAssertFalse(SequenceFilter(requireCompleted: true).matches(take(), calendar: utc))
+    }
+
+    // Dock redesign (2026-06-10): "Expired" modifier on the Reminders toggle.
+    func testRequireExpiredReminder_matchesOnlyPastDatedReminders() {
+        let now = ISO8601.date(from: "2026-06-10T12:00:00.000Z")!
+        let past = ISO8601.date(from: "2026-06-09T12:00:00.000Z")!
+        let future = ISO8601.date(from: "2026-06-11T12:00:00.000Z")!
+        let f = SequenceFilter(requireExpiredReminder: true)
+
+        // Expired: scheduled date already passed relative to `now`.
+        XCTAssertTrue(f.matches(take(reminder: true, reminderDate: past), calendar: utc, now: now))
+        // A future reminder is not expired.
+        XCTAssertFalse(f.matches(take(reminder: true, reminderDate: future), calendar: utc, now: now))
+        // A Take without any reminder can never satisfy the constraint.
+        XCTAssertFalse(f.matches(take(), calendar: utc, now: now))
+        // The constraint counts toward isEmpty.
+        XCTAssertFalse(f.isEmpty)
+        XCTAssertTrue(SequenceFilter().isEmpty)
+    }
+
+    /// Owner's exact case (2026-06-10): Tasks + Reminders both toggled on →
+    /// only Takes that are BOTH a task AND carry a reminder (AND semantics).
+    func testTaskAndReminder_andComposition_requiresBoth() {
+        let f = SequenceFilter(requireTask: true, requireReminder: true)
+        XCTAssertTrue(f.matches(take(task: true, reminder: true), calendar: utc))
+        XCTAssertFalse(f.matches(take(task: true), calendar: utc))            // task only
+        XCTAssertFalse(f.matches(take(reminder: true), calendar: utc))        // reminder only
+        XCTAssertFalse(f.matches(take(), calendar: utc))                      // neither
     }
 
     func testMonths_orWithinDimension_andWithEverythingElse() {

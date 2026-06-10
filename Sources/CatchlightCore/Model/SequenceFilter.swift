@@ -33,8 +33,11 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
     /// Pure notes: Note active and no other activity type (mirrors the
     /// timeline's vocabulary).
     public var requireNoteOnly: Bool
-    /// Completed Tasks ("Done").
+    /// Completed Tasks ("Done" — long-press on the Tasks toggle).
     public var requireCompleted: Bool
+    /// Expired Reminders: scheduled date already passed ("Expired" — long-press
+    /// on the Reminders toggle).
+    public var requireExpiredReminder: Bool
 
     /// Month buckets as "yyyy-MM" keys (e.g. "2026-06"), matched against the
     /// Take's `createdAt` in the caller's calendar. Multiple months are OR-ed
@@ -46,19 +49,22 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
                 requireReminder: Bool = false,
                 requireNoteOnly: Bool = false,
                 requireCompleted: Bool = false,
+                requireExpiredReminder: Bool = false,
                 months: [String] = []) {
         self.text = text
         self.requireTask = requireTask
         self.requireReminder = requireReminder
         self.requireNoteOnly = requireNoteOnly
         self.requireCompleted = requireCompleted
+        self.requireExpiredReminder = requireExpiredReminder
         self.months = months
     }
 
     // Tolerant decoding: every field has a default so future fields never
     // break old payloads (same discipline as Take).
     enum CodingKeys: String, CodingKey {
-        case text, requireTask, requireReminder, requireNoteOnly, requireCompleted, months
+        case text, requireTask, requireReminder, requireNoteOnly, requireCompleted
+        case requireExpiredReminder, months
     }
 
     public init(from decoder: Decoder) throws {
@@ -68,6 +74,7 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
         requireReminder = try c.decodeIfPresent(Bool.self, forKey: .requireReminder) ?? false
         requireNoteOnly = try c.decodeIfPresent(Bool.self, forKey: .requireNoteOnly) ?? false
         requireCompleted = try c.decodeIfPresent(Bool.self, forKey: .requireCompleted) ?? false
+        requireExpiredReminder = try c.decodeIfPresent(Bool.self, forKey: .requireExpiredReminder) ?? false
         months = try c.decodeIfPresent([String].self, forKey: .months) ?? []
     }
 
@@ -75,16 +82,22 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
     public var isEmpty: Bool {
         text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !requireTask && !requireReminder && !requireNoteOnly && !requireCompleted
-            && months.isEmpty
+            && !requireExpiredReminder && months.isEmpty
     }
 
     // MARK: - Matching
 
-    public func matches(_ take: Take, calendar: Calendar = .current) -> Bool {
+    /// AND composition across every active constraint (owner decision
+    /// 2026-06-10: "tasks + reminders applied → only Takes with both").
+    /// - Parameter now: reference instant for the expired-reminder constraint.
+    public func matches(_ take: Take, calendar: Calendar = .current, now: Date = Date()) -> Bool {
         if requireTask && !take.isTask { return false }
         if requireReminder && take.timeReminder == nil { return false }
         if requireNoteOnly && (take.isTask || take.timeReminder != nil) { return false }
         if requireCompleted && !(take.isTask && take.isComplete) { return false }
+        if requireExpiredReminder {
+            guard let reminder = take.timeReminder, reminder.scheduledDate < now else { return false }
+        }
         if !months.isEmpty,
            !months.contains(Self.monthKey(for: take.createdAt, calendar: calendar)) {
             return false
@@ -111,6 +124,7 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
         if requireReminder { parts.append("Reminders") }
         if requireNoteOnly { parts.append("Notes") }
         if requireCompleted { parts.append("Done") }
+        if requireExpiredReminder { parts.append("Expired") }
         parts.append(contentsOf: months.map(monthLabel))
         return parts.isEmpty ? "Everything" : parts.joined(separator: " · ")
     }
