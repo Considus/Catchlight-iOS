@@ -331,7 +331,11 @@ struct DailiesView: View {
             }
             .coordinateSpace(name: "dailies")
             .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
-            .onChange(of: ui.spotlightTargetTakeID) { _, newTarget in
+            // `initial: true` (2026-06-10): when the Spotlight tap arrives from
+            // another tab, this view is created with the target ALREADY set, so
+            // a change-only observer never fired — no scroll, and the highlight
+            // never cleared (blocking re-taps of the same result).
+            .onChange(of: ui.spotlightTargetTakeID, initial: true) { _, newTarget in
                 // Task 6.19 — Spotlight tap deep-link. Scroll the matching row
                 // into view and let the row's own opacity flash do the rest.
                 guard let id = newTarget else { return }
@@ -370,6 +374,19 @@ struct DailiesView: View {
                 // Task 6.20: editing is gated for lapsed users — paywall opens instead.
                 guard app.ensureEntitled() else { return }
                 ui.openEditor(for: take)
+            },
+            // Delete / complete paths (2026-06-10). Previously `vm.delete` had
+            // no UI caller at all and nothing ever set `isComplete` — rows could
+            // only accumulate, and the strikethrough/"complete" rendering was
+            // unreachable. The row exposes both via a context menu on its text
+            // column (kept off the circle so the Obie long-press still wins).
+            onToggleComplete: {
+                guard app.ensureEntitled() else { return }
+                vm.toggleComplete(take)
+            },
+            onDelete: {
+                guard app.ensureEntitled() else { return }
+                vm.delete(take)
             }
         )
         .background(
@@ -398,13 +415,20 @@ struct DailiesView: View {
 
     private struct MonthGroup { let month: String; let takes: [Take] }
 
-    private var monthGroups: [MonthGroup] {
+    /// Cached formatter — `DateFormatter` construction is expensive and this
+    /// property is evaluated on every body pass (including the scroll-driven
+    /// `scrolling` state toggles).
+    private static let monthFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "LLLL yyyy"
+        return f
+    }()
+
+    private var monthGroups: [MonthGroup] {
         var order: [String] = []
         var map: [String: [Take]] = [:]
         for take in vm.takes {
-            let key = f.string(from: take.createdAt)
+            let key = Self.monthFormatter.string(from: take.createdAt)
             if map[key] == nil { order.append(key); map[key] = [] }
             map[key]?.append(take)
         }
@@ -423,7 +447,7 @@ struct DailiesView: View {
 }
 
 private struct ScrollOffsetKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 

@@ -67,10 +67,30 @@ enum ExportCoordinator {
         let filename = TakeExporter.suggestedFilename()
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         do {
-            try markdown.data(using: .utf8)?.write(to: url, options: [.atomic])
+            // `.completeFileProtectionUnlessOpen`: the file holds the user's
+            // ENTIRE decrypted corpus, so it gets the strongest protection class
+            // compatible with the share sheet reading it while the device is
+            // unlocked. `Data(markdown.utf8)` cannot fail (the previous
+            // `data(using:)?` optional chain could silently skip the write and
+            // still return the URL).
+            try Data(markdown.utf8).write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
             return url
         } catch {
             return nil
+        }
+    }
+
+    /// Delete any stale export files left in tmp by a crash or a share sheet
+    /// whose completion handler never ran. Call once at app launch. Without
+    /// this, the cleanup in `completionWithItemsHandler` was the ONLY thing
+    /// standing between the full decrypted corpus and an indefinite lifetime in
+    /// the sandbox tmp directory (iOS purges tmp only opportunistically).
+    static func sweepStaleExports() {
+        let fm = FileManager.default
+        let tmp = fm.temporaryDirectory
+        guard let items = try? fm.contentsOfDirectory(at: tmp, includingPropertiesForKeys: nil) else { return }
+        for item in items where TakeExporter.isExportFilename(item.lastPathComponent) {
+            try? fm.removeItem(at: item)
         }
     }
 

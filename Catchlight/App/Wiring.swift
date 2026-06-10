@@ -5,7 +5,8 @@
 //  The composition root. This is the single place where the platform-agnostic
 //  CatchlightCore protocols are bound to their concrete iOS implementations:
 //
-//      TakeStore          → SQLiteTakeStore       (SQLite3 + NSFileProtection, App Group container)
+//      TakeStore          → EncryptedTakeStore   (SQLite3, AES-256-GCM payload columns,
+//                                                 NSFileProtection, App Group container)
 //      CloudFolder        → FileCloudFolder      (Files API, security-scoped bookmark)
 //
 //  Master-key derivation is performed in-process by CatchlightCore's
@@ -26,7 +27,6 @@ enum Wiring {
     /// Fallback URL-string slot used when the user pastes a folder URL instead
     /// of picking through `UIDocumentPickerViewController` (Task 3.12).
     static let cloudFolderURLStringDefaultsKey = "catchlight.cloudFolderURLString"
-    private static let saltDefaultsKey = "catchlight.argon2SaltB64"
     private static let deviceIdDefaultsKey = "catchlight.deviceId"
 
     /// Task 6.13 — resolve a persisted folder bookmark to a URL while surfacing
@@ -109,7 +109,7 @@ enum Wiring {
             return nil
         }
         let keys = KeyHierarchy(masterKey: masterKey)
-        return try? SQLiteTakeStore(keys: keys)
+        return try? EncryptedTakeStore(keys: keys)
     }
 
     /// Build the application-scope model that drives the whole UI. Decides onboarding
@@ -132,8 +132,15 @@ enum Wiring {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--uitesting") {
             let store = InMemoryTakeStore()
-            try? store.upsert(Take(bodyText: "Buy film for the weekend shoot"))
-            try? store.upsert(Take(bodyText: "Call the framer back"))
+            // Explicit creation times 1s apart: timestamps are truncated to
+            // millisecond precision (wire resolution), so two back-to-back
+            // `Take()` inits can TIE on createdAt — and a tied newest-first
+            // sort is unstable, flipping which row is on top between launches
+            // (UI tests assume "Call the framer back" is the top row).
+            let base = Date()
+            try? store.upsert(Take(createdAt: base.addingTimeInterval(-1),
+                                   bodyText: "Buy film for the weekend shoot"))
+            try? store.upsert(Take(createdAt: base, bodyText: "Call the framer back"))
             // UI-test build is treated as fully entitled by default so existing
             // flow tests aren't gated by the paywall. Pass `--uitesting-lapsed`
             // alongside to exercise the paywall path explicitly.
@@ -143,7 +150,7 @@ enum Wiring {
             } else {
                 manager.forceStatusForTesting(.lapsed)
             }
-            return AppModel(
+            let model = AppModel(
                 needsOnboarding: false,
                 initialStore: store,
                 storeProvider: { nil },   // never swap stores during a test run
@@ -152,6 +159,14 @@ enum Wiring {
                 // user's device search results clean across runs.
                 spotlight: NoopSpotlightIndexer()
             )
+            // First-run orientation state persists in standard UserDefaults
+            // across simulator launches, so whichever hint a PREVIOUS run left
+            // armed leaked into the next test (e.g. an armed settings hint
+            // swallows the first dailies-tab long-press, breaking Flow 6).
+            // UI-test runs start with the tour complete; the orientation flow
+            // itself is covered by FirstRunOrientationTests (unit).
+            model.orientation.step = 5
+            return model
         }
         #endif
         let onboarded = MasterKeyKeychain.exists()
@@ -182,19 +197,65 @@ enum Wiring {
 
     /// Build a SyncEngine if the app is unlocked AND a cloud folder is configured.
     /// Returns nil in local-only mode or when locked (used by background sync).
+    /// (The Argon2 salt requirement is gone — HKDF derivation uses a fixed
+    /// domain salt, so the per-account salt had no function. Previously this
+    /// guard could silently disable sync if the legacy defaults key was absent.)
     static func makeSyncEngine() -> SyncEngine? {
         guard MasterKeyKeychain.exists() else { return nil }
-        guard let bookmark = UserDefaults(suiteName: AppGroup.identifier)?.data(forKey: bookmarkDefaultsKey) else {
+        guard let cloud = makeCloudFolder() else {
             return nil   // local-only mode
         }
         guard let masterKey = try? MasterKeyKeychain.retrieve(reason: "Sync your Takes") else { return nil }
-        guard let cloud = try? FileCloudFolder(bookmark: bookmark) else { return nil }
-        guard let saltB64 = UserDefaults(suiteName: AppGroup.identifier)?.string(forKey: saltDefaultsKey),
-              let salt = Data(base64Encoded: saltB64) else { return nil }
 
         let keys = KeyHierarchy(masterKey: masterKey)
-        let store = try? SQLiteTakeStore(keys: keys)
+        let store = try? EncryptedTakeStore(keys: keys)
         guard let store else { return nil }
-        return SyncEngine(store: store, cloud: cloud, keys: keys, argon2Salt: salt, deviceId: deviceId())
+        return SyncEngine(store: store, cloud: cloud, keys: keys, deviceId: deviceId())
+    }
+
+    /// Resolve the configured cloud folder: the security-scoped bookmark
+    /// (preferred, set via "Choose Folder") or the pasted-URL fallback slot.
+    /// The URL slot previously was written by Settings but NEVER read by
+    /// anything — users who pasted a URL believed sync was configured while the
+    /// app silently ran local-only.
+    private static func makeCloudFolder() -> FileCloudFolder? {
+        let defaults = UserDefaults(suiteName: AppGroup.identifier)
+        if let bookmark = defaults?.data(forKey: bookmarkDefaultsKey),
+           let cloud = try? FileCloudFolder(bookmark: bookmark) {
+            // The OS flagged the bookmark stale: re-mint and re-persist so
+            // access doesn't silently degrade later.
+            if cloud.bookmarkWasStale,
+               let fresh = try? FileCloudFolder.makeBookmark(for: cloud.folderURL) {
+                defaults?.set(fresh, forKey: bookmarkDefaultsKey)
+            }
+            return cloud
+        }
+        if let raw = defaults?.string(forKey: cloudFolderURLStringDefaultsKey),
+           let url = usableFolderURL(from: raw) {
+            return FileCloudFolder(folderURL: url)
+        }
+        return nil
+    }
+
+    /// Accepts a `file://` URL or a plain path, and requires it to be an
+    /// existing, readable directory from this sandbox. Shared by
+    /// CloudStorageView (validation at save time) and `makeCloudFolder`
+    /// (validation at engine construction).
+    static func usableFolderURL(from raw: String) -> URL? {
+        let url: URL
+        if let parsed = URL(string: raw), parsed.isFileURL {
+            url = parsed
+        } else if raw.hasPrefix("/") {
+            url = URL(fileURLWithPath: raw, isDirectory: true)
+        } else {
+            return nil
+        }
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+              isDirectory.boolValue,
+              FileManager.default.isReadableFile(atPath: url.path) else {
+            return nil
+        }
+        return url
     }
 }

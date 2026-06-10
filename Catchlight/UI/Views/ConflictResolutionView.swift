@@ -200,8 +200,12 @@ struct ConflictResolutionView: View {
                     selection.removeValue(forKey: pair.local.id)
                     dailies.reload()
                 } catch {
-                    // Best-effort: the store surfaces its own error already; leave
-                    // the pair in the queue so the user can retry.
+                    // ConflictQueue writes through the store directly, bypassing
+                    // DailiesViewModel — so nothing surfaced this failure before
+                    // (the old comment claimed otherwise). Route it through the
+                    // timeline's storage-error strip; the pair stays in the
+                    // queue so the user can retry.
+                    dailies.reportStorageError("Couldn't save that resolution. Please try again.")
                 }
             } label: {
                 Text("Keep this version")

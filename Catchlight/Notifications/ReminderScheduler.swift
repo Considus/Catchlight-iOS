@@ -20,6 +20,7 @@
 import Foundation
 import UserNotifications
 import CatchlightCore
+import os
 
 /// Minimal seam around the parts of `UNUserNotificationCenter` that
 /// `ReminderScheduler` actually uses. `UNUserNotificationCenter` already
@@ -27,37 +28,64 @@ import CatchlightCore
 public protocol NotificationScheduling: AnyObject {
     func add(_ request: UNNotificationRequest)
     func removePendingNotificationRequests(withIdentifiers identifiers: [String])
+    func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
 }
 
 extension UNUserNotificationCenter: NotificationScheduling {
     public func add(_ request: UNNotificationRequest) {
-        // Wrap the completion-handler form (no `try` available on the variant
-        // without a handler in older SDKs). Errors are surfaced through the
-        // completion the same way the previous `add(request)` no-handler call
-        // did — silently dropped, matching pre-7.2 behaviour.
-        self.add(request, withCompletionHandler: nil)
+        // Errors are logged (no content!) rather than silently dropped — an
+        // identifier or trigger problem previously left the model holding a
+        // reminder the OS would never deliver, with no diagnostic trail.
+        self.add(request) { error in
+            if let error {
+                ReminderScheduler.logger.error("UNUserNotificationCenter.add failed: \(String(describing: error))")
+            }
+        }
     }
 }
 
 public final class ReminderScheduler {
 
     public static let categoryIdentifier = "TAKE_REMINDER"
+    static let logger = Logger(subsystem: "com.considus.catchlight", category: "reminders")
 
     private let center: NotificationScheduling
+    private let now: () -> Date
 
-    public init(center: NotificationScheduling = UNUserNotificationCenter.current()) {
+    public init(center: NotificationScheduling = UNUserNotificationCenter.current(),
+                now: @escaping () -> Date = Date.init) {
         self.center = center
+        self.now = now
     }
 
     /// Request permission. Per §8.3, call this when the user adds their FIRST
     /// time-based reminder during onboarding — not at launch.
+    /// Goes through the injected seam (previously bypassed it straight to
+    /// `UNUserNotificationCenter.current()`, defeating the Task 7.2 seam).
     public func requestAuthorization() async -> Bool {
-        (try? await UNUserNotificationCenter.current()
-            .requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+        (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
+    /// Schedule the local notification for a Take's time reminder.
+    ///
+    /// SEMANTICS (decided 2026-06-10): `TimeReminder.scheduledDate` is an
+    /// ABSOLUTE INSTANT and the notification fires at that instant regardless of
+    /// where in the world the device is. The trigger pins `timeZone` so the
+    /// calendar components are evaluated in the zone they were computed in —
+    /// previously no zone was set, so the components floated with the device's
+    /// current zone and a travelling user's reminder silently drifted away from
+    /// the stored instant.
+    ///
+    /// Past-dated reminders are refused: a `repeats: false` calendar trigger
+    /// whose components are in the past never fires, so scheduling one would
+    /// leave the model holding a reminder that silently never delivers. The UI
+    /// prevents picking past dates; this is the defence at the boundary.
     public func scheduleReminder(for take: Take) {
         guard let reminder = take.timeReminder else { return }
+        guard reminder.scheduledDate > now() else {
+            Self.logger.warning("Refusing to schedule a past-dated reminder (id \(reminder.notificationIdentifier, privacy: .public))")
+            return
+        }
 
         let content = UNMutableNotificationContent()
         content.title = "Catchlight"
@@ -65,10 +93,11 @@ public final class ReminderScheduler {
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier
 
-        let components = Calendar.current.dateComponents(
+        var components = Calendar.current.dateComponents(
             [.year, .month, .day, .hour, .minute],
             from: reminder.scheduledDate
         )
+        components.timeZone = TimeZone.current   // pin: absolute-instant semantics
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         let request = UNNotificationRequest(
             identifier: reminder.notificationIdentifier,

@@ -20,6 +20,9 @@ struct BottomDockView: View {
     @Environment(UIState.self) private var ui
     @Environment(FirstRunOrientationState.self) private var orientation
     @Environment(\.dynamicTypeSize) private var dynamicSize
+    // Live-updating, unlike reading `UIAccessibility.isReduceMotionEnabled`
+    // directly (which only reflects the setting at call time).
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var onNewTake: () -> Void
     var onNewSequence: () -> Void
@@ -106,7 +109,7 @@ struct BottomDockView: View {
     private func startAddPulseIfAllowed() {
         addPulsesDone = 0
         addPulseScale = 1.0
-        if UIAccessibility.isReduceMotionEnabled { return }
+        if reduceMotion { return }
         runPulseCycle()
     }
 

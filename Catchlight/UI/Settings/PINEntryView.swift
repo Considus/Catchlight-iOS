@@ -68,7 +68,10 @@ struct PINEntryView: View {
                 }
             ))
             .keyboardType(.numberPad)
-            .textContentType(.oneTimeCode)   // suppress autofill chrome
+            // No content type: `.oneTimeCode` actively INVITES SMS-code autofill
+            // suggestions on recent iOS — the opposite of suppressing chrome for
+            // a secret PIN. `.numberPad` already has no predictive bar.
+            .textContentType(nil)
             .focused($fieldFocused)
             .frame(width: 0, height: 0)
             .opacity(0.001)

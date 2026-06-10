@@ -108,6 +108,10 @@ struct CatchlightApp: App {
                 (SettingsViewModel.AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme
             )
             .task {
+                // Remove any decrypted export files a crash or an unfinished
+                // share sheet left in tmp — the only other cleanup path is the
+                // share sheet's own completion handler.
+                ExportCoordinator.sweepStaleExports()
                 // Task 6.21: kick off the subscription state machine on first
                 // launch. `startObservingUpdates` is idempotent; entitlements
                 // are then re-checked on every scenePhase → .active.

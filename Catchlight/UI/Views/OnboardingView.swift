@@ -426,9 +426,12 @@ private struct ConfirmStep: View {
     private var bankGrid: some View {
         let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
         return LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(Array(vm.bank.enumerated()), id: \.offset) { _, word in
-                let used = vm.usedWords.contains(word)
-                Button { vm.tapBankWord(word) } label: {
+            // Index-based identity + usage (2026-06-10): tracking by word value
+            // greyed BOTH tiles when a phrase contained a duplicate word, and
+            // could make the confirm step unwinnable.
+            ForEach(Array(vm.bank.enumerated()), id: \.offset) { index, word in
+                let used = vm.usedBankIndices.contains(index)
+                Button { vm.tapBankWord(at: index) } label: {
                     Text(word)
                         .font(CatchlightFont.displayFixed(size: 18))
                         .foregroundStyle(used ? Color.ckTextSecondary.opacity(0.4) : Color.ckTextPrimary)
