@@ -94,6 +94,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-xcode-spm-
 
+      - name: Disable simulator hardware keyboard
+        # Guards against the classic XCUITest `typeText` flake on CI runners:
+        # with the hardware keyboard connected the software keyboard never
+        # appears and typing fails with kAXErrorCannotComplete (hit on run
+        # 27280916290, Flow 5).
+        run: defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
+
       - name: List available simulators (debug)
         # Surfaced in the run log so future failures pinning a destination are
         # easy to diagnose without re-running.
