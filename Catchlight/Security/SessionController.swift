@@ -50,9 +50,15 @@ public final class SessionController: ObservableObject {
         switch phase {
         case .active:
             isObscured = false
-        case .inactive, .background:
-            // sceneWillResignActive equivalent: obscure BEFORE the snapshot, then
-            // clear plaintext + derived keys.
+        case .inactive:
+            // `.inactive` fires for transient events — Notification Center pull,
+            // system alerts, the app switcher, and notably the Face ID sheet shown
+            // DURING unlock itself. Obscure the UI before the system snapshot
+            // (Encryption Architecture §12.2) but do NOT tear down keys here:
+            // doing so caused an unlock → inactive → re-lock loop and constant
+            // re-prompts. Full teardown happens on `.background`.
+            overlayPrivacyScreen()
+        case .background:
             overlayPrivacyScreen()
             clearDecryptedCache()
             clearDerivedKeyCache()

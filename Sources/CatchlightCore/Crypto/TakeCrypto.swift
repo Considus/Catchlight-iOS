@@ -81,7 +81,10 @@ public func itemKey(masterKey: SymmetricKey, takeUUID: UUID) -> SymmetricKey {
     return HKDF<SHA256>.deriveKey(
         inputKeyMaterial: masterKey,
         salt: Data(ItemKeyDerivationConstants.salt.utf8),
-        info: Data(takeUUID.uuidString.utf8),
+        // CROSS-PLATFORM CONTRACT: UPPERCASE hyphenated UUID string (see
+        // KeyHierarchy.itemKey). `.uppercased()` is a no-op on Apple platforms
+        // but pins the contract for future non-Apple clients.
+        info: Data(takeUUID.uuidString.uppercased().utf8),
         outputByteCount: ItemKeyDerivationConstants.outputByteCount
     )
 }

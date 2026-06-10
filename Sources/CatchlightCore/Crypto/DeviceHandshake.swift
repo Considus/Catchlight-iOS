@@ -63,6 +63,32 @@ public enum DeviceHandshake {
 
     public static let expiryInterval: TimeInterval = 15 * 60   // 15 minutes (§6 step 9)
 
+    /// Short authentication string (2026-06-10 hardening).
+    ///
+    /// THREAT: the user's approval is the only gate on a handshake request. An
+    /// attacker with WRITE access to the cloud folder during an open handshake
+    /// window can overwrite the request file with their own public key and a
+    /// plausible device name; the user — who genuinely is adding a device —
+    /// approves, and the master key is wrapped to the attacker's key.
+    ///
+    /// MITIGATION: both devices derive a 6-digit code from the request's public
+    /// key + id. The NEW device displays it; the ORIGINAL device shows it inside
+    /// the existing approval prompt ("Approve device — code 481 263"). If the
+    /// request file was substituted, the codes differ and the user declines. This
+    /// is the cryptographic minimum: nothing else binds the approved request to
+    /// the user's actual new device. UI surfaces MUST display this code in any
+    /// future multi-device flow (no flow ships in v1.0).
+    public static func confirmationCode(for request: HandshakeRequest) -> String {
+        var hasher = SHA256()
+        hasher.update(data: Data("catchlight-handshake-sas-v1".utf8))
+        hasher.update(data: Data(request.requestId.uuidString.uppercased().utf8))
+        hasher.update(data: Data(request.ephemeralPublicKey.utf8))
+        let digest = Data(hasher.finalize())
+        // First 4 bytes → big-endian UInt32 → 6 decimal digits (zero-padded).
+        let value = digest.prefix(4).reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
+        return String(format: "%06d", value % 1_000_000)
+    }
+
     /// Derive the wrapping key shared by both devices.
     /// - Parameters:
     ///   - ephemeralPrivate: this device's ephemeral X25519 private key.
@@ -76,17 +102,19 @@ public enum DeviceHandshake {
         guard oneTimeValue.count == 32 else { throw CryptoError.malformedCiphertext }
         let shared = try ephemeralPrivate.sharedSecretFromKeyAgreement(with: peerPublic)
         // IKM = shared_secret XOR OTV  (Encryption Architecture §6 step 7)
-        let sharedBytes = shared.withUnsafeBytes { Data($0) }   // 32 bytes
+        var sharedBytes = shared.withUnsafeBytes { Data($0) }   // 32 bytes
         var ikm = Data(count: 32)
+        defer {
+            // Zero both intermediate secret buffers.
+            ikm.resetBytes(in: 0..<ikm.count)
+            sharedBytes.resetBytes(in: 0..<sharedBytes.count)
+        }
         for i in 0..<32 { ikm[i] = sharedBytes[i] ^ oneTimeValue[i] }
-        let key = HKDF<SHA256>.deriveKey(
+        return HKDF<SHA256>.deriveKey(
             inputKeyMaterial: SymmetricKey(data: ikm),
             info: Data(KeyInfo.deviceHandshake.utf8),
             outputByteCount: 32
         )
-        // Zero the intermediate IKM buffer.
-        ikm.resetBytes(in: 0..<ikm.count)
-        return key
     }
 
     /// ORIGINAL device: generate OTV + ephemeral key pair and wrap the master key
@@ -103,15 +131,15 @@ public enum DeviceHandshake {
         let peerPublic = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: peerPubData)
 
         let ephemeralPrivate = Curve25519.KeyAgreement.PrivateKey()
-        var otv = Data(count: 32)
-        otv.withUnsafeMutableBytes { _ = SecureRandom.fill($0) }
+        let otv = SecureRandom.bytes(32)   // hard-fails on CSPRNG error
 
         let wrappingKey = try wrappingKey(
             ephemeralPrivate: ephemeralPrivate,
             peerPublic: peerPublic,
             oneTimeValue: otv
         )
-        let masterKeyData = masterKey.withUnsafeBytes { Data($0) }
+        var masterKeyData = masterKey.withUnsafeBytes { Data($0) }
+        defer { masterKeyData.resetBytes(in: 0..<masterKeyData.count) }
         let sealed = try ChaChaPoly.seal(masterKeyData, using: wrappingKey)
 
         let expiry = ISO8601.string(from: now.addingTimeInterval(expiryInterval))
@@ -173,7 +201,14 @@ public enum DeviceHandshake {
 }
 
 private extension Data {
+    /// Overwrite bytes in place with zeros. Uses `memset_s` (guaranteed not to be
+    /// optimised away) on the actual backing buffer — the previous
+    /// `replaceSubrange` implementation could trigger a copy-on-write
+    /// reallocation, zeroing a fresh copy while the original key bytes lived on.
     mutating func resetBytes(in range: Range<Int>) {
-        self.replaceSubrange(range, with: Data(count: range.count))
+        withUnsafeMutableBytes { raw in
+            guard let base = raw.baseAddress else { return }
+            memset_s(base + range.lowerBound, raw.count - range.lowerBound, 0, range.count)
+        }
     }
 }

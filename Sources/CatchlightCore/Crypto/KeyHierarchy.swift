@@ -68,14 +68,20 @@ public struct KeyHierarchy: Sendable {
         HKDF<SHA256>.deriveKey(
             inputKeyMaterial: masterKey,
             salt: Data(ItemKeyDerivationConstants.salt.utf8),
-            info: Data(takeUUID.uuidString.utf8),
+            // CROSS-PLATFORM CONTRACT: the HKDF info is the UPPERCASE hyphenated
+            // UUID string (Apple's `uuidString` is uppercase; many other
+            // platforms emit lowercase by default — a lowercase UUID would
+            // silently derive a different key). `.uppercased()` is a no-op on
+            // Apple platforms but pins the contract explicitly.
+            info: Data(takeUUID.uuidString.uppercased().utf8),
             outputByteCount: ItemKeyDerivationConstants.outputByteCount
         )
     }
 
     /// Hex-encoded form of the database key. Retained for forward compatibility
-    /// with column-level encryption schemes; the current `SQLiteTakeStore` (a
-    /// historical name — the file no longer uses SQLCipher) does not consume it.
+    /// (and pinned by the EncryptionLayerTests KATs); the current
+    /// `EncryptedTakeStore` seals payload columns with per-item keys and does
+    /// not consume a whole-database key.
     public func databaseKeyHex() -> String {
         databaseKey().withUnsafeBytes { raw in
             raw.map { String(format: "%02x", $0) }.joined()

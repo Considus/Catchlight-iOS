@@ -6,20 +6,25 @@
 //
 //  IMPORTANT SCOPE: the PIN protects APP ACCESS on this device only — it is NOT
 //  part of the encryption key chain. Data confidentiality is provided by the
-//  Keychain-stored master key (HKDF-derived from the BIP-39 mnemonic) and by
-//  SQLCipher. Losing the PIN does not lose data; recovery is via the mnemonic.
+//  Keychain-stored master key (HKDF-derived from the BIP-39 mnemonic) and the
+//  per-item AES-256-GCM encryption of Take content at rest. Losing the PIN does
+//  not lose data; recovery is via the mnemonic.
 //
-//  KDF CHOICE: the PIN is low-entropy (6+ alphanumeric or 8+ digit) and therefore
+//  KDF CHOICE: the PIN is low-entropy (6+ characters/digits) and therefore
 //  requires a slow KDF to resist on-device offline brute force. Apple-native
 //  PBKDF2-HMAC-SHA-256 via CommonCrypto is the right tool here — slower than
 //  Argon2id, but Argon2id is no longer available in the codebase and PBKDF2 is
 //  acceptable for protecting UI access (NOT for key derivation).
 //
-//  Policy:
+//  Policy (Encryption Architecture §13.3, revised 2026-06-10):
 //    • Minimum 6 alphanumeric characters OR a 6-digit numeric PIN. Sub-6 PINs
 //      are rejected. The 10-attempt lockout is the primary defence against
 //      brute force at this entropy floor.
 //    • After 10 consecutive failed attempts the app locks and requires the mnemonic.
+//    • The failed-attempt counter is PERSISTED in the Keychain (2026-06-10): an
+//      in-memory counter could be reset by force-quitting the app, which made the
+//      lockout — the primary brute-force defence — trivially bypassable. `verify`
+//      also refuses attempts itself once locked out, rather than trusting callers.
 //
 
 import Foundation
@@ -43,24 +48,30 @@ public struct PINPolicy {
 }
 
 public final class PINService {
-    private let service = "com.considus.catchlight"
+    private let service: String
     private let hashAccount = "pin-hash"
     private let saltAccount = "pin-salt"
-    // Must match the RESOLVED entitlement string in the signed binary. See the
-    // long comment in `MasterKeyKeychain.accessGroup` — the literal
-    // `"$(AppIdentifierPrefix)…"` form is only substituted in plist/entitlements
-    // files, never in Swift, and using it here returns -34018 at runtime.
-    // Team prefix YTPP9HU9F9 = Mark Stradling (project.yml DEVELOPMENT_TEAM).
-    private let accessGroup = "YTPP9HU9F9.com.considus.catchlight"
+    private let attemptsAccount = "pin-failed-attempts"
+    // Resolved keychain access group — see KeychainConfig for why the literal
+    // `"$(AppIdentifierPrefix)…"` form cannot be used in Swift source.
+    // Optional: tests pass nil so items live in the host app's default group
+    // (an EXPLICIT group requires the keychain-sharing entitlement, which
+    // unsigned simulator test hosts lack — SecItemAdd fails with -34018).
+    private let accessGroup: String?
 
     /// PBKDF2 parameters. 600_000 iterations matches OWASP 2023 guidance for
     /// PBKDF2-HMAC-SHA-256. 32-byte output.
     private static let pbkdf2Iterations: UInt32 = 600_000
     private static let pbkdf2OutputLength: Int = 32
 
-    public private(set) var failedAttempts = 0
-
-    public init() {}
+    /// Production storage slots by default. Tests pass a distinct `service` so
+    /// they can never clobber a real user's PIN (the suites previously called
+    /// `reset()` against the production slots).
+    public init(service: String = KeychainConfig.service,
+                accessGroup: String? = KeychainConfig.accessGroup) {
+        self.service = service
+        self.accessGroup = accessGroup
+    }
 
     /// Set or change the PIN. Generates a fresh random salt.
     public func setPIN(_ pin: String) throws {
@@ -71,13 +82,16 @@ public final class PINService {
         let hash = try Self.pbkdf2(password: pin, salt: salt)
         try storeItem(hash, account: hashAccount)
         try storeItem(salt, account: saltAccount)
-        failedAttempts = 0
+        persistFailedAttempts(0)
     }
 
-    /// Verify a PIN attempt. Returns true on success; increments the failure counter
-    /// on mismatch. Caller must lock to mnemonic recovery once `failedAttempts`
-    /// reaches `PINPolicy.maxFailedAttempts`.
+    /// Verify a PIN attempt. Returns true on success; increments the persisted
+    /// failure counter on mismatch. Once `failedAttempts` reaches
+    /// `PINPolicy.maxFailedAttempts` this method refuses further attempts
+    /// (returns false without evaluating) until the PIN is reset via mnemonic
+    /// recovery — enforcement no longer relies on the caller checking first.
     public func verify(_ pin: String) throws -> Bool {
+        guard !isLockedOut else { return false }
         guard let storedHash = readItem(account: hashAccount),
               let salt = readItem(account: saltAccount) else {
             throw KeychainError.notFound
@@ -85,8 +99,15 @@ public final class PINService {
         let candidate = try Self.pbkdf2(password: pin, salt: salt)
         // Constant-time comparison.
         let match = constantTimeEqual(candidate, storedHash)
-        if match { failedAttempts = 0 } else { failedAttempts += 1 }
+        persistFailedAttempts(match ? 0 : failedAttempts + 1)
         return match
+    }
+
+    /// Consecutive failed attempts, persisted in the Keychain so the lockout
+    /// survives app relaunches and reinstalls within the same keychain lifetime.
+    public var failedAttempts: Int {
+        guard let data = readItem(account: attemptsAccount), data.count == 1 else { return 0 }
+        return Int(data[data.startIndex])
     }
 
     public var isLockedOut: Bool { failedAttempts >= PINPolicy.maxFailedAttempts }
@@ -94,7 +115,12 @@ public final class PINService {
     public func reset() {
         deleteItem(account: hashAccount)
         deleteItem(account: saltAccount)
-        failedAttempts = 0
+        deleteItem(account: attemptsAccount)
+    }
+
+    private func persistFailedAttempts(_ count: Int) {
+        let clamped = UInt8(clamping: count)
+        try? storeItem(Data([clamped]), account: attemptsAccount)
     }
 
     // MARK: - PBKDF2 (Apple-native via CommonCrypto)
@@ -127,42 +153,63 @@ public final class PINService {
     // MARK: - Keychain helpers (WhenUnlockedThisDeviceOnly, non-synchronisable)
 
     private func storeItem(_ data: Data, account: String) throws {
-        let query: [String: Any] = [
+        // Update-or-add. The previous delete-then-add reused the full add
+        // dictionary (including kSecValueData / kSecAttrAccessible) as a search
+        // query, which is not a valid search shape on all iOS versions and could
+        // leave a stale item behind, failing the subsequent add with
+        // errSecDuplicateItem.
+        var searchQuery: [String: Any] = [
             kSecClass as String:              kSecClassGenericPassword,
             kSecAttrService as String:        service,
             kSecAttrAccount as String:        account,
-            kSecAttrAccessGroup as String:    accessGroup,
+            kSecAttrSynchronizable as String: false
+        ]
+        if let accessGroup { searchQuery[kSecAttrAccessGroup as String] = accessGroup }
+        let update: [String: Any] = [kSecValueData as String: data]
+        let updateStatus = SecItemUpdate(searchQuery as CFDictionary, update as CFDictionary)
+        if updateStatus == errSecSuccess { return }
+        // Any other update failure (not just errSecItemNotFound) falls back to
+        // replace-then-add: e.g. unsigned simulator test hosts report
+        // errSecMissingEntitlement (-34018) from SecItemUpdate while SecItemAdd
+        // succeeds. The delete uses the minimal search query.
+        if updateStatus != errSecItemNotFound {
+            SecItemDelete(searchQuery as CFDictionary)
+        }
+        var addQuery: [String: Any] = [
+            kSecClass as String:              kSecClassGenericPassword,
+            kSecAttrService as String:        service,
+            kSecAttrAccount as String:        account,
             kSecValueData as String:          data,
             kSecAttrAccessible as String:     kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
             kSecAttrSynchronizable as String: false
         ]
-        SecItemDelete(query as CFDictionary)
-        let status = SecItemAdd(query as CFDictionary, nil)
+        if let accessGroup { addQuery[kSecAttrAccessGroup as String] = accessGroup }
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
         guard status == errSecSuccess else { throw KeychainError.storeFailed(status) }
     }
 
     private func readItem(account: String) -> Data? {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String:              kSecClassGenericPassword,
             kSecAttrService as String:        service,
             kSecAttrAccount as String:        account,
-            kSecAttrAccessGroup as String:    accessGroup,
             kSecReturnData as String:         true,
             kSecMatchLimit as String:         kSecMatchLimitOne,
             kSecAttrSynchronizable as String: false
         ]
+        if let accessGroup { query[kSecAttrAccessGroup as String] = accessGroup }
         var item: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess else { return nil }
         return item as? Data
     }
 
     private func deleteItem(account: String) {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String:           kSecClassGenericPassword,
             kSecAttrService as String:     service,
-            kSecAttrAccount as String:     account,
-            kSecAttrAccessGroup as String: accessGroup
+            kSecAttrAccount as String:     account
         ]
+        if let accessGroup { query[kSecAttrAccessGroup as String] = accessGroup }
         SecItemDelete(query as CFDictionary)
     }
 

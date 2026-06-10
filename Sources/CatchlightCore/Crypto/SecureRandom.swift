@@ -30,9 +30,17 @@ public enum SecureRandom {
     }
 
     /// Return `count` secure random bytes.
+    ///
+    /// HARD-FAILS (traps) if the CSPRNG reports an error. Previously the status
+    /// was discarded and callers received all-zero bytes — for consumers like
+    /// BIP-39 entropy generation that failure mode is a deterministic, guessable
+    /// mnemonic. `SecRandomCopyBytes` failure is effectively unheard of in
+    /// practice; if it ever happens, crashing is strictly safer than silently
+    /// generating zero-entropy key material.
     public static func bytes(_ count: Int) -> Data {
         var data = Data(count: count)
-        data.withUnsafeMutableBytes { _ = fill($0) }
+        let status = data.withUnsafeMutableBytes { fill($0) }
+        precondition(status == 0, "SecureRandom: CSPRNG failure (status \(status)) — refusing to return weak entropy")
         return data
     }
 }
