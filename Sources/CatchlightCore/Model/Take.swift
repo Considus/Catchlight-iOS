@@ -7,11 +7,13 @@
 //  combination of Note / Task / Reminder / Obie is valid simultaneously, and Note
 //  is the floor — it re-asserts if every other type is removed.
 //
-//  This struct is the plaintext representation. It is what gets encrypted (the
-//  whole payload, per Encryption Architecture §10.5) and what the SQLCipher
-//  database holds in the clear. The Take's `id` is the ONLY field that is never
-//  encrypted: it is the HKDF `info` input for the per-item key and must be known
-//  before decryption.
+//  This struct is the plaintext representation. It is what gets sealed with the
+//  per-item AES-256-GCM key (the whole payload, per Encryption Architecture
+//  §10.5) — both in the cloud blob and in the local database's payload column.
+//  The Take's `id` is never encrypted: it is the HKDF `info` input for the
+//  per-item key and must be known before decryption. The timestamps and the
+//  Obie flag are additionally mirrored as plaintext columns locally because the
+//  store needs them for ordering, sync watermarks, and the single-Obie index.
 //
 //  Forward-compatibility fields (Strategic Roadmap §4) are present now even though
 //  unused in v1.0, so that adding the v1.1/Horizon-2 features never requires a
@@ -21,12 +23,28 @@
 import Foundation
 
 public struct Take: Identifiable, Codable, Equatable, Sendable {
+    /// Version of the encrypted payload schema (2026-06-10). Synthesised Codable
+    /// offers no decoding defaults, so the FIRST field ever added in a future
+    /// version would have broken decoding of every existing payload — and with
+    /// no version stamp, a migrator could not even tell what it was reading.
+    /// Old payloads without the field decode as version 1. Future fields MUST be
+    /// added with `decodeIfPresent` + a default in `init(from:)` below.
+    public static let currentSchemaVersion = 1
+    public var schemaVersion: Int
+
     /// Primary key. Used as the HKDF `info` parameter for the per-item key.
     /// Never changes for the life of the Take. Not encrypted.
     public let id: UUID
 
-    public var createdAt: Date
-    public var modifiedAt: Date
+    /// Timestamps are normalised to MILLISECOND precision (the wire format's
+    /// resolution) at init and on mutation, so a Take compares equal to itself
+    /// after a serialisation round trip. See `ISO8601.truncateToMilliseconds`.
+    public var createdAt: Date {
+        didSet { createdAt = ISO8601.truncateToMilliseconds(createdAt) }
+    }
+    public var modifiedAt: Date {
+        didSet { modifiedAt = ISO8601.truncateToMilliseconds(modifiedAt) }
+    }
 
     // MARK: - Content
 
@@ -101,9 +119,10 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         sequenceIds: [UUID] = [],
         isSeeded: Bool = false
     ) {
+        self.schemaVersion = Self.currentSchemaVersion
         self.id = id
-        self.createdAt = createdAt
-        self.modifiedAt = modifiedAt
+        self.createdAt = ISO8601.truncateToMilliseconds(createdAt)
+        self.modifiedAt = ISO8601.truncateToMilliseconds(modifiedAt)
         self.bodyText = bodyText
         self.contentType = contentType
         self.isNote = isNote
@@ -118,13 +137,42 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         self.isSeeded = isSeeded
     }
 
+    // MARK: - Codable (explicit so future fields can carry decoding defaults)
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion, id, createdAt, modifiedAt, bodyText, contentType
+        case isNote, isTask, isComplete, isObie
+        case timeReminder, locationReminder, checklistItems, attachments
+        case sequenceIds, isSeeded
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        // Payloads written before 2026-06-10 carry no version field — they are v1.
+        self.schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        self.id = try c.decode(UUID.self, forKey: .id)
+        self.createdAt = ISO8601.truncateToMilliseconds(try c.decode(Date.self, forKey: .createdAt))
+        self.modifiedAt = ISO8601.truncateToMilliseconds(try c.decode(Date.self, forKey: .modifiedAt))
+        self.bodyText = try c.decode(String.self, forKey: .bodyText)
+        self.contentType = try c.decode(String.self, forKey: .contentType)
+        self.isNote = try c.decode(Bool.self, forKey: .isNote)
+        self.isTask = try c.decode(Bool.self, forKey: .isTask)
+        self.isComplete = try c.decode(Bool.self, forKey: .isComplete)
+        self.isObie = try c.decode(Bool.self, forKey: .isObie)
+        self.timeReminder = try c.decodeIfPresent(TimeReminder.self, forKey: .timeReminder)
+        self.locationReminder = try c.decodeIfPresent(LocationTrigger.self, forKey: .locationReminder)
+        self.checklistItems = try c.decodeIfPresent([ChecklistItem].self, forKey: .checklistItems) ?? []
+        self.attachments = try c.decodeIfPresent([Attachment].self, forKey: .attachments) ?? []
+        self.sequenceIds = try c.decodeIfPresent([UUID].self, forKey: .sequenceIds) ?? []
+        self.isSeeded = try c.decodeIfPresent(Bool.self, forKey: .isSeeded) ?? false
+        // NOTE for future versions: new fields added here MUST use
+        // `decodeIfPresent` with a default so older payloads keep decoding.
+    }
+
     /// Enforces the "Note is the floor" rule (UX §6). Call after any activity-type
-    /// mutation: if no other activity type is active, Note re-asserts.
+    /// mutation. Note is conceptually always true — it is never allowed to become
+    /// false — and completion state is meaningless for non-Tasks.
     public mutating func normaliseActivityFloor() {
-        if !isTask && timeReminder == nil && locationReminder == nil && !isObie {
-            isNote = true
-        }
-        // Note is conceptually always true; we never let it become false.
         isNote = true
         if !isTask { isComplete = false }
     }

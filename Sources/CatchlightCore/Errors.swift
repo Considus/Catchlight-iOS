@@ -41,6 +41,9 @@ public enum SyncError: Error, Equatable, Sendable {
     case handshakeExpired
     /// No cloud folder is configured — sync was requested in local-only mode.
     case noCloudFolderConfigured
+    /// The cloud manifest declares a format version newer than this client
+    /// understands. Processed as a hard stop rather than misreading it.
+    case unsupportedManifestVersion(Int)
 }
 
 /// Local storage failures.
@@ -50,4 +53,9 @@ public enum StorageError: Error, Equatable, Sendable {
     case writeFailed(String)
     /// Attempt to designate a second Obie without resolving the existing one.
     case obieConflict(existing: UUID)
+    /// A stored row could not be decoded (unparseable id/date, undecryptable or
+    /// corrupt payload). Surfaced loudly — silently fabricating replacement
+    /// values (a fresh UUID, "now") would mutate the item's identity, break the
+    /// per-item key derivation, and corrupt sync matching.
+    case corruptRow(String)
 }
