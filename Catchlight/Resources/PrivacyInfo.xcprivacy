@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  PrivacyInfo.xcprivacy — App Store privacy manifest (required since May 2024
+  for apps using "required reason" APIs; absence blocks/flags the upload).
+
+  Catchlight's honest position:
+    • No tracking. No tracking domains. No third-party SDKs.
+    • No data collection at all — Takes are end-to-end encrypted on device and
+      the developer operates no server that ever receives user data.
+    • Required-reason APIs in use:
+        - UserDefaults (NSPrivacyAccessedAPICategoryUserDefaults): app-group
+          defaults for settings, device id, cloud-folder bookmark. Reason
+          CA92.1 — "access info from same app, per documentation".
+        - File timestamps (NSPrivacyAccessedAPICategoryFileTimestamp): the
+          store and cloud-folder layers read/set file attributes inside the
+          app's own containers and the user-picked sync folder. Reason
+          C617.1 — "inside app/group container, per documentation".
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

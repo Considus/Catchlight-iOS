@@ -7,19 +7,24 @@ Thank you for your interest in contributing.
 - Read the non-negotiables in `README.md` — particularly the zero-knowledge and
   encryption-always-on constraints. Any contribution that weakens these will not
   be accepted regardless of other merits.
-- The encryption architecture is under specialist review. Do not propose changes
-  to `Sources/CatchlightCore/Crypto/` until that review is published.
+- The encryption architecture received specialist sign-off (2026-06-05) and was
+  revised to v1.1 on 2026-06-10. The domain-separation strings and derivation
+  parameters in `Sources/CatchlightCore/Crypto/` are frozen cross-platform
+  contract bytes — do not propose changes to them.
 
 ## Development setup
 
 ```bash
 # Requires full Xcode (not just Command Line Tools) for the iOS app target.
-swift build            # builds CatchlightCore
-swift run coreverify   # 52 runtime checks — must pass before any PR
-swift test             # full XCTest suite — must be all green
+# IMPORTANT: this repo lives in a ProtonDrive-synced folder — keep build
+# artifacts on local disk (see README "Build artifacts"):
+swift build  --scratch-path /Users/stradd3rs/Claude/Catchlight-Build/spm
+swift run coreverify   # 52 runtime checks — must pass before any PR (52/52 green)
+swift test   --scratch-path /Users/stradd3rs/Claude/Catchlight-Build/spm
 
 brew install xcodegen
 xcodegen generate      # produces Catchlight.xcodeproj
+# Build with: xcodebuild … -derivedDataPath /Users/stradd3rs/Claude/Catchlight-Build/DerivedData
 ```
 
 ## Pull requests
