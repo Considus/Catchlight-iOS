@@ -35,13 +35,14 @@ public protocol CloudFolder: AnyObject {
 public extension CloudFolder {
     func clkFiles() throws -> [String] { try listFiles().filter { $0.hasSuffix(".clk") } }
 
-    func writeAtomically(_ data: Data, to name: String) throws {
-        let tmp = name + ".tmp"
-        try write(data, to: tmp)
-        if let existing = try read(name) { _ = existing }   // overwrite semantics
-        try write(data, to: name)
-        try? delete(tmp)
-    }
+    // NOTE (2026-06-10): there is deliberately NO default implementation of
+    // `writeAtomically`. The previous default wrote a `.tmp` file and then did a
+    // SECOND full non-atomic write to the real name — it never renamed, so a
+    // crash mid-write left exactly the torn manifest the method exists to
+    // prevent, and any conformer silently inherited that bug while tests
+    // validated semantics production didn't have. Every conformer must provide
+    // real atomicity for its medium (temp-write + rename on file systems;
+    // trivial single assignment in memory).
 
     func secureDelete(_ name: String) throws {
         if let existing = try read(name) {
@@ -64,6 +65,8 @@ public final class InMemoryCloudFolder: CloudFolder {
     public func listFiles() throws -> [String] { Array(files.keys).sorted() }
     public func read(_ name: String) throws -> Data? { files[name] }
     public func write(_ data: Data, to name: String) throws { files[name] = data }
+    /// A dictionary assignment is inherently atomic for this medium.
+    public func writeAtomically(_ data: Data, to name: String) throws { files[name] = data }
     public func delete(_ name: String) throws { files[name] = nil }
 
     public func secureDelete(_ name: String) throws {

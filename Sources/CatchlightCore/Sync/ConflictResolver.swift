@@ -47,9 +47,13 @@ public enum ConflictResolver {
         case (true, false):  return .keepLocal(local)
         case (true, true):   return .conflict(local: local, remote: remote)
         case (false, false):
-            // Neither side recorded a change since last sync yet they differ.
-            // Fall back to most-recent-write; ties keep local to avoid churn.
-            return remote.modifiedAt > local.modifiedAt ? .takeRemote(remote) : .keepLocal(local)
+            // Neither side recorded a change since last sync yet they differ —
+            // the bookkeeping is confused (clock skew, watermark drift). The
+            // previous fall-back silently overwrote by most-recent-write, which
+            // violated this file's "never silently discards a user's edit"
+            // contract. Surface it as a conflict instead (2026-06-10); the
+            // existing resolution UI handles it at zero extra cost.
+            return .conflict(local: local, remote: remote)
         }
     }
 }
