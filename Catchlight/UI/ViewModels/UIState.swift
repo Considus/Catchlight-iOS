@@ -59,8 +59,9 @@ final class UIState {
     var editorTake: Take?
     var isEditorPresented: Bool { editorTake != nil }
 
-    /// Settings sheet — long-press on the Dailies dock button toggles this once the
-    /// first-run orientation has finished (step >= 4 in `FirstRunOrientationState`).
+    /// Settings sheet — a swipe UP on the dock toggles this once the first-run
+    /// orientation has finished (step >= 4 in `FirstRunOrientationState`).
+    /// (Owner redesign 2026-06-11 — replaces the long-press on Dailies.)
     var isSettingsPresented = false
 
     /// Sync-conflict resolution sheet — opened from the timeline's "Review" banner

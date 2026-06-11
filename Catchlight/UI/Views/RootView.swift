@@ -9,9 +9,11 @@
 //  from Wiring; this view owns no domain logic.
 //
 //  Spine ↔ dock alignment: the timeline spine and the dock's Add button share the
-//  same x. DailiesView draws the spine at `CatchlightLayout.spineLeading`; the dock
-//  places Add as its first (leftmost) column, whose centre we nudge to that x by
-//  giving the Add column the matching leading inset.
+//  same x. Both derive it from `CatchlightLayout.spineX(containerWidth:)` — the
+//  dock's four-equal-columns formula — DailiesView for the spine and row layout,
+//  BottomDockView implicitly via its own column layout (and explicitly via
+//  `addButtonCentreX`). 2026-06-10 fix: the earlier fixed `spineLeading = 32`
+//  never matched the dock's real Add centre (~58pt on a 393pt screen).
 //
 
 import SwiftUI
@@ -53,9 +55,7 @@ struct RootView: View {
         return ZStack(alignment: .bottom) {
             Color.ckBackground.ignoresSafeArea()
 
-            timeline
-                .opacity(fanOpacity)   // de-emphasise behind the fan
-                .animation(.easeInOut(duration: 0.2), value: ui.isPetalFanPresented)
+            timeline   // full opacity behind the fan — the veil does the work
 
             dock
         }
@@ -119,7 +119,9 @@ struct RootView: View {
     // `mainApp` ZStack) so each ViewBuilder stays simple enough for SwiftUI's
     // type-checker.
 
-    /// Opacity for content behind the petal fan (de-emphasised while the fan is open).
+    /// Opacity for the DOCK behind the petal fan. The timeline itself stays at
+    /// full opacity — the fan's ckDim veil (background @90%) provides the
+    /// recede on its own (owner decision 2026-06-11; HiFi §4 technique).
     private var fanOpacity: Double { ui.isPetalFanPresented ? 0.18 : 1 }
 
     /// The ONE surface — the timeline. The dock's filtering/searching states

@@ -47,7 +47,10 @@ struct TakeEditView: View {
 
             card
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
+                // Standard first-row position (cosmetic baseline 2026-06-11):
+                // the card sits where the top Take sits, below the (veiled)
+                // heading — not hugging the very top of the screen.
+                .padding(.top, 56)
         }
         .onAppear { focused = true }
     }

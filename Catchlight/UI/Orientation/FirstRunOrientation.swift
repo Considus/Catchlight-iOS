@@ -11,7 +11,7 @@
 //    0 — not started
 //    1 — waiting for Add tap            (Hint 1: "What's your first Take?")
 //    2 — waiting for Iris tap           (Hint 2: "Tap the Iris to shape this Take.")
-//    3 — waiting for Settings hint      (Hint 3: "Long press here for settings.")
+//    3 — waiting for Settings hint      (Hint 3: "Swipe up here for settings.")
 //    4 — waiting for Obie intro         (Hint 4: introduction copy)
 //    5 — complete (never shown again)
 //
@@ -56,7 +56,7 @@ final class FirstRunOrientationState {
     var showAddPulse: Bool { step == 1 }
     /// Show the "Tap the Iris to shape this Take." tooltip on the first row.
     var showIrisHint: Bool { step == 2 }
-    /// Show the dashed ring + "Long press here for settings." tooltip on the Dailies button.
+    /// Show the dashed ring + "Swipe up here for settings." tooltip on the Dailies button.
     var showSettingsHint: Bool { step == 3 }
     /// Show the Obie introduction tooltip — only once the user has actually
     /// long-pressed an Iris (or tapped the Obie) while step 4 is armed.
