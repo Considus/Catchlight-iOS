@@ -36,9 +36,23 @@ struct DailiesView: View {
     @Environment(ConflictQueue.self) private var conflicts
     @Environment(\.colorScheme) private var scheme
 
-    /// Horizontal centre of the circles == x of the spine. Matches the dock's Add
-    /// button so the spine terminates there (handled in RootView's layout).
-    private let spineX = CatchlightLayout.spineLeading
+    /// Container width, captured by the background GeometryReader on the body
+    /// ZStack; drives `spineX`.
+    @State private var containerWidth: CGFloat = 0
+
+
+    /// Horizontal centre of the circles == x of the spine == the dock's Add
+    /// button centre. Both derive from `CatchlightLayout.spineX(containerWidth:)`
+    /// — the same four-equal-columns formula BottomDockView lays out with — so
+    /// the spine sits exactly on the + vertical at every device width
+    /// (2026-06-10 fix: the previous fixed 32pt constant never matched the
+    /// dock). The screen width stands in before the first layout pass so the
+    /// spine doesn't flash at a wrong x.
+    private var spineX: CGFloat {
+        CatchlightLayout.spineX(
+            containerWidth: containerWidth > 0 ? containerWidth : UIScreen.main.bounds.width
+        )
+    }
 
     @State private var scrolling = false
     @State private var scrollHideWork: DispatchWorkItem?
@@ -63,6 +77,25 @@ struct DailiesView: View {
             } else {
                 timeline
             }
+
+            // Pinned page heading + top fade (cosmetic baseline 2026-06-11):
+            // a plain overlay child, NOT .safeAreaInset — in this full-bleed
+            // hierarchy (.ignoresSafeArea(.container) at the app root) a top
+            // safeAreaInset here desynced hit-testing and killed the dock's
+            // keyboard avoidance (Flow 5 regression, 2026-06-11). The heading
+            // dodges the status bar itself via deviceTopInset. Takes scroll
+            // under the solid block and dissolve beneath the 12pt fade.
+            heading
+        }
+        .background {
+            // Capture the layout width (NOT UIScreen) so spineX matches the
+            // dock, which is laid out in the same safe-area coordinate space —
+            // and the remaining top safe-area inset for the pinned heading.
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { containerWidth = geo.size.width }
+                    .onChange(of: geo.size.width) { _, width in containerWidth = width }
+            }
         }
         .safeAreaInset(edge: .top, spacing: 0) { topStrips }
         .animation(.easeInOut(duration: 0.2), value: conflicts.pending.isEmpty)
@@ -75,6 +108,59 @@ struct DailiesView: View {
             // is visible. No-op once the tour has started or completed.
             orientation.beginIfNeeded()
         }
+    }
+
+    // MARK: - Heading
+
+    /// The device's top safe-area inset, captured at the WINDOW ROOT in
+    /// CatchlightApp and delivered via the environment. The app root runs
+    /// full-bleed (`.ignoresSafeArea(.container)` — the dock design), so the
+    /// local safe-area plumbing reports zero here and the heading must dodge
+    /// the status bar / Dynamic Island itself.
+    ///
+    /// History (2026-06-11): do NOT read UIKit window state for this —
+    /// `keyWindow` per-body flapped when the keyboard window became key
+    /// (killed dock hit-testing + keyboard avoidance); a `static let`
+    /// UIApplication read trapped in dispatch_once recursion (launch SIGILL).
+    /// The root-GeometryReader environment value is the safe source.
+    @Environment(\.deviceTopInset) private var deviceTopInset
+
+    /// The page title follows the activity: DAILIES · SEQUENCE · SEARCH.
+    private var headingTitle: String {
+        switch ui.dockMode {
+        case .resting:   return "DAILIES"
+        case .filtering: return "SEQUENCE"
+        case .searching: return "SEARCH"
+        }
+    }
+
+    /// Solid background behind the title, then a 12pt fade hugging it (kept
+    /// tight so the pinned Obie's circle is clear of it at rest).
+    private var heading: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(headingTitle)
+                    .font(CatchlightFont.display(size: 20, relativeTo: .title3))
+                    .kerning(1.6)
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .id(headingTitle)
+                    .transition(.opacity)
+                Spacer()
+            }
+            .padding(.leading, spineX + 22)
+            .padding(.top, deviceTopInset + 14)
+            .padding(.bottom, 2)
+            .background(Color.ckBackground)
+            LinearGradient(
+                colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 12)
+        }
+        .animation(.easeInOut(duration: 0.18), value: headingTitle)
+        .allowsHitTesting(false)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityLabel(headingTitle.capitalized)
     }
 
     // MARK: - Empty state
@@ -351,7 +437,7 @@ struct DailiesView: View {
                         }
                     }
                 }
-                .padding(.top, 12)
+                .padding(.top, 52)       // clears the pinned heading overlay at rest
                 .padding(.bottom, 120)   // clearance for the dock
                 .frame(maxWidth: .infinity, alignment: .leading)
                 // FILTERING exit: tapping empty timeline background (not rows /

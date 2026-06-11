@@ -91,7 +91,7 @@ private struct ArrowPlacement: ViewModifier {
     VStack(spacing: 40) {
         OrientationTooltip(text: "What's your first Take?", arrowEdge: .bottom)
         OrientationTooltip(text: "Tap the Iris to shape this Take.", arrowEdge: .leading)
-        OrientationTooltip(text: "Long press here for settings.", arrowEdge: .bottom)
+        OrientationTooltip(text: "Swipe up here for settings.", arrowEdge: .bottom)
         OrientationTooltip(
             text: "This is your Obie — your one most important Take. It stays at the top of everything until it's done.",
             arrowEdge: .top

@@ -95,6 +95,11 @@ struct CatchlightApp: App {
 
     var body: some Scene {
         WindowGroup {
+            // Root GeometryReader: the ONE place the real window safe-area
+            // insets are visible (everything inside runs full-bleed via
+            // `.ignoresSafeArea(.container)` below). The top inset is passed
+            // down the environment for pinned chrome (DailiesView heading).
+            GeometryReader { rootGeo in
             ZStack {
                 Color.ckBackground.ignoresSafeArea()
 
@@ -122,6 +127,7 @@ struct CatchlightApp: App {
             // keep the full-bleed layout; the keyboard inset now lifts the
             // dock above the keyboard while searching.
             .ignoresSafeArea(.container)
+            .environment(\.deviceTopInset, rootGeo.safeAreaInsets.top)
             .preferredColorScheme(
                 (SettingsViewModel.AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme
             )
@@ -149,6 +155,7 @@ struct CatchlightApp: App {
             .onContinueUserActivity(SpotlightConstants.userActivityType) { activity in
                 handleSpotlight(activity)
             }
+            }   // GeometryReader (rootGeo)
         }
         .onChange(of: scenePhase) { _, newPhase in
             session.handleScenePhase(newPhase)

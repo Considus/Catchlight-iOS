@@ -7,29 +7,45 @@
 //
 //    RESTING:   [+ Add Take][Dailies (active)][Sequence][Search]
 //               Add creates a Take and opens the editor DIRECTLY (the old
-//               two-option bloom is gone). Long-press Dailies → Settings.
-//               Sequence → FILTERING; Search → SEARCHING.
+//               two-option bloom is gone). Sequence → FILTERING;
+//               Search → SEARCHING (via the merge-stretch morph below).
 //    FILTERING: [+ Add Take][Notes][Tasks][Reminders]
 //               Circular toggles, AND-composed live filters on the timeline.
 //               Tap = off ↔ on; long-press Tasks/Reminders = on + modifier
-//               ("Done" / "Expired"); Notes is mutually exclusive with the
+//               ("Done" / "Expired") — the modifier shares the SAME Ember fill
+//               as plain selected and is signalled by the swapped glyph alone
+//               (owner rev 2026-06-11). Notes is mutually exclusive with the
 //               other two. Exit = tapping empty timeline background (DailiesView).
 //    SEARCHING: [× Cancel][— capsule text field spanning slots 2+3 —][Search]
-//               The field autofocuses; filtering is live per keystroke. The
-//               slot-4 Search button just dismisses the keyboard (Return-key
-//               equivalent); × exits to RESTING and clears the query.
+//               × and Search sit EXACTLY on slot centres 1 & 4; the Take-white
+//               capsule spans slots 2+3 (GeometryReader slot grid). No magnifier
+//               in the field — just the Ember caret. Live per keystroke; slot-4
+//               dismisses the keyboard; × morphs back to RESTING and clears.
+//
+//  Morph (cosmetic baseline 2026-06-11, HiFi v1.6 §9): entering search, the
+//  Dailies and Sequence buttons glide toward the dock centre as their icons
+//  dissolve, fuse, and the capsule stretches out of the fusion point with a
+//  soft spring overshoot while + crossfades to ×. Exit mirrors it, quicker.
+//  No rotation; everything stays inside the toolbar.
+//
+//  Settings access (owner redesign 2026-06-11): swipe UP anywhere on the dock
+//  (drag beginning on the toolbar — deliberately NOT a screen-edge swipe, which
+//  would fight the iOS home gesture). The old long-press on Dailies is retired;
+//  VoiceOver keeps an explicit "Open Settings" action on the Dailies button.
+//
+//  One toolbar colour (owner): ALL icons Ember; state is carried by fill.
+//  Dailies/Sequence use the custom spine glyphs (CatchlightGlyphs.swift).
 //
 //  The dock background is identical to the screen background (no elevation,
 //  border, or separator). The Add button is the leftmost so the timeline spine
 //  can terminate at its horizontal centre (RootView positions the spine to match
 //  `addButtonCentreX`).
 //
-//  Long-press pattern: Button + .simultaneousGesture(LongPressGesture) — the
-//  same pattern as the Dailies/Settings press. Do NOT switch to
-//  .onLongPressGesture; synthesized presses on the current simulator runtime
-//  never reach it. Because the Button's tap action ALSO fires on finger-up
-//  after a long press, each long-pressable toggle suppresses the immediately
-//  following tap via a one-shot flag.
+//  Long-press pattern: Button + .simultaneousGesture(LongPressGesture) — do NOT
+//  switch to .onLongPressGesture; synthesized presses on the current simulator
+//  runtime never reach it. Because the Button's tap action ALSO fires on
+//  finger-up after a long press, each long-pressable toggle suppresses the
+//  immediately following tap via a one-shot flag.
 //
 
 import SwiftUI
@@ -62,31 +78,71 @@ struct BottomDockView: View {
     /// Autofocus for the SEARCHING-state capsule field.
     @FocusState private var searchFocused: Bool
 
+    // ── Morph state (resting ⇄ searching) ──
+    /// 0→1 while Dailies/Sequence glide toward the dock centre (icons dissolve).
+    @State private var mergeProgress: CGFloat = 0
+    /// Capsule width: false = the fused 44pt droplet, true = full slots 2+3.
+    @State private var capsuleExpanded = true
+    /// Re-entrancy guard while a morph sequence is running.
+    @State private var morphing = false
+
     var body: some View {
         @Bindable var ui = ui
-        HStack(spacing: 0) {
-            switch ui.dockMode {
-            case .resting:
-                addButton.frame(maxWidth: .infinity)
-                dailiesNavButton.frame(maxWidth: .infinity)
-                sequenceNavButton.frame(maxWidth: .infinity)
-                searchNavButton.frame(maxWidth: .infinity)
-            case .filtering:
-                addButton.frame(maxWidth: .infinity)
-                notesToggle.frame(maxWidth: .infinity)
-                tasksToggle.frame(maxWidth: .infinity)
-                remindersToggle.frame(maxWidth: .infinity)
-            case .searching:
-                searchCancelButton.frame(maxWidth: .infinity)
-                searchField.frame(maxWidth: .infinity)   // spans slots 2+3
-                searchDismissButton.frame(maxWidth: .infinity)
+        GeometryReader { geo in
+            // Four equal slots inside the horizontal padding — the same grid
+            // CatchlightLayout.spineX derives from, so × (searching) lands on
+            // the + slot centre and Search stays put.
+            let slotW = geo.size.width / 4
+            HStack(spacing: 0) {
+                switch ui.dockMode {
+                case .resting:
+                    addButton.frame(width: slotW)
+                    dailiesNavButton
+                        .frame(width: slotW)
+                        .offset(x: mergeProgress * slotW * 0.5)
+                        .opacity(1 - Double(mergeProgress))
+                    sequenceNavButton
+                        .frame(width: slotW)
+                        .offset(x: -mergeProgress * slotW * 0.5)
+                        .opacity(1 - Double(mergeProgress))
+                    searchNavButton.frame(width: slotW)
+                case .filtering:
+                    addButton.frame(width: slotW)
+                    notesToggle.frame(width: slotW)
+                    tasksToggle.frame(width: slotW)
+                    remindersToggle.frame(width: slotW)
+                case .searching:
+                    searchCancelButton.frame(width: slotW)
+                    searchField
+                        .frame(width: capsuleExpanded ? slotW * 2 : buttonSize)
+                        .frame(width: slotW * 2)   // reserve slots 2+3; droplet centres in them
+                    searchDismissButton.frame(width: slotW)
+                }
             }
         }
+        .frame(height: buttonSize)
         .animation(.easeInOut(duration: 0.2), value: ui.dockMode)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
         .padding(.top, 10)
         .padding(.bottom, 8)
         .background(Color.ckBackground)   // identical to screen — no elevation
+        // Settings: swipe up anywhere on the dock (owner redesign 2026-06-11 —
+        // replaces the long-press on Dailies; not a screen-edge gesture, so it
+        // never fights the system home swipe).
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 24)
+                .onEnded { value in
+                    guard value.translation.height < -30,
+                          abs(value.translation.width) < 60 else { return }
+                    if orientation.showSettingsHint {
+                        // Hint 3 still up — dismiss the hint without opening
+                        // (spec: visual only during the hint).
+                        orientation.didDismissSettingsHint()
+                    } else {
+                        ui.isSettingsPresented = true
+                    }
+                }
+        )
         .onChange(of: ui.dockMode) { _, mode in
             // Announce the morph so VoiceOver users know the dock changed
             // underneath them (the four buttons are replaced wholesale).
@@ -161,9 +217,9 @@ struct BottomDockView: View {
     // MARK: - RESTING nav buttons
 
     /// The Dailies nav button — always the active surface (there is only one).
-    /// Long-press opens Settings; while first-run Hint 3 is visible the press
-    /// dismisses the hint without activating Settings ("visual only" rule),
-    /// shown with a dashed ring + tooltip.
+    /// Settings moved to the dock swipe-up (owner redesign 2026-06-11); while
+    /// first-run Hint 3 is visible a tap dismisses the hint, shown with a
+    /// dashed ring + tooltip. The custom spine glyph IS the Dailies icon.
     private var dailiesNavButton: some View {
         Button {
             if orientation.showSettingsHint { orientation.didDismissSettingsHint() }
@@ -178,15 +234,14 @@ struct BottomDockView: View {
                         .frame(width: buttonSize, height: buttonSize)
                         .transition(.opacity)
                 }
-                Image(systemName: "list.bullet")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckNavActive)
+                DailiesGlyph(size: 20)
+                    .foregroundStyle(Color.ckEmber)
                     .frame(width: buttonSize, height: buttonSize)
                     .contentShape(Rectangle())
             }
             .overlay(alignment: .top) {
                 if orientation.showSettingsHint {
-                    OrientationTooltip(text: "Long press here for settings.", arrowEdge: .bottom)
+                    OrientationTooltip(text: "Swipe up here for settings.", arrowEdge: .bottom)
                         .fixedSize()
                         .offset(y: -(buttonSize / 2 + 32))
                         .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
@@ -194,35 +249,26 @@ struct BottomDockView: View {
             }
         }
         .buttonStyle(.plain)
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.4).onEnded { _ in
-                if orientation.showSettingsHint {
-                    // Hint 3 still up — dismiss the hint visually without opening
-                    // Settings (spec: "Long-press gesture is DISABLED during this
-                    // hint — visual only, cannot activate settings").
-                    orientation.didDismissSettingsHint()
-                } else {
-                    // Orientation complete: long-press opens the Settings sheet (6.14).
-                    ui.isSettingsPresented = true
-                }
-            }
-        )
         .accessibilityIdentifier("dailies-tab")
         .accessibilityLabel("Dailies")
         .accessibilityValue("selected")
-        .accessibilityHint("Your timeline. Long press to open Settings.")
-        // Long-press → Settings is a VoiceOver-incompatible gesture (VO intercepts
-        // long press), so expose Settings as an explicit named action too.
+        .accessibilityHint("Your timeline. Swipe up on the toolbar to open Settings.")
+        // The swipe is a VoiceOver-incompatible gesture, so expose Settings as
+        // an explicit named action too.
         .accessibilityAction(named: "Open Settings") { ui.isSettingsPresented = true }
         .accessibilityAddTraits([.isSelected, .isButton])
     }
 
     /// Sequence (slot 3, RESTING) — morphs the dock to the FILTERING state.
+    /// Three beads on the spine: a sequence of Takes (sibling of the Dailies glyph).
     private var sequenceNavButton: some View {
         Button {
             ui.enterFiltering()
         } label: {
-            navIcon("square.stack.3d.up", active: false)
+            SequenceGlyph(size: 20)
+                .foregroundStyle(Color.ckEmber)
+                .frame(width: buttonSize, height: buttonSize)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("sequence-tab")
@@ -231,12 +277,12 @@ struct BottomDockView: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    /// Search (slot 4, RESTING) — morphs the dock to the SEARCHING state.
+    /// Search (slot 4, RESTING) — runs the merge-stretch morph into SEARCHING.
     private var searchNavButton: some View {
         Button {
-            ui.enterSearching()
+            morphToSearch()
         } label: {
-            navIcon("magnifyingglass", active: false)
+            navIcon("magnifyingglass")
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("search-tab")
@@ -245,21 +291,67 @@ struct BottomDockView: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    private func navIcon(_ system: String, active: Bool) -> some View {
+    /// One toolbar colour (owner, cosmetic baseline): every dock icon is Ember,
+    /// at the light weight from the refined icon set.
+    private func navIcon(_ system: String) -> some View {
         Image(systemName: system)
-            .font(.system(size: 20, weight: .regular))
-            .foregroundStyle(active ? Color.ckNavActive : Color.ckNavInactive)
+            .font(.system(size: 20, weight: .light))
+            .foregroundStyle(Color.ckEmber)
             .frame(width: buttonSize, height: buttonSize)
             .contentShape(Rectangle())
     }
 
+    // MARK: - Resting ⇄ searching morph
+
+    /// Dailies + Sequence glide together (icons dissolving), fuse, and the
+    /// capsule stretches out of the fusion point; + crossfades to ×. The whole
+    /// gesture lives inside the toolbar — no rotation. Reduce Motion gets the
+    /// plain crossfade the dock already does on mode changes.
+    private func morphToSearch() {
+        guard !morphing else { return }
+        guard !reduceMotion else { ui.enterSearching(); searchFocused = true; return }
+        morphing = true
+        withAnimation(.easeInOut(duration: 0.28)) { mergeProgress = 1 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.29) {
+            capsuleExpanded = false
+            ui.enterSearching()
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
+                capsuleExpanded = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                searchFocused = true
+                mergeProgress = 0
+                morphing = false
+            }
+        }
+    }
+
+    /// Exit mirror, quicker: capsule contracts to the droplet, which splits
+    /// back into Dailies + Sequence as their icons breathe back in.
+    private func morphFromSearch() {
+        guard !morphing else { return }
+        guard !reduceMotion else { ui.exitToResting(); return }
+        morphing = true
+        searchFocused = false
+        withAnimation(.easeIn(duration: 0.22)) { capsuleExpanded = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.23) {
+            mergeProgress = 1
+            ui.exitToResting()
+            withAnimation(.easeOut(duration: 0.26)) { mergeProgress = 0 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.27) {
+                capsuleExpanded = true
+                morphing = false
+            }
+        }
+    }
+
     // MARK: - FILTERING toggles
 
-    /// Visual vocabulary for the three filter-toggle states:
-    ///   off      — like an inactive nav circle (bare icon, ckNavInactive)
-    ///   on       — circle filled with ckAdd (the old selected-pill colour)
-    ///   modified — circle filled with ckEmber + a distinct SF symbol
-    ///              (checkmark.circle = Done, clock.badge.exclamationmark = Expired)
+    /// Visual vocabulary for the three filter-toggle states (owner rev 2026-06-11):
+    ///   off      — bare Ember glyph (one toolbar colour; state = fill, not hue)
+    ///   on       — circle filled with Ember + background-colour glyph (reversed)
+    ///   modified — the SAME Ember fill as `on`; the swapped glyph ALONE signals
+    ///              the modifier (checkmark.circle = Done, clock.badge.exclamationmark = Expired)
     private enum ToggleVisual { case off, on, modified }
 
     private func toggleLabel(system: String, visual: ToggleVisual) -> some View {
@@ -267,14 +359,12 @@ struct BottomDockView: View {
             switch visual {
             case .off:
                 Circle().fill(Color.clear)
-            case .on:
-                Circle().fill(Color.ckAdd)
-            case .modified:
+            case .on, .modified:
                 Circle().fill(Color.ckEmber)
             }
             Image(systemName: system)
-                .font(.system(size: 18, weight: .regular))
-                .foregroundStyle(visual == .off ? Color.ckNavInactive : Color.ckBackground)
+                .font(.system(size: 18, weight: .light))
+                .foregroundStyle(visual == .off ? Color.ckEmber : Color.ckBackground)
         }
         .frame(width: buttonSize, height: buttonSize)
         .contentShape(Circle())
@@ -348,17 +438,17 @@ struct BottomDockView: View {
 
     // MARK: - SEARCHING state
 
-    /// × (slot 1) — exits to RESTING and clears the query.
+    /// × (slot 1 — exactly where + sits at rest) — morphs back to RESTING and
+    /// clears the query.
     private var searchCancelButton: some View {
         Button {
-            searchFocused = false
-            ui.exitToResting()
+            morphFromSearch()
         } label: {
             ZStack {
                 Circle().fill(Color.ckSurface)
                 Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(Color.ckTextSecondary)
+                    .font(.system(size: 17, weight: .light))
+                    .foregroundStyle(Color.ckEmber)
             }
             .frame(width: buttonSize, height: buttonSize)
         }
@@ -369,31 +459,27 @@ struct BottomDockView: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    /// The merged capsule field spanning slots 2+3 — visually "the two circles
-    /// merged". Autofocuses on appear; every keystroke filters the timeline live.
+    /// The merged capsule field spanning slots 2+3 — the two circles fused.
+    /// Take-card surface, Take-row type, NO magnifier — just the Ember caret
+    /// (owner: the field on first view is the blinking cursor alone). Focus is
+    /// driven by the morph (or onAppear as a fallback for direct entry).
     private var searchField: some View {
         @Bindable var ui = ui
-        return HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 15, weight: .regular))
-                .foregroundStyle(Color.ckTextSecondary)
-                .accessibilityHidden(true)
-            TextField("Search your takes", text: $ui.searchQuery)
-                .focused($searchFocused)
-                .font(CatchlightFont.ui(.regular, size: 16, relativeTo: .body))
-                .foregroundStyle(Color.ckTextPrimary)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-                .onSubmit { searchFocused = false }
-                .accessibilityIdentifier("search-field")
-                .accessibilityLabel("Search Takes")
-                .accessibilityHint("Type to filter the timeline by text.")
-        }
-        .padding(.horizontal, 14)
-        .frame(height: buttonSize)
-        .background(Capsule().fill(Color.ckSurface))
-        .onAppear { searchFocused = true }
+        return TextField("Search your takes", text: $ui.searchQuery)
+            .focused($searchFocused)
+            .font(CatchlightFont.display(size: 20, relativeTo: .body))
+            .foregroundStyle(Color.ckTextPrimary)
+            .tint(Color.ckEmber)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .submitLabel(.search)
+            .onSubmit { searchFocused = false }
+            .accessibilityIdentifier("search-field")
+            .accessibilityLabel("Search Takes")
+            .accessibilityHint("Type to filter the timeline by text.")
+            .padding(.horizontal, 16)
+            .frame(height: buttonSize)
+            .background(Capsule().fill(Color.ckSurface))
     }
 
     /// Search (slot 4, SEARCHING) — dismisses the keyboard; the Return-key
@@ -402,7 +488,7 @@ struct BottomDockView: View {
         Button {
             searchFocused = false
         } label: {
-            navIcon("magnifyingglass", active: true)
+            navIcon("magnifyingglass")
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("search-tab")
@@ -412,11 +498,11 @@ struct BottomDockView: View {
     }
 
     /// The x of the Add button's centre within the dock's coordinate space, so the
-    /// caller can terminate the spine there. With four equal columns + 12pt h-pad,
-    /// the Add column centre is at one-eighth of the dock width (plus pad).
+    /// caller can terminate the spine there. Delegates to the single source of
+    /// truth in CatchlightLayout — DailiesView derives its spine x from the same
+    /// formula, which is what keeps the spine on the + vertical (2026-06-10 fix).
     static func addButtonCentreX(dockWidth: CGFloat) -> CGFloat {
-        let usable = dockWidth - 24   // 12pt padding each side
-        return 12 + usable / 8
+        CatchlightLayout.spineX(containerWidth: dockWidth)
     }
 }
 

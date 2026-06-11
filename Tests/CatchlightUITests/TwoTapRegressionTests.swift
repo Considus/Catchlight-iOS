@@ -49,14 +49,14 @@ final class TwoTapRegressionTests: XCTestCase {
         )
     }
 
-    func testReachability_settings_inOneLongPress() {
+    func testReachability_settings_inOneSwipe() {
         let app = launchAppForUITesting()
         XCTAssertTrue(app.buttons["dailies-tab"].waitForExistence(timeout: 3))
         // The most-violated invariant historically — Settings keeps trying to
         // grow its own tab, which would push it OFF the two-tap path.
         assertReachableInOneInteraction(
             "Settings",
-            interaction: { app.buttons["dailies-tab"].press(forDuration: 0.6) },
+            interaction: { app.buttons["dailies-tab"].swipeUp() },
             expectedElement: app.navigationBars["Settings"]
         )
     }

@@ -22,17 +22,18 @@ final class CloudStorageSettingsUITests: XCTestCase {
         app.launchArguments = ["--uitesting"]
         app.launch()
 
-        // Open Settings via the dock long-press. The Dailies dock button is
-        // the entry point per the orientation tour (Hint 3 advanced state).
+        // Open Settings via the dock swipe-up (owner redesign 2026-06-11 —
+        // replaces the long-press on Dailies). Swiping up on any dock button
+        // starts the drag on the toolbar, which is the gesture surface.
         let dailiesTab = app.descendants(matching: .any)
             .matching(identifier: "dailies-tab").firstMatch
         XCTAssertTrue(dailiesTab.waitForExistence(timeout: 3))
-        dailiesTab.press(forDuration: 1.2)
+        dailiesTab.swipeUp()
 
         let settingsSheet = app.descendants(matching: .any)
             .matching(identifier: "settings-sheet").firstMatch
         XCTAssertTrue(settingsSheet.waitForExistence(timeout: 3),
-                      "Settings sheet should appear after long-press.")
+                      "Settings sheet should appear after the dock swipe-up.")
 
         // Locate and tap the Cloud Storage row.
         let cloudRow = app.descendants(matching: .any)

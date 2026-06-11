@@ -129,10 +129,14 @@ extension Color {
         light: Palette.fog
     ))
 
-    /// Dim overlay behind fans/sheets — Ink @ 80% (Night) / Paper @ 88% (Daylight).
+    /// The veil — the ONE obscuring overlay for the Dial, the editor, and the
+    /// Settings backdrop (owner decision 2026-06-11: solid 90% background veil
+    /// everywhere; no blur, no dark tint in Daylight). Ink @ 90% (Night) /
+    /// Paper @ 90% (Daylight). The screens beneath stay full-opacity — the
+    /// veil alone provides the recede.
     static let ckDim = Color(uiColor: .adaptive(
-        dark: Palette.ink.withAlphaComponent(0.80),
-        light: Palette.paper.withAlphaComponent(0.88)
+        dark: Palette.ink.withAlphaComponent(0.90),
+        light: Palette.paper.withAlphaComponent(0.90)
     ))
 
     /// Error / warning accent — used by the non-blocking error strips on the
@@ -268,8 +272,19 @@ enum CatchlightLayout {
     static let circleDiameter: CGFloat = 22
     /// Width of the timeline spine.
     static let spineWidth: CGFloat = 2
-    /// Leading inset from screen edge to the circle's centre (so the spine has room).
-    static let spineLeading: CGFloat = 32
+    /// Horizontal padding of the bottom dock (each side).
+    static let dockHorizontalPadding: CGFloat = 12
+    /// x of the timeline spine == the dock Add button's centre, for a given
+    /// container width. The dock lays out four equal columns inside
+    /// `dockHorizontalPadding`, so the first column's centre sits at
+    /// pad + (width − 2·pad) / 8. The spine, the Iris circles, and the Add
+    /// button must all derive from this one formula — that is what keeps the
+    /// spine on the + vertical at every device width.
+    /// (2026-06-10 fix: this was previously a fixed `spineLeading = 32` that
+    /// never matched the dock — ~26pt left of the + on a 393pt screen.)
+    static func spineX(containerWidth: CGFloat) -> CGFloat {
+        dockHorizontalPadding + (containerWidth - 2 * dockHorizontalPadding) / 8
+    }
     /// Minimum touch target per HIG / accessibility.
     static let minTouchTarget: CGFloat = 44
     /// Standard dim-overlay opacity is baked into Color.ckDim.

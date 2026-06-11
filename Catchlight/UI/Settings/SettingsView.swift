@@ -11,9 +11,9 @@
 //  moment (6.12 Second device, 6.13 Cloud Storage) — the rows are visible so the
 //  sheet layout is complete; tapping them no-ops or shows a "Coming soon" badge.
 //
-//  Access: long-press on the Dailies dock button (BottomDockView). The orientation
-//  Hint 3 short-circuits the gesture until orientation step >= 4; after that, the
-//  long-press flips UIState.isSettingsPresented.
+//  Access: swipe UP on the dock (BottomDockView — owner redesign 2026-06-11;
+//  replaces the long-press on Dailies). The orientation Hint 3 short-circuits the
+//  gesture until orientation step >= 4; after that, the swipe flips UIState.isSettingsPresented.
 //
 
 import SwiftUI

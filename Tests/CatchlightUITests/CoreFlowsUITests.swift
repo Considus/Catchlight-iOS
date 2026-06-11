@@ -250,9 +250,10 @@ final class CoreFlowsUITests: XCTestCase {
 
     // MARK: - Flow 6 — Open Settings
 
-    /// Long-press the Dailies dock button (1) → Settings sheet appears.
+    /// Swipe up on the dock (1) → Settings sheet appears (owner redesign
+    /// 2026-06-11 — replaces the long-press on Dailies).
     /// Settings is reachable in a single interaction from Dailies.
-    func testFlow6_openSettings_isReachableInOneLongPress() {
+    func testFlow6_openSettings_isReachableInOneSwipe() {
         let app = launchAppForUITesting()
 
         let dailiesTab = app.buttons["dailies-tab"]
@@ -260,7 +261,7 @@ final class CoreFlowsUITests: XCTestCase {
 
         assertReachableInOneInteraction(
             "Flow 6: Settings",
-            interaction: { dailiesTab.press(forDuration: 0.6) },
+            interaction: { dailiesTab.swipeUp() },
             expectedElement: app.navigationBars["Settings"]
         )
 
