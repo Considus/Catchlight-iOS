@@ -102,12 +102,18 @@ targets:
           UIImageName: "launch-splash"
           UIImageRespectsSafeAreaInsets: false
         UIApplicationSupportsIndirectInputEvents: true
-        # App uses only standard iOS encryption (AES-256-GCM via CryptoKit,
-        # HKDF/HMAC-SHA-256). No proprietary crypto, no export-controlled
-        # algorithms beyond what's exempt under US BIS 740.17(b)(2). Declaring
-        # this here lets TestFlight/App Store skip the annual export-compliance
-        # questionnaire on every upload.
-        ITSAppUsesNonExemptEncryption: false
+        # App encrypts user content with AES-256-GCM (CryptoKit) + HKDF/HMAC-SHA-256
+        # for confidentiality — i.e. it DOES use non-exempt encryption (beyond OS
+        # HTTPS). Algorithms are standard (no proprietary crypto). Export basis:
+        # Licence Exception TSU (15 CFR 740.13(e)) — Catchlight is open-source, so the
+        # publicly-available encryption source code qualifies; a one-time notification
+        # to BIS (crypt@bis.doc.gov) + NSA (enc@nsa.gov) with the repo URL is required
+        # before public release. No CCATS, no annual self-classification report.
+        # PREREQUISITE: GitHub repos must be public + TSU email sent before submission.
+        # If shipping closed-source instead, switch basis to mass-market 740.17(b)(1)
+        # (annual self-classification report). See
+        # 04_GoToMarket/Export_Compliance_and_DSA_v1.0.md and DECISIONS D-005.
+        ITSAppUsesNonExemptEncryption: true
         # Required so BGTaskScheduler will register the sync refresh task —
         # without this, BackgroundTasks rejects the registration at launch
         # ("com.considus.catchlight.sync is not advertised in the application's
