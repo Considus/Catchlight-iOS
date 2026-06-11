@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/Considus/Catchlight-iOS/security/policy
+    about: Do NOT open a public issue for security problems. Report privately per our Security Policy (email security@considus.com).
+  - name: Help & general questions
+    url: https://catchlight.app
+    about: For help using Catchlight, visit catchlight.app.
