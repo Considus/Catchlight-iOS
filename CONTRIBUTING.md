@@ -16,15 +16,15 @@ Thank you for your interest in contributing.
 
 ```bash
 # Requires full Xcode (not just Command Line Tools) for the iOS app target.
-# IMPORTANT: this repo lives in a ProtonDrive-synced folder — keep build
-# artifacts on local disk (see README "Build artifacts"):
-swift build  --scratch-path /Users/stradd3rs/Claude/Catchlight-Build/spm
+# Keep build artifacts OUTSIDE the source tree (see README "Build artifacts"):
+BUILD_DIR="$HOME/CatchlightBuild"
+swift build  --scratch-path "$BUILD_DIR/spm"
 swift run coreverify   # 52 runtime checks — must pass before any PR (52/52 green)
-swift test   --scratch-path /Users/stradd3rs/Claude/Catchlight-Build/spm
+swift test   --scratch-path "$BUILD_DIR/spm"
 
 brew install xcodegen
 xcodegen generate      # produces Catchlight.xcodeproj
-# Build with: xcodebuild … -derivedDataPath /Users/stradd3rs/Claude/Catchlight-Build/DerivedData
+# Build with: xcodebuild … -derivedDataPath "$BUILD_DIR/DerivedData"
 ```
 
 ## Pull requests
@@ -37,4 +37,4 @@ xcodegen generate      # produces Catchlight.xcodeproj
 ## Security issues
 
 Please do not open public issues for security vulnerabilities.
-Contact the maintainer privately before disclosure.
+See [`SECURITY.md`](SECURITY.md) for how to report privately.

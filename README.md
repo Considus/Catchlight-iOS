@@ -6,8 +6,8 @@ encryption layer, local storage, sync engine, notifications, search, background 
 and now also contains the complete **Phase 6 product UI** (Dailies, Dial, Sequences,
 Search, Settings, onboarding, paywall — all 6.x tasks ✅ as of 2026-06-09).
 
-Companion design documents: `../Design & Develop "Catchlight" productivity app/Technical_Architecture_v1.0.md`
-and `Encryption_Architecture_v1.0.md` (internal version v1.1, revised 2026-06-10).
+Detailed design and encryption-architecture documents are maintained separately by Considus.
+A public overview of the security model is in [`SECURITY.md`](SECURITY.md).
 
 ## Layout
 
@@ -53,16 +53,16 @@ reverse, and the future Web/Android/Mac clients re-implement only the thin app l
 
 ## Building & testing
 
-### Build artifacts — keep them OFF the ProtonDrive-synced tree
+### Build artifacts — keep them out of the source tree
 
-This repo lives inside a ProtonDrive-synced folder. Build products must not be
-written here (sync churn, path-length and locking issues). All build artifacts go
-to local disk at `/Users/stradd3rs/Claude/Catchlight-Build`:
+Write build products to a local directory **outside** the repo. This avoids sync churn and
+path-length/locking issues if your checkout lives on a cloud-synced folder:
 
 ```bash
-swift build  --scratch-path /Users/stradd3rs/Claude/Catchlight-Build/spm
-swift test   --scratch-path /Users/stradd3rs/Claude/Catchlight-Build/spm
-xcodebuild … -derivedDataPath /Users/stradd3rs/Claude/Catchlight-Build/DerivedData
+BUILD_DIR="$HOME/CatchlightBuild"
+swift build  --scratch-path "$BUILD_DIR/spm"
+swift test   --scratch-path "$BUILD_DIR/spm"
+xcodebuild … -derivedDataPath "$BUILD_DIR/DerivedData"
 ```
 
 ### Core (works on this machine — Command Line Tools only)
