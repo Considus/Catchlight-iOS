@@ -5,6 +5,8 @@
 //  Six-screen onboarding (UX Session Decisions v2.5 §15):
 //    1. welcome → 2. storageChoice → (3. localWarning) → 4. reveal → 5. confirm → 6. complete
 //  All copy in this file is the locked spec text — do not paraphrase.
+//  Copy source of truth: the 2026-06-12 owner revision — HiFi v1.7
+//  (internal v1.11.1 changelog) — which supersedes UX §15 where they differ.
 //
 
 import SwiftUI
@@ -14,18 +16,31 @@ struct OnboardingView: View {
     @Environment(OnboardingViewModel.self) private var vm
 
     var body: some View {
-        Group {
-            switch vm.step {
-            case .welcome:        WelcomeStep()
-            case .storageChoice:  StorageChoiceStep()
-            case .localWarning:   LocalWarningStep()
-            case .reveal:         RevealStep()
-            case .confirm:        ConfirmStep()
-            case .complete:       CompleteStep()
-            case .failure:        FailureStep()
-            }
+        // Step changes CROSSFADE the whole content layer (owner motion rule
+        // 2026-06-12: the app-wide heading-crossfade extended to onboarding —
+        // DS §10 fade duration; nothing snaps). Persistent chrome (the
+        // background, the dock-geometry button row position) holds steady;
+        // within-step changes (error line, slot fills) animate individually.
+        ZStack {
+            stepView
+                .id(vm.step)
+                .transition(.opacity)
         }
+        .animation(.easeInOut(duration: 0.18), value: vm.step)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var stepView: some View {
+        switch vm.step {
+        case .welcome:        WelcomeStep()
+        case .storageChoice:  StorageChoiceStep()
+        case .localWarning:   LocalWarningStep()
+        case .reveal:         RevealStep()
+        case .confirm:        ConfirmStep()
+        case .complete:       CompleteStep()
+        case .failure:        FailureStep()
+        }
     }
 }
 
@@ -65,49 +80,24 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.ckBackground.ignoresSafeArea())
         .safeAreaInset(edge: .bottom) {
+            // No scaffold padding here — DockPillRow carries the dock grid's
+            // own paddings so the pills land exactly on the dock positions.
+            // Background = the dock's soft edge (owner 2026-06-12, HiFi
+            // v1.11.5): scrolling content fades out beneath the button zone
+            // instead of meeting a hard edge.
             bottom()
-                .padding(.horizontal, 24)
-                .padding(.bottom, 16)
                 .frame(maxWidth: .infinity)
-                .background(Color.ckBackground.ignoresSafeArea(edges: .bottom))
+                .dockFadeBackground()
         }
     }
 }
 
-private struct PrimaryButton: View {
-    let title: String
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
-                .foregroundStyle(Color.ckBackground)
-                .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-                .background(Capsule().fill(Color.ckAdd))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .accessibilityHint("Double-tap to continue.")
-    }
-}
+// (DaylightCardShadow lives in CatchlightTheme.swift — shared with the
+// Settings sub-screens since 2026-06-12.)
 
-private struct SecondaryButton: View {
-    let title: String
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
-                .foregroundStyle(Color.ckTextPrimary)
-                .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-                .background(
-                    Capsule().stroke(Color.ckTextPrimary.opacity(0.4), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-    }
-}
+// Onboarding buttons use the shared dock-geometry pills (DockPillRow.swift) —
+// owner decision 2026-06-12 (HiFi v1.11.1): a single pill sits exactly over
+// the four dock-button slots; pairs split into slots 1+2 / 3+4.
 
 // MARK: - Screen 1: Welcome
 
@@ -128,7 +118,7 @@ private struct WelcomeStep: View {
                     .scaledToFit()
                     .frame(height: 32)
                     .accessibilityLabel("Catchlight")
-                Text("You don't need to choose privacy, it's your right and you never need to ask for it.")
+                Text("You don't need to choose privacy, it's yours and you never have to ask for it.")
                     .font(CatchlightFont.displayFixed(size: 26))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
@@ -137,13 +127,13 @@ private struct WelcomeStep: View {
                     .accessibilityAddTraits(.isHeader)
                 VStack(spacing: 16) {
                     (Text("First, we'll create your privacy phrase — 12 words that are the ")
-                     + Text("only").bold()
+                     + Text("ONLY").bold()
                      + Text(" key to your data."))
                         .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
                         .foregroundStyle(Color.ckTextSecondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("We never see them, store them, or ask for them.")
+                    Text("We never see them, store them, or ask for them. So don't lose them.")
                         .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
                         .foregroundStyle(Color.ckTextSecondary)
                         .multilineTextAlignment(.center)
@@ -153,7 +143,9 @@ private struct WelcomeStep: View {
             }
             .padding(.top, 32)
         } bottom: {
-            PrimaryButton(title: "Create my privacy phrase") { vm.beginStorageChoice() }
+            DockPillRow {
+                DockPill(title: "Create my privacy phrase") { vm.beginStorageChoice() }
+            }
         }
     }
 }
@@ -184,7 +176,7 @@ private struct StorageChoiceStep: View {
 
                 StorageOptionCard(
                     title: "Cloud — backed up and restorable",
-                    description: "Connect a cloud folder you control. Your Takes sync encrypted — we never see them."
+                    description: "Connect a cloud folder you control. Your Takes remain encrypted — we never see them."
                 ) { vm.chooseStorage(.cloud) }
 
                 Spacer(minLength: 0)
@@ -218,6 +210,7 @@ private struct StorageOptionCard: View {
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(Color.ckSurface)
+                    .daylightCardShadow()
             )
         }
         .buttonStyle(.plain)
@@ -249,9 +242,10 @@ private struct LocalWarningStep: View {
                 Spacer()
             }
         } bottom: {
-            VStack(spacing: 12) {
-                PrimaryButton(title: "Continue locally") { vm.continueLocally() }
-                SecondaryButton(title: "Go back") { vm.backToStorageChoice() }
+            DockPillRow {
+                DockPill(title: "I know the risk") { vm.continueLocally() }
+            } trailing: {
+                DockPill(title: "Go back", secondary: true) { vm.backToStorageChoice() }
             }
         }
     }
@@ -283,9 +277,11 @@ private struct RevealStep: View {
                         .accessibilityAddTraits(.isHeader)
                         .padding(.top, 48) // clear the dynamic island
 
+                    // ckTextSecondary, matching the confirm prompt (owner
+                    // 2026-06-12, HiFi v1.11.5 — the amber treatment retired).
                     Text(bodyText)
                         .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
-                        .foregroundStyle(Color.ckTextObie)
+                        .foregroundStyle(Color.ckTextSecondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -295,7 +291,9 @@ private struct RevealStep: View {
                 .padding(.bottom, 100) // clear the pinned button
             }
         } bottom: {
-            PrimaryButton(title: "I've written them down") { vm.proceedToConfirm() }
+            DockPillRow {
+                DockPill(title: "I've written them down") { vm.proceedToConfirm() }
+            }
         }
     }
 
@@ -320,6 +318,7 @@ private struct RevealStep: View {
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Color.ckSurface)
+                        .daylightCardShadow()
                 )
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Word \(idx + 1): \(word)")
@@ -353,24 +352,34 @@ private struct ConfirmStep: View {
 
                     slotsRow
 
-                    if let failure = vm.failure {
-                        Text(failure)
-                            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                            .foregroundStyle(Color.ckEmber)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    // The error line is RESERVED (owner 2026-06-12, HiFi
+                    // v1.11.1): it always occupies its height so the bank
+                    // never moves when the message appears. ckTextObie, not
+                    // ckEmber: Ember fails WCAG AA on Paper at 13pt (DS §12.3);
+                    // resolves to Ember Text #856539 Daylight / Glow Night.
+                    Text(vm.failure ?? " ")
+                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                        .foregroundStyle(Color.ckTextObie)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .opacity(vm.failure == nil ? 0 : 1)
+                        .accessibilityHidden(vm.failure == nil)
 
                     bankGrid
                 }
                 .padding(.bottom, 24)
             }
         } bottom: {
-            // A 1-pt clear strip rather than EmptyView. On iOS 26, a ScrollView
-            // inside StepScaffold whose `.safeAreaInset(.bottom)` closure returns
-            // EmptyView lays its content above the top safe-area edge (off-screen).
-            // Giving the inset a real (zero-visual) view restores normal layout.
-            Color.clear.frame(height: 1)
+            // Reveal-return (owner 2026-06-12, HiFi v1.11.5): a user who blanks
+            // on a word must never be stuck guessing — the gate proves a usable
+            // record of the phrase, not short-term memory. Re-entry re-shuffles.
+            // (Also supersedes the old iOS 26 EmptyView-inset workaround: the
+            // inset now always holds a real view.)
+            DockPillRow {
+                DockPill(title: "Show my words once more", secondary: true) {
+                    vm.backToReveal()
+                }
+            }
         }
     }
 
@@ -424,7 +433,9 @@ private struct ConfirmStep: View {
     }
 
     private var bankGrid: some View {
-        let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+        // 2×6 — the same grid as the reveal step (owner 2026-06-12, HiFi
+        // v1.11.3), order preserved from the shuffle.
+        let columns = [GridItem(.flexible()), GridItem(.flexible())]
         return LazyVGrid(columns: columns, spacing: 12) {
             // Index-based identity + usage (2026-06-10): tracking by word value
             // greyed BOTH tiles when a phrase contained a duplicate word, and
@@ -441,6 +452,7 @@ private struct ConfirmStep: View {
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .fill(Color.ckSurface.opacity(used ? 0.35 : 1.0))
+                                .daylightCardShadow()
                         )
                 }
                 .buttonStyle(.plain)
@@ -489,7 +501,9 @@ private struct CompleteStep: View {
                 Spacer()
             }
         } bottom: {
-            PrimaryButton(title: "Start using Catchlight") { vm.finishOnboarding() }
+            DockPillRow {
+                DockPill(title: "Start using Catchlight") { vm.finishOnboarding() }
+            }
         }
     }
 }
@@ -517,7 +531,7 @@ private struct FailureStep: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 8)
                 }
-                Text("You can start over and try again. Your phrase hasn't been saved anywhere.")
+                Text("You can start over and try again. Your phrase hasn't been saved anywhere. We'll generate another.")
                     .font(CatchlightFont.ui(.light, size: 15, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
@@ -525,7 +539,9 @@ private struct FailureStep: View {
                 Spacer()
             }
         } bottom: {
-            PrimaryButton(title: "Start over") { vm.restartFromError() }
+            DockPillRow {
+                DockPill(title: "Start over") { vm.restartFromError() }
+            }
         }
     }
 }

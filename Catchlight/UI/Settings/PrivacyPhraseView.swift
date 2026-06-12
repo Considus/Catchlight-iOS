@@ -198,14 +198,16 @@ private struct PhraseRevealGrid: View {
                 : "Phrase hidden. Press and hold the reveal button to view.")
 
             Spacer()
-
-            holdButton
-
-            Spacer().frame(height: 24)
         }
         .padding(.top, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.ckBackground)
+        // Dock-geometry position for the hold control (D-022 button system,
+        // applied to Settings sub-screens 2026-06-12).
+        .safeAreaInset(edge: .bottom) {
+            DockPillRow { holdButton }
+                .dockFadeBackground()
+        }
     }
 
     private func wordCell(index: Int, word: String) -> some View {
@@ -226,15 +228,18 @@ private struct PhraseRevealGrid: View {
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color.ckSurface)
+                .daylightCardShadow()   // DS §4.1 — same lift as the onboarding chips
         )
     }
 
     private var holdButton: some View {
         Text(revealed ? "Release to hide" : "Hold to reveal")
-            .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
+            .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+            // Ink in BOTH modes (deliberate deviation from the pill system's
+            // ckBackground label): the revealed state fills with GLOW, and
+            // Paper-on-Glow is illegible in Daylight — Ink reads on both fills.
             .foregroundStyle(Color.ckInk)
-            .padding(.horizontal, 28)
-            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 Capsule().fill(revealed ? Color.ckGlow : Color.ckEmber)
             )

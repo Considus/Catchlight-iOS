@@ -236,4 +236,19 @@ final class SubscriptionManager {
         @unknown default: return nil
         }
     }
+
+    /// Adjectival (hyphenated, singular-unit) trial length, e.g. "14-day" —
+    /// for copy like "Start your 14-day free trial" (owner-locked CTA,
+    /// HiFi v1.11.1). Same live intro-offer source as `trialDurationCopy`.
+    var trialDurationAdjectiveCopy: String? {
+        guard let offer = annual?.subscription?.introductoryOffer else { return nil }
+        let n = offer.period.value
+        switch offer.period.unit {
+        case .day: return "\(n)-day"
+        case .week: return "\(n)-week"
+        case .month: return "\(n)-month"
+        case .year: return "\(n)-year"
+        @unknown default: return nil
+        }
+    }
 }

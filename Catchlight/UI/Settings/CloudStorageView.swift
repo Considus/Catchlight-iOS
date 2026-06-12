@@ -69,6 +69,15 @@ struct CloudStorageView: View {
             }
         }
         .presentationDragIndicator(.visible)
+        .safeAreaInset(edge: .bottom) {
+            // Primary action at the dock position (D-022 pill system). The
+            // label is unchanged so the UI tests' button query still matches.
+            DockPillRow {
+                DockPill(title: "Choose folder from Files") { pickerPresented = true }
+                    .accessibilityHint("Opens the Files picker to choose a folder for sync.")
+            }
+            .dockFadeBackground()
+        }
         .sheet(isPresented: $pickerPresented) {
             FolderPicker { url in
                 handlePickedFolder(url)
@@ -90,28 +99,11 @@ struct CloudStorageView: View {
         }
     }
 
+    // The primary action lives in the bottom dock-pill row (D-022 button
+    // system, applied 2026-06-12) — this section now carries only the
+    // current-folder status and its secondary actions.
     private var pickerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Button {
-                pickerPresented = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "folder.badge.plus")
-                        .font(.system(size: 18, weight: .regular))
-                    Text("Choose folder from Files")
-                        .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.ckEmber)
-                )
-                .foregroundStyle(Color.ckInk)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Opens the Files picker to choose a folder for sync.")
-
             if let folderDisplayPath {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")

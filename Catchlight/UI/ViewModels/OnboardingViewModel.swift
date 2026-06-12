@@ -117,6 +117,17 @@ final class OnboardingViewModel {
         }
     }
 
+    /// Screen 5 secondary action — back to the words (owner 2026-06-12,
+    /// HiFi v1.11.5): the confirm gate proves the user holds a usable RECORD
+    /// of the phrase, not their short-term memory. The mnemonic is unchanged;
+    /// returning re-enters via `proceedToConfirm()`, which re-shuffles the
+    /// target positions and the bank — no answer-memorising shortcut.
+    func backToReveal() {
+        failure = nil
+        flashError = false
+        step = .reveal
+    }
+
     /// Screen 4 → Screen 5.
     func proceedToConfirm() {
         targetPositions = Array(0..<mnemonic.count).shuffled().prefix(3).sorted()

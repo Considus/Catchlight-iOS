@@ -236,15 +236,17 @@ struct PINSetupView: View {
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            Button("Done") { dismiss() }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.ckEmber)
-                .padding(.top, 8)
             Spacer()
         }
         .padding(.top, 60)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.ckBackground)
+        // Dock-geometry pill replaces the stock .borderedProminent button
+        // (D-022 button system; no default iOS chrome anywhere).
+        .safeAreaInset(edge: .bottom) {
+            DockPillRow { DockPill(title: "Done") { dismiss() } }
+                .dockFadeBackground()
+        }
     }
 }
 
