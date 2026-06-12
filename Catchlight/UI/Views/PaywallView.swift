@@ -35,33 +35,53 @@ struct PaywallView: View {
     /// as `loadProduct()` resolves.
     private var manager: SubscriptionManager { app.subscription }
 
+    // Composition per HiFi v1.7 §12 (owner 2026-06-12, internal v1.11.2–.4):
+    // everything centred except the terms block (matching the onboarding
+    // screens); hero's first line on the standard heading line (top 26);
+    // the eyebrow splits the hero↔values space equally; the Cormorant
+    // trial/price line bisects the values↔auto-renews space (equal spacers);
+    // CTA = the dock-geometry pill pinned at the dock's resting position.
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color.ckBackground.ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    hero
-                    valueProps
-                    Spacer(minLength: 8)
-                    pricingBlock
-                    primaryCTA
-                    secondaryActions
-                    legalBlock
+            GeometryReader { geo in
+                ScrollView {
+                    VStack(spacing: 22) {
+                        hero
+                        eyebrow
+                        valueProps
+                        Spacer(minLength: 12)
+                        pricingLine
+                        Spacer(minLength: 12)
+                        renewalCopy
+                        secondaryActions
+                        legalBlock
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 26)   // standard heading line (HiFi v1.11.3)
+                    .padding(.bottom, 8)
+                    .frame(maxWidth: .infinity)
+                    // Fill the viewport so the equal-split Spacers lay out like
+                    // the static mock; the view only actually scrolls at
+                    // accessibility text sizes.
+                    .frame(minHeight: geo.size.height)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 80)
-                .padding(.bottom, 32)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                // The sheet marker lives on the ScrollView, NOT the container
+                // ZStack (2026-06-10): a container-level accessibilityIdentifier
+                // propagates onto every descendant accessibility element on the
+                // current SwiftUI runtime, which overwrote the dismiss button's
+                // own "paywall-dismiss" identifier and broke the UI tests.
+                .accessibilityIdentifier("paywall-sheet")
             }
-            // The sheet marker lives on the ScrollView, NOT the container
-            // ZStack (2026-06-10): a container-level accessibilityIdentifier
-            // propagates onto every descendant accessibility element on the
-            // current SwiftUI runtime, which overwrote the dismiss button's
-            // own "paywall-dismiss" identifier and broke the UI tests.
-            .accessibilityIdentifier("paywall-sheet")
 
             dismissButton
+        }
+        .safeAreaInset(edge: .bottom) {
+            // The dock's soft edge (HiFi v1.11.5) — the legal block fades out
+            // beneath the CTA zone when the view scrolls at large text sizes.
+            DockPillRow { primaryCTA }
+                .dockFadeBackground()
         }
         .task {
             await manager.loadProduct()
@@ -71,24 +91,29 @@ struct PaywallView: View {
     // MARK: - Sections
 
     private var hero: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("A quieter way\nto hold the day.")
-                .font(CatchlightFont.displayFixed(size: 38))
-                .foregroundStyle(Color.ckTextPrimary)
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
+        Text("A quieter way\nto hold the day.")
+            .font(CatchlightFont.displayFixed(size: 38))
+            .foregroundStyle(Color.ckTextPrimary)
+            .lineSpacing(4)   // ≈ the standard heading's 1.25 line-height (HiFi v1.11.3)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+    }
 
-            Text("Catchlight Annual")
-                .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .footnote))
-                .tracking(2)
-                .textCase(.uppercase)
-                .foregroundStyle(Color.ckTextObie)
-        }
+    /// Its own stack row, so the standard spacing sits EQUALLY above and below
+    /// (owner 2026-06-12, HiFi v1.11.4).
+    private var eyebrow: some View {
+        Text("Catchlight Annual")
+            .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .footnote))
+            .tracking(2)
+            .textCase(.uppercase)
+            .foregroundStyle(Color.ckTextObie)
     }
 
     private var valueProps: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        // Centred, bullet-free (owner 2026-06-12, HiFi v1.11.3 — dots aren't
+        // used anywhere else in the product).
+        VStack(spacing: 12) {
             valueRow("Unlimited Takes, Notes, and Reminders")
             valueRow("Encrypted cloud sync across your devices")
             valueRow("Your data stays yours — readable, exportable")
@@ -96,20 +121,18 @@ struct PaywallView: View {
     }
 
     private func valueRow(_ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Circle()
-                .fill(Color.ckEmber)
-                .frame(width: 6, height: 6)
-                .offset(y: 6)
-                .accessibilityHidden(true)
-            Text(text)
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                .foregroundStyle(Color.ckTextPrimary)
-        }
+        Text(text)
+            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+            .foregroundStyle(Color.ckTextPrimary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
-    private var pricingBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
+    /// The trial/price line is a Cormorant Light Italic display moment that
+    /// breaks the page up (owner 2026-06-12, HiFi v1.11.3). It bisects the
+    /// values↔auto-renews space via the equal Spacers in `body`.
+    private var pricingLine: some View {
+        Group {
             if manager.isEligibleForIntroOffer, let trial = manager.trialDurationCopy {
                 // L10N: composed phrase. `trial` ("14 days") and `priceCopy`
                 // ("£14.99/year") are both locale-aware via StoreKit, but the
@@ -118,18 +141,22 @@ struct PaywallView: View {
                 // Text+LocalizedStringKey extracts this as a format string
                 // with two %@ args; the future xcstrings will pick it up.
                 Text("\(trial) free, then \(priceCopy)")
-                    .font(CatchlightFont.ui(.medium, size: 20, relativeTo: .title3))
-                    .foregroundStyle(Color.ckTextPrimary)
             } else {
                 Text(priceCopy)
-                    .font(CatchlightFont.ui(.medium, size: 20, relativeTo: .title3))
-                    .foregroundStyle(Color.ckTextPrimary)
             }
-            Text("Auto-renews each year. Cancel anytime in your App Store account.")
-                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
-                .foregroundStyle(Color.ckTextSecondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
+        .font(CatchlightFont.display(size: 24, relativeTo: .title3))
+        .foregroundStyle(Color.ckTextPrimary)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var renewalCopy: some View {
+        Text("Auto-renews each year. Cancel anytime in your App Store account.")
+            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+            .foregroundStyle(Color.ckTextSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var priceCopy: String {
@@ -138,6 +165,8 @@ struct PaywallView: View {
 
     // MARK: - CTAs
 
+    /// Dock-geometry pill (HiFi v1.11.2): Ember fill, ckBackground label —
+    /// the same button system as onboarding. Sized by the enclosing DockPillRow.
     private var primaryCTA: some View {
         Button {
             Task {
@@ -149,24 +178,29 @@ struct PaywallView: View {
                 if manager.isWorking {
                     ProgressView()
                         .progressViewStyle(.circular)
-                        .tint(Color.ckInk)
+                        .tint(Color.ckBackground)
                 } else {
                     Text(ctaText)
-                        .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
+                        .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 52)
-            .foregroundStyle(Color.ckInk)
-            .background(Color.ckEmber)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .foregroundStyle(Color.ckBackground)
+            .background(Capsule().fill(Color.ckEmber))
+            .contentShape(Capsule())
         }
+        .buttonStyle(.plain)
         .disabled(manager.isWorking || manager.annual == nil)
         .accessibilityIdentifier("paywall-subscribe")
     }
 
     private var ctaText: String {
-        if manager.isEligibleForIntroOffer, let trial = manager.trialDurationCopy {
-            return "Start \(trial) free trial"
+        // Owner-locked CTA copy (HiFi v1.11.1): "Start your 14-day free trial".
+        // The adjectival variant keeps the duration live from StoreKit.
+        if manager.isEligibleForIntroOffer, let trial = manager.trialDurationAdjectiveCopy {
+            return "Start your \(trial) free trial"
         }
         return manager.annual.map { "Subscribe — \($0.displayPrice)/year" } ?? "Subscribe"
     }
@@ -213,16 +247,23 @@ struct PaywallView: View {
         }
     }
 
+    // The terms block is the one un-centred element (owner: matches the
+    // onboarding composition; disclosure reads as a quiet footnote).
     private var legalBlock: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Your subscription auto-renews each year unless cancelled at least 24 hours before the period ends. Manage or cancel anytime in your App Store account. Catchlight is end-to-end encrypted — your Takes are never readable by us.")
                 .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .footnote))
                 .foregroundStyle(Color.ckTextSecondary)
+                .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack(spacing: 18) {
+            // Justified like Restore/Redeem: Privacy leading · ToS trailing
+            // (owner 2026-06-12, HiFi v1.11.3).
+            HStack {
                 Link("Privacy Policy",
                      destination: URL(string: "https://catchlight.app/privacy")!)
+                Spacer()
                 Link("Terms of Service",
                      destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stgvs/")!)
             }

@@ -86,6 +86,7 @@ struct AboutView: View {
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.ckSurface)
+                .daylightCardShadow()   // DS §4.1
         )
     }
 

@@ -174,6 +174,27 @@ enum Quadrant {
     }
 }
 
+// MARK: - Daylight card shadow (Design System v1.1 §4.1)
+
+/// The standard Take-card shadow for ckSurface cards/chips on Paper: ambient
+/// `0 2px 8px rgba(15,14,12,0.09)` + contact `0 1px 2px rgba(15,14,12,0.05)`.
+/// Daylight ONLY — DS §4 prohibits shadows in Night, where elevation is the
+/// Dusk surface colour. CSS blur ≈ 2× SwiftUI radius, hence radius 4/1.
+struct DaylightCardShadow: ViewModifier {
+    @Environment(\.colorScheme) private var scheme
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.09),
+                    radius: 4, y: 2)
+            .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.05),
+                    radius: 1, y: 1)
+    }
+}
+
+extension View {
+    func daylightCardShadow() -> some View { modifier(DaylightCardShadow()) }
+}
+
 // MARK: - Typography
 
 enum CatchlightFont {
