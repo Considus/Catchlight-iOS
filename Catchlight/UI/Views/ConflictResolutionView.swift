@@ -210,7 +210,7 @@ struct ConflictResolutionView: View {
             } label: {
                 Text("Keep this version")
                     .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
-                    .foregroundStyle(Color.ckBackground)
+                    .foregroundStyle(Color.ckOnAccent)
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: CatchlightLayout.minTouchTarget)
                     .background(

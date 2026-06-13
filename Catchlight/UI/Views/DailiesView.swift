@@ -198,7 +198,7 @@ struct DailiesView: View {
             HStack(spacing: 10) {
                 Image(systemName: "lock")
                     .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(Color.ckEmber)
+                    .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
                 Text("Read-only — your data is still yours.")
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
@@ -211,7 +211,7 @@ struct DailiesView: View {
                 } label: {
                     Text("Export")
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextObie)
+                        .foregroundStyle(Color.ckAccent)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("lapse-banner-export")
@@ -221,7 +221,7 @@ struct DailiesView: View {
                 } label: {
                     Text("Subscribe")
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextObie)
+                        .foregroundStyle(Color.ckAccent)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("lapse-banner-subscribe")
@@ -248,7 +248,7 @@ struct DailiesView: View {
             HStack(spacing: 10) {
                 Image(systemName: "arrow.triangle.2.circlepath")
                     .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(Color.ckEmber)
+                    .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
                 // L10N: pluralisation done inline via `count == 1`. Future
                 // pass should move to a Stringsdict / .xcstrings plural rule
@@ -264,7 +264,7 @@ struct DailiesView: View {
                 } label: {
                     Text("Review")
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextObie)
+                        .foregroundStyle(Color.ckAccent)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(count) Take\(count == 1 ? "" : "s") changed on another device. Double-tap to review.")
