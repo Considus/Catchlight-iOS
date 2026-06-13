@@ -212,7 +212,7 @@ struct ConflictResolutionView: View {
                     .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
                     .foregroundStyle(Color.ckBackground)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 40)
+                    .frame(minHeight: CatchlightLayout.minTouchTarget)
                     .background(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(Color.ckAdd)
@@ -229,7 +229,7 @@ struct ConflictResolutionView: View {
                 Text("Skip for now")
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
-                    .frame(height: 40)
+                    .frame(minHeight: CatchlightLayout.minTouchTarget)
                     .padding(.horizontal, 12)
             }
             .buttonStyle(.plain)
