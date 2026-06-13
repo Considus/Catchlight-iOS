@@ -170,7 +170,7 @@ struct BottomDockView: View {
                 Circle().fill(Color.ckAdd)
                 Image(systemName: "plus")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Color.ckBackground)
+                    .foregroundStyle(Color.ckOnAccent)
             }
             .frame(width: buttonSize, height: buttonSize)
             .scaleEffect(addPulseScale)
@@ -235,7 +235,7 @@ struct BottomDockView: View {
                         .transition(.opacity)
                 }
                 DailiesGlyph(size: 20)
-                    .foregroundStyle(Color.ckEmber)
+                    .foregroundStyle(Color.ckAccent)
                     .frame(width: buttonSize, height: buttonSize)
                     .contentShape(Rectangle())
             }
@@ -266,7 +266,7 @@ struct BottomDockView: View {
             ui.enterFiltering()
         } label: {
             SequenceGlyph(size: 20)
-                .foregroundStyle(Color.ckEmber)
+                .foregroundStyle(Color.ckAccent)
                 .frame(width: buttonSize, height: buttonSize)
                 .contentShape(Rectangle())
         }
@@ -292,11 +292,12 @@ struct BottomDockView: View {
     }
 
     /// One toolbar colour (owner, cosmetic baseline): every dock icon is Ember,
-    /// at the light weight from the refined icon set.
+    /// at the light weight from the refined icon set. (Daylight resolves Ember
+    /// to the accessible #856539 via `ckAccent` — D-028.)
     private func navIcon(_ system: String) -> some View {
         Image(systemName: system)
             .font(.system(size: 20, weight: .light))
-            .foregroundStyle(Color.ckEmber)
+            .foregroundStyle(Color.ckAccent)
             .frame(width: buttonSize, height: buttonSize)
             .contentShape(Rectangle())
     }
@@ -364,7 +365,7 @@ struct BottomDockView: View {
             }
             Image(systemName: system)
                 .font(.system(size: 18, weight: .light))
-                .foregroundStyle(visual == .off ? Color.ckEmber : Color.ckBackground)
+                .foregroundStyle(visual == .off ? Color.ckAccent : Color.ckOnAccent)
         }
         .frame(width: buttonSize, height: buttonSize)
         .contentShape(Circle())
@@ -448,7 +449,7 @@ struct BottomDockView: View {
                 Circle().fill(Color.ckSurface)
                 Image(systemName: "xmark")
                     .font(.system(size: 17, weight: .light))
-                    .foregroundStyle(Color.ckEmber)
+                    .foregroundStyle(Color.ckAccent)
             }
             .frame(width: buttonSize, height: buttonSize)
         }

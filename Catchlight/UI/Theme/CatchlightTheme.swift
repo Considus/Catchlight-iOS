@@ -129,6 +129,26 @@ extension Color {
         light: Palette.fog
     ))
 
+    /// Amber accent for FOREGROUND content (text or iconography) drawn on a
+    /// background SURFACE — Ember (Night) / Ember Text #856539 (Daylight).
+    /// Use this — NOT raw `ckEmber` — for any amber glyph or label sitting on
+    /// `ckBackground` / `ckSurface`: dock icons, settings-row icons, timeline
+    /// banner action labels. Raw Ember (#C9A96E) on Paper is only ~2:1 and
+    /// fails both WCAG AA text (4.5:1) and UI-component (3:1) contrast; #856539
+    /// gives 4.9:1 on Paper and 5.4:1 on white. Night is UNCHANGED (resolves to
+    /// Ember). Raw `ckEmber` / `ckAdd` remain the FILL colour (Add droplet,
+    /// selection borders, pill fills), where Ember is correct.
+    /// (Accessibility audit 7.6 / D-027 follow-up 2026-06-13.)
+    static let ckAccent = Color(uiColor: .adaptive(dark: Palette.ember, light: Palette.emberText))
+
+    /// Foreground drawn ON an Ember fill (the Add "+", active filter glyphs):
+    /// Ink in BOTH modes. Night was already Ink-coloured (it used `ckBackground`
+    /// = Ink), so this is unchanged there; in Daylight it replaces Paper-on-Ember
+    /// (2.04:1, fails) with Ink-on-Ember (8.62:1). Use for amber-filled chrome
+    /// controls. NOTE: the locked D-022 primary CTAs (DockPill, Paywall) are a
+    /// separate owner call (see audit C4) and are NOT switched here.
+    static let ckOnAccent = Color(uiColor: .adaptive(dark: Palette.ink, light: Palette.ink))
+
     /// The veil — the ONE obscuring overlay for the Dial, the editor, and the
     /// Settings backdrop (owner decision 2026-06-11: solid 90% background veil
     /// everywhere; no blur, no dark tint in Daylight). Ink @ 90% (Night) /

@@ -107,7 +107,7 @@ struct CloudStorageView: View {
             if let folderDisplayPath {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.ckEmber)
+                        .foregroundStyle(Color.ckAccent)
                     Text(folderDisplayPath)
                         .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                         .foregroundStyle(Color.ckTextSecondary)
