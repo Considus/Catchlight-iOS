@@ -165,8 +165,9 @@ struct PaywallView: View {
 
     // MARK: - CTAs
 
-    /// Dock-geometry pill (HiFi v1.11.2): Ember fill, ckBackground label —
-    /// the same button system as onboarding. Sized by the enclosing DockPillRow.
+    /// Dock-geometry pill (HiFi v1.11.2): Ember fill, ckOnAccent (Ink) label —
+    /// the same button system as onboarding. Ink label both modes (D-028):
+    /// Paper-on-Ember fails WCAG in Daylight. Sized by the enclosing DockPillRow.
     private var primaryCTA: some View {
         Button {
             Task {
@@ -178,7 +179,7 @@ struct PaywallView: View {
                 if manager.isWorking {
                     ProgressView()
                         .progressViewStyle(.circular)
-                        .tint(Color.ckBackground)
+                        .tint(Color.ckOnAccent)
                 } else {
                     Text(ctaText)
                         .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
@@ -187,7 +188,7 @@ struct PaywallView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .foregroundStyle(Color.ckBackground)
+            .foregroundStyle(Color.ckOnAccent)
             .background(Capsule().fill(Color.ckEmber))
             .contentShape(Capsule())
         }

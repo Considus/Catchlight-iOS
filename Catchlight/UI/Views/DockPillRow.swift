@@ -18,8 +18,9 @@
 
 import SwiftUI
 
-/// The standard dock-geometry button label: Ember capsule + ckBackground text
-/// (primary), or a ckTextPrimary@40% outline (secondary).
+/// The standard dock-geometry button label: Ember capsule + ckOnAccent (Ink)
+/// text (primary), or a ckTextPrimary@40% outline (secondary). The primary
+/// label is Ink in both modes (D-028) — Paper-on-Ember fails WCAG in Daylight.
 struct DockPill: View {
     let title: String
     var secondary: Bool = false
@@ -32,7 +33,7 @@ struct DockPill: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .padding(.horizontal, 10)
-                .foregroundStyle(secondary ? Color.ckTextPrimary : Color.ckBackground)
+                .foregroundStyle(secondary ? Color.ckTextPrimary : Color.ckOnAccent)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background {
                     if secondary {
