@@ -211,7 +211,7 @@ struct DailiesView: View {
                 } label: {
                     Text("Export")
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
-                        .foregroundStyle(Color.ckEmber)
+                        .foregroundStyle(Color.ckTextObie)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("lapse-banner-export")
@@ -221,7 +221,7 @@ struct DailiesView: View {
                 } label: {
                     Text("Subscribe")
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
-                        .foregroundStyle(Color.ckEmber)
+                        .foregroundStyle(Color.ckTextObie)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("lapse-banner-subscribe")
@@ -264,13 +264,13 @@ struct DailiesView: View {
                 } label: {
                     Text("Review")
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
-                        .foregroundStyle(Color.ckEmber)
+                        .foregroundStyle(Color.ckTextObie)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(count) Take\(count == 1 ? "" : "s") changed on another device. Double-tap to review.")
             }
             .padding(.horizontal, 16)
-            .frame(height: 44)
+            .frame(minHeight: 44)
             .frame(maxWidth: .infinity)
             .background(scheme == .dark
                         ? Color.ckGlow.opacity(0.12)
