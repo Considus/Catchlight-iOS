@@ -26,15 +26,23 @@ struct DockPill: View {
     var secondary: Bool = false
     let action: () -> Void
 
+    // D-030: at accessibility text sizes (AX1+) the CTA label may wrap to two
+    // lines and grows instead of shrinking, defining the pill height itself
+    // (≥44pt). At normal sizes the locked dock geometry is unchanged: one line,
+    // shrink-to-fit, filling the parent's fixed 44pt row.
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
     var body: some View {
         Button(action: action) {
             Text(title)
                 .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .lineLimit(dynamicSize.isAccessibilitySize ? 2 : 1)
+                .minimumScaleFactor(dynamicSize.isAccessibilitySize ? 1.0 : 0.75)
                 .padding(.horizontal, 10)
                 .foregroundStyle(secondary ? Color.ckTextPrimary : Color.ckOnAccent)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity,
+                       minHeight: dynamicSize.isAccessibilitySize ? CatchlightLayout.minTouchTarget : nil,
+                       maxHeight: dynamicSize.isAccessibilitySize ? nil : .infinity)
                 .background {
                     if secondary {
                         Capsule().stroke(Color.ckTextPrimary.opacity(0.4), lineWidth: 1)
@@ -82,27 +90,48 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
         self.trailing = trailing()
     }
 
+    // D-030: at accessibility text sizes the locked dock-slot grid (fixed 44pt
+    // height, slot-aligned widths) would force the CTA labels to shrink. Abandon
+    // exact dock alignment there and let the pills grow full-width instead.
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
     var body: some View {
-        GeometryReader { geo in
-            // slot-i button centre = slotW·(i+0.5); pill edges = centre ∓ d/2.
-            // Single: slot-1 leading edge → slot-4 trailing edge (3·slotW + d).
-            // Pair: each slotW + d wide; gap = slotW − d (the inter-button gap).
-            let slotW = geo.size.width / 4
-            let d = CatchlightLayout.minTouchTarget
-            HStack(spacing: slotW - d) {
+        if dynamicSize.isAccessibilitySize {
+            // Full-width layout: a single primary pill spans the width; a primary
+            // plus a trailing pill stack vertically, each full width and ≥44pt.
+            VStack(spacing: 10) {
                 primary
-                    .frame(width: trailing == nil ? slotW * 3 + d : slotW + d)
+                    .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
                 if let trailing {
                     trailing
-                        .frame(width: slotW + d)
+                        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
                 }
             }
-            .padding(.leading, slotW / 2 - d / 2)
-            .frame(height: d)
+            .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+        } else {
+            GeometryReader { geo in
+                // slot-i button centre = slotW·(i+0.5); pill edges = centre ∓ d/2.
+                // Single: slot-1 leading edge → slot-4 trailing edge (3·slotW + d).
+                // Pair: each slotW + d wide; gap = slotW − d (the inter-button gap).
+                let slotW = geo.size.width / 4
+                let d = CatchlightLayout.minTouchTarget
+                HStack(spacing: slotW - d) {
+                    primary
+                        .frame(width: trailing == nil ? slotW * 3 + d : slotW + d)
+                    if let trailing {
+                        trailing
+                            .frame(width: slotW + d)
+                    }
+                }
+                .padding(.leading, slotW / 2 - d / 2)
+                .frame(height: d)
+            }
+            .frame(height: CatchlightLayout.minTouchTarget)
+            .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
         }
-        .frame(height: CatchlightLayout.minTouchTarget)
-        .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
     }
 }
