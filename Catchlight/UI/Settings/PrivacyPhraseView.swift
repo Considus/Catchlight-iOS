@@ -120,7 +120,7 @@ struct PrivacyPhraseView: View {
         VStack(spacing: 16) {
             Image(systemName: symbol)
                 .font(.system(size: 40, weight: .regular))
-                .foregroundStyle(Color.ckEmber)
+                .foregroundStyle(Color.ckAccent)
             Text(title)
                 .font(CatchlightFont.ui(.regular, size: 20, relativeTo: .title3))
                 .foregroundStyle(Color.ckTextPrimary)

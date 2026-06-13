@@ -227,7 +227,7 @@ struct PINSetupView: View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.seal")
                 .font(.system(size: 44, weight: .regular))
-                .foregroundStyle(Color.ckEmber)
+                .foregroundStyle(Color.ckAccent)
             Text("PIN saved")
                 .font(CatchlightFont.ui(.regular, size: 20, relativeTo: .title3))
                 .foregroundStyle(Color.ckTextPrimary)

@@ -91,7 +91,7 @@ struct SettingsView: View {
             HStack(spacing: 14) {
                 Image(systemName: "circle.lefthalf.filled")
                     .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAdd)
+                    .foregroundStyle(Color.ckAccent)
                     .frame(width: 26)
                     .accessibilityHidden(true)
                 Text("Mode")

@@ -18,22 +18,33 @@
 
 import SwiftUI
 
-/// The standard dock-geometry button label: Ember capsule + ckBackground text
-/// (primary), or a ckTextPrimary@40% outline (secondary).
+/// The standard dock-geometry button label: Ember capsule + ckOnAccent (Ink)
+/// text (primary), or a ckTextPrimary@40% outline (secondary). The primary
+/// label is Ink in both modes (D-028) — Paper-on-Ember fails WCAG in Daylight.
 struct DockPill: View {
     let title: String
     var secondary: Bool = false
     let action: () -> Void
 
+    // D-030 (+ owner refinement: Default is the floor): at any size ABOVE the
+    // default (.xLarge and up, through AX5) the CTA label may wrap to two lines
+    // and grows instead of shrinking, defining the pill height itself (≥44pt) —
+    // so the label is never rendered smaller than at the default size. At the
+    // default size and below, the locked dock geometry is unchanged: one line,
+    // shrink-to-fit, filling the parent's fixed 44pt row.
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
     var body: some View {
         Button(action: action) {
             Text(title)
                 .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .lineLimit(dynamicSize > .large ? 2 : 1)
+                .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)
                 .padding(.horizontal, 10)
-                .foregroundStyle(secondary ? Color.ckTextPrimary : Color.ckBackground)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .foregroundStyle(secondary ? Color.ckTextPrimary : Color.ckOnAccent)
+                .frame(maxWidth: .infinity,
+                       minHeight: dynamicSize > .large ? CatchlightLayout.minTouchTarget : nil,
+                       maxHeight: dynamicSize > .large ? nil : .infinity)
                 .background {
                     if secondary {
                         Capsule().stroke(Color.ckTextPrimary.opacity(0.4), lineWidth: 1)
@@ -81,27 +92,50 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
         self.trailing = trailing()
     }
 
+    // D-030 (+ owner refinement: Default is the floor): above the default text
+    // size (.xLarge and up) the locked dock-slot grid (fixed 44pt height,
+    // slot-aligned widths) would force the CTA labels to shrink below their
+    // default size. Abandon exact dock alignment there and let the pills grow
+    // full-width instead. At the default size and below, the grid is unchanged.
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
     var body: some View {
-        GeometryReader { geo in
-            // slot-i button centre = slotW·(i+0.5); pill edges = centre ∓ d/2.
-            // Single: slot-1 leading edge → slot-4 trailing edge (3·slotW + d).
-            // Pair: each slotW + d wide; gap = slotW − d (the inter-button gap).
-            let slotW = geo.size.width / 4
-            let d = CatchlightLayout.minTouchTarget
-            HStack(spacing: slotW - d) {
+        if dynamicSize > .large {
+            // Full-width layout: a single primary pill spans the width; a primary
+            // plus a trailing pill stack vertically, each full width and ≥44pt.
+            VStack(spacing: 10) {
                 primary
-                    .frame(width: trailing == nil ? slotW * 3 + d : slotW + d)
+                    .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
                 if let trailing {
                     trailing
-                        .frame(width: slotW + d)
+                        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
                 }
             }
-            .padding(.leading, slotW / 2 - d / 2)
-            .frame(height: d)
+            .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+        } else {
+            GeometryReader { geo in
+                // slot-i button centre = slotW·(i+0.5); pill edges = centre ∓ d/2.
+                // Single: slot-1 leading edge → slot-4 trailing edge (3·slotW + d).
+                // Pair: each slotW + d wide; gap = slotW − d (the inter-button gap).
+                let slotW = geo.size.width / 4
+                let d = CatchlightLayout.minTouchTarget
+                HStack(spacing: slotW - d) {
+                    primary
+                        .frame(width: trailing == nil ? slotW * 3 + d : slotW + d)
+                    if let trailing {
+                        trailing
+                            .frame(width: slotW + d)
+                    }
+                }
+                .padding(.leading, slotW / 2 - d / 2)
+                .frame(height: d)
+            }
+            .frame(height: CatchlightLayout.minTouchTarget)
+            .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
         }
-        .frame(height: CatchlightLayout.minTouchTarget)
-        .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
     }
 }

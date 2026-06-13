@@ -24,7 +24,7 @@ struct SettingsRow<Accessory: View>: View {
             if let icon {
                 Image(systemName: icon)
                     .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAdd)
+                    .foregroundStyle(Color.ckAccent)
                     .frame(width: 26)
                     .accessibilityHidden(true)
             }
