@@ -30,6 +30,10 @@ struct PaywallView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppModel.self) private var app
+    // D-030 (+ owner refinement: Default is the floor). The subscribe CTA is not
+    // a DockPill but shares the dock geometry, so it mirrors the same rule:
+    // above the default text size the label grows/wraps instead of shrinking.
+    @Environment(\.dynamicTypeSize) private var dynamicSize
 
     /// Bound to the manager so price / trial copy update reactively as soon
     /// as `loadProduct()` resolves.
@@ -183,11 +187,14 @@ struct PaywallView: View {
                 } else {
                     Text(ctaText)
                         .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
+                        .lineLimit(dynamicSize > .large ? 2 : 1)
+                        .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)
+                        .multilineTextAlignment(.center)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity,
+                   minHeight: dynamicSize > .large ? CatchlightLayout.minTouchTarget : nil,
+                   maxHeight: dynamicSize > .large ? nil : .infinity)
             .foregroundStyle(Color.ckOnAccent)
             .background(Capsule().fill(Color.ckEmber))
             .contentShape(Capsule())
