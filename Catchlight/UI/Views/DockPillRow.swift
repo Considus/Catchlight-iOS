@@ -26,9 +26,11 @@ struct DockPill: View {
     var secondary: Bool = false
     let action: () -> Void
 
-    // D-030: at accessibility text sizes (AX1+) the CTA label may wrap to two
-    // lines and grows instead of shrinking, defining the pill height itself
-    // (≥44pt). At normal sizes the locked dock geometry is unchanged: one line,
+    // D-030 (+ owner refinement: Default is the floor): at any size ABOVE the
+    // default (.xLarge and up, through AX5) the CTA label may wrap to two lines
+    // and grows instead of shrinking, defining the pill height itself (≥44pt) —
+    // so the label is never rendered smaller than at the default size. At the
+    // default size and below, the locked dock geometry is unchanged: one line,
     // shrink-to-fit, filling the parent's fixed 44pt row.
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
@@ -36,13 +38,13 @@ struct DockPill: View {
         Button(action: action) {
             Text(title)
                 .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
-                .lineLimit(dynamicSize.isAccessibilitySize ? 2 : 1)
-                .minimumScaleFactor(dynamicSize.isAccessibilitySize ? 1.0 : 0.75)
+                .lineLimit(dynamicSize > .large ? 2 : 1)
+                .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)
                 .padding(.horizontal, 10)
                 .foregroundStyle(secondary ? Color.ckTextPrimary : Color.ckOnAccent)
                 .frame(maxWidth: .infinity,
-                       minHeight: dynamicSize.isAccessibilitySize ? CatchlightLayout.minTouchTarget : nil,
-                       maxHeight: dynamicSize.isAccessibilitySize ? nil : .infinity)
+                       minHeight: dynamicSize > .large ? CatchlightLayout.minTouchTarget : nil,
+                       maxHeight: dynamicSize > .large ? nil : .infinity)
                 .background {
                     if secondary {
                         Capsule().stroke(Color.ckTextPrimary.opacity(0.4), lineWidth: 1)
@@ -90,13 +92,15 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
         self.trailing = trailing()
     }
 
-    // D-030: at accessibility text sizes the locked dock-slot grid (fixed 44pt
-    // height, slot-aligned widths) would force the CTA labels to shrink. Abandon
-    // exact dock alignment there and let the pills grow full-width instead.
+    // D-030 (+ owner refinement: Default is the floor): above the default text
+    // size (.xLarge and up) the locked dock-slot grid (fixed 44pt height,
+    // slot-aligned widths) would force the CTA labels to shrink below their
+    // default size. Abandon exact dock alignment there and let the pills grow
+    // full-width instead. At the default size and below, the grid is unchanged.
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
     var body: some View {
-        if dynamicSize.isAccessibilitySize {
+        if dynamicSize > .large {
             // Full-width layout: a single primary pill spans the width; a primary
             // plus a trailing pill stack vertically, each full width and ≥44pt.
             VStack(spacing: 10) {
