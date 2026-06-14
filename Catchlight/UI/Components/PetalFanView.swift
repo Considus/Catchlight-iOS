@@ -289,7 +289,7 @@ struct PetalFanView: View {
     private var workingTake: Take {
         var t = take
         t.isNote = isNote
-        t.isTask = isTask
+        t.setTask(isTask)
         t.isObie = isObie
         if hasReminder, t.timeReminder == nil {
             t.timeReminder = TimeReminder(scheduledDate: .now, notificationIdentifier: t.id.uuidString)
@@ -390,7 +390,7 @@ struct PetalFanView: View {
 #Preview("Petal fan — Night") {
     GeometryReader { geo in
         PetalFanView(
-            take: Take(bodyText: "Shape me", isTask: true),
+            take: Take(blocks: [.checkItem("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
             onCommit: { _, _, _, _ in },
             onDismiss: {}
@@ -403,7 +403,7 @@ struct PetalFanView: View {
 #Preview("Petal fan — Daylight") {
     GeometryReader { geo in
         PetalFanView(
-            take: Take(bodyText: "Shape me"),
+            take: Take(blocks: [.textLine("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
             onCommit: { _, _, _, _ in },
             onDismiss: {}

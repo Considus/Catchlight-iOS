@@ -133,7 +133,7 @@ struct ConflictResolutionView: View {
 
     private func shouldStack(pair: (local: Take, remote: Take)) -> Bool {
         // Compact width AND both bodies long enough to need real estate.
-        hSize == .compact && pair.local.bodyText.count > 80 && pair.remote.bodyText.count > 80
+        hSize == .compact && pair.local.plainText.count > 80 && pair.remote.plainText.count > 80
     }
 
     // MARK: - Version panel
@@ -146,7 +146,7 @@ struct ConflictResolutionView: View {
                               take: Take,
                               selected: Bool,
                               tap: @escaping () -> Void) -> some View {
-        let body = take.bodyText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
         let displayBody = body.isEmpty ? "Untitled take" : body
         return Button(action: tap) {
             VStack(alignment: .leading, spacing: 8) {
@@ -254,14 +254,12 @@ struct ConflictResolutionView: View {
 #Preview("Resolution — 2 conflicts (Night)") {
     let queue = ConflictQueue()
     let pair1 = (
-        local: Take(bodyText: "Local edit: pick up groceries on the way home."),
-        remote: Take(bodyText: "Remote edit: pick up groceries AND dry cleaning.")
+        local: Take(blocks: [.textLine("Local edit: pick up groceries on the way home.")]),
+        remote: Take(blocks: [.textLine("Remote edit: pick up groceries AND dry cleaning.")])
     )
     let pair2 = (
-        local: Take(bodyText: "Local: ship the Catchlight TestFlight build by Friday so the first cohort can start kicking the tyres before the long weekend.",
-                    isTask: true),
-        remote: Take(bodyText: "Remote: ship TestFlight to first cohort by Friday, then schedule the retro for the following Tuesday.",
-                     isTask: true)
+        local: Take(blocks: [.checkItem("Local: ship the Catchlight TestFlight build by Friday so the first cohort can start kicking the tyres before the long weekend.")]),
+        remote: Take(blocks: [.checkItem("Remote: ship TestFlight to first cohort by Friday, then schedule the retro for the following Tuesday.")])
     )
     queue.enqueue([pair1, pair2])
     let store = InMemoryTakeStore()

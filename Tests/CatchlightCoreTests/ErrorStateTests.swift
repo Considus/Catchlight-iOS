@@ -32,7 +32,7 @@ final class ErrorStateTests: XCTestCase {
         let vm = DailiesViewModel(store: store)
         XCTAssertNil(vm.lastError)
 
-        vm.delete(Take(bodyText: "ghost — never inserted"))
+        vm.delete(Take(blocks: [.textLine("ghost — never inserted")]))
         XCTAssertNotNil(vm.lastError, "Deleting an unknown Take should surface lastError")
 
         vm.clearError()

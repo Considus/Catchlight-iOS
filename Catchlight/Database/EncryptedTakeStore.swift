@@ -264,19 +264,22 @@ public final class EncryptedTakeStore: TakeStore {
             func arrJSON<T: Decodable>(_ idx: Int32, _ type: T.Type) -> [T] {
                 (try? decoder.decode([T].self, from: Data(columnText(stmt, idx).utf8))) ?? []
             }
+            // v1 → block model upgrade (D-035), mirroring `Take.init(from:)`:
+            // the legacy body becomes one prose block, then any checklist items
+            // become check blocks. The legacy `is_task`/`is_complete` flags are
+            // derived from the resulting blocks, so they are not carried across.
+            var blocks: [TakeBlock] = [.text(TextBlock(text: columnText(stmt, 3)))]
+            blocks.append(contentsOf: arrJSON(12, ChecklistItem.self).map { TakeBlock.check($0) })
             out.append(Take(
                 id: id,
                 createdAt: created,
                 modifiedAt: modified,
-                bodyText: columnText(stmt, 3),
-                contentType: columnText(stmt, 4),
+                blocks: blocks,
+                contentType: "blocks/v2",
                 isNote: sqlite3_column_int(stmt, 5) == 1,
-                isTask: sqlite3_column_int(stmt, 6) == 1,
-                isComplete: sqlite3_column_int(stmt, 7) == 1,
                 isObie: sqlite3_column_int(stmt, 8) == 1,
                 timeReminder: optJSON(10, TimeReminder.self),
                 locationReminder: optJSON(11, LocationTrigger.self),
-                checklistItems: arrJSON(12, ChecklistItem.self),
                 attachments: arrJSON(13, Attachment.self),
                 isSeeded: sqlite3_column_int(stmt, 9) == 1
             ))
@@ -436,7 +439,7 @@ public final class EncryptedTakeStore: TakeStore {
         // Decrypt-side substring search (case-insensitive) — identical semantics
         // to InMemoryTakeStore. The plaintext FTS index this replaces leaked the
         // full body text of every Take to disk.
-        return try allTakes().filter { $0.bodyText.lowercased().contains(q) }
+        return try allTakes().filter { $0.plainText.lowercased().contains(q) }
     }
 
     // MARK: - TakeStore: Sequences

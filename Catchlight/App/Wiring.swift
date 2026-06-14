@@ -151,8 +151,8 @@ enum Wiring {
             // (UI tests assume "Call the framer back" is the top row).
             let base = Date()
             try? store.upsert(Take(createdAt: base.addingTimeInterval(-1),
-                                   bodyText: "Buy film for the weekend shoot"))
-            try? store.upsert(Take(createdAt: base, bodyText: "Call the framer back"))
+                                   blocks: [.textLine("Buy film for the weekend shoot")]))
+            try? store.upsert(Take(createdAt: base, blocks: [.textLine("Call the framer back")]))
             // UI-test build is treated as fully entitled by default so existing
             // flow tests aren't gated by the paywall. Pass `--uitesting-lapsed`
             // alongside to exercise the paywall path explicitly.

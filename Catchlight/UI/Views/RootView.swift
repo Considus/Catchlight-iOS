@@ -164,21 +164,23 @@ struct RootView: View {
                             ui.closePetalFan()
                             return
                         }
-                        app.dailiesVM.applyActivityTypes(
-                            to: take,
-                            isNote: isNote, isTask: isTask,
-                            hasReminder: hasReminder, isObie: isObie
-                        )
-                        // If the editor is open behind the fan for this same
-                        // Take, refresh its snapshot — otherwise the editor's
-                        // auto-save on dismiss would write the PRE-fan struct
-                        // back over the changes the fan just persisted (the
-                        // typed text survives; it lives in the editor's own
-                        // @State). Sibling-VM recompute now fans out from the
-                        // DailiesViewModel mutation hook.
-                        if ui.editorTake?.id == take.id,
-                           let fresh = try? app.dailiesVM.store.take(id: take.id) {
-                            ui.editorTake = fresh
+                        if ui.editorTake?.id == take.id {
+                            // The editor is open for this Take: hand the selection
+                            // to it so the Task Mark reshapes the LIVE blocks the
+                            // user is editing (and reminder/Obie ride the editor's
+                            // own save on dismiss). Routing through the store here
+                            // would operate on the pre-typing copy.
+                            ui.editorFanCommand = UIState.EditorFanCommand(
+                                token: UUID(),
+                                isNote: isNote, isTask: isTask,
+                                hasReminder: hasReminder, isObie: isObie
+                            )
+                        } else {
+                            app.dailiesVM.applyActivityTypes(
+                                to: take,
+                                isNote: isNote, isTask: isTask,
+                                hasReminder: hasReminder, isObie: isObie
+                            )
                         }
                         ui.closePetalFan()
                     },

@@ -23,11 +23,12 @@ final class DataModelTests: XCTestCase {
         // Millisecond-aligned date: the canonical wire format is ms-precision, so a
         // raw Date() would not be bit-exact after a round-trip (documented).
         let nowMs = ISO8601.date(from: ISO8601.string(from: Date()))!
-        let take = Take(createdAt: nowMs, modifiedAt: nowMs, bodyText: "")
+        let take = Take(createdAt: nowMs, modifiedAt: nowMs, blocks: [])
         let data = try PlatformJSON.encode(take)
         let decoded = try PlatformJSON.decode(Take.self, from: data)
         XCTAssertEqual(decoded, take)
-        XCTAssertTrue(decoded.checklistItems.isEmpty)
+        XCTAssertTrue(decoded.blocks.isEmpty)
+        XCTAssertTrue(decoded.checkItems.isEmpty)
         XCTAssertTrue(decoded.attachments.isEmpty)
         XCTAssertNil(decoded.timeReminder)
         XCTAssertNil(decoded.locationReminder)
@@ -71,14 +72,16 @@ final class DataModelTests: XCTestCase {
     // §12.2 — locationReminder is always nil in v1.0.
     func testLocationReminderNilInV1() {
         // Default and fixture Takes never populate locationReminder.
-        XCTAssertNil(Take(bodyText: "x").locationReminder)
+        XCTAssertNil(Take(blocks: [.textLine("x")]).locationReminder)
         XCTAssertNil(TestFixtures.richTake().locationReminder)
     }
 
-    // "Note is the floor" (UX §6): removing all activity types re-asserts Note.
+    // "Note is the floor" (UX §6): removing all activity types re-asserts Note,
+    // and completion (derived) falls away once there are no check items.
     func testNoteFloor() {
-        var take = Take(bodyText: "x", isNote: true, isTask: true, isComplete: true)
-        take.isTask = false
+        var take = Take(blocks: [.checkItem("x", isComplete: true)], isNote: true)
+        XCTAssertTrue(take.isComplete)
+        take.setTask(false)
         take.normaliseActivityFloor()
         XCTAssertTrue(take.isNote)
         XCTAssertFalse(take.isComplete, "completion clears when not a task")
@@ -140,28 +143,52 @@ final class DataModelTests: XCTestCase {
         XCTAssertEqual(decoded.appVersion, "0.9.0")
     }
 
-    // Take payloads carry the schemaVersion stamp (2026-06-10) and decode old
-    // payloads without one as version 1.
-    func testTakeJSONIncludesSchemaVersion_andDefaultsWhenAbsent() throws {
+    // Take payloads carry the schemaVersion stamp; v2 (D-035) is the block model.
+    func testTakeJSONIncludesSchemaVersion() throws {
         let take = TestFixtures.richTake()
         let json = String(data: try PlatformJSON.encode(take), encoding: .utf8)!
-        XCTAssertTrue(json.contains("\"schemaVersion\":1"), "encoded Take must carry the version stamp")
+        XCTAssertTrue(json.contains("\"schemaVersion\":2"), "encoded Take must carry the v2 stamp")
+        XCTAssertEqual(take.schemaVersion, Take.currentSchemaVersion)
+    }
 
-        // A pre-2026-06-10 payload (no schemaVersion key) decodes as v1, with
-        // decodeIfPresent defaults for the optional/array fields.
+    // A v1 payload (bodyText + checklistItems, no `blocks`) upgrades to the block
+    // model on decode: one prose block for the body, then the items as check
+    // blocks. The upgraded Take is re-stamped to the current version so a save
+    // never persists v2 content under a v1 stamp.
+    func testV1Payload_upgradesBodyTextAndItemsToBlocks() throws {
         let legacy = """
         {"id":"6B4D9E20-1A2B-4C3D-8E5F-001122334455",\
         "createdAt":"2026-05-01T09:00:00.000Z","modifiedAt":"2026-05-02T10:30:00.000Z",\
-        "bodyText":"legacy","contentType":"plain",\
-        "isNote":true,"isTask":false,"isComplete":false,"isObie":false}
+        "bodyText":"legacy note","contentType":"plain",\
+        "isNote":true,"isTask":true,"isComplete":false,"isObie":false,\
+        "checklistItems":[{"id":"6B4D9E20-1A2B-4C3D-8E5F-001122334456","text":"sub one","isComplete":true}]}
         """
         let decoded = try PlatformJSON.decode(Take.self, from: Data(legacy.utf8))
-        XCTAssertEqual(decoded.schemaVersion, 1)
-        XCTAssertEqual(decoded.bodyText, "legacy")
-        XCTAssertEqual(decoded.checklistItems, [])
+        XCTAssertEqual(decoded.schemaVersion, Take.currentSchemaVersion, "upgrade re-stamps to current version")
+        XCTAssertEqual(decoded.blocks.count, 2)
+        XCTAssertEqual(decoded.blocks.first?.text, "legacy note")
+        if case .text? = decoded.blocks.first {} else { XCTFail("first block must be prose") }
+        XCTAssertEqual(decoded.checkItems.map(\.text), ["sub one"])
+        XCTAssertTrue(decoded.checkItems.first?.isComplete ?? false)
+        XCTAssertTrue(decoded.isTask, "a check block makes it a Task")
         XCTAssertEqual(decoded.attachments, [])
         XCTAssertFalse(decoded.isSeeded)
         XCTAssertNil(decoded.timeReminder)
+    }
+
+    // A v1 payload with bodyText only (no checklistItems) upgrades to a single
+    // prose block and is therefore a plain Note, not a Task.
+    func testV1Payload_bodyOnly_upgradesToSingleProseBlock() throws {
+        let legacy = """
+        {"id":"6B4D9E20-1A2B-4C3D-8E5F-00112233AABB",\
+        "createdAt":"2026-05-01T09:00:00.000Z","modifiedAt":"2026-05-02T10:30:00.000Z",\
+        "bodyText":"just a thought","contentType":"plain",\
+        "isNote":true,"isTask":false,"isComplete":false,"isObie":false}
+        """
+        let decoded = try PlatformJSON.decode(Take.self, from: Data(legacy.utf8))
+        XCTAssertEqual(decoded.plainText, "just a thought")
+        XCTAssertEqual(decoded.blocks.count, 1)
+        XCTAssertFalse(decoded.isTask)
     }
 
     // ISO8601.date(from:) tolerant INPUT parsing (2026-06-10): 0–9 fractional
@@ -198,7 +225,7 @@ final class DataModelTests: XCTestCase {
     // compares equal to itself after a wire round-trip even from a raw Date().
     func testTakeTimestampsTruncatedToMilliseconds() throws {
         let raw = Date(timeIntervalSince1970: 1_700_000_000.123_456_789)
-        let take = Take(createdAt: raw, modifiedAt: raw, bodyText: "ms")
+        let take = Take(createdAt: raw, modifiedAt: raw, blocks: [.textLine("ms")])
         let decoded = try PlatformJSON.decode(Take.self, from: try PlatformJSON.encode(take))
         XCTAssertEqual(decoded, take, "ms-truncation at init makes round-trips bit-exact")
         XCTAssertEqual(take.createdAt, ISO8601.truncateToMilliseconds(raw))
