@@ -117,6 +117,14 @@ struct CatchlightApp: App {
                 if session.isObscured {
                     PrivacyOverlay()   // branded blur before the app-switcher snapshot
                 }
+
+                #if DEBUG
+                // Section 2b — on-device safe-area readout (gated behind a
+                // Settings DEBUG toggle, off by default). Reads the env values
+                // from the modifiers below; raw insets come straight off rootGeo.
+                DebugInsetReadout(rawTop: rootGeo.safeAreaInsets.top,
+                                  rawBottom: rootGeo.safeAreaInsets.bottom)
+                #endif
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // `.container` ONLY (2026-06-10 dock redesign): the bare
@@ -128,6 +136,11 @@ struct CatchlightApp: App {
             // dock above the keyboard while searching.
             .ignoresSafeArea(.container)
             .environment(\.deviceTopInset, rootGeo.safeAreaInsets.top)
+            // Section 4 / D-041 — mirror of deviceTopInset for the BOTTOM edge
+            // (home-indicator zone). The app runs full-bleed, so this is the one
+            // place the real bottom inset is visible; the dock + onboarding pill
+            // row read it from the environment to rest above the home indicator.
+            .environment(\.deviceBottomInset, rootGeo.safeAreaInsets.bottom)
             .preferredColorScheme(
                 (SettingsViewModel.AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme
             )

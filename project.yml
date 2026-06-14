@@ -162,6 +162,44 @@ targets:
         CODE_SIGN_STYLE: Automatic
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         SWIFT_OBJC_BRIDGING_HEADER: ""
+        # Section 1 (fix pass 1) — the git-SHA build-stamp script below must read
+        # the git checkout (`$SRCROOT/.git`) and write the built Info.plist. The
+        # build-script sandbox (ENABLE_USER_SCRIPT_SANDBOXING, YES at project
+        # level) blocks those accesses, so it is disabled for THIS target only;
+        # the test bundles keep the project-level YES. The script is read-only on
+        # the source tree and writes solely inside the build products dir.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+    # Section 1 — stamp CFBundleVersion with the git short SHA so the About row
+    # answers "which commit is on the phone?" (CFBundleShortVersionString stays
+    # the human MARKETING_VERSION). Runs after the sources compile, when the
+    # processed Info.plist is in the build products dir, and BEFORE code signing
+    # so the signature covers the stamped value. Resilient: if git is
+    # unavailable (CI source archive) or the plist isn't there yet, it logs a
+    # note and exits 0 — the build keeps the existing CFBundleVersion ("1").
+    postCompileScripts:
+      - name: "Stamp build number with git short SHA"
+        basedOnDependencyAnalysis: false
+        script: |
+          GIT=$(command -v git || true)
+          if [ -z "$GIT" ]; then
+            echo "note: git not found — leaving CFBundleVersion as-is"
+            exit 0
+          fi
+          SHA=$("$GIT" -C "$SRCROOT" rev-parse --short HEAD 2>/dev/null || true)
+          if [ -z "$SHA" ]; then
+            echo "note: not a git checkout — leaving CFBundleVersion as-is"
+            exit 0
+          fi
+          if [ -n "$("$GIT" -C "$SRCROOT" status --porcelain 2>/dev/null)" ]; then
+            SHA="${SHA}+dirty"
+          fi
+          PLIST="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
+          if [ ! -f "$PLIST" ]; then
+            echo "note: built Info.plist not found at $PLIST — skipping SHA stamp"
+            exit 0
+          fi
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $SHA" "$PLIST"
+          echo "note: stamped CFBundleVersion = $SHA"
     dependencies:
       - package: CatchlightCore
         product: CatchlightCore

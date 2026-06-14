@@ -43,7 +43,10 @@ final class SubscriptionManager {
     private(set) var lastError: String?
 
     private let defaults: UserDefaults
-    private static let everSubscribedKey = "catchlight.subscription.everEntitled"
+    /// Persistent "has this install ever been entitled" flag (app-group defaults).
+    /// Exposed (non-private) so the DEBUG reset can clear it as part of a
+    /// fresh-install wipe (DebugReset). Production code only reads/writes it here.
+    static let everEntitledDefaultsKey = "catchlight.subscription.everEntitled"
 
     // `nonisolated(unsafe)`: deinit is nonisolated and may not touch
     // MainActor-isolated state under the current toolchain; access is confined
@@ -125,13 +128,13 @@ final class SubscriptionManager {
                     && (txn.expirationDate.map { $0 > Date() } ?? true)
             ))
         }
-        let ever = defaults.bool(forKey: Self.everSubscribedKey)
+        let ever = defaults.bool(forKey: Self.everEntitledDefaultsKey)
         let derived = SubscriptionStatus.derive(from: snapshots, everSubscribed: ever)
         // Persist "has ever been entitled" the first time we see an active
         // transaction, so a later expiry resolves to `.lapsed` rather than
         // the initial-purchase prompt.
         if snapshots.contains(where: { $0.isActive }) && !ever {
-            defaults.set(true, forKey: Self.everSubscribedKey)
+            defaults.set(true, forKey: Self.everEntitledDefaultsKey)
         }
         let previous = status
         status = derived
