@@ -173,7 +173,10 @@ final class DailiesViewModel {
     func toggleComplete(_ take: Take) {
         guard take.isTask else { return }
         var updated = take
-        updated.isComplete.toggle()
+        // Take-level completion (D-035): ticking the Take ticks every item; one
+        // untouched item leaves the Take incomplete, so toggling drives all items
+        // to the same new state.
+        updated.setAllItemsComplete(!take.isComplete)
         save(updated)
     }
 
@@ -187,7 +190,7 @@ final class DailiesViewModel {
                             isObie: Bool) {
         var updated = take
         updated.isNote = isNote
-        updated.isTask = isTask
+        updated.setTask(isTask)
         if hasReminder, updated.timeReminder == nil {
             // Default a reminder to tomorrow morning; the edit surface refines it.
             let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()

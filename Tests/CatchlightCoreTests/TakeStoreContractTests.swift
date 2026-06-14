@@ -54,11 +54,11 @@ class TakeStoreContractTests: XCTestCase {
     func testContract_upsertSameIdTwice_replacesNotDuplicates() throws {
         let id = UUID()
         let t0 = ISO8601.date(from: "2026-05-01T09:00:00.000Z")!
-        try store.upsert(Take(id: id, createdAt: t0, modifiedAt: t0, bodyText: "v1"))
-        try store.upsert(Take(id: id, createdAt: t0, modifiedAt: t0, bodyText: "v2"))
+        try store.upsert(Take(id: id, createdAt: t0, modifiedAt: t0, blocks: [.textLine("v1")]))
+        try store.upsert(Take(id: id, createdAt: t0, modifiedAt: t0, blocks: [.textLine("v2")]))
         let all = try store.allTakes()
         XCTAssertEqual(all.count, 1)
-        XCTAssertEqual(all.first?.bodyText, "v2")
+        XCTAssertEqual(all.first?.primaryText, "v2")
     }
 
     // MARK: - Delete + tombstones (2026-06-10 deletion propagation)
@@ -137,9 +137,9 @@ class TakeStoreContractTests: XCTestCase {
 
     func testContract_takesModifiedSince_strictlyAfterOnly() throws {
         let base = ISO8601.date(from: "2026-05-01T09:00:00.000Z")!
-        let atCutoff = Take(id: UUID(), createdAt: base, modifiedAt: base, bodyText: "at")
+        let atCutoff = Take(id: UUID(), createdAt: base, modifiedAt: base, blocks: [.textLine("at")])
         let after = Take(id: UUID(), createdAt: base,
-                         modifiedAt: base.addingTimeInterval(0.001), bodyText: "after")
+                         modifiedAt: base.addingTimeInterval(0.001), blocks: [.textLine("after")])
         try store.upsert(atCutoff)
         try store.upsert(after)
 
@@ -159,19 +159,19 @@ class TakeStoreContractTests: XCTestCase {
 
     func testContract_search_caseInsensitiveSubstring() throws {
         let t0 = ISO8601.date(from: "2026-05-01T09:00:00.000Z")!
-        try store.upsert(Take(createdAt: t0, modifiedAt: t0, bodyText: "The Quiet Hour"))
-        try store.upsert(Take(createdAt: t0.addingTimeInterval(1), modifiedAt: t0, bodyText: "Loud noise"))
+        try store.upsert(Take(createdAt: t0, modifiedAt: t0, blocks: [.textLine("The Quiet Hour")]))
+        try store.upsert(Take(createdAt: t0.addingTimeInterval(1), modifiedAt: t0, blocks: [.textLine("Loud noise")]))
         let hits = try store.search("qUiEt")
-        XCTAssertEqual(hits.map(\.bodyText), ["The Quiet Hour"])
+        XCTAssertEqual(hits.map(\.primaryText), ["The Quiet Hour"])
     }
 
     func testContract_search_emptyQueryReturnsEmpty() throws {
-        try store.upsert(Take(bodyText: "anything"))
+        try store.upsert(Take(blocks: [.textLine("anything")]))
         XCTAssertEqual(try store.search(""), [])
     }
 
     func testContract_search_noMatchReturnsEmpty() throws {
-        try store.upsert(Take(bodyText: "alpha"))
+        try store.upsert(Take(blocks: [.textLine("alpha")]))
         XCTAssertEqual(try store.search("zebra"), [])
     }
 
@@ -188,7 +188,7 @@ class TakeStoreContractTests: XCTestCase {
     }
 
     func testContract_deleteSequence_removesDefinitionOnly() throws {
-        let take = Take(bodyText: "darkroom session")
+        let take = Take(blocks: [.textLine("darkroom session")])
         try store.upsert(take)
         let seq = CatchlightSequence(name: "kept", filter: SequenceFilter(text: "darkroom"))
         try store.upsert(seq)
@@ -213,7 +213,7 @@ class TakeStoreContractTests: XCTestCase {
     }
 
     func testContract_obie_secondWithoutReplace_throwsObieConflict() throws {
-        let a = Take(bodyText: "a"); let b = Take(bodyText: "b")
+        let a = Take(blocks: [.textLine("a")]); let b = Take(blocks: [.textLine("b")])
         try store.upsert(a); try store.upsert(b)
         try store.setObie(id: a.id, replaceExisting: false)
         XCTAssertThrowsError(try store.setObie(id: b.id, replaceExisting: false)) { error in
@@ -226,7 +226,7 @@ class TakeStoreContractTests: XCTestCase {
     }
 
     func testContract_obie_replaceExisting_demotesFirst_exactlyOneObie() throws {
-        let a = Take(bodyText: "a"); let b = Take(bodyText: "b")
+        let a = Take(blocks: [.textLine("a")]); let b = Take(blocks: [.textLine("b")])
         try store.upsert(a); try store.upsert(b)
         try store.setObie(id: a.id, replaceExisting: false)
         try store.setObie(id: b.id, replaceExisting: true)

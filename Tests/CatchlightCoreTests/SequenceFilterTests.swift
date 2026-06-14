@@ -25,9 +25,7 @@ final class SequenceFilterTests: XCTestCase {
                       reminderDate: Date = Date(timeIntervalSince1970: 2_000_000_000),
                       createdAt: String = "2026-06-05T09:00:00.000Z") -> Take {
         Take(createdAt: ISO8601.date(from: createdAt)!,
-             bodyText: body,
-             isTask: task,
-             isComplete: complete,
+             blocks: task ? [.checkItem(body, isComplete: complete)] : [.textLine(body)],
              timeReminder: reminder
                 ? TimeReminder(scheduledDate: reminderDate,
                                notificationIdentifier: "x")

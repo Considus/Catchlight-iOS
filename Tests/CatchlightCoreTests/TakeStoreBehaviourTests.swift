@@ -46,25 +46,25 @@ final class TakeStoreBehaviourTests: XCTestCase {
     func testTakeStore_upsertSameIdTwice_replacesNotDuplicates() throws {
         let id = UUID()
         let now = Date()
-        let first  = Take(id: id, createdAt: now, modifiedAt: now, bodyText: "first")
-        let second = Take(id: id, createdAt: now, modifiedAt: now, bodyText: "second")
+        let first  = Take(id: id, createdAt: now, modifiedAt: now, blocks: [.textLine("first")])
+        let second = Take(id: id, createdAt: now, modifiedAt: now, blocks: [.textLine("second")])
         try store.upsert(first)
         try store.upsert(second)
         let all = try store.allTakes()
         XCTAssertEqual(all.count, 1, "Same UUID must not produce two rows")
-        XCTAssertEqual(all.first?.bodyText, "second")
+        XCTAssertEqual(all.first?.primaryText, "second")
     }
 
     func testTakeStore_upsertExisting_bumpsModifiedAtWhenCallerSetsIt() throws {
         let id = UUID()
         let created = Date(timeIntervalSinceReferenceDate: 100_000)
-        var take = Take(id: id, createdAt: created, modifiedAt: created, bodyText: "v1")
+        var take = Take(id: id, createdAt: created, modifiedAt: created, blocks: [.textLine("v1")])
         try store.upsert(take)
-        take.bodyText = "v2"
+        take.primaryText = "v2"
         take.modifiedAt = created.addingTimeInterval(60)
         try store.upsert(take)
         let read = try XCTUnwrap(try store.take(id: id))
-        XCTAssertEqual(read.bodyText, "v2")
+        XCTAssertEqual(read.primaryText, "v2")
         XCTAssertGreaterThan(read.modifiedAt, read.createdAt)
     }
 
@@ -77,7 +77,7 @@ final class TakeStoreBehaviourTests: XCTestCase {
     }
 
     func testTakeStore_deleteRemovesRecord_andSubsequentFetchReturnsNil() throws {
-        let take = Take(bodyText: "to delete")
+        let take = Take(blocks: [.textLine("to delete")])
         try store.upsert(take)
         try store.delete(id: take.id)
         XCTAssertNil(try store.take(id: take.id))
@@ -114,25 +114,25 @@ final class TakeStoreBehaviourTests: XCTestCase {
                 id: UUID(),
                 createdAt: base.addingTimeInterval(Double(i)),
                 modifiedAt: base.addingTimeInterval(Double(i)),
-                bodyText: "take-\(i)"
+                blocks: [.textLine("take-\(i)")]
             )
             try store.upsert(take)
         }
         let all = try store.allTakes()
         XCTAssertEqual(all.count, 500)
         // Spot-check first / middle / last by order (createdAt-ascending).
-        XCTAssertEqual(all.first?.bodyText, "take-0")
-        XCTAssertEqual(all[249].bodyText, "take-249")
-        XCTAssertEqual(all.last?.bodyText, "take-499")
+        XCTAssertEqual(all.first?.primaryText, "take-0")
+        XCTAssertEqual(all[249].primaryText, "take-249")
+        XCTAssertEqual(all.last?.primaryText, "take-499")
     }
 
     func testTakeStore_takesModifiedSince_returnsOnlyChangedTakes() throws {
         let base = Date(timeIntervalSinceReferenceDate: 0)
-        let old = Take(id: UUID(), createdAt: base, modifiedAt: base, bodyText: "old")
+        let old = Take(id: UUID(), createdAt: base, modifiedAt: base, blocks: [.textLine("old")])
         let fresh = Take(id: UUID(),
                          createdAt: base,
                          modifiedAt: base.addingTimeInterval(100),
-                         bodyText: "fresh")
+                         blocks: [.textLine("fresh")])
         try store.upsert(old)
         try store.upsert(fresh)
         let cutoff = base.addingTimeInterval(50)
@@ -141,15 +141,15 @@ final class TakeStoreBehaviourTests: XCTestCase {
     }
 
     func testTakeStore_search_returnsCaseInsensitiveMatches() throws {
-        try store.upsert(Take(bodyText: "The Quiet Hour"))
-        try store.upsert(Take(bodyText: "Loud noise"))
+        try store.upsert(Take(blocks: [.textLine("The Quiet Hour")]))
+        try store.upsert(Take(blocks: [.textLine("Loud noise")]))
         let hits = try store.search("quiet")
         XCTAssertEqual(hits.count, 1)
-        XCTAssertEqual(hits.first?.bodyText, "The Quiet Hour")
+        XCTAssertEqual(hits.first?.primaryText, "The Quiet Hour")
     }
 
     func testTakeStore_search_emptyQueryReturnsEmpty() throws {
-        try store.upsert(Take(bodyText: "x"))
+        try store.upsert(Take(blocks: [.textLine("x")]))
         XCTAssertEqual(try store.search(""), [])
     }
 
@@ -160,7 +160,7 @@ final class TakeStoreBehaviourTests: XCTestCase {
     }
 
     func testObie_setObie_marksTargetAndIsRetrievable() throws {
-        let t = Take(bodyText: "the one")
+        let t = Take(blocks: [.textLine("the one")])
         try store.upsert(t)
         try store.setObie(id: t.id, replaceExisting: false)
         let current = try XCTUnwrap(try store.currentObie())
@@ -169,7 +169,7 @@ final class TakeStoreBehaviourTests: XCTestCase {
     }
 
     func testObie_promotingSecond_withoutReplace_throwsObieConflict() throws {
-        let a = Take(bodyText: "a"); let b = Take(bodyText: "b")
+        let a = Take(blocks: [.textLine("a")]); let b = Take(blocks: [.textLine("b")])
         try store.upsert(a); try store.upsert(b)
         try store.setObie(id: a.id, replaceExisting: false)
         XCTAssertThrowsError(try store.setObie(id: b.id, replaceExisting: false)) { error in
@@ -183,7 +183,7 @@ final class TakeStoreBehaviourTests: XCTestCase {
     }
 
     func testObie_promotingSecond_withReplace_demotesFirst() throws {
-        let a = Take(bodyText: "a"); let b = Take(bodyText: "b")
+        let a = Take(blocks: [.textLine("a")]); let b = Take(blocks: [.textLine("b")])
         try store.upsert(a); try store.upsert(b)
         try store.setObie(id: a.id, replaceExisting: false)
         try store.setObie(id: b.id, replaceExisting: true)
@@ -226,7 +226,7 @@ final class TakeStoreBehaviourTests: XCTestCase {
     }
 
     func testSequence_delete_removesOnlyTheFilter() throws {
-        let take = Take(bodyText: "darkroom session")
+        let take = Take(blocks: [.textLine("darkroom session")])
         try store.upsert(take)
         let seq = CatchlightSequence(name: "kept", filter: SequenceFilter(text: "darkroom"))
         try store.upsert(seq)

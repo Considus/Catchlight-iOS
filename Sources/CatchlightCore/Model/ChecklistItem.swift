@@ -2,11 +2,13 @@
 //  ChecklistItem.swift
 //  CatchlightCore
 //
-//  A single checklist item inside a Take (Phase 5 brief §4.5).
+//  A single check item inside a Take (D-034 / D-035).
 //
-//  v1.0 STATUS: the `checklistItems` array on Take is always empty in v1.0; this
-//  struct exists for the Horizon-2 "promote checklist item to independent Take"
-//  feature (Roadmap §3, Horizon 2 + Decisions Log).
+//  v1.0 STATUS: in active use. A check item is the payload of a `.check`
+//  `TakeBlock`; a Take with one or more of them IS a Task (D-034). The struct is
+//  unchanged from when it was forward-compat-only — only its role changed. The
+//  Horizon-2 "promote check item to independent Take" action still targets one
+//  of these cleanly (Roadmap §3, Horizon 2 + Decisions Log).
 //
 //  DELIBERATE OMISSIONS — DO NOT ADD:
 //    • no `reminder` field   — reminders belong to Takes, not sub-items.

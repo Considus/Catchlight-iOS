@@ -25,17 +25,18 @@ public enum SeedTakes {
 
         // 1 — Note (NW active by default).
         var note = Take(createdAt: at(-50), modifiedAt: at(-50),
-                        bodyText: "A Take starts as a Note. A thought — nothing more required.",
+                        blocks: [.textLine("A Take starts as a Note. A thought — nothing more required.")],
                         isSeeded: true)
 
-        // 2 — Task (NE).
+        // 2 — Task (NE). A Task is a Take with a check item (D-034), so the body
+        // is a single check block — that is what makes the Task quadrant light.
         var task = Take(createdAt: at(-40), modifiedAt: at(-40),
-                        bodyText: "Make it a Task. Something to act on, not just think about.",
-                        isTask: true, isSeeded: true)
+                        blocks: [.checkItem("Make it a Task. Something to act on, not just think about.")],
+                        isSeeded: true)
 
         // 3 — Reminder (SW). A representative future reminder time.
         var reminder = Take(createdAt: at(-30), modifiedAt: at(-30),
-                            bodyText: "Or a Reminder — so it finds you when the moment is right.",
+                            blocks: [.textLine("Or a Reminder — so it finds you when the moment is right.")],
                             isSeeded: true)
         reminder.timeReminder = TimeReminder(
             scheduledDate: at(60 * 60 * 24),   // ~tomorrow; user can change or clear
@@ -44,12 +45,12 @@ public enum SeedTakes {
 
         // 4 — Obie (SE, glow). The single north-star Take.
         var obie = Take(createdAt: at(-20), modifiedAt: at(-20),
-                        bodyText: "Obie is your north star Take. It always leads.",
+                        blocks: [.textLine("Obie is your north star Take. It always leads.")],
                         isObie: true, isSeeded: true)
 
         // 5 — All dim (just a note).
         var farewell = Take(createdAt: at(-10), modifiedAt: at(-10),
-                            bodyText: "Delete these when you're ready. Your Takes are already waiting.",
+                            blocks: [.textLine("Delete these when you're ready. Your Takes are already waiting.")],
                             isSeeded: true)
 
         // Ensure the floor invariant holds on each.

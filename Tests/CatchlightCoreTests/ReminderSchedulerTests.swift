@@ -71,7 +71,7 @@ final class ReminderSchedulerTests: XCTestCase {
             scheduledDate: date,
             notificationIdentifier: identifier ?? id.uuidString
         )
-        return Take(id: id, bodyText: body, timeReminder: reminder)
+        return Take(id: id, blocks: [.textLine(body)], timeReminder: reminder)
     }
 
     // MARK: - Scheduling
@@ -91,7 +91,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func testSchedule_takeWithoutReminder_addsNothing() {
-        let take = Take(bodyText: "no reminder")
+        let take = Take(blocks: [.textLine("no reminder")])
         scheduler.scheduleReminder(for: take)
         XCTAssertEqual(center.added.count, 0)
     }
@@ -183,7 +183,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func testCancel_takeWithoutReminder_isNoOp() {
-        let take = Take(bodyText: "x")
+        let take = Take(blocks: [.textLine("x")])
         scheduler.cancelReminder(for: take)
         XCTAssertEqual(center.removedIdentifiers.count, 0)
     }
@@ -194,7 +194,7 @@ final class ReminderSchedulerTests: XCTestCase {
     /// exactly one pending request for the same identifier, never a duplicate.
     func testReschedule_replacesNotDuplicates() {
         let id = UUID()
-        var take = Take(id: id, bodyText: "x", timeReminder: TimeReminder(
+        var take = Take(id: id, blocks: [.textLine("x")], timeReminder: TimeReminder(
             scheduledDate: now.addingTimeInterval(60),
             notificationIdentifier: id.uuidString
         ))

@@ -103,7 +103,7 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
             return false
         }
         let term = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if !term.isEmpty && !take.bodyText.lowercased().contains(term) { return false }
+        if !term.isEmpty && !take.plainText.lowercased().contains(term) { return false }
         return true
     }
 

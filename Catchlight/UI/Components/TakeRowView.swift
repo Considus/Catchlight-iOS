@@ -34,7 +34,7 @@ struct TakeRowView: View {
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
     private var firstLine: String {
-        let line = take.bodyText
+        let line = take.plainText
             .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
             .first
             .map(String.init) ?? ""
@@ -214,11 +214,11 @@ private struct TapAndLongPressRecognizer: UIViewRepresentable {
     let reminder = TimeReminder(scheduledDate: .now.addingTimeInterval(86_400),
                                 notificationIdentifier: "x")
     return VStack(alignment: .leading, spacing: 0) {
-        TakeRowView(take: Take(bodyText: "A plain thought, nothing more."))
-        TakeRowView(take: Take(bodyText: "Ship the Phase 6 UI", isTask: true))
-        TakeRowView(take: Take(bodyText: "Done already", isTask: true, isComplete: true))
-        TakeRowView(take: { var t = Take(bodyText: "Call the framer back"); t.timeReminder = reminder; return t }())
-        TakeRowView(take: Take(bodyText: "The north star", isObie: true))
+        TakeRowView(take: Take(blocks: [.textLine("A plain thought, nothing more.")]))
+        TakeRowView(take: Take(blocks: [.checkItem("Ship the Phase 6 UI")]))
+        TakeRowView(take: Take(blocks: [.checkItem("Done already", isComplete: true)]))
+        TakeRowView(take: { var t = Take(blocks: [.textLine("Call the framer back")]); t.timeReminder = reminder; return t }())
+        TakeRowView(take: Take(blocks: [.textLine("The north star")], isObie: true))
     }
     .padding()
     .background(Color.ckBackground)
@@ -227,9 +227,9 @@ private struct TapAndLongPressRecognizer: UIViewRepresentable {
 
 #Preview("Rows — Daylight") {
     VStack(alignment: .leading, spacing: 0) {
-        TakeRowView(take: Take(bodyText: "A plain thought."))
-        TakeRowView(take: Take(bodyText: "A task to do", isTask: true))
-        TakeRowView(take: Take(bodyText: "The north star", isObie: true))
+        TakeRowView(take: Take(blocks: [.textLine("A plain thought.")]))
+        TakeRowView(take: Take(blocks: [.checkItem("A task to do")]))
+        TakeRowView(take: Take(blocks: [.textLine("The north star")], isObie: true))
     }
     .padding()
     .background(Color.ckBackground)
