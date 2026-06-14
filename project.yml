@@ -171,12 +171,15 @@ targets:
         ENABLE_USER_SCRIPT_SANDBOXING: NO
     # Section 1 — stamp CFBundleVersion with the git short SHA so the About row
     # answers "which commit is on the phone?" (CFBundleShortVersionString stays
-    # the human MARKETING_VERSION). Runs after the sources compile, when the
-    # processed Info.plist is in the build products dir, and BEFORE code signing
-    # so the signature covers the stamped value. Resilient: if git is
-    # unavailable (CI source archive) or the plist isn't there yet, it logs a
-    # note and exits 0 — the build keeps the existing CFBundleVersion ("1").
-    postCompileScripts:
+    # the human MARKETING_VERSION). MUST run as a postBuildScript, NOT
+    # postCompile: "Process Info.plist" runs during the resources phase (after
+    # postCompile) and rewrites CFBundleVersion back to $(CURRENT_PROJECT_VERSION),
+    # clobbering an earlier stamp — verified 2026-06-14 (the stamp logged the SHA
+    # but the final plist still read "1"). postBuild runs AFTER Process Info.plist
+    # and BEFORE code signing, so the stamp survives and the signature covers it.
+    # Resilient: if git is unavailable (CI source archive) or the plist isn't
+    # there, it logs a note and exits 0 — the build keeps CFBundleVersion ("1").
+    postBuildScripts:
       - name: "Stamp build number with git short SHA"
         basedOnDependencyAnalysis: false
         script: |
