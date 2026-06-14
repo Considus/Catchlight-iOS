@@ -101,11 +101,11 @@ struct TakeCircleView: View {
 #Preview("Take circles — Night") {
     let reminder = TimeReminder(scheduledDate: .now, notificationIdentifier: "x")
     return HStack(spacing: 16) {
-        TakeCircleView(take: Take(bodyText: "Note"), diameter: 44)
-        TakeCircleView(take: Take(bodyText: "Task", isTask: true), diameter: 44)
-        TakeCircleView(take: { var t = Take(bodyText: "Remind"); t.timeReminder = reminder; return t }(), diameter: 44)
-        TakeCircleView(take: Take(bodyText: "Obie", isObie: true), diameter: 44)
-        TakeCircleView(take: { var t = Take(bodyText: "All", isTask: true); t.timeReminder = reminder; return t }(), diameter: 44)
+        TakeCircleView(take: Take(blocks: [.textLine("Note")]), diameter: 44)
+        TakeCircleView(take: Take(blocks: [.checkItem("Task")]), diameter: 44)
+        TakeCircleView(take: { var t = Take(blocks: [.textLine("Remind")]); t.timeReminder = reminder; return t }(), diameter: 44)
+        TakeCircleView(take: Take(blocks: [.textLine("Obie")], isObie: true), diameter: 44)
+        TakeCircleView(take: { var t = Take(blocks: [.checkItem("All")]); t.timeReminder = reminder; return t }(), diameter: 44)
     }
     .padding()
     .background(Color.ckBackground)
@@ -115,10 +115,10 @@ struct TakeCircleView: View {
 #Preview("Take circles — Daylight") {
     let reminder = TimeReminder(scheduledDate: .now, notificationIdentifier: "x")
     return HStack(spacing: 16) {
-        TakeCircleView(take: Take(bodyText: "Note"), diameter: 44)
-        TakeCircleView(take: Take(bodyText: "Task", isTask: true), diameter: 44)
-        TakeCircleView(take: { var t = Take(bodyText: "Remind"); t.timeReminder = reminder; return t }(), diameter: 44)
-        TakeCircleView(take: Take(bodyText: "Obie", isObie: true), diameter: 44)
+        TakeCircleView(take: Take(blocks: [.textLine("Note")]), diameter: 44)
+        TakeCircleView(take: Take(blocks: [.checkItem("Task")]), diameter: 44)
+        TakeCircleView(take: { var t = Take(blocks: [.textLine("Remind")]); t.timeReminder = reminder; return t }(), diameter: 44)
+        TakeCircleView(take: Take(blocks: [.textLine("Obie")], isObie: true), diameter: 44)
     }
     .padding()
     .background(Color.ckBackground)

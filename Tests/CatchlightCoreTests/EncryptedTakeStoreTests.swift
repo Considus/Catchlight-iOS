@@ -93,7 +93,7 @@ final class EncryptedTakeStoreTests: XCTestCase {
     func testEncryptedStore_dateMillisecondPrecisionRoundTrip() throws {
         let isoString = "2026-05-28T07:00:00.123Z"
         let date = try XCTUnwrap(ISO8601.date(from: isoString))
-        let take = Take(id: UUID(), createdAt: date, modifiedAt: date, bodyText: "ms-precision")
+        let take = Take(id: UUID(), createdAt: date, modifiedAt: date, blocks: [.textLine("ms-precision")])
         try store.upsert(take)
         let read = try XCTUnwrap(try store.take(id: take.id))
         XCTAssertEqual(ISO8601.string(from: read.createdAt), isoString)
@@ -102,19 +102,19 @@ final class EncryptedTakeStoreTests: XCTestCase {
 
     func testEncryptedStore_optionalFields_preserveNil() throws {
         let date = try XCTUnwrap(ISO8601.date(from: "2026-05-28T07:00:00.000Z"))
-        let take = Take(id: UUID(), createdAt: date, modifiedAt: date, bodyText: "minimal",
+        let take = Take(id: UUID(), createdAt: date, modifiedAt: date, blocks: [.textLine("minimal")],
                         timeReminder: nil, locationReminder: nil)
         try store.upsert(take)
         let read = try XCTUnwrap(try store.take(id: take.id))
         XCTAssertNil(read.timeReminder)
         XCTAssertNil(read.locationReminder)
-        XCTAssertEqual(read.checklistItems, [])
+        XCTAssertEqual(read.checkItems, [])
         XCTAssertEqual(read.attachments, [])
     }
 
     func testEncryptedStore_uuidStringRoundTrip() throws {
         let id = try XCTUnwrap(UUID(uuidString: "DEADBEEF-1234-5678-9ABC-DEF012345678"))
-        try store.upsert(Take(id: id, bodyText: "uuid"))
+        try store.upsert(Take(id: id, blocks: [.textLine("uuid")]))
         XCTAssertEqual(try XCTUnwrap(try store.take(id: id)).id, id)
     }
 
@@ -127,13 +127,13 @@ final class EncryptedTakeStoreTests: XCTestCase {
                 id: UUID(),
                 createdAt: base.addingTimeInterval(Double(i)),
                 modifiedAt: base.addingTimeInterval(Double(i)),
-                bodyText: "take-\(i)"
+                blocks: [.textLine("take-\(i)")]
             ))
         }
         let all = try store.allTakes()
         XCTAssertEqual(all.count, 500)
-        XCTAssertEqual(all.first?.bodyText, "take-0")
-        XCTAssertEqual(all.last?.bodyText, "take-499")
+        XCTAssertEqual(all.first?.primaryText, "take-0")
+        XCTAssertEqual(all.last?.primaryText, "take-499")
     }
 
     // MARK: - Persistence across close/reopen (schema v2: sync_state, tombstones)
@@ -177,7 +177,7 @@ final class EncryptedTakeStoreTests: XCTestCase {
     func testEncryptedStore_dbFileBytes_doNotContainPlaintextBody() throws {
         let sentinel = "TOP-SECRET-PLAINTEXT-SENTINEL-c0ffee"
         var take = TestFixtures.richTake()
-        take.bodyText = sentinel
+        take.primaryText = sentinel
         try store.upsert(take)
 
         // Close the store so the SQLite handle releases and WAL state settles.

@@ -53,10 +53,23 @@ public enum TakeExporter {
         for take in sorted {
             out += "\n"
             out += "## \(heading(for: take))\n"
-            out += "\(take.bodyText)\n"
+            out += "\(body(for: take))\n"
         }
 
         return out
+    }
+
+    /// Render a Take's blocks in order: prose lines as-is, check items as
+    /// `- [ ]` / `- [x]` (D-035). One block per line.
+    static func body(for take: Take) -> String {
+        take.blocks.map { block in
+            switch block {
+            case .text(let textBlock):
+                return textBlock.text
+            case .check(let item):
+                return "- [\(item.isComplete ? "x" : " ")] \(item.text)"
+            }
+        }.joined(separator: "\n")
     }
 
     /// Suggested filename for the share sheet, e.g. `catchlight-2026-06-09.md`.

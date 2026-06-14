@@ -40,7 +40,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         let t0 = Date(timeIntervalSince1970: 1_700_000_000)
 
         var take = TestFixtures.richTake()
-        take.bodyText = "v1"
+        take.primaryText = "v1"
         take.modifiedAt = t0
         try store.upsert(take)
 
@@ -52,7 +52,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         // changed-since-watermark filter picks it up.
         store.setLastSyncDate(t0.addingTimeInterval(1))
         var take2 = take
-        take2.bodyText = "v2"
+        take2.primaryText = "v2"
         take2.modifiedAt = t0.addingTimeInterval(100)
         try store.upsert(take2)
         try makeEngine(store: store, cloud: cloud, keys: k, now: { t0.addingTimeInterval(101) }).pushOutbound()
@@ -63,7 +63,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         // The new blob decrypts to v2 — proves overwrite, not append/rename.
         let parsed = try CloudBlob.parse(blobV2)
         let decrypted = try TakeCrypto(keys: k).open(parsed.ciphertext!, takeUUID: take.id)
-        XCTAssertEqual(decrypted.bodyText, "v2")
+        XCTAssertEqual(decrypted.primaryText, "v2")
         XCTAssertEqual(try cloud.clkFiles().count, 1, "no orphan blob left behind")
     }
 
@@ -167,13 +167,13 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         // Device B edited the same Take AFTER the deletion timestamp.
         let storeB = InMemoryTakeStore()
         var edited = take
-        edited.bodyText = "edited after the delete"
+        edited.primaryText = "edited after the delete"
         edited.modifiedAt = Date().addingTimeInterval(3600)   // strictly after deletedAt
         try storeB.upsert(edited)
 
         let report = try makeEngine(store: storeB, cloud: cloud, keys: k, now: Date.init).pullInbound()
         XCTAssertTrue(report.deletedLocally.isEmpty, "edit made after deletion must survive")
-        XCTAssertEqual(try storeB.take(id: take.id)?.bodyText, "edited after the delete")
+        XCTAssertEqual(try storeB.take(id: take.id)?.primaryText, "edited after the delete")
     }
 
     /// `upsert` clears a pending tombstone for the same id — re-creating an item
@@ -323,7 +323,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         // Remote pushes a take at modifiedAt = 100.
         let remoteStore = InMemoryTakeStore()
         var remoteTake = TestFixtures.richTake()
-        remoteTake.bodyText = "remote-old"
+        remoteTake.primaryText = "remote-old"
         remoteTake.modifiedAt = t0.addingTimeInterval(100)
         try remoteStore.upsert(remoteTake)
         try makeEngine(store: remoteStore, cloud: cloud, keys: k, now: { t0.addingTimeInterval(101) }).pushOutbound()
@@ -332,7 +332,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         // → remote.modifiedAt(100) ≤ watermark(150) means "we've already seen this".
         let local = InMemoryTakeStore()
         var localTake = remoteTake
-        localTake.bodyText = "local-newer"
+        localTake.primaryText = "local-newer"
         localTake.modifiedAt = t0.addingTimeInterval(200)
         try local.upsert(localTake)
         local.setLastSyncDate(t0.addingTimeInterval(150))
@@ -341,7 +341,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
 
         XCTAssertTrue(report.applied.isEmpty, "older remote must not be applied")
         XCTAssertTrue(report.conflicts.isEmpty)
-        XCTAssertEqual(try local.take(id: localTake.id)?.bodyText, "local-newer")
+        XCTAssertEqual(try local.take(id: localTake.id)?.primaryText, "local-newer")
     }
 
     /// Newer remote (modifiedAt after lastSync watermark) replaces the unchanged
@@ -353,7 +353,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
 
         let remoteStore = InMemoryTakeStore()
         var remoteTake = TestFixtures.richTake()
-        remoteTake.bodyText = "remote-new"
+        remoteTake.primaryText = "remote-new"
         remoteTake.modifiedAt = t0.addingTimeInterval(200)
         try remoteStore.upsert(remoteTake)
         try makeEngine(store: remoteStore, cloud: cloud, keys: k, now: { t0.addingTimeInterval(201) }).pushOutbound()
@@ -361,7 +361,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         // Local copy is older (100) and considered unchanged since watermark (150).
         let local = InMemoryTakeStore()
         var localTake = remoteTake
-        localTake.bodyText = "local-old"
+        localTake.primaryText = "local-old"
         localTake.modifiedAt = t0.addingTimeInterval(100)
         try local.upsert(localTake)
         local.setLastSyncDate(t0.addingTimeInterval(150))
@@ -369,7 +369,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         let report = try makeEngine(store: local, cloud: cloud, keys: k, now: { t0.addingTimeInterval(300) }).pullInbound()
 
         XCTAssertEqual(report.applied, [remoteTake.id])
-        XCTAssertEqual(try local.take(id: remoteTake.id)?.bodyText, "remote-new")
+        XCTAssertEqual(try local.take(id: remoteTake.id)?.primaryText, "remote-new")
     }
 
     // MARK: - Pull: partial-sync quarantine
@@ -385,7 +385,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         var ids: [UUID] = []
         for i in 0..<5 {
             var t = TestFixtures.richTake(id: UUID())
-            t.bodyText = "body-\(i)"
+            t.primaryText = "body-\(i)"
             try remoteStore.upsert(t)
             ids.append(t.id)
         }
@@ -443,18 +443,18 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         let lastSync = Date(timeIntervalSince1970: 1_700_000_000)
         let ts = lastSync.addingTimeInterval(100)
         var local = TestFixtures.richTake()
-        local.bodyText = "local"
+        local.primaryText = "local"
         local.modifiedAt = ts
         var remote = local
-        remote.bodyText = "remote"
+        remote.primaryText = "remote"
         // modifiedAt is the SAME value on both sides.
 
         let decision = ConflictResolver.decide(local: local, remote: remote, lastSync: lastSync)
         guard case .conflict(let l, let r) = decision else {
             return XCTFail("expected .conflict when both sides changed with equal modifiedAt; got \(decision)")
         }
-        XCTAssertEqual(l.bodyText, "local")
-        XCTAssertEqual(r.bodyText, "remote")
+        XCTAssertEqual(l.primaryText, "local")
+        XCTAssertEqual(r.primaryText, "remote")
     }
 
     /// Both sides UNCHANGED since the watermark (modifiedAt ≤ watermark) but the
@@ -464,17 +464,17 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
     func testConflictResolver_bothUnchangedButDiffering_returnsConflict() {
         let lastSync = Date(timeIntervalSince1970: 1_700_000_000)
         var local = TestFixtures.richTake()
-        local.bodyText = "local"
+        local.primaryText = "local"
         local.modifiedAt = lastSync.addingTimeInterval(-10)  // before watermark
         var remote = local
-        remote.bodyText = "remote"
+        remote.primaryText = "remote"
         // Same modifiedAt, both before lastSync — yet the content differs.
 
         guard case .conflict(let l, let r) = ConflictResolver.decide(local: local, remote: remote, lastSync: lastSync) else {
             return XCTFail("expected .conflict for the (false,false)-but-differing branch")
         }
-        XCTAssertEqual(l.bodyText, "local")
-        XCTAssertEqual(r.bodyText, "remote")
+        XCTAssertEqual(l.primaryText, "local")
+        XCTAssertEqual(r.primaryText, "remote")
     }
 
     /// A single resolver call yields exactly one `SyncDecision`. Trivial by type,
@@ -486,7 +486,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         var local = TestFixtures.richTake()
         local.modifiedAt = lastSync.addingTimeInterval(-10)
         var remote = local
-        remote.bodyText = "remote"
+        remote.primaryText = "remote"
         remote.modifiedAt = lastSync.addingTimeInterval(50)
 
         let d1 = ConflictResolver.decide(local: local, remote: remote, lastSync: lastSync)
@@ -499,17 +499,17 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
     func testConflictResolver_payloadCarriesBothSides() {
         let lastSync = Date(timeIntervalSince1970: 1_700_000_000)
         var local = TestFixtures.richTake()
-        local.bodyText = "L"
+        local.primaryText = "L"
         local.modifiedAt = lastSync.addingTimeInterval(100)
         var remote = local
-        remote.bodyText = "R"
+        remote.primaryText = "R"
         remote.modifiedAt = lastSync.addingTimeInterval(200)
 
         guard case .conflict(let l, let r) = ConflictResolver.decide(local: local, remote: remote, lastSync: lastSync) else {
             return XCTFail("expected conflict")
         }
-        XCTAssertEqual(l.bodyText, "L")
-        XCTAssertEqual(r.bodyText, "R")
+        XCTAssertEqual(l.primaryText, "L")
+        XCTAssertEqual(r.primaryText, "R")
         XCTAssertNotEqual(l, r, "both versions are distinct and preserved")
     }
 

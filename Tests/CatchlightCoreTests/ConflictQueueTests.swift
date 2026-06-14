@@ -25,8 +25,8 @@ final class ConflictQueueTests: XCTestCase {
     private func makePair(body: String = "local body",
                           remoteBody: String = "remote body") -> (local: Take, remote: Take) {
         let id = UUID()
-        let local = Take(id: id, bodyText: body)
-        let remote = Take(id: id, bodyText: remoteBody)
+        let local = Take(id: id, blocks: [.textLine(body)])
+        let remote = Take(id: id, blocks: [.textLine(remoteBody)])
         return (local, remote)
     }
 
@@ -44,17 +44,17 @@ final class ConflictQueueTests: XCTestCase {
     func testEnqueue_sameId_replacesPendingPairWithNewestSnapshot() {
         let queue = ConflictQueue()
         let id = UUID()
-        let stale = (local: Take(id: id, bodyText: "local v1"),
-                     remote: Take(id: id, bodyText: "remote v1"))
-        let fresh = (local: Take(id: id, bodyText: "local v2"),
-                     remote: Take(id: id, bodyText: "remote v2"))
+        let stale = (local: Take(id: id, blocks: [.textLine("local v1")]),
+                     remote: Take(id: id, blocks: [.textLine("remote v1")]))
+        let fresh = (local: Take(id: id, blocks: [.textLine("local v2")]),
+                     remote: Take(id: id, blocks: [.textLine("remote v2")]))
 
         queue.enqueue([stale])
         queue.enqueue([fresh])
 
         XCTAssertEqual(queue.pending.count, 1)
-        XCTAssertEqual(queue.pending.first?.local.bodyText, "local v2")
-        XCTAssertEqual(queue.pending.first?.remote.bodyText, "remote v2")
+        XCTAssertEqual(queue.pending.first?.local.primaryText, "local v2")
+        XCTAssertEqual(queue.pending.first?.remote.primaryText, "remote v2")
     }
 
     /// Replacement preserves the entry's position in the queue (oldest-first
@@ -65,12 +65,12 @@ final class ConflictQueueTests: XCTestCase {
         let b = makePair()
         queue.enqueue([a, b])
 
-        let aUpdated = (local: Take(id: a.local.id, bodyText: "a v2"),
-                        remote: Take(id: a.local.id, bodyText: "a remote v2"))
+        let aUpdated = (local: Take(id: a.local.id, blocks: [.textLine("a v2")]),
+                        remote: Take(id: a.local.id, blocks: [.textLine("a remote v2")]))
         queue.enqueue([aUpdated])
 
         XCTAssertEqual(queue.pending.map(\.local.id), [a.local.id, b.local.id])
-        XCTAssertEqual(queue.pending.first?.local.bodyText, "a v2")
+        XCTAssertEqual(queue.pending.first?.local.primaryText, "a v2")
     }
 
     func testEnqueue_appendsDistinctConflicts() {
@@ -89,7 +89,7 @@ final class ConflictQueueTests: XCTestCase {
 
         XCTAssertTrue(queue.pending.isEmpty)
         let saved = try XCTUnwrap(try store.allTakes().first { $0.id == pair.local.id })
-        XCTAssertEqual(saved.bodyText, "MINE")
+        XCTAssertEqual(saved.primaryText, "MINE")
     }
 
     func testResolve_keepRemote() throws {
@@ -102,7 +102,7 @@ final class ConflictQueueTests: XCTestCase {
 
         XCTAssertTrue(queue.pending.isEmpty)
         let saved = try XCTUnwrap(try store.allTakes().first { $0.id == pair.local.id })
-        XCTAssertEqual(saved.bodyText, "THEIRS")
+        XCTAssertEqual(saved.primaryText, "THEIRS")
     }
 
     func testSkip_removesFromQueueWithoutWriting() throws {

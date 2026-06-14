@@ -1,6 +1,6 @@
 //
 //  TakeExporterTests.swift
-//  CatchlightCoreTests — Task 6.22
+//  CatchlightCoreTests — Task 6.22 / D-035
 //
 //  Pins the export format defined in `App_Store_Connect_Decisions_v1.0.md §5`.
 //  These tests are deliberately literal — they string-compare the full payload
@@ -8,6 +8,9 @@
 //  byte layout (frontmatter delimiters, the `· ✓ Complete` separator, the
 //  bell glyph, blank-line spacing). Any change here is a format change and
 //  must trace back to an explicit decision update.
+//
+//  Under D-035 the body is rendered from `blocks`: prose lines as text, check
+//  items as `- [ ]` / `- [x]`.
 //
 
 import XCTest
@@ -51,7 +54,7 @@ final class TakeExporterTests: XCTestCase {
     func testExport_singleNote_rendersNoteHeading() {
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 14)
         let take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        bodyText: "Buy film for the weekend shoot",
+                        blocks: [.textLine("Buy film for the weekend shoot")],
                         isNote: true)
         let out = TakeExporter.export([take], exportedAt: exportedAt)
         let expected = """
@@ -67,31 +70,51 @@ final class TakeExporterTests: XCTestCase {
         XCTAssertEqual(out, expected)
     }
 
-    func testExport_completedTask_appendsCompleteMarker() {
+    func testExport_completedTask_rendersCheckMarkerAndHeading() {
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 15)
         let take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        bodyText: "Call the framer back",
-                        isNote: true, isTask: true, isComplete: true)
+                        blocks: [.checkItem("Call the framer back", isComplete: true)],
+                        isNote: true)
         let out = TakeExporter.export([take], exportedAt: exportedAt)
         XCTAssertTrue(out.contains("## Task — 2026-05-15 · ✓ Complete"))
-        XCTAssertTrue(out.contains("Call the framer back"))
+        XCTAssertTrue(out.contains("- [x] Call the framer back"))
     }
 
-    func testExport_incompleteTask_omitsCompleteMarker() {
+    func testExport_incompleteTask_omitsCompleteMarkerAndRendersOpenBox() {
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 15)
         let take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        bodyText: "Call the framer back",
-                        isNote: true, isTask: true, isComplete: false)
+                        blocks: [.checkItem("Call the framer back", isComplete: false)],
+                        isNote: true)
         let out = TakeExporter.export([take], exportedAt: exportedAt)
         XCTAssertTrue(out.contains("## Task — 2026-05-15"))
         XCTAssertFalse(out.contains("✓ Complete"))
+        XCTAssertTrue(out.contains("- [ ] Call the framer back"))
+    }
+
+    func testExport_interleavedBlocks_renderInOrder() {
+        let createdAt = Self.makeUTC(year: 2026, month: 5, day: 15)
+        let take = Take(createdAt: createdAt, modifiedAt: createdAt,
+                        blocks: [.textLine("Packing list"),
+                                 .checkItem("passport", isComplete: true),
+                                 .checkItem("charger"),
+                                 .textLine("buy at airport:"),
+                                 .checkItem("water")],
+                        isNote: true)
+        let out = TakeExporter.export([take], exportedAt: exportedAt)
+        XCTAssertTrue(out.contains("""
+        Packing list
+        - [x] passport
+        - [ ] charger
+        buy at airport:
+        - [ ] water
+        """), "Got: \(out)")
     }
 
     func testExport_reminderWithDate_appendsBellAndStamp() {
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 16)
         let scheduledAt = Self.makeUTC(year: 2026, month: 5, day: 20, hour: 9, minute: 0)
         var take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        bodyText: "Pick up prints",
+                        blocks: [.textLine("Pick up prints")],
                         isNote: true)
         take.timeReminder = TimeReminder(scheduledDate: scheduledAt,
                                          notificationIdentifier: take.id.uuidString)
@@ -104,7 +127,7 @@ final class TakeExporterTests: XCTestCase {
     func testExport_takeWithoutReminder_neverEmitsBellGlyph() {
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 14)
         let take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        bodyText: "no reminder here", isNote: true)
+                        blocks: [.textLine("no reminder here")], isNote: true)
         let out = TakeExporter.export([take], exportedAt: exportedAt)
         XCTAssertFalse(out.contains("🔔"))
     }
@@ -114,13 +137,13 @@ final class TakeExporterTests: XCTestCase {
     func testExport_multipleTakes_sortedByCreatedAtAscending() {
         let t1 = Take(createdAt: Self.makeUTC(year: 2026, month: 5, day: 14),
                       modifiedAt: Self.makeUTC(year: 2026, month: 5, day: 14),
-                      bodyText: "first", isNote: true)
+                      blocks: [.textLine("first")], isNote: true)
         let t2 = Take(createdAt: Self.makeUTC(year: 2026, month: 5, day: 15),
                       modifiedAt: Self.makeUTC(year: 2026, month: 5, day: 15),
-                      bodyText: "second", isNote: true)
+                      blocks: [.textLine("second")], isNote: true)
         let t3 = Take(createdAt: Self.makeUTC(year: 2026, month: 5, day: 16),
                       modifiedAt: Self.makeUTC(year: 2026, month: 5, day: 16),
-                      bodyText: "third", isNote: true)
+                      blocks: [.textLine("third")], isNote: true)
         // Feed in reverse order — exporter must re-sort.
         let out = TakeExporter.export([t3, t1, t2], exportedAt: exportedAt)
         guard let firstRange = out.range(of: "first"),
@@ -137,10 +160,10 @@ final class TakeExporterTests: XCTestCase {
     func testExport_multipleTakes_oneBlankLineBetween() {
         let t1 = Take(createdAt: Self.makeUTC(year: 2026, month: 5, day: 14),
                       modifiedAt: Self.makeUTC(year: 2026, month: 5, day: 14),
-                      bodyText: "first", isNote: true)
+                      blocks: [.textLine("first")], isNote: true)
         let t2 = Take(createdAt: Self.makeUTC(year: 2026, month: 5, day: 15),
                       modifiedAt: Self.makeUTC(year: 2026, month: 5, day: 15),
-                      bodyText: "second", isNote: true)
+                      blocks: [.textLine("second")], isNote: true)
         let out = TakeExporter.export([t1, t2], exportedAt: exportedAt)
         // Body of first Take ends with "first\n", then exactly one blank line
         // ("\n"), then the next H2 begins. No double blanks anywhere.
@@ -154,7 +177,7 @@ final class TakeExporterTests: XCTestCase {
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 14)
         let takes = (0..<3).map { i in
             Take(createdAt: createdAt, modifiedAt: createdAt,
-                 bodyText: "t\(i)", isNote: true)
+                 blocks: [.textLine("t\(i)")], isNote: true)
         }
         let out = TakeExporter.export(takes, exportedAt: exportedAt)
         XCTAssertTrue(out.contains("takes: 3\n"))
@@ -165,7 +188,7 @@ final class TakeExporterTests: XCTestCase {
     func testExport_bodyWithQuotesAndBackticks_passedThroughVerbatim() {
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 14)
         let take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        bodyText: #"She said "go" and we ran. `code` and 'quotes'"#,
+                        blocks: [.textLine(#"She said "go" and we ran. `code` and 'quotes'"#)],
                         isNote: true)
         let out = TakeExporter.export([take], exportedAt: exportedAt)
         XCTAssertTrue(out.contains(#"She said "go" and we ran. `code` and 'quotes'"#))
@@ -174,7 +197,7 @@ final class TakeExporterTests: XCTestCase {
     func testExport_bodyWithNewlines_preservesMultiLineBody() {
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 14)
         let take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        bodyText: "line one\nline two\nline three",
+                        blocks: [.textLine("line one\nline two\nline three")],
                         isNote: true)
         let out = TakeExporter.export([take], exportedAt: exportedAt)
         XCTAssertTrue(out.contains("line one\nline two\nline three"))
@@ -186,7 +209,7 @@ final class TakeExporterTests: XCTestCase {
         // round-trips intact for the user when re-imported into a Markdown app.
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 14)
         let take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        bodyText: "# user heading\n* item",
+                        blocks: [.textLine("# user heading\n* item")],
                         isNote: true)
         let out = TakeExporter.export([take], exportedAt: exportedAt)
         XCTAssertTrue(out.contains("# user heading\n* item"))
@@ -202,12 +225,12 @@ final class TakeExporterTests: XCTestCase {
     // MARK: - Heading precedence
 
     func testHeading_takeWithBothReminderAndTask_prefersReminder() {
-        // Specification ambiguity: a Take may have both isTask and a reminder.
-        // Decision: most specific qualifier wins for the H2 — Reminder.
+        // Specification ambiguity: a Take may have both a check item and a
+        // reminder. Decision: most specific qualifier wins for the H2 — Reminder.
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 14)
         let scheduledAt = Self.makeUTC(year: 2026, month: 5, day: 20, hour: 9, minute: 0)
         var take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        bodyText: "x", isNote: true, isTask: true, isComplete: true)
+                        blocks: [.checkItem("x", isComplete: true)], isNote: true)
         take.timeReminder = TimeReminder(scheduledDate: scheduledAt,
                                          notificationIdentifier: take.id.uuidString)
         XCTAssertEqual(TakeExporter.heading(for: take),

@@ -111,6 +111,13 @@ extension Color {
     /// Fog (#B8B0A3) fails WCAG AA for body text on Paper; Slate is the accessible replacement.
     static let ckTextSecondary = Color(uiColor: .adaptive(dark: Palette.fog, light: Palette.slate))
 
+    /// Completed-Task text — the receded "done" treatment from HiFi v1.7 `.tt.done`:
+    /// Fog @ 55% (Night, `rgba(184,176,163,0.55)`) / Fog #B8B0A3 (Daylight). A
+    /// completed Take recedes in place via this colour (plus the strikethrough),
+    /// staying readable but clearly de-emphasised.
+    static let ckTextComplete = Color(uiColor: .adaptive(dark: Palette.fog.withAlphaComponent(0.55),
+                                                         light: Palette.fog))
+
     /// The timeline spine — Catchlight @ 18% (Night) / Ink @ 13% (Daylight).
     static let ckSpine = Color(uiColor: .adaptive(
         dark: Palette.catchlight.withAlphaComponent(0.18),
@@ -286,6 +293,24 @@ enum CatchlightFont {
         }
         // System-serif fallback has no fixedSize counterpart; clamp via .system.
         return .system(size: size, weight: .regular, design: .serif).italic()
+    }
+
+    /// UIKit counterpart of `display(size:)` for `UIViewRepresentable` text
+    /// surfaces (the block editor's `UITextView` rows). Scales with Dynamic Type
+    /// via `UIFontMetrics(.body)`. Falls back to the system serif italic when the
+    /// bundled face isn't present — matching `display`'s SwiftUI fallback.
+    static func uiDisplay(size: CGFloat) -> UIFont {
+        let base: UIFont
+        if let name = firstAvailable(displayCandidates), let custom = UIFont(name: name, size: size) {
+            base = custom
+        } else {
+            let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
+                .withDesign(.serif)?
+                .withSymbolicTraits(.traitItalic)
+            base = descriptor.map { UIFont(descriptor: $0, size: size) }
+                ?? UIFont.italicSystemFont(ofSize: size)
+        }
+        return UIFontMetrics(forTextStyle: .body).scaledFont(for: base)
     }
 
     /// Interface text — DM Sans, scaling with Dynamic Type. Falls back to the

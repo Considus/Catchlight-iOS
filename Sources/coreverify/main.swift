@@ -52,10 +52,9 @@ func richTake(id: UUID = UUID()) -> Take {
     Take(id: id,
          createdAt: ISO8601.date(from: "2026-05-01T09:00:00.000Z")!,
          modifiedAt: ISO8601.date(from: "2026-05-02T10:30:00.000Z")!,
-         bodyText: "Buy film for the weekend shoot",
-         isTask: true,
-         timeReminder: TimeReminder(scheduledDate: ISO8601.date(from: "2026-05-03T15:00:00.000Z")!, notificationIdentifier: id.uuidString),
-         checklistItems: [ChecklistItem(text: "Portra 400", isComplete: false)])
+         blocks: [.textLine("Buy film for the weekend shoot"),
+                  .checkItem("Portra 400", isComplete: false)],
+         timeReminder: TimeReminder(scheduledDate: ISO8601.date(from: "2026-05-03T15:00:00.000Z")!, notificationIdentifier: id.uuidString))
 }
 
 func mk() -> SymmetricKey { SymmetricKey(size: .bits256) }
@@ -114,10 +113,10 @@ do {
     // Use a millisecond-aligned date: the canonical wire format is ms-precision,
     // so a raw Date() would not be bit-exact after a round-trip (documented behaviour).
     let nowMs = ISO8601.date(from: ISO8601.string(from: Date()))!
-    let empty = Take(createdAt: nowMs, modifiedAt: nowMs, bodyText: "")
+    let empty = Take(createdAt: nowMs, modifiedAt: nowMs, blocks: [])
     let decodedEmpty = try PlatformJSON.decode(Take.self, from: try PlatformJSON.encode(empty))
-    check("Empty Take round-trips; arrays empty; note floor true",
-          decodedEmpty == empty && decodedEmpty.checklistItems.isEmpty && decodedEmpty.attachments.isEmpty && decodedEmpty.isNote && decodedEmpty.locationReminder == nil)
+    check("Empty Take round-trips; blocks empty; note floor true",
+          decodedEmpty == empty && decodedEmpty.blocks.isEmpty && decodedEmpty.attachments.isEmpty && decodedEmpty.isNote && decodedEmpty.locationReminder == nil)
 
     let json = String(data: try PlatformJSON.encode(take), encoding: .utf8)!
     check("ISO-8601 UTC dates in JSON (no Apple reference-date Double)",
@@ -128,10 +127,24 @@ do {
     check("ChecklistItem has only id/text/isComplete; no reminder/linkedTakeId",
           ijson.contains("\"id\"") && ijson.contains("\"text\"") && ijson.contains("\"isComplete\"") && !ijson.contains("reminder") && !ijson.contains("linkedTake"))
 
-    check("locationReminder nil in v1.0", richTake().locationReminder == nil && Take(bodyText: "x").locationReminder == nil)
+    check("locationReminder nil in v1.0", richTake().locationReminder == nil && Take(blocks: [.textLine("x")]).locationReminder == nil)
 
-    var t = Take(bodyText: "x", isTask: true, isComplete: true); t.isTask = false; t.normaliseActivityFloor()
+    var t = Take(blocks: [.checkItem("x", isComplete: true)]); t.setTask(false); t.normaliseActivityFloor()
     check("Note is the floor (re-asserts; completion cleared)", t.isNote && !t.isComplete)
+
+    // Derived block props (D-035).
+    let taskTake = Take(blocks: [.textLine("prose"), .checkItem("a"), .checkItem("b", isComplete: true)])
+    check("isTask derived from check blocks; isComplete needs all ticked; plainText joins",
+          taskTake.isTask && !taskTake.isComplete && taskTake.plainText == "prose\na\nb")
+
+    // v1 payload (bodyText + checklistItems, no blocks) upgrades to blocks.
+    let v1 = """
+    {"id":"6B4D9E20-1A2B-4C3D-8E5F-001122334455","createdAt":"2026-05-01T09:00:00.000Z","modifiedAt":"2026-05-02T10:30:00.000Z","bodyText":"legacy","contentType":"plain","isNote":true,"isTask":true,"isComplete":false,"isObie":false,"checklistItems":[{"id":"6B4D9E20-1A2B-4C3D-8E5F-001122334456","text":"sub","isComplete":true}]}
+    """
+    let upgraded = try PlatformJSON.decode(Take.self, from: Data(v1.utf8))
+    check("v1 payload upgrades bodyText+items to blocks (re-stamped to v2)",
+          upgraded.schemaVersion == Take.currentSchemaVersion && upgraded.blocks.count == 2
+          && upgraded.plainText == "legacy\nsub" && upgraded.isTask)
 
     // Sequences are saved searches (filter-based, 2026-06-10).
     let seqFilter = SequenceFilter(text: "darkroom", requireTask: true, months: ["2026-06"])
@@ -278,18 +291,18 @@ do {
     do {
         let lastSync = Date(timeIntervalSince1970: 1_700_000_000)
         var base = richTake(); base.modifiedAt = lastSync
-        var l = base; l.bodyText = "local"; l.modifiedAt = lastSync.addingTimeInterval(100)
-        var r = base; r.bodyText = "remote"; r.modifiedAt = lastSync.addingTimeInterval(200)
+        var l = base; l.blocks = [.textLine("local")]; l.modifiedAt = lastSync.addingTimeInterval(100)
+        var r = base; r.blocks = [.textLine("remote")]; r.modifiedAt = lastSync.addingTimeInterval(200)
         if case .conflict = ConflictResolver.decide(local: l, remote: r, lastSync: lastSync) { check("Two offline edits detected as conflict", true) }
         else { check("Two offline edits detected as conflict", false) }
 
         let k = keys(); let cloud = InMemoryCloudFolder(); let t0 = lastSync
-        let remoteStore = InMemoryTakeStore(); var remote = richTake(); remote.bodyText = "remote version"; remote.modifiedAt = t0.addingTimeInterval(300)
+        let remoteStore = InMemoryTakeStore(); var remote = richTake(); remote.blocks = [.textLine("remote version")]; remote.modifiedAt = t0.addingTimeInterval(300)
         try remoteStore.upsert(remote); try engine(remoteStore, cloud, k, now: { t0.addingTimeInterval(301) }).pushOutbound()
-        let local = InMemoryTakeStore(); var le = richTake(id: remote.id); le.bodyText = "local version"; le.modifiedAt = t0.addingTimeInterval(250)
+        let local = InMemoryTakeStore(); var le = richTake(id: remote.id); le.blocks = [.textLine("local version")]; le.modifiedAt = t0.addingTimeInterval(250)
         try local.upsert(le); local.setLastSyncDate(t0)
         let report = try engine(local, cloud, k, now: { t0.addingTimeInterval(400) }).pullInbound()
-        let localBody = try local.take(id: remote.id)?.bodyText
+        let localBody = try local.take(id: remote.id)?.plainText
         check("Conflict surfaced, local NOT overwritten", report.conflicts.count == 1 && localBody == "local version")
     }
     // Local-only mode.

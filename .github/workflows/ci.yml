@@ -65,6 +65,17 @@ jobs:
   xcode-tests:
     name: iOS (xcodebuild test)
     runs-on: macos-15
+    strategy:
+      # D-039 (2026-06-14): the deployment floor is iOS 18, so test the FLOOR
+      # (iOS 18) and CURRENT (OS=latest) — the iOS 17 legs are dropped. fail-fast
+      # off so a failure on one runtime still reports the other.
+      fail-fast: false
+      matrix:
+        destination:
+          # If a future runner image lacks 18.0 exactly, bump to the available
+          # 18.x (the floor leg just needs SOME iOS 18 runtime).
+          - 'platform=iOS Simulator,name=iPhone 16,OS=18.0'
+          - 'platform=iOS Simulator,name=iPhone 16,OS=latest'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -114,18 +125,17 @@ jobs:
         # fails with errSecMissingEntitlement (-34018) on current runtimes,
         # taking the PIN/mnemonic keychain suites down with it.
         #
-        # The destination pins to iPhone 16 / OS=latest — newer than the iOS 17
-        # deployment target, stable across runner image bumps.
-        # FileProtectionTests self-skips on simulator via XCTSkip.
+        # Destinations come from the matrix: the iOS 18 deployment floor (D-039)
+        # and OS=latest. FileProtectionTests self-skips on simulator via XCTSkip.
         #
         # The Catchlight scheme's test action runs BOTH `CatchlightTests`
-        # (unit tests — Tests/CatchlightCoreTests) and `CatchlightUITests`
-        # (XCUITest for the six core flows + the two-tap regression anchor,
-        # workplan 7.4 / 7.5). The scheme is declared explicitly in
-        # project.yml because XcodeGen's auto-scheme does NOT include the
-        # `bundle.ui-testing` target.
+        # (unit tests — Tests/CatchlightCoreTests + Tests/CatchlightAppTests) and
+        # `CatchlightUITests` (XCUITest for the six core flows, the two-tap
+        # regression anchor, and the block-editor / Angle flows — workplan 7.4 /
+        # 7.5). The scheme is declared explicitly in project.yml because
+        # XcodeGen's auto-scheme does NOT include the `bundle.ui-testing` target.
         run: |
           xcodebuild test \
             -project Catchlight.xcodeproj \
             -scheme Catchlight \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest'
+            -destination '${{ matrix.destination }}'

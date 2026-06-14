@@ -21,8 +21,10 @@ import PackageDescription
 let package = Package(
     name: "CatchlightCore",
     platforms: [
-        .macOS(.v13),   // for local test execution; iOS target is configured in the app project
-        .iOS(.v17)
+        .macOS(.v13),     // for local test execution; iOS target is configured in the app project
+        .iOS("18.0")      // D-039 — floor raised to iOS 18.0 (2026-06-14). String form
+                          // because the `.v18` enum case needs swift-tools-version 6.0+
+                          // (this manifest is 5.9).
     ],
     products: [
         .library(name: "CatchlightCore", targets: ["CatchlightCore"]),
