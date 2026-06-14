@@ -154,6 +154,15 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         blocks.map { $0.text }.joined(separator: "\n")
     }
 
+    /// `(done, total)` for the timeline row's "3 of 5" progress marker — only for
+    /// a Task with 2+ check items. A one-item Task returns nil: its checked /
+    /// strikethrough state already reads the progress, so a count would be noise.
+    public var checklistProgress: (done: Int, total: Int)? {
+        let items = checkItems
+        guard items.count >= 2 else { return nil }
+        return (items.filter(\.isComplete).count, items.count)
+    }
+
     // MARK: - Block editing (the block-stack editor, D-035)
     //
     // These reshape `blocks` for the editor and the Focus-ring Task Mark. They
