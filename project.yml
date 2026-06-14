@@ -92,18 +92,18 @@ targets:
           - "CormorantGaramond[wght].ttf"
           - "CormorantGaramond-Italic[wght].ttf"
           - "DMSans[opsz,wght].ttf"
-        # UILaunchScreen: opts into modern full-screen scene sizing (required, see
-        # gotcha #1 in iOS gotchas). UIColorName references the ck-background colour
-        # set in Assets.xcassets (light: Paper #F7F4EF, dark: Ink #0F0E0C) — this
-        # colour set was added 2026-06-07 specifically for the launch screen, since
-        # UIColorName resolves against the asset catalog, not Swift colour extensions.
-        # UIImageName centers the composite splash (icon + wordmark + tagline) on the
-        # background. launch-splash.imageset added 2026-06-09 (task 4.7): two path-only
-        # SVGs (190×280pt viewBox), dark/light adaptive, original rendering intent.
-        UILaunchScreen:
-          UIColorName: "ck-background"
-          UIImageName: "launch-splash"
-          UIImageRespectsSafeAreaInsets: false
+        # Launch screen = LaunchScreen.storyboard (owner 2026-06-15), replacing the
+        # earlier UILaunchScreen dict + centred composite (launch-splash.imageset,
+        # now unused — retire once the storyboard is device-confirmed). A storyboard
+        # also opts into modern full-screen scene sizing (the gotcha-#1 requirement)
+        # but, unlike the dict's single CENTRED image, it can pin the real
+        # catchlight-icon + catchlight-wordmark assets to the EXACT geometry of the
+        # in-app brand mark (IntroChapterScaffold: icon 72 at safe-area-top+24,
+        # wordmark 44 below) — so OS-launch → in-app splash → Welcome never jumps.
+        # Background is the ck-background asset colour (adaptive Paper/Ink), set on
+        # the storyboard's root view. Storyboards can't load custom fonts, hence both
+        # marks are images and the tagline is revealed by the in-app splash instead.
+        UILaunchStoryboardName: "LaunchScreen"
         UIApplicationSupportsIndirectInputEvents: true
         # App encrypts user content with AES-256-GCM (CryptoKit) + HKDF/HMAC-SHA-256
         # for confidentiality — i.e. it DOES use non-exempt encryption (beyond OS

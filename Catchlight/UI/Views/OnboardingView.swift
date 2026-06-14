@@ -95,6 +95,57 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
 // (DaylightCardShadow lives in CatchlightTheme.swift — shared with the
 // Settings sub-screens since 2026-06-12.)
 
+// MARK: - Intro chapter (shared brand mark)
+
+/// The persistent brand mark — icon over wordmark — that anchors the opening
+/// chapter (splash · Welcome · Storage choice · Local warning). It is drawn at an
+/// IDENTICAL position on every one of those screens so that, as the screens
+/// crossfade, the mark reads as STATIC while only the words beneath it change
+/// (owner 2026-06-15). The launch-screen storyboard mirrors this geometry so the
+/// OS launch → splash → Welcome handoff is seamless.
+private struct IntroBrandMark: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image("catchlight-icon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 72, height: 72)
+                .accessibilityHidden(true)
+            Image("catchlight-wordmark")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 44)
+                .accessibilityLabel("Catchlight")
+        }
+    }
+}
+
+/// Layout shared by every screen of the intro chapter. Pins `IntroBrandMark` at a
+/// fixed offset below the safe-area top (so its Y is identical on all four screens)
+/// and lets each screen fill the region beneath it. Because the brand mark sits at
+/// the same position in every screen, the per-step crossfade in `OnboardingView`
+/// leaves it visually static — the surface feels continuous and only the content
+/// and buttons change. Screens after the brand chapter (reveal onward) use the
+/// plain `StepScaffold` instead, so the mark naturally fades out as the
+/// privacy-phrase screens load.
+private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
+    @ViewBuilder var content: () -> Content
+    @ViewBuilder var bottom: () -> Bottom
+
+    var body: some View {
+        StepScaffold {
+            VStack(spacing: 0) {
+                IntroBrandMark()
+                    .padding(.top, 24)
+                content()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        } bottom: {
+            bottom()
+        }
+    }
+}
+
 // Onboarding buttons use the shared dock-geometry pills (DockPillRow.swift) —
 // owner decision 2026-06-12 (HiFi v1.11.1): a single pill sits exactly over
 // the four dock-button slots; pairs split into slots 1+2 / 3+4.
@@ -111,14 +162,12 @@ private struct WelcomeStep: View {
 
 /// Shared layout behind BOTH the launch splash and the onboarding Welcome screen
 /// (owner 2026-06-14: the splash should look like the first screen with only the
-/// text swapped). The brand mark (icon + wordmark) and every content slot sit at
-/// IDENTICAL positions in both modes — the splash lays out the (invisible)
-/// headline / body / button purely to reserve their height — so the
-/// splash→Welcome crossfade reads as "the brand stays, the words change".
-///
-/// Content is spread space-evenly across the full height (replaces the earlier
-/// centred cluster, owner review). Used by `RootView` for the splash (`.splash`,
-/// no view model) and by `WelcomeStep` (`.welcome`).
+/// text swapped). Both modes use `IntroChapterScaffold`, so the brand mark sits at
+/// the same position as on every intro screen; the splash lays out the
+/// (invisible) headline / body / button purely to reserve their height. The
+/// splash→Welcome crossfade therefore reads as "the brand stays, the words
+/// change". Used by `RootView` for the splash (`.splash`, no view model) and by
+/// `WelcomeStep` (`.welcome`).
 struct WelcomeContent: View {
     enum Mode { case splash, welcome }
     let mode: Mode
@@ -127,32 +176,19 @@ struct WelcomeContent: View {
     private var isWelcome: Bool { mode == .welcome }
 
     var body: some View {
-        StepScaffold {
+        IntroChapterScaffold {
             VStack(spacing: 0) {
-                Spacer(minLength: 16)
-                VStack(spacing: 16) {
-                    Image("catchlight-icon")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 72, height: 72)
-                        .accessibilityHidden(true)
-                    Image("catchlight-wordmark")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 44)
-                        .accessibilityLabel("Catchlight")
-                }
-                Spacer(minLength: 16)
+                Spacer(minLength: 24)
                 // Primary-text slot. The headline is laid out in BOTH modes (so the
-                // slot — and therefore the brand mark above — keeps the same height
-                // and Y); the splash hides it and overlays the tagline in its place.
+                // slot keeps the same height); the splash hides it and overlays the
+                // tagline in its place.
                 ZStack {
                     headline.opacity(isWelcome ? 1 : 0)
                     if !isWelcome { tagline }
                 }
-                Spacer(minLength: 16)
+                Spacer(minLength: 24)
                 bodyBlock.opacity(isWelcome ? 1 : 0)
-                Spacer(minLength: 16)
+                Spacer(minLength: 24)
             }
         } bottom: {
             // Button slot — present in both for identical geometry; hidden + inert
@@ -209,30 +245,31 @@ private struct StorageChoiceStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
     var body: some View {
-        StepScaffold {
-            VStack(spacing: 24) {
-                Spacer().frame(height: 8)
-                Text("Takes belong to you and so does the choice of how they are stored.")
+        IntroChapterScaffold {
+            VStack(spacing: 0) {
+                Spacer(minLength: 16)
+                Text("Now — where should your Takes live?")
                     .font(CatchlightFont.displayFixed(size: 26))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 24)
                     .accessibilityAddTraits(.isHeader)
 
-                Spacer(minLength: 0)
+                Spacer(minLength: 32)
 
-                StorageOptionCard(
-                    title: "Local — on this device only",
-                    description: "Your Takes stay on this device. If you lose it without a backup, they're gone."
-                ) { vm.chooseStorage(.local) }
+                VStack(spacing: 16) {
+                    StorageOptionCard(
+                        title: "Local — on this device only",
+                        description: "Your Takes stay on this device. If you lose it without a backup, they're gone."
+                    ) { vm.chooseStorage(.local) }
 
-                StorageOptionCard(
-                    title: "Cloud — backed up and restorable",
-                    description: "Connect a cloud folder you control. Your Takes remain encrypted — we never see them."
-                ) { vm.chooseStorage(.cloud) }
+                    StorageOptionCard(
+                        title: "Cloud — backed up and restorable",
+                        description: "Connect a cloud folder you control. Your Takes remain encrypted — we never see them."
+                    ) { vm.chooseStorage(.cloud) }
+                }
 
-                Spacer(minLength: 0)
+                Spacer(minLength: 16)
             }
         } bottom: {
             EmptyView()
@@ -278,21 +315,23 @@ private struct LocalWarningStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
     var body: some View {
-        StepScaffold {
-            VStack(spacing: 24) {
-                Spacer()
-                Text("One thing before we continue.")
-                    .font(CatchlightFont.displayFixed(size: 28))
-                    .foregroundStyle(Color.ckTextPrimary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityAddTraits(.isHeader)
-                Text("Without cloud backup, your Takes exist only on this device. If you lose access to it and haven't set up a second device, your data cannot be recovered.")
-                    .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextSecondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer()
+        IntroChapterScaffold {
+            VStack(spacing: 0) {
+                Spacer(minLength: 24)
+                VStack(spacing: 24) {
+                    Text("One thing before we continue.")
+                        .font(CatchlightFont.displayFixed(size: 28))
+                        .foregroundStyle(Color.ckTextPrimary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    Text("Without cloud backup, your Takes exist only on this device. If you lose access to it and haven't set up a second device, your data cannot be recovered.")
+                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 24)
             }
         } bottom: {
             DockPillRow {
@@ -522,12 +561,13 @@ private struct ConfirmStep: View {
 private struct CompleteStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
+    /// The encryption-fact line that follows the voice gem — storage-specific.
     private var bodyText: String {
         switch vm.storagePath {
         case .local:
-            return "Your Takes are yours. Encrypted on this device, readable only by you."
+            return "Encrypted on this device, readable only by you."
         case .cloud:
-            return "Your Takes are yours. Encrypted on this device and backed up to your cloud folder — readable only by you."
+            return "Encrypted on this device and backed up to your cloud folder — readable only by you."
         }
     }
 
@@ -546,11 +586,20 @@ private struct CompleteStep: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
-                Text(bodyText)
-                    .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextSecondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                // The voice gem leads (the "story before the real app opens",
+                // owner 2026-06-15), then the storage-specific encryption fact.
+                VStack(spacing: 12) {
+                    Text("Your thoughts, in your order, telling your story. Nobody else's.")
+                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextPrimary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(bodyText)
+                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Spacer()
             }
         } bottom: {
