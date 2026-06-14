@@ -29,6 +29,13 @@ struct SettingsView: View {
 
     @State private var vm = SettingsViewModel()
 
+    #if DEBUG
+    /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
+    @State private var showResetConfirm = false
+    /// Settings-backed toggle for the section 2b on-device inset readout overlay.
+    @AppStorage(DebugInsetReadoutSettings.defaultsKey) private var showInsetReadout = false
+    #endif
+
     var body: some View {
         NavigationStack {
             List {
@@ -37,6 +44,9 @@ struct SettingsView: View {
                 syncSection
                 subscriptionSection
                 systemSection
+                #if DEBUG
+                debugSection
+                #endif
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
@@ -81,7 +91,73 @@ struct SettingsView: View {
         .sheet(isPresented: $vm.isAboutSheetPresented) {
             AboutView()
         }
+        #if DEBUG
+        .alert("Reset Catchlight?", isPresented: $showResetConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Wipe & re-onboard", role: .destructive) {
+                DebugReset.wipeAndRelaunch()
+            }
+        } message: {
+            Text("Deletes the master key, PIN, privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
+        }
+        #endif
     }
+
+    #if DEBUG
+    // MARK: - DEBUG (never compiled into Release / TestFlight)
+
+    /// Developer-only aids for on-device testing (fix pass 1, sections 2 / 2b).
+    /// The whole section is `#if DEBUG`, so it cannot ship.
+    private var debugSection: some View {
+        Section {
+            // Section 2 — one-tap re-onboarding on a real device. The Keychain
+            // survives app deletion, so this is the only way to re-trigger
+            // onboarding without a full device wipe.
+            Button(role: .destructive) {
+                showResetConfirm = true
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 20, weight: .regular))
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    Text("Reset Catchlight (wipe & re-onboard)")
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 8)
+                }
+                .frame(minHeight: 52)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.ckRuby)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityIdentifier("debug-reset")
+            .accessibilityHint("Wipes everything and returns to onboarding. Debug builds only.")
+
+            // Section 2b — toggle the on-device safe-area inset readout overlay.
+            Toggle(isOn: $showInsetReadout) {
+                HStack(spacing: 14) {
+                    Image(systemName: "ruler")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(Color.ckAccent)
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    Text("Inset readout")
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextPrimary)
+                }
+            }
+            .tint(Color.ckEmber)
+            .frame(minHeight: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityIdentifier("debug-inset-readout-toggle")
+            .accessibilityHint("Shows live safe-area insets bottom-right, to verify the device-layout fix.")
+        } header: {
+            sectionHeader("Debug")
+        }
+    }
+    #endif
 
     // MARK: - Appearance
 

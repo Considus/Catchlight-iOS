@@ -290,9 +290,11 @@ struct BiometricsAvailability {
 /// Persisted biometrics-enabled flag. Convenience unlock only — does NOT affect
 /// the PIN itself, which is always required as a fallback.
 enum BiometricsPreference {
-    private static let key = "catchlight.pin.biometricsEnabled"
+    /// Standard-defaults key. Exposed (non-private) so the DEBUG reset can clear
+    /// it as part of a fresh-install wipe (DebugReset).
+    static let defaultsKey = "catchlight.pin.biometricsEnabled"
     static var isEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: key) }
-        set { UserDefaults.standard.set(newValue, forKey: key) }
+        get { UserDefaults.standard.bool(forKey: defaultsKey) }
+        set { UserDefaults.standard.set(newValue, forKey: defaultsKey) }
     }
 }
