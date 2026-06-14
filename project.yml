@@ -15,7 +15,10 @@ name: Catchlight
 options:
   bundleIdPrefix: com.considus
   deploymentTarget:
-    iOS: "17.0"            # brief §3.1 — iOS 17.0 minimum (Secure Enclave guaranteed)
+    iOS: "18.0"            # brief §3.1 — iOS 18.0 minimum (D-039, 2026-06-14; raised
+                          # from 17.0: owner has no iOS 17 device, and the 17.x sim
+                          # was unreliable for the block-editor/Angle UI tests). Secure
+                          # Enclave still guaranteed across all supported devices.
   createIntermediateGroups: true
 
 settings:

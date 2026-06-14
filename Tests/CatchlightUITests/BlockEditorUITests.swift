@@ -22,20 +22,13 @@ import XCTest
 
 final class BlockEditorUITests: XCTestCase {
 
-    override func setUpWithError() throws {
+    override func setUp() {
         continueAfterFailure = false
-        // The block editor is a stack of UIViewRepresentable (UITextView) rows
-        // with programmatic cross-row focus. On the iOS 17.0 SIMULATOR, XCUITest
-        // drives the Focus-ring commit and snapshots the rapidly-restructured
-        // text views unreliably (rows appear, then vanish from the snapshot mid
-        // assertion) — a harness limitation on the old runtime, not an app bug:
-        // the flow is deterministic on iOS 26 and every mutation is unit-tested
-        // in TakeModelTests. So exercise these on iOS 18+ and skip on the floor,
-        // mirroring CoreFlowsUITests' existing sim-gesture skips. The editor on
-        // iOS 17 is on the on-device QA checklist.
-        if #unavailable(iOS 18) {
-            throw XCTSkip("Block-editor UI flow exercised on iOS 18+; skipped on the iOS 17 simulator where the synthesized Focus-ring commit lands unreliably (the make-checklist itself runs without hanging — verified — but the dim-tap commit is flaky). Logic is unit-tested in TakeModelTests and the flow is verified on iOS 26 + on-device.")
-        }
+        // The iOS-18 gate is gone (D-039): the deployment floor is now iOS 18, so
+        // the block-editor / Angle UI flows are first-class on every supported
+        // runtime. (They were previously skipped on the iOS 17 simulator, where
+        // the synthesized Focus-ring dim-commit and the UITextView snapshots were
+        // unreliable.)
     }
 
     // MARK: - Helpers
