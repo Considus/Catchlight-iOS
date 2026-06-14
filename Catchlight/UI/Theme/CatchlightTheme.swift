@@ -288,6 +288,24 @@ enum CatchlightFont {
         return .system(size: size, weight: .regular, design: .serif).italic()
     }
 
+    /// UIKit counterpart of `display(size:)` for `UIViewRepresentable` text
+    /// surfaces (the block editor's `UITextView` rows). Scales with Dynamic Type
+    /// via `UIFontMetrics(.body)`. Falls back to the system serif italic when the
+    /// bundled face isn't present — matching `display`'s SwiftUI fallback.
+    static func uiDisplay(size: CGFloat) -> UIFont {
+        let base: UIFont
+        if let name = firstAvailable(displayCandidates), let custom = UIFont(name: name, size: size) {
+            base = custom
+        } else {
+            let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
+                .withDesign(.serif)?
+                .withSymbolicTraits(.traitItalic)
+            base = descriptor.map { UIFont(descriptor: $0, size: size) }
+                ?? UIFont.italicSystemFont(ofSize: size)
+        }
+        return UIFontMetrics(forTextStyle: .body).scaledFont(for: base)
+    }
+
     /// Interface text — DM Sans, scaling with Dynamic Type. Falls back to the
     /// system sans (rounded-neutral) when the font is not bundled.
     static func ui(_ weight: Font.Weight = .regular,

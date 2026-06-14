@@ -9,6 +9,33 @@ import Foundation
 import CryptoKit
 @testable import CatchlightCore
 
+extension Take {
+    /// Test sugar for the sync / store / conflict suites, which only need to
+    /// give a Take some body text and read it back — they don't care about the
+    /// block structure. The production `primaryText` bridge was retired when the
+    /// block editor landed (D-035 / Phase 2); this mirrors its old semantics
+    /// (first prose block, inserted at the front if none) so those tests stay
+    /// about sync, not content shape.
+    var primaryText: String {
+        get {
+            for block in blocks {
+                if case .text(let textBlock) = block { return textBlock.text }
+            }
+            return ""
+        }
+        set {
+            if let index = blocks.firstIndex(where: { if case .text = $0 { return true } else { return false } }) {
+                if case .text(var textBlock) = blocks[index] {
+                    textBlock.text = newValue
+                    blocks[index] = .text(textBlock)
+                }
+            } else {
+                blocks.insert(.text(TextBlock(text: newValue)), at: 0)
+            }
+        }
+    }
+}
+
 enum TestFixtures {
     /// Build a SyncEngine with test defaults. `deviceId` is REQUIRED by the
     /// production initialiser (2026-06-10 remediation) — a fresh UUID default is

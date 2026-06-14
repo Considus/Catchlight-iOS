@@ -83,7 +83,7 @@ final class TakeModelTests: XCTestCase {
         XCTAssertEqual(take.checkItems.map(\.isComplete), [false, true])
     }
 
-    // MARK: - Content mutation helpers (Phase-1 bridges)
+    // MARK: - Block editing (D-035 / Phase 2)
 
     func testSetTask_promotesProseToCheckItems() {
         var take = Take(blocks: [.textLine("buy milk")])
@@ -106,28 +106,92 @@ final class TakeModelTests: XCTestCase {
         XCTAssertEqual(take.plainText, "buy milk", "item text is preserved as prose")
     }
 
+    func testConvertToChecklist_splittingTargetBlock_splitsOnNewlines() {
+        // The Focus-ring Task ON path: only the cursor's text block is split,
+        // each line becoming its own check item.
+        let prose = TakeBlock.text(TextBlock(text: "milk\neggs\nbread"))
+        var take = Take(blocks: [.textLine("header"), prose])
+        let firstID = take.convertToChecklist(splitting: prose.id)
+        XCTAssertEqual(take.checkItems.map(\.text), ["milk", "eggs", "bread"])
+        XCTAssertEqual(take.blocks.first?.text, "header", "other prose is untouched")
+        XCTAssertEqual(firstID, take.checkItems.first?.id, "returns the first new item to focus")
+    }
+
+    func testConvertToChecklist_noTarget_splitsEveryProseBlock() {
+        var take = Take(blocks: [.textLine("a\nb"), .textLine("c")])
+        take.convertToChecklist()
+        XCTAssertEqual(take.checkItems.map(\.text), ["a", "b", "c"])
+    }
+
+    func testConvertToProse_joinsCheckRunsIntoTextBlocks() {
+        var take = Take(blocks: [.checkItem("milk"), .checkItem("eggs"),
+                                 .textLine("note"), .checkItem("bread")])
+        take.convertToProse()
+        XCTAssertFalse(take.isTask)
+        XCTAssertEqual(take.blocks.count, 3, "the leading run collapses to one block")
+        XCTAssertEqual(take.blocks.first?.text, "milk\neggs")
+        XCTAssertEqual(take.plainText, "milk\neggs\nnote\nbread")
+    }
+
+    func testInsertCheckItem_addsEmptyItemAfter() {
+        let first = TakeBlock.checkItem("milk")
+        var take = Take(blocks: [first])
+        let newID = take.insertCheckItem(after: first.id)
+        XCTAssertEqual(take.checkItems.count, 2)
+        XCTAssertEqual(take.checkItems.last?.text, "")
+        XCTAssertEqual(newID, take.checkItems.last?.id)
+    }
+
+    func testConvertCheckToText_exitsListPreservingId() {
+        let item = TakeBlock.checkItem("milk")
+        var take = Take(blocks: [item])
+        take.convertCheckToText(blockID: item.id)
+        XCTAssertFalse(take.isTask)
+        XCTAssertEqual(take.blocks.first?.id, item.id, "id is preserved so focus stays")
+        XCTAssertEqual(take.blocks.first?.text, "milk")
+    }
+
+    func testBlockIDBefore_andRemoveBlock() {
+        let a = TakeBlock.textLine("a"), b = TakeBlock.checkItem("b"), c = TakeBlock.checkItem("c")
+        var take = Take(blocks: [a, b, c])
+        XCTAssertEqual(take.blockID(before: b.id), a.id)
+        XCTAssertNil(take.blockID(before: a.id), "first block has nothing before it")
+        take.removeBlock(blockID: b.id)
+        XCTAssertEqual(take.blocks.map(\.id), [a.id, c.id])
+    }
+
+    func testMoveBlock_reordersBeforeTarget() {
+        let a = TakeBlock.checkItem("a"), b = TakeBlock.checkItem("b"), c = TakeBlock.checkItem("c")
+        var take = Take(blocks: [a, b, c])
+        take.moveBlock(id: c.id, before: a.id)
+        XCTAssertEqual(take.blocks.map(\.id), [c.id, a.id, b.id])
+        take.moveBlock(id: c.id, before: c.id)   // no-op
+        XCTAssertEqual(take.blocks.map(\.id), [c.id, a.id, b.id])
+    }
+
+    func testUpdateText_andToggleItemComplete() {
+        let t = TakeBlock.textLine("draft"), c = TakeBlock.checkItem("todo")
+        var take = Take(blocks: [t, c])
+        take.updateText("revised", blockID: t.id)
+        XCTAssertEqual(take.blocks.first?.text, "revised")
+        take.toggleItemComplete(blockID: c.id)
+        XCTAssertTrue(take.isComplete)
+    }
+
+    func testRemoveEmptyTextBlocks_dropsEmptyProseKeepsEmptyChecks() {
+        var take = Take(blocks: [.textLine(""), .textLine("keep"), .checkItem("")])
+        take.removeEmptyTextBlocks()
+        XCTAssertEqual(take.blocks.count, 2)
+        XCTAssertEqual(take.blocks.first?.text, "keep")
+        XCTAssertTrue(take.isTask, "an empty check item is kept")
+    }
+
     func testSetAllItemsComplete_ticksEveryItem() {
         var take = Take(blocks: [.checkItem("a"), .textLine("x"), .checkItem("b")])
         take.setAllItemsComplete(true)
         XCTAssertTrue(take.isComplete)
         take.setAllItemsComplete(false)
         XCTAssertFalse(take.isComplete)
-    }
-
-    func testPrimaryText_editsFirstProseBlockPreservingChecks() {
-        var take = Take(blocks: [.textLine("draft"), .checkItem("item")])
-        take.primaryText = "revised"
-        XCTAssertEqual(take.primaryText, "revised")
-        XCTAssertTrue(take.isTask, "editing prose must not drop the check block")
-        XCTAssertEqual(take.checkItems.map(\.text), ["item"])
-    }
-
-    func testPrimaryText_insertsProseBlockWhenNone() {
-        var take = Take(blocks: [.checkItem("item")])
-        XCTAssertEqual(take.primaryText, "")
-        take.primaryText = "context"
-        XCTAssertEqual(take.primaryText, "context")
-        XCTAssertTrue(take.isTask)
     }
 
     // MARK: - Equality (synthesised — whole-struct, NOT id-only)
@@ -165,7 +229,7 @@ final class TakeModelTests: XCTestCase {
         // touch `modifiedAt` ourselves — the model doesn't auto-stamp on field mutation.
         var mutated = original
         Thread.sleep(forTimeInterval: 0.001)
-        mutated.primaryText = "second"
+        mutated.updateText("second", blockID: original.blocks[0].id)
         mutated.modifiedAt = Date()
         XCTAssertGreaterThan(mutated.modifiedAt, original.createdAt,
                              "modifiedAt must move forward after a mutation")

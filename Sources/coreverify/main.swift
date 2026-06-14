@@ -291,18 +291,18 @@ do {
     do {
         let lastSync = Date(timeIntervalSince1970: 1_700_000_000)
         var base = richTake(); base.modifiedAt = lastSync
-        var l = base; l.primaryText = "local"; l.modifiedAt = lastSync.addingTimeInterval(100)
-        var r = base; r.primaryText = "remote"; r.modifiedAt = lastSync.addingTimeInterval(200)
+        var l = base; l.blocks = [.textLine("local")]; l.modifiedAt = lastSync.addingTimeInterval(100)
+        var r = base; r.blocks = [.textLine("remote")]; r.modifiedAt = lastSync.addingTimeInterval(200)
         if case .conflict = ConflictResolver.decide(local: l, remote: r, lastSync: lastSync) { check("Two offline edits detected as conflict", true) }
         else { check("Two offline edits detected as conflict", false) }
 
         let k = keys(); let cloud = InMemoryCloudFolder(); let t0 = lastSync
-        let remoteStore = InMemoryTakeStore(); var remote = richTake(); remote.primaryText = "remote version"; remote.modifiedAt = t0.addingTimeInterval(300)
+        let remoteStore = InMemoryTakeStore(); var remote = richTake(); remote.blocks = [.textLine("remote version")]; remote.modifiedAt = t0.addingTimeInterval(300)
         try remoteStore.upsert(remote); try engine(remoteStore, cloud, k, now: { t0.addingTimeInterval(301) }).pushOutbound()
-        let local = InMemoryTakeStore(); var le = richTake(id: remote.id); le.primaryText = "local version"; le.modifiedAt = t0.addingTimeInterval(250)
+        let local = InMemoryTakeStore(); var le = richTake(id: remote.id); le.blocks = [.textLine("local version")]; le.modifiedAt = t0.addingTimeInterval(250)
         try local.upsert(le); local.setLastSyncDate(t0)
         let report = try engine(local, cloud, k, now: { t0.addingTimeInterval(400) }).pullInbound()
-        let localBody = try local.take(id: remote.id)?.primaryText
+        let localBody = try local.take(id: remote.id)?.plainText
         check("Conflict surfaced, local NOT overwritten", report.conflicts.count == 1 && localBody == "local version")
     }
     // Local-only mode.
