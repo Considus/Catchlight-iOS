@@ -328,7 +328,7 @@ struct PetalFanView: View {
                         .font(.system(size: 16, weight: .light))
                         .foregroundStyle(active ? Color.ckBackground : Color.ckEmber)
                 } else {
-                    ObiePetalGlyph(size: 18)
+                    ObiePetalGlyph(size: 16)   // match the 16pt sibling glyphs (D-042; owner: Obie petal too large)
                         .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
                 }
             }

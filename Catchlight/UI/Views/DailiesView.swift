@@ -428,7 +428,10 @@ struct DailiesView: View {
                     ForEach(Array(monthGroups.enumerated()), id: \.element.month) { groupIndex, group in
                         // Ghosted month marker — appears only while scrolling.
                         Text(group.month)
-                            .font(CatchlightFont.ui(.medium, size: 12, relativeTo: .caption))
+                            // .month — 11pt medium, 0.08em tracking (matches the
+                            // DAILIES heading kerning; D-042, was 12pt untracked).
+                            .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                            .kerning(0.88)
                             .foregroundStyle(Color.ckTextSecondary)
                             .padding(.leading, spineX + 22)
                             .padding(.vertical, 6)

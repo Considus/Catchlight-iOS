@@ -229,21 +229,29 @@ extension Color {
 // These need the active colour scheme because the same activity reads differently
 // per mode. Views pass their `@Environment(\.colorScheme)` in.
 
+// Per-TYPE fill colours (position is set by TakeCircleView's N/E/S/W diamond —
+// Note=top, Task=right, Remind=left, Reserved=bottom). Daylight values are the
+// HiFi v1.6.9 `--q-*` swatches (the canonical look the owner reviews). v1.6.9
+// moved the Ember accent from Remind onto TASK, so Task is the warm quadrant
+// and Remind is the lighter amber. (D-042; supersedes the DS §5.2 Ink-tint
+// Daylight values — flagged for DS reconciliation, sub-decision D-S1.)
 enum Quadrant {
-    /// Top-right: Note — Catchlight @ 50% (Night) / Ink @ 30% (Daylight).
+    /// Note — Daylight grey `#BCBCBB` (HiFi `--q-note`) / Night Catchlight @ 55%.
     static func note(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.ckCatchlight.opacity(0.50) : Color.ckInk.opacity(0.30)
+        scheme == .dark ? Color.ckCatchlight.opacity(0.55) : Color(hex: 0xBCBCBB)
     }
 
-    /// Bottom-right: Reminder — Ember (both).
-    static func reminder(_ scheme: ColorScheme) -> Color { .ckEmber }
+    /// Task — the warm Ember accent (HiFi `--q-task` `#C9A96E`), both modes.
+    static func task(_ scheme: ColorScheme) -> Color { .ckEmber }
 
-    /// Bottom-left: Task — Glow @ 60% (Night) / Ink @ 12% (Daylight).
-    static func task(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.ckGlow.opacity(0.60) : Color.ckInk.opacity(0.12)
+    /// Remind — Daylight `#B5A283` (HiFi `--q-remind`, 50% tint of overdue) /
+    /// Night Glow @ 65% (a distinct gold from Task's Ember).
+    static func reminder(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color.ckGlow.opacity(0.65) : Color(hex: 0xB5A283)
     }
 
     /// Obie ring around the whole circle — Glow (Night) / Ember (Daylight).
+    /// Also the colour of the Obie specular-dot core (DS §5.4).
     static func obieRing(_ scheme: ColorScheme) -> Color {
         scheme == .dark ? .ckGlow : .ckEmber
     }
@@ -396,6 +404,21 @@ enum CatchlightFont {
             base = descriptor.map { UIFont(descriptor: $0, size: size) }
                 ?? UIFont.italicSystemFont(ofSize: size)
         }
+        return UIFontMetrics(forTextStyle: .body).scaledFont(for: base)
+    }
+
+    /// UIKit DM Sans — the `ui()` counterpart for `UIViewRepresentable` text
+    /// surfaces (the block editor's `UITextView` rows). Take content is DM Sans,
+    /// never the display face (DS §2.2 / D-042). Scales via UIFontMetrics(.body).
+    static func uiBody(size: CGFloat, weight: Font.Weight = .regular) -> UIFont {
+        let candidates: [String]
+        switch weight {
+        case .light: candidates = uiLightCandidates
+        case .medium, .semibold, .bold: candidates = uiMediumCandidates
+        default: candidates = uiRegularCandidates
+        }
+        let base = firstAvailable(candidates).flatMap { UIFont(name: $0, size: size) }
+            ?? UIFont.systemFont(ofSize: size)
         return UIFontMetrics(forTextStyle: .body).scaledFont(for: base)
     }
 

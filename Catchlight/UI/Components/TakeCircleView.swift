@@ -7,11 +7,13 @@
 //  timeline row, in search/sequence results, and in the edit footer. Pure
 //  rendering — no gestures here; callers attach taps/long-presses.
 //
-//  Quadrant map (clockwise from top-right), per the brief:
-//    • Top-right    → Note      (Catchlight @ 50% Night / Ink @ 30% Daylight)
-//    • Bottom-right → Reminder  (Ember, both)
-//    • Bottom-left  → Task      (Glow @ 60% Night / Ink @ 12% Daylight)
-//    • Top-left     → Reserved  (always empty)
+//  Quadrant map — N/E/S/W DIAMOND (HiFi §2 Iris SVG, owner-confirmed 2026-06-14,
+//  D-042). Each wedge is a 90° slice centred on a cardinal direction:
+//    • Top    (N) → Note     (grey #BCBCBB Daylight / Catchlight@55% Night)
+//    • Right  (E) → Task     (Ember — the warm accent, HiFi v1.6.9)
+//    • Left   (W) → Remind   (#B5A283 Daylight / Glow@65% Night)
+//    • Bottom (S) → Reserved (always empty)
+//  (Supersedes the prior NE/SE/SW X-orientation and the DS §5.2 prose table.)
 //
 
 import SwiftUI
@@ -73,22 +75,25 @@ struct TakeCircleView: View {
             Circle()
                 .strokeBorder(Color.ckIrisOff, lineWidth: diameter * 0.28)
 
-            // Top-right: Note. Angles -90°..0° (12 o'clock to 3 o'clock).
+            // N/E/S/W diamond (D-042): each wedge is centred on a cardinal point,
+            // spanning ±45° from it (corner-to-corner), so the slices read as a
+            // diamond, not an X. 0° = 3 o'clock, increasing clockwise.
+            // Top (N): Note — centred on -90°, spans -135°..-45°.
             if take.isNote {
-                QuadrantSlice(startDegrees: -90, endDegrees: 0)
+                QuadrantSlice(startDegrees: -135, endDegrees: -45)
                     .fill(Quadrant.note(scheme))
             }
-            // Bottom-right: Reminder. 0°..90°.
-            if hasReminder {
-                QuadrantSlice(startDegrees: 0, endDegrees: 90)
-                    .fill(Quadrant.reminder(scheme))
-            }
-            // Bottom-left: Task. 90°..180°.
+            // Right (E): Task — centred on 0°, spans -45°..45°.
             if take.isTask {
-                QuadrantSlice(startDegrees: 90, endDegrees: 180)
+                QuadrantSlice(startDegrees: -45, endDegrees: 45)
                     .fill(Quadrant.task(scheme))
             }
-            // Top-left (180°..270°) is reserved — intentionally empty.
+            // Left (W): Remind — centred on 180°, spans 135°..225°.
+            if hasReminder {
+                QuadrantSlice(startDegrees: 135, endDegrees: 225)
+                    .fill(Quadrant.reminder(scheme))
+            }
+            // Bottom (S, 45°..135°) is reserved — intentionally empty.
 
             // Hairline outer ring (HiFi v1.7 — section 7): a 0.75pt rim around
             // the annular quadrants. Daylight #E7E7E7 (v1.7's iris SVG uses the
@@ -96,14 +101,27 @@ struct TakeCircleView: View {
             Circle()
                 .strokeBorder(Color.ckIrisRing, lineWidth: 0.75)
 
-            // Obie: full ring + specular dot at the upper-right.
+            // Obie: outer ring with a gap + a 3-layer specular catch.
             if take.isObie {
+                // Ring: 2pt, sitting ~3pt OUTSIDE the disc edge (DS §5.1
+                // obieRingWidth 2 / obieRingGap 3). `.stroke` on a larger circle
+                // (overflowing the frame, as the HiFi Obie does) — was a ~2.6pt
+                // strokeBorder at the rim with no gap.
                 Circle()
-                    .strokeBorder(Quadrant.obieRing(scheme), lineWidth: max(2, diameter * 0.12))
-                Circle()
-                    .fill(Color.white.opacity(scheme == .dark ? 0.9 : 0.8))
-                    .frame(width: diameter * 0.16, height: diameter * 0.16)
-                    .offset(x: diameter * 0.22, y: -diameter * 0.22)
+                    .stroke(Quadrant.obieRing(scheme), lineWidth: 2)
+                    .frame(width: diameter + 6, height: diameter + 6)
+                // Specular catch (DS §5.4 / HiFi §2): a 3-layer dot upper-right
+                // at ~0.305·D per axis — ground halo, warm core, bright catch —
+                // replacing the flat single white pip.
+                ZStack {
+                    Circle().fill(scheme == .dark ? Color.black.opacity(0.35) : Color.ckInk.opacity(0.08))
+                        .frame(width: diameter * 0.31, height: diameter * 0.31)
+                    Circle().fill(Quadrant.obieRing(scheme))   // Ember (Daylight) / Glow (Night)
+                        .frame(width: diameter * 0.19, height: diameter * 0.19)
+                    Circle().fill(Color(hex: 0xFEFCF5))
+                        .frame(width: diameter * 0.10, height: diameter * 0.10)
+                }
+                .offset(x: diameter * 0.305, y: -diameter * 0.305)
             }
         }
         .frame(width: diameter, height: diameter)
