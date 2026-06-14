@@ -210,16 +210,51 @@ final class BlockEditorUITests: XCTestCase {
         guard handles.count >= 2 else {
             throw XCTSkip("Reorder handles not resolvable in this simulator runtime.")
         }
+        let source = handles.element(boundBy: 1)
+        let dest = handles.element(boundBy: 0)
+        guard source.isHittable, dest.isHittable else {
+            throw XCTSkip("Reorder handles not hittable in this simulator runtime; covered by unit tests + on-device QA.")
+        }
         let firstValueBefore = checkFields(app).element(boundBy: 0).value as? String
 
         // Drag the second handle up onto the first row.
-        handles.element(boundBy: 1).press(forDuration: 0.6,
-                                           thenDragTo: handles.element(boundBy: 0))
+        source.press(forDuration: 0.6, thenDragTo: dest)
 
         let firstValueAfter = checkFields(app).element(boundBy: 0).value as? String
         if firstValueAfter == firstValueBefore {
             throw XCTSkip("Simulator did not deliver the reorder drag; covered by unit tests + on-device QA.")
         }
         XCTAssertEqual(firstValueAfter, "bravo", "The dragged item should now be first")
+    }
+
+    // MARK: - List Angle (D-033) — opens from a checklist Take and ticks an item
+
+    /// A checklist Take shows the top-right Angle affordance; tapping it opens the
+    /// full-screen list Angle, where tapping an item ticks it on the real Take.
+    func testAngle_opensFromChecklist_andTicksItem() throws {
+        let app = launchAppForUITesting()
+        let body = openNewEditor(app)
+        body.tap()
+        body.typeText("milk")
+
+        try toggleTaskOnViaFocusRing(app)
+        try requireChecklistRendered(app)
+
+        // The affordance appears only for a Take with check items.
+        let angleButton = app.buttons["angle-button"]
+        XCTAssertTrue(angleButton.waitForExistence(timeout: 4),
+                      "Angle affordance should appear for a checklist Take")
+        angleButton.tap()
+
+        let box = app.buttons.matching(identifier: "angle-checkbox").firstMatch
+        XCTAssertTrue(box.waitForExistence(timeout: 4), "List Angle item did not present")
+        XCTAssertEqual(box.value as? String, "unchecked")
+        box.tap()
+        XCTAssertEqual(box.value as? String, "checked", "Tapping in the Angle ticks the item")
+
+        // Exit the ephemeral Angle back to the editor.
+        app.buttons["angle-close"].tap()
+        XCTAssertTrue(app.buttons["editor-shape"].waitForExistence(timeout: 3),
+                      "Closing the Angle returns to the editor")
     }
 }
