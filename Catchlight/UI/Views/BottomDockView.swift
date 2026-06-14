@@ -70,13 +70,18 @@ struct BottomDockView: View {
     var onNewTake: () -> Void
 
     private let buttonSize: CGFloat = CatchlightLayout.minTouchTarget
-    /// Visible dock-circle diameter (HiFi v1.7 `--iris` = 36pt) inside the 44pt
-    /// touch frame (HIG / gotcha #15). All resting dock buttons draw this circle
-    /// — a 1.5pt Ember-tinted border around the icon (.db) — so they read as
-    /// circles rather than bare icons (section 6). Filled buttons (+, on-toggles,
-    /// the × cancel) use the same diameter so the dock stays visually uniform and
-    /// the off→on toggle doesn't jump size.
-    private let dockCircle: CGFloat = 36
+    /// Visible dock-circle diameter. Owner 2026-06-15: enlarged 36 → 44 so the
+    /// circle FILLS its 44pt touch frame (= `minTouchTarget`) — the buttons read
+    /// larger and now match the onboarding/paywall pill, which already sizes to the
+    /// 44pt grid (DockPillRow). Slot centres are unchanged, so the buttons keep
+    /// their distance from the screen edges and only sit visually closer together.
+    /// Glyphs were scaled in step (×44/36) to preserve the HiFi glyph-to-circle
+    /// ratio. All resting dock buttons draw this circle — a 1.5pt Ember-tinted
+    /// border around the icon (.db) — so they read as circles rather than bare
+    /// icons (section 6). Filled buttons (+, on-toggles, the × cancel) use the same
+    /// diameter so the dock stays visually uniform and the off→on toggle doesn't
+    /// jump size.
+    private let dockCircle: CGFloat = 44
 
     /// The resting border ring shared by every dock button (HiFi v1.7 .db).
     /// `strong` = the 0.55 opacity reserved for the Add + (.db.add) and the
@@ -201,7 +206,7 @@ struct BottomDockView: View {
                 // a fill. Was a filled ckAdd droplet with an Ink "+".
                 dockRing(strong: true)   // .db.add — Ember border @55%
                 Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: 24, weight: .medium))   // scaled with the 36→44 circle (owner 2026-06-15)
                     .foregroundStyle(Color.ckAccent)   // #856539 glyph (Option A), like the siblings
             }
             .frame(width: buttonSize, height: buttonSize)
@@ -267,7 +272,7 @@ struct BottomDockView: View {
                         .transition(.opacity)
                 }
                 dockRing(strong: true)   // .db.active — Ember border @55%
-                DailiesGlyph(size: 20)
+                DailiesGlyph(size: 24)   // scaled with the 36→44 circle
                     .foregroundStyle(Color.ckAccent)
                     .frame(width: buttonSize, height: buttonSize)
                     .contentShape(Rectangle())
@@ -300,7 +305,7 @@ struct BottomDockView: View {
         } label: {
             ZStack {
                 dockRing()   // .db — Ember border @35%
-                SequenceGlyph(size: 20)
+                SequenceGlyph(size: 24)   // scaled with the 36→44 circle
                     .foregroundStyle(Color.ckAccent)
                     .frame(width: buttonSize, height: buttonSize)
                     .contentShape(Rectangle())
@@ -334,7 +339,7 @@ struct BottomDockView: View {
         ZStack {
             dockRing()   // .db — Ember border @35% (Sequence / Search resting)
             Image(systemName: system)
-                .font(.system(size: 20, weight: .light))
+                .font(.system(size: 24, weight: .light))   // scaled with the 36→44 circle
                 .foregroundStyle(Color.ckAccent)
                 .frame(width: buttonSize, height: buttonSize)
                 .contentShape(Rectangle())
@@ -406,7 +411,7 @@ struct BottomDockView: View {
                     .frame(width: dockCircle, height: dockCircle)
             }
             Image(systemName: system)
-                .font(.system(size: 18, weight: .light))
+                .font(.system(size: 22, weight: .light))   // scaled with the 36→44 circle
                 .foregroundStyle(visual == .off ? Color.ckAccent : Color.ckOnAccent)
         }
         .frame(width: buttonSize, height: buttonSize)
@@ -492,7 +497,7 @@ struct BottomDockView: View {
                     .frame(width: dockCircle, height: dockCircle)
                 dockRing()   // .db — Ember border @35%
                 Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .light))
+                    .font(.system(size: 20, weight: .light))   // scaled with the 36→44 circle
                     .foregroundStyle(Color.ckAccent)
             }
             .frame(width: buttonSize, height: buttonSize)

@@ -120,14 +120,18 @@ private struct IntroBrandMark: View {
     }
 }
 
-/// Layout shared by every screen of the intro chapter. Pins `IntroBrandMark` at a
-/// fixed offset below the safe-area top (so its Y is identical on all four screens)
-/// and lets each screen fill the region beneath it. Because the brand mark sits at
-/// the same position in every screen, the per-step crossfade in `OnboardingView`
-/// leaves it visually static — the surface feels continuous and only the content
-/// and buttons change. Screens after the brand chapter (reveal onward) use the
-/// plain `StepScaffold` instead, so the mark naturally fades out as the
-/// privacy-phrase screens load.
+/// Layout shared by the centred intro screens (Welcome · Storage · Local warning ·
+/// Complete) and the launch splash. Pins `IntroBrandMark` at a fixed offset below
+/// the safe-area top (`.padding(.top, 24)`) so its Y is identical everywhere, then
+/// lets each screen fill the region beneath it. Because the mark sits at the same
+/// position on every screen, the per-step crossfade in `OnboardingView` leaves it
+/// visually static — the surface feels continuous and only the content and buttons
+/// change. The denser Reveal/Confirm screens don't use this scaffold (their content
+/// scrolls), but they embed the SAME `IntroBrandMark().padding(.top, 24)` at the top
+/// of their scroll so the mark lines up and the effect carries through the whole
+/// happy path (owner 2026-06-15 — the mark now persists Welcome → Complete rather
+/// than fading at the privacy-phrase screens). Only the Failure escape-hatch omits
+/// the mark.
 private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
@@ -361,13 +365,20 @@ private struct RevealStep: View {
         StepScaffold {
             ScrollView {
                 VStack(spacing: 20) {
+                    // Carry the intro brand mark through the privacy-phrase screens
+                    // (owner 2026-06-15) — same icon+wordmark at the same Y as the
+                    // IntroChapterScaffold screens, so the mark stays put and only
+                    // the words change. (Replaces the old .padding(.top, 48) island
+                    // clearance — the mark's own top inset clears the island.)
+                    IntroBrandMark()
+                        .padding(.top, 24)
+
                     Text("Your privacy phrase")
                         .font(CatchlightFont.displayFixed(size: 30))
                         .foregroundStyle(Color.ckTextPrimary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
-                        .padding(.top, 48) // clear the dynamic island
 
                     // ckTextSecondary, matching the confirm prompt (owner
                     // 2026-06-12, HiFi v1.11.5 — the amber treatment retired).
@@ -428,13 +439,16 @@ private struct ConfirmStep: View {
         StepScaffold {
             ScrollView {
                 VStack(spacing: 20) {
+                    // Same persistent brand mark as Reveal (owner 2026-06-15).
+                    IntroBrandMark()
+                        .padding(.top, 24)
+
                     Text("Confirm three words")
                         .font(CatchlightFont.displayFixed(size: 30))
                         .foregroundStyle(Color.ckTextPrimary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
-                        .padding(.top, 48) // clear the dynamic island
 
                     Text(promptCopy)
                         .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
@@ -572,35 +586,35 @@ private struct CompleteStep: View {
     }
 
     var body: some View {
-        StepScaffold {
-            VStack(spacing: 24) {
-                Spacer()
-                Image("catchlight-icon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 72, height: 72)
-                    .accessibilityHidden(true)
-                Text("You're ready.")
-                    .font(CatchlightFont.displayFixed(size: 32))
-                    .foregroundStyle(Color.ckTextPrimary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityAddTraits(.isHeader)
-                // The voice gem leads (the "story before the real app opens",
-                // owner 2026-06-15), then the storage-specific encryption fact.
-                VStack(spacing: 12) {
-                    Text("Your thoughts, in your order, telling your story. Nobody else's.")
-                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+        // Carry the persistent brand mark through to the end (owner 2026-06-15):
+        // the icon+wordmark sits at the same Y as every other intro screen, so the
+        // standalone 72pt hero icon is retired in favour of the shared mark.
+        IntroChapterScaffold {
+            VStack(spacing: 0) {
+                Spacer(minLength: 24)
+                VStack(spacing: 24) {
+                    Text("You're ready.")
+                        .font(CatchlightFont.displayFixed(size: 32))
                         .foregroundStyle(Color.ckTextPrimary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(bodyText)
-                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    // The voice gem leads (the "story before the real app opens",
+                    // owner 2026-06-15), then the storage-specific encryption fact.
+                    VStack(spacing: 12) {
+                        Text("Your thoughts, in your order, telling your story. Nobody else's.")
+                            .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                            .foregroundStyle(Color.ckTextPrimary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(bodyText)
+                            .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                Spacer()
+                Spacer(minLength: 24)
             }
         } bottom: {
             DockPillRow {
