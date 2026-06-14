@@ -166,6 +166,54 @@ extension Color {
         light: Palette.paper.withAlphaComponent(0.90)
     ))
 
+    // MARK: - Take card variants (HiFi v1.7 .card — section 5)
+    //
+    // The Take card surface is `ckSurface` (White Daylight / Dusk Night). These
+    // tokens cover the two variant treatments v1.7 layers on top. Added 2026-06-14
+    // (fix pass 1, D-040) — record in the Design System.
+
+    /// Obie card BACKGROUND — a warm tint distinct from the plain surface so the
+    /// pinned Take reads as special. Daylight #FBF8F3 (Ember @8% blended onto
+    /// White, solid to prevent spine bleed) / Night #2D2921. (HiFi v1.7 .obie-card)
+    static let ckCardObieSurface = Color(uiColor: .adaptive(
+        dark: UIColor(hex: 0x2D2921),
+        light: UIColor(hex: 0xFBF8F3)
+    ))
+
+    /// Obie card BORDER — Ember @65% (Daylight) / Glow @65% (Night). The Ember
+    /// border is reserved EXCLUSIVELY for the Obie. (HiFi v1.7 .obie-card)
+    static let ckCardObieBorder = Color(uiColor: .adaptive(
+        dark: Palette.glow.withAlphaComponent(0.65),
+        light: Palette.ember.withAlphaComponent(0.65)
+    ))
+
+    /// Overdue card BORDER (reminder date passed) — solid overdue amber #6B4508
+    /// (Daylight, matches the v1.7 overdue text token) / Glow @35% (Night).
+    /// Clearly distinct from the Obie Ember. (HiFi v1.7 .card.overdue, DS §12.3)
+    static let ckCardOverdueBorder = Color(uiColor: .adaptive(
+        dark: Palette.glow.withAlphaComponent(0.35),
+        light: UIColor(hex: 0x6B4508)
+    ))
+
+    /// Iris OFF-quadrant annular fill (HiFi v1.7 `--q-off` — section 7). The
+    /// faint backing band that makes the Iris read as a complete RING (with a
+    /// hollow centre aperture) even when only some quadrants are active. Daylight
+    /// #F1F1F0 / Night #1B1916. Replaces the old solid base disc, which filled the
+    /// centre and defeated the hollow-aperture read.
+    static let ckIrisOff = Color(uiColor: .adaptive(
+        dark: UIColor(hex: 0x1B1916),
+        light: UIColor(hex: 0xF1F1F0)
+    ))
+
+    /// Iris hairline OUTER ring (HiFi v1.7 — section 7). Daylight #E7E7E7 (the
+    /// v1.7 iris SVG uses the near-identical #ECECEC); Night rides the divider /
+    /// spine line token (Catchlight @18%) so it reads as a faint warm rim on Ink
+    /// rather than the bright Daylight grey.
+    static let ckIrisRing = Color(uiColor: .adaptive(
+        dark: Palette.catchlight.withAlphaComponent(0.18),
+        light: UIColor(hex: 0xE7E7E7)
+    ))
+
     /// Error / warning accent — used by the non-blocking error strips on the
     /// timeline (Task 3.9). Same hue in both modes so the strip reads as an
     /// alert regardless of theme; brightness chosen to remain WCAG AA against
@@ -208,18 +256,24 @@ enum Quadrant {
 /// Daylight ONLY — DS §4 prohibits shadows in Night, where elevation is the
 /// Dusk surface colour. CSS blur ≈ 2× SwiftUI radius, hence radius 4/1.
 struct DaylightCardShadow: ViewModifier {
+    /// Overdue Takes get a slightly stronger Daylight shadow (HiFi v1.7
+    /// .card.overdue: `0 2px 10px rgba(15,14,12,0.13), 0 1px 3px …0.08`) — the
+    /// dark overdue border absorbs the subtle default, so it's lifted a touch.
+    var strong: Bool = false
     @Environment(\.colorScheme) private var scheme
     func body(content: Content) -> some View {
         content
-            .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.09),
-                    radius: 4, y: 2)
-            .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.05),
-                    radius: 1, y: 1)
+            .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(strong ? 0.13 : 0.09),
+                    radius: strong ? 5 : 4, y: 2)
+            .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(strong ? 0.08 : 0.05),
+                    radius: strong ? 1.5 : 1, y: 1)
     }
 }
 
 extension View {
-    func daylightCardShadow() -> some View { modifier(DaylightCardShadow()) }
+    func daylightCardShadow(strong: Bool = false) -> some View {
+        modifier(DaylightCardShadow(strong: strong))
+    }
 }
 
 // MARK: - Typography
@@ -242,6 +296,16 @@ enum CatchlightFont {
         "CormorantGaramond-LightItalic",   // confirmed PS name — matches first
         "CormorantGaramond-Italic",
         "CormorantGaramond-Light",
+        "CormorantGaramond"
+    ]
+    /// ROMAN (upright) Cormorant Garamond — the same bundled face as the italic
+    /// candidates, but the non-italic cut. The `display*` candidates lead with
+    /// `CormorantGaramond-LightItalic`, so every "display" use renders italic;
+    /// these lead with the roman PostScript names so headings that must be
+    /// upright (the DAILIES page heading — section 3) resolve correctly. The
+    /// fallback is the system serif WITHOUT `.italic()`.
+    private static let displayRomanCandidates = [
+        "CormorantGaramond-Light",   // confirmed PS name of CormorantGaramond[wght].ttf
         "CormorantGaramond"
     ]
     private static let uiLightCandidates = [
@@ -279,6 +343,28 @@ enum CatchlightFont {
             return .custom(name, size: size, relativeTo: style)
         }
         return .system(style, design: .serif).italic()
+    }
+
+    /// Display ROMAN (upright) — Cormorant Garamond Light, scaling with Dynamic
+    /// Type. Use for display-face text that must NOT be italic: the pinned
+    /// DAILIES / SEQUENCE / SEARCH page heading (section 3). Take BODY text stays
+    /// italic via `display(size:)` — the display face is intentionally italic for
+    /// Take content. Falls back to the system serif (upright, no `.italic()`).
+    static func displayRoman(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
+        if let name = firstAvailable(displayRomanCandidates) {
+            return .custom(name, size: size, relativeTo: style)
+        }
+        return .system(style, design: .serif)
+    }
+
+    /// Fixed-size roman counterpart of `displayRoman` for callers that must NOT
+    /// scale with Dynamic Type (brand display chrome). Falls back to the upright
+    /// system serif.
+    static func displayRomanFixed(size: CGFloat) -> Font {
+        if let name = firstAvailable(displayRomanCandidates) {
+            return .custom(name, fixedSize: size)
+        }
+        return .system(size: size, weight: .regular, design: .serif)
     }
 
     /// Display / brand headings — Cormorant Garamond Italic at a FIXED point size
@@ -354,4 +440,19 @@ enum CatchlightLayout {
     /// Minimum touch target per HIG / accessibility.
     static let minTouchTarget: CGFloat = 44
     /// Standard dim-overlay opacity is baked into Color.ckDim.
+
+    /// Vertical space the pinned timeline heading + its 12pt fade occupy BELOW
+    /// the device top inset (≈ 14 top pad + ~24 title + 2 + 12 fade). The
+    /// timeline's top content padding is `deviceTopInset + headingClearance` so
+    /// the first row always clears the heading and the fade on large-inset
+    /// devices (iPhone 17 / iOS 26.5.1 — section 4 / D-041). The previous fixed
+    /// `52` ignored the inset, tucking the first Take under the fade.
+    static let headingClearance: CGFloat = 52
+    /// Resting clearance the dock occupies above the timeline's bottom, BEFORE
+    /// the device bottom inset is added. Last-row bottom padding is
+    /// `dockClearance + deviceBottomInset` so the final Take clears the raised dock.
+    static let dockClearance: CGFloat = 120
+    /// The dock's own resting bottom padding above the home indicator, added on
+    /// top of `deviceBottomInset` (BottomDockView / DockPillRow).
+    static let dockBottomPadding: CGFloat = 8
 }
