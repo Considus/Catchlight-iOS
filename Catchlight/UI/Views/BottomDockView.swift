@@ -149,7 +149,10 @@ struct BottomDockView: View {
         .padding(.top, 10)
         // Section 4 / D-041 — rest above the home indicator (was a bare 8).
         .padding(.bottom, deviceBottomInset + CatchlightLayout.dockBottomPadding)
-        .background(Color.ckBackground)   // identical to screen — no elevation
+        // Soft bottom edge (HiFi §1 / v1.6 owner directive: "the toolbar has no
+        // hard edge that the Takes disappear behind" — they fade beneath it).
+        // D-042; was a solid Color.ckBackground fill.
+        .dockFadeBackground()
         // Settings: swipe up anywhere on the dock (owner redesign 2026-06-11 —
         // replaces the long-press on Dailies; not a screen-edge gesture, so it
         // never fights the system home swipe).
@@ -191,12 +194,15 @@ struct BottomDockView: View {
             onNewTake()
         } label: {
             ZStack {
-                Circle().fill(Color.ckAdd)
-                    .frame(width: dockCircle, height: dockCircle)
+                // HiFi `.db.add` is an OUTLINE button — a stronger Ember border,
+                // NOT a fill (D-042 follow-up, owner 2026-06-14). The only filled
+                // dock state is a SELECTED FILTER TOGGLE (see toggleLabel .on/.mod);
+                // Add and active-Dailies are distinguished by the 0.55 border, not
+                // a fill. Was a filled ckAdd droplet with an Ink "+".
                 dockRing(strong: true)   // .db.add — Ember border @55%
                 Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Color.ckOnAccent)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(Color.ckAccent)   // #856539 glyph (Option A), like the siblings
             }
             .frame(width: buttonSize, height: buttonSize)
             .scaleEffect(addPulseScale)
@@ -506,7 +512,9 @@ struct BottomDockView: View {
         @Bindable var ui = ui
         return TextField("Search your takes", text: $ui.searchQuery)
             .focused($searchFocused)
-            .font(CatchlightFont.display(size: 20, relativeTo: .body))
+            // §5: the search field is Take-row type — DM Sans 14, not the
+            // display face (D-042; was Cormorant display 20).
+            .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
             .foregroundStyle(Color.ckTextPrimary)
             .tint(Color.ckEmber)
             .textInputAutocapitalization(.never)

@@ -135,7 +135,10 @@ struct ListAngleView: View {
                         .font(.system(size: 32))
                         .foregroundStyle(item.isComplete ? Color.ckAccent : Color.ckTextSecondary)
                     Text(item.text.isEmpty ? " " : item.text)
-                        .font(CatchlightFont.display(size: 26, relativeTo: .title3))
+                        // DM Sans (Take content is never the display face, DS §2.2
+                        // / D-042). 17pt for the full-screen list — provisional,
+                        // flagged for Phase-3 review (D-S3). Was Cormorant 26.
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .title3))
                         .foregroundStyle(item.isComplete ? Color.ckTextSecondary : Color.ckTextPrimary)
                         .strikethrough(item.isComplete, color: Color.ckTextSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -46,7 +46,7 @@ struct BlockTextEditor: UIViewRepresentable {
         tv.backgroundColor = .clear
         tv.textContainerInset = UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
         tv.textContainer.lineFragmentPadding = 0
-        tv.font = CatchlightFont.uiDisplay(size: 19)
+        tv.font = CatchlightFont.uiBody(size: 14)   // DM Sans (.tt) — D-042; was Cormorant uiDisplay 19
         tv.returnKeyType = .default
         tv.keyboardType = .default
         tv.autocorrectionType = .default

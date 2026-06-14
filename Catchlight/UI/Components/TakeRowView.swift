@@ -166,7 +166,9 @@ struct TakeRowView: View {
     private var cardColumn: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(firstLine)
-                .font(CatchlightFont.display(size: 20, relativeTo: .body))
+                // DM Sans 14 (.tt) — Take content is never the display face
+                // (DS §2.2 / D-042). Was Cormorant display 20 italic.
+                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
                 .foregroundStyle(textColor)
                 // Compact 2-line preview at default sizes; let the row grow
                 // up to 4 lines at accessibility text sizes so a Take's first
@@ -180,15 +182,18 @@ struct TakeRowView: View {
             // matches the reminder label's scale (DM Sans caption, Secondary);
             // flagged for owner review. Stacked so neither fights the other.
             if let progressText {
+                // Quiet meta scale (matches .tm size; non-italic — it's a count).
                 Text(progressText)
-                    .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                    .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption))
                     .foregroundStyle(Color.ckTextSecondary)
                     .accessibilityHidden(true)   // already spoken in the row label
             }
 
             if let reminderLabel {
+                // .tm — 11pt medium italic, Slate (overdue → overdue amber).
                 Text(reminderLabel)
-                    .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                    .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                    .italic()
                     .foregroundStyle(isOverdue ? Color.ckCardOverdueBorder : Color.ckTextSecondary)
             }
         }
