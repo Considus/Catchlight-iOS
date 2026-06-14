@@ -105,47 +105,100 @@ private struct WelcomeStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
     var body: some View {
+        WelcomeContent(mode: .welcome) { vm.beginStorageChoice() }
+    }
+}
+
+/// Shared layout behind BOTH the launch splash and the onboarding Welcome screen
+/// (owner 2026-06-14: the splash should look like the first screen with only the
+/// text swapped). The brand mark (icon + wordmark) and every content slot sit at
+/// IDENTICAL positions in both modes — the splash lays out the (invisible)
+/// headline / body / button purely to reserve their height — so the
+/// splash→Welcome crossfade reads as "the brand stays, the words change".
+///
+/// Content is spread space-evenly across the full height (replaces the earlier
+/// centred cluster, owner review). Used by `RootView` for the splash (`.splash`,
+/// no view model) and by `WelcomeStep` (`.welcome`).
+struct WelcomeContent: View {
+    enum Mode { case splash, welcome }
+    let mode: Mode
+    var onPrimary: () -> Void = {}
+
+    private var isWelcome: Bool { mode == .welcome }
+
+    var body: some View {
         StepScaffold {
-            VStack(spacing: 24) {
-                Spacer()
-                Image("catchlight-icon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 72, height: 72)
-                    .accessibilityHidden(true)
-                Image("catchlight-wordmark")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 32)
-                    .accessibilityLabel("Catchlight")
-                Text("You don't need to choose privacy, it's yours and you never have to ask for it.")
-                    .font(CatchlightFont.displayFixed(size: 26))
-                    .foregroundStyle(Color.ckTextPrimary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 8)
-                    .accessibilityAddTraits(.isHeader)
+            VStack(spacing: 0) {
+                Spacer(minLength: 16)
                 VStack(spacing: 16) {
-                    (Text("First, we'll create your privacy phrase — 12 words that are the ")
-                     + Text("ONLY").bold()
-                     + Text(" key to your data."))
-                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("We never see them, store them, or ask for them. So don't lose them.")
-                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Image("catchlight-icon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 72, height: 72)
+                        .accessibilityHidden(true)
+                    Image("catchlight-wordmark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 44)
+                        .accessibilityLabel("Catchlight")
                 }
-                Spacer()
+                Spacer(minLength: 16)
+                // Primary-text slot. The headline is laid out in BOTH modes (so the
+                // slot — and therefore the brand mark above — keeps the same height
+                // and Y); the splash hides it and overlays the tagline in its place.
+                ZStack {
+                    headline.opacity(isWelcome ? 1 : 0)
+                    if !isWelcome { tagline }
+                }
+                Spacer(minLength: 16)
+                bodyBlock.opacity(isWelcome ? 1 : 0)
+                Spacer(minLength: 16)
             }
-            .padding(.top, 32)
         } bottom: {
+            // Button slot — present in both for identical geometry; hidden + inert
+            // in the splash.
             DockPillRow {
-                DockPill(title: "Create my privacy phrase") { vm.beginStorageChoice() }
+                DockPill(title: "Create my privacy phrase", action: onPrimary)
             }
+            .opacity(isWelcome ? 1 : 0)
+            .allowsHitTesting(isWelcome)
+        }
+    }
+
+    private var headline: some View {
+        Text("You don't need to choose privacy, it's yours and you never have to ask for it.")
+            .font(CatchlightFont.displayFixed(size: 26))
+            .foregroundStyle(Color.ckTextPrimary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// The brand tagline (same line as the launch-screen composite), shown only on
+    /// the splash, occupying the headline slot.
+    private var tagline: some View {
+        Text("Every thought deserves a moment of clarity.")
+            .font(CatchlightFont.display(size: 16, relativeTo: .subheadline))
+            .foregroundStyle(Color.ckTextSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityHidden(true)
+    }
+
+    private var bodyBlock: some View {
+        VStack(spacing: 16) {
+            (Text("First, we'll create your privacy phrase — 12 words that are the ")
+             + Text("ONLY").bold()
+             + Text(" key to your data."))
+                .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                .foregroundStyle(Color.ckTextSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("We never see them, store them, or ask for them. So don't lose them.")
+                .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                .foregroundStyle(Color.ckTextSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
