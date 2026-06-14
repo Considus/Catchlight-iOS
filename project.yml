@@ -168,6 +168,10 @@ targets:
     platform: iOS
     sources:
       - path: Tests/CatchlightCoreTests
+      # App-module unit tests (`@testable import Catchlight`) — e.g. the Angle
+      # registry/predicate (D-033), which can't live in CatchlightCoreTests
+      # because the Angle type is in the app target (its presentation is SwiftUI).
+      - path: Tests/CatchlightAppTests
       # `EnglishWordlistTests` loads bip39-english.txt from
       # `Bundle(for: Self.self)` (the test bundle). Without this entry the
       # resource is only in the app bundle and the test fails on CI with

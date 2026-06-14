@@ -41,6 +41,8 @@ struct TakeEditView: View {
     /// Which block holds the keyboard. Driven across rows on Return / Backspace /
     /// make-checklist; bound into each row's BlockTextEditor.
     @State private var focusedBlockID: UUID?
+    /// The Angle (D-033) currently presented full-screen over the editor, if any.
+    @State private var presentedAngle: Angle?
 
     init(take: Take) {
         self.take = take
@@ -84,6 +86,13 @@ struct TakeEditView: View {
             applyFanCommand(command)
             ui.editorFanCommand = nil
         }
+        // The Angle is an ephemeral, full-screen toggle over the editor. It binds
+        // to the LIVE draft, so its ticks / reorders ride the editor's own save
+        // on dismiss — exactly like an edit, no separate state. iOS already swaps
+        // the cover's slide for a fade under Reduce Motion.
+        .fullScreenCover(item: $presentedAngle) { angle in
+            angle.makePresentation($draft) { presentedAngle = nil }
+        }
     }
 
     private var card: some View {
@@ -100,6 +109,65 @@ struct TakeEditView: View {
                 .fill(Color.ckSurface)
                 .shadow(color: Color.ckShadow.opacity(0.5), radius: 18, y: 6)
         )
+        // The Angle affordance sits at the top-right of the Take, mirroring the
+        // footer Iris on the opposite corner (placement per spec §6; flagged for
+        // owner review against the HiFi). Shown only when an Angle applies.
+        .overlay(alignment: .topTrailing) {
+            angleAffordance
+                .padding(.top, 6)
+                .padding(.trailing, 6)
+        }
+    }
+
+    // MARK: - Angle affordance (D-033)
+
+    @ViewBuilder
+    private var angleAffordance: some View {
+        let angles = AngleRegistry.applicable(to: currentTake)
+        if angles.count == 1, let angle = angles.first {
+            angleButton(systemImage: angle.systemImage,
+                        label: "View as \(angle.title)") { openAngle(angle) }
+        } else if angles.count > 1 {
+            // More than one Angle applies → a small picker (Day 1 never hits this,
+            // but the system is built for it).
+            Menu {
+                ForEach(angles) { angle in
+                    Button { openAngle(angle) } label: {
+                        Label(angle.title, systemImage: angle.systemImage)
+                    }
+                }
+            } label: {
+                angleIcon(systemImage: "square.on.square")
+            }
+            .accessibilityIdentifier("angle-button")
+            .accessibilityLabel("Choose a view")
+        }
+    }
+
+    private func angleButton(systemImage: String, label: String,
+                             action: @escaping () -> Void) -> some View {
+        Button(action: action) { angleIcon(systemImage: systemImage) }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("angle-button")
+            .accessibilityLabel(label)
+            .accessibilityHint("Opens a full-screen list view of this Take.")
+    }
+
+    private func angleIcon(systemImage: String) -> some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(Color.ckAccent)
+            .frame(width: 30, height: 30)
+            .background(Circle().fill(Color.ckSurface))
+            .overlay(Circle().stroke(Color.ckAccent.opacity(0.4), lineWidth: 1))
+            .frame(width: CatchlightLayout.minTouchTarget,
+                   height: CatchlightLayout.minTouchTarget)
+            .contentShape(Rectangle())
+    }
+
+    private func openAngle(_ angle: Angle) {
+        focusedBlockID = nil   // drop the keyboard before the cover presents
+        presentedAngle = angle
     }
 
     // MARK: - Block stack
