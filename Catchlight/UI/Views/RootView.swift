@@ -24,6 +24,11 @@ struct RootView: View {
     @Environment(UIState.self) private var ui
     @Environment(FirstRunOrientationState.self) private var orientation
 
+    /// Branded splash shown on every cold launch (owner 2026-06-14). `.task` runs
+    /// once per RootView lifetime, so warm resumes from the background don't
+    /// re-show it.
+    @State private var showSplash = true
+
     var body: some View {
         // ZStack with a full-bleed background guarantees children receive a full-screen
         // size proposal. A bare Group inherits the parent's bounded proposal, which left
@@ -41,9 +46,28 @@ struct RootView: View {
                 mainApp
                     .transition(.opacity)
             }
+
+            if showSplash {
+                // The splash shares the Welcome screen's exact layout (brand mark
+                // + content slots), so dismissing it crossfades to onboarding's
+                // Welcome with the brand mark appearing static — only the text
+                // swaps (owner 2026-06-14). On the onboarded path it simply
+                // crossfades to the timeline.
+                WelcomeContent(mode: .splash)
+                    .transition(.opacity)
+                    .zIndex(100)   // above content + overlays while it holds
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.4), value: app.needsOnboarding)
+        .task {
+            // Hold the launch-screen branding for a minimum beat so it reads even
+            // when content is ready instantly (the onboarding path has no store to
+            // load, so the OS launch screen would otherwise flash by). ~1.2s, then
+            // crossfade to whatever's behind (onboarding or the timeline).
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            withAnimation(.easeInOut(duration: 0.4)) { showSplash = false }
+        }
     }
 
     private var mainApp: some View {
