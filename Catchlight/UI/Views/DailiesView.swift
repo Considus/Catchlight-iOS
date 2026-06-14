@@ -125,6 +125,11 @@ struct DailiesView: View {
     /// The root-GeometryReader environment value is the safe source.
     @Environment(\.deviceTopInset) private var deviceTopInset
 
+    /// The device's BOTTOM safe-area inset (home-indicator zone), captured at the
+    /// window root (section 4 / D-041). Used to lift the timeline's last-row
+    /// dock clearance so the final Take still clears the now-raised dock.
+    @Environment(\.deviceBottomInset) private var deviceBottomInset
+
     /// The page title follows the activity: DAILIES · SEQUENCE · SEARCH.
     private var headingTitle: String {
         switch ui.dockMode {
@@ -140,7 +145,10 @@ struct DailiesView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(headingTitle)
-                    .font(CatchlightFont.display(size: 20, relativeTo: .title3))
+                    // ROMAN (upright) display face — section 3. The page heading
+                    // is Cormorant Garamond Light ROMAN, not the italic display
+                    // cut. Take body text stays italic via `display(size:)`.
+                    .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
                     .kerning(1.6)
                     .foregroundStyle(Color.ckTextPrimary)
                     .id(headingTitle)
@@ -437,8 +445,15 @@ struct DailiesView: View {
                         }
                     }
                 }
-                .padding(.top, 52)       // clears the pinned heading overlay at rest
-                .padding(.bottom, 120)   // clearance for the dock
+                // Section 4 / D-041 — inset-aware on BOTH edges (the app runs
+                // full-bleed, so these manual paddings are the only safe-area
+                // correction). Top: clear the pinned heading + its 12pt fade on
+                // large-inset devices (was a fixed 52 that ignored the inset, so
+                // the first Take tucked under the fade on iPhone 17 / iOS 26.5.1).
+                // Bottom: lift the last-row clearance by the home-indicator inset
+                // so it still clears the now-raised dock.
+                .padding(.top, deviceTopInset + CatchlightLayout.headingClearance)
+                .padding(.bottom, CatchlightLayout.dockClearance + deviceBottomInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 // FILTERING exit: tapping empty timeline background (not rows /
                 // Irises — they stay fully interactive and win hit-testing)
@@ -481,10 +496,13 @@ struct DailiesView: View {
     private func row(for take: Take, isFirst: Bool = false) -> some View {
         TakeRowView(
             take: take,
-            onTapCircle: {
+            onTapCircle: { irisCentre in
                 // Hint 2 is dismissed by tapping any Iris.
                 orientation.didTapIris()
-                ui.openPetalFan(for: take)
+                // Section 8 — bloom the fan in place at the tapped Iris (window
+                // coords match the full-screen overlay space). The .zero fallback
+                // (screen centre) only survives as a last resort.
+                ui.openPetalFan(for: take, origin: irisCentre)
             },
             onLongPressCircle: {
                 // Hint 4: arm the Obie introduction tooltip on the first long-press.
