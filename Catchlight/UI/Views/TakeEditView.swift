@@ -30,7 +30,9 @@ struct TakeEditView: View {
 
     init(take: Take) {
         self.take = take
-        _text = State(initialValue: take.bodyText)
+        // Phase 1 minimal editor: edit the Take's prose text (the first text
+        // block). Phase 2 replaces this with the block-stack editor.
+        _text = State(initialValue: take.primaryText)
     }
 
     var body: some View {
@@ -105,7 +107,7 @@ struct TakeEditView: View {
     /// reflect what's on screen.
     private var currentTake: Take {
         var t = take
-        t.bodyText = text
+        t.primaryText = text
         return t
     }
 
@@ -131,11 +133,11 @@ struct TakeEditView: View {
         //   • the Take must not already exist in the store with content —
         //     deliberately erasing an old note keeps an "Untitled take" row the
         //     user can delete explicitly, rather than silently destroying it.
-        let isBlank = t.bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !t.isTask && t.timeReminder == nil && !t.isObie
-            && t.checklistItems.isEmpty && t.attachments.isEmpty && t.locationReminder == nil
+            && t.attachments.isEmpty && t.locationReminder == nil
         let storedCopy = try? vm.store.take(id: t.id)
-        let storedHadContent = (storedCopy?.bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+        let storedHadContent = (storedCopy?.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
         if isBlank && !storedHadContent {
             vm.discardIfPresent(t)
         } else {
@@ -147,7 +149,8 @@ struct TakeEditView: View {
 
 #Preview("Edit — Night") {
     let vm = DailiesViewModel(store: InMemoryTakeStore())
-    return TakeEditView(take: Take(bodyText: "A thought half-formed,\nstill worth keeping.", isTask: true))
+    return TakeEditView(take: Take(blocks: [.textLine("A thought half-formed,\nstill worth keeping."),
+                                            .checkItem("act on it")]))
         .environment(vm)
         .environment(UIState())
         .background(Color.ckBackground)
@@ -156,7 +159,7 @@ struct TakeEditView: View {
 
 #Preview("Edit — Daylight") {
     let vm = DailiesViewModel(store: InMemoryTakeStore())
-    return TakeEditView(take: Take(bodyText: ""))
+    return TakeEditView(take: Take(blocks: []))
         .environment(vm)
         .environment(UIState())
         .background(Color.ckBackground)

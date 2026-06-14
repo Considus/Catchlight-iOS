@@ -32,17 +32,17 @@ final class SpotlightIndexerTests: XCTestCase {
     // MARK: - Title (activity-type label)
 
     func testTitle_noteOnlyTake_isNote() {
-        let t = Take(bodyText: "x", isNote: true)
+        let t = Take(blocks: [.textLine("x")], isNote: true)
         XCTAssertEqual(SpotlightAttributes.title(for: t), "Note")
     }
 
     func testTitle_taskTake_isTask() {
-        let t = Take(bodyText: "x", isNote: true, isTask: true)
+        let t = Take(blocks: [.checkItem("x")], isNote: true)
         XCTAssertEqual(SpotlightAttributes.title(for: t), "Task")
     }
 
     func testTitle_reminderBeatsTask() {
-        var t = Take(bodyText: "x", isNote: true, isTask: true)
+        var t = Take(blocks: [.checkItem("x")], isNote: true)
         t.timeReminder = TimeReminder(scheduledDate: Date(),
                                       notificationIdentifier: t.id.uuidString)
         XCTAssertEqual(SpotlightAttributes.title(for: t), "Reminder")
@@ -51,7 +51,7 @@ final class SpotlightIndexerTests: XCTestCase {
     // MARK: - userInfo carries ONLY the Take UUID
 
     func testUserInfo_containsTakeID() {
-        let t = Take(bodyText: "x", isNote: true)
+        let t = Take(blocks: [.textLine("x")], isNote: true)
         let info = SpotlightAttributes.userInfo(for: t)
         XCTAssertEqual(info[SpotlightConstants.userInfoTakeIDKey] as? String,
                        t.id.uuidString)
@@ -59,7 +59,7 @@ final class SpotlightIndexerTests: XCTestCase {
 
     func testUserInfo_doesNotLeakBodyText() {
         let secret = "Confidential body text that must never reach Spotlight"
-        let t = Take(bodyText: secret, isNote: true)
+        let t = Take(blocks: [.textLine(secret)], isNote: true)
         let info = SpotlightAttributes.userInfo(for: t)
         for (_, value) in info {
             if let str = value as? String {
@@ -75,7 +75,7 @@ final class SpotlightIndexerTests: XCTestCase {
     #if canImport(CoreSpotlight)
     func testMakeItem_titleIsActivityTypeNotBody() {
         let secret = "do not index this body"
-        let t = Take(bodyText: secret, isNote: true)
+        let t = Take(blocks: [.textLine(secret)], isNote: true)
         let item = SpotlightAttributes.makeItem(for: t)
         XCTAssertEqual(item.attributeSet.title, "Note")
         XCTAssertEqual(item.attributeSet.displayName, "Note")
@@ -86,26 +86,26 @@ final class SpotlightIndexerTests: XCTestCase {
     func testMakeItem_contentDescriptionIsNil() {
         // Load-bearing: this is the field where the body would otherwise live.
         // Leaving it nil is the privacy invariant.
-        let t = Take(bodyText: "x", isNote: true)
+        let t = Take(blocks: [.textLine("x")], isNote: true)
         let item = SpotlightAttributes.makeItem(for: t)
         XCTAssertNil(item.attributeSet.contentDescription)
     }
 
     func testMakeItem_uniqueIdentifierIsTakeUUID() {
-        let t = Take(bodyText: "x", isNote: true)
+        let t = Take(blocks: [.textLine("x")], isNote: true)
         let item = SpotlightAttributes.makeItem(for: t)
         XCTAssertEqual(item.uniqueIdentifier, t.id.uuidString)
     }
 
     func testMakeItem_domainIdentifierIsBundlePrefix() {
-        let t = Take(bodyText: "x", isNote: true)
+        let t = Take(blocks: [.textLine("x")], isNote: true)
         let item = SpotlightAttributes.makeItem(for: t)
         XCTAssertEqual(item.domainIdentifier, SpotlightConstants.domainIdentifier)
     }
 
     func testMakeItem_doesNotEmbedBodyInAnyKnownTextField() {
         let secret = "TOP-SECRET-BODY-PAYLOAD-XYZ123"
-        let t = Take(bodyText: secret, isNote: true)
+        let t = Take(blocks: [.textLine(secret)], isNote: true)
         let item = SpotlightAttributes.makeItem(for: t)
         let attrs = item.attributeSet
         // Scan the broad text surface area on a Spotlight item — every field
@@ -122,7 +122,7 @@ final class SpotlightIndexerTests: XCTestCase {
 
     func testIndexer_indexCalledOnce_recordsTheTake() {
         let mock = RecordingIndexer()
-        let t = Take(bodyText: "x", isNote: true)
+        let t = Take(blocks: [.textLine("x")], isNote: true)
         mock.index(t)
         XCTAssertEqual(mock.indexed.count, 1)
         XCTAssertEqual(mock.indexed.first?.id, t.id)

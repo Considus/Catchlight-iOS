@@ -89,7 +89,7 @@ public final class ReminderScheduler {
 
         let content = UNMutableNotificationContent()
         content.title = "Catchlight"
-        content.body = String(take.bodyText.prefix(100))
+        content.body = String(take.plainText.prefix(100))
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier
 

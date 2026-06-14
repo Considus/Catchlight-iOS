@@ -181,25 +181,25 @@ final class SyncEngineTests: XCTestCase {
         base.modifiedAt = lastSync
 
         var localEdit = base
-        localEdit.bodyText = "local edit"
+        localEdit.primaryText = "local edit"
         localEdit.modifiedAt = lastSync.addingTimeInterval(100)
 
         var remoteEdit = base
-        remoteEdit.bodyText = "remote edit"
+        remoteEdit.primaryText = "remote edit"
         remoteEdit.modifiedAt = lastSync.addingTimeInterval(200)
 
         let decision = ConflictResolver.decide(local: localEdit, remote: remoteEdit, lastSync: lastSync)
         guard case .conflict(let l, let r) = decision else {
             return XCTFail("expected a conflict, got \(decision)")
         }
-        XCTAssertEqual(l.bodyText, "local edit")
-        XCTAssertEqual(r.bodyText, "remote edit")
+        XCTAssertEqual(l.primaryText, "local edit")
+        XCTAssertEqual(r.primaryText, "remote edit")
     }
 
     func testOnlyRemoteChangedTakesRemote() {
         let lastSync = Date(timeIntervalSince1970: 1_700_000_000)
         var local = TestFixtures.richTake(); local.modifiedAt = lastSync.addingTimeInterval(-10)
-        var remote = local; remote.bodyText = "newer"; remote.modifiedAt = lastSync.addingTimeInterval(50)
+        var remote = local; remote.primaryText = "newer"; remote.modifiedAt = lastSync.addingTimeInterval(50)
         guard case .takeRemote = ConflictResolver.decide(local: local, remote: remote, lastSync: lastSync) else {
             return XCTFail("expected takeRemote")
         }
@@ -213,7 +213,7 @@ final class SyncEngineTests: XCTestCase {
         // Remote device pushes an edited version.
         let remoteStore = InMemoryTakeStore()
         var remote = TestFixtures.richTake()
-        remote.bodyText = "remote version"
+        remote.primaryText = "remote version"
         remote.modifiedAt = t0.addingTimeInterval(300)
         try remoteStore.upsert(remote)
         try makeEngine(store: remoteStore, cloud: cloud, keys: k, now: { t0.addingTimeInterval(301) }).pushOutbound()
@@ -221,7 +221,7 @@ final class SyncEngineTests: XCTestCase {
         // Local device has its own edit since the same baseline.
         let local = InMemoryTakeStore()
         var localEdit = TestFixtures.richTake(id: remote.id)
-        localEdit.bodyText = "local version"
+        localEdit.primaryText = "local version"
         localEdit.modifiedAt = t0.addingTimeInterval(250)
         try local.upsert(localEdit)
         local.setLastSyncDate(t0)   // both edits are after the watermark
@@ -229,7 +229,7 @@ final class SyncEngineTests: XCTestCase {
         let report = try makeEngine(store: local, cloud: cloud, keys: k, now: { t0.addingTimeInterval(400) }).pullInbound()
         XCTAssertEqual(report.conflicts.count, 1)
         // Local DB is NOT silently overwritten — resolution UI is Phase 6.
-        XCTAssertEqual(try local.take(id: remote.id)?.bodyText, "local version")
+        XCTAssertEqual(try local.take(id: remote.id)?.primaryText, "local version")
     }
 
     // §12.4 — Local-only mode: no file system writes outside the app container.

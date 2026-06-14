@@ -43,8 +43,9 @@ public protocol TakeStore: AnyObject {
     /// Takes whose `modifiedAt` is strictly after `date` (or all if nil). Used by
     /// outbound sync to find what changed.
     func takesModified(since date: Date?) throws -> [Take]
-    /// Plain-text, local, full-text search across body text (FTS5 in the app target;
-    /// case-insensitive substring here). Search scope per Phase 5 brief §9.
+    /// Plain-text, local search across the Take's derived `plainText` (prose +
+    /// check-item labels; case-insensitive substring). Search scope per Phase 5
+    /// brief §9.
     func search(_ query: String) throws -> [Take]
 
     // Sequences (saved searches — filter-based, 2026-06-10)
@@ -124,7 +125,7 @@ public final class InMemoryTakeStore: TakeStore {
     public func search(_ query: String) throws -> [Take] {
         let q = query.lowercased()
         guard !q.isEmpty else { return [] }
-        return try allTakes().filter { $0.bodyText.lowercased().contains(q) }
+        return try allTakes().filter { $0.plainText.lowercased().contains(q) }
     }
 
     public func upsert(_ sequence: CatchlightSequence) throws { sequences[sequence.id] = sequence }

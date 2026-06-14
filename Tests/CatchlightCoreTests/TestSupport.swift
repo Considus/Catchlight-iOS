@@ -31,17 +31,21 @@ enum TestFixtures {
         return try! BIP39Wordlist(words: words)
     }
 
-    /// A representative Take exercising every populated v1.0 field.
+    /// A representative Take exercising every populated v1.0 field. Interleaved
+    /// block content: a prose line plus two check items (so it is a Task — D-034 —
+    /// but incomplete, one item unticked).
     static func richTake(id: UUID = UUID()) -> Take {
         Take(
             id: id,
             createdAt: ISO8601.date(from: "2026-05-01T09:00:00.000Z")!,
             modifiedAt: ISO8601.date(from: "2026-05-02T10:30:00.000Z")!,
-            bodyText: "Buy film for the weekend shoot / café at 3",
-            contentType: "plain",
+            blocks: [
+                .textLine("Buy film for the weekend shoot / café at 3"),
+                .checkItem("Kodak Portra 400", isComplete: false),
+                .checkItem("Lens cloth", isComplete: true)
+            ],
+            contentType: "blocks/v2",
             isNote: true,
-            isTask: true,
-            isComplete: false,
             isObie: false,
             timeReminder: TimeReminder(
                 scheduledDate: ISO8601.date(from: "2026-05-03T15:00:00.000Z")!,
@@ -49,10 +53,6 @@ enum TestFixtures {
                 notificationIdentifier: id.uuidString
             ),
             locationReminder: nil,
-            checklistItems: [
-                ChecklistItem(text: "Kodak Portra 400", isComplete: false),
-                ChecklistItem(text: "Lens cloth", isComplete: true)
-            ],
             attachments: [],
             isSeeded: false
         )
