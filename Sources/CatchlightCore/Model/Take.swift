@@ -154,64 +154,175 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         blocks.map { $0.text }.joined(separator: "\n")
     }
 
-    /// Phase-1 editor bridge: the text of the FIRST prose block (or `""` if the
-    /// Take has none). Setting it writes into that block, prepending a new text
-    /// block when the Take has no prose yet. This lets the minimal Phase-1 editor
-    /// "edit the Take's text" without a block editor; Phase 2's block-stack editor
-    /// replaces it with per-block editing.
-    public var primaryText: String {
-        get {
-            for block in blocks {
-                if case .text(let textBlock) = block { return textBlock.text }
-            }
-            return ""
-        }
-        set {
-            if let index = blocks.firstIndex(where: { if case .text = $0 { return true } else { return false } }) {
-                if case .text(var textBlock) = blocks[index] {
-                    textBlock.text = newValue
-                    blocks[index] = .text(textBlock)
-                }
-            } else {
-                blocks.insert(.text(TextBlock(text: newValue)), at: 0)
-            }
-        }
-    }
+    // MARK: - Block editing (the block-stack editor, D-035)
+    //
+    // These reshape `blocks` for the editor and the Focus-ring Task Mark. They
+    // are pure value mutations so they're unit-tested directly; the editor's
+    // focus/cursor management lives in the view layer.
 
-    // MARK: - Content mutation helpers (Phase-1 bridges for the petal fan)
-
-    /// Make this Take a Task (`on == true`) or a plain note (`on == false`) by
-    /// reshaping `blocks`. This is the coarse Phase-1 affordance the petal fan
-    /// uses; Phase 2's editor does fine-grained per-line make-task at the cursor.
-    ///
-    /// - Promote: every prose line becomes a check item (preserving id + text);
-    ///   a Take with no blocks gains one empty check item.
-    /// - Demote: every check item becomes a prose line (preserving id + text).
+    /// Make this Take a Task (`on == true`, the Focus ring's "Task" Mark turned
+    /// on) or a plain note (`on == false`). A thin wrapper over the structural
+    /// conversions used when there is no cursor context (the timeline petal fan).
     public mutating func setTask(_ on: Bool) {
         guard on != isTask else { return }
-        if on {
-            if blocks.isEmpty {
-                blocks = [.check(ChecklistItem(text: ""))]
+        if on { _ = convertToChecklist() } else { convertToProse() }
+    }
+
+    /// Turn prose into check items. With a `splitting` block id (the text block
+    /// the cursor is in), only THAT block is split — each newline-separated line
+    /// becomes its own check item — leaving the rest of the document untouched
+    /// (so "milk\neggs\nbread" becomes three tickable items). With no id, every
+    /// prose block is split the same way; an empty Take gains one empty item.
+    /// Returns the id of the FIRST resulting check item so the editor can focus
+    /// it (drop the user straight into typing).
+    @discardableResult
+    public mutating func convertToChecklist(splitting blockID: UUID? = nil) -> UUID? {
+        func items(from text: String) -> [TakeBlock] {
+            // Split on newlines so each line becomes an item; an empty block
+            // still yields one (empty) item so the list is never zero-length.
+            let lines = text.isEmpty ? [""] : text.components(separatedBy: "\n")
+            return lines.map { .check(ChecklistItem(text: $0)) }
+        }
+
+        if blocks.isEmpty {
+            let seeded = items(from: "")
+            blocks = seeded
+            return seeded.first?.id
+        }
+
+        if let blockID, let index = blocks.firstIndex(where: { $0.id == blockID }),
+           case .text(let textBlock) = blocks[index] {
+            let replacement = items(from: textBlock.text)
+            blocks.replaceSubrange(index...index, with: replacement)
+            return replacement.first?.id
+        }
+
+        // No (usable) cursor target: split every prose block in place.
+        var firstNewID: UUID?
+        var rebuilt: [TakeBlock] = []
+        for block in blocks {
+            if case .text(let textBlock) = block {
+                let replacement = items(from: textBlock.text)
+                if firstNewID == nil { firstNewID = replacement.first?.id }
+                rebuilt.append(contentsOf: replacement)
             } else {
-                blocks = blocks.map { block in
-                    if case .text(let textBlock) = block {
-                        return .check(ChecklistItem(id: textBlock.id, text: textBlock.text))
-                    }
-                    return block
-                }
+                if firstNewID == nil { firstNewID = block.id }
+                rebuilt.append(block)
             }
-        } else {
-            blocks = blocks.map { block in
-                if case .check(let item) = block {
-                    return .text(TextBlock(id: item.id, text: item.text))
-                }
-                return block
+        }
+        blocks = rebuilt
+        return firstNewID
+    }
+
+    /// Turn the Take back into prose: each maximal run of consecutive check
+    /// items collapses into a single text block (their labels newline-joined),
+    /// so a checklist demotes back to the lines it came from. Existing text
+    /// blocks are left in place, preserving any interleaving.
+    public mutating func convertToProse() {
+        var rebuilt: [TakeBlock] = []
+        var runTexts: [String] = []
+        var runFirstID: UUID?
+
+        func flushRun() {
+            guard !runTexts.isEmpty else { return }
+            let id = runFirstID ?? UUID()
+            rebuilt.append(.text(TextBlock(id: id, text: runTexts.joined(separator: "\n"))))
+            runTexts.removeAll()
+            runFirstID = nil
+        }
+
+        for block in blocks {
+            switch block {
+            case .check(let item):
+                if runFirstID == nil { runFirstID = item.id }
+                runTexts.append(item.text)
+            case .text:
+                flushRun()
+                rebuilt.append(block)
             }
+        }
+        flushRun()
+        blocks = rebuilt
+    }
+
+    /// Set the text of the block with `blockID` (no-op if it's gone).
+    public mutating func updateText(_ text: String, blockID: UUID) {
+        guard let index = blocks.firstIndex(where: { $0.id == blockID }) else { return }
+        switch blocks[index] {
+        case .text(var textBlock):
+            textBlock.text = text
+            blocks[index] = .text(textBlock)
+        case .check(var item):
+            item.text = text
+            blocks[index] = .check(item)
         }
     }
 
-    /// Tick (or untick) every check item. The Phase-1 row/quadrant "mark complete"
-    /// affordance; no-op for a non-Task.
+    /// Toggle the completion of the check block with `blockID` (no-op otherwise).
+    public mutating func toggleItemComplete(blockID: UUID) {
+        guard let index = blocks.firstIndex(where: { $0.id == blockID }),
+              case .check(var item) = blocks[index] else { return }
+        item.isComplete.toggle()
+        blocks[index] = .check(item)
+    }
+
+    /// Insert a new empty check item immediately after `blockID` (Return inside a
+    /// non-empty check item continues the list). Returns the new item's id, or
+    /// nil if `blockID` isn't present.
+    @discardableResult
+    public mutating func insertCheckItem(after blockID: UUID) -> UUID? {
+        guard let index = blocks.firstIndex(where: { $0.id == blockID }) else { return nil }
+        let item = ChecklistItem(text: "")
+        blocks.insert(.check(item), at: index + 1)
+        return item.id
+    }
+
+    /// Convert the check block with `blockID` into a text block, preserving id and
+    /// text (Return in an EMPTY check item exits the list back to prose).
+    public mutating func convertCheckToText(blockID: UUID) {
+        guard let index = blocks.firstIndex(where: { $0.id == blockID }),
+              case .check(let item) = blocks[index] else { return }
+        blocks[index] = .text(TextBlock(id: item.id, text: item.text))
+    }
+
+    /// The id of the block immediately before `blockID`, or nil if it's first /
+    /// absent (used to move focus on backspace-merge).
+    public func blockID(before blockID: UUID) -> UUID? {
+        guard let index = blocks.firstIndex(where: { $0.id == blockID }), index > 0 else { return nil }
+        return blocks[index - 1].id
+    }
+
+    /// Remove the block with `blockID` (backspace-merge into the previous block,
+    /// or swipe-to-delete).
+    public mutating func removeBlock(blockID: UUID) {
+        blocks.removeAll { $0.id == blockID }
+    }
+
+    /// Move the block `id` so it sits immediately before `targetID` (drag
+    /// reorder). No-op if they're the same or either is missing.
+    public mutating func moveBlock(id: UUID, before targetID: UUID) {
+        guard id != targetID, let from = blocks.firstIndex(where: { $0.id == id }) else { return }
+        let block = blocks.remove(at: from)
+        if let to = blocks.firstIndex(where: { $0.id == targetID }) {
+            blocks.insert(block, at: to)
+        } else {
+            blocks.append(block)
+        }
+    }
+
+    /// Drop empty text blocks — called when the editor commits, so a stray empty
+    /// prose line (e.g. the seeded blank row, or a return-exited line left
+    /// untyped) doesn't linger in the saved content / preview / export. Empty
+    /// check items are kept (an unfilled to-do is intentional).
+    public mutating func removeEmptyTextBlocks() {
+        blocks.removeAll { block in
+            if case .text(let textBlock) = block { return textBlock.text.isEmpty }
+            return false
+        }
+    }
+
+    /// Tick (or untick) every check item. The timeline row's "mark complete"
+    /// affordance (the editor toggles items individually); no-op for a non-Task.
     public mutating func setAllItemsComplete(_ complete: Bool) {
         guard isTask else { return }
         blocks = blocks.map { block in

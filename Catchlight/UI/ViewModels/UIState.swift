@@ -59,6 +59,20 @@ final class UIState {
     var editorTake: Take?
     var isEditorPresented: Bool { editorTake != nil }
 
+    /// A petal-fan selection handed to the OPEN editor (the fan was opened from
+    /// the editor's footer). The editor applies it to its live block draft —
+    /// the Task Mark reshapes the on-screen blocks, never the stored copy — so a
+    /// make-checklist toggle lands on what the user is typing, not a stale row.
+    /// Carries a token so two identical selections in a row still trigger.
+    struct EditorFanCommand: Equatable {
+        let token: UUID
+        let isNote: Bool
+        let isTask: Bool
+        let hasReminder: Bool
+        let isObie: Bool
+    }
+    var editorFanCommand: EditorFanCommand?
+
     /// Settings sheet — a swipe UP on the dock toggles this once the first-run
     /// orientation has finished (step >= 4 in `FirstRunOrientationState`).
     /// (Owner redesign 2026-06-11 — replaces the long-press on Dailies.)

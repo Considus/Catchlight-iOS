@@ -1,17 +1,26 @@
 //
 //  TakeEditView.swift
-//  Catchlight (iOS app target) — Phase 6 UI
+//  Catchlight (iOS app target) — Phase 6 UI / Phase 2 block editor (D-035)
 //
-//  Creating / editing a Take. A card that rises into the upper third of the screen
-//  above a dimmed background, holding a full-surface TextEditor and a footer row
-//  with the Take's circle + a muted "Shape this take" label. Tapping the footer
-//  circle opens the petal fan from that origin. Auto-saves on dismiss — there is no
-//  explicit save button. Dismiss by tapping the dim overlay; the card retreats and
-//  the keyboard dismisses.
+//  Creating / editing a Take. A card that rises into the upper third of the
+//  screen above a dimmed background. The writing surface is a BLOCK-STACK
+//  editor: an ordered list of rows where prose lines and checkbox lines
+//  interleave inline (Apple Notes / Word parity), replacing the old single
+//  TextEditor. The footer keeps the Take's Iris + "Shape this take" (the Focus
+//  ring); auto-saves on dismiss; there is no explicit save button.
 //
-//  Keyboard handling: the card is top-anchored and uses `.ignoresSafeArea(.keyboard)`
-//  on the dim layer only, while the card itself stays pinned to the top — so the
-//  writing surface is always visible above the keyboard, never behind it.
+//  Interaction (see BlockTextEditor for the UITextView plumbing):
+//    • Type prose in a text row; Return is a normal newline.
+//    • Focus-ring "Task" Mark ON → the cursor's text block is split on newlines
+//      into check items and focus drops into the first one (the user types
+//      immediately). OFF → check items join back into prose.
+//    • Return in a non-empty check row continues the list; Return in an EMPTY
+//      check row exits back to prose. Backspace on an empty row merges upward.
+//    • Tap a checkbox to tick; drag (the trailing handle) to reorder; swipe to
+//      delete.
+//
+//  Focus/cursor management across rows is the fiddly part and only fully
+//  exercises on a device — the simulator does not reproduce all keyboard timing.
 //
 
 import SwiftUI
@@ -25,14 +34,25 @@ struct TakeEditView: View {
 
     let take: Take
 
-    @State private var text: String
-    @FocusState private var focused: Bool
+    /// The live, editable Take. The single source of truth while the editor is
+    /// open; persisted on dismiss. Activity flags / reminder ride here too so a
+    /// Focus-ring commit applies to what's on screen, not the stored copy.
+    @State private var draft: Take
+    /// Which block holds the keyboard. Driven across rows on Return / Backspace /
+    /// make-checklist; bound into each row's BlockTextEditor.
+    @State private var focusedBlockID: UUID?
 
     init(take: Take) {
         self.take = take
-        // Phase 1 minimal editor: edit the Take's prose text (the first text
-        // block). Phase 2 replaces this with the block-stack editor.
-        _text = State(initialValue: take.primaryText)
+        _draft = State(initialValue: Self.normalisedForEditing(take))
+    }
+
+    /// A Take always edits with at least one row; a brand-new (blocks-empty) Take
+    /// gets one empty prose row to type into. The empty row is pruned on save.
+    private static func normalisedForEditing(_ take: Take) -> Take {
+        var t = take
+        if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
+        return t
     }
 
     var body: some View {
@@ -54,47 +74,26 @@ struct TakeEditView: View {
                 // heading — not hugging the very top of the screen.
                 .padding(.top, 56)
         }
-        .onAppear { focused = true }
+        .onAppear {
+            if focusedBlockID == nil { focusedBlockID = draft.blocks.first?.id }
+        }
+        .onChange(of: ui.editorFanCommand) { _, command in
+            // The Focus ring committed while this editor is open — apply it to
+            // the live draft (the Task Mark reshapes the on-screen blocks).
+            guard let command else { return }
+            applyFanCommand(command)
+            ui.editorFanCommand = nil
+        }
     }
 
     private var card: some View {
         VStack(alignment: .leading, spacing: 0) {
-            TextEditor(text: $text)
-                .focused($focused)
-                .font(CatchlightFont.display(size: 22, relativeTo: .body))
-                .foregroundStyle(Color.ckTextPrimary)
-                .scrollContentBackground(.hidden)
-                .frame(minHeight: 160, maxHeight: 260)
-                .padding(.horizontal, 12)
-                .padding(.top, 12)
-                .accessibilityIdentifier("take-edit-body")
-                .accessibilityLabel("Take text")
-                .accessibilityHint("Write your take. It saves automatically.")
+            blockList
+                .padding(.top, 6)
 
             Divider().background(Color.ckTextSecondary.opacity(0.2))
 
-            // Footer: circle + "Shape this take".
-            HStack(spacing: 12) {
-                Button {
-                    ui.openPetalFan(for: currentTake)
-                } label: {
-                    TakeCircleView(take: currentTake, diameter: 28)
-                        .frame(minWidth: CatchlightLayout.minTouchTarget,
-                               minHeight: CatchlightLayout.minTouchTarget)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Shape this take. \(TakeCircleView.activityDescription(for: currentTake))")
-                .accessibilityHint("Double-tap to choose activity types.")
-
-                Text("Shape this take")
-                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
-                    .foregroundStyle(Color.ckTextSecondary)
-
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            footer
         }
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -103,33 +102,236 @@ struct TakeEditView: View {
         )
     }
 
-    /// The take with the live (unsaved) text, so the footer circle + petal fan
-    /// reflect what's on screen.
-    private var currentTake: Take {
-        var t = take
-        t.primaryText = text
-        return t
+    // MARK: - Block stack
+
+    // A `List` of block rows. List is used deliberately over a ScrollView/VStack:
+    // it manages its OWN keyboard avoidance internally (scrolling the focused row
+    // into view without shoving the whole top-anchored card down to mid-screen —
+    // which a ScrollView did on iOS 17, breaking tap-outside-to-dismiss), and it
+    // sizes each UITextView row reliably. The earlier List focus/render loop on
+    // block-restructure is prevented by the coordinator's `focusRequested` latch
+    // (BlockTextEditor) plus per-row identity by block id. `.onMove` reorders.
+    //
+    // No `.accessibilityIdentifier` on the List — on iOS 17 SwiftUI merges a
+    // container identifier onto a lone child, overriding the per-row
+    // "take-edit-body" / "take-edit-check-field" ids the tests query.
+    private var blockList: some View {
+        List {
+            ForEach(draft.blocks) { block in
+                row(for: block)
+                    .listRowInsets(EdgeInsets(top: 1, leading: 12, bottom: 1, trailing: 6))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            .onMove { from, to in
+                draft.blocks.move(fromOffsets: from, toOffset: to)
+            }
+            .onDelete { offsets in
+                draft.blocks.remove(atOffsets: offsets)
+                ensureNonEmpty()
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 36)
+        .frame(minHeight: 160, maxHeight: 280)
     }
 
+    @ViewBuilder
+    private func row(for block: TakeBlock) -> some View {
+        switch block {
+        case .text(let textBlock):
+            textRow(textBlock)
+        case .check(let item):
+            checkRow(item)
+        }
+    }
+
+    private func textRow(_ textBlock: TextBlock) -> some View {
+        BlockTextEditor(
+            blockID: textBlock.id,
+            text: textBinding(textBlock.id),
+            focusedBlockID: $focusedBlockID,
+            isCheck: false,
+            isComplete: false,
+            // The first prose row keeps the historical id the create/edit flows
+            // type into ("take-edit-body"); later prose rows get a generic id.
+            axIdentifier: isFirstTextBlock(textBlock.id) ? "take-edit-body" : "take-edit-text",
+            axLabel: "Take text",
+            onBackspaceEmpty: { handleBackspaceEmpty(textBlock.id, isCheck: false) }
+        )
+    }
+
+    private func checkRow(_ item: ChecklistItem) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Button {
+                draft.toggleItemComplete(blockID: item.id)
+            } label: {
+                Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(item.isComplete ? Color.ckAccent : Color.ckTextSecondary)
+                    .frame(width: CatchlightLayout.minTouchTarget,
+                           height: CatchlightLayout.minTouchTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("take-edit-checkbox")
+            .accessibilityLabel(item.text.isEmpty ? "Checklist item" : item.text)
+            .accessibilityValue(item.isComplete ? "checked" : "unchecked")
+            .accessibilityHint("Double-tap to \(item.isComplete ? "untick" : "tick") this item.")
+            .accessibilityAddTraits(item.isComplete ? [.isSelected, .isButton] : .isButton)
+
+            BlockTextEditor(
+                blockID: item.id,
+                text: textBinding(item.id),
+                focusedBlockID: $focusedBlockID,
+                isCheck: true,
+                isComplete: item.isComplete,
+                axIdentifier: "take-edit-check-field",
+                axLabel: "Checklist item",
+                onReturn: { handleReturn(item.id) },
+                onBackspaceEmpty: { handleBackspaceEmpty(item.id, isCheck: true) }
+            )
+
+            // 44pt drag affordance. The List's `.onMove` lifts the row on a
+            // long-press from this non-editable handle (it doesn't fight the text
+            // view's gestures). Drag fidelity is on the on-device verification list.
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.ckTextSecondary.opacity(0.5))
+                .frame(width: CatchlightLayout.minTouchTarget,
+                       height: CatchlightLayout.minTouchTarget)
+                .contentShape(Rectangle())
+                .accessibilityIdentifier("take-edit-reorder")
+                .accessibilityLabel("Reorder item")
+        }
+    }
+
+    // MARK: - Row bindings & helpers
+
+    private func textBinding(_ id: UUID) -> Binding<String> {
+        Binding(
+            get: { draft.blocks.first { $0.id == id }?.text ?? "" },
+            set: { draft.updateText($0, blockID: id) }
+        )
+    }
+
+    private func isFirstTextBlock(_ id: UUID) -> Bool {
+        draft.blocks.first { if case .text = $0 { return true } else { return false } }?.id == id
+    }
+
+    /// Return inside a check row: continue the list, or exit to prose when empty.
+    private func handleReturn(_ id: UUID) {
+        let isEmpty = (draft.blocks.first { $0.id == id }?.text ?? "").isEmpty
+        if isEmpty {
+            draft.convertCheckToText(blockID: id)   // exit the list (rule 4)
+            focusedBlockID = id                      // …staying in the now-prose row
+        } else {
+            focusedBlockID = draft.insertCheckItem(after: id)  // continue (rule 3)
+        }
+    }
+
+    /// Backspace on an empty row: merge with the block above, or — for the first
+    /// check row — exit the list back to prose.
+    private func handleBackspaceEmpty(_ id: UUID, isCheck: Bool) {
+        if let previous = draft.blockID(before: id) {
+            draft.removeBlock(blockID: id)
+            ensureNonEmpty()
+            focusedBlockID = previous
+        } else if isCheck {
+            draft.convertCheckToText(blockID: id)
+            focusedBlockID = id
+        }
+        // Empty first prose row + backspace: nothing to merge into.
+    }
+
+    private func ensureNonEmpty() {
+        if draft.blocks.isEmpty {
+            let textBlock = TextBlock(text: "")
+            draft.blocks = [.text(textBlock)]
+            focusedBlockID = textBlock.id
+        }
+    }
+
+    /// Apply a Focus-ring selection to the live draft. The Task Mark is
+    /// structural (reshapes blocks); Note / Reminder / Obie are activity flags.
+    private func applyFanCommand(_ command: UIState.EditorFanCommand) {
+        draft.isNote = command.isNote
+
+        if command.isTask && !draft.isTask {
+            // Turn ON: split the cursor's prose line(s) into items, drop focus in.
+            let firstItem = draft.convertToChecklist(splitting: focusedBlockID)
+            focusedBlockID = firstItem ?? draft.checkItems.first?.id
+        } else if !command.isTask && draft.isTask {
+            draft.convertToProse()
+        }
+
+        if command.hasReminder, draft.timeReminder == nil {
+            // Mirror DailiesViewModel.applyActivityTypes: default to tomorrow; the
+            // reminder surface refines it.
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+            draft.timeReminder = TimeReminder(scheduledDate: tomorrow,
+                                              notificationIdentifier: draft.id.uuidString)
+        } else if !command.hasReminder {
+            draft.timeReminder = nil
+        }
+
+        draft.isObie = command.isObie
+        draft.normaliseActivityFloor()
+    }
+
+    // MARK: - Footer (Iris + Shape this take)
+
+    private var footer: some View {
+        HStack(spacing: 12) {
+            Button {
+                ui.openPetalFan(for: currentTake)
+            } label: {
+                TakeCircleView(take: currentTake, diameter: 28)
+                    .frame(minWidth: CatchlightLayout.minTouchTarget,
+                           minHeight: CatchlightLayout.minTouchTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("editor-shape")
+            .accessibilityLabel("Shape this take. \(TakeCircleView.activityDescription(for: currentTake))")
+            .accessibilityHint("Double-tap to choose activity types.")
+
+            Text("Shape this take")
+                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                .foregroundStyle(Color.ckTextSecondary)
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+
+    /// The live (unsaved) Take, so the footer Iris and the Focus ring reflect
+    /// what's on screen.
+    private var currentTake: Take { draft }
+
+    // MARK: - Save / dismiss
+
     private func saveAndDismiss() {
-        focused = false
+        focusedBlockID = nil
         // Task 6.20: the gate lives at the commit, not the navigation. Any path
-        // that reaches the editor (Dailies, Search, Sequence, future deep links)
-        // funnels through here; lapsed users have their edit redirected to the
-        // paywall without losing what they typed (the close still happens so the
-        // dim layer and keyboard get released — the paywall overlays cleanly).
+        // that reaches the editor funnels through here; lapsed users have their
+        // edit redirected to the paywall without losing what they typed (the
+        // close still happens so the dim layer + keyboard release — the paywall
+        // overlays cleanly).
         guard app.ensureEntitled() else {
             ui.closeEditor()
             return
         }
-        let t = currentTake
-        // Blank-Take discard (2026-06-10): a NEW Take dismissed with no text
-        // and no shaping leaves nothing behind (previously the blank row was
-        // persisted the moment the editor opened, accumulating permanent
-        // "Untitled take" rows). Scope deliberately narrow:
-        //   • every content field must be empty (incl. checklist/attachments a
-        //     future client may have synced — clearing visible text must not
-        //     destroy invisible content), AND
+        var t = draft
+        // Drop the seeded / return-exited empty prose rows so they don't linger
+        // in the saved content, preview, or export.
+        t.removeEmptyTextBlocks()
+        // Blank-Take discard (2026-06-10): a NEW Take dismissed with no content
+        // and no shaping leaves nothing behind. Scope deliberately narrow:
+        //   • every content field empty (a check item — even empty — counts as
+        //     content, so `!isTask` guards it), AND
         //   • the Take must not already exist in the store with content —
         //     deliberately erasing an old note keeps an "Untitled take" row the
         //     user can delete explicitly, rather than silently destroying it.
@@ -150,7 +352,8 @@ struct TakeEditView: View {
 #Preview("Edit — Night") {
     let vm = DailiesViewModel(store: InMemoryTakeStore())
     return TakeEditView(take: Take(blocks: [.textLine("A thought half-formed,\nstill worth keeping."),
-                                            .checkItem("act on it")]))
+                                            .checkItem("act on it"),
+                                            .checkItem("done already", isComplete: true)]))
         .environment(vm)
         .environment(UIState())
         .background(Color.ckBackground)
