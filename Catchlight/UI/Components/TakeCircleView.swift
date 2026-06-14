@@ -17,24 +17,38 @@
 import SwiftUI
 import CatchlightCore
 
-/// One pie-slice quadrant of the circle.
+/// One ANNULAR quadrant of the Iris (HiFi v1.7 — section 7). The Iris reads as a
+/// RING with a hollow aperture, not a solid disc: each quadrant fills only the
+/// band between an inner radius (`innerRatio × R`, v1.7's r8-of-r18 ≈ 0.44) and
+/// the outer radius, leaving the centre empty (the camera aperture). The path
+/// runs along the outer arc, back along the inner arc, and closes — never
+/// through the centre.
 private struct QuadrantSlice: Shape {
     /// Start/end angles in degrees, 0° = 3 o'clock, increasing clockwise in screen
     /// space (SwiftUI's y grows downward, so `Angle` clockwise matches visual).
     let startDegrees: Double
     let endDegrees: Double
+    /// Inner radius as a fraction of the outer radius (v1.7 r8/r18 ≈ 0.44).
+    var innerRatio: CGFloat = 0.44
 
     func path(in rect: CGRect) -> Path {
         let centre = CGPoint(x: rect.midX, y: rect.midY)
-        let radius = min(rect.width, rect.height) / 2
+        let outerR = min(rect.width, rect.height) / 2
+        let innerR = outerR * innerRatio
         var p = Path()
-        p.move(to: centre)
         p.addArc(
             center: centre,
-            radius: radius,
+            radius: outerR,
             startAngle: .degrees(startDegrees),
             endAngle: .degrees(endDegrees),
             clockwise: false
+        )
+        p.addArc(
+            center: centre,
+            radius: innerR,
+            startAngle: .degrees(endDegrees),
+            endAngle: .degrees(startDegrees),
+            clockwise: true
         )
         p.closeSubpath()
         return p
@@ -51,9 +65,13 @@ struct TakeCircleView: View {
 
     var body: some View {
         ZStack {
-            // Base disc (very subtle, so empty quadrants are still a disc, not a gap).
+            // Off-band: a faint full ANNULAR ring (v1.7 `--q-off`) so empty
+            // quadrants still read as part of a ring while the centre stays
+            // HOLLOW (the camera aperture). `strokeBorder` fills inward from the
+            // edge to the inner radius (0.44·R), leaving the centre empty —
+            // replacing the old solid base disc that filled the aperture.
             Circle()
-                .fill(Color.ckTextSecondary.opacity(0.10))
+                .strokeBorder(Color.ckIrisOff, lineWidth: diameter * 0.28)
 
             // Top-right: Note. Angles -90°..0° (12 o'clock to 3 o'clock).
             if take.isNote {
@@ -71,6 +89,12 @@ struct TakeCircleView: View {
                     .fill(Quadrant.task(scheme))
             }
             // Top-left (180°..270°) is reserved — intentionally empty.
+
+            // Hairline outer ring (HiFi v1.7 — section 7): a 0.75pt rim around
+            // the annular quadrants. Daylight #E7E7E7 (v1.7's iris SVG uses the
+            // near-identical #ECECEC); Night rides the divider/line token.
+            Circle()
+                .strokeBorder(Color.ckIrisRing, lineWidth: 0.75)
 
             // Obie: full ring + specular dot at the upper-right.
             if take.isObie {

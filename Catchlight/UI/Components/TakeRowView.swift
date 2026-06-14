@@ -18,7 +18,12 @@ import CatchlightCore
 
 struct TakeRowView: View {
     let take: Take
-    var onTapCircle: () -> Void = {}
+    /// Tap on the Iris. The `CGPoint` is the Iris's centre in WINDOW (global)
+    /// coordinates, captured by the tap recognizer, so the caller can bloom the
+    /// petal fan in place at the tapped Iris rather than at the screen centre
+    /// (section 8). The window coordinate space matches the full-screen petal-fan
+    /// overlay's space in RootView.
+    var onTapCircle: (CGPoint) -> Void = { _ in }
     var onLongPressCircle: () -> Void = {}
     var onTapText: () -> Void = {}
     /// Optional row actions (2026-06-10): when supplied, a context menu on the
@@ -97,83 +102,134 @@ struct TakeRowView: View {
         return Self.reminderFormatter.string(from: r.scheduledDate)
     }
 
+    /// Reminder date has passed — drives the overdue card variant (HiFi v1.7
+    /// .card.overdue). Obie always wins the card treatment when both apply.
+    private var isOverdue: Bool {
+        guard let r = take.timeReminder else { return false }
+        return r.scheduledDate < Date()
+    }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            // Circle column — fixed width so every circle's centre lands on the
-            // spine. Gestures are UIKit recognizers (2026-06-10): SwiftUI's
-            // `LongPressGesture` (plain or simultaneous, with or without a
-            // Button) never fires for synthesized presses inside this
-            // ScrollView on the current runtime — while UIKit long-press
-            // interactions (e.g. the context menu's) work for both real and
-            // synthesized touches. `tap.require(toFail: long)` preserves the
-            // original exclusive semantics.
-            ZStack {
-                TakeCircleView(take: take)
-            }
-            .frame(width: CatchlightLayout.circleDiameter,
-                   height: CatchlightLayout.circleDiameter)
-            .frame(minWidth: CatchlightLayout.minTouchTarget,
-                   minHeight: CatchlightLayout.minTouchTarget)
-            .contentShape(Rectangle())
-            .overlay(
-                TapAndLongPressRecognizer(
-                    minimumDuration: 0.45,
-                    onTap: onTapCircle,
-                    onLongPress: onLongPressCircle
-                )
-            )
-            .accessibilityElement()
-            .accessibilityIdentifier("take-iris")
-            .accessibilityLabel(take.isObie
-                ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
-                : "Iris. \(TakeCircleView.activityDescription(for: take))")
-            .accessibilityHint("Double-tap to open actions. Long press to make this your Obie.")
-            // VoiceOver intercepts long-press, so expose the Obie designation as a
-            // named action too. VO activation lands as a tap on the recognizer.
-            .accessibilityAction(named: "Make Obie") { onLongPressCircle() }
-            .accessibilityAddTraits(.isButton)
-
-            // Text column.
-            VStack(alignment: .leading, spacing: 4) {
-                Text(firstLine)
-                    .font(CatchlightFont.display(size: 20, relativeTo: .body))
-                    .foregroundStyle(textColor)
-                    // Compact 2-line preview at default sizes; let the row grow
-                    // up to 4 lines at accessibility text sizes so a Take's first
-                    // sentence is never cut off mid-word.
-                    .lineLimit(dynamicSize.isAccessibilitySize ? 4 : 2)
-                    .multilineTextAlignment(.leading)
-                    .strikethrough(take.isTask && take.isComplete, color: .ckTextComplete)
-
-                // Quiet meta line: the checklist progress marker (2+ items) and/or
-                // the reminder time. New marker — HiFi v1.7 is silent on it, so it
-                // matches the reminder label's scale (DM Sans caption, Secondary);
-                // flagged for owner review. Stacked so neither fights the other.
-                if let progressText {
-                    Text(progressText)
-                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .accessibilityHidden(true)   // already spoken in the row label
-                }
-
-                if let reminderLabel {
-                    Text(reminderLabel)
-                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
-                        .foregroundStyle(Color.ckTextSecondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(minHeight: CatchlightLayout.minTouchTarget, alignment: .center)
-            .contentShape(Rectangle())
-            .onTapGesture { onTapText() }
-            .contextMenu { rowMenuItems }
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("take-row")
-            .accessibilityLabel(rowAccessibilityLabel)
-            .accessibilityHint("Double-tap to edit this take.")
-            .accessibilityActions { rowAccessibilityActions }
+        // Section 5 (HiFi v1.7 .card) — the text column rides a card SURFACE; the
+        // Iris stays on the spine to its left, overlapping the card's leading
+        // edge (`position:absolute; left:6px` in v1.7). The Iris is drawn on TOP
+        // so its long-press still wins hit-testing; the card's text taps clear
+        // the 44pt Iris touch frame.
+        ZStack(alignment: .topLeading) {
+            cardColumn
+                // Slide the card's leading edge under the Iris so its rounded
+                // corner tucks beneath the circle. Card content (14pt leading
+                // pad) clears the 44pt Iris frame, keeping the gesture split.
+                .padding(.leading, CatchlightLayout.circleDiameter)
+            irisColumn
         }
         .padding(.vertical, 6)
+    }
+
+    /// The Iris circle on the spine — a 22pt disc in a 44pt touch frame.
+    /// Gestures are UIKit recognizers (2026-06-10): SwiftUI's `LongPressGesture`
+    /// (plain or simultaneous, with or without a Button) never fires for
+    /// synthesized presses inside this ScrollView on the current runtime — while
+    /// UIKit long-press interactions (e.g. the context menu's) work for both real
+    /// and synthesized touches. `tap.require(toFail: long)` preserves the
+    /// original exclusive semantics.
+    private var irisColumn: some View {
+        ZStack {
+            TakeCircleView(take: take)
+        }
+        .frame(width: CatchlightLayout.circleDiameter,
+               height: CatchlightLayout.circleDiameter)
+        .frame(minWidth: CatchlightLayout.minTouchTarget,
+               minHeight: CatchlightLayout.minTouchTarget)
+        .contentShape(Rectangle())
+        .overlay(
+            TapAndLongPressRecognizer(
+                minimumDuration: 0.45,
+                onTap: onTapCircle,
+                onLongPress: onLongPressCircle
+            )
+        )
+        .accessibilityElement()
+        .accessibilityIdentifier("take-iris")
+        .accessibilityLabel(take.isObie
+            ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
+            : "Iris. \(TakeCircleView.activityDescription(for: take))")
+        .accessibilityHint("Double-tap to open actions. Long press to make this your Obie.")
+        // VoiceOver intercepts long-press, so expose the Obie designation as a
+        // named action too. VO activation lands as a tap on the recognizer.
+        .accessibilityAction(named: "Make Obie") { onLongPressCircle() }
+        .accessibilityAddTraits(.isButton)
+    }
+
+    /// The Take's text column on the v1.7 card surface (radius 12, content pad
+    /// 24/14/14/14, Daylight shadow / Night tonal-only, variant borders).
+    private var cardColumn: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(firstLine)
+                .font(CatchlightFont.display(size: 20, relativeTo: .body))
+                .foregroundStyle(textColor)
+                // Compact 2-line preview at default sizes; let the row grow
+                // up to 4 lines at accessibility text sizes so a Take's first
+                // sentence is never cut off mid-word.
+                .lineLimit(dynamicSize.isAccessibilitySize ? 4 : 2)
+                .multilineTextAlignment(.leading)
+                .strikethrough(take.isTask && take.isComplete, color: .ckTextComplete)
+
+            // Quiet meta line: the checklist progress marker (2+ items) and/or
+            // the reminder time. New marker — HiFi v1.7 is silent on it, so it
+            // matches the reminder label's scale (DM Sans caption, Secondary);
+            // flagged for owner review. Stacked so neither fights the other.
+            if let progressText {
+                Text(progressText)
+                    .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .accessibilityHidden(true)   // already spoken in the row label
+            }
+
+            if let reminderLabel {
+                Text(reminderLabel)
+                    .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                    .foregroundStyle(isOverdue ? Color.ckCardOverdueBorder : Color.ckTextSecondary)
+            }
+        }
+        // v1.7 .card padding: 24px top (clears the overlapping Iris) / 14 sides /
+        // 14 bottom.
+        .padding(EdgeInsets(top: 24, leading: 14, bottom: 14, trailing: 14))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(cardSurface)
+                // Daylight elevation only; Night is tonal (surface lighter than
+                // bg). Overdue gets the slightly stronger shadow.
+                .daylightCardShadow(strong: isOverdue && !take.isObie)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(cardBorder, lineWidth: 1.5)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .onTapGesture { onTapText() }
+        .contextMenu { rowMenuItems }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("take-row")
+        .accessibilityLabel(rowAccessibilityLabel)
+        .accessibilityHint("Double-tap to edit this take.")
+        .accessibilityActions { rowAccessibilityActions }
+    }
+
+    /// Card background — Obie warm tint, else the standard surface (overdue keeps
+    /// the standard surface; only its border + shadow change).
+    private var cardSurface: Color {
+        take.isObie ? .ckCardObieSurface : .ckSurface
+    }
+
+    /// Card border (1.5pt). Obie → Ember (reserved exclusively for the Obie);
+    /// overdue → overdue amber; standard → the surface colour (invisible, but
+    /// reserves the 1.5pt so all cards are the same size).
+    private var cardBorder: Color {
+        if take.isObie { return .ckCardObieBorder }
+        if isOverdue { return .ckCardOverdueBorder }
+        return cardSurface
     }
 
     @ViewBuilder
@@ -214,7 +270,10 @@ struct TakeRowView: View {
 /// the finger is still down), matching the previous SwiftUI behaviour.
 private struct TapAndLongPressRecognizer: UIViewRepresentable {
     var minimumDuration: TimeInterval
-    var onTap: () -> Void
+    /// Receives the recognizer view's centre in WINDOW coordinates (the Iris
+    /// touch-frame centre ≈ the Iris circle centre) so the caller can anchor the
+    /// petal fan there (section 8).
+    var onTap: (CGPoint) -> Void
     var onLongPress: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -226,7 +285,7 @@ private struct TapAndLongPressRecognizer: UIViewRepresentable {
                                                 action: #selector(Coordinator.longPressed(_:)))
         long.minimumPressDuration = minimumDuration
         let tap = UITapGestureRecognizer(target: context.coordinator,
-                                         action: #selector(Coordinator.tapped))
+                                         action: #selector(Coordinator.tapped(_:)))
         tap.require(toFail: long)
         view.addGestureRecognizer(long)
         view.addGestureRecognizer(tap)
@@ -241,7 +300,19 @@ private struct TapAndLongPressRecognizer: UIViewRepresentable {
         var parent: TapAndLongPressRecognizer
         init(_ parent: TapAndLongPressRecognizer) { self.parent = parent }
 
-        @objc func tapped() { parent.onTap() }
+        @objc func tapped(_ recognizer: UITapGestureRecognizer) {
+            // The recognizer's view IS the Iris's 44pt touch overlay; its centre
+            // converted to window coordinates is the Iris centre the petal fan
+            // should bloom from (section 8). `convert(_:to: nil)` targets the
+            // window — which equals the global / full-screen overlay space.
+            let centre: CGPoint
+            if let view = recognizer.view {
+                centre = view.convert(CGPoint(x: view.bounds.midX, y: view.bounds.midY), to: nil)
+            } else {
+                centre = .zero
+            }
+            parent.onTap(centre)
+        }
 
         @objc func longPressed(_ recognizer: UILongPressGestureRecognizer) {
             if recognizer.state == .began { parent.onLongPress() }
