@@ -77,6 +77,19 @@ final class TakeModelTests: XCTestCase {
         XCTAssertEqual(take.plainText, "Shopping\nmilk\neggs")
     }
 
+    func testChecklistProgress_onlyForTwoOrMoreItems() {
+        XCTAssertNil(Take(blocks: [.textLine("note")]).checklistProgress, "a note has no progress")
+        XCTAssertNil(Take(blocks: [.checkItem("one")]).checklistProgress, "a one-item Task reads from its state, no count")
+
+        let take = Take(blocks: [.checkItem("a", isComplete: true),
+                                 .textLine("aside"),
+                                 .checkItem("b"),
+                                 .checkItem("c", isComplete: true)])
+        let progress = take.checklistProgress
+        XCTAssertEqual(progress?.done, 2)
+        XCTAssertEqual(progress?.total, 3, "interleaved prose is not counted")
+    }
+
     func testTake_checkItems_inBlockOrder() {
         let take = Take(blocks: [.checkItem("a"), .textLine("mid"), .checkItem("b", isComplete: true)])
         XCTAssertEqual(take.checkItems.map(\.text), ["a", "b"])

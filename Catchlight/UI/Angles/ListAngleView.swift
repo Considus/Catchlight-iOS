@@ -97,6 +97,15 @@ struct ListAngleView: View {
         .environment(\.defaultMinListRowHeight, 56)
     }
 
+    /// Move the block one step up (-1) or down (+1) — the VoiceOver-operable
+    /// reorder, since drag isn't. Operates on the real Take, so it persists.
+    private func moveItem(_ id: UUID, by offset: Int) {
+        guard let from = take.blocks.firstIndex(where: { $0.id == id }) else { return }
+        let to = from + offset
+        guard to >= 0, to < take.blocks.count else { return }
+        take.blocks.swapAt(from, to)
+    }
+
     @ViewBuilder
     private func row(for block: TakeBlock) -> some View {
         switch block {
@@ -140,6 +149,10 @@ struct ListAngleView: View {
             .accessibilityValue(item.isComplete ? "checked" : "unchecked")
             .accessibilityHint("Double-tap to \(item.isComplete ? "untick" : "tick") this item.")
             .accessibilityAddTraits(item.isComplete ? [.isButton, .isSelected] : .isButton)
+            // Drag-to-reorder is not VoiceOver-operable, so expose reorder as named
+            // actions on each item (D-033 accessibility).
+            .accessibilityAction(named: "Move up") { moveItem(item.id, by: -1) }
+            .accessibilityAction(named: "Move down") { moveItem(item.id, by: 1) }
 
             // Reorder handle — List `.onMove` lifts the row on a long-press here,
             // away from the tick button. Drag fidelity is on the on-device list.

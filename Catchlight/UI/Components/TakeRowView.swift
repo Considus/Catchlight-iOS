@@ -42,16 +42,44 @@ struct TakeRowView: View {
         return trimmed.isEmpty ? "Untitled take" : trimmed
     }
 
-    /// Composed VoiceOver label: text + status + reminder date.
-    /// Example: "Buy milk. Task. Complete." or "The north star. Obie, your pinned Take. Note. Reminder: Tomorrow at 3 PM."
+    /// Composed VoiceOver label: text + status (+ progress) + reminder date.
+    /// Example: "Buy milk. Task, 3 of 5 complete." or "The north star. Obie, your
+    /// pinned Take. Note. Reminder set. Tomorrow at 3 PM."
     private var rowAccessibilityLabel: String {
-        var parts: [String] = [firstLine]
+        var parts: [String] = [firstLine, Self.statusDescription(for: take)]
+        if let when = reminderLabel { parts.append(when) }
+        return parts.filter { !$0.isEmpty }.joined(separator: ". ")
+    }
+
+    /// The spoken status (Obie / Task + progress / Note / reminder-set) portion of
+    /// the row label, without the first line or the formatted reminder date.
+    /// Internal + static so the progress/completed wording is unit-testable.
+    static func statusDescription(for take: Take) -> String {
+        var parts: [String] = []
         if take.isObie { parts.append("Obie, your pinned Take") }
-        if take.isTask { parts.append(take.isComplete ? "Task, complete" : "Task") }
+        if take.isTask {
+            if let progress = take.checklistProgress {
+                parts.append("Task, \(progress.done) of \(progress.total) complete")
+            } else {
+                parts.append(take.isComplete ? "Task, complete" : "Task")
+            }
+        }
         if take.timeReminder != nil { parts.append("Reminder set") }
         if take.isNote && !take.isTask && take.timeReminder == nil { parts.append("Note") }
-        if let when = reminderLabel { parts.append(when) }
         return parts.joined(separator: ". ")
+    }
+
+    /// The "3 of 5" progress marker, or nil (one-item Tasks / non-Tasks show none).
+    private var progressText: String? {
+        guard let progress = take.checklistProgress else { return nil }
+        return "\(progress.done) of \(progress.total)"
+    }
+
+    /// The Take's first-line colour. A complete Task recedes to the HiFi `.tt.done`
+    /// treatment (plus the strikethrough); Obie keeps its emphasis colour.
+    private var textColor: Color {
+        if take.isTask && take.isComplete { return .ckTextComplete }
+        return take.isObie ? .ckTextObie : .ckTextPrimary
     }
 
     /// Cached formatter — this label is evaluated twice per row render (body +
@@ -109,13 +137,24 @@ struct TakeRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(firstLine)
                     .font(CatchlightFont.display(size: 20, relativeTo: .body))
-                    .foregroundStyle(take.isObie ? Color.ckTextObie : Color.ckTextPrimary)
+                    .foregroundStyle(textColor)
                     // Compact 2-line preview at default sizes; let the row grow
                     // up to 4 lines at accessibility text sizes so a Take's first
                     // sentence is never cut off mid-word.
                     .lineLimit(dynamicSize.isAccessibilitySize ? 4 : 2)
                     .multilineTextAlignment(.leading)
-                    .strikethrough(take.isTask && take.isComplete, color: .ckTextSecondary)
+                    .strikethrough(take.isTask && take.isComplete, color: .ckTextComplete)
+
+                // Quiet meta line: the checklist progress marker (2+ items) and/or
+                // the reminder time. New marker — HiFi v1.7 is silent on it, so it
+                // matches the reminder label's scale (DM Sans caption, Secondary);
+                // flagged for owner review. Stacked so neither fights the other.
+                if let progressText {
+                    Text(progressText)
+                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .accessibilityHidden(true)   // already spoken in the row label
+                }
 
                 if let reminderLabel {
                     Text(reminderLabel)
@@ -217,6 +256,11 @@ private struct TapAndLongPressRecognizer: UIViewRepresentable {
         TakeRowView(take: Take(blocks: [.textLine("A plain thought, nothing more.")]))
         TakeRowView(take: Take(blocks: [.checkItem("Ship the Phase 6 UI")]))
         TakeRowView(take: Take(blocks: [.checkItem("Done already", isComplete: true)]))
+        TakeRowView(take: Take(blocks: [.textLine("Weekend shop"), .checkItem("milk", isComplete: true),
+                                        .checkItem("eggs"), .checkItem("bread", isComplete: true),
+                                        .checkItem("coffee"), .checkItem("apples")]))
+        TakeRowView(take: Take(blocks: [.checkItem("wash", isComplete: true),
+                                        .checkItem("fold", isComplete: true)]))
         TakeRowView(take: { var t = Take(blocks: [.textLine("Call the framer back")]); t.timeReminder = reminder; return t }())
         TakeRowView(take: Take(blocks: [.textLine("The north star")], isObie: true))
     }
