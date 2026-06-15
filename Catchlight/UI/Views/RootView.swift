@@ -61,12 +61,11 @@ struct RootView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.4), value: app.needsOnboarding)
         .task {
-            // Hold the launch-screen branding for a minimum beat so it reads even
-            // when content is ready instantly (the onboarding path has no store to
-            // load, so the OS launch screen would otherwise flash by). ~1.2s, then
-            // crossfade to whatever's behind (onboarding or the timeline).
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
-            withAnimation(.easeInOut(duration: 0.4)) { showSplash = false }
+            // Hold the launch-screen branding long enough to actually READ the
+            // tagline (owner 2026-06-16: 1.2s was too fast). ~2.5s, then a gentle
+            // 0.5s crossfade to whatever's behind (onboarding or the timeline).
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            withAnimation(.easeInOut(duration: 0.5)) { showSplash = false }
         }
     }
 

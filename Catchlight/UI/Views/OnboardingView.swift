@@ -225,7 +225,11 @@ struct WelcomeContent: View {
     /// the splash, occupying the headline slot.
     private var tagline: some View {
         Text("Every thought deserves a moment of clarity.")
-            .font(CatchlightFont.display(size: 16, relativeTo: .subheadline))
+            // Bumped 16 → 22 (owner 2026-06-16: too small versus the Welcome text).
+            // It's the splash's hero line, so it sits between the body (17) and the
+            // headline (26); the secondary colour + italic keep it a tagline, not a
+            // heading.
+            .font(CatchlightFont.display(size: 22, relativeTo: .title3))
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
