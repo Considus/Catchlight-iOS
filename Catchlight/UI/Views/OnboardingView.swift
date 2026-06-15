@@ -104,11 +104,13 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
 /// beneath it change (owner 2026-06-15). The launch-screen storyboard mirrors this
 /// geometry so the OS launch → splash → Welcome handoff is seamless.
 ///
-/// The top inset is `deviceTopInset + 24` — i.e. 24pt below the SAFE-AREA top, not
+/// The top inset is `deviceTopInset + 84` — i.e. 84pt below the SAFE-AREA top, not
 /// the screen top. The app runs full-bleed (`.ignoresSafeArea(.container)` at the
-/// root), so without `deviceTopInset` the mark rendered under the status bar /
-/// Dynamic Island (owner caught it in Daylight 2026-06-15; the dark Night icon hid
-/// it). 24 matches the launch storyboard's safe-area+24, keeping the handoff aligned.
+/// root), so the `deviceTopInset` term is what keeps the mark out from under the
+/// status bar / Dynamic Island (owner caught it in Daylight 2026-06-15; the dark
+/// Night icon hid it). The 84 base (was 24) drops the mark ~one inset lower for a
+/// rule-of-thirds feel (owner 2026-06-16). The launch storyboard's icon-top constant
+/// is kept at the SAME 84 so the OS launch → splash → Welcome handoff doesn't jump.
 private struct IntroBrandMark: View {
     @Environment(\.deviceTopInset) private var deviceTopInset
 
@@ -125,7 +127,7 @@ private struct IntroBrandMark: View {
                 .frame(height: 44)
                 .accessibilityLabel("Catchlight")
         }
-        .padding(.top, deviceTopInset + 24)
+        .padding(.top, deviceTopInset + 84)
     }
 }
 
@@ -225,11 +227,10 @@ struct WelcomeContent: View {
     /// the splash, occupying the headline slot.
     private var tagline: some View {
         Text("Every thought deserves a moment of clarity.")
-            // Bumped 16 → 22 (owner 2026-06-16: too small versus the Welcome text).
-            // It's the splash's hero line, so it sits between the body (17) and the
-            // headline (26); the secondary colour + italic keep it a tagline, not a
-            // heading.
-            .font(CatchlightFont.display(size: 22, relativeTo: .title3))
+            // Bumped 16 → 22 → 26 (owner 2026-06-16: match the Welcome headline, 26).
+            // It's the splash's hero line; the secondary colour + italic keep it a
+            // tagline despite the headline size.
+            .font(CatchlightFont.display(size: 26, relativeTo: .title2))
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
