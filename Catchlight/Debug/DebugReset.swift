@@ -25,7 +25,8 @@ enum DebugReset {
     /// What it clears, in order:
     ///   • Keychain master key (+ its Secure-Enclave wrapping key) and mnemonic —
     ///     the secrets that gate onboarding and decryption.
-    ///   • Onboarding / orientation + appearance user defaults.
+    ///   • Onboarding / orientation + all preference user defaults (appearance,
+    ///     View/Order timeline settings, Lock-after).
     ///   • App-group cloud-folder bookmark / URL keys.
     ///   • The `everEntitled` subscription flag (app-group defaults).
     ///   • The local SQLite store (all Takes + sequences) by removing the
@@ -55,10 +56,15 @@ enum DebugReset {
     // MARK: - User defaults
 
     private static func wipeDefaults() {
-        // Standard defaults: onboarding/orientation step + appearance.
+        // Standard defaults: onboarding/orientation step + all user preferences, so a
+        // reset truly returns to fresh-install defaults. (owner 2026-06-16: View/Order
+        // were persisting through a reset — they weren't listed here when added.)
         let standard = UserDefaults.standard
         standard.removeObject(forKey: FirstRunOrientationState.storageKey)
         standard.removeObject(forKey: SettingsViewModel.appearanceDefaultsKey)
+        standard.removeObject(forKey: SettingsViewModel.TakeSpacing.defaultsKey)   // "View"
+        standard.removeObject(forKey: SettingsViewModel.TakeSort.defaultsKey)      // "Order"
+        standard.removeObject(forKey: SettingsViewModel.LockAfter.defaultsKey)     // "Lock after"
 
         // App-group defaults: cloud-folder bookmark / URL fallback + the
         // "ever entitled" subscription flag. `clearCloudFolderBookmark` removes
