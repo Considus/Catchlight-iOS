@@ -126,7 +126,7 @@ struct TakeRowView: View {
         .padding(.vertical, 6)
     }
 
-    /// The Iris circle on the spine — a 22pt disc in a 44pt touch frame.
+    /// The Iris circle on the spine — a 44pt disc filling its 44pt touch frame.
     /// Gestures are UIKit recognizers (2026-06-10): SwiftUI's `LongPressGesture`
     /// (plain or simultaneous, with or without a Button) never fires for
     /// synthesized presses inside this ScrollView on the current runtime — while
