@@ -223,7 +223,12 @@ struct WelcomeContent: View {
         // hoisted, non-fading mark draw it.
         IntroChapterScaffold(drawsBrandMark: !isWelcome) {
             VStack(spacing: 0) {
-                Spacer(minLength: 24)
+                // FIXED gap pins the hero line just below the brand mark at the SAME
+                // Y as Storage + Local warning (owner 2026-06-16: the Cormorant hero
+                // lines must sit consistently, regardless of how much content is
+                // below). The body then settles toward the button via the flexible
+                // spacer.
+                Spacer().frame(height: 24)
                 // Primary-text slot. The headline is laid out in BOTH modes (so the
                 // slot keeps the same height); the splash hides it and overlays the
                 // tagline in its place.
@@ -233,7 +238,7 @@ struct WelcomeContent: View {
                 }
                 Spacer(minLength: 24)
                 bodyBlock.opacity(isWelcome ? 1 : 0)
-                Spacer(minLength: 24)
+                Spacer().frame(height: 24)
             }
         } bottom: {
             // Button slot — present in both for identical geometry; hidden + inert
@@ -295,7 +300,8 @@ private struct StorageChoiceStep: View {
     var body: some View {
         IntroChapterScaffold {
             VStack(spacing: 0) {
-                Spacer(minLength: 16)
+                // Hero line pinned at the SAME fixed gap as Welcome + Local warning.
+                Spacer().frame(height: 24)
                 Text("Now — where should your Takes live?")
                     .font(CatchlightFont.displayFixed(size: 26))
                     .foregroundStyle(Color.ckTextPrimary)
@@ -303,7 +309,7 @@ private struct StorageChoiceStep: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
 
-                Spacer(minLength: 32)
+                Spacer().frame(height: 32)
 
                 VStack(spacing: 16) {
                     StorageOptionCard(
@@ -317,7 +323,7 @@ private struct StorageChoiceStep: View {
                     ) { vm.chooseStorage(.cloud) }
                 }
 
-                Spacer(minLength: 16)
+                Spacer(minLength: 24)
             }
         } bottom: {
             EmptyView()
@@ -365,7 +371,9 @@ private struct LocalWarningStep: View {
     var body: some View {
         IntroChapterScaffold {
             VStack(spacing: 0) {
-                Spacer(minLength: 24)
+                // Hero line pinned at the SAME fixed gap as Welcome + Storage; the
+                // paragraph rides with it and the rest is empty space above the dock.
+                Spacer().frame(height: 24)
                 VStack(spacing: 24) {
                     Text("One thing before we continue.")
                         .font(CatchlightFont.displayFixed(size: 28))
