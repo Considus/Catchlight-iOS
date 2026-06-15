@@ -500,7 +500,11 @@ private struct RevealStep: View {
                         .foregroundStyle(Color.ckTextSecondary)
                         .frame(width: 22, alignment: .trailing)
                     Text(word)
-                        .font(CatchlightFont.displayFixed(size: 20))
+                        // The 12 words use the subtext font, not Cormorant (owner
+                        // 2026-06-16): DS §2.1 reserves Cormorant for display moments,
+                        // never functional content; sans is also clearer for a phrase
+                        // you must transcribe exactly.
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                         .foregroundStyle(Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -610,7 +614,7 @@ private struct ConfirmStep: View {
                             .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
                             .foregroundStyle(Color.ckTextSecondary)
                         Text(value ?? "—")
-                            .font(CatchlightFont.displayFixed(size: 18))
+                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))   // 12 words → subtext font (DS §2.1; Confirm bank is interactive)
                             .foregroundStyle(value == nil ? Color.ckTextSecondary : Color.ckTextPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
@@ -644,7 +648,7 @@ private struct ConfirmStep: View {
                 let used = vm.usedBankIndices.contains(index)
                 Button { vm.tapBankWord(at: index) } label: {
                     Text(word)
-                        .font(CatchlightFont.displayFixed(size: 18))
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))   // 12 words → subtext font (DS §2.1; Confirm bank is interactive)
                         .foregroundStyle(used ? Color.ckTextSecondary.opacity(0.4) : Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
