@@ -28,7 +28,14 @@ struct RootView: View {
     /// Branded splash shown on every cold launch (owner 2026-06-14). `.task` runs
     /// once per RootView lifetime, so warm resumes from the background don't
     /// re-show it.
-    @State private var showSplash = true
+    ///
+    /// SUPPRESSED under `--uitesting`: the splash sits at `zIndex 100` over the
+    /// timeline for ~2.5s, so an XCUITest that taps `add-button` at launch hits an
+    /// OCCLUDED element ("Failed to scroll to visible … kAXErrorCannotComplete")
+    /// before the curtain lifts — it mass-failed CoreFlows/BlockEditor/TwoTap on
+    /// CI. Tests don't need the branding flourish, and skipping it also reclaims
+    /// ~2.5s per launch across the suite. Same flag `Wiring.makeAppModel` reads.
+    @State private var showSplash = !ProcessInfo.processInfo.arguments.contains("--uitesting")
 
     var body: some View {
         // ZStack with a full-bleed background guarantees children receive a full-screen
@@ -70,6 +77,12 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.4), value: app.needsOnboarding)
         .animation(.easeInOut(duration: 0.4), value: app.lockState)
         .task {
+            // Splash suppressed (UI testing): still drive the unlock if we somehow
+            // launched locked, but skip the 2.5s branding hold entirely.
+            guard showSplash else {
+                if app.lockState == .locked { await app.attemptUnlock() }
+                return
+            }
             // Hold the launch-screen branding long enough to actually READ the
             // tagline (owner 2026-06-16: 1.2s was too fast). ~2.5s solo.
             try? await Task.sleep(nanoseconds: 2_500_000_000)
