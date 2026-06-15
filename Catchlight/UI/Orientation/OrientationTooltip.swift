@@ -14,6 +14,12 @@ struct OrientationTooltip: View {
 
     let text: String
     var arrowEdge: Edge = .bottom
+    /// Where the arrow sits ALONG a top/bottom edge. `.center` (default) is the
+    /// classic centred arrow. `.leading` parks it near the bubble's left so the
+    /// bubble extends RIGHT of the anchor — used for the Add hint, whose button is
+    /// near the screen's left edge, so a centred bubble would clip off-screen
+    /// (owner 2026-06-15). Ignored for `.leading`/`.trailing` arrow edges.
+    var arrowAlignment: HorizontalAlignment = .center
     var maxWidth: CGFloat = 220
 
     var body: some View {
@@ -32,7 +38,7 @@ struct OrientationTooltip: View {
                     OrientationTooltipArrow(edge: arrowEdge)
                         .fill(Color.ckSurface)
                         .frame(width: 14, height: 8)
-                        .modifier(ArrowPlacement(edge: arrowEdge))
+                        .modifier(ArrowPlacement(edge: arrowEdge, horizontal: arrowAlignment))
                 }
             )
             .shadow(color: Color.black.opacity(0.18), radius: 8, y: 2)
@@ -61,6 +67,14 @@ private struct OrientationTooltipArrow: Shape {
 /// Positions and rotates the arrow so its apex pokes out of the requested bubble edge.
 private struct ArrowPlacement: ViewModifier {
     let edge: Edge
+    /// Along a top/bottom edge: `.center` centres the arrow; `.leading`/`.trailing`
+    /// park it `arrowEdgeInset` in from that corner (so the bubble extends away).
+    var horizontal: HorizontalAlignment = .center
+
+    /// Arrow-CENTRE distance from the leading/trailing edge when not centred. 22pt
+    /// lines the apex up with the centre of a 44pt control whose near edge aligns
+    /// with the bubble's.
+    private let arrowEdgeInset: CGFloat = 22
 
     func body(content: Content) -> some View {
         switch edge {
@@ -68,11 +82,13 @@ private struct ArrowPlacement: ViewModifier {
             content
                 .rotationEffect(.degrees(180))
                 .offset(y: -8)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: topBottomAlignment(top: true))
+                .offset(x: horizontalInset)
         case .bottom:
             content
                 .offset(y: 8)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: topBottomAlignment(top: false))
+                .offset(x: horizontalInset)
         case .leading:
             content
                 .rotationEffect(.degrees(90))
@@ -84,6 +100,20 @@ private struct ArrowPlacement: ViewModifier {
                 .offset(x: 8)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
         }
+    }
+
+    private func topBottomAlignment(top: Bool) -> Alignment {
+        if horizontal == .leading  { return top ? .topLeading  : .bottomLeading }
+        if horizontal == .trailing { return top ? .topTrailing : .bottomTrailing }
+        return top ? .top : .bottom
+    }
+
+    /// Shift the arrow in from the corner so its CENTRE lands `arrowEdgeInset` from
+    /// the edge (the arrow is 14pt wide, so its own centre is 7pt in when corner-aligned).
+    private var horizontalInset: CGFloat {
+        if horizontal == .leading  { return arrowEdgeInset - 7 }
+        if horizontal == .trailing { return -(arrowEdgeInset - 7) }
+        return 0
     }
 }
 
