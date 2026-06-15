@@ -454,6 +454,12 @@ enum CatchlightLayout {
     static let circleDiameter: CGFloat = 44
     /// Width of the timeline spine.
     static let spineWidth: CGFloat = 2
+    /// The Take card's leading edge sits this far LEFT of the spine, so the opaque
+    /// card covers the spine and the Iris nests into the card's top-left corner
+    /// (HiFi §1: card-left ≈ 21.6 vs spine ≈ 45.6 → 24). Deliberately independent
+    /// of `circleDiameter` — the row derives the Iris nesting offset from this plus
+    /// the circle size, so resizing the Iris never moves or narrows the card.
+    static let cardSpineInset: CGFloat = 24
     /// Horizontal padding of the bottom dock (each side).
     static let dockHorizontalPadding: CGFloat = 12
     /// x of the timeline spine == the dock Add button's centre, for a given

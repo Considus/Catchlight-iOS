@@ -544,8 +544,12 @@ struct DailiesView: View {
                 .fill(Color.ckEmber.opacity(ui.spotlightTargetTakeID == take.id ? 0.18 : 0))
                 .animation(.easeInOut(duration: 0.4), value: ui.spotlightTargetTakeID)
         )
-        .padding(.leading, spineX - CatchlightLayout.circleDiameter / 2
-                 - (CatchlightLayout.minTouchTarget - CatchlightLayout.circleDiameter) / 2)
+        // The row's leading edge IS the card's leading edge — `cardSpineInset`
+        // left of the spine, so the card covers the spine and the Iris nests in its
+        // corner (TakeRowView offsets the Iris back onto the spine). Independent of
+        // the Iris diameter (was derived from circleDiameter, which moved the card
+        // when the Iris grew).
+        .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
         .padding(.trailing, 20)
         .overlay(alignment: .topLeading) {
             if isFirst && orientation.showIrisHint {
