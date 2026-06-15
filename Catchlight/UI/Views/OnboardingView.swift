@@ -98,12 +98,20 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
 // MARK: - Intro chapter (shared brand mark)
 
 /// The persistent brand mark — icon over wordmark — that anchors the opening
-/// chapter (splash · Welcome · Storage choice · Local warning). It is drawn at an
-/// IDENTICAL position on every one of those screens so that, as the screens
-/// crossfade, the mark reads as STATIC while only the words beneath it change
-/// (owner 2026-06-15). The launch-screen storyboard mirrors this geometry so the
-/// OS launch → splash → Welcome handoff is seamless.
+/// chapter (splash · Welcome · Storage · Local warning · Reveal · Confirm ·
+/// Complete). It is drawn at an IDENTICAL position on every one of those screens so
+/// that, as the screens crossfade, the mark reads as STATIC while only the words
+/// beneath it change (owner 2026-06-15). The launch-screen storyboard mirrors this
+/// geometry so the OS launch → splash → Welcome handoff is seamless.
+///
+/// The top inset is `deviceTopInset + 24` — i.e. 24pt below the SAFE-AREA top, not
+/// the screen top. The app runs full-bleed (`.ignoresSafeArea(.container)` at the
+/// root), so without `deviceTopInset` the mark rendered under the status bar /
+/// Dynamic Island (owner caught it in Daylight 2026-06-15; the dark Night icon hid
+/// it). 24 matches the launch storyboard's safe-area+24, keeping the handoff aligned.
 private struct IntroBrandMark: View {
+    @Environment(\.deviceTopInset) private var deviceTopInset
+
     var body: some View {
         VStack(spacing: 16) {
             Image("catchlight-icon")
@@ -117,21 +125,21 @@ private struct IntroBrandMark: View {
                 .frame(height: 44)
                 .accessibilityLabel("Catchlight")
         }
+        .padding(.top, deviceTopInset + 24)
     }
 }
 
 /// Layout shared by the centred intro screens (Welcome · Storage · Local warning ·
-/// Complete) and the launch splash. Pins `IntroBrandMark` at a fixed offset below
-/// the safe-area top (`.padding(.top, 24)`) so its Y is identical everywhere, then
-/// lets each screen fill the region beneath it. Because the mark sits at the same
+/// Complete) and the launch splash. Places `IntroBrandMark` at the top (the mark
+/// carries its own safe-area top inset, so its Y is identical everywhere), then lets
+/// each screen fill the region beneath it. Because the mark sits at the same
 /// position on every screen, the per-step crossfade in `OnboardingView` leaves it
 /// visually static — the surface feels continuous and only the content and buttons
 /// change. The denser Reveal/Confirm screens don't use this scaffold (their content
-/// scrolls), but they embed the SAME `IntroBrandMark().padding(.top, 24)` at the top
-/// of their scroll so the mark lines up and the effect carries through the whole
-/// happy path (owner 2026-06-15 — the mark now persists Welcome → Complete rather
-/// than fading at the privacy-phrase screens). Only the Failure escape-hatch omits
-/// the mark.
+/// scrolls), but they embed the SAME `IntroBrandMark` at the top of their scroll so
+/// the mark lines up and the effect carries through the whole happy path (owner
+/// 2026-06-15 — the mark now persists Welcome → Complete rather than fading at the
+/// privacy-phrase screens). Only the Failure escape-hatch omits the mark.
 private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
@@ -140,7 +148,6 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
         StepScaffold {
             VStack(spacing: 0) {
                 IntroBrandMark()
-                    .padding(.top, 24)
                 content()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -368,10 +375,9 @@ private struct RevealStep: View {
                     // Carry the intro brand mark through the privacy-phrase screens
                     // (owner 2026-06-15) — same icon+wordmark at the same Y as the
                     // IntroChapterScaffold screens, so the mark stays put and only
-                    // the words change. (Replaces the old .padding(.top, 48) island
-                    // clearance — the mark's own top inset clears the island.)
+                    // the words change. (The mark's own safe-area top inset clears
+                    // the status bar / Dynamic Island — replaces the old top:48.)
                     IntroBrandMark()
-                        .padding(.top, 24)
 
                     Text("Your privacy phrase")
                         .font(CatchlightFont.displayFixed(size: 30))
@@ -441,7 +447,6 @@ private struct ConfirmStep: View {
                 VStack(spacing: 20) {
                     // Same persistent brand mark as Reveal (owner 2026-06-15).
                     IntroBrandMark()
-                        .padding(.top, 24)
 
                     Text("Confirm three words")
                         .font(CatchlightFont.displayFixed(size: 30))
