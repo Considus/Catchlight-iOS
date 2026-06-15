@@ -211,12 +211,17 @@ struct BottomDockView: View {
             }
             .frame(width: buttonSize, height: buttonSize)
             .scaleEffect(addPulseScale)
-            .overlay(alignment: .top) {
+            // Add is the LEFTMOST dock slot (≈58pt from the screen edge), so a
+            // centred bubble clipped off-screen left. Anchor the arrow at the
+            // bubble's bottom-LEADING (over the +) and let the bubble extend RIGHT
+            // (owner 2026-06-15): .topLeading lines the bubble's leading up with the
+            // button's, the arrow sits 22pt in (the + centre), text spills right.
+            .overlay(alignment: .topLeading) {
                 if orientation.showAddPulse {
-                    OrientationTooltip(text: "What's your first Take?", arrowEdge: .bottom)
+                    OrientationTooltip(text: "What's your first Take?", arrowEdge: .bottom, arrowAlignment: .leading)
                         .fixedSize()
                         .offset(y: -(buttonSize / 2 + 32))
-                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
+                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
                 }
             }
         }
