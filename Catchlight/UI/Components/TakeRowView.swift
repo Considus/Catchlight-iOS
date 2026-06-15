@@ -198,16 +198,19 @@ struct TakeRowView: View {
             }
 
             if let reminderLabel {
-                // .tm — 11pt medium italic, Slate (overdue → overdue amber).
+                // .tm — 11pt medium italic, Slate (overdue → overdue amber Daylight /
+                // full Glow Night, the .tm.overdue token — distinct from the @35% border).
                 Text(reminderLabel)
                     .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
                     .italic()
-                    .foregroundStyle(isOverdue ? Color.ckCardOverdueBorder : Color.ckTextSecondary)
+                    .foregroundStyle(isOverdue ? Color.ckTextOverdue : Color.ckTextSecondary)
             }
         }
         // v1.7 .card padding: 24px top (clears the overlapping Iris) / 14 sides /
-        // 14 bottom.
-        .padding(EdgeInsets(top: 24, leading: 14, bottom: 14, trailing: 14))
+        // 14 bottom. Leading uses the shared token so the DAILIES heading + month
+        // markers align to this same text column (owner 2026-06-16).
+        .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
+                            bottom: 14, trailing: 14))
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)

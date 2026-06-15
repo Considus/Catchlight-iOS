@@ -159,6 +159,12 @@ enum Wiring {
         // transparent to the test suite.
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--uitesting") {
+            // Pin the timeline order for deterministic fixtures: the flow tests
+            // assume newest-first ("Call the framer back" on top). The app's
+            // user-facing DEFAULT is oldest-first (TakeSort, owner 2026-06-16), but
+            // a UI test controls its own environment — so force newest-first here.
+            UserDefaults.standard.set(SettingsViewModel.TakeSort.newestFirst.rawValue,
+                                      forKey: SettingsViewModel.TakeSort.defaultsKey)
             let store = InMemoryTakeStore()
             // Explicit creation times 1s apart: timestamps are truncated to
             // millisecond precision (wire resolution), so two back-to-back

@@ -27,6 +27,8 @@ struct SettingsView: View {
     @Environment(UIState.self) private var ui
     @AppStorage(SettingsViewModel.appearanceDefaultsKey) private var appearanceModeRaw: String = SettingsViewModel.AppearanceMode.system.rawValue
     @AppStorage(SettingsViewModel.LockAfter.defaultsKey) private var lockAfterRaw: String = SettingsViewModel.LockAfter.default.rawValue
+    @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey) private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
+    @AppStorage(SettingsViewModel.TakeSort.defaultsKey) private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
 
     @State private var vm = SettingsViewModel()
 
@@ -179,6 +181,54 @@ struct SettingsView: View {
             .frame(height: 52)
             .listRowBackground(Color.ckSurface)
 
+            // Timeline density — the gap between Takes on Dailies (owner 2026-06-16).
+            // Segmented control matching the Mode row; labelled "View" so the three
+            // options fit the inline 220pt width.
+            HStack(spacing: 14) {
+                Image(systemName: "arrow.up.and.down.text.horizontal")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("View")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("View", selection: takeSpacingBinding) {
+                    ForEach(SettingsViewModel.TakeSpacing.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 220)
+                .accessibilityLabel("Take spacing")
+            }
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+
+            // Timeline order — which end of time sits at the top (owner 2026-06-16).
+            HStack(spacing: 14) {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("Order")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("Order", selection: takeSortBinding) {
+                    ForEach(SettingsViewModel.TakeSort.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 220)
+                .accessibilityLabel("Timeline order")
+            }
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+
             SettingsRow(icon: "paintpalette",
                         label: "Themes",
                         disabled: true) {
@@ -187,6 +237,10 @@ struct SettingsView: View {
             .accessibilityHint("Coming soon.")
         } header: {
             sectionHeader("Appearance")
+        } footer: {
+            Text("Spacing between Takes, and whether the oldest or newest Take sits at the top. The Obie always stays pinned at the top.")
+                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                .foregroundStyle(Color.ckTextSecondary)
         }
     }
 
@@ -194,6 +248,20 @@ struct SettingsView: View {
         Binding(
             get: { SettingsViewModel.AppearanceMode(rawValue: appearanceModeRaw) ?? .system },
             set: { appearanceModeRaw = $0.rawValue }
+        )
+    }
+
+    private var takeSpacingBinding: Binding<SettingsViewModel.TakeSpacing> {
+        Binding(
+            get: { SettingsViewModel.TakeSpacing(rawValue: takeSpacingRaw) ?? .default },
+            set: { takeSpacingRaw = $0.rawValue }
+        )
+    }
+
+    private var takeSortBinding: Binding<SettingsViewModel.TakeSort> {
+        Binding(
+            get: { SettingsViewModel.TakeSort(rawValue: takeSortRaw) ?? .default },
+            set: { takeSortRaw = $0.rawValue }
         )
     }
 

@@ -206,7 +206,9 @@ struct BottomDockView: View {
                 // a fill. Was a filled ckAdd droplet with an Ink "+".
                 dockRing(strong: true)   // .db.add — Ember border @55%
                 Image(systemName: "plus")
-                    .font(.system(size: 24, weight: .medium))   // scaled with the 36→44 circle (owner 2026-06-15)
+                    // .regular (was .medium): the + read slightly heavier than the
+                    // .light sibling glyphs; nudged down one step (owner 2026-06-16).
+                    .font(.system(size: 24, weight: .regular))
                     .foregroundStyle(Color.ckAccent)   // #856539 glyph (Option A), like the siblings
             }
             .frame(width: buttonSize, height: buttonSize)
@@ -311,6 +313,10 @@ struct BottomDockView: View {
             ZStack {
                 dockRing()   // .db — Ember border @35%
                 SequenceGlyph(size: 24)   // scaled with the 36→44 circle
+                    // Owner 2026-06-16: lay the three beads HORIZONTALLY (a left→
+                    // right sequence) while Dailies stays vertical. Rotating the
+                    // glyph view keeps the shape's bead/link geometry intact.
+                    .rotationEffect(.degrees(90))
                     .foregroundStyle(Color.ckAccent)
                     .frame(width: buttonSize, height: buttonSize)
                     .contentShape(Rectangle())

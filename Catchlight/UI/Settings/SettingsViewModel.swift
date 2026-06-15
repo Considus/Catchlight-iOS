@@ -84,6 +84,74 @@ final class SettingsViewModel {
         }
     }
 
+    /// Timeline density — how much clear space sits between consecutive Takes on
+    /// Dailies (owner 2026-06-16). Changes ONLY the inter-card gap; the cards, Iris,
+    /// and spine are untouched. `gap` is the clear distance from one card's bottom to
+    /// the next card's top, sized so the lower card's Iris (which straddles its top
+    /// edge, poking up one radius ≈ 22pt) never overlaps the card above. Read by
+    /// `DailiesView` via `@AppStorage`.
+    enum TakeSpacing: String, CaseIterable, Identifiable {
+        case compact, standard, comfort
+
+        static let defaultsKey = "catchlight.takeSpacing"
+        static let `default`: TakeSpacing = .standard
+
+        var id: String { rawValue }
+
+        /// Clear gap between consecutive cards. Floor is the Iris's upper half
+        /// (≈22pt) plus breathing room so Compact reads "close but not touching."
+        var gap: CGFloat {
+            switch self {
+            case .compact:  return 26
+            case .standard: return 44
+            case .comfort:  return 56
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .compact:  return "Compact"
+            case .standard: return "Standard"
+            case .comfort:  return "Comfort"
+            }
+        }
+
+        static var current: TakeSpacing {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = TakeSpacing(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
+    /// Timeline sort direction — which end of time sits at the TOP (owner 2026-06-16).
+    /// The Obie is pinned above the list regardless. Default `.oldestFirst`: the
+    /// oldest Take is on top and newer ones accrue below, so scrolling down moves
+    /// toward "now" and older Takes fall off the top. This is also the order under
+    /// which the chronologically-timed seed Takes read Note·Task·Reminder·Delete.
+    /// `.newestFirst` inverts it. Read by `DailiesView`.
+    enum TakeSort: String, CaseIterable, Identifiable {
+        case oldestFirst, newestFirst
+
+        static let defaultsKey = "catchlight.takeSort"
+        static let `default`: TakeSort = .oldestFirst
+
+        var id: String { rawValue }
+
+        /// Short label for the segmented control.
+        var label: String {
+            switch self {
+            case .oldestFirst: return "Oldest"
+            case .newestFirst: return "Newest"
+            }
+        }
+
+        static var current: TakeSort {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = TakeSort(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     var notificationStatus: UNAuthorizationStatus = .notDetermined
     var notificationStatusLoading: Bool = false
 

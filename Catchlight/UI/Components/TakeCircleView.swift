@@ -105,32 +105,39 @@ struct TakeCircleView: View {
             // near-identical #ECECEC); Night rides the divider/line token.
             Circle()
                 .strokeBorder(Color.ckIrisRing, lineWidth: 0.75)
-
-            // Obie: outer ring with a gap + a 3-layer specular catch.
-            if take.isObie {
-                // Ring: 2pt, sitting ~3pt OUTSIDE the disc edge (DS §5.1
-                // obieRingWidth 2 / obieRingGap 3). `.stroke` on a larger circle
-                // (overflowing the frame, as the HiFi Obie does) — was a ~2.6pt
-                // strokeBorder at the rim with no gap.
-                Circle()
-                    .stroke(Quadrant.obieRing(scheme), lineWidth: 2)
-                    .frame(width: diameter + 6, height: diameter + 6)
-                // Specular catch (DS §5.4 / HiFi §2): a 3-layer dot upper-right
-                // at ~0.305·D per axis — ground halo, warm core, bright catch —
-                // replacing the flat single white pip.
-                ZStack {
-                    Circle().fill(scheme == .dark ? Color.black.opacity(0.35) : Color.ckInk.opacity(0.08))
-                        .frame(width: diameter * 0.31, height: diameter * 0.31)
-                    Circle().fill(Quadrant.obieRing(scheme))   // Ember (Daylight) / Glow (Night)
-                        .frame(width: diameter * 0.19, height: diameter * 0.19)
-                    Circle().fill(Color(hex: 0xFEFCF5))
-                        .frame(width: diameter * 0.10, height: diameter * 0.10)
-                }
-                .offset(x: diameter * 0.305, y: -diameter * 0.305)
-            }
         }
         .frame(width: diameter, height: diameter)
+        // Obie decorations live in an OVERLAY, not as ZStack siblings (owner-measured
+        // bug, D-042): the ring below is a larger fixed-frame view (`diameter + 6`),
+        // and as a sibling of the flexible disc circles it inflated the size PROPOSED
+        // to them — so the off-band's outer grew while its stroke width (fixed at
+        // `diameter × 0.225`) did not, blowing the aperture out disproportionately
+        // (owner: Obie hole ≈ 1.25× a standard Iris, disc ≈ 1.13×). An overlay is
+        // sized to the 44pt disc and lets the ring overflow WITHOUT touching the
+        // disc's layout, so the Obie's disc + aperture now match every other Take.
+        .overlay { if take.isObie { obieDecorations } }
         .accessibilityHidden(true)   // the row exposes a combined label; the disc is decorative there
+    }
+
+    /// The Obie's outer ring (2pt, sitting ~3pt OUTSIDE the disc edge — DS §5.1
+    /// obieRingWidth 2 / obieRingGap 3) plus the 3-layer specular catch (DS §5.4 /
+    /// HiFi §2: ground halo, warm core, bright pip at ~0.305·D upper-right). Drawn in
+    /// the body's overlay so the larger ring frame can't enlarge the disc (see body).
+    private var obieDecorations: some View {
+        ZStack {
+            Circle()
+                .stroke(Quadrant.obieRing(scheme), lineWidth: 2)
+                .frame(width: diameter + 6, height: diameter + 6)
+            ZStack {
+                Circle().fill(scheme == .dark ? Color.black.opacity(0.35) : Color.ckInk.opacity(0.08))
+                    .frame(width: diameter * 0.31, height: diameter * 0.31)
+                Circle().fill(Quadrant.obieRing(scheme))   // Ember (Daylight) / Glow (Night)
+                    .frame(width: diameter * 0.19, height: diameter * 0.19)
+                Circle().fill(Color(hex: 0xFEFCF5))
+                    .frame(width: diameter * 0.10, height: diameter * 0.10)
+            }
+            .offset(x: diameter * 0.305, y: -diameter * 0.305)
+        }
     }
 
     /// A spoken description of the active types, for callers that DO want the circle

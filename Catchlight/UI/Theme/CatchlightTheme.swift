@@ -195,6 +195,16 @@ extension Color {
         light: UIColor(hex: 0x6B4508)
     ))
 
+    /// Overdue reminder META TEXT (`.tm.overdue`) — #6B4508 (Daylight, same as the
+    /// border) but FULL Glow in Night, NOT the Glow@35% the BORDER uses: HiFi v1.7
+    /// `.night .tm.overdue{color:var(--glow)}` keeps the overdue time legible while
+    /// the border stays a quiet @35%. (DS §12.3 — was incorrectly sharing the border
+    /// token, so Night overdue times read too faint; owner 2026-06-16.)
+    static let ckTextOverdue = Color(uiColor: .adaptive(
+        dark: Palette.glow,
+        light: UIColor(hex: 0x6B4508)
+    ))
+
     /// Iris OFF-quadrant annular fill (HiFi v1.7 `--q-off` — section 7). The
     /// faint backing band that makes the Iris read as a complete RING (with a
     /// hollow centre aperture) even when only some quadrants are active. Daylight
@@ -454,12 +464,24 @@ enum CatchlightLayout {
     static let circleDiameter: CGFloat = 44
     /// Width of the timeline spine.
     static let spineWidth: CGFloat = 2
-    /// The Take card's leading edge sits this far LEFT of the spine, so the opaque
-    /// card covers the spine and the Iris nests into the card's top-left corner
-    /// (HiFi §1: card-left ≈ 21.6 vs spine ≈ 45.6 → 24). Deliberately independent
-    /// of `circleDiameter` — the row derives the Iris nesting offset from this plus
-    /// the circle size, so resizing the Iris never moves or narrows the card.
-    static let cardSpineInset: CGFloat = 24
+    /// The Take card's leading edge sits this far LEFT of the spine. Two things ride
+    /// on it together (which is what keeps the Iris ON the spine): the row's leading
+    /// padding is `spineX − cardSpineInset` (the card's left edge), and TakeRowView
+    /// offsets the Iris by `cardSpineInset − circleDiameter/2` so the Iris re-centres
+    /// on the spine. Owner 2026-06-16: raised 24 → 38 so the card's LEFT margin
+    /// (`spineX − 38` ≈ 20pt) matches the 20pt RIGHT margin — the card grows ~14pt
+    /// wider and the Iris nests a little deeper into its top-left region (the Iris
+    /// stays pinned to the spine under the + button). Deliberately independent of
+    /// `circleDiameter` so resizing the Iris never moves or narrows the card.
+    static let cardSpineInset: CGFloat = 38
+    /// The Take card's internal LEADING text padding — sized so the text column
+    /// begins exactly at the Iris's EASTERN edge, leaving the Iris in a clear left
+    /// gutter with NO text left of the spine (owner 2026-06-16). card-left is
+    /// `spineX − cardSpineInset`, the Iris east edge is `spineX + circleDiameter/2`,
+    /// so the pad = circleDiameter/2 + cardSpineInset. The DAILIES heading + month
+    /// markers align to the same x (`spineX + circleDiameter/2`). Trailing/bottom
+    /// stay at the standard 14.
+    static let cardTextLeadingPad: CGFloat = circleDiameter / 2 + cardSpineInset
     /// Horizontal padding of the bottom dock (each side).
     static let dockHorizontalPadding: CGFloat = 12
     /// x of the timeline spine == the dock Add button's centre, for a given
@@ -483,7 +505,7 @@ enum CatchlightLayout {
     /// the first row always clears the heading and the fade on large-inset
     /// devices (iPhone 17 / iOS 26.5.1 — section 4 / D-041). The previous fixed
     /// `52` ignored the inset, tucking the first Take under the fade.
-    static let headingClearance: CGFloat = 52
+    static let headingClearance: CGFloat = 58   // 52 → 58: drop the topmost Take/Obie 6pt lower so the Obie fully clears the fade (owner 2026-06-16)
     /// Resting clearance the dock occupies above the timeline's bottom, BEFORE
     /// the device bottom inset is added. Last-row bottom padding is
     /// `dockClearance + deviceBottomInset` so the final Take clears the raised dock.

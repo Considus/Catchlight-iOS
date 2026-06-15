@@ -30,6 +30,8 @@ final class SeedTakesTests: XCTestCase {
     }
 
     func testChronologicalOrder() {
+        // Ascending: Note (oldest) → Delete (newest). Under the default TakeSort
+        // ("Oldest first") this is also the top→bottom on-screen order.
         let s = SeedTakes.make()
         XCTAssertTrue(zip(s, s.dropFirst()).allSatisfy { $0.createdAt <= $1.createdAt })
     }

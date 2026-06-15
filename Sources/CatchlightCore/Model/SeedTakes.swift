@@ -15,15 +15,18 @@
 import Foundation
 
 public enum SeedTakes {
-    /// Build the five seed Takes in display order. `now` anchors their timestamps so
-    /// they appear in chronological order beneath the user's first blank Take.
+    /// Build the five seed Takes in natural chronological (lesson) order — Note is
+    /// oldest, Delete newest. Under the DEFAULT timeline order (TakeSort = "Oldest
+    /// first", owner 2026-06-16) this reads top → bottom Note · Task · Reminder ·
+    /// Delete — the intended teaching sequence — with the Obie pinned above; choosing
+    /// "Newest first" in Settings simply inverts the list.
     public static func make(now: Date = Date()) -> [Take] {
         // Anchor to millisecond precision (the canonical wire format) so seed Takes
         // serialise bit-exactly. Offsets are whole seconds, keeping the .000 ms.
         let anchored = ISO8601.date(from: ISO8601.string(from: now)) ?? now
         func at(_ offset: TimeInterval) -> Date { anchored.addingTimeInterval(offset) }
 
-        // 1 — Note (NW active by default).
+        // 1 — Note (NW active by default). OLDEST → top under the Oldest-first default.
         var note = Take(createdAt: at(-50), modifiedAt: at(-50),
                         blocks: [.textLine("A Take starts as a Note. A thought — nothing more required.")],
                         isSeeded: true)
@@ -43,12 +46,13 @@ public enum SeedTakes {
             notificationIdentifier: reminder.id.uuidString
         )
 
-        // 4 — Obie (SE, glow). The single north-star Take.
+        // 4 — Obie (SE, glow). The single north-star Take — pinned above the list, so
+        // its timestamp only keeps the returned array monotonic.
         var obie = Take(createdAt: at(-20), modifiedAt: at(-20),
                         blocks: [.textLine("Obie is your north star Take. It always leads.")],
                         isObie: true, isSeeded: true)
 
-        // 5 — All dim (just a note).
+        // 5 — All dim (just a note). NEWEST → bottom under the Oldest-first default.
         var farewell = Take(createdAt: at(-10), modifiedAt: at(-10),
                             blocks: [.textLine("Delete these when you're ready. Your Takes are already waiting.")],
                             isSeeded: true)
