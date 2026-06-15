@@ -12,6 +12,14 @@
 import SwiftUI
 import CatchlightCore
 
+/// The fixed gap below the brand mark at which EVERY onboarding hero line (the
+/// Cormorant italic heading or, on the splash, the tagline) sits — so they land at
+/// the same Y on every screen the brand mark appears: splash · Welcome · Storage ·
+/// Local warning · Reveal · Confirm · Complete (owner 2026-06-16). Without this the
+/// flexible spacers pushed each heading down by an amount that depended on the
+/// content below it, so they drifted apart.
+private let introHeroTopGap: CGFloat = 24
+
 struct OnboardingView: View {
     @Environment(OnboardingViewModel.self) private var vm
 
@@ -223,12 +231,10 @@ struct WelcomeContent: View {
         // hoisted, non-fading mark draw it.
         IntroChapterScaffold(drawsBrandMark: !isWelcome) {
             VStack(spacing: 0) {
-                // FIXED gap pins the hero line just below the brand mark at the SAME
-                // Y as Storage + Local warning (owner 2026-06-16: the Cormorant hero
-                // lines must sit consistently, regardless of how much content is
-                // below). The body then settles toward the button via the flexible
-                // spacer.
-                Spacer().frame(height: 24)
+                // Pin the hero line at the shared set position (every brand-mark
+                // screen uses `introHeroTopGap`); the body then settles toward the
+                // button via the flexible spacer.
+                Spacer().frame(height: introHeroTopGap)
                 // Primary-text slot. The headline is laid out in BOTH modes (so the
                 // slot keeps the same height); the splash hides it and overlays the
                 // tagline in its place.
@@ -300,8 +306,8 @@ private struct StorageChoiceStep: View {
     var body: some View {
         IntroChapterScaffold {
             VStack(spacing: 0) {
-                // Hero line pinned at the SAME fixed gap as Welcome + Local warning.
-                Spacer().frame(height: 24)
+                // Hero line at the shared set position.
+                Spacer().frame(height: introHeroTopGap)
                 Text("Now — where should your Takes live?")
                     .font(CatchlightFont.displayFixed(size: 26))
                     .foregroundStyle(Color.ckTextPrimary)
@@ -371,9 +377,9 @@ private struct LocalWarningStep: View {
     var body: some View {
         IntroChapterScaffold {
             VStack(spacing: 0) {
-                // Hero line pinned at the SAME fixed gap as Welcome + Storage; the
-                // paragraph rides with it and the rest is empty space above the dock.
-                Spacer().frame(height: 24)
+                // Hero line at the shared set position; the paragraph rides with it
+                // and the rest is empty space above the dock.
+                Spacer().frame(height: introHeroTopGap)
                 VStack(spacing: 24) {
                     Text("One thing before we continue.")
                         .font(CatchlightFont.displayFixed(size: 28))
@@ -416,30 +422,35 @@ private struct RevealStep: View {
     var body: some View {
         StepScaffold {
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: 0) {
                     // Reserve the brand-mark space (owner 2026-06-15); the visible,
                     // non-fading mark is hoisted in OnboardingView so it doesn't flash
                     // between steps. `.opacity(0)` keeps the same Y/height here.
                     IntroBrandMark()
                         .opacity(0)
+                    // Hero line at the shared set position (consistent with the
+                    // IntroChapterScaffold screens).
+                    Spacer().frame(height: introHeroTopGap)
 
-                    Text("Your privacy phrase")
-                        .font(CatchlightFont.displayFixed(size: 30))
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
+                    VStack(spacing: 20) {
+                        Text("Your privacy phrase")
+                            .font(CatchlightFont.displayFixed(size: 30))
+                            .foregroundStyle(Color.ckTextPrimary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
 
-                    // ckTextSecondary, matching the confirm prompt (owner
-                    // 2026-06-12, HiFi v1.11.5 — the amber treatment retired).
-                    Text(bodyText)
-                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                        // ckTextSecondary, matching the confirm prompt (owner
+                        // 2026-06-12, HiFi v1.11.5 — the amber treatment retired).
+                        Text(bodyText)
+                            .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                    wordGrid(words: vm.mnemonic)
-                        .padding(.top, 4)
+                        wordGrid(words: vm.mnemonic)
+                            .padding(.top, 4)
+                    }
                 }
                 .padding(.bottom, 100) // clear the pinned button
             }
@@ -488,40 +499,44 @@ private struct ConfirmStep: View {
     var body: some View {
         StepScaffold {
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: 0) {
                     // Reserve the brand-mark space (hoisted + non-fading, as Reveal).
                     IntroBrandMark()
                         .opacity(0)
+                    // Hero line at the shared set position.
+                    Spacer().frame(height: introHeroTopGap)
 
-                    Text("Confirm three words")
-                        .font(CatchlightFont.displayFixed(size: 30))
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
+                    VStack(spacing: 20) {
+                        Text("Confirm three words")
+                            .font(CatchlightFont.displayFixed(size: 30))
+                            .foregroundStyle(Color.ckTextPrimary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
 
-                    Text(promptCopy)
-                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                        Text(promptCopy)
+                            .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                    slotsRow
+                        slotsRow
 
-                    // The error line is RESERVED (owner 2026-06-12, HiFi
-                    // v1.11.1): it always occupies its height so the bank
-                    // never moves when the message appears. ckTextObie, not
-                    // ckEmber: Ember fails WCAG AA on Paper at 13pt (DS §12.3);
-                    // resolves to Ember Text #856539 Daylight / Glow Night.
-                    Text(vm.failure ?? " ")
-                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                        .foregroundStyle(Color.ckTextObie)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .opacity(vm.failure == nil ? 0 : 1)
-                        .accessibilityHidden(vm.failure == nil)
+                        // The error line is RESERVED (owner 2026-06-12, HiFi
+                        // v1.11.1): it always occupies its height so the bank
+                        // never moves when the message appears. ckTextObie, not
+                        // ckEmber: Ember fails WCAG AA on Paper at 13pt (DS §12.3);
+                        // resolves to Ember Text #856539 Daylight / Glow Night.
+                        Text(vm.failure ?? " ")
+                            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                            .foregroundStyle(Color.ckTextObie)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .opacity(vm.failure == nil ? 0 : 1)
+                            .accessibilityHidden(vm.failure == nil)
 
-                    bankGrid
+                        bankGrid
+                    }
                 }
                 .padding(.bottom, 24)
             }
@@ -641,7 +656,10 @@ private struct CompleteStep: View {
         // standalone 72pt hero icon is retired in favour of the shared mark.
         IntroChapterScaffold {
             VStack(spacing: 0) {
-                Spacer(minLength: 24)
+                // Hero line at the shared set position (was centred — owner
+                // 2026-06-16: keep "You're ready." consistent with every other
+                // brand-mark screen). Gem + fact follow; the rest is empty space.
+                Spacer().frame(height: introHeroTopGap)
                 VStack(spacing: 24) {
                     Text("You're ready.")
                         .font(CatchlightFont.displayFixed(size: 32))
