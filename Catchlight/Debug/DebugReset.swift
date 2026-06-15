@@ -23,10 +23,9 @@ enum DebugReset {
     /// launch shows onboarding. DEBUG only.
     ///
     /// What it clears, in order:
-    ///   • Keychain master key (+ its Secure-Enclave wrapping key), mnemonic,
-    ///     and PIN hash/salt/attempts — the secrets that gate onboarding and
-    ///     decryption.
-    ///   • Onboarding / orientation + appearance + biometrics user defaults.
+    ///   • Keychain master key (+ its Secure-Enclave wrapping key) and mnemonic —
+    ///     the secrets that gate onboarding and decryption.
+    ///   • Onboarding / orientation + appearance user defaults.
     ///   • App-group cloud-folder bookmark / URL keys.
     ///   • The `everEntitled` subscription flag (app-group defaults).
     ///   • The local SQLite store (all Takes + sequences) by removing the
@@ -51,17 +50,15 @@ enum DebugReset {
     private static func wipeKeychain() {
         MasterKeyKeychain.delete()
         MnemonicKeychain.delete()
-        PINService().reset()
     }
 
     // MARK: - User defaults
 
     private static func wipeDefaults() {
-        // Standard defaults: onboarding/orientation step, appearance, biometrics.
+        // Standard defaults: onboarding/orientation step + appearance.
         let standard = UserDefaults.standard
         standard.removeObject(forKey: FirstRunOrientationState.storageKey)
         standard.removeObject(forKey: SettingsViewModel.appearanceDefaultsKey)
-        standard.removeObject(forKey: BiometricsPreference.defaultsKey)
 
         // App-group defaults: cloud-folder bookmark / URL fallback + the
         // "ever entitled" subscription flag. `clearCloudFolderBookmark` removes

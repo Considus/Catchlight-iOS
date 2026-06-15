@@ -26,6 +26,7 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @AppStorage(SettingsViewModel.appearanceDefaultsKey) private var appearanceModeRaw: String = SettingsViewModel.AppearanceMode.system.rawValue
+    @AppStorage(SettingsViewModel.LockAfter.defaultsKey) private var lockAfterRaw: String = SettingsViewModel.LockAfter.default.rawValue
 
     @State private var vm = SettingsViewModel()
 
@@ -65,23 +66,15 @@ struct SettingsView: View {
         .presentationDragIndicator(.visible)
         .task {
             await vm.refreshNotificationStatus()
-            vm.refreshPINState()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 // Returning from iOS Settings: re-poll in case the user toggled.
                 Task { await vm.refreshNotificationStatus() }
-                vm.refreshPINState()
             }
         }
         // Sub-screen sheets (Task 3.12). Each presents on its own bool so they
         // never compete with one another and each can be drag-dismissed.
-        .sheet(isPresented: $vm.isPINSheetPresented) {
-            PINSetupView(
-                initialMode: vm.hasPIN ? .manage : .create,
-                onDidChangePINState: { vm.refreshPINState() }
-            )
-        }
         .sheet(isPresented: $vm.isPhraseSheetPresented) {
             PrivacyPhraseView()
         }
@@ -98,7 +91,7 @@ struct SettingsView: View {
                 DebugReset.wipeAndRelaunch()
             }
         } message: {
-            Text("Deletes the master key, PIN, privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
+            Text("Deletes the master key, privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
         }
         #endif
     }
@@ -208,19 +201,38 @@ struct SettingsView: View {
 
     private var securitySection: some View {
         Section {
-            SettingsRow(icon: "lock",
-                        label: "PIN / biometrics",
-                        chevron: true,
-                        action: { vm.isPINSheetPresented = true }) {
-                SettingsDetailLabel(text: vm.hasPIN ? "On" : "Off")
+            // Lock after — the background grace window before a return re-locks
+            // (D-042). The app ALWAYS locks on cold launch and when the phone locks
+            // while Catchlight is in front; this only governs the in-background grace.
+            HStack(spacing: 14) {
+                Image(systemName: "lock")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("Lock after")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("Lock after", selection: lockAfterBinding) {
+                    ForEach(SettingsViewModel.LockAfter.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(Color.ckTextSecondary)
             }
-            .accessibilityHint(vm.hasPIN ? "Change or remove your PIN." : "Set a PIN to lock the app.")
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Lock after \(lockAfterBinding.wrappedValue.label)")
 
             SettingsRow(icon: "key.horizontal",
                         label: "Privacy phrase",
                         chevron: true,
                         action: { vm.isPhraseSheetPresented = true })
-                .accessibilityHint("Double-tap to view your phrase. PIN confirmation required.")
+                .accessibilityHint("Double-tap to view your phrase. Face ID or passcode required.")
 
             // 6.12 — Blocked on Phase 2. Stub stays visible so the layout is complete.
             SettingsRow(icon: "iphone.and.arrow.forward",
@@ -232,7 +244,18 @@ struct SettingsView: View {
             .accessibilityHint("Coming soon.")
         } header: {
             sectionHeader("Security")
+        } footer: {
+            Text("Catchlight locks after this long in the background. It always locks when you quit the app or lock your phone while it's open.")
+                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                .foregroundStyle(Color.ckTextSecondary)
         }
+    }
+
+    private var lockAfterBinding: Binding<SettingsViewModel.LockAfter> {
+        Binding(
+            get: { SettingsViewModel.LockAfter(rawValue: lockAfterRaw) ?? .default },
+            set: { lockAfterRaw = $0.rawValue }
+        )
     }
 
     // MARK: - Sync

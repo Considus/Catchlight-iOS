@@ -67,9 +67,12 @@ final class OnboardingViewModel {
     private(set) var failureDetail: String?
 
     private let bip39: BIP39
-    private let onComplete: () -> Void
+    /// Carries the just-derived 32-byte master key so the app can open the store
+    /// directly (no Keychain read, hence no Face ID/passcode prompt right after
+    /// onboarding). D-042.
+    private let onComplete: (Data) -> Void
 
-    init(onComplete: @escaping () -> Void) {
+    init(onComplete: @escaping (Data) -> Void) {
         self.onComplete = onComplete
         do {
             self.bip39 = BIP39(wordlist: try EnglishWordlist.load())
@@ -194,7 +197,7 @@ final class OnboardingViewModel {
             // PIN gate at the call site. (The Argon2 metadata salt is no longer
             // written — HKDF derivation uses a fixed domain salt.)
             try MnemonicKeychain.store(mnemonic)
-            onComplete()
+            onComplete(masterKeyData)
         } catch let error as KeychainError {
             failure = "Couldn't secure your account on this device."
             failureDetail = describe(error)

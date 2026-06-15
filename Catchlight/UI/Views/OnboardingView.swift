@@ -122,45 +122,11 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
 
 // MARK: - Intro chapter (shared brand mark)
 
-/// The persistent brand mark — icon over wordmark — that anchors the opening
-/// chapter (splash · Welcome · Storage · Local warning · Reveal · Confirm ·
-/// Complete). It is drawn at an IDENTICAL position on every one of those screens so
-/// that, as the screens crossfade, the mark reads as STATIC while only the words
-/// beneath it change (owner 2026-06-15). The launch-screen storyboard mirrors this
-/// geometry so the OS launch → splash → Welcome handoff is seamless.
-///
-/// The top inset is `deviceTopInset + 114` — i.e. 114pt below the SAFE-AREA top, not
-/// the screen top. The app runs full-bleed (`.ignoresSafeArea(.container)` at the
-/// root), so the `deviceTopInset` term is what keeps the mark out from under the
-/// status bar / Dynamic Island (owner caught it in Daylight 2026-06-15; the dark
-/// Night icon hid it). The base grew 24 → 84 → 114 (owner rule-of-thirds nudges,
-/// 2026-06-16). The launch storyboard's icon-top constant is kept at the SAME 114 so
-/// the OS launch → splash → Welcome handoff doesn't jump.
-///
-/// In onboarding this view is drawn ONCE, hoisted above the per-step crossfade in
-/// `OnboardingView`, so it never fades between screens (owner: the icon "flashed"
-/// because two identical marks were crossfading). Each step RESERVES its space with
-/// a hidden copy; only the splash (in `RootView`, outside that crossfade) draws its
-/// own via `IntroChapterScaffold(drawsBrandMark: true)`.
-private struct IntroBrandMark: View {
-    @Environment(\.deviceTopInset) private var deviceTopInset
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Image("catchlight-icon")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 72, height: 72)
-                .accessibilityHidden(true)
-            Image("catchlight-wordmark")
-                .resizable()
-                .scaledToFit()
-                .frame(height: 44)
-                .accessibilityLabel("Catchlight")
-        }
-        .padding(.top, deviceTopInset + 114)
-    }
-}
+// `IntroBrandMark` now lives in its own file (IntroBrandMark.swift) so the
+// app-entry `LockView` can reuse the exact same mark + position (D-042). It is
+// drawn ONCE here, hoisted above the per-step crossfade in `OnboardingView`, so it
+// never fades between screens; each step reserves its space with a hidden copy and
+// only the splash draws its own via `IntroChapterScaffold(drawsBrandMark: true)`.
 
 /// Layout shared by the centred intro screens (Welcome · Storage · Local warning ·
 /// Complete) and the launch splash. Places `IntroBrandMark` at the top (the mark
@@ -752,31 +718,35 @@ private struct CompleteStep: View {
             VStack(spacing: 0) {
                 // Hero line at the shared set position (was centred — owner
                 // 2026-06-16: keep "You're ready." consistent with every other
-                // brand-mark screen). Gem + fact follow; the rest is empty space.
+                // brand-mark screen).
                 Spacer().frame(height: introHeroTopGap)
-                VStack(spacing: 24) {
-                    Text("You're ready.")
-                        .font(CatchlightFont.displayFixed(size: 32))
+                Text("You're ready.")
+                    .font(CatchlightFont.displayFixed(size: 32))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                // The voice gem + encryption fact drop to the LOW subtext position
+                // (owner 2026-06-15) — same placement as Welcome / Local-warning, so
+                // the closing screen shares the rhythm. A flexible spacer carries the
+                // block down toward the dock; the hero stays pinned. The gem leads in
+                // Primary (the "story before the real app opens"), then the
+                // storage-specific encryption fact in Secondary; both 16 light, like
+                // every other onboarding subtext.
+                Spacer(minLength: 24)
+                VStack(spacing: 12) {
+                    Text("Your thoughts, in your order, telling your story. Nobody else's.")
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                         .foregroundStyle(Color.ckTextPrimary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                    // The voice gem leads (the "story before the real app opens",
-                    // owner 2026-06-15), then the storage-specific encryption fact.
-                    VStack(spacing: 12) {
-                        Text("Your thoughts, in your order, telling your story. Nobody else's.")
-                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                            .foregroundStyle(Color.ckTextPrimary)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(bodyText)
-                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                            .foregroundStyle(Color.ckTextSecondary)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    Text(bodyText)
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 24)
+                Spacer().frame(height: 24)
             }
         } bottom: {
             DockPillRow {
@@ -827,14 +797,14 @@ private struct FailureStep: View {
 // MARK: - Previews
 
 #Preview("Onboarding — welcome (Night)") {
-    let vm = OnboardingViewModel(onComplete: {})
+    let vm = OnboardingViewModel(onComplete: { _ in })
     return OnboardingView()
         .environment(vm)
         .preferredColorScheme(.dark)
 }
 
 #Preview("Onboarding — reveal (Night)") {
-    let vm = OnboardingViewModel(onComplete: {})
+    let vm = OnboardingViewModel(onComplete: { _ in })
     vm.beginStorageChoice()
     vm.chooseStorage(.cloud)
     return OnboardingView()
@@ -843,7 +813,7 @@ private struct FailureStep: View {
 }
 
 #Preview("Onboarding — confirm (Daylight)") {
-    let vm = OnboardingViewModel(onComplete: {})
+    let vm = OnboardingViewModel(onComplete: { _ in })
     vm.beginStorageChoice()
     vm.chooseStorage(.cloud)
     vm.proceedToConfirm()

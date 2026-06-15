@@ -124,6 +124,22 @@ enum Wiring {
         return store
     }
 
+    /// Open the production store from an ALREADY-unlocked key hierarchy — no
+    /// Keychain access, so no Face ID/passcode prompt (D-042). The app-entry
+    /// unlock path uses this after `SessionController.unlock()` so the single
+    /// `.userPresence` prompt belongs to `unlock()` alone (no double-prompt).
+    /// Primes `sessionKeys` so foreground sync reuses the same keys.
+    static func makeStore(keys: KeyHierarchy) -> TakeStore? {
+        guard let store = try? EncryptedTakeStore(keys: keys) else { return nil }
+        sessionKeys = keys
+        return store
+    }
+
+    /// Drop the cached session keys (D-042 re-lock). Called by `AppModel.relock()`
+    /// when the device locks, so a subsequent foreground sync can't reuse stale
+    /// keys and must wait for a fresh unlock.
+    static func clearSessionKeys() { sessionKeys = nil }
+
     /// Build the application-scope model that drives the whole UI. Decides onboarding
     /// vs. main app based on whether a master key already exists, and supplies the
     /// production store provider used after onboarding completes.
@@ -135,7 +151,7 @@ enum Wiring {
     /// the test bundle a known resting state on every launch with no Keychain or
     /// SQLite state to clear between methods.
     @MainActor
-    static func makeAppModel() -> AppModel {
+    static func makeAppModel(session: SessionController) -> AppModel {
         // `#if DEBUG` so the test hook is COMPLETELY removed from Release
         // archives — a stripped binary cannot land in the UI-test branch even
         // if launched with `--uitesting`. The UI tests run against the Debug
@@ -165,7 +181,10 @@ enum Wiring {
             let model = AppModel(
                 needsOnboarding: false,
                 initialStore: store,
-                storeProvider: { nil },   // never swap stores during a test run
+                session: session,
+                makeStoreFromKeys: { _ in nil },
+                unlockKeys: { throw KeychainError.notFound },   // never invoked: starts unlocked
+                lockState: .unlocked,     // UI tests bypass the lock screen entirely
                 subscription: manager,
                 // UI tests must not touch the real Spotlight index — keep the
                 // user's device search results clean across runs.
@@ -182,15 +201,25 @@ enum Wiring {
         }
         #endif
         let onboarded = MasterKeyKeychain.exists()
-        // Pre-onboarding (or if the encrypted store can't open yet) we run against an
-        // in-memory store so the UI is never dead; it is replaced by the SQLite
-        // store the moment the master key exists (AppModel rebinds on completion).
-        let initialStore: TakeStore = (onboarded ? makeStore() : nil) ?? InMemoryTakeStore()
+        // D-042: an onboarded user starts LOCKED with a non-writable placeholder —
+        // the store is NOT opened eagerly here (that fired the `.userPresence`
+        // prompt at launch and, on cancel, silently handed back a writable empty
+        // InMemoryTakeStore whose contents were lost). The real store is bound by
+        // `AppModel.attemptUnlock()` from the session's keys. Pre-onboarding runs
+        // unlocked against an in-memory store (replaced on completion).
+        let initialStore: TakeStore = InMemoryTakeStore()
+        let lockState: AppModel.LockState = onboarded ? .locked : .unlocked
         let subscriptionDefaults = UserDefaults(suiteName: AppGroup.identifier) ?? .standard
         return AppModel(
             needsOnboarding: !onboarded,
             initialStore: initialStore,
-            storeProvider: { makeStore() },
+            session: session,
+            makeStoreFromKeys: { keys in makeStore(keys: keys) }, // unlock + onboarding open (no prompt)
+            unlockKeys: {                                         // the `.userPresence` prompt — runs off-main
+                let masterKey = try MasterKeyKeychain.retrieve(reason: "Unlock your Takes")
+                return KeyHierarchy(masterKey: masterKey)
+            },
+            lockState: lockState,
             subscription: SubscriptionManager(defaults: subscriptionDefaults),
             spotlight: CoreSpotlightIndexer()
         )

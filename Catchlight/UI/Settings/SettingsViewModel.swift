@@ -43,45 +43,60 @@ final class SettingsViewModel {
         }
     }
 
+    /// "Lock after" grace — how long Catchlight may sit in the background before a
+    /// return re-locks it (D-042). Read by `AppModel.relockIfAwayTooLong()`. The app
+    /// ALWAYS re-locks on cold launch and when the phone locks while Catchlight is in
+    /// the foreground — this only governs the background-grace window.
+    enum LockAfter: String, CaseIterable, Identifiable {
+        case thirtySeconds, oneMinute, fiveMinutes, thirtyMinutes, oneHour
+
+        static let defaultsKey = "catchlight.lockAfter"
+        static let `default`: LockAfter = .oneMinute
+
+        var id: String { rawValue }
+
+        var seconds: TimeInterval {
+            switch self {
+            case .thirtySeconds: return 30
+            case .oneMinute:     return 60
+            case .fiveMinutes:   return 300
+            case .thirtyMinutes: return 1800
+            case .oneHour:       return 3600
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .thirtySeconds: return "30 seconds"
+            case .oneMinute:     return "1 minute"
+            case .fiveMinutes:   return "5 minutes"
+            case .thirtyMinutes: return "30 minutes"
+            case .oneHour:       return "1 hour"
+            }
+        }
+
+        /// The user's current choice (falls back to the default), read from the same
+        /// UserDefaults key the Settings picker writes via `@AppStorage`.
+        static var current: LockAfter {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = LockAfter(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     var notificationStatus: UNAuthorizationStatus = .notDetermined
     var notificationStatusLoading: Bool = false
 
     // MARK: - Sub-sheet presentation (Task 3.12)
 
-    var isPINSheetPresented: Bool = false
     var isPhraseSheetPresented: Bool = false
     var isCloudStorageSheetPresented: Bool = false
     var isAboutSheetPresented: Bool = false
-
-    /// Whether a PIN currently exists in the Keychain. Driven by a salt-slot
-    /// probe so the lookup never triggers a biometric prompt.
-    var hasPIN: Bool = false
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.hasPIN = Self.probePINPresence()
-    }
-
-    /// Re-read PIN presence after the PIN sheet closes.
-    func refreshPINState() {
-        hasPIN = Self.probePINPresence()
-    }
-
-    private static func probePINPresence() -> Bool {
-        let service = KeychainConfig.service
-        let account = "pin-salt"
-        let accessGroup = KeychainConfig.accessGroup
-        let query: [String: Any] = [
-            kSecClass as String:           kSecClassGenericPassword,
-            kSecAttrService as String:     service,
-            kSecAttrAccount as String:     account,
-            kSecAttrAccessGroup as String: accessGroup,
-            kSecMatchLimit as String:      kSecMatchLimitOne,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
-        ]
-        return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
     }
 
     // MARK: - Notifications

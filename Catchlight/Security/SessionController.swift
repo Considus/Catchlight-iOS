@@ -35,14 +35,31 @@ public final class SessionController: ObservableObject {
 
     // MARK: - Unlock / lock
 
-    /// Retrieve the master key (biometric/passcode prompt) and build the hierarchy.
-    public func unlock() throws {
-        let masterKey = try MasterKeyKeychain.retrieve()
-        keys = KeyHierarchy(masterKey: masterKey)
+    /// Adopt an already-unlocked key hierarchy. The blocking Keychain retrieve (which
+    /// presents the Face ID/passcode sheet) runs OFF the main actor in
+    /// `AppModel.attemptUnlock()` so the lock screen never freezes; the resulting
+    /// keys are handed here to bring the session live.
+    public func adopt(_ keys: KeyHierarchy) {
+        self.keys = keys
         isUnlocked = true
     }
 
     public func currentKeys() -> KeyHierarchy? { keys }
+
+    /// Drop the privacy curtain immediately on a successful unlock, so the overlay
+    /// raised by the Face ID sheet's `.inactive` can't linger and flash over the
+    /// timeline before the next `.active` event clears it (D-042).
+    public func clearObscured() { isObscured = false }
+
+    /// Drop the live key material on demand — e.g. the device locked
+    /// (`protectedDataWillBecomeUnavailable`). Zeroes the session's keys and the
+    /// decrypted cache and flips `isUnlocked` false; the encrypted store is torn
+    /// down separately by `AppModel.relock()`. Distinct from the scene-phase
+    /// teardown so a deliberate re-lock can be driven from outside the lifecycle.
+    public func lock() {
+        clearDecryptedCache()
+        clearDerivedKeyCache()
+    }
 
     // MARK: - Scene lifecycle (Encryption Architecture §12.2)
 

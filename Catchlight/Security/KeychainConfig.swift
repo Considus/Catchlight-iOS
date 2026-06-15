@@ -3,7 +3,7 @@
 //  Catchlight (iOS app target)
 //
 //  Single source of truth for the Keychain access group shared by
-//  MasterKeyKeychain, MnemonicKeychain, PINService, and any future extension.
+//  MasterKeyKeychain, MnemonicKeychain, and any future extension.
 //  Previously this literal was duplicated across several files (and two views),
 //  which risked silent divergence if the development team ever changes.
 //

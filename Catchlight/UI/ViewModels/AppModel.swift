@@ -56,14 +56,44 @@ final class AppModel {
     private(set) var needsOnboarding: Bool
     private(set) var onboardingVM: OnboardingViewModel?
 
+    /// App-entry lock state for an ONBOARDED user (D-042 lock screen). The
+    /// encrypted store is no longer opened eagerly at launch — an onboarded user
+    /// starts `.locked`, `RootView` shows the branded `LockView`, and the store is
+    /// bound only after `attemptUnlock()` succeeds (one iOS `.userPresence` prompt,
+    /// never a writable empty fallback). Pre-onboarding and `--uitesting` start
+    /// `.unlocked`. `.failed` carries the message the lock screen shows on
+    /// cancel/auth-failure or an unopenable library.
+    enum LockState: Equatable { case unlocked, locked, unlocking, failed(String) }
+    private(set) var lockState: LockState
+
+    /// Set when onboarding completes but the store hasn't opened yet (the user
+    /// cancelled the post-onboarding prompt). The first successful `attemptUnlock`
+    /// seeds the starter Takes, so seeding survives a cancel-then-retry without the
+    /// eager open path having to run.
+    private var seedOnNextUnlock = false
+
     // Feature view model. Available once a store is bound (after onboarding).
     // (Dock redesign 2026-06-10: the timeline is the ONE surface; the former
     // Search/Sequence view models are gone — the dock's live filter narrows
     // the Dailies snapshot directly via SequenceFilter.)
     private(set) var dailiesVM: DailiesViewModel
 
-    /// Supplies the production store after the master key exists. Injected by Wiring.
-    private let storeProvider: () -> TakeStore?
+    /// The live crypto session. Held as a plain reference for IMPERATIVE use
+    /// (`adopt(_:)` / `currentKeys()` / `lock()`); it is observed for `isObscured`
+    /// in `CatchlightApp` via `@StateObject`, not here.
+    private let session: SessionController
+
+    /// Builds the encrypted store from an already-unlocked key hierarchy WITHOUT a
+    /// Keychain prompt (`Wiring.makeStore(keys:)`). Used by the unlock path AND the
+    /// onboarding-completion path (which opens from the just-derived key).
+    private let makeStoreFromKeys: (KeyHierarchy) -> TakeStore?
+
+    /// Retrieves the master key from the Keychain (presenting the Face ID/passcode
+    /// sheet) and returns the unlocked key hierarchy, or throws on cancel/failure.
+    /// `@Sendable` because `attemptUnlock` runs it OFF the main actor so the lock
+    /// screen never freezes; injected so the state machine is unit-testable without
+    /// the real Keychain.
+    private let unlockKeys: @Sendable () throws -> KeyHierarchy
 
     /// Task 6.19 — Spotlight indexer. Held here so the same instance is shared
     /// across the lifetime of the app: DailiesViewModel uses it on save/delete,
@@ -76,11 +106,17 @@ final class AppModel {
     // explicitly (Wiring does; previews use `AppModel.preview`).
     init(needsOnboarding: Bool,
          initialStore: TakeStore,
-         storeProvider: @escaping () -> TakeStore?,
+         session: SessionController,
+         makeStoreFromKeys: @escaping (KeyHierarchy) -> TakeStore?,
+         unlockKeys: @escaping @Sendable () throws -> KeyHierarchy,
+         lockState: LockState = .unlocked,
          subscription: SubscriptionManager,
          spotlight: SpotlightIndexing = NoopSpotlightIndexer()) {
         self.needsOnboarding = needsOnboarding
-        self.storeProvider = storeProvider
+        self.session = session
+        self.makeStoreFromKeys = makeStoreFromKeys
+        self.unlockKeys = unlockKeys
+        self.lockState = lockState
         self.subscription = subscription
         self.spotlight = spotlight
         self.dailiesVM = DailiesViewModel(store: initialStore, spotlight: spotlight)
@@ -90,8 +126,8 @@ final class AppModel {
 
         if needsOnboarding {
             self.onboardingVM = nil
-            self.onboardingVM = OnboardingViewModel { [weak self] in
-                self?.completeOnboarding()
+            self.onboardingVM = OnboardingViewModel { [weak self] masterKeyData in
+                self?.completeOnboarding(with: masterKeyData)
             }
         }
     }
@@ -99,21 +135,27 @@ final class AppModel {
     /// Called by OnboardingViewModel after the master key is stored. Rebinds the
     /// feature view model to the now-openable production store and seeds the first
     /// Takes, then flips to the main app.
-    private func completeOnboarding() {
-        if let store = storeProvider() {
-            seedIfEmpty(store)
-            rebind(to: store)
-        } else {
-            // The master key was stored but the encrypted store failed to open.
-            // Previously this fell through SILENTLY onto the launch in-memory
-            // store — everything the user wrote was lost on the next launch with
-            // zero indication. Surface it through the existing non-blocking
-            // notice strip; data recovery is via restart (or, worst case, the
-            // privacy phrase).
-            lastSyncError = "Your encrypted library couldn't be opened, so changes aren't being saved to this device yet. Please restart Catchlight."
-        }
+    private func completeOnboarding(with masterKeyData: Data) {
         onboardingVM = nil
         needsOnboarding = false
+        // Open the store directly from the key we JUST derived — no Keychain read,
+        // so NO Face ID/passcode prompt right after setup (the user lands straight in
+        // the seeded timeline). The `.userPresence` prompt first appears on the next
+        // cold launch via LockView. `KeyHierarchy(masterKeyBytes:)` is identical to
+        // the cold-launch Keychain-read hierarchy for the same bytes, so the seeded
+        // Takes decrypt then.
+        let keys = KeyHierarchy(masterKeyBytes: masterKeyData)
+        session.adopt(keys)
+        if let store = makeStoreFromKeys(keys) {
+            seedIfEmpty(store)
+            rebind(to: store)
+            lockState = .unlocked
+        } else {
+            // The store genuinely couldn't open (corrupt / I/O) — fall back to the
+            // lock screen so a relaunch/retry can recover; seed on that first unlock.
+            seedOnNextUnlock = true
+            lockState = .locked
+        }
     }
 
     private func seedIfEmpty(_ store: TakeStore) {
@@ -127,6 +169,82 @@ final class AppModel {
         // onboarding completion — without this, post-onboarding Takes wouldn't
         // be indexed until the next app launch.
         dailiesVM = DailiesViewModel(store: store, spotlight: spotlight)
+    }
+
+    // MARK: - D-042 — app-entry lock screen
+
+    /// Drive the unlock for an onboarded user: present the iOS `.userPresence`
+    /// prompt (run OFF the main actor so the lock screen never freezes), then bind
+    /// the encrypted store from the unlocked keys. Distinguishes auth-cancel from an
+    /// unopenable library; NEVER falls back to a writable empty store. Called by
+    /// `LockView` (`await`).
+    func attemptUnlock() async {
+        guard lockState != .unlocking else { return }
+        lockState = .unlocking
+        let keys: KeyHierarchy
+        do {
+            // The Keychain retrieve BLOCKS until the user answers the Face ID/passcode
+            // sheet — run it off the main actor so the UI stays responsive.
+            let retrieve = unlockKeys
+            keys = try await Task.detached(priority: .userInitiated) { try retrieve() }.value
+        } catch {
+            lockState = .failed("Couldn't unlock. Authenticate to open your Takes.")
+            return
+        }
+        session.adopt(keys)
+        guard let store = makeStoreFromKeys(keys) else {
+            // Auth succeeded but the encrypted DB couldn't open (corrupt / I/O).
+            // Distinct from cancel — retrying auth won't help. Surface via the
+            // existing strip too, but stay locked (no writable fallback).
+            lastSyncError = "Your encrypted library couldn't be opened, so changes aren't being saved to this device yet. Please restart Catchlight."
+            lockState = .failed("Your encrypted library couldn't be opened. Please restart Catchlight.")
+            return
+        }
+        if seedOnNextUnlock {
+            // First unlock after onboarding (the post-onboarding prompt was
+            // cancelled and retried here) — seed the starter Takes.
+            seedIfEmpty(store)
+            seedOnNextUnlock = false
+        }
+        rebind(to: store)        // bind the REAL store before the UI un-gates
+        session.clearObscured()  // drop the privacy curtain so it can't flash post-Face ID
+        lockState = .unlocked
+    }
+
+    /// When the app last entered the background, for the time-away re-lock. iOS
+    /// can't reliably tell a SUSPENDED app that the device locked, so we re-lock on
+    /// return if we were away longer than `relockGrace` (the reliable proxy for
+    /// "you stepped away / the phone auto-locked"). Quick app-switches stay unlocked.
+    private var backgroundedAt: Date?
+
+    /// Record the moment we leave the foreground (scene `.background`).
+    func noteEnteredBackground() { backgroundedAt = Date() }
+
+    /// On returning to the foreground, re-lock if we were away longer than the grace
+    /// window. Always clears the timestamp. No-op on a cold launch (no timestamp) or
+    /// if already locked (e.g. the device-lock notification beat us to it).
+    func relockIfAwayTooLong() {
+        let since = backgroundedAt
+        backgroundedAt = nil
+        guard lockState == .unlocked, let since else { return }
+        // The grace window is the user's "Lock after" setting (read fresh each time).
+        if Date().timeIntervalSince(since) >= SettingsViewModel.LockAfter.current.seconds {
+            relock()
+        }
+    }
+
+    /// Re-lock when the device itself locks (`protectedDataWillBecomeUnavailable`).
+    /// Tears down the live keys + the encrypted store and returns to `.locked` so
+    /// the next foreground shows `LockView` again — re-lock thus follows the
+    /// device's own lock (the user's iOS Auto-Lock), not an app-defined timer.
+    /// No-op while onboarding (no key yet) or already locked.
+    func relock() {
+        guard !needsOnboarding, lockState == .unlocked else { return }
+        ui.closeEditor()                    // drop any decrypted Take held for editing
+        session.lock()                      // zero the session's keys + decrypted cache
+        Wiring.clearSessionKeys()           // drop the cached keys used by sync
+        rebind(to: InMemoryTakeStore())     // tear down the encrypted store (never written while locked)
+        lockState = .locked
     }
 
     // MARK: - Task 3.9 — sync error & quarantine reporting
@@ -200,6 +318,10 @@ final class AppModel {
     /// simply branch on the bool.
     @discardableResult
     func ensureEntitled() -> Bool {
+        // Belt-and-suspenders: while locked the UI is fully covered by LockView so
+        // mutation entry points are unreachable — but never let a create/edit slip
+        // through against the locked placeholder store (no side effects).
+        guard lockState == .unlocked else { return false }
         if subscriptionStatus.isEntitled { return true }
         ui.isPaywallPresented = true
         return false
@@ -220,7 +342,10 @@ final class AppModel {
         AppModel(
             needsOnboarding: !onboarded,
             initialStore: store,
-            storeProvider: { store },
+            session: SessionController(),
+            makeStoreFromKeys: { _ in store },
+            unlockKeys: { KeyHierarchy(masterKeyBytes: Data(repeating: 0, count: 32)) },
+            lockState: .unlocked,
             subscription: SubscriptionManager()
         )
     }

@@ -23,6 +23,7 @@ struct RootView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @Environment(FirstRunOrientationState.self) private var orientation
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Branded splash shown on every cold launch (owner 2026-06-14). `.task` runs
     /// once per RootView lifetime, so warm resumes from the background don't
@@ -42,6 +43,13 @@ struct RootView: View {
                         .environment(onboardingVM)
                         .transition(.opacity)
                 }
+            } else if app.lockState != .unlocked {
+                // D-042: an onboarded-but-locked user sees the branded LockView
+                // INSTEAD of the timeline — so `mainApp`'s side effects (paywall
+                // .task, sync) don't run against the locked placeholder store, and
+                // the (empty) timeline is never visible or interactive.
+                LockView()
+                    .transition(.opacity)
             } else {
                 mainApp
                     .transition(.opacity)
@@ -60,12 +68,37 @@ struct RootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.4), value: app.needsOnboarding)
+        .animation(.easeInOut(duration: 0.4), value: app.lockState)
         .task {
             // Hold the launch-screen branding long enough to actually READ the
-            // tagline (owner 2026-06-16: 1.2s was too fast). ~2.5s, then a gentle
-            // 0.5s crossfade to whatever's behind (onboarding or the timeline).
+            // tagline (owner 2026-06-16: 1.2s was too fast). ~2.5s solo.
             try? await Task.sleep(nanoseconds: 2_500_000_000)
+            // Keep the splash as the BACKDROP through the unlock so the happy path
+            // never flashes the lock screen (owner 2026-06-16): splash → Face ID over
+            // it → crossfade straight to the timeline on success. The lock screen is
+            // revealed only if the user cancels (lockState becomes `.failed` behind
+            // the splash, so the crossfade lands on LockView's "Try Again").
+            if app.lockState == .locked { await app.attemptUnlock() }
             withAnimation(.easeInOut(duration: 0.5)) { showSplash = false }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background:
+                // Start the time-away clock for the grace re-lock (option 1).
+                app.noteEnteredBackground()
+            case .active:
+                // Warm resume only — the splash `.task` handles cold launch. Re-lock
+                // if we were away past the grace window (or the device-lock notice
+                // already re-locked us), then auto-present the unlock now that we're
+                // foreground (never prompt while backgrounded).
+                guard !showSplash else { return }
+                Task {
+                    app.relockIfAwayTooLong()
+                    if app.lockState == .locked { await app.attemptUnlock() }
+                }
+            default:
+                break
+            }
         }
     }
 
