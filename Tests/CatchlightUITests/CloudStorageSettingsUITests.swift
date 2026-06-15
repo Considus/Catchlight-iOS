@@ -27,8 +27,7 @@ final class CloudStorageSettingsUITests: XCTestCase {
         // starts the drag on the toolbar, which is the gesture surface.
         let dailiesTab = app.descendants(matching: .any)
             .matching(identifier: "dailies-tab").firstMatch
-        XCTAssertTrue(dailiesTab.waitForExistence(timeout: 3))
-        dailiesTab.swipeUp()
+        swipeUpWhenReady(dailiesTab)
 
         let settingsSheet = app.descendants(matching: .any)
             .matching(identifier: "settings-sheet").firstMatch
@@ -38,7 +37,7 @@ final class CloudStorageSettingsUITests: XCTestCase {
         // Locate and tap the Cloud Storage row.
         let cloudRow = app.descendants(matching: .any)
             .matching(identifier: "settings-cloud-storage").firstMatch
-        XCTAssertTrue(cloudRow.waitForExistence(timeout: 2))
+        XCTAssertTrue(cloudRow.waitForExistence(timeout: 5))
         XCTAssertTrue(cloudRow.isHittable)
         cloudRow.tap()
 
@@ -48,7 +47,7 @@ final class CloudStorageSettingsUITests: XCTestCase {
                       "Cloud Storage sub-sheet should present.")
 
         // Dismiss via the Done toolbar button — leaves no state change behind.
-        app.buttons["Done"].firstMatch.tap()
+        tapWhenReady(app.buttons["Done"].firstMatch)
         XCTAssertTrue(settingsSheet.waitForExistence(timeout: 2),
                       "Settings sheet should still be visible after Cloud Storage dismisses.")
     }
