@@ -27,8 +27,10 @@
 //      to the top, then nudges its final 10°.
 //  CLOSE — the TRUE time-mirror of the open played 1.25× faster (exits are
 //  quicker than entrances): petals kick slightly outward (the reversed
-//  overshoot), spiral back into the descending deck, the Iris counter-rotates
-//  past 0 to −6° and settles. Reduce Motion replaces all of it with a fade.
+//  overshoot), spiral back into the descending deck, and the Iris reverses its
+//  OWN turn on the SAME mirrored clock (it nudges to ~96° then sweeps back to 0 —
+//  the open's soft-catch run backwards), so hub and Marks land together rather
+//  than the Iris finishing first. Reduce Motion replaces all of it with a fade.
 //
 //  STYLE — petals share the dock-button language: background-colour face
 //  (readable above cards), 1.5pt Ember@35% ring, no shadow, Ember glyphs at
@@ -203,25 +205,35 @@ struct PetalFanView: View {
         }
     }
 
-    /// Hub rotation with the petals' soft-catch character: ~6° past the mark,
-    /// then settle — nothing moves precisely between two points.
-    private func hubRotation(now: Date) -> Double {
+    /// Open-time hub rotation with the petals' soft-catch character: ~6° past the
+    /// mark, then settle — nothing moves precisely between two points. Factored out
+    /// so the CLOSE can evaluate it at the mirrored time (below), making the hub a
+    /// strict time-reverse of the open IN STEP with the petals (owner 2026-06-16:
+    /// the close used to drive the hub on its OWN faster clock, so the Iris finished
+    /// its turn well before the Marks had spiralled back into it).
+    private static func openHubRotation(at t: Double) -> Double {
         func turn(_ p: Double, from a: Double, over b: Double, to c: Double) -> Double {
             // two-segment keyframe: a → b (72%, ease-out) → c (settle)
-            if p < 0.72 { return a + (b - a) * Self.easeOutCubic(p / 0.72) }
-            return b + (c - b) * Self.easeInOutCubic((p - 0.72) / 0.28)
+            if p < 0.72 { return a + (b - a) * easeOutCubic(p / 0.72) }
+            return b + (c - b) * easeInOutCubic((p - 0.72) / 0.28)
         }
+        let tt = t - PetalKind.obie.peel   // the hub starts turning at the first peel
+        guard tt > 0 else { return 0 }
+        return turn(min(tt / Choreo.irisTurn, 1), from: 0, over: 96, to: 90)
+    }
+
+    private func hubRotation(now: Date) -> Double {
         switch phase {
         case .opening(let start):
-            let firstPeel = PetalKind.obie.peel
-            let t = now.timeIntervalSince(start) - firstPeel
-            guard t > 0 else { return 0 }
-            return turn(min(t / Choreo.irisTurn, 1), from: 0, over: 96, to: 90)
+            return Self.openHubRotation(at: now.timeIntervalSince(start))
         case .open:
             return 90
         case .closing(let start, _):
-            let t = now.timeIntervalSince(start)
-            return turn(min(t / (Choreo.irisTurn / Choreo.closeSpeed), 1), from: 90, over: -6, to: 0)
+            // Same mirrored clock the petals use (petalState .closing) — a strict
+            // reverse of the open, so hub and Marks land together.
+            let tm = Choreo.total - now.timeIntervalSince(start) * Choreo.closeSpeed
+            if tm <= 0 { return 0 }
+            return Self.openHubRotation(at: tm)
         }
     }
 

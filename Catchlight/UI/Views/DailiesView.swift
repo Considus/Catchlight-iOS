@@ -54,6 +54,35 @@ struct DailiesView: View {
         )
     }
 
+    /// Left edge of the Take TEXT column — the card's left edge (`spineX −
+    /// cardSpineInset`) plus the card's internal leading pad. The DAILIES heading and
+    /// the ghosted month markers align to this so they sit directly above the body
+    /// text (owner 2026-06-16; was `spineX + 22`, which floated them right of the text).
+    private var textColumnLeading: CGFloat {
+        spineX - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad
+    }
+
+    /// Reads the user's timeline-density choice live. The inter-card LazyVStack
+    /// spacing is the chosen clear gap MINUS the two 6pt row paddings each card
+    /// already carries (`.padding(.vertical, 6)`), so the visible card-to-card gap
+    /// equals `TakeSpacing.gap`.
+    @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey)
+    private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
+    private var takeSpacing: SettingsViewModel.TakeSpacing {
+        SettingsViewModel.TakeSpacing(rawValue: takeSpacingRaw) ?? .default
+    }
+    /// LazyVStack spacing + the Obie gap. `gap − 12` because each row adds 6pt top
+    /// and 6pt bottom of its own; the result is the extra space between cards.
+    private var interCardSpacing: CGFloat { max(0, takeSpacing.gap - 12) }
+
+    /// Timeline order (owner 2026-06-16). Default Oldest first: oldest at the top,
+    /// newer Takes accrue below. The Obie stays pinned above the list regardless.
+    @AppStorage(SettingsViewModel.TakeSort.defaultsKey)
+    private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
+    private var takeSort: SettingsViewModel.TakeSort {
+        SettingsViewModel.TakeSort(rawValue: takeSortRaw) ?? .default
+    }
+
     @State private var scrolling = false
     @State private var scrollHideWork: DispatchWorkItem?
     /// The first row's top Y in the "dailies" space, published by the first row so
@@ -85,10 +114,23 @@ struct DailiesView: View {
             // row's 6pt vertical pad; the top edge is one Iris radius higher. The
             // bottom runs on toward the Add button, covered by the dock fade (HiFi).
             Rectangle()
-                .fill(Color.ckSpine)
+                // Owner 2026-06-16: the spine takes the dock buttons' ring colour
+                // (Ember @ 35% — `dockRing()` in BottomDockView) so the wire and the
+                // toolbar read as one family. (Was `ckSpine`, a fainter Catchlight/Ink
+                // tint; that token still serves onboarding + the conflict view.)
+                .fill(Color.ckAccent.opacity(0.35))
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
+                // Terminate the spine at the TOP EDGE of the Add button's ring rather
+                // than running full-bleed under the dock (owner 2026-06-16: it was
+                // visible through the +'s hollow ring). The Add ring's top sits
+                // `dockBottomPadding + minTouchTarget` above the device bottom inset
+                // (BottomDockView lays the 44pt button `dockBottomPadding` above the
+                // home indicator), so the wire plugs into the top of the +.
+                .padding(.bottom, deviceBottomInset
+                         + CatchlightLayout.dockBottomPadding
+                         + CatchlightLayout.minTouchTarget)
                 .offset(x: spineX - CatchlightLayout.spineWidth / 2)
                 .accessibilityHidden(true)
 
@@ -178,7 +220,7 @@ struct DailiesView: View {
                     .transition(.opacity)
                 Spacer()
             }
-            .padding(.leading, spineX + 22)
+            .padding(.leading, textColumnLeading)
             .padding(.top, deviceTopInset + 14)
             .padding(.bottom, 2)
             .background(Color.ckBackground)
@@ -427,13 +469,17 @@ struct DailiesView: View {
                 }
                 .frame(height: 0)
 
-                LazyVStack(alignment: .leading, spacing: 0) {
+                // Inter-card spacing is user-configurable (Compact/Standard/Comfort —
+                // owner 2026-06-16). The chosen `gap` minus the 12pt each row already
+                // carries gives the visible card-to-card distance, sized so a lower
+                // card's Iris (straddling its top edge) never overlaps the card above.
+                LazyVStack(alignment: .leading, spacing: interCardSpacing) {
                     // Pinned Obie — ALWAYS shown, even when it doesn't match
-                    // the active filter (dock redesign 2026-06-10).
+                    // the active filter (dock redesign 2026-06-10). The LazyVStack
+                    // spacing now provides the gap below it (was a fixed 18pt spacer).
                     if let obie = vm.obie {
                         row(for: obie, isFirst: true)
                             .id(obie.id)
-                        Color.clear.frame(height: 18)   // gap below the Obie
                     }
 
                     // Filter active but no non-Obie Take matches: quiet line in
@@ -449,18 +495,25 @@ struct DailiesView: View {
                     }
 
                     ForEach(Array(monthGroups.enumerated()), id: \.element.month) { groupIndex, group in
-                        // Ghosted month marker — appears only while scrolling.
-                        Text(group.month)
-                            // .month — 11pt medium, 0.08em tracking (matches the
-                            // DAILIES heading kerning; D-042, was 12pt untracked).
-                            .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
-                            .kerning(0.88)
-                            .foregroundStyle(Color.ckTextSecondary)
-                            .padding(.leading, spineX + 22)
-                            .padding(.vertical, 6)
-                            .opacity(scrolling ? 0.8 : 0)
-                            .animation(.easeInOut(duration: 0.25), value: scrolling)
-                            .accessibilityHidden(!scrolling)
+                        // Ghosted month marker — appears only while scrolling. The
+                        // FIRST group's marker is suppressed (owner 2026-06-16): it
+                        // reserved ~25pt of always-on height between the pinned Obie
+                        // and the first row, inflating that gap well past the chosen
+                        // Take spacing. Later groups keep their markers as section
+                        // breaks; the topmost month reads from the DAILIES heading.
+                        if groupIndex > 0 {
+                            Text(group.month)
+                                // .month — 11pt medium, 0.08em tracking (matches the
+                                // DAILIES heading kerning; D-042, was 12pt untracked).
+                                .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                                .kerning(0.88)
+                                .foregroundStyle(Color.ckTextSecondary)
+                                .padding(.leading, textColumnLeading)
+                                .padding(.vertical, 6)
+                                .opacity(scrolling ? 0.8 : 0)
+                                .animation(.easeInOut(duration: 0.25), value: scrolling)
+                                .accessibilityHidden(!scrolling)
+                        }
 
                         ForEach(Array(group.takes.enumerated()), id: \.element.id) { takeIndex, take in
                             // The very first row across all months (when there's no Obie)
@@ -604,12 +657,19 @@ struct DailiesView: View {
     /// The filter the dock's current state describes (empty in RESTING).
     private var activeFilter: SequenceFilter { ui.activeTimelineFilter }
 
-    /// Non-Obie Takes narrowed through the live filter, newest-first order
-    /// preserved from the VM. The Obie is pinned separately and never filtered.
+    /// The non-Obie Takes in the user's chosen order. The VM hands them back
+    /// newest-first (deterministic, with an id tie-break); Oldest first is its exact
+    /// reverse, so the tie-break stays stable. The Obie is pinned separately.
+    private var orderedTakes: [Take] {
+        takeSort == .oldestFirst ? Array(vm.takes.reversed()) : vm.takes
+    }
+
+    /// `orderedTakes` narrowed through the live dock filter. The Obie is pinned
+    /// separately and never filtered.
     private var filteredTakes: [Take] {
         let filter = activeFilter
-        guard !filter.isEmpty else { return vm.takes }
-        return vm.takes.filter { filter.matches($0) }
+        guard !filter.isEmpty else { return orderedTakes }
+        return orderedTakes.filter { filter.matches($0) }
     }
 
     // MARK: - Month grouping
