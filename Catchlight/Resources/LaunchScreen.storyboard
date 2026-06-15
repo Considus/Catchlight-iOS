@@ -29,14 +29,14 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="catchlight-icon" translatesAutoresizingMaskIntoConstraints="NO" id="cl1-icn-001">
-                                <rect key="frame" x="160.5" y="83" width="72" height="72"/>
+                                <rect key="frame" x="160.5" y="143" width="72" height="72"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="72" id="cl1-icn-w"/>
                                     <constraint firstAttribute="height" constant="72" id="cl1-icn-h"/>
                                 </constraints>
                             </imageView>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="catchlight-wordmark" translatesAutoresizingMaskIntoConstraints="NO" id="cl1-wmk-001">
-                                <rect key="frame" x="117.5" y="171" width="158" height="44"/>
+                                <rect key="frame" x="117.5" y="231" width="158" height="44"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="158" id="cl1-wmk-w"/>
                                     <constraint firstAttribute="height" constant="44" id="cl1-wmk-h"/>
@@ -47,7 +47,7 @@
                         <color key="backgroundColor" name="ck-background"/>
                         <constraints>
                             <constraint firstItem="cl1-icn-001" firstAttribute="centerX" secondItem="cl1-vw-001" secondAttribute="centerX" id="cl1-icn-cx"/>
-                            <constraint firstItem="cl1-icn-001" firstAttribute="top" secondItem="cl1-saf-001" secondAttribute="top" constant="24" id="cl1-icn-top"/>
+                            <constraint firstItem="cl1-icn-001" firstAttribute="top" secondItem="cl1-saf-001" secondAttribute="top" constant="84" id="cl1-icn-top"/>
                             <constraint firstItem="cl1-wmk-001" firstAttribute="centerX" secondItem="cl1-vw-001" secondAttribute="centerX" id="cl1-wmk-cx"/>
                             <constraint firstItem="cl1-wmk-001" firstAttribute="top" secondItem="cl1-icn-001" secondAttribute="bottom" constant="16" id="cl1-wmk-top"/>
                         </constraints>
