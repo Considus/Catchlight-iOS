@@ -116,12 +116,20 @@ struct TakeRowView: View {
         // so its long-press still wins hit-testing; the card's text taps clear
         // the 44pt Iris touch frame.
         ZStack(alignment: .topLeading) {
+            // The card fills from the row's leading edge, which DailiesView places
+            // `cardSpineInset` (24) left of the spine — so the opaque card covers
+            // the spine and the Iris nests into its top-left corner (HiFi §1). The
+            // Iris is offset right to centre on the spine and UP by its radius to
+            // STRADDLE the card's top edge (HiFi `.iw top:-18`): half sits in the
+            // gap above, half over the corner; the card's 24pt top pad clears the
+            // lower half so text never collides with it. Both offsets derive from
+            // `cardSpineInset` + `circleDiameter`, so the card stays put when the
+            // Iris is resized (previously the card was padded by the Iris diameter,
+            // so enlarging the Iris pushed it right and narrowed it).
             cardColumn
-                // Slide the card's leading edge under the Iris so its rounded
-                // corner tucks beneath the circle. Card content (14pt leading
-                // pad) clears the 44pt Iris frame, keeping the gesture split.
-                .padding(.leading, CatchlightLayout.circleDiameter)
             irisColumn
+                .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
+                        y: -CatchlightLayout.circleDiameter / 2)
         }
         .padding(.vertical, 6)
     }
