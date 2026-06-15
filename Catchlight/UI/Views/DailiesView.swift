@@ -56,16 +56,39 @@ struct DailiesView: View {
 
     @State private var scrolling = false
     @State private var scrollHideWork: DispatchWorkItem?
+    /// The first row's top Y in the "dailies" space, published by the first row so
+    /// the spine starts exactly at the first Iris (handles the pinned-Obie vs
+    /// invisible-month-marker offset). `nil` until the first layout pass.
+    @State private var firstRowTop: CGFloat?
+
+    /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
+    /// MEASURED first-row top; before the first layout, fall back to the constant
+    /// estimate (no month marker). Row top → card top (+6, the Iris straddles the
+    /// top edge so its centre is there) → Iris top (−radius).
+    private var spineTopInset: CGFloat {
+        let radius = CatchlightLayout.circleDiameter / 2
+        if let t = firstRowTop, t.isFinite {
+            return max(0, t + 6 - radius)
+        }
+        return deviceTopInset + CatchlightLayout.headingClearance + 6 - radius
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.ckBackground.ignoresSafeArea()
 
-            // The spine: a full-height hairline behind the rows, at the circle centre.
+            // The spine: a hairline behind the rows, at the circle centre. It
+            // STARTS at the first Iris's top edge (HiFi §1 "the spine terminates at
+            // the first Take") rather than the screen top — a full-height line poked
+            // up into the gap below the DAILIES heading. First Iris centre = the
+            // timeline's top content pad (deviceTopInset + headingClearance) + the
+            // row's 6pt vertical pad; the top edge is one Iris radius higher. The
+            // bottom runs on toward the Add button, covered by the dock fade (HiFi).
             Rectangle()
                 .fill(Color.ckSpine)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
+                .padding(.top, spineTopInset)
                 .offset(x: spineX - CatchlightLayout.spineWidth / 2)
                 .accessibilityHidden(true)
 
@@ -475,6 +498,7 @@ struct DailiesView: View {
             }
             .coordinateSpace(name: "dailies")
             .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
+            .onPreferenceChange(FirstRowTopKey.self) { firstRowTop = $0.isFinite ? $0 : nil }
             // `initial: true` (2026-06-10): when the Spotlight tap arrives from
             // another tab, this view is created with the target ALREADY set, so
             // a change-only observer never fired — no scroll, and the highlight
@@ -551,6 +575,19 @@ struct DailiesView: View {
         // when the Iris grew).
         .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
         .padding(.trailing, 20)
+        .background(alignment: .top) {
+            // The first row publishes its top Y (shared "dailies" space) so the
+            // spine starts exactly at the first Iris — whether that's the pinned
+            // Obie or a row sitting under an invisible month marker.
+            if isFirst {
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: FirstRowTopKey.self,
+                        value: geo.frame(in: .named("dailies")).minY
+                    )
+                }
+            }
+        }
         .overlay(alignment: .topLeading) {
             if isFirst && orientation.showIrisHint {
                 OrientationTooltip(text: "Tap the Iris to shape this Take.", arrowEdge: .leading)
@@ -613,6 +650,16 @@ struct DailiesView: View {
 private struct ScrollOffsetKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
+/// The first timeline row's top Y (in the "dailies" space) — drives where the spine
+/// begins. Only the `isFirst` row publishes; `min` keeps the topmost if more than
+/// one ever reports during a transition. `.infinity` default ⇒ "not measured yet".
+private struct FirstRowTopKey: PreferenceKey {
+    static let defaultValue: CGFloat = .infinity
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = min(value, nextValue())
+    }
 }
 
 #Preview("Dailies — Night (populated)") {
