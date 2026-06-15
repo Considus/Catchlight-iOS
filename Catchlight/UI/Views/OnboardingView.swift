@@ -18,7 +18,7 @@ import CatchlightCore
 /// Local warning · Reveal · Confirm · Complete (owner 2026-06-16). Without this the
 /// flexible spacers pushed each heading down by an amount that depended on the
 /// content below it, so they drifted apart.
-private let introHeroTopGap: CGFloat = 80
+private let introHeroTopGap: CGFloat = 112
 
 struct OnboardingView: View {
     @Environment(OnboardingViewModel.self) private var vm
@@ -200,6 +200,23 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
 // owner decision 2026-06-12 (HiFi v1.11.1): a single pill sits exactly over
 // the four dock-button slots; pairs split into slots 1+2 / 3+4.
 
+/// A NON-interactive footer styled as a subtle outline dock pill — used on the
+/// splash, in the CTA's slot, to carry the copyright (owner 2026-06-16: a pill
+/// design, not a button; muted so it reads as a footer rather than a tappable CTA).
+private struct SplashFooterPill: View {
+    let text: String
+    var body: some View {
+        Text(text)
+            .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))   // button-label style
+            .foregroundStyle(Color.ckTextSecondary)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Capsule().strokeBorder(Color.ckTextSecondary.opacity(0.3), lineWidth: 1))
+            .accessibilityElement()
+            .accessibilityLabel(text)
+    }
+}
+
 // MARK: - Screen 1: Welcome
 
 private struct WelcomeStep: View {
@@ -247,13 +264,18 @@ struct WelcomeContent: View {
                 Spacer().frame(height: 24)
             }
         } bottom: {
-            // Button slot — present in both for identical geometry; hidden + inert
-            // in the splash.
-            DockPillRow {
-                DockPill(title: "Create my privacy phrase", action: onPrimary)
+            // Welcome shows the CTA; the splash fills the SAME toolbar slot with a
+            // non-interactive © footer styled as a subtle outline pill (owner
+            // 2026-06-16) — keeps the splash's bottom edge anchored like the others.
+            if isWelcome {
+                DockPillRow {
+                    DockPill(title: "Create my privacy phrase", action: onPrimary)
+                }
+            } else {
+                DockPillRow {
+                    SplashFooterPill(text: "© 2026 Considus")
+                }
             }
-            .opacity(isWelcome ? 1 : 0)
-            .allowsHitTesting(isWelcome)
         }
     }
 
@@ -285,12 +307,12 @@ struct WelcomeContent: View {
             (Text("First, we'll create your privacy phrase — 12 words that are the ")
              + Text("ONLY").bold()
              + Text(" key to your data."))
-                .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             Text("We never see them, store them, or ask for them. So don't lose them.")
-                .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -315,7 +337,12 @@ private struct StorageChoiceStep: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
 
-                Spacer().frame(height: 32)
+                // PARTIAL mirror of the brand→hero gap (owner 2026-06-16 "middle
+                // ground"): a full mirror dropped the Cloud panel below the pill line
+                // once the 16pt descriptions grew the cards (the Cloud one wraps to 3
+                // lines). Eased to 48 — more than the old 32, but kept conservative so
+                // the Cloud panel stays above the pill line even when the hero wraps.
+                Spacer().frame(height: 48)
 
                 VStack(spacing: 16) {
                     StorageOptionCard(
@@ -350,7 +377,9 @@ private struct StorageOptionCard: View {
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(description)
-                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    // Matches every onboarding subtext (owner 2026-06-16: unified at
+                    // 16 light Secondary everywhere; this panel text was 14 regular).
+                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -388,7 +417,7 @@ private struct LocalWarningStep: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
                     Text("Without cloud backup, your Takes exist only on this device. If you lose access to it and haven't set up a second device, your data cannot be recovered.")
-                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                         .foregroundStyle(Color.ckTextSecondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -443,7 +472,7 @@ private struct RevealStep: View {
                         // ckTextSecondary, matching the confirm prompt (owner
                         // 2026-06-12, HiFi v1.11.5 — the amber treatment retired).
                         Text(bodyText)
-                            .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -515,7 +544,7 @@ private struct ConfirmStep: View {
                             .accessibilityAddTraits(.isHeader)
 
                         Text(promptCopy)
-                            .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -671,12 +700,12 @@ private struct CompleteStep: View {
                     // owner 2026-06-15), then the storage-specific encryption fact.
                     VStack(spacing: 12) {
                         Text("Your thoughts, in your order, telling your story. Nobody else's.")
-                            .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                         Text(bodyText)
-                            .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -716,7 +745,7 @@ private struct FailureStep: View {
                         .padding(.horizontal, 8)
                 }
                 Text("You can start over and try again. Your phrase hasn't been saved anywhere. We'll generate another.")
-                    .font(CatchlightFont.ui(.light, size: 15, relativeTo: .body))
+                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
