@@ -5,11 +5,14 @@
 //  Settings → Security → Privacy phrase.
 //
 //  The 12-word BIP-39 mnemonic is the user's only recovery path. We treat its
-//  re-display as security-sensitive:
-//    1. The caller must already have a PIN set — if not, this view tells them
-//       to set one first (the parent handles routing back to PINSetupView).
-//    2. The user must enter the current PIN. Only after PINService.verify
-//       succeeds does the phrase load from MnemonicKeychain.
+//  re-display as security-sensitive. The real gate is the device's own
+//  `.userPresence` auth (Face ID / passcode), which `MnemonicKeychain.retrieve()`
+//  forces on every read — so an unlocked app is NEVER enough to reveal the phrase
+//  (D-042):
+//    1. If an in-app PIN is set, it is required FIRST as an optional extra factor.
+//       With no PIN (the default) the fresh iOS auth alone gates the reveal — we
+//       no longer block users who never created a PIN.
+//    2. Either way the phrase only loads after MnemonicKeychain's iOS prompt.
 //    3. Words appear in a numbered 3-column grid, blurred by default.
 //       "Press and hold to reveal" — the `LongPressGesture(minimumDuration: 0)`
 //       with `.updating(_:body:)` fires on press, releases on lift, so it is
@@ -23,28 +26,20 @@ struct PrivacyPhraseView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    private let pinService = PINService()
-
     private enum Stage: Equatable {
-        case noPIN              // can't reveal until PIN is set
-        case enterPIN           // PIN gate
-        case missingPhrase      // PIN ok, but mnemonic was never persisted (legacy install)
+        case authenticate       // reveal gated by the device's `.userPresence` auth
+        case missingPhrase      // mnemonic was never persisted (legacy install / other device)
         case revealed([String]) // 12 words, ready to display blurred
     }
 
     @State private var stage: Stage
     @State private var errorText: String?
-    @State private var entryResetId = UUID()
 
     init() {
-        if !MnemonicKeychain.exists() {
-            // Legacy install or no onboarding yet — handled in the body.
-            _stage = State(initialValue: .missingPhrase)
-        } else if !PINSetupAvailability.hasPIN {
-            _stage = State(initialValue: .noPIN)
-        } else {
-            _stage = State(initialValue: .enterPIN)
-        }
+        // The reveal is gated solely by the fresh iOS auth that MnemonicKeychain
+        // forces (D-042 — the in-app PIN was removed). Either the phrase exists and
+        // we authenticate to show it, or it was never persisted on this device.
+        _stage = State(initialValue: MnemonicKeychain.exists() ? .authenticate : .missingPhrase)
     }
 
     var body: some View {
@@ -66,47 +61,66 @@ struct PrivacyPhraseView: View {
     @ViewBuilder
     private var content: some View {
         switch stage {
-        case .noPIN:
-            explainer(
-                symbol: "lock",
-                title: "Set a PIN first",
-                body: "Your privacy phrase is only revealed after entering your PIN. Open Settings → PIN / biometrics to create one, then come back here."
-            )
+        case .authenticate:
+            authenticatePrompt
         case .missingPhrase:
             explainer(
                 symbol: "questionmark.key.filled",
                 title: "Phrase isn't on this device",
                 body: "Catchlight stores the privacy phrase only on the device where you set it up. If you onboarded on a different device, use that one to view it."
             )
-        case .enterPIN:
-            PINEntryView(
-                title: "Enter your PIN",
-                subtitle: "Verify your PIN to reveal the 12 words.",
-                onSubmit: { pin in
-                    do {
-                        if try pinService.verify(pin) {
-                            if let words = MnemonicKeychain.retrieve(), words.count == 12 {
-                                stage = .revealed(words)
-                            } else {
-                                stage = .missingPhrase
-                            }
-                            errorText = nil
-                        } else {
-                            errorText = pinService.isLockedOut
-                                ? "Too many wrong attempts. Restart the app and use your privacy phrase."
-                                : "Incorrect PIN. Try again."
-                            entryResetId = UUID()
-                        }
-                    } catch {
-                        errorText = "Couldn't verify the PIN."
-                        entryResetId = UUID()
-                    }
-                },
-                errorText: errorText
-            )
-            .id(entryResetId)
         case .revealed(let words):
             revealGrid(words: words)
+        }
+    }
+
+    // MARK: - Authenticate (no in-app PIN)
+
+    /// No in-app PIN set: the reveal is gated solely by the fresh iOS auth that
+    /// `MnemonicKeychain.retrieve()` forces. An explicit tap triggers it — we never
+    /// auto-read the crown-jewels on appear.
+    private var authenticatePrompt: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "faceid")
+                .font(.system(size: 40, weight: .regular))
+                .foregroundStyle(Color.ckAccent)
+            Text("Reveal your privacy phrase")
+                .font(CatchlightFont.ui(.regular, size: 20, relativeTo: .title3))
+                .foregroundStyle(Color.ckTextPrimary)
+            Text("Authenticate with Face ID or your device passcode to view the 12 words — they're the only way to recover your account, so reveal them somewhere private.")
+                .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                .foregroundStyle(Color.ckTextSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            if let errorText {
+                Text(errorText)
+                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                    .foregroundStyle(Color.ckTextObie)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+            Spacer()
+        }
+        .padding(.top, 60)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.ckBackground)
+        .safeAreaInset(edge: .bottom) {
+            DockPillRow {
+                DockPill(title: "Reveal phrase") { revealViaDeviceAuth() }
+            }
+            .dockFadeBackground()
+        }
+    }
+
+    private func revealViaDeviceAuth() {
+        // MnemonicKeychain.retrieve() forces the iOS `.userPresence` prompt and
+        // returns nil on cancel/failure. `exists()` was true at init, so nil here
+        // means the auth was dismissed — not a missing phrase.
+        if let words = MnemonicKeychain.retrieve(), words.count == 12 {
+            stage = .revealed(words)
+            errorText = nil
+        } else {
+            errorText = "Authentication needed to reveal your phrase."
         }
     }
 
@@ -134,29 +148,6 @@ struct PrivacyPhraseView: View {
         .padding(.top, 60)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.ckBackground)
-    }
-}
-
-/// Cheap proxy used by `PrivacyPhraseView.init` to decide the initial stage
-/// without holding a PINService instance at the call site. PINService is
-/// pure-Keychain, so this is a one-shot lookup.
-private enum PINSetupAvailability {
-    static var hasPIN: Bool {
-        // PINService.verify throws .notFound if no PIN is set; a cheaper check is
-        // to look directly for the salt slot. We mirror PINService internals only
-        // here, deliberately keeping the rest of the file off any Keychain detail.
-        let service = KeychainConfig.service
-        let account = "pin-salt"
-        let accessGroup = KeychainConfig.accessGroup
-        let query: [String: Any] = [
-            kSecClass as String:           kSecClassGenericPassword,
-            kSecAttrService as String:     service,
-            kSecAttrAccount as String:     account,
-            kSecAttrAccessGroup as String: accessGroup,
-            kSecMatchLimit as String:      kSecMatchLimitOne,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
-        ]
-        return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
     }
 }
 

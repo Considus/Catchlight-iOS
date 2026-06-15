@@ -105,6 +105,11 @@ targets:
         # marks are images and the tagline is revealed by the in-app splash instead.
         UILaunchStoryboardName: "LaunchScreen"
         UIApplicationSupportsIndirectInputEvents: true
+        # Face ID is the biometric for the app-entry unlock (the master key is
+        # `.userPresence`-gated). Without this usage string iOS refuses Face ID and
+        # silently falls back to the device passcode (D-042 — this was the cause of
+        # "passcode prompt, not Face ID").
+        NSFaceIDUsageDescription: "Catchlight uses Face ID to unlock your encrypted Takes."
         # App encrypts user content with AES-256-GCM (CryptoKit) + HKDF/HMAC-SHA-256
         # for confidentiality — i.e. it DOES use non-exempt encryption (beyond OS
         # HTTPS). Algorithms are standard (no proprietary crypto). Export basis:

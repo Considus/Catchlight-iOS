@@ -13,13 +13,14 @@
 //
 
 import SwiftUI
+import UIKit
 import CoreSpotlight
 import CatchlightCore
 
 @main
 struct CatchlightApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var session = SessionController()
+    @StateObject private var session: SessionController
 
     /// User-chosen appearance preference (Settings → Appearance → Mode). Drives the
     /// top-level `preferredColorScheme` override so the whole tree follows the user's
@@ -33,7 +34,13 @@ struct CatchlightApp: App {
     private let backgroundSync: BackgroundSyncCoordinator
 
     init() {
-        let app = Wiring.makeAppModel()
+        // Create the crypto session first so it can be shared: AppModel drives
+        // unlock through it imperatively, while this view observes its `isObscured`
+        // for the privacy overlay (hence the @StateObject wrapper over the SAME
+        // instance).
+        let session = SessionController()
+        let app = Wiring.makeAppModel(session: session)
+        self._session = StateObject(wrappedValue: session)
         self._app = State(initialValue: app)
         // Background sync runs off the main thread; surfaced conflicts hop back to
         // the main actor and land in `AppModel.conflictQueue` for the UI to resolve.
@@ -114,8 +121,12 @@ struct CatchlightApp: App {
                     JailbreakBanner()
                 }
 
-                if session.isObscured {
-                    PrivacyOverlay()   // branded blur before the app-switcher snapshot
+                // Cover decrypted content before the app-switcher snapshot — but
+                // ONLY when unlocked. While locked, LockView is already on screen and
+                // reveals nothing, so the overlay would just flash over it during the
+                // unlock sheet (D-042).
+                if session.isObscured && app.lockState == .unlocked {
+                    PrivacyOverlay()
                 }
 
                 #if DEBUG
@@ -167,6 +178,15 @@ struct CatchlightApp: App {
             }
             .onContinueUserActivity(SpotlightConstants.userActivityType) { activity in
                 handleSpotlight(activity)
+            }
+            // D-042 — re-lock when the DEVICE locks (auto-lock or manual), not on
+            // mere app-switching. `protectedDataWillBecomeUnavailable` fires on
+            // device lock only; the app drops its keys + encrypted store and the
+            // next foreground shows LockView. Re-lock cadence thus follows the
+            // user's iOS Auto-Lock, not an app-defined timer.
+            .onReceive(NotificationCenter.default.publisher(
+                for: UIApplication.protectedDataWillBecomeUnavailableNotification)) { _ in
+                app.relock()
             }
             }   // GeometryReader (rootGeo)
         }
@@ -220,17 +240,26 @@ struct JailbreakBanner: View {
     }
 }
 
-/// Branded blur shown over content when the app is inactive/backgrounded so the
-/// system snapshot never captures decrypted Take content (Encryption Architecture §12.2).
+/// Branded curtain shown over content when the app is inactive/backgrounded so the
+/// system snapshot never captures decrypted Take content (Encryption Architecture
+/// §12.2). Mirrors the splash / lock screen — the brand mark centred on the adaptive
+/// Paper/Ink background — so the app-switcher card reads as Catchlight, on-brand in
+/// both appearances (D-042: was a plain dark "catchlight" wordmark).
 struct PrivacyOverlay: View {
     var body: some View {
         ZStack {
-            Color(red: 0x0F/255, green: 0x0E/255, blue: 0x0C/255)   // Ink
-                .ignoresSafeArea()
-            Text("catchlight")
-                .font(.system(size: 28, weight: .light, design: .serif))   // Cormorant in prod
-                .italic()
-                .foregroundColor(Color(red: 0xF5/255, green: 0xED/255, blue: 0xD8/255))   // Catchlight
+            Color.ckBackground.ignoresSafeArea()
+            VStack(spacing: 16) {
+                Image("catchlight-icon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 72, height: 72)
+                Image("catchlight-wordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 44)
+            }
+            .accessibilityHidden(true)
         }
     }
 }
