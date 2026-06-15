@@ -72,9 +72,11 @@ jobs:
       fail-fast: false
       matrix:
         destination:
-          # If a future runner image lacks 18.0 exactly, bump to the available
-          # 18.x (the floor leg just needs SOME iOS 18 runtime).
-          - 'platform=iOS Simulator,name=iPhone 16,OS=18.0'
+          # The floor leg just needs SOME iOS 18 runtime. The macos-15 image
+          # dropped the exact 18.0 runtime (2026-06-15: now ships 18.5 / 18.6 +
+          # 26.x), so this is pinned to the lowest available 18.x. Bump again if a
+          # future image drops 18.5 too (check the "List available simulators" step).
+          - 'platform=iOS Simulator,name=iPhone 16,OS=18.5'
           - 'platform=iOS Simulator,name=iPhone 16,OS=latest'
     steps:
       - name: Checkout
