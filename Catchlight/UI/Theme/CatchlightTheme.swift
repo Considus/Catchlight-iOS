@@ -443,8 +443,15 @@ enum CatchlightFont {
 // MARK: - Layout constants
 
 enum CatchlightLayout {
-    /// Diameter of a Take circle on the timeline.
-    static let circleDiameter: CGFloat = 22
+    /// Diameter of a Take circle (Iris) on the timeline. Owner 2026-06-15:
+    /// enlarged 22 → 44 to FILL the 44pt touch frame and match the dock buttons
+    /// (which were also taken to 44 the same day) — the Iris and the dock share
+    /// the HiFi `--iris` token by design, and 22 had drifted below even the HiFi's
+    /// 36. Row spacing is unaffected (the touch frame was already 44). The spine
+    /// and Add-button alignment math below is parametric on this, so it follows.
+    /// (Search/sequence results reuse the timeline row; the edit footer, conflict
+    /// view, and petal fan pass their own explicit diameters and are unaffected.)
+    static let circleDiameter: CGFloat = 44
     /// Width of the timeline spine.
     static let spineWidth: CGFloat = 2
     /// Horizontal padding of the bottom dock (each side).
