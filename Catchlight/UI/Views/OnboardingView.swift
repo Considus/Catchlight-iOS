@@ -21,13 +21,30 @@ struct OnboardingView: View {
         // DS §10 fade duration; nothing snaps). Persistent chrome (the
         // background, the dock-geometry button row position) holds steady;
         // within-step changes (error line, slot fills) animate individually.
-        ZStack {
+        ZStack(alignment: .top) {
             stepView
                 .id(vm.step)
                 .transition(.opacity)
+
+            // The brand mark is HOISTED out of the per-step crossfade (owner
+            // 2026-06-16): drawn once, it stays mounted across every brand-mark
+            // step, so it never fades/flashes when the text swaps — only the words
+            // and buttons crossfade beneath it. Each step reserves its space with a
+            // hidden copy. It fades only when entering/leaving the chapter (i.e. the
+            // Failure step, which has no mark).
+            if showsBrandMark {
+                IntroBrandMark()
+                    .transition(.opacity)
+            }
         }
         .animation(.easeInOut(duration: 0.18), value: vm.step)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Every onboarding step carries the brand mark except the Failure escape-hatch.
+    private var showsBrandMark: Bool {
+        if case .failure = vm.step { return false }
+        return true
     }
 
     @ViewBuilder
@@ -104,13 +121,19 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
 /// beneath it change (owner 2026-06-15). The launch-screen storyboard mirrors this
 /// geometry so the OS launch → splash → Welcome handoff is seamless.
 ///
-/// The top inset is `deviceTopInset + 84` — i.e. 84pt below the SAFE-AREA top, not
+/// The top inset is `deviceTopInset + 114` — i.e. 114pt below the SAFE-AREA top, not
 /// the screen top. The app runs full-bleed (`.ignoresSafeArea(.container)` at the
 /// root), so the `deviceTopInset` term is what keeps the mark out from under the
 /// status bar / Dynamic Island (owner caught it in Daylight 2026-06-15; the dark
-/// Night icon hid it). The 84 base (was 24) drops the mark ~one inset lower for a
-/// rule-of-thirds feel (owner 2026-06-16). The launch storyboard's icon-top constant
-/// is kept at the SAME 84 so the OS launch → splash → Welcome handoff doesn't jump.
+/// Night icon hid it). The base grew 24 → 84 → 114 (owner rule-of-thirds nudges,
+/// 2026-06-16). The launch storyboard's icon-top constant is kept at the SAME 114 so
+/// the OS launch → splash → Welcome handoff doesn't jump.
+///
+/// In onboarding this view is drawn ONCE, hoisted above the per-step crossfade in
+/// `OnboardingView`, so it never fades between screens (owner: the icon "flashed"
+/// because two identical marks were crossfading). Each step RESERVES its space with
+/// a hidden copy; only the splash (in `RootView`, outside that crossfade) draws its
+/// own via `IntroChapterScaffold(drawsBrandMark: true)`.
 private struct IntroBrandMark: View {
     @Environment(\.deviceTopInset) private var deviceTopInset
 
@@ -127,7 +150,7 @@ private struct IntroBrandMark: View {
                 .frame(height: 44)
                 .accessibilityLabel("Catchlight")
         }
-        .padding(.top, deviceTopInset + 84)
+        .padding(.top, deviceTopInset + 114)
     }
 }
 
@@ -143,6 +166,11 @@ private struct IntroBrandMark: View {
 /// 2026-06-15 — the mark now persists Welcome → Complete rather than fading at the
 /// privacy-phrase screens). Only the Failure escape-hatch omits the mark.
 private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
+    /// Whether THIS scaffold paints the brand mark. The splash (RootView) does; the
+    /// onboarding steps don't — there the mark is hoisted above the per-step
+    /// crossfade in `OnboardingView`, and the scaffold just RESERVES its space with
+    /// a hidden copy so the content still sits below it.
+    var drawsBrandMark: Bool = false
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
 
@@ -150,6 +178,7 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
         StepScaffold {
             VStack(spacing: 0) {
                 IntroBrandMark()
+                    .opacity(drawsBrandMark ? 1 : 0)
                 content()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -189,7 +218,10 @@ struct WelcomeContent: View {
     private var isWelcome: Bool { mode == .welcome }
 
     var body: some View {
-        IntroChapterScaffold {
+        // The splash (`.splash`, shown by RootView) paints the brand mark itself; the
+        // Welcome step (`.welcome`) reserves the space and lets OnboardingView's
+        // hoisted, non-fading mark draw it.
+        IntroChapterScaffold(drawsBrandMark: !isWelcome) {
             VStack(spacing: 0) {
                 Spacer(minLength: 24)
                 // Primary-text slot. The headline is laid out in BOTH modes (so the
@@ -377,12 +409,11 @@ private struct RevealStep: View {
         StepScaffold {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Carry the intro brand mark through the privacy-phrase screens
-                    // (owner 2026-06-15) — same icon+wordmark at the same Y as the
-                    // IntroChapterScaffold screens, so the mark stays put and only
-                    // the words change. (The mark's own safe-area top inset clears
-                    // the status bar / Dynamic Island — replaces the old top:48.)
+                    // Reserve the brand-mark space (owner 2026-06-15); the visible,
+                    // non-fading mark is hoisted in OnboardingView so it doesn't flash
+                    // between steps. `.opacity(0)` keeps the same Y/height here.
                     IntroBrandMark()
+                        .opacity(0)
 
                     Text("Your privacy phrase")
                         .font(CatchlightFont.displayFixed(size: 30))
@@ -450,8 +481,9 @@ private struct ConfirmStep: View {
         StepScaffold {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Same persistent brand mark as Reveal (owner 2026-06-15).
+                    // Reserve the brand-mark space (hoisted + non-fading, as Reveal).
                     IntroBrandMark()
+                        .opacity(0)
 
                     Text("Confirm three words")
                         .font(CatchlightFont.displayFixed(size: 30))
