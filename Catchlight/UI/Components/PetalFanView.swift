@@ -7,9 +7,11 @@
 //
 //  LAYOUT — petals settle on an arc to the RIGHT of the timeline: angles
 //  −80° / −26.7° / +26.7° / +80° from horizontal (screen frame, y down), all at
-//  R = 56pt from the Iris centre; order Notes · Tasks · Reminders · Obie
-//  top→bottom. Petals are 36pt visual inside 44pt touch circles (adjacent
-//  chord 50.3 > 44; Iris clearance 56 > 44). Petals deliberately pass ABOVE
+//  R = 68pt from the Iris centre; order Notes · Tasks · Reminders · Obie
+//  top→bottom. Petals (Marks) are 44pt — they FILL their 44pt touch circles, to
+//  match the dock buttons + timeline Iris (owner 2026-06-15; the hub Iris and R
+//  were scaled 36→44 / 56→68 in step so the Focus ring keeps its spacing:
+//  adjacent chord 61 > 44; Iris clearance 68 > 44). Petals deliberately pass ABOVE
 //  the Take card. On the Obie row the fan covers the page heading — approved.
 //
 //  MOTION — one fluid action in two distinct movements:
@@ -134,7 +136,7 @@ struct PetalFanView: View {
 
     private enum Choreo {
         static let riseAngle: Double = -90
-        static let radius: CGFloat = 56
+        static let radius: CGFloat = 68     // owner 2026-06-15: 56 → 68, scaled with the 44pt hub/Marks
         static let startRadius: CGFloat = 8
         static let rise: Double = 0.340          // phase-1 emergence
         static let radialBlend: Double = 0.520   // spiral: radius reaches R over this
@@ -260,10 +262,10 @@ struct PetalFanView: View {
                     // marker line rides the rotation and lands horizontal at
                     // open (UX §6).
                     ZStack {
-                        TakeCircleView(take: workingTake, diameter: 36)
+                        TakeCircleView(take: workingTake, diameter: 44)   // match the timeline Iris (owner 2026-06-15)
                         Capsule()
                             .fill(Color.ckEmber.opacity(0.6))
-                            .frame(width: 1.5, height: 14)
+                            .frame(width: 1.5, height: 17)   // scaled with the 36→44 hub
                             .opacity(hubRotation(now: now) / 90 * 0.9)
                     }
                     .rotationEffect(.degrees(hubRotation(now: now)))
@@ -325,14 +327,14 @@ struct PetalFanView: View {
                 )
                 if let symbol = kind.systemImage {
                     Image(systemName: symbol)
-                        .font(.system(size: 16, weight: .light))
+                        .font(.system(size: 20, weight: .light))   // scaled with the 36→44 Mark
                         .foregroundStyle(active ? Color.ckBackground : Color.ckEmber)
                 } else {
-                    ObiePetalGlyph(size: 16)   // match the 16pt sibling glyphs (D-042; owner: Obie petal too large)
+                    ObiePetalGlyph(size: 20)   // scaled with the 36→44 Mark, keeping the petal's tuned ratio (D-042)
                         .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
                 }
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
             .frame(minWidth: CatchlightLayout.minTouchTarget,
                    minHeight: CatchlightLayout.minTouchTarget)
             .contentShape(Circle())
