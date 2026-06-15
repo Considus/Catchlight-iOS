@@ -406,23 +406,26 @@ private struct LocalWarningStep: View {
     var body: some View {
         IntroChapterScaffold {
             VStack(spacing: 0) {
-                // Hero line at the shared set position; the paragraph rides with it
-                // and the rest is empty space above the dock.
+                // Hero line at the shared set position; the warning paragraph then
+                // drops to the LOW subtext position — the same placement as the
+                // Welcome body block — so the two screens read consistently as they
+                // crossfade (owner 2026-06-15: "One thing before…" should match the
+                // low subtext of "You don't need to choose…"). A flexible spacer
+                // carries it down toward the dock while the hero stays pinned.
                 Spacer().frame(height: introHeroTopGap)
-                VStack(spacing: 24) {
-                    Text("One thing before we continue.")
-                        .font(CatchlightFont.displayFixed(size: 28))
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                    Text("Without cloud backup, your Takes exist only on this device. If you lose access to it and haven't set up a second device, your data cannot be recovered.")
-                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                Text("One thing before we continue.")
+                    .font(CatchlightFont.displayFixed(size: 28))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 24)
+                Text("Without cloud backup, your Takes exist only on this device. If you lose access to it and haven't set up a second device, your data cannot be recovered.")
+                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer().frame(height: 24)
             }
         } bottom: {
             DockPillRow {
@@ -469,6 +472,13 @@ private struct RevealStep: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader)
 
+                        // The words lead, directly under the hero; the "write these
+                        // down" instruction follows BELOW the grid (owner 2026-06-15)
+                        // so it lands in the low subtext position shared with Welcome
+                        // and Local-warning.
+                        wordGrid(words: vm.mnemonic)
+                            .padding(.top, 4)
+
                         // ckTextSecondary, matching the confirm prompt (owner
                         // 2026-06-12, HiFi v1.11.5 — the amber treatment retired).
                         Text(bodyText)
@@ -476,13 +486,19 @@ private struct RevealStep: View {
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
-
-                        wordGrid(words: vm.mnemonic)
-                            .padding(.top, 4)
                     }
                 }
-                .padding(.bottom, 100) // clear the pinned button
+                // No manual bottom clearance: the `safeAreaInset(.bottom)` dock
+                // already insets the scroll content above the pinned pill. The old
+                // 100pt padding doubled that up and made the content taller than the
+                // viewport — forcing a scroll even when everything fit (owner
+                // 2026-06-15). The dock's own fade carries the soft bottom edge.
             }
+            // Don't rubber-band when the content already fits (owner 2026-06-15):
+            // `.basedOnSize` lets the scroll view bounce only if content actually
+            // exceeds the viewport (e.g. accessibility text sizes), so at default
+            // sizes the screen sits truly static.
+            .scrollBounceBehavior(.basedOnSize)
         } bottom: {
             DockPillRow {
                 DockPill(title: "I've written them down") { vm.proceedToConfirm() }
@@ -491,14 +507,16 @@ private struct RevealStep: View {
     }
 
     private func wordGrid(words: [String]) -> some View {
-        let columns = [GridItem(.flexible()), GridItem(.flexible())]
-        return LazyVGrid(columns: columns, spacing: 12) {
+        // 3×4 (owner 2026-06-15): three columns pack the 12 words into four rows
+        // instead of six and remove the wide trailing gap the 2-column cards left
+        // after each word — tighter on the page and quicker to scan.
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+        return LazyVGrid(columns: columns, spacing: 10) {
             ForEach(Array(words.enumerated()), id: \.offset) { idx, word in
-                HStack(spacing: 8) {
+                HStack(spacing: 5) {
                     Text("\(idx + 1)")
-                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
                         .foregroundStyle(Color.ckTextSecondary)
-                        .frame(width: 22, alignment: .trailing)
                     Text(word)
                         // The 12 words use the subtext font, not Cormorant (owner
                         // 2026-06-16): DS §2.1 reserves Cormorant for display moments,
@@ -508,10 +526,10 @@ private struct RevealStep: View {
                         .foregroundStyle(Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    Spacer()
                 }
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Color.ckSurface)
@@ -536,10 +554,48 @@ private struct ConfirmStep: View {
                     // Reserve the brand-mark space (hoisted + non-fading, as Reveal).
                     IntroBrandMark()
                         .opacity(0)
-                    // Hero line at the shared set position.
-                    Spacer().frame(height: introHeroTopGap)
+                    // The gap to the hero now also HOSTS the validation message: it
+                    // floats as a card centred between the brand mark and the hero
+                    // (owner 2026-06-15). Previously the error reserved a line down in
+                    // the flow, between the slots and the bank — that extra height
+                    // pushed the bottom bank row under the dock fade. Floating it here
+                    // keeps the slots + bank tight and fully on-screen, and a wrong
+                    // guess never shifts the layout (the card is an overlay, so the
+                    // hero stays pinned at the set position whether or not it shows).
+                    // ckTextObie, not ckEmber: Ember fails WCAG AA on Paper at 13pt
+                    // (DS §12.3); resolves to Ember Text #856539 Daylight / Glow Night.
+                    Color.clear
+                        .frame(height: introHeroTopGap)
+                        .overlay {
+                            if let failure = vm.failure {
+                                Text(failure)
+                                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                                    .foregroundStyle(Color.ckTextObie)
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(Color.ckEmber.opacity(0.12))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                    .strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1)
+                                            )
+                                    )
+                                    .padding(.horizontal, 24)
+                                    // Nudge to the VISUAL centre of the wordmark→hero
+                                    // gap: the geometric centre reads a touch high
+                                    // because the Cormorant hero sits low in its line
+                                    // box (owner 2026-06-15).
+                                    .offset(y: 16)
+                                    .transition(.opacity)
+                                    .accessibilityLabel(failure)
+                            }
+                        }
+                        .animation(.easeInOut(duration: 0.18), value: vm.failure)
 
-                    VStack(spacing: 20) {
+                    VStack(spacing: 12) {
                         Text("Confirm three words")
                             .font(CatchlightFont.displayFixed(size: 30))
                             .foregroundStyle(Color.ckTextPrimary)
@@ -553,26 +609,23 @@ private struct ConfirmStep: View {
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        slotsRow
-
-                        // The error line is RESERVED (owner 2026-06-12, HiFi
-                        // v1.11.1): it always occupies its height so the bank
-                        // never moves when the message appears. ckTextObie, not
-                        // ckEmber: Ember fails WCAG AA on Paper at 13pt (DS §12.3);
-                        // resolves to Ember Text #856539 Daylight / Glow Night.
-                        Text(vm.failure ?? " ")
-                            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                            .foregroundStyle(Color.ckTextObie)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .opacity(vm.failure == nil ? 0 : 1)
-                            .accessibilityHidden(vm.failure == nil)
-
-                        bankGrid
+                        // Slots + bank read as one block: the gap between the to-fill
+                        // row and the word bank matches the gap between the bank's own
+                        // rows (10), so the cells feel like a single family (owner
+                        // 2026-06-15). This also recovers the height that was nudging
+                        // the bottom row under the dock fade.
+                        VStack(spacing: 10) {
+                            slotsRow
+                            bankGrid
+                        }
                     }
                 }
-                .padding(.bottom, 24)
+                // As Reveal: no manual bottom clearance — the dock's
+                // `safeAreaInset` already insets the scroll content (owner
+                // 2026-06-15). Avoids the phantom over-scroll.
             }
+            // As Reveal: bounce only when content actually overflows.
+            .scrollBounceBehavior(.basedOnSize)
         } bottom: {
             // Reveal-return (owner 2026-06-12, HiFi v1.11.5): a user who blanks
             // on a word must never be stuck guessing — the gate proves a usable
@@ -596,7 +649,10 @@ private struct ConfirmStep: View {
     }
 
     private var slotsRow: some View {
-        HStack(spacing: 12) {
+        // Slots match the bank tiles below — same 44pt height, same 10pt gutters
+        // (owner 2026-06-15): they read as one family of cells and the row no longer
+        // costs the extra height that pushed the bank off-screen.
+        HStack(spacing: 10) {
             ForEach(0..<vm.slots.count, id: \.self) { i in
                 let value = vm.slots[i]
                 let positionLabel = vm.targetPositionsForDisplay.indices.contains(i)
@@ -609,9 +665,13 @@ private struct ConfirmStep: View {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .fill(vm.flashError ? Color.ckEmber.opacity(0.18) : Color.ckSurface.opacity(0.6))
                         )
-                    VStack(spacing: 2) {
+                    // Number INLINE, to the left of the word — same arrangement as
+                    // the reveal cells (owner 2026-06-15), so the slot reads as a
+                    // single-line cell rather than a taller stacked one. The position
+                    // number stays the small grey prefix; the word fills the rest.
+                    HStack(spacing: 5) {
                         Text(positionLabel)
-                            .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
+                            .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
                             .foregroundStyle(Color.ckTextSecondary)
                         Text(value ?? "—")
                             .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))   // 12 words → subtext font (DS §2.1; Confirm bank is interactive)
@@ -619,10 +679,11 @@ private struct ConfirmStep: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                     }
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 6)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 8)
                 }
-                .frame(minHeight: 56)
+                .frame(minHeight: 44)
                 .frame(maxWidth: .infinity)
                 .animation(.easeInOut(duration: 0.18), value: vm.flashError)
                 .accessibilityElement(children: .ignore)
@@ -637,10 +698,10 @@ private struct ConfirmStep: View {
     }
 
     private var bankGrid: some View {
-        // 2×6 — the same grid as the reveal step (owner 2026-06-12, HiFi
-        // v1.11.3), order preserved from the shuffle.
-        let columns = [GridItem(.flexible()), GridItem(.flexible())]
-        return LazyVGrid(columns: columns, spacing: 12) {
+        // 3×4 — matches the reveal grid (owner 2026-06-15: both phrase grids moved
+        // 2×6 → 3×4 to compact the cards), order preserved from the shuffle.
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+        return LazyVGrid(columns: columns, spacing: 10) {
             // Index-based identity + usage (2026-06-10): tracking by word value
             // greyed BOTH tiles when a phrase contained a duplicate word, and
             // could make the confirm step unwinnable.
