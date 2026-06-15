@@ -273,7 +273,9 @@ struct TakeRowView: View {
 /// proves it). `tap.require(toFail: long)` keeps the two mutually exclusive,
 /// and the long press fires at `.began` (i.e. at the duration threshold while
 /// the finger is still down), matching the previous SwiftUI behaviour.
-private struct TapAndLongPressRecognizer: UIViewRepresentable {
+/// (Internal, not private: the editor footer Iris reuses it for tap-to-shape /
+/// long-press-to-discard — UX §19.)
+struct TapAndLongPressRecognizer: UIViewRepresentable {
     var minimumDuration: TimeInterval
     /// Receives the recognizer view's centre in WINDOW coordinates (the Iris
     /// touch-frame centre ≈ the Iris circle centre) so the caller can anchor the
