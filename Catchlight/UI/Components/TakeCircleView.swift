@@ -21,17 +21,20 @@ import CatchlightCore
 
 /// One ANNULAR quadrant of the Iris (HiFi v1.7 — section 7). The Iris reads as a
 /// RING with a hollow aperture, not a solid disc: each quadrant fills only the
-/// band between an inner radius (`innerRatio × R`, v1.7's r8-of-r18 ≈ 0.44) and
-/// the outer radius, leaving the centre empty (the camera aperture). The path
-/// runs along the outer arc, back along the inner arc, and closes — never
-/// through the centre.
+/// band between an inner radius (`innerRatio × R`) and the outer radius, leaving
+/// the centre empty (the camera aperture). The path runs along the outer arc,
+/// back along the inner arc, and closes — never through the centre. Owner
+/// 2026-06-15: aperture widened 0.44 → 0.55 of the radius ("the hole was a little
+/// small") — the ring thins and the central hole opens up; the off-band ring's
+/// `strokeBorder` width is kept in lock-step (see `body`).
 private struct QuadrantSlice: Shape {
     /// Start/end angles in degrees, 0° = 3 o'clock, increasing clockwise in screen
     /// space (SwiftUI's y grows downward, so `Angle` clockwise matches visual).
     let startDegrees: Double
     let endDegrees: Double
-    /// Inner radius as a fraction of the outer radius (v1.7 r8/r18 ≈ 0.44).
-    var innerRatio: CGFloat = 0.44
+    /// Inner radius as a fraction of the outer radius (owner 2026-06-15: 0.55,
+    /// was v1.7's r8/r18 ≈ 0.44 — bigger aperture).
+    var innerRatio: CGFloat = 0.55
 
     func path(in rect: CGRect) -> Path {
         let centre = CGPoint(x: rect.midX, y: rect.midY)
@@ -70,10 +73,12 @@ struct TakeCircleView: View {
             // Off-band: a faint full ANNULAR ring (v1.7 `--q-off`) so empty
             // quadrants still read as part of a ring while the centre stays
             // HOLLOW (the camera aperture). `strokeBorder` fills inward from the
-            // edge to the inner radius (0.44·R), leaving the centre empty —
-            // replacing the old solid base disc that filled the aperture.
+            // edge to the inner radius, leaving the centre empty. The width MUST
+            // track QuadrantSlice.innerRatio so the off-band and the filled wedges
+            // share one inner edge: band = (1 − innerRatio)·R = (1 − 0.55)/2·D =
+            // 0.225·D (was 0.28·D at innerRatio 0.44).
             Circle()
-                .strokeBorder(Color.ckIrisOff, lineWidth: diameter * 0.28)
+                .strokeBorder(Color.ckIrisOff, lineWidth: diameter * 0.225)
 
             // N/E/S/W diamond (D-042): each wedge is centred on a cardinal point,
             // spanning ±45° from it (corner-to-corner), so the slices read as a
