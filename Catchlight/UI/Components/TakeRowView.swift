@@ -277,10 +277,12 @@ struct TakeCardSurface: View {
         return text.isEmpty ? "Untitled Take" : text
     }
 
-    /// The "3 of 5" progress marker, or nil (one-item Tasks / non-Tasks show none).
+    /// The "3 of 5 completed" progress marker, or nil (one-item Tasks / non-Tasks
+    /// show none). The trailing word makes the count self-explanatory on the card
+    /// (owner 2026-06-17) — the bare "3 of 5" read ambiguously.
     private var progressText: String? {
         guard let progress = take.checklistProgress else { return nil }
-        return "\(progress.done) of \(progress.total)"
+        return "\(progress.done) of \(progress.total) completed"
     }
 
     /// The Take's first-line colour. A complete Task recedes to the HiFi `.tt.done`
