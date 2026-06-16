@@ -27,19 +27,27 @@ final class CloudStorageSettingsUITests: XCTestCase {
         // starts the drag on the toolbar, which is the gesture surface.
         let dailiesTab = app.descendants(matching: .any)
             .matching(identifier: "dailies-tab").firstMatch
-        XCTAssertTrue(dailiesTab.waitForExistence(timeout: 3))
-        dailiesTab.swipeUp()
+        swipeUpWhenReady(dailiesTab)
 
         let settingsSheet = app.descendants(matching: .any)
             .matching(identifier: "settings-sheet").firstMatch
         XCTAssertTrue(settingsSheet.waitForExistence(timeout: 3),
                       "Settings sheet should appear after the dock swipe-up.")
 
-        // Locate and tap the Cloud Storage row.
+        // Locate and tap the Cloud Storage row. It lives in the Sync section, below
+        // Appearance + Security, so it falls below the fold once those sections grow
+        // (e.g. the View/Order rows) — and SwiftUI's lazy List keeps off-screen rows
+        // OUT of the a11y tree. Scroll the settings list until the row is on screen
+        // and hittable rather than assuming it's visible at rest.
         let cloudRow = app.descendants(matching: .any)
             .matching(identifier: "settings-cloud-storage").firstMatch
-        XCTAssertTrue(cloudRow.waitForExistence(timeout: 2))
-        XCTAssertTrue(cloudRow.isHittable)
+        var scrolls = 0
+        while !cloudRow.isHittable && scrolls < 8 {
+            app.swipeUp()
+            scrolls += 1
+        }
+        XCTAssertTrue(cloudRow.isHittable,
+                      "Cloud Storage row should be reachable by scrolling the settings list.")
         cloudRow.tap()
 
         // The sub-sheet presents with the picker primary CTA visible.
@@ -48,7 +56,7 @@ final class CloudStorageSettingsUITests: XCTestCase {
                       "Cloud Storage sub-sheet should present.")
 
         // Dismiss via the Done toolbar button — leaves no state change behind.
-        app.buttons["Done"].firstMatch.tap()
+        tapWhenReady(app.buttons["Done"].firstMatch)
         XCTAssertTrue(settingsSheet.waitForExistence(timeout: 2),
                       "Settings sheet should still be visible after Cloud Storage dismisses.")
     }

@@ -12,6 +12,14 @@
 import SwiftUI
 import CatchlightCore
 
+/// The fixed gap below the brand mark at which EVERY onboarding hero line (the
+/// Cormorant italic heading or, on the splash, the tagline) sits — so they land at
+/// the same Y on every screen the brand mark appears: splash · Welcome · Storage ·
+/// Local warning · Reveal · Confirm · Complete (owner 2026-06-16). Without this the
+/// flexible spacers pushed each heading down by an amount that depended on the
+/// content below it, so they drifted apart.
+private let introHeroTopGap: CGFloat = 112
+
 struct OnboardingView: View {
     @Environment(OnboardingViewModel.self) private var vm
 
@@ -21,13 +29,30 @@ struct OnboardingView: View {
         // DS §10 fade duration; nothing snaps). Persistent chrome (the
         // background, the dock-geometry button row position) holds steady;
         // within-step changes (error line, slot fills) animate individually.
-        ZStack {
+        ZStack(alignment: .top) {
             stepView
                 .id(vm.step)
                 .transition(.opacity)
+
+            // The brand mark is HOISTED out of the per-step crossfade (owner
+            // 2026-06-16): drawn once, it stays mounted across every brand-mark
+            // step, so it never fades/flashes when the text swaps — only the words
+            // and buttons crossfade beneath it. Each step reserves its space with a
+            // hidden copy. It fades only when entering/leaving the chapter (i.e. the
+            // Failure step, which has no mark).
+            if showsBrandMark {
+                IntroBrandMark()
+                    .transition(.opacity)
+            }
         }
         .animation(.easeInOut(duration: 0.18), value: vm.step)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Every onboarding step carries the brand mark except the Failure escape-hatch.
+    private var showsBrandMark: Bool {
+        if case .failure = vm.step { return false }
+        return true
     }
 
     @ViewBuilder
@@ -95,9 +120,68 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
 // (DaylightCardShadow lives in CatchlightTheme.swift — shared with the
 // Settings sub-screens since 2026-06-12.)
 
+// MARK: - Intro chapter (shared brand mark)
+
+// `IntroBrandMark` now lives in its own file (IntroBrandMark.swift) so the
+// app-entry `LockView` can reuse the exact same mark + position (D-042). It is
+// drawn ONCE here, hoisted above the per-step crossfade in `OnboardingView`, so it
+// never fades between screens; each step reserves its space with a hidden copy and
+// only the splash draws its own via `IntroChapterScaffold(drawsBrandMark: true)`.
+
+/// Layout shared by the centred intro screens (Welcome · Storage · Local warning ·
+/// Complete) and the launch splash. Places `IntroBrandMark` at the top (the mark
+/// carries its own safe-area top inset, so its Y is identical everywhere), then lets
+/// each screen fill the region beneath it. Because the mark sits at the same
+/// position on every screen, the per-step crossfade in `OnboardingView` leaves it
+/// visually static — the surface feels continuous and only the content and buttons
+/// change. The denser Reveal/Confirm screens don't use this scaffold (their content
+/// scrolls), but they embed the SAME `IntroBrandMark` at the top of their scroll so
+/// the mark lines up and the effect carries through the whole happy path (owner
+/// 2026-06-15 — the mark now persists Welcome → Complete rather than fading at the
+/// privacy-phrase screens). Only the Failure escape-hatch omits the mark.
+private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
+    /// Whether THIS scaffold paints the brand mark. The splash (RootView) does; the
+    /// onboarding steps don't — there the mark is hoisted above the per-step
+    /// crossfade in `OnboardingView`, and the scaffold just RESERVES its space with
+    /// a hidden copy so the content still sits below it.
+    var drawsBrandMark: Bool = false
+    @ViewBuilder var content: () -> Content
+    @ViewBuilder var bottom: () -> Bottom
+
+    var body: some View {
+        StepScaffold {
+            VStack(spacing: 0) {
+                IntroBrandMark()
+                    .opacity(drawsBrandMark ? 1 : 0)
+                content()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        } bottom: {
+            bottom()
+        }
+    }
+}
+
 // Onboarding buttons use the shared dock-geometry pills (DockPillRow.swift) —
 // owner decision 2026-06-12 (HiFi v1.11.1): a single pill sits exactly over
 // the four dock-button slots; pairs split into slots 1+2 / 3+4.
+
+/// A NON-interactive footer styled as a subtle outline dock pill — used on the
+/// splash, in the CTA's slot, to carry the copyright (owner 2026-06-16: a pill
+/// design, not a button; muted so it reads as a footer rather than a tappable CTA).
+private struct SplashFooterPill: View {
+    let text: String
+    var body: some View {
+        Text(text)
+            .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))   // button-label style
+            .foregroundStyle(Color.ckTextSecondary)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Capsule().strokeBorder(Color.ckTextSecondary.opacity(0.3), lineWidth: 1))
+            .accessibilityElement()
+            .accessibilityLabel(text)
+    }
+}
 
 // MARK: - Screen 1: Welcome
 
@@ -105,47 +189,99 @@ private struct WelcomeStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
     var body: some View {
-        StepScaffold {
-            VStack(spacing: 24) {
-                Spacer()
-                Image("catchlight-icon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 72, height: 72)
-                    .accessibilityHidden(true)
-                Image("catchlight-wordmark")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 32)
-                    .accessibilityLabel("Catchlight")
-                Text("You don't need to choose privacy, it's yours and you never have to ask for it.")
-                    .font(CatchlightFont.displayFixed(size: 26))
-                    .foregroundStyle(Color.ckTextPrimary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 8)
-                    .accessibilityAddTraits(.isHeader)
-                VStack(spacing: 16) {
-                    (Text("First, we'll create your privacy phrase — 12 words that are the ")
-                     + Text("ONLY").bold()
-                     + Text(" key to your data."))
-                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("We never see them, store them, or ask for them. So don't lose them.")
-                        .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+        WelcomeContent(mode: .welcome) { vm.beginStorageChoice() }
+    }
+}
+
+/// Shared layout behind BOTH the launch splash and the onboarding Welcome screen
+/// (owner 2026-06-14: the splash should look like the first screen with only the
+/// text swapped). Both modes use `IntroChapterScaffold`, so the brand mark sits at
+/// the same position as on every intro screen; the splash lays out the
+/// (invisible) headline / body / button purely to reserve their height. The
+/// splash→Welcome crossfade therefore reads as "the brand stays, the words
+/// change". Used by `RootView` for the splash (`.splash`, no view model) and by
+/// `WelcomeStep` (`.welcome`).
+struct WelcomeContent: View {
+    enum Mode { case splash, welcome }
+    let mode: Mode
+    var onPrimary: () -> Void = {}
+
+    private var isWelcome: Bool { mode == .welcome }
+
+    var body: some View {
+        // The splash (`.splash`, shown by RootView) paints the brand mark itself; the
+        // Welcome step (`.welcome`) reserves the space and lets OnboardingView's
+        // hoisted, non-fading mark draw it.
+        IntroChapterScaffold(drawsBrandMark: !isWelcome) {
+            VStack(spacing: 0) {
+                // Pin the hero line at the shared set position (every brand-mark
+                // screen uses `introHeroTopGap`); the body then settles toward the
+                // button via the flexible spacer.
+                Spacer().frame(height: introHeroTopGap)
+                // Primary-text slot. The headline is laid out in BOTH modes (so the
+                // slot keeps the same height); the splash hides it and overlays the
+                // tagline in its place.
+                ZStack {
+                    headline.opacity(isWelcome ? 1 : 0)
+                    if !isWelcome { tagline }
                 }
-                Spacer()
+                Spacer(minLength: 24)
+                bodyBlock.opacity(isWelcome ? 1 : 0)
+                Spacer().frame(height: 24)
             }
-            .padding(.top, 32)
         } bottom: {
-            DockPillRow {
-                DockPill(title: "Create my privacy phrase") { vm.beginStorageChoice() }
+            // Welcome shows the CTA; the splash fills the SAME toolbar slot with a
+            // non-interactive © footer styled as a subtle outline pill (owner
+            // 2026-06-16) — keeps the splash's bottom edge anchored like the others.
+            if isWelcome {
+                DockPillRow {
+                    DockPill(title: "Create my privacy phrase", action: onPrimary)
+                }
+            } else {
+                DockPillRow {
+                    SplashFooterPill(text: "© 2026 Considus")
+                }
             }
+        }
+    }
+
+    private var headline: some View {
+        Text("You don't need to choose privacy, it's yours and you never have to ask for it.")
+            .font(CatchlightFont.displayFixed(size: 26))
+            .foregroundStyle(Color.ckTextPrimary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// The brand tagline (same line as the launch-screen composite), shown only on
+    /// the splash, occupying the headline slot.
+    private var tagline: some View {
+        Text("Every thought deserves a moment of clarity.")
+            // Bumped 16 → 22 → 26 (owner 2026-06-16: match the Welcome headline, 26).
+            // It's the splash's hero line; the secondary colour + italic keep it a
+            // tagline despite the headline size.
+            .font(CatchlightFont.display(size: 26, relativeTo: .title2))
+            .foregroundStyle(Color.ckTextSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityHidden(true)
+    }
+
+    private var bodyBlock: some View {
+        VStack(spacing: 16) {
+            (Text("First, we'll create your privacy phrase — 12 words that are the ")
+             + Text("ONLY").bold()
+             + Text(" key to your data."))
+                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                .foregroundStyle(Color.ckTextSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("We never see them, store them, or ask for them. So don't lose them.")
+                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                .foregroundStyle(Color.ckTextSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -156,30 +292,37 @@ private struct StorageChoiceStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
     var body: some View {
-        StepScaffold {
-            VStack(spacing: 24) {
-                Spacer().frame(height: 8)
-                Text("Takes belong to you and so does the choice of how they are stored.")
+        IntroChapterScaffold {
+            VStack(spacing: 0) {
+                // Hero line at the shared set position.
+                Spacer().frame(height: introHeroTopGap)
+                Text("Now — where should your Takes live?")
                     .font(CatchlightFont.displayFixed(size: 26))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 24)
                     .accessibilityAddTraits(.isHeader)
 
-                Spacer(minLength: 0)
+                // PARTIAL mirror of the brand→hero gap (owner 2026-06-16 "middle
+                // ground"): a full mirror dropped the Cloud panel below the pill line
+                // once the 16pt descriptions grew the cards (the Cloud one wraps to 3
+                // lines). Eased to 48 — more than the old 32, but kept conservative so
+                // the Cloud panel stays above the pill line even when the hero wraps.
+                Spacer().frame(height: 48)
 
-                StorageOptionCard(
-                    title: "Local — on this device only",
-                    description: "Your Takes stay on this device. If you lose it without a backup, they're gone."
-                ) { vm.chooseStorage(.local) }
+                VStack(spacing: 16) {
+                    StorageOptionCard(
+                        title: "Local — on this device only",
+                        description: "Your Takes stay on this device. If you lose it without a backup, they're gone."
+                    ) { vm.chooseStorage(.local) }
 
-                StorageOptionCard(
-                    title: "Cloud — backed up and restorable",
-                    description: "Connect a cloud folder you control. Your Takes remain encrypted — we never see them."
-                ) { vm.chooseStorage(.cloud) }
+                    StorageOptionCard(
+                        title: "Cloud — backed up and restorable",
+                        description: "Connect a cloud folder you control. Your Takes remain encrypted — we never see them."
+                    ) { vm.chooseStorage(.cloud) }
+                }
 
-                Spacer(minLength: 0)
+                Spacer(minLength: 24)
             }
         } bottom: {
             EmptyView()
@@ -200,7 +343,9 @@ private struct StorageOptionCard: View {
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(description)
-                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    // Matches every onboarding subtext (owner 2026-06-16: unified at
+                    // 16 light Secondary everywhere; this panel text was 14 regular).
+                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -225,21 +370,28 @@ private struct LocalWarningStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
     var body: some View {
-        StepScaffold {
-            VStack(spacing: 24) {
-                Spacer()
+        IntroChapterScaffold {
+            VStack(spacing: 0) {
+                // Hero line at the shared set position; the warning paragraph then
+                // drops to the LOW subtext position — the same placement as the
+                // Welcome body block — so the two screens read consistently as they
+                // crossfade (owner 2026-06-15: "One thing before…" should match the
+                // low subtext of "You don't need to choose…"). A flexible spacer
+                // carries it down toward the dock while the hero stays pinned.
+                Spacer().frame(height: introHeroTopGap)
                 Text("One thing before we continue.")
                     .font(CatchlightFont.displayFixed(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 24)
                 Text("Without cloud backup, your Takes exist only on this device. If you lose access to it and haven't set up a second device, your data cannot be recovered.")
-                    .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer()
+                Spacer().frame(height: 24)
             }
         } bottom: {
             DockPillRow {
@@ -268,28 +420,51 @@ private struct RevealStep: View {
     var body: some View {
         StepScaffold {
             ScrollView {
-                VStack(spacing: 20) {
-                    Text("Your privacy phrase")
-                        .font(CatchlightFont.displayFixed(size: 30))
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                        .padding(.top, 48) // clear the dynamic island
+                VStack(spacing: 0) {
+                    // Reserve the brand-mark space (owner 2026-06-15); the visible,
+                    // non-fading mark is hoisted in OnboardingView so it doesn't flash
+                    // between steps. `.opacity(0)` keeps the same Y/height here.
+                    IntroBrandMark()
+                        .opacity(0)
+                    // Hero line at the shared set position (consistent with the
+                    // IntroChapterScaffold screens).
+                    Spacer().frame(height: introHeroTopGap)
 
-                    // ckTextSecondary, matching the confirm prompt (owner
-                    // 2026-06-12, HiFi v1.11.5 — the amber treatment retired).
-                    Text(bodyText)
-                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(spacing: 20) {
+                        Text("Your privacy phrase")
+                            .font(CatchlightFont.displayFixed(size: 30))
+                            .foregroundStyle(Color.ckTextPrimary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
 
-                    wordGrid(words: vm.mnemonic)
-                        .padding(.top, 4)
+                        // The words lead, directly under the hero; the "write these
+                        // down" instruction follows BELOW the grid (owner 2026-06-15)
+                        // so it lands in the low subtext position shared with Welcome
+                        // and Local-warning.
+                        wordGrid(words: vm.mnemonic)
+                            .padding(.top, 4)
+
+                        // ckTextSecondary, matching the confirm prompt (owner
+                        // 2026-06-12, HiFi v1.11.5 — the amber treatment retired).
+                        Text(bodyText)
+                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                .padding(.bottom, 100) // clear the pinned button
+                // No manual bottom clearance: the `safeAreaInset(.bottom)` dock
+                // already insets the scroll content above the pinned pill. The old
+                // 100pt padding doubled that up and made the content taller than the
+                // viewport — forcing a scroll even when everything fit (owner
+                // 2026-06-15). The dock's own fade carries the soft bottom edge.
             }
+            // Don't rubber-band when the content already fits (owner 2026-06-15):
+            // `.basedOnSize` lets the scroll view bounce only if content actually
+            // exceeds the viewport (e.g. accessibility text sizes), so at default
+            // sizes the screen sits truly static.
+            .scrollBounceBehavior(.basedOnSize)
         } bottom: {
             DockPillRow {
                 DockPill(title: "I've written them down") { vm.proceedToConfirm() }
@@ -298,23 +473,29 @@ private struct RevealStep: View {
     }
 
     private func wordGrid(words: [String]) -> some View {
-        let columns = [GridItem(.flexible()), GridItem(.flexible())]
-        return LazyVGrid(columns: columns, spacing: 12) {
+        // 3×4 (owner 2026-06-15): three columns pack the 12 words into four rows
+        // instead of six and remove the wide trailing gap the 2-column cards left
+        // after each word — tighter on the page and quicker to scan.
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+        return LazyVGrid(columns: columns, spacing: 10) {
             ForEach(Array(words.enumerated()), id: \.offset) { idx, word in
-                HStack(spacing: 8) {
+                HStack(spacing: 5) {
                     Text("\(idx + 1)")
-                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
                         .foregroundStyle(Color.ckTextSecondary)
-                        .frame(width: 22, alignment: .trailing)
                     Text(word)
-                        .font(CatchlightFont.displayFixed(size: 20))
+                        // The 12 words use the subtext font, not Cormorant (owner
+                        // 2026-06-16): DS §2.1 reserves Cormorant for display moments,
+                        // never functional content; sans is also clearer for a phrase
+                        // you must transcribe exactly.
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                         .foregroundStyle(Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    Spacer()
                 }
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Color.ckSurface)
@@ -335,40 +516,82 @@ private struct ConfirmStep: View {
     var body: some View {
         StepScaffold {
             ScrollView {
-                VStack(spacing: 20) {
-                    Text("Confirm three words")
-                        .font(CatchlightFont.displayFixed(size: 30))
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                        .padding(.top, 48) // clear the dynamic island
+                VStack(spacing: 0) {
+                    // Reserve the brand-mark space (hoisted + non-fading, as Reveal).
+                    IntroBrandMark()
+                        .opacity(0)
+                    // The gap to the hero now also HOSTS the validation message: it
+                    // floats as a card centred between the brand mark and the hero
+                    // (owner 2026-06-15). Previously the error reserved a line down in
+                    // the flow, between the slots and the bank — that extra height
+                    // pushed the bottom bank row under the dock fade. Floating it here
+                    // keeps the slots + bank tight and fully on-screen, and a wrong
+                    // guess never shifts the layout (the card is an overlay, so the
+                    // hero stays pinned at the set position whether or not it shows).
+                    // ckTextObie, not ckEmber: Ember fails WCAG AA on Paper at 13pt
+                    // (DS §12.3); resolves to Ember Text #856539 Daylight / Glow Night.
+                    Color.clear
+                        .frame(height: introHeroTopGap)
+                        .overlay {
+                            if let failure = vm.failure {
+                                Text(failure)
+                                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                                    .foregroundStyle(Color.ckTextObie)
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(Color.ckEmber.opacity(0.12))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                    .strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1)
+                                            )
+                                    )
+                                    .padding(.horizontal, 24)
+                                    // Nudge to the VISUAL centre of the wordmark→hero
+                                    // gap: the geometric centre reads a touch high
+                                    // because the Cormorant hero sits low in its line
+                                    // box (owner 2026-06-15).
+                                    .offset(y: 16)
+                                    .transition(.opacity)
+                                    .accessibilityLabel(failure)
+                            }
+                        }
+                        .animation(.easeInOut(duration: 0.18), value: vm.failure)
 
-                    Text(promptCopy)
-                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(spacing: 12) {
+                        Text("Confirm three words")
+                            .font(CatchlightFont.displayFixed(size: 30))
+                            .foregroundStyle(Color.ckTextPrimary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
 
-                    slotsRow
+                        Text(promptCopy)
+                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                    // The error line is RESERVED (owner 2026-06-12, HiFi
-                    // v1.11.1): it always occupies its height so the bank
-                    // never moves when the message appears. ckTextObie, not
-                    // ckEmber: Ember fails WCAG AA on Paper at 13pt (DS §12.3);
-                    // resolves to Ember Text #856539 Daylight / Glow Night.
-                    Text(vm.failure ?? " ")
-                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                        .foregroundStyle(Color.ckTextObie)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .opacity(vm.failure == nil ? 0 : 1)
-                        .accessibilityHidden(vm.failure == nil)
-
-                    bankGrid
+                        // Slots + bank read as one block: the gap between the to-fill
+                        // row and the word bank matches the gap between the bank's own
+                        // rows (10), so the cells feel like a single family (owner
+                        // 2026-06-15). This also recovers the height that was nudging
+                        // the bottom row under the dock fade.
+                        VStack(spacing: 10) {
+                            slotsRow
+                            bankGrid
+                        }
+                    }
                 }
-                .padding(.bottom, 24)
+                // As Reveal: no manual bottom clearance — the dock's
+                // `safeAreaInset` already insets the scroll content (owner
+                // 2026-06-15). Avoids the phantom over-scroll.
             }
+            // As Reveal: bounce only when content actually overflows.
+            .scrollBounceBehavior(.basedOnSize)
         } bottom: {
             // Reveal-return (owner 2026-06-12, HiFi v1.11.5): a user who blanks
             // on a word must never be stuck guessing — the gate proves a usable
@@ -392,7 +615,10 @@ private struct ConfirmStep: View {
     }
 
     private var slotsRow: some View {
-        HStack(spacing: 12) {
+        // Slots match the bank tiles below — same 44pt height, same 10pt gutters
+        // (owner 2026-06-15): they read as one family of cells and the row no longer
+        // costs the extra height that pushed the bank off-screen.
+        HStack(spacing: 10) {
             ForEach(0..<vm.slots.count, id: \.self) { i in
                 let value = vm.slots[i]
                 let positionLabel = vm.targetPositionsForDisplay.indices.contains(i)
@@ -405,20 +631,25 @@ private struct ConfirmStep: View {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .fill(vm.flashError ? Color.ckEmber.opacity(0.18) : Color.ckSurface.opacity(0.6))
                         )
-                    VStack(spacing: 2) {
+                    // Number INLINE, to the left of the word — same arrangement as
+                    // the reveal cells (owner 2026-06-15), so the slot reads as a
+                    // single-line cell rather than a taller stacked one. The position
+                    // number stays the small grey prefix; the word fills the rest.
+                    HStack(spacing: 5) {
                         Text(positionLabel)
-                            .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
+                            .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
                             .foregroundStyle(Color.ckTextSecondary)
                         Text(value ?? "—")
-                            .font(CatchlightFont.displayFixed(size: 18))
+                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))   // 12 words → subtext font (DS §2.1; Confirm bank is interactive)
                             .foregroundStyle(value == nil ? Color.ckTextSecondary : Color.ckTextPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                     }
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 6)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 8)
                 }
-                .frame(minHeight: 56)
+                .frame(minHeight: 44)
                 .frame(maxWidth: .infinity)
                 .animation(.easeInOut(duration: 0.18), value: vm.flashError)
                 .accessibilityElement(children: .ignore)
@@ -433,10 +664,10 @@ private struct ConfirmStep: View {
     }
 
     private var bankGrid: some View {
-        // 2×6 — the same grid as the reveal step (owner 2026-06-12, HiFi
-        // v1.11.3), order preserved from the shuffle.
-        let columns = [GridItem(.flexible()), GridItem(.flexible())]
-        return LazyVGrid(columns: columns, spacing: 12) {
+        // 3×4 — matches the reveal grid (owner 2026-06-15: both phrase grids moved
+        // 2×6 → 3×4 to compact the cards), order preserved from the shuffle.
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+        return LazyVGrid(columns: columns, spacing: 10) {
             // Index-based identity + usage (2026-06-10): tracking by word value
             // greyed BOTH tiles when a phrase contained a duplicate word, and
             // could make the confirm step unwinnable.
@@ -444,7 +675,7 @@ private struct ConfirmStep: View {
                 let used = vm.usedBankIndices.contains(index)
                 Button { vm.tapBankWord(at: index) } label: {
                     Text(word)
-                        .font(CatchlightFont.displayFixed(size: 18))
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))   // 12 words → subtext font (DS §2.1; Confirm bank is interactive)
                         .foregroundStyle(used ? Color.ckTextSecondary.opacity(0.4) : Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -469,36 +700,53 @@ private struct ConfirmStep: View {
 private struct CompleteStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
+    /// The encryption-fact line that follows the voice gem — storage-specific.
     private var bodyText: String {
         switch vm.storagePath {
         case .local:
-            return "Your Takes are yours. Encrypted on this device, readable only by you."
+            return "Encrypted on this device, readable only by you."
         case .cloud:
-            return "Your Takes are yours. Encrypted on this device and backed up to your cloud folder — readable only by you."
+            return "Encrypted on this device and backed up to your cloud folder — readable only by you."
         }
     }
 
     var body: some View {
-        StepScaffold {
-            VStack(spacing: 24) {
-                Spacer()
-                Image("catchlight-icon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 72, height: 72)
-                    .accessibilityHidden(true)
+        // Carry the persistent brand mark through to the end (owner 2026-06-15):
+        // the icon+wordmark sits at the same Y as every other intro screen, so the
+        // standalone 72pt hero icon is retired in favour of the shared mark.
+        IntroChapterScaffold {
+            VStack(spacing: 0) {
+                // Hero line at the shared set position (was centred — owner
+                // 2026-06-16: keep "You're ready." consistent with every other
+                // brand-mark screen).
+                Spacer().frame(height: introHeroTopGap)
                 Text("You're ready.")
                     .font(CatchlightFont.displayFixed(size: 32))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
-                Text(bodyText)
-                    .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextSecondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer()
+                // The voice gem + encryption fact drop to the LOW subtext position
+                // (owner 2026-06-15) — same placement as Welcome / Local-warning, so
+                // the closing screen shares the rhythm. A flexible spacer carries the
+                // block down toward the dock; the hero stays pinned. The gem leads in
+                // Primary (the "story before the real app opens"), then the
+                // storage-specific encryption fact in Secondary; both 16 light, like
+                // every other onboarding subtext.
+                Spacer(minLength: 24)
+                VStack(spacing: 12) {
+                    Text("Your thoughts, in your order, telling your story. Nobody else's.")
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextPrimary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(bodyText)
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer().frame(height: 24)
             }
         } bottom: {
             DockPillRow {
@@ -532,7 +780,7 @@ private struct FailureStep: View {
                         .padding(.horizontal, 8)
                 }
                 Text("You can start over and try again. Your phrase hasn't been saved anywhere. We'll generate another.")
-                    .font(CatchlightFont.ui(.light, size: 15, relativeTo: .body))
+                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -549,14 +797,14 @@ private struct FailureStep: View {
 // MARK: - Previews
 
 #Preview("Onboarding — welcome (Night)") {
-    let vm = OnboardingViewModel(onComplete: {})
+    let vm = OnboardingViewModel(onComplete: { _ in })
     return OnboardingView()
         .environment(vm)
         .preferredColorScheme(.dark)
 }
 
 #Preview("Onboarding — reveal (Night)") {
-    let vm = OnboardingViewModel(onComplete: {})
+    let vm = OnboardingViewModel(onComplete: { _ in })
     vm.beginStorageChoice()
     vm.chooseStorage(.cloud)
     return OnboardingView()
@@ -565,7 +813,7 @@ private struct FailureStep: View {
 }
 
 #Preview("Onboarding — confirm (Daylight)") {
-    let vm = OnboardingViewModel(onComplete: {})
+    let vm = OnboardingViewModel(onComplete: { _ in })
     vm.beginStorageChoice()
     vm.chooseStorage(.cloud)
     vm.proceedToConfirm()

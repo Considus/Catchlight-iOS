@@ -26,8 +26,18 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @AppStorage(SettingsViewModel.appearanceDefaultsKey) private var appearanceModeRaw: String = SettingsViewModel.AppearanceMode.system.rawValue
+    @AppStorage(SettingsViewModel.LockAfter.defaultsKey) private var lockAfterRaw: String = SettingsViewModel.LockAfter.default.rawValue
+    @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey) private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
+    @AppStorage(SettingsViewModel.TakeSort.defaultsKey) private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
 
     @State private var vm = SettingsViewModel()
+
+    #if DEBUG
+    /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
+    @State private var showResetConfirm = false
+    /// Settings-backed toggle for the section 2b on-device inset readout overlay.
+    @AppStorage(DebugInsetReadoutSettings.defaultsKey) private var showInsetReadout = false
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -37,6 +47,9 @@ struct SettingsView: View {
                 syncSection
                 subscriptionSection
                 systemSection
+                #if DEBUG
+                debugSection
+                #endif
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
@@ -55,23 +68,15 @@ struct SettingsView: View {
         .presentationDragIndicator(.visible)
         .task {
             await vm.refreshNotificationStatus()
-            vm.refreshPINState()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 // Returning from iOS Settings: re-poll in case the user toggled.
                 Task { await vm.refreshNotificationStatus() }
-                vm.refreshPINState()
             }
         }
         // Sub-screen sheets (Task 3.12). Each presents on its own bool so they
         // never compete with one another and each can be drag-dismissed.
-        .sheet(isPresented: $vm.isPINSheetPresented) {
-            PINSetupView(
-                initialMode: vm.hasPIN ? .manage : .create,
-                onDidChangePINState: { vm.refreshPINState() }
-            )
-        }
         .sheet(isPresented: $vm.isPhraseSheetPresented) {
             PrivacyPhraseView()
         }
@@ -81,7 +86,73 @@ struct SettingsView: View {
         .sheet(isPresented: $vm.isAboutSheetPresented) {
             AboutView()
         }
+        #if DEBUG
+        .alert("Reset Catchlight?", isPresented: $showResetConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Wipe & re-onboard", role: .destructive) {
+                DebugReset.wipeAndRelaunch()
+            }
+        } message: {
+            Text("Deletes the master key, privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
+        }
+        #endif
     }
+
+    #if DEBUG
+    // MARK: - DEBUG (never compiled into Release / TestFlight)
+
+    /// Developer-only aids for on-device testing (fix pass 1, sections 2 / 2b).
+    /// The whole section is `#if DEBUG`, so it cannot ship.
+    private var debugSection: some View {
+        Section {
+            // Section 2 — one-tap re-onboarding on a real device. The Keychain
+            // survives app deletion, so this is the only way to re-trigger
+            // onboarding without a full device wipe.
+            Button(role: .destructive) {
+                showResetConfirm = true
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 20, weight: .regular))
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    Text("Reset Catchlight (wipe & re-onboard)")
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 8)
+                }
+                .frame(minHeight: 52)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.ckRuby)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityIdentifier("debug-reset")
+            .accessibilityHint("Wipes everything and returns to onboarding. Debug builds only.")
+
+            // Section 2b — toggle the on-device safe-area inset readout overlay.
+            Toggle(isOn: $showInsetReadout) {
+                HStack(spacing: 14) {
+                    Image(systemName: "ruler")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(Color.ckAccent)
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    Text("Inset readout")
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextPrimary)
+                }
+            }
+            .tint(Color.ckEmber)
+            .frame(minHeight: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityIdentifier("debug-inset-readout-toggle")
+            .accessibilityHint("Shows live safe-area insets bottom-right, to verify the device-layout fix.")
+        } header: {
+            sectionHeader("Debug")
+        }
+    }
+    #endif
 
     // MARK: - Appearance
 
@@ -110,6 +181,54 @@ struct SettingsView: View {
             .frame(height: 52)
             .listRowBackground(Color.ckSurface)
 
+            // Timeline density — the gap between Takes on Dailies (owner 2026-06-16).
+            // Segmented control matching the Mode row; labelled "View" so the three
+            // options fit the inline 220pt width.
+            HStack(spacing: 14) {
+                Image(systemName: "arrow.up.and.down.text.horizontal")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("View")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("View", selection: takeSpacingBinding) {
+                    ForEach(SettingsViewModel.TakeSpacing.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 220)
+                .accessibilityLabel("Take spacing")
+            }
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+
+            // Timeline order — which end of time sits at the top (owner 2026-06-16).
+            HStack(spacing: 14) {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("Order")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("Order", selection: takeSortBinding) {
+                    ForEach(SettingsViewModel.TakeSort.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 220)
+                .accessibilityLabel("Timeline order")
+            }
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+
             SettingsRow(icon: "paintpalette",
                         label: "Themes",
                         disabled: true) {
@@ -118,6 +237,10 @@ struct SettingsView: View {
             .accessibilityHint("Coming soon.")
         } header: {
             sectionHeader("Appearance")
+        } footer: {
+            Text("Spacing between Takes, and whether the oldest or newest Take sits at the top. The Obie always stays pinned at the top.")
+                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                .foregroundStyle(Color.ckTextSecondary)
         }
     }
 
@@ -128,23 +251,56 @@ struct SettingsView: View {
         )
     }
 
+    private var takeSpacingBinding: Binding<SettingsViewModel.TakeSpacing> {
+        Binding(
+            get: { SettingsViewModel.TakeSpacing(rawValue: takeSpacingRaw) ?? .default },
+            set: { takeSpacingRaw = $0.rawValue }
+        )
+    }
+
+    private var takeSortBinding: Binding<SettingsViewModel.TakeSort> {
+        Binding(
+            get: { SettingsViewModel.TakeSort(rawValue: takeSortRaw) ?? .default },
+            set: { takeSortRaw = $0.rawValue }
+        )
+    }
+
     // MARK: - Security
 
     private var securitySection: some View {
         Section {
-            SettingsRow(icon: "lock",
-                        label: "PIN / biometrics",
-                        chevron: true,
-                        action: { vm.isPINSheetPresented = true }) {
-                SettingsDetailLabel(text: vm.hasPIN ? "On" : "Off")
+            // Lock after — the background grace window before a return re-locks
+            // (D-042). The app ALWAYS locks on cold launch and when the phone locks
+            // while Catchlight is in front; this only governs the in-background grace.
+            HStack(spacing: 14) {
+                Image(systemName: "lock")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("Lock after")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("Lock after", selection: lockAfterBinding) {
+                    ForEach(SettingsViewModel.LockAfter.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(Color.ckTextSecondary)
             }
-            .accessibilityHint(vm.hasPIN ? "Change or remove your PIN." : "Set a PIN to lock the app.")
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Lock after \(lockAfterBinding.wrappedValue.label)")
 
             SettingsRow(icon: "key.horizontal",
                         label: "Privacy phrase",
                         chevron: true,
                         action: { vm.isPhraseSheetPresented = true })
-                .accessibilityHint("Double-tap to view your phrase. PIN confirmation required.")
+                .accessibilityHint("Double-tap to view your phrase. Face ID or passcode required.")
 
             // 6.12 — Blocked on Phase 2. Stub stays visible so the layout is complete.
             SettingsRow(icon: "iphone.and.arrow.forward",
@@ -156,7 +312,18 @@ struct SettingsView: View {
             .accessibilityHint("Coming soon.")
         } header: {
             sectionHeader("Security")
+        } footer: {
+            Text("Catchlight locks after this long in the background. It always locks when you quit the app or lock your phone while it's open.")
+                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                .foregroundStyle(Color.ckTextSecondary)
         }
+    }
+
+    private var lockAfterBinding: Binding<SettingsViewModel.LockAfter> {
+        Binding(
+            get: { SettingsViewModel.LockAfter(rawValue: lockAfterRaw) ?? .default },
+            set: { lockAfterRaw = $0.rawValue }
+        )
     }
 
     // MARK: - Sync

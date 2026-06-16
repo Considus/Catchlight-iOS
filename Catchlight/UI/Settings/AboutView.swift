@@ -49,9 +49,17 @@ struct AboutView: View {
 
     private var headline: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Catchlight")
-                .font(CatchlightFont.displayFixed(size: 36))   // wordmark — brand, fixed
-                .foregroundStyle(Color.ckTextPrimary)
+            // Section 3b — the brand wordmark is the bundled SVG asset
+            // (`catchlight-wordmark.imageset`, Light/Dark appearance variants,
+            // vector preserved), NOT a font. The previous `Text("Catchlight")`
+            // rendered in the italic display face — wrong twice over (italic, and
+            // not the real wordmark). `.original` rendering intent keeps the
+            // brand colours; the asset adapts to Night / Daylight on its own.
+            Image("catchlight-wordmark")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 36)
+                .accessibilityLabel("Catchlight")
             Text(Self.versionString)
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)

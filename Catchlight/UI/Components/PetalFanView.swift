@@ -7,9 +7,11 @@
 //
 //  LAYOUT — petals settle on an arc to the RIGHT of the timeline: angles
 //  −80° / −26.7° / +26.7° / +80° from horizontal (screen frame, y down), all at
-//  R = 56pt from the Iris centre; order Notes · Tasks · Reminders · Obie
-//  top→bottom. Petals are 36pt visual inside 44pt touch circles (adjacent
-//  chord 50.3 > 44; Iris clearance 56 > 44). Petals deliberately pass ABOVE
+//  R = 68pt from the Iris centre; order Notes · Tasks · Reminders · Obie
+//  top→bottom. Petals (Marks) are 44pt — they FILL their 44pt touch circles, to
+//  match the dock buttons + timeline Iris (owner 2026-06-15; the hub Iris and R
+//  were scaled 36→44 / 56→68 in step so the Focus ring keeps its spacing:
+//  adjacent chord 61 > 44; Iris clearance 68 > 44). Petals deliberately pass ABOVE
 //  the Take card. On the Obie row the fan covers the page heading — approved.
 //
 //  MOTION — one fluid action in two distinct movements:
@@ -25,8 +27,10 @@
 //      to the top, then nudges its final 10°.
 //  CLOSE — the TRUE time-mirror of the open played 1.25× faster (exits are
 //  quicker than entrances): petals kick slightly outward (the reversed
-//  overshoot), spiral back into the descending deck, the Iris counter-rotates
-//  past 0 to −6° and settles. Reduce Motion replaces all of it with a fade.
+//  overshoot), spiral back into the descending deck, and the Iris reverses its
+//  OWN turn on the SAME mirrored clock (it nudges to ~96° then sweeps back to 0 —
+//  the open's soft-catch run backwards), so hub and Marks land together rather
+//  than the Iris finishing first. Reduce Motion replaces all of it with a fade.
 //
 //  STYLE — petals share the dock-button language: background-colour face
 //  (readable above cards), 1.5pt Ember@35% ring, no shadow, Ember glyphs at
@@ -134,7 +138,7 @@ struct PetalFanView: View {
 
     private enum Choreo {
         static let riseAngle: Double = -90
-        static let radius: CGFloat = 56
+        static let radius: CGFloat = 68     // owner 2026-06-15: 56 → 68, scaled with the 44pt hub/Marks
         static let startRadius: CGFloat = 8
         static let rise: Double = 0.340          // phase-1 emergence
         static let radialBlend: Double = 0.520   // spiral: radius reaches R over this
@@ -201,25 +205,35 @@ struct PetalFanView: View {
         }
     }
 
-    /// Hub rotation with the petals' soft-catch character: ~6° past the mark,
-    /// then settle — nothing moves precisely between two points.
-    private func hubRotation(now: Date) -> Double {
+    /// Open-time hub rotation with the petals' soft-catch character: ~6° past the
+    /// mark, then settle — nothing moves precisely between two points. Factored out
+    /// so the CLOSE can evaluate it at the mirrored time (below), making the hub a
+    /// strict time-reverse of the open IN STEP with the petals (owner 2026-06-16:
+    /// the close used to drive the hub on its OWN faster clock, so the Iris finished
+    /// its turn well before the Marks had spiralled back into it).
+    private static func openHubRotation(at t: Double) -> Double {
         func turn(_ p: Double, from a: Double, over b: Double, to c: Double) -> Double {
             // two-segment keyframe: a → b (72%, ease-out) → c (settle)
-            if p < 0.72 { return a + (b - a) * Self.easeOutCubic(p / 0.72) }
-            return b + (c - b) * Self.easeInOutCubic((p - 0.72) / 0.28)
+            if p < 0.72 { return a + (b - a) * easeOutCubic(p / 0.72) }
+            return b + (c - b) * easeInOutCubic((p - 0.72) / 0.28)
         }
+        let tt = t - PetalKind.obie.peel   // the hub starts turning at the first peel
+        guard tt > 0 else { return 0 }
+        return turn(min(tt / Choreo.irisTurn, 1), from: 0, over: 96, to: 90)
+    }
+
+    private func hubRotation(now: Date) -> Double {
         switch phase {
         case .opening(let start):
-            let firstPeel = PetalKind.obie.peel
-            let t = now.timeIntervalSince(start) - firstPeel
-            guard t > 0 else { return 0 }
-            return turn(min(t / Choreo.irisTurn, 1), from: 0, over: 96, to: 90)
+            return Self.openHubRotation(at: now.timeIntervalSince(start))
         case .open:
             return 90
         case .closing(let start, _):
-            let t = now.timeIntervalSince(start)
-            return turn(min(t / (Choreo.irisTurn / Choreo.closeSpeed), 1), from: 90, over: -6, to: 0)
+            // Same mirrored clock the petals use (petalState .closing) — a strict
+            // reverse of the open, so hub and Marks land together.
+            let tm = Choreo.total - now.timeIntervalSince(start) * Choreo.closeSpeed
+            if tm <= 0 { return 0 }
+            return Self.openHubRotation(at: tm)
         }
     }
 
@@ -260,10 +274,10 @@ struct PetalFanView: View {
                     // marker line rides the rotation and lands horizontal at
                     // open (UX §6).
                     ZStack {
-                        TakeCircleView(take: workingTake, diameter: 36)
+                        TakeCircleView(take: workingTake, diameter: 44)   // match the timeline Iris (owner 2026-06-15)
                         Capsule()
                             .fill(Color.ckEmber.opacity(0.6))
-                            .frame(width: 1.5, height: 14)
+                            .frame(width: 1.5, height: 17)   // scaled with the 36→44 hub
                             .opacity(hubRotation(now: now) / 90 * 0.9)
                     }
                     .rotationEffect(.degrees(hubRotation(now: now)))
@@ -325,14 +339,14 @@ struct PetalFanView: View {
                 )
                 if let symbol = kind.systemImage {
                     Image(systemName: symbol)
-                        .font(.system(size: 16, weight: .light))
+                        .font(.system(size: 20, weight: .light))   // scaled with the 36→44 Mark
                         .foregroundStyle(active ? Color.ckBackground : Color.ckEmber)
                 } else {
-                    ObiePetalGlyph(size: 18)
+                    ObiePetalGlyph(size: 20)   // scaled with the 36→44 Mark, keeping the petal's tuned ratio (D-042)
                         .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
                 }
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
             .frame(minWidth: CatchlightLayout.minTouchTarget,
                    minHeight: CatchlightLayout.minTouchTarget)
             .contentShape(Circle())

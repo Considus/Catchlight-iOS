@@ -46,7 +46,7 @@ final class CoreFlowsUITests: XCTestCase {
 
         // Dismiss the editor — tap the "Done editing" affordance above the card.
         // The editor saves on dismiss (DailiesViewModel.save).
-        app.buttons["editor-done"].tap()
+        tapWhenReady(app.buttons["editor-done"])
 
         // The new Take should be visible in the Dailies list as a take-row.
         let newRow = takeRow(in: app, withLabelStarting: phrase)
@@ -146,7 +146,7 @@ final class CoreFlowsUITests: XCTestCase {
         let updated = "Buy black-and-white film"
         body.typeText(updated)
 
-        app.buttons["editor-done"].tap()
+        tapWhenReady(app.buttons["editor-done"])
 
         let updatedRow = takeRow(in: app, withLabelStarting: updated)
         XCTAssertTrue(updatedRow.waitForExistence(timeout: 3), "Updated Take text not visible in Dailies")
@@ -237,11 +237,11 @@ final class CoreFlowsUITests: XCTestCase {
         // Dismiss the keyboard via the Search confirm button first (that's its
         // job in this state) — tapping × with the keyboard still up is flaky:
         // keyboard avoidance is repositioning the dock at that moment.
-        app.buttons["search-tab"].tap()
+        tapWhenReady(app.buttons["search-tab"])
         _ = app.keyboards.firstMatch.waitForNonExistence(timeout: 3)
 
         // × exits to RESTING and clears the query — the resting dock returns.
-        app.buttons["search-cancel"].tap()
+        tapWhenReady(app.buttons["search-cancel"])
         XCTAssertTrue(
             app.buttons["sequence-tab"].waitForExistence(timeout: 3),
             "Cancelling search did not return the dock to its resting state"

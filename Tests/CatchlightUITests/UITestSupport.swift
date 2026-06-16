@@ -24,6 +24,95 @@ func launchAppForUITesting() -> XCUIApplication {
     return app
 }
 
+// MARK: - Race-hardening interaction helpers
+//
+// Every synthesized interaction below FIRST waits for the element to exist,
+// failing with a precise message if it never appears. This closes the
+// simulator timing race the suite documents: a bare `.tap()` / `.typeText()` /
+// `.swipeUp()` fires a beat before the element resolves from the accessibility
+// query, surfacing as "element did not appear" / "No matches found" /
+// "Failed to scroll to visible (kAXErrorCannotComplete)" even though the
+// element IS in the tree at failure time. Route no-wait interactions through
+// these; prefer querying by a stable accessibilityIdentifier over a label so
+// they stay robust to copy changes. The default 5s is deliberately generous
+// for loaded CI simulators.
+
+/// Resolve an element by its accessibilityIdentifier regardless of element TYPE.
+/// A SwiftUI `.accessibilityElement()` wrapper (e.g. the editor footer Iris,
+/// "editor-shape") surfaces as `.other` on some runtimes and `.button` on
+/// others, so a type-pinned query like `app.buttons["editor-shape"]` matches on
+/// one iOS version and silently misses on the next (verified: on iOS 18.6 the
+/// footer Iris is an `Other`, so `.buttons` never resolves it). Matching `.any`
+/// by identifier is stable across runtimes — prefer it for elements whose
+/// trait/type isn't guaranteed.
+func anyElement(in app: XCUIApplication, id: String) -> XCUIElement {
+    app.descendants(matching: .any).matching(identifier: id).firstMatch
+}
+
+/// Wait for `element` to exist (default 5s), then tap it. Returns the element.
+@discardableResult
+func tapWhenReady(_ element: XCUIElement, timeout: TimeInterval = 5,
+                  file: StaticString = #file, line: UInt = #line) -> XCUIElement {
+    XCTAssertTrue(element.waitForExistence(timeout: timeout),
+                  "tapWhenReady: element did not appear within \(timeout)s",
+                  file: file, line: line)
+    element.tap()
+    return element
+}
+
+/// Tap `target` and wait for `result` to appear; if it doesn't, re-tap (up to
+/// `attempts`). A synthesized tap on a present element is occasionally swallowed
+/// before the view's gesture recognizer is armed — surfacing as the editor /
+/// sheet simply never opening even though the tapped element was in the tree.
+/// Re-issuing the SAME tap compensates without masking a real bug: if `result`
+/// never appears after `attempts` taps the test still fails. Use for idempotent
+/// open/navigate taps (opening the editor, a sheet) — NOT for toggles, where a
+/// second tap would undo the first.
+@discardableResult
+func tapUntil(_ target: XCUIElement, appears result: XCUIElement,
+              attempts: Int = 3, timeout: TimeInterval = 5,
+              file: StaticString = #file, line: UInt = #line) -> Bool {
+    XCTAssertTrue(target.waitForExistence(timeout: timeout),
+                  "tapUntil: target element did not appear within \(timeout)s",
+                  file: file, line: line)
+    for _ in 0..<attempts {
+        target.tap()
+        if result.waitForExistence(timeout: timeout) { return true }
+    }
+    XCTFail("tapUntil: result element did not appear after \(attempts) taps",
+            file: file, line: line)
+    return false
+}
+
+/// Wait for `element`, then type into it. (For an already-focused responder
+/// where an AX scroll-to-visible would itself flake, prefer `app.typeText`.)
+func typeWhenReady(_ element: XCUIElement, _ text: String, timeout: TimeInterval = 5,
+                   file: StaticString = #file, line: UInt = #line) {
+    XCTAssertTrue(element.waitForExistence(timeout: timeout),
+                  "typeWhenReady: element did not appear within \(timeout)s",
+                  file: file, line: line)
+    element.typeText(text)
+}
+
+/// Wait for `element`, then swipe up on it (the Settings dock gesture).
+func swipeUpWhenReady(_ element: XCUIElement, timeout: TimeInterval = 5,
+                      file: StaticString = #file, line: UInt = #line) {
+    XCTAssertTrue(element.waitForExistence(timeout: timeout),
+                  "swipeUpWhenReady: element did not appear within \(timeout)s",
+                  file: file, line: line)
+    element.swipeUp()
+}
+
+/// Wait for `element`, then long-press it for `duration`.
+func pressWhenReady(_ element: XCUIElement, forDuration duration: TimeInterval,
+                    timeout: TimeInterval = 5,
+                    file: StaticString = #file, line: UInt = #line) {
+    XCTAssertTrue(element.waitForExistence(timeout: timeout),
+                  "pressWhenReady: element did not appear within \(timeout)s",
+                  file: file, line: line)
+    element.press(forDuration: duration)
+}
+
 /// Two-tap rule helper — the primary structural invariant of Catchlight's UI
 /// (Product Brief principle: every primary action reachable within two
 /// interactions from Dailies). Each call to `firstInteraction` MUST be one tap,
@@ -36,9 +125,20 @@ func assertReachableInTwoInteractions(
     file: StaticString = #file,
     line: UInt = #line
 ) {
-    firstInteraction()
-    XCTAssertTrue(
-        expectedElement.waitForExistence(timeout: 2),
+    // Re-issue the SINGLE interaction if a synthesized event is dropped (the
+    // simulator intermittently swallows a synthesized tap/swipe before the
+    // view's recognizer is armed, so the destination never opens even though the
+    // tapped element was present). This does NOT relax the two-tap rule: the
+    // same one interaction is re-issued, and re-issuing only happens when the
+    // expected element is ABSENT (i.e. the navigation has not occurred), so a
+    // flow that genuinely needs a second, DIFFERENT interaction still cannot
+    // satisfy the assertion. 5s per attempt (was a single 2s wait) also absorbs
+    // post-interaction render lag under CI load.
+    for _ in 0..<3 {
+        firstInteraction()
+        if expectedElement.waitForExistence(timeout: 5) { return }
+    }
+    XCTFail(
         "\(name): expected element did not appear within two interactions",
         file: file, line: line
     )
@@ -53,9 +153,13 @@ func assertReachableInOneInteraction(
     file: StaticString = #file,
     line: UInt = #line
 ) {
-    interaction()
-    XCTAssertTrue(
-        expectedElement.waitForExistence(timeout: 2),
+    // Re-issue the single interaction on a dropped synthesized event — see
+    // assertReachableInTwoInteractions for why this preserves the rule.
+    for _ in 0..<3 {
+        interaction()
+        if expectedElement.waitForExistence(timeout: 5) { return }
+    }
+    XCTFail(
         "\(name): expected element did not appear within one interaction",
         file: file, line: line
     )

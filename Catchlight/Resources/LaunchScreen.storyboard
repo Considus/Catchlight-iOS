@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LaunchScreen.storyboard — Catchlight (owner 2026-06-15)
+
+  The OS launch screen, drawn from the SAME real assets as the in-app brand mark
+  (catchlight-icon + catchlight-wordmark) and pinned to the SAME geometry as
+  `IntroChapterScaffold` in OnboardingView.swift: the icon is 72×72, its top is
+  24pt below the safe-area top, and the wordmark (height 44) sits 16pt beneath it.
+  This makes the OS-launch → in-app splash → Welcome handoff seamless — the brand
+  mark never jumps. Background = the `ck-background` asset colour (adaptive Paper /
+  Ink), so the launch screen follows the system appearance like the rest of the
+  app. Storyboards can't load custom fonts, which is why both marks are image
+  assets (the tagline is revealed by the in-app splash, not shown here).
+-->
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="22154" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="cl1-vc-001">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22130"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="Named colors" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <scene sceneID="cl1-sc-001">
+            <objects>
+                <viewController id="cl1-vc-001" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="cl1-vw-001">
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="catchlight-icon" translatesAutoresizingMaskIntoConstraints="NO" id="cl1-icn-001">
+                                <rect key="frame" x="160.5" y="173" width="72" height="72"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="72" id="cl1-icn-w"/>
+                                    <constraint firstAttribute="height" constant="72" id="cl1-icn-h"/>
+                                </constraints>
+                            </imageView>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="catchlight-wordmark" translatesAutoresizingMaskIntoConstraints="NO" id="cl1-wmk-001">
+                                <rect key="frame" x="117.5" y="261" width="158" height="44"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="158" id="cl1-wmk-w"/>
+                                    <constraint firstAttribute="height" constant="44" id="cl1-wmk-h"/>
+                                </constraints>
+                            </imageView>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="cl1-saf-001"/>
+                        <color key="backgroundColor" name="ck-background"/>
+                        <constraints>
+                            <constraint firstItem="cl1-icn-001" firstAttribute="centerX" secondItem="cl1-vw-001" secondAttribute="centerX" id="cl1-icn-cx"/>
+                            <constraint firstItem="cl1-icn-001" firstAttribute="top" secondItem="cl1-saf-001" secondAttribute="top" constant="114" id="cl1-icn-top"/>
+                            <constraint firstItem="cl1-wmk-001" firstAttribute="centerX" secondItem="cl1-vw-001" secondAttribute="centerX" id="cl1-wmk-cx"/>
+                            <constraint firstItem="cl1-wmk-001" firstAttribute="top" secondItem="cl1-icn-001" secondAttribute="bottom" constant="16" id="cl1-wmk-top"/>
+                        </constraints>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="cl1-fr-001" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="53" y="56"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="catchlight-icon" width="72" height="72"/>
+        <image name="catchlight-wordmark" width="158" height="44"/>
+        <namedColor name="ck-background">
+            <color red="0.96862745098039216" green="0.95686274509803926" blue="0.93725490196078431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+    </resources>
+</document>

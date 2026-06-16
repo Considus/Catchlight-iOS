@@ -32,7 +32,7 @@ final class TwoTapRegressionTests: XCTestCase {
         XCTAssertTrue(app.buttons["dailies-tab"].waitForExistence(timeout: 3))
         assertReachableInOneInteraction(
             "Search",
-            interaction: { app.buttons["search-tab"].tap() },
+            interaction: { tapWhenReady(app.buttons["search-tab"]) },
             expectedElement: app.textFields["search-field"]
         )
     }
@@ -44,7 +44,7 @@ final class TwoTapRegressionTests: XCTestCase {
         // state — the three live filter toggles appear in one interaction.
         assertReachableInOneInteraction(
             "Sequence",
-            interaction: { app.buttons["sequence-tab"].tap() },
+            interaction: { tapWhenReady(app.buttons["sequence-tab"]) },
             expectedElement: app.buttons["filter-tasks"]
         )
     }
@@ -56,7 +56,7 @@ final class TwoTapRegressionTests: XCTestCase {
         // grow its own tab, which would push it OFF the two-tap path.
         assertReachableInOneInteraction(
             "Settings",
-            interaction: { app.buttons["dailies-tab"].swipeUp() },
+            interaction: { swipeUpWhenReady(app.buttons["dailies-tab"]) },
             expectedElement: app.navigationBars["Settings"]
         )
     }

@@ -55,6 +55,12 @@ struct BottomDockView: View {
     @Environment(UIState.self) private var ui
     @Environment(FirstRunOrientationState.self) private var orientation
     @Environment(\.dynamicTypeSize) private var dynamicSize
+    /// Bottom safe-area inset (home-indicator zone), captured at the window root.
+    /// Section 4 / D-041 — the full-bleed dock never re-added the bottom inset,
+    /// so on a device with a home indicator it sat ~8pt off the physical edge,
+    /// inside the indicator zone. Padding by `deviceBottomInset + 8` rests it
+    /// above the indicator.
+    @Environment(\.deviceBottomInset) private var deviceBottomInset
     // Live-updating, unlike reading `UIAccessibility.isReduceMotionEnabled`
     // directly (which only reflects the setting at call time).
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -64,6 +70,28 @@ struct BottomDockView: View {
     var onNewTake: () -> Void
 
     private let buttonSize: CGFloat = CatchlightLayout.minTouchTarget
+    /// Visible dock-circle diameter. Owner 2026-06-15: enlarged 36 → 44 so the
+    /// circle FILLS its 44pt touch frame (= `minTouchTarget`) — the buttons read
+    /// larger and now match the onboarding/paywall pill, which already sizes to the
+    /// 44pt grid (DockPillRow). Slot centres are unchanged, so the buttons keep
+    /// their distance from the screen edges and only sit visually closer together.
+    /// Glyphs were scaled in step (×44/36) to preserve the HiFi glyph-to-circle
+    /// ratio. All resting dock buttons draw this circle — a 1.5pt Ember-tinted
+    /// border around the icon (.db) — so they read as circles rather than bare
+    /// icons (section 6). Filled buttons (+, on-toggles, the × cancel) use the same
+    /// diameter so the dock stays visually uniform and the off→on toggle doesn't
+    /// jump size.
+    private let dockCircle: CGFloat = 44
+
+    /// The resting border ring shared by every dock button (HiFi v1.7 .db).
+    /// `strong` = the 0.55 opacity reserved for the Add + (.db.add) and the
+    /// active Dailies button (.db.active); everything else rests at 0.35.
+    private func dockRing(strong: Bool = false) -> some View {
+        Circle()
+            .strokeBorder(Color.ckAccent.opacity(strong ? 0.55 : 0.35), lineWidth: 1.5)
+            .frame(width: dockCircle, height: dockCircle)
+            .allowsHitTesting(false)
+    }
 
     /// Number of completed pulses for the first-run Add hint. We pulse exactly twice
     /// then stop — never loop. Re-set to 0 if the hint is dismissed and re-armed.
@@ -124,8 +152,12 @@ struct BottomDockView: View {
         .animation(.easeInOut(duration: 0.2), value: ui.dockMode)
         .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
         .padding(.top, 10)
-        .padding(.bottom, 8)
-        .background(Color.ckBackground)   // identical to screen — no elevation
+        // Section 4 / D-041 — rest above the home indicator (was a bare 8).
+        .padding(.bottom, deviceBottomInset + CatchlightLayout.dockBottomPadding)
+        // Soft bottom edge (HiFi §1 / v1.6 owner directive: "the toolbar has no
+        // hard edge that the Takes disappear behind" — they fade beneath it).
+        // D-042; was a solid Color.ckBackground fill.
+        .dockFadeBackground()
         // Settings: swipe up anywhere on the dock (owner redesign 2026-06-11 —
         // replaces the long-press on Dailies; not a screen-edge gesture, so it
         // never fights the system home swipe).
@@ -167,19 +199,31 @@ struct BottomDockView: View {
             onNewTake()
         } label: {
             ZStack {
-                Circle().fill(Color.ckAdd)
+                // HiFi `.db.add` is an OUTLINE button — a stronger Ember border,
+                // NOT a fill (D-042 follow-up, owner 2026-06-14). The only filled
+                // dock state is a SELECTED FILTER TOGGLE (see toggleLabel .on/.mod);
+                // Add and active-Dailies are distinguished by the 0.55 border, not
+                // a fill. Was a filled ckAdd droplet with an Ink "+".
+                dockRing(strong: true)   // .db.add — Ember border @55%
                 Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Color.ckOnAccent)
+                    // .regular (was .medium): the + read slightly heavier than the
+                    // .light sibling glyphs; nudged down one step (owner 2026-06-16).
+                    .font(.system(size: 24, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)   // #856539 glyph (Option A), like the siblings
             }
             .frame(width: buttonSize, height: buttonSize)
             .scaleEffect(addPulseScale)
-            .overlay(alignment: .top) {
+            // Add is the LEFTMOST dock slot (≈58pt from the screen edge), so a
+            // centred bubble clipped off-screen left. Anchor the arrow at the
+            // bubble's bottom-LEADING (over the +) and let the bubble extend RIGHT
+            // (owner 2026-06-15): .topLeading lines the bubble's leading up with the
+            // button's, the arrow sits 22pt in (the + centre), text spills right.
+            .overlay(alignment: .topLeading) {
                 if orientation.showAddPulse {
-                    OrientationTooltip(text: "What's your first Take?", arrowEdge: .bottom)
+                    OrientationTooltip(text: "What's your first Take?", arrowEdge: .bottom, arrowAlignment: .leading)
                         .fixedSize()
                         .offset(y: -(buttonSize / 2 + 32))
-                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
+                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
                 }
             }
         }
@@ -234,7 +278,8 @@ struct BottomDockView: View {
                         .frame(width: buttonSize, height: buttonSize)
                         .transition(.opacity)
                 }
-                DailiesGlyph(size: 20)
+                dockRing(strong: true)   // .db.active — Ember border @55%
+                DailiesGlyph(size: 24)   // scaled with the 36→44 circle
                     .foregroundStyle(Color.ckAccent)
                     .frame(width: buttonSize, height: buttonSize)
                     .contentShape(Rectangle())
@@ -265,10 +310,17 @@ struct BottomDockView: View {
         Button {
             ui.enterFiltering()
         } label: {
-            SequenceGlyph(size: 20)
-                .foregroundStyle(Color.ckAccent)
-                .frame(width: buttonSize, height: buttonSize)
-                .contentShape(Rectangle())
+            ZStack {
+                dockRing()   // .db — Ember border @35%
+                SequenceGlyph(size: 24)   // scaled with the 36→44 circle
+                    // Owner 2026-06-16: lay the three beads HORIZONTALLY (a left→
+                    // right sequence) while Dailies stays vertical. Rotating the
+                    // glyph view keeps the shape's bead/link geometry intact.
+                    .rotationEffect(.degrees(90))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: buttonSize, height: buttonSize)
+                    .contentShape(Rectangle())
+            }
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("sequence-tab")
@@ -295,11 +347,14 @@ struct BottomDockView: View {
     /// at the light weight from the refined icon set. (Daylight resolves Ember
     /// to the accessible #856539 via `ckAccent` — D-028.)
     private func navIcon(_ system: String) -> some View {
-        Image(systemName: system)
-            .font(.system(size: 20, weight: .light))
-            .foregroundStyle(Color.ckAccent)
-            .frame(width: buttonSize, height: buttonSize)
-            .contentShape(Rectangle())
+        ZStack {
+            dockRing()   // .db — Ember border @35% (Sequence / Search resting)
+            Image(systemName: system)
+                .font(.system(size: 24, weight: .light))   // scaled with the 36→44 circle
+                .foregroundStyle(Color.ckAccent)
+                .frame(width: buttonSize, height: buttonSize)
+                .contentShape(Rectangle())
+        }
     }
 
     // MARK: - Resting ⇄ searching morph
@@ -359,12 +414,15 @@ struct BottomDockView: View {
         ZStack {
             switch visual {
             case .off:
-                Circle().fill(Color.clear)
+                // .db.toggle off = bare Ember icon inside the resting .db ring.
+                dockRing()
             case .on, .modified:
+                // .db.toggle.on/.mod = Ember fill (the fill edge IS the border).
                 Circle().fill(Color.ckEmber)
+                    .frame(width: dockCircle, height: dockCircle)
             }
             Image(systemName: system)
-                .font(.system(size: 18, weight: .light))
+                .font(.system(size: 22, weight: .light))   // scaled with the 36→44 circle
                 .foregroundStyle(visual == .off ? Color.ckAccent : Color.ckOnAccent)
         }
         .frame(width: buttonSize, height: buttonSize)
@@ -447,8 +505,10 @@ struct BottomDockView: View {
         } label: {
             ZStack {
                 Circle().fill(Color.ckSurface)
+                    .frame(width: dockCircle, height: dockCircle)
+                dockRing()   // .db — Ember border @35%
                 Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .light))
+                    .font(.system(size: 20, weight: .light))   // scaled with the 36→44 circle
                     .foregroundStyle(Color.ckAccent)
             }
             .frame(width: buttonSize, height: buttonSize)
@@ -468,7 +528,9 @@ struct BottomDockView: View {
         @Bindable var ui = ui
         return TextField("Search your takes", text: $ui.searchQuery)
             .focused($searchFocused)
-            .font(CatchlightFont.display(size: 20, relativeTo: .body))
+            // §5: the search field is Take-row type — DM Sans 14, not the
+            // display face (D-042; was Cormorant display 20).
+            .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
             .foregroundStyle(Color.ckTextPrimary)
             .tint(Color.ckEmber)
             .textInputAutocapitalization(.never)

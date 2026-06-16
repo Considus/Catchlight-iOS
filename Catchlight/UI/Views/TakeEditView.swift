@@ -352,22 +352,50 @@ struct TakeEditView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Button {
-                ui.openPetalFan(for: currentTake)
-            } label: {
-                TakeCircleView(take: currentTake, diameter: 28)
-                    .frame(minWidth: CatchlightLayout.minTouchTarget,
-                           minHeight: CatchlightLayout.minTouchTarget)
-                    .contentShape(Rectangle())
+            // The footer Iris (UX §19): TAP opens the Focus ring (shape); LONG-PRESS
+            // discards a content-ful Take. The × in the centre void is a VISUAL
+            // affordance only — the spec deliberately routes discard through
+            // long-press, never a tap on the ×, "too small to tap reliably". Shown
+            // only when there's content to abandon (an empty Take is silently
+            // dropped by a tap outside). The Iris is 44pt to match the timeline +
+            // give the × room (owner 2026-06-15).
+            ZStack {
+                TakeCircleView(take: currentTake, diameter: CatchlightLayout.circleDiameter)
+                if draftHasContent {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundStyle(Color.ckAccent)   // Ember/#856539, the toolbar treatment (D-028)
+                        .accessibilityHidden(true)
+                }
             }
-            .buttonStyle(.plain)
+            .frame(width: CatchlightLayout.circleDiameter, height: CatchlightLayout.circleDiameter)
+            .frame(minWidth: CatchlightLayout.minTouchTarget,
+                   minHeight: CatchlightLayout.minTouchTarget)
+            .contentShape(Rectangle())
+            .overlay(
+                TapAndLongPressRecognizer(
+                    minimumDuration: 0.45,
+                    onTap: { _ in ui.openPetalFan(for: currentTake) },
+                    onLongPress: { discardAndDismiss() }
+                )
+            )
+            .accessibilityElement()
             .accessibilityIdentifier("editor-shape")
             .accessibilityLabel("Shape this take. \(TakeCircleView.activityDescription(for: currentTake))")
             .accessibilityHint("Double-tap to choose activity types.")
+            // Long-press isn't VoiceOver-reachable, so expose discard as a named
+            // action (mirrors the timeline Obie long-press). Only when there's
+            // content to discard.
+            .accessibilityActions {
+                if draftHasContent {
+                    Button("Discard take") { discardAndDismiss() }
+                }
+            }
 
-            Text("Shape this take")
-                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+            Text("Tap the Iris to shape your Take · Long-press to discard")
+                .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption).italic())   // .tm
                 .foregroundStyle(Color.ckTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
         }
@@ -378,6 +406,16 @@ struct TakeEditView: View {
     /// The live (unsaved) Take, so the footer Iris and the Focus ring reflect
     /// what's on screen.
     private var currentTake: Take { draft }
+
+    /// Whether the draft has anything worth keeping — the same blank test
+    /// `saveAndDismiss` uses, inverted. Drives the discard × affordance (the ×
+    /// only appears when there is content to abandon).
+    private var draftHasContent: Bool {
+        let blank = draft.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !draft.isTask && draft.timeReminder == nil && !draft.isObie
+            && draft.attachments.isEmpty && draft.locationReminder == nil
+        return !blank
+    }
 
     // MARK: - Save / dismiss
 
@@ -413,6 +451,19 @@ struct TakeEditView: View {
         } else {
             vm.save(t)
         }
+        ui.closeEditor()
+    }
+
+    /// Intentional discard (long-press the footer Iris — UX §19). Throws the draft
+    /// away WITHOUT saving: deletes it from the store if it was already saved
+    /// (editing an existing Take), or simply closes for a never-saved new Take —
+    /// `discardIfPresent` no-ops when the id isn't in the store. No confirm: the
+    /// long-press itself is the deliberate gesture (the spec's accidental-discard
+    /// guard). Empty Takes never reach here via the × (it's hidden), but a stray
+    /// long-press on one just closes, same as a tap outside.
+    private func discardAndDismiss() {
+        focusedBlockID = nil
+        vm.discardIfPresent(draft)
         ui.closeEditor()
     }
 }

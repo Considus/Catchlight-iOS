@@ -24,6 +24,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Catchlight uses Face ID to unlock your encrypted Takes.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.considus.catchlight.viewTake</string>
@@ -36,15 +38,8 @@
 	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>UILaunchScreen</key>
-	<dict>
-		<key>UIColorName</key>
-		<string>ck-background</string>
-		<key>UIImageName</key>
-		<string>launch-splash</string>
-		<key>UIImageRespectsSafeAreaInsets</key>
-		<false/>
-	</dict>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>UISupportedInterfaceOrientations</key>

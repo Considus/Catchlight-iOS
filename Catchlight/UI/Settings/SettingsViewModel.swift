@@ -43,45 +43,128 @@ final class SettingsViewModel {
         }
     }
 
+    /// "Lock after" grace — how long Catchlight may sit in the background before a
+    /// return re-locks it (D-042). Read by `AppModel.relockIfAwayTooLong()`. The app
+    /// ALWAYS re-locks on cold launch and when the phone locks while Catchlight is in
+    /// the foreground — this only governs the background-grace window.
+    enum LockAfter: String, CaseIterable, Identifiable {
+        case thirtySeconds, oneMinute, fiveMinutes, thirtyMinutes, oneHour
+
+        static let defaultsKey = "catchlight.lockAfter"
+        static let `default`: LockAfter = .oneMinute
+
+        var id: String { rawValue }
+
+        var seconds: TimeInterval {
+            switch self {
+            case .thirtySeconds: return 30
+            case .oneMinute:     return 60
+            case .fiveMinutes:   return 300
+            case .thirtyMinutes: return 1800
+            case .oneHour:       return 3600
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .thirtySeconds: return "30 seconds"
+            case .oneMinute:     return "1 minute"
+            case .fiveMinutes:   return "5 minutes"
+            case .thirtyMinutes: return "30 minutes"
+            case .oneHour:       return "1 hour"
+            }
+        }
+
+        /// The user's current choice (falls back to the default), read from the same
+        /// UserDefaults key the Settings picker writes via `@AppStorage`.
+        static var current: LockAfter {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = LockAfter(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
+    /// Timeline density — how much clear space sits between consecutive Takes on
+    /// Dailies (owner 2026-06-16). Changes ONLY the inter-card gap; the cards, Iris,
+    /// and spine are untouched. `gap` is the clear distance from one card's bottom to
+    /// the next card's top, sized so the lower card's Iris (which straddles its top
+    /// edge, poking up one radius ≈ 22pt) never overlaps the card above. Read by
+    /// `DailiesView` via `@AppStorage`.
+    enum TakeSpacing: String, CaseIterable, Identifiable {
+        case compact, standard, comfort
+
+        static let defaultsKey = "catchlight.takeSpacing"
+        static let `default`: TakeSpacing = .standard
+
+        var id: String { rawValue }
+
+        /// Clear gap between consecutive cards. Floor is the Iris's upper half
+        /// (≈22pt) plus breathing room so Compact reads "close but not touching."
+        var gap: CGFloat {
+            switch self {
+            case .compact:  return 26
+            case .standard: return 44
+            case .comfort:  return 56
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .compact:  return "Compact"
+            case .standard: return "Standard"
+            case .comfort:  return "Comfort"
+            }
+        }
+
+        static var current: TakeSpacing {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = TakeSpacing(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
+    /// Timeline sort direction — which end of time sits at the TOP (owner 2026-06-16).
+    /// The Obie is pinned above the list regardless. Default `.oldestFirst`: the
+    /// oldest Take is on top and newer ones accrue below, so scrolling down moves
+    /// toward "now" and older Takes fall off the top. This is also the order under
+    /// which the chronologically-timed seed Takes read Note·Task·Reminder·Delete.
+    /// `.newestFirst` inverts it. Read by `DailiesView`.
+    enum TakeSort: String, CaseIterable, Identifiable {
+        case oldestFirst, newestFirst
+
+        static let defaultsKey = "catchlight.takeSort"
+        static let `default`: TakeSort = .oldestFirst
+
+        var id: String { rawValue }
+
+        /// Short label for the segmented control.
+        var label: String {
+            switch self {
+            case .oldestFirst: return "Oldest"
+            case .newestFirst: return "Newest"
+            }
+        }
+
+        static var current: TakeSort {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = TakeSort(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     var notificationStatus: UNAuthorizationStatus = .notDetermined
     var notificationStatusLoading: Bool = false
 
     // MARK: - Sub-sheet presentation (Task 3.12)
 
-    var isPINSheetPresented: Bool = false
     var isPhraseSheetPresented: Bool = false
     var isCloudStorageSheetPresented: Bool = false
     var isAboutSheetPresented: Bool = false
-
-    /// Whether a PIN currently exists in the Keychain. Driven by a salt-slot
-    /// probe so the lookup never triggers a biometric prompt.
-    var hasPIN: Bool = false
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.hasPIN = Self.probePINPresence()
-    }
-
-    /// Re-read PIN presence after the PIN sheet closes.
-    func refreshPINState() {
-        hasPIN = Self.probePINPresence()
-    }
-
-    private static func probePINPresence() -> Bool {
-        let service = KeychainConfig.service
-        let account = "pin-salt"
-        let accessGroup = KeychainConfig.accessGroup
-        let query: [String: Any] = [
-            kSecClass as String:           kSecClassGenericPassword,
-            kSecAttrService as String:     service,
-            kSecAttrAccount as String:     account,
-            kSecAttrAccessGroup as String: accessGroup,
-            kSecMatchLimit as String:      kSecMatchLimitOne,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
-        ]
-        return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
     }
 
     // MARK: - Notifications

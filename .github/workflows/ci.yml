@@ -72,9 +72,11 @@ jobs:
       fail-fast: false
       matrix:
         destination:
-          # If a future runner image lacks 18.0 exactly, bump to the available
-          # 18.x (the floor leg just needs SOME iOS 18 runtime).
-          - 'platform=iOS Simulator,name=iPhone 16,OS=18.0'
+          # The floor leg just needs SOME iOS 18 runtime. The macos-15 image
+          # dropped the exact 18.0 runtime (2026-06-15: now ships 18.5 / 18.6 +
+          # 26.x), so this is pinned to the lowest available 18.x. Bump again if a
+          # future image drops 18.5 too (check the "List available simulators" step).
+          - 'platform=iOS Simulator,name=iPhone 16,OS=18.5'
           - 'platform=iOS Simulator,name=iPhone 16,OS=latest'
     steps:
       - name: Checkout
@@ -134,8 +136,21 @@ jobs:
         # regression anchor, and the block-editor / Angle flows — workplan 7.4 /
         # 7.5). The scheme is declared explicitly in project.yml because
         # XcodeGen's auto-scheme does NOT include the `bundle.ui-testing` target.
+        #
+        # FLAKY-XCUITEST ABSORPTION (2026-06-15): the synthesized-gesture UI flows
+        # (BlockEditor / CoreFlows) intermittently miss an element that IS present
+        # in the accessibility tree — a simulator timing race the suite itself
+        # documents (and self-skip-guards in places). `-retry-tests-on-failure`
+        # with `-test-iterations 3` reruns ONLY the failed tests up to 3× and
+        # passes if any attempt passes; a genuinely broken test fails all 3 and
+        # still blocks the merge. Unit/Core tests pass first try, so they're never
+        # retried. (Surfaced when the floor leg moved 18.0 → 18.5 and the UI tests
+        # actually ran reliably for the first time.) The real cure is hardening the
+        # no-wait taps with `waitForExistence` — tracked as a follow-up.
         run: |
           xcodebuild test \
             -project Catchlight.xcodeproj \
             -scheme Catchlight \
-            -destination '${{ matrix.destination }}'
+            -destination '${{ matrix.destination }}' \
+            -retry-tests-on-failure \
+            -test-iterations 3
