@@ -66,7 +66,7 @@ struct TakeEditView: View {
                 .onTapGesture { saveAndDismiss() }
                 .accessibilityIdentifier("editor-done")
                 .accessibilityLabel("Done editing")
-                .accessibilityHint("Double-tap to save this take and close.")
+                .accessibilityHint("Double-tap to save this Take and close.")
                 .accessibilityAddTraits(.isButton)
 
             card
@@ -381,14 +381,14 @@ struct TakeEditView: View {
             )
             .accessibilityElement()
             .accessibilityIdentifier("editor-shape")
-            .accessibilityLabel("Shape this take. \(TakeCircleView.activityDescription(for: currentTake))")
+            .accessibilityLabel("Shape this Take. \(TakeCircleView.activityDescription(for: currentTake))")
             .accessibilityHint("Double-tap to choose activity types.")
             // Long-press isn't VoiceOver-reachable, so expose discard as a named
             // action (mirrors the timeline Obie long-press). Only when there's
             // content to discard.
             .accessibilityActions {
                 if draftHasContent {
-                    Button("Discard take") { discardAndDismiss() }
+                    Button("Discard Take") { discardAndDismiss() }
                 }
             }
 
@@ -439,7 +439,7 @@ struct TakeEditView: View {
         //   • every content field empty (a check item — even empty — counts as
         //     content, so `!isTask` guards it), AND
         //   • the Take must not already exist in the store with content —
-        //     deliberately erasing an old note keeps an "Untitled take" row the
+        //     deliberately erasing an old note keeps an "Untitled Take" row the
         //     user can delete explicitly, rather than silently destroying it.
         let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !t.isTask && t.timeReminder == nil && !t.isObie
