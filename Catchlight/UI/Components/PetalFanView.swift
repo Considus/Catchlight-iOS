@@ -526,23 +526,29 @@ struct ReminderPickerSheet: View {
 
     var body: some View {
         NavigationStack {
-            DatePicker("Remind me", selection: $date)
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-                .padding()
-                .frame(maxHeight: .infinity, alignment: .top)
-                .navigationTitle("Remind me")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { onCancel(); dismiss() }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { onSave(date); dismiss() }
-                    }
+            // Scrollable so every element (calendar AND the time row beneath it) is
+            // always reachable regardless of sheet height — owner 2026-06-17: at the
+            // half-height detent the graphical calendar pushed the time off-screen.
+            ScrollView {
+                DatePicker("Remind me", selection: $date)
+                    .datePickerStyle(.graphical)
+                    .labelsHidden()
+                    .padding()
+            }
+            .navigationTitle("Remind me")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel(); dismiss() }
                 }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { onSave(date); dismiss() }
+                }
+            }
         }
-        .presentationDetents([.medium, .large])
+        // Open at full height so the whole picker is visible at once (the half-height
+        // detent clipped the time selector).
+        .presentationDetents([.large])
     }
 }
 
