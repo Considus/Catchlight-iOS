@@ -34,11 +34,20 @@ final class CloudStorageSettingsUITests: XCTestCase {
         XCTAssertTrue(settingsSheet.waitForExistence(timeout: 3),
                       "Settings sheet should appear after the dock swipe-up.")
 
-        // Locate and tap the Cloud Storage row.
+        // Locate and tap the Cloud Storage row. It lives in the Sync section, below
+        // Appearance + Security, so it falls below the fold once those sections grow
+        // (e.g. the View/Order rows) — and SwiftUI's lazy List keeps off-screen rows
+        // OUT of the a11y tree. Scroll the settings list until the row is on screen
+        // and hittable rather than assuming it's visible at rest.
         let cloudRow = app.descendants(matching: .any)
             .matching(identifier: "settings-cloud-storage").firstMatch
-        XCTAssertTrue(cloudRow.waitForExistence(timeout: 5))
-        XCTAssertTrue(cloudRow.isHittable)
+        var scrolls = 0
+        while !cloudRow.isHittable && scrolls < 8 {
+            app.swipeUp()
+            scrolls += 1
+        }
+        XCTAssertTrue(cloudRow.isHittable,
+                      "Cloud Storage row should be reachable by scrolling the settings list.")
         cloudRow.tap()
 
         // The sub-sheet presents with the picker primary CTA visible.
