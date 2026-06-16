@@ -242,11 +242,11 @@ struct DailiesView: View {
     // MARK: - Empty state
 
     private var emptyState: some View {
-        Text("Your first take is waiting.")
+        Text("Your first Take is waiting.")
             .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
             .foregroundStyle(Color.ckTextSecondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .accessibilityLabel("Your first take is waiting.")
+            .accessibilityLabel("Your first Take is waiting.")
     }
 
     // MARK: - Timeline
@@ -330,7 +330,7 @@ struct DailiesView: View {
                 // pass should move to a Stringsdict / .xcstrings plural rule
                 // — many locales don't pluralise on the singular/plural axis
                 // alone (e.g. Polish, Arabic). Tracked but not blocking.
-                Text("\(count) take\(count == 1 ? "" : "s") changed on another device.")
+                Text("\(count) Take\(count == 1 ? "" : "s") changed on another device.")
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(2)
