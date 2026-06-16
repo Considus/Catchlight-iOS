@@ -124,6 +124,15 @@ extension Color {
         light: Palette.ink.withAlphaComponent(0.13)
     ))
 
+    /// The live "wire" colour of the timeline spine — Ember @ 35%, matching the
+    /// dock buttons' ring (`dockRing()`) so the wire and toolbar read as one family
+    /// (owner 2026-06-16). Single-sourced because the wire is now drawn in TWO
+    /// places that MUST stay identical: the gutter spine (`DailiesView`, behind the
+    /// cards) and the short segment that threads each Iris aperture (`TakeRowView`,
+    /// above the card / behind the ring — "rings on a wire"). (`ckSpine` above is
+    /// the older, fainter tint still used by onboarding + the conflict view.)
+    static var ckSpineWire: Color { ckAccent.opacity(0.35) }
+
     /// The Add button — Ember (both).
     static let ckAdd = Color(uiColor: .adaptive(dark: Palette.ember, light: Palette.ember))
 
