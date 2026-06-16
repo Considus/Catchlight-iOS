@@ -115,7 +115,7 @@ final class DailiesViewModel {
     /// edit surface on it immediately. NOT persisted (2026-06-10): the editor
     /// saves on dismiss, and a blank dismissed Take is discarded — previously the
     /// blank row was written to the store before any typing, so cancelling left a
-    /// permanent "Untitled take" with no way to remove it.
+    /// permanent "Untitled Take" with no way to remove it.
     @discardableResult
     func createTake() -> Take {
         var take = Take()

@@ -325,7 +325,7 @@ struct BottomDockView: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("sequence-tab")
         .accessibilityLabel("Sequence")
-        .accessibilityHint("Double-tap to filter the timeline by Notes, Tasks, or Reminders.")
+        .accessibilityHint("Double-tap to filter the timeline by notes, tasks, or reminders.")
         .accessibilityAddTraits(.isButton)
     }
 
@@ -440,7 +440,7 @@ struct BottomDockView: View {
         .accessibilityIdentifier("filter-notes")
         .accessibilityLabel("Notes filter")
         .accessibilityValue(ui.filterNotes ? "on" : "off")
-        .accessibilityHint("Double-tap to show only pure notes. Turning Notes on clears the Tasks and Reminders filters.")
+        .accessibilityHint("Double-tap to show only pure notes. Turning notes on clears the tasks and reminders filters.")
         .accessibilityAddTraits(ui.filterNotes ? [.isSelected, .isButton] : [.isButton])
     }
 
@@ -526,7 +526,7 @@ struct BottomDockView: View {
     /// driven by the morph (or onAppear as a fallback for direct entry).
     private var searchField: some View {
         @Bindable var ui = ui
-        return TextField("Search your takes", text: $ui.searchQuery)
+        return TextField("Search your Takes", text: $ui.searchQuery)
             .focused($searchFocused)
             // §5: the search field is Take-row type — DM Sans 14, not the
             // display face (D-042; was Cormorant display 20).

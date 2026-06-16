@@ -118,7 +118,7 @@ struct PaywallView: View {
         // Centred, bullet-free (owner 2026-06-12, HiFi v1.11.3 — dots aren't
         // used anywhere else in the product).
         VStack(spacing: 12) {
-            valueRow("Unlimited Takes, Notes, and Reminders")
+            valueRow("Unlimited Takes, tasks and reminders")
             valueRow("Encrypted cloud sync across your devices")
             valueRow("Your data stays yours — readable, exportable")
         }
