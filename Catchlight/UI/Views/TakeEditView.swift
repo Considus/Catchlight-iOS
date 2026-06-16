@@ -43,6 +43,9 @@ struct TakeEditView: View {
     @State private var focusedBlockID: UUID?
     /// The Angle (D-033) currently presented full-screen over the editor, if any.
     @State private var presentedAngle: Angle?
+    /// Drives the reminder date/time picker sheet (the editor's "change it later"
+    /// path — owner 2026-06-17).
+    @State private var showingReminderPicker = false
 
     init(take: Take) {
         self.take = take
@@ -93,12 +96,25 @@ struct TakeEditView: View {
         .fullScreenCover(item: $presentedAngle) { angle in
             angle.makePresentation($draft) { presentedAngle = nil }
         }
+        // Reminder time editor (owner 2026-06-17). Opened from the reminder row;
+        // Done writes the new time to the draft (it rides the editor's save on
+        // dismiss). Cancel keeps the existing time (no onCancel) — unlike the
+        // Focus-ring, where Cancel removes a just-added reminder.
+        .sheet(isPresented: $showingReminderPicker) {
+            ReminderPickerSheet(
+                initialDate: draft.timeReminder?.scheduledDate ?? PetalFanView.defaultReminderDate,
+                onSave: { draft.timeReminder = TimeReminder(scheduledDate: $0,
+                                                            notificationIdentifier: draft.id.uuidString) }
+            )
+        }
     }
 
     private var card: some View {
         VStack(alignment: .leading, spacing: 0) {
             blockList
                 .padding(.top, 6)
+
+            reminderRow
 
             Divider().background(Color.ckTextSecondary.opacity(0.2))
 
@@ -335,13 +351,15 @@ struct TakeEditView: View {
             draft.convertToProse()
         }
 
-        if command.hasReminder, draft.timeReminder == nil {
-            // Mirror DailiesViewModel.applyActivityTypes: default to tomorrow; the
-            // reminder surface refines it.
-            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-            draft.timeReminder = TimeReminder(scheduledDate: tomorrow,
+        if command.hasReminder {
+            // Use the time chosen in the Focus-ring picker (owner 2026-06-17),
+            // falling back to any existing reminder, then +24h.
+            let when = command.reminderDate
+                ?? draft.timeReminder?.scheduledDate
+                ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+            draft.timeReminder = TimeReminder(scheduledDate: when,
                                               notificationIdentifier: draft.id.uuidString)
-        } else if !command.hasReminder {
+        } else {
             draft.timeReminder = nil
         }
 
@@ -356,6 +374,58 @@ struct TakeEditView: View {
         // the prose row.
         if let newTaskEntryID {
             DispatchQueue.main.async { focusedBlockID = newTaskEntryID }
+        }
+    }
+
+    // MARK: - Reminder row (change / clear the time — owner 2026-06-17)
+
+    /// Shown only when the draft has a Reminder. Tap the row to reopen the iOS
+    /// date/time picker and change the time; tap the ✕ to clear it (the Note floor
+    /// re-asserts if nothing else remains). Adding a reminder is the Focus-ring's
+    /// job; this row is the "edit it later" surface the editor previously lacked.
+    @ViewBuilder
+    private var reminderRow: some View {
+        if let reminder = draft.timeReminder {
+            let when = reminder.scheduledDate.formatted(date: .abbreviated, time: .shortened)
+            HStack(spacing: 10) {
+                // Tap the bell + time to change it (its own VO element + action).
+                Button { showingReminderPicker = true } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bell")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundStyle(Color.ckAccent)
+                        Text(when)
+                            .font(CatchlightFont.ui(.medium, size: 13, relativeTo: .subheadline))
+                            .foregroundStyle(Color.ckTextPrimary)
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("editor-reminder-row")
+                .accessibilityLabel("Reminder: \(when)")
+                .accessibilityHint("Double-tap to change the time.")
+
+                // Clear it — a separate VO element + action.
+                Button {
+                    draft.timeReminder = nil
+                    draft.normaliseActivityFloor()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .frame(width: CatchlightLayout.minTouchTarget,
+                               height: CatchlightLayout.minTouchTarget)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("editor-reminder-clear")
+                .accessibilityLabel("Remove reminder")
+                .accessibilityHint("Double-tap to remove this reminder.")
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 2)
+            .padding(.vertical, 4)
         }
     }
 

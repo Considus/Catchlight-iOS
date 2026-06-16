@@ -236,7 +236,7 @@ struct RootView: View {
                     // footer the origin is .zero (screen centre) and the editor is
                     // already the context, so no spotlight card there.
                     showsFocusCard: ui.petalFanOrigin != .zero,
-                    onCommit: { isNote, isTask, hasReminder, isObie in
+                    onCommit: { isNote, isTask, hasReminder, reminderDate, isObie in
                         // Task 6.20: petal-fan commit is a mutation — gate it.
                         guard app.ensureEntitled() else {
                             ui.closePetalFan()
@@ -251,13 +251,15 @@ struct RootView: View {
                             ui.editorFanCommand = UIState.EditorFanCommand(
                                 token: UUID(),
                                 isNote: isNote, isTask: isTask,
-                                hasReminder: hasReminder, isObie: isObie
+                                hasReminder: hasReminder, reminderDate: reminderDate,
+                                isObie: isObie
                             )
                         } else {
                             app.dailiesVM.applyActivityTypes(
                                 to: take,
                                 isNote: isNote, isTask: isTask,
-                                hasReminder: hasReminder, isObie: isObie
+                                hasReminder: hasReminder, reminderDate: reminderDate,
+                                isObie: isObie
                             )
                         }
                         ui.closePetalFan()

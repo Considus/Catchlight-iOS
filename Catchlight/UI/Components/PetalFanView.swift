@@ -62,16 +62,29 @@ struct PetalFanView: View {
     /// false from the editor footer (origin = screen centre — the editor IS the
     /// context there, so no card to spotlight).
     var showsFocusCard: Bool = false
-    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ isObie: Bool) -> Void
+    /// `reminderDate` carries the time chosen in the picker (nil when no Reminder).
+    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ isObie: Bool) -> Void
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Default Reminder time when one is freshly added: 24h out (owner 2026-06-17 —
+    /// the picker opens pre-set here, the user refines or accepts it).
+    static var defaultReminderDate: Date {
+        Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+    }
 
     // Working selection (mutated as petals are tapped).
     @State private var isNote: Bool
     @State private var isTask: Bool
     @State private var hasReminder: Bool
     @State private var isObie: Bool
+    /// The working Reminder time. Seeded from the Take's existing reminder (or the
+    /// +24h default) and edited by the picker that pops when the Reminder Mark is
+    /// tapped on (owner 2026-06-17).
+    @State private var reminderDate: Date
+    /// Drives the date/time picker sheet the Reminder Mark pops.
+    @State private var showingReminderPicker = false
 
     private enum FanPhase: Equatable {
         case opening(start: Date)
@@ -84,7 +97,7 @@ struct PetalFanView: View {
          hubCentre: CGPoint,
          containerWidth: CGFloat = 0,
          showsFocusCard: Bool = false,
-         onCommit: @escaping (Bool, Bool, Bool, Bool) -> Void,
+         onCommit: @escaping (Bool, Bool, Bool, Date?, Bool) -> Void,
          onDismiss: @escaping () -> Void) {
         self.take = take
         self.hubCentre = hubCentre
@@ -96,6 +109,7 @@ struct PetalFanView: View {
         _isTask = State(initialValue: take.isTask)
         _hasReminder = State(initialValue: take.timeReminder != nil)
         _isObie = State(initialValue: take.isObie)
+        _reminderDate = State(initialValue: take.timeReminder?.scheduledDate ?? Self.defaultReminderDate)
         _phase = State(initialValue: .opening(start: .now))
     }
 
@@ -371,6 +385,16 @@ struct PetalFanView: View {
                 if case .opening = phase { phase = .open }
             }
         }
+        // The Reminder Mark pops the standard iOS date/time picker (owner 2026-06-17).
+        // Done keeps the Reminder at the chosen time; Cancel removes it entirely
+        // (tapping the Mark on was the only commitment, so backing out clears it).
+        .sheet(isPresented: $showingReminderPicker) {
+            ReminderPickerSheet(
+                initialDate: reminderDate,
+                onSave: { reminderDate = $0; hasReminder = true },
+                onCancel: { hasReminder = false }
+            )
+        }
     }
 
     /// A synthetic Take reflecting the working selection, so the hub circle
@@ -380,9 +404,9 @@ struct PetalFanView: View {
         t.isNote = isNote
         t.setTask(isTask)
         t.isObie = isObie
-        if hasReminder, t.timeReminder == nil {
-            t.timeReminder = TimeReminder(scheduledDate: .now, notificationIdentifier: t.id.uuidString)
-        } else if !hasReminder {
+        if hasReminder {
+            t.timeReminder = TimeReminder(scheduledDate: reminderDate, notificationIdentifier: t.id.uuidString)
+        } else {
             t.timeReminder = nil
         }
         return t
@@ -447,6 +471,9 @@ struct PetalFanView: View {
             // Note is the floor: if nothing else is active, Note re-asserts.
             if !isTask && !hasReminder && !isObie { isNote = true }
         }
+        // Turning the Reminder Mark ON pops the date/time picker so the user sets
+        // the time there and then (owner 2026-06-17). Turning it off just clears it.
+        if kind == .remind && hasReminder { showingReminderPicker = true }
     }
 
     // MARK: - Retract
@@ -469,10 +496,53 @@ struct PetalFanView: View {
 
     private func finish(commit: Bool) {
         if commit {
-            onCommit(isNote, isTask, hasReminder, isObie)
+            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, isObie)
         } else {
             onDismiss()
         }
+    }
+}
+
+/// A standard iOS date/time picker presented as a sheet — the Reminder time editor.
+/// Popped by the Focus-ring's Reminder Mark (set the time at creation) and reused by
+/// the Take editor's reminder row to change it later (owner 2026-06-17). Purely a
+/// time chooser: the caller owns what Save/Cancel mean for its own state.
+struct ReminderPickerSheet: View {
+    let initialDate: Date
+    let onSave: (Date) -> Void
+    /// Optional — the Focus-ring uses Cancel to REMOVE a just-added reminder; the
+    /// editor leaves it nil (Cancel keeps the existing time untouched).
+    var onCancel: () -> Void = {}
+
+    @State private var date: Date
+    @Environment(\.dismiss) private var dismiss
+
+    init(initialDate: Date, onSave: @escaping (Date) -> Void, onCancel: @escaping () -> Void = {}) {
+        self.initialDate = initialDate
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _date = State(initialValue: initialDate)
+    }
+
+    var body: some View {
+        NavigationStack {
+            DatePicker("Remind me", selection: $date)
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .padding()
+                .frame(maxHeight: .infinity, alignment: .top)
+                .navigationTitle("Remind me")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { onCancel(); dismiss() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { onSave(date); dismiss() }
+                    }
+                }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 
@@ -481,7 +551,7 @@ struct PetalFanView: View {
         PetalFanView(
             take: Take(blocks: [.checkItem("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _ in },
+            onCommit: { _, _, _, _, _ in },
             onDismiss: {}
         )
     }
@@ -494,7 +564,7 @@ struct PetalFanView: View {
         PetalFanView(
             take: Take(blocks: [.textLine("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _ in },
+            onCommit: { _, _, _, _, _ in },
             onDismiss: {}
         )
     }

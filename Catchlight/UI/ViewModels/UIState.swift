@@ -69,6 +69,8 @@ final class UIState {
         let isNote: Bool
         let isTask: Bool
         let hasReminder: Bool
+        /// The time chosen in the Reminder picker (nil when no Reminder).
+        let reminderDate: Date?
         let isObie: Bool
     }
     var editorFanCommand: EditorFanCommand?
