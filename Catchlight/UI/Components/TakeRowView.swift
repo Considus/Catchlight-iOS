@@ -157,6 +157,21 @@ struct TakeRowView: View {
                 // Only the card slides on swipe; the Iris (below) keeps its spine
                 // position so the wire stays threaded through it.
                 .offset(x: cardSwipeOffset)
+            // Crown occluder (owner 2026-06-16): the static dotted spine runs BEHIND
+            // the whole row, so its bright dots were bleeding up through the Iris's
+            // hollow aperture and making the crown look translucent. This page-coloured
+            // 2pt segment sits at the wire column BEHIND the Iris: the opaque ring band
+            // covers it (no notch), but in the aperture it reads as plain background —
+            // blocking the dots behind, so the wire on top reads as clearly above the
+            // ring. Same crown geometry as the visible wire segment below.
+            Rectangle()
+                .fill(Color.ckBackground)
+                .frame(width: CatchlightLayout.spineWidth,
+                       height: CatchlightLayout.circleDiameter / 2)
+                .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.spineWidth / 2,
+                        y: -CatchlightLayout.circleDiameter / 2)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
             irisColumn
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
@@ -181,6 +196,25 @@ struct TakeRowView: View {
                         y: -CatchlightLayout.circleDiameter / 2)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
+            // …and the DOTS pass IN FRONT of the ring too, so the dotted spine reads
+            // as convincingly ABOVE the Iris (owner 2026-06-16) — not behind it. The
+            // GeometryReader anchors the dash phase to the segment's live SCREEN Y
+            // (`+minY`), so the dots hold fixed screen positions as the row scrolls:
+            // the ring slides UNDER a static dotted wire, matching the gutter dots
+            // above and below. Same `SpineDots` pattern as the gutter. The sign MUST
+            // be `+`: `−minY` advances the phase the wrong way, sliding these dots at
+            // ~2× and OPPOSITE the gutter (the "two wires" bug).
+            GeometryReader { geo in
+                SpineLine()
+                    .stroke(SpineDots.color,
+                            style: SpineDots.style(phase: geo.frame(in: .global).minY))
+            }
+            .frame(width: CatchlightLayout.spineWidth,
+                   height: CatchlightLayout.circleDiameter / 2)
+            .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.spineWidth / 2,
+                    y: -CatchlightLayout.circleDiameter / 2)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
         .padding(.vertical, 6)
     }
