@@ -160,6 +160,27 @@ struct TakeRowView: View {
             irisColumn
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
+            // Rings on a wire (owner spec 2026-06-16): the spine lies ON TOP of the
+            // Iris's upper half — from the ring's crown down to the card's top edge
+            // — then ducks BEHIND the card, which (being opaque) hides it for the
+            // rest of the card's height. Drawn AFTER `irisColumn` so it sits in
+            // FRONT of the ring; its height is exactly the Iris RADIUS and its
+            // bottom lands on the card's top edge (the ZStack origin, y = 0), so
+            // the wire is never drawn over the card surface — only over the Iris.
+            // The rule: visible over the Iris OR hidden behind the card, never both.
+            // Between Takes the gutter spine (DailiesView, behind the cards) carries
+            // the wire through the gaps, reappearing above the next ring's crown.
+            // Stays on the spine (no `cardSwipeOffset`) so the wire holds while the
+            // card swipes. Same `ckSpineWire` fill + `spineWidth` as the gutter so
+            // the two read as one continuous wire.
+            Rectangle()
+                .fill(Color.ckSpineWire)
+                .frame(width: CatchlightLayout.spineWidth,
+                       height: CatchlightLayout.circleDiameter / 2)
+                .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.spineWidth / 2,
+                        y: -CatchlightLayout.circleDiameter / 2)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
         .padding(.vertical, 6)
     }
