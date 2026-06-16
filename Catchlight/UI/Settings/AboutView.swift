@@ -17,8 +17,6 @@ import SwiftUI
 @MainActor
 struct AboutView: View {
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -38,12 +36,9 @@ struct AboutView: View {
             .background(Color.ckBackground)
             .navigationTitle("About")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(Color.ckTextObie)
-                }
-            }
+            // No Done button — dismiss by swiping down, matching the Settings sheet
+            // (owner 2026-06-16). VoiceOver dismisses via the two-finger scrub
+            // (escape) gesture; the drag indicator shows the swipe affordance.
         }
         .presentationDragIndicator(.visible)
     }
