@@ -89,7 +89,9 @@ final class SubscriptionStatusTests: XCTestCase {
         manager.forceStatusForTesting(.lapsed)
         let app = AppModel(needsOnboarding: false,
                            initialStore: InMemoryTakeStore(),
-                           storeProvider: { nil },
+                           session: SessionController(),
+                           makeStoreFromKeys: { _ in nil },
+                           unlockKeys: { throw KeychainError.notFound },
                            subscription: manager)
 
         XCTAssertFalse(app.ui.isPaywallPresented)
@@ -104,7 +106,9 @@ final class SubscriptionStatusTests: XCTestCase {
         manager.forceStatusForTesting(.subscribed)
         let app = AppModel(needsOnboarding: false,
                            initialStore: InMemoryTakeStore(),
-                           storeProvider: { nil },
+                           session: SessionController(),
+                           makeStoreFromKeys: { _ in nil },
+                           unlockKeys: { throw KeychainError.notFound },
                            subscription: manager)
 
         let permitted = app.ensureEntitled()
@@ -118,7 +122,9 @@ final class SubscriptionStatusTests: XCTestCase {
         manager.forceStatusForTesting(.trial)
         let app = AppModel(needsOnboarding: false,
                            initialStore: InMemoryTakeStore(),
-                           storeProvider: { nil },
+                           session: SessionController(),
+                           makeStoreFromKeys: { _ in nil },
+                           unlockKeys: { throw KeychainError.notFound },
                            subscription: manager)
 
         XCTAssertTrue(app.ensureEntitled())
@@ -131,7 +137,9 @@ final class SubscriptionStatusTests: XCTestCase {
         manager.forceStatusForTesting(.lapsed)
         let app = AppModel(needsOnboarding: false,
                            initialStore: InMemoryTakeStore(),
-                           storeProvider: { nil },
+                           session: SessionController(),
+                           makeStoreFromKeys: { _ in nil },
+                           unlockKeys: { throw KeychainError.notFound },
                            subscription: manager)
         app.presentPaywallIfNeededAfterOnboarding()
         XCTAssertTrue(app.ui.isPaywallPresented)
@@ -143,7 +151,9 @@ final class SubscriptionStatusTests: XCTestCase {
         manager.forceStatusForTesting(.subscribed)
         let app = AppModel(needsOnboarding: false,
                            initialStore: InMemoryTakeStore(),
-                           storeProvider: { nil },
+                           session: SessionController(),
+                           makeStoreFromKeys: { _ in nil },
+                           unlockKeys: { throw KeychainError.notFound },
                            subscription: manager)
         app.presentPaywallIfNeededAfterOnboarding()
         XCTAssertFalse(app.ui.isPaywallPresented)
@@ -155,7 +165,9 @@ final class SubscriptionStatusTests: XCTestCase {
         manager.forceStatusForTesting(.lapsed)
         let app = AppModel(needsOnboarding: true,
                            initialStore: InMemoryTakeStore(),
-                           storeProvider: { nil },
+                           session: SessionController(),
+                           makeStoreFromKeys: { _ in nil },
+                           unlockKeys: { throw KeychainError.notFound },
                            subscription: manager)
         app.presentPaywallIfNeededAfterOnboarding()
         XCTAssertFalse(app.ui.isPaywallPresented)

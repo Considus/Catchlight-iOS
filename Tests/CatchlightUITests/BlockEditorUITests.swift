@@ -36,10 +36,11 @@ final class BlockEditorUITests: XCTestCase {
     /// Open a fresh editor on a new blank Take.
     private func openNewEditor(_ app: XCUIApplication) -> XCUIElement {
         let addButton = app.buttons["add-button"]
-        XCTAssertTrue(addButton.waitForExistence(timeout: 3), "Dock did not load")
-        addButton.tap()
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5), "Dock did not load")
+        // Re-issue the open tap if the synthesized event is dropped — opening the
+        // editor is idempotent, so a swallowed tap shouldn't fail the setup.
         let body = app.textViews["take-edit-body"]
-        XCTAssertTrue(body.waitForExistence(timeout: 3), "Editor body row did not appear")
+        tapUntil(addButton, appears: body)
         return body
     }
 
@@ -50,7 +51,10 @@ final class BlockEditorUITests: XCTestCase {
     /// the fan closes) and dismiss the editor. The wait is generous because the
     /// close choreography is slower on older simulator runtimes (e.g. iOS 17.0).
     private func toggleTaskOnViaFocusRing(_ app: XCUIApplication) throws {
-        app.buttons["editor-shape"].tap()
+        // "editor-shape" is the footer Iris — a SwiftUI `.accessibilityElement()`
+        // that surfaces as `.other` (not `.button`) on iOS 18.x, so query it by
+        // identifier regardless of type.
+        tapWhenReady(anyElement(in: app, id: "editor-shape"))
         let taskPetal = app.buttons["dial-petal-task"]
         try XCTSkipUnless(taskPetal.waitForExistence(timeout: 3),
                           "Focus ring did not open under synthesized gestures on this runtime.")
@@ -70,7 +74,7 @@ final class BlockEditorUITests: XCTestCase {
         }
         try XCTSkipUnless(closed,
             "Focus-ring dim-commit not delivered on this simulator runtime (deterministic on iOS 26; covered by unit tests + on-device QA).")
-        try XCTSkipUnless(app.buttons["editor-shape"].waitForExistence(timeout: 3),
+        try XCTSkipUnless(anyElement(in: app, id: "editor-shape").waitForExistence(timeout: 3),
             "Editor not present after the synthesized commit on this runtime.")
     }
 
@@ -136,7 +140,7 @@ final class BlockEditorUITests: XCTestCase {
         // Focus the item explicitly (robust vs relying on post-commit programmatic
         // focus + keyboard timing), then Return continues the list.
         let field = checkFields(app).firstMatch
-        field.tap()
+        tapWhenReady(field)
         _ = app.keyboards.firstMatch.waitForExistence(timeout: 3)
         app.typeText("\n")
 
@@ -155,7 +159,7 @@ final class BlockEditorUITests: XCTestCase {
 
         // Focus the empty item explicitly, then Return exits the list.
         let field = checkFields(app).firstMatch
-        field.tap()
+        tapWhenReady(field)
         _ = app.keyboards.firstMatch.waitForExistence(timeout: 3)
         app.typeText("\n")   // Return on the empty item
 
@@ -246,8 +250,8 @@ final class BlockEditorUITests: XCTestCase {
         XCTAssertEqual(box.value as? String, "checked", "Tapping in the Angle ticks the item")
 
         // Exit the ephemeral Angle back to the editor.
-        app.buttons["angle-close"].tap()
-        XCTAssertTrue(app.buttons["editor-shape"].waitForExistence(timeout: 3),
+        tapWhenReady(app.buttons["angle-close"])
+        XCTAssertTrue(anyElement(in: app, id: "editor-shape").waitForExistence(timeout: 3),
                       "Closing the Angle returns to the editor")
     }
 }

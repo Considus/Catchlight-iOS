@@ -92,19 +92,24 @@ targets:
           - "CormorantGaramond[wght].ttf"
           - "CormorantGaramond-Italic[wght].ttf"
           - "DMSans[opsz,wght].ttf"
-        # UILaunchScreen: opts into modern full-screen scene sizing (required, see
-        # gotcha #1 in iOS gotchas). UIColorName references the ck-background colour
-        # set in Assets.xcassets (light: Paper #F7F4EF, dark: Ink #0F0E0C) — this
-        # colour set was added 2026-06-07 specifically for the launch screen, since
-        # UIColorName resolves against the asset catalog, not Swift colour extensions.
-        # UIImageName centers the composite splash (icon + wordmark + tagline) on the
-        # background. launch-splash.imageset added 2026-06-09 (task 4.7): two path-only
-        # SVGs (190×280pt viewBox), dark/light adaptive, original rendering intent.
-        UILaunchScreen:
-          UIColorName: "ck-background"
-          UIImageName: "launch-splash"
-          UIImageRespectsSafeAreaInsets: false
+        # Launch screen = LaunchScreen.storyboard (owner 2026-06-15), replacing the
+        # earlier UILaunchScreen dict + centred composite (launch-splash.imageset,
+        # now unused — retire once the storyboard is device-confirmed). A storyboard
+        # also opts into modern full-screen scene sizing (the gotcha-#1 requirement)
+        # but, unlike the dict's single CENTRED image, it can pin the real
+        # catchlight-icon + catchlight-wordmark assets to the EXACT geometry of the
+        # in-app brand mark (IntroChapterScaffold: icon 72 at safe-area-top+24,
+        # wordmark 44 below) — so OS-launch → in-app splash → Welcome never jumps.
+        # Background is the ck-background asset colour (adaptive Paper/Ink), set on
+        # the storyboard's root view. Storyboards can't load custom fonts, hence both
+        # marks are images and the tagline is revealed by the in-app splash instead.
+        UILaunchStoryboardName: "LaunchScreen"
         UIApplicationSupportsIndirectInputEvents: true
+        # Face ID is the biometric for the app-entry unlock (the master key is
+        # `.userPresence`-gated). Without this usage string iOS refuses Face ID and
+        # silently falls back to the device passcode (D-042 — this was the cause of
+        # "passcode prompt, not Face ID").
+        NSFaceIDUsageDescription: "Catchlight uses Face ID to unlock your encrypted Takes."
         # App encrypts user content with AES-256-GCM (CryptoKit) + HKDF/HMAC-SHA-256
         # for confidentiality — i.e. it DOES use non-exempt encryption (beyond OS
         # HTTPS). Algorithms are standard (no proprietary crypto). Export basis:
@@ -162,6 +167,47 @@ targets:
         CODE_SIGN_STYLE: Automatic
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         SWIFT_OBJC_BRIDGING_HEADER: ""
+        # Section 1 (fix pass 1) — the git-SHA build-stamp script below must read
+        # the git checkout (`$SRCROOT/.git`) and write the built Info.plist. The
+        # build-script sandbox (ENABLE_USER_SCRIPT_SANDBOXING, YES at project
+        # level) blocks those accesses, so it is disabled for THIS target only;
+        # the test bundles keep the project-level YES. The script is read-only on
+        # the source tree and writes solely inside the build products dir.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+    # Section 1 — stamp CFBundleVersion with the git short SHA so the About row
+    # answers "which commit is on the phone?" (CFBundleShortVersionString stays
+    # the human MARKETING_VERSION). MUST run as a postBuildScript, NOT
+    # postCompile: "Process Info.plist" runs during the resources phase (after
+    # postCompile) and rewrites CFBundleVersion back to $(CURRENT_PROJECT_VERSION),
+    # clobbering an earlier stamp — verified 2026-06-14 (the stamp logged the SHA
+    # but the final plist still read "1"). postBuild runs AFTER Process Info.plist
+    # and BEFORE code signing, so the stamp survives and the signature covers it.
+    # Resilient: if git is unavailable (CI source archive) or the plist isn't
+    # there, it logs a note and exits 0 — the build keeps CFBundleVersion ("1").
+    postBuildScripts:
+      - name: "Stamp build number with git short SHA"
+        basedOnDependencyAnalysis: false
+        script: |
+          GIT=$(command -v git || true)
+          if [ -z "$GIT" ]; then
+            echo "note: git not found — leaving CFBundleVersion as-is"
+            exit 0
+          fi
+          SHA=$("$GIT" -C "$SRCROOT" rev-parse --short HEAD 2>/dev/null || true)
+          if [ -z "$SHA" ]; then
+            echo "note: not a git checkout — leaving CFBundleVersion as-is"
+            exit 0
+          fi
+          if [ -n "$("$GIT" -C "$SRCROOT" status --porcelain 2>/dev/null)" ]; then
+            SHA="${SHA}+dirty"
+          fi
+          PLIST="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
+          if [ ! -f "$PLIST" ]; then
+            echo "note: built Info.plist not found at $PLIST — skipping SHA stamp"
+            exit 0
+          fi
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $SHA" "$PLIST"
+          echo "note: stamped CFBundleVersion = $SHA"
     dependencies:
       - package: CatchlightCore
         product: CatchlightCore

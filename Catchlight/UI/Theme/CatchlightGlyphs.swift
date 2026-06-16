@@ -98,10 +98,27 @@ private struct DeviceTopInsetKey: EnvironmentKey {
     static let defaultValue: CGFloat = 59
 }
 
+/// The window's BOTTOM safe-area inset (home-indicator zone), captured ONCE at
+/// the window root in CatchlightApp from the SAME GeometryReader as
+/// `deviceTopInset` (the app runs full-bleed via `.ignoresSafeArea(.container)`,
+/// so SwiftUI's own safe-area plumbing reports zero inside). Read by the bottom
+/// dock and the onboarding/paywall pill row so they rest ABOVE the home
+/// indicator rather than inside it (section 4 / D-041). Default ~34 matches the
+/// home-indicator inset on a notched/Dynamic-Island device so previews and any
+/// pre-capture frame are sensible.
+private struct DeviceBottomInsetKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 34
+}
+
 extension EnvironmentValues {
     var deviceTopInset: CGFloat {
         get { self[DeviceTopInsetKey.self] }
         set { self[DeviceTopInsetKey.self] = newValue }
+    }
+
+    var deviceBottomInset: CGFloat {
+        get { self[DeviceBottomInsetKey.self] }
+        set { self[DeviceBottomInsetKey.self] = newValue }
     }
 }
 

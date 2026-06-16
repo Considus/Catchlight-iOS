@@ -46,3 +46,11 @@ AuthKey_*.p8
 
 # Claude Code working files
 .claude/
+
+# 7.12 OS-floor verification harness — TEMPORARY, manual-only (run with
+# -only-testing: on an ERASED simulator; drives the Settings app for AX5).
+# Deliberately NOT committed: project.yml globs Tests/CatchlightUITests so it
+# still compiles for local 7.12 runs, but it must not enter the public repo or
+# the CI `xcodebuild test` scheme. Delete file + this rule after the 7.12 pass
+# is signed off (Decision D-024).
+Tests/CatchlightUITests/OSFloorTourUITests.swift

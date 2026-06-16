@@ -54,18 +54,83 @@ struct DailiesView: View {
         )
     }
 
+    /// Left edge of the Take TEXT column — the card's left edge (`spineX −
+    /// cardSpineInset`) plus the card's internal leading pad. The DAILIES heading and
+    /// the ghosted month markers align to this so they sit directly above the body
+    /// text (owner 2026-06-16; was `spineX + 22`, which floated them right of the text).
+    private var textColumnLeading: CGFloat {
+        spineX - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad
+    }
+
+    /// Reads the user's timeline-density choice live. The inter-card LazyVStack
+    /// spacing is the chosen clear gap MINUS the two 6pt row paddings each card
+    /// already carries (`.padding(.vertical, 6)`), so the visible card-to-card gap
+    /// equals `TakeSpacing.gap`.
+    @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey)
+    private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
+    private var takeSpacing: SettingsViewModel.TakeSpacing {
+        SettingsViewModel.TakeSpacing(rawValue: takeSpacingRaw) ?? .default
+    }
+    /// LazyVStack spacing + the Obie gap. `gap − 12` because each row adds 6pt top
+    /// and 6pt bottom of its own; the result is the extra space between cards.
+    private var interCardSpacing: CGFloat { max(0, takeSpacing.gap - 12) }
+
+    /// Timeline order (owner 2026-06-16). Default Oldest first: oldest at the top,
+    /// newer Takes accrue below. The Obie stays pinned above the list regardless.
+    @AppStorage(SettingsViewModel.TakeSort.defaultsKey)
+    private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
+    private var takeSort: SettingsViewModel.TakeSort {
+        SettingsViewModel.TakeSort(rawValue: takeSortRaw) ?? .default
+    }
+
     @State private var scrolling = false
     @State private var scrollHideWork: DispatchWorkItem?
+    /// The first row's top Y in the "dailies" space, published by the first row so
+    /// the spine starts exactly at the first Iris (handles the pinned-Obie vs
+    /// invisible-month-marker offset). `nil` until the first layout pass.
+    @State private var firstRowTop: CGFloat?
+
+    /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
+    /// MEASURED first-row top; before the first layout, fall back to the constant
+    /// estimate (no month marker). Row top → card top (+6, the Iris straddles the
+    /// top edge so its centre is there) → Iris top (−radius).
+    private var spineTopInset: CGFloat {
+        let radius = CatchlightLayout.circleDiameter / 2
+        if let t = firstRowTop, t.isFinite {
+            return max(0, t + 6 - radius)
+        }
+        return deviceTopInset + CatchlightLayout.headingClearance + 6 - radius
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.ckBackground.ignoresSafeArea()
 
-            // The spine: a full-height hairline behind the rows, at the circle centre.
+            // The spine: a hairline behind the rows, at the circle centre. It
+            // STARTS at the first Iris's top edge (HiFi §1 "the spine terminates at
+            // the first Take") rather than the screen top — a full-height line poked
+            // up into the gap below the DAILIES heading. First Iris centre = the
+            // timeline's top content pad (deviceTopInset + headingClearance) + the
+            // row's 6pt vertical pad; the top edge is one Iris radius higher. The
+            // bottom runs on toward the Add button, covered by the dock fade (HiFi).
             Rectangle()
-                .fill(Color.ckSpine)
+                // Owner 2026-06-16: the spine takes the dock buttons' ring colour
+                // (Ember @ 35% — `dockRing()` in BottomDockView) so the wire and the
+                // toolbar read as one family. (Was `ckSpine`, a fainter Catchlight/Ink
+                // tint; that token still serves onboarding + the conflict view.)
+                .fill(Color.ckAccent.opacity(0.35))
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
+                .padding(.top, spineTopInset)
+                // Terminate the spine at the TOP EDGE of the Add button's ring rather
+                // than running full-bleed under the dock (owner 2026-06-16: it was
+                // visible through the +'s hollow ring). The Add ring's top sits
+                // `dockBottomPadding + minTouchTarget` above the device bottom inset
+                // (BottomDockView lays the 44pt button `dockBottomPadding` above the
+                // home indicator), so the wire plugs into the top of the +.
+                .padding(.bottom, deviceBottomInset
+                         + CatchlightLayout.dockBottomPadding
+                         + CatchlightLayout.minTouchTarget)
                 .offset(x: spineX - CatchlightLayout.spineWidth / 2)
                 .accessibilityHidden(true)
 
@@ -125,6 +190,11 @@ struct DailiesView: View {
     /// The root-GeometryReader environment value is the safe source.
     @Environment(\.deviceTopInset) private var deviceTopInset
 
+    /// The device's BOTTOM safe-area inset (home-indicator zone), captured at the
+    /// window root (section 4 / D-041). Used to lift the timeline's last-row
+    /// dock clearance so the final Take still clears the now-raised dock.
+    @Environment(\.deviceBottomInset) private var deviceBottomInset
+
     /// The page title follows the activity: DAILIES · SEQUENCE · SEARCH.
     private var headingTitle: String {
         switch ui.dockMode {
@@ -140,14 +210,17 @@ struct DailiesView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(headingTitle)
-                    .font(CatchlightFont.display(size: 20, relativeTo: .title3))
+                    // ROMAN (upright) display face — section 3. The page heading
+                    // is Cormorant Garamond Light ROMAN, not the italic display
+                    // cut. Take body text stays italic via `display(size:)`.
+                    .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
                     .kerning(1.6)
                     .foregroundStyle(Color.ckTextPrimary)
                     .id(headingTitle)
                     .transition(.opacity)
                 Spacer()
             }
-            .padding(.leading, spineX + 22)
+            .padding(.leading, textColumnLeading)
             .padding(.top, deviceTopInset + 14)
             .padding(.bottom, 2)
             .background(Color.ckBackground)
@@ -396,13 +469,17 @@ struct DailiesView: View {
                 }
                 .frame(height: 0)
 
-                LazyVStack(alignment: .leading, spacing: 0) {
+                // Inter-card spacing is user-configurable (Compact/Standard/Comfort —
+                // owner 2026-06-16). The chosen `gap` minus the 12pt each row already
+                // carries gives the visible card-to-card distance, sized so a lower
+                // card's Iris (straddling its top edge) never overlaps the card above.
+                LazyVStack(alignment: .leading, spacing: interCardSpacing) {
                     // Pinned Obie — ALWAYS shown, even when it doesn't match
-                    // the active filter (dock redesign 2026-06-10).
+                    // the active filter (dock redesign 2026-06-10). The LazyVStack
+                    // spacing now provides the gap below it (was a fixed 18pt spacer).
                     if let obie = vm.obie {
                         row(for: obie, isFirst: true)
                             .id(obie.id)
-                        Color.clear.frame(height: 18)   // gap below the Obie
                     }
 
                     // Filter active but no non-Obie Take matches: quiet line in
@@ -418,15 +495,25 @@ struct DailiesView: View {
                     }
 
                     ForEach(Array(monthGroups.enumerated()), id: \.element.month) { groupIndex, group in
-                        // Ghosted month marker — appears only while scrolling.
-                        Text(group.month)
-                            .font(CatchlightFont.ui(.medium, size: 12, relativeTo: .caption))
-                            .foregroundStyle(Color.ckTextSecondary)
-                            .padding(.leading, spineX + 22)
-                            .padding(.vertical, 6)
-                            .opacity(scrolling ? 0.8 : 0)
-                            .animation(.easeInOut(duration: 0.25), value: scrolling)
-                            .accessibilityHidden(!scrolling)
+                        // Ghosted month marker — appears only while scrolling. The
+                        // FIRST group's marker is suppressed (owner 2026-06-16): it
+                        // reserved ~25pt of always-on height between the pinned Obie
+                        // and the first row, inflating that gap well past the chosen
+                        // Take spacing. Later groups keep their markers as section
+                        // breaks; the topmost month reads from the DAILIES heading.
+                        if groupIndex > 0 {
+                            Text(group.month)
+                                // .month — 11pt medium, 0.08em tracking (matches the
+                                // DAILIES heading kerning; D-042, was 12pt untracked).
+                                .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                                .kerning(0.88)
+                                .foregroundStyle(Color.ckTextSecondary)
+                                .padding(.leading, textColumnLeading)
+                                .padding(.vertical, 6)
+                                .opacity(scrolling ? 0.8 : 0)
+                                .animation(.easeInOut(duration: 0.25), value: scrolling)
+                                .accessibilityHidden(!scrolling)
+                        }
 
                         ForEach(Array(group.takes.enumerated()), id: \.element.id) { takeIndex, take in
                             // The very first row across all months (when there's no Obie)
@@ -437,8 +524,15 @@ struct DailiesView: View {
                         }
                     }
                 }
-                .padding(.top, 52)       // clears the pinned heading overlay at rest
-                .padding(.bottom, 120)   // clearance for the dock
+                // Section 4 / D-041 — inset-aware on BOTH edges (the app runs
+                // full-bleed, so these manual paddings are the only safe-area
+                // correction). Top: clear the pinned heading + its 12pt fade on
+                // large-inset devices (was a fixed 52 that ignored the inset, so
+                // the first Take tucked under the fade on iPhone 17 / iOS 26.5.1).
+                // Bottom: lift the last-row clearance by the home-indicator inset
+                // so it still clears the now-raised dock.
+                .padding(.top, deviceTopInset + CatchlightLayout.headingClearance)
+                .padding(.bottom, CatchlightLayout.dockClearance + deviceBottomInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 // FILTERING exit: tapping empty timeline background (not rows /
                 // Irises — they stay fully interactive and win hit-testing)
@@ -457,6 +551,7 @@ struct DailiesView: View {
             }
             .coordinateSpace(name: "dailies")
             .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
+            .onPreferenceChange(FirstRowTopKey.self) { firstRowTop = $0.isFinite ? $0 : nil }
             // `initial: true` (2026-06-10): when the Spotlight tap arrives from
             // another tab, this view is created with the target ALREADY set, so
             // a change-only observer never fired — no scroll, and the highlight
@@ -481,10 +576,13 @@ struct DailiesView: View {
     private func row(for take: Take, isFirst: Bool = false) -> some View {
         TakeRowView(
             take: take,
-            onTapCircle: {
+            onTapCircle: { irisCentre in
                 // Hint 2 is dismissed by tapping any Iris.
                 orientation.didTapIris()
-                ui.openPetalFan(for: take)
+                // Section 8 — bloom the fan in place at the tapped Iris (window
+                // coords match the full-screen overlay space). The .zero fallback
+                // (screen centre) only survives as a last resort.
+                ui.openPetalFan(for: take, origin: irisCentre)
             },
             onLongPressCircle: {
                 // Hint 4: arm the Obie introduction tooltip on the first long-press.
@@ -523,9 +621,26 @@ struct DailiesView: View {
                 .fill(Color.ckEmber.opacity(ui.spotlightTargetTakeID == take.id ? 0.18 : 0))
                 .animation(.easeInOut(duration: 0.4), value: ui.spotlightTargetTakeID)
         )
-        .padding(.leading, spineX - CatchlightLayout.circleDiameter / 2
-                 - (CatchlightLayout.minTouchTarget - CatchlightLayout.circleDiameter) / 2)
+        // The row's leading edge IS the card's leading edge — `cardSpineInset`
+        // left of the spine, so the card covers the spine and the Iris nests in its
+        // corner (TakeRowView offsets the Iris back onto the spine). Independent of
+        // the Iris diameter (was derived from circleDiameter, which moved the card
+        // when the Iris grew).
+        .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
         .padding(.trailing, 20)
+        .background(alignment: .top) {
+            // The first row publishes its top Y (shared "dailies" space) so the
+            // spine starts exactly at the first Iris — whether that's the pinned
+            // Obie or a row sitting under an invisible month marker.
+            if isFirst {
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: FirstRowTopKey.self,
+                        value: geo.frame(in: .named("dailies")).minY
+                    )
+                }
+            }
+        }
         .overlay(alignment: .topLeading) {
             if isFirst && orientation.showIrisHint {
                 OrientationTooltip(text: "Tap the Iris to shape this Take.", arrowEdge: .leading)
@@ -542,12 +657,19 @@ struct DailiesView: View {
     /// The filter the dock's current state describes (empty in RESTING).
     private var activeFilter: SequenceFilter { ui.activeTimelineFilter }
 
-    /// Non-Obie Takes narrowed through the live filter, newest-first order
-    /// preserved from the VM. The Obie is pinned separately and never filtered.
+    /// The non-Obie Takes in the user's chosen order. The VM hands them back
+    /// newest-first (deterministic, with an id tie-break); Oldest first is its exact
+    /// reverse, so the tie-break stays stable. The Obie is pinned separately.
+    private var orderedTakes: [Take] {
+        takeSort == .oldestFirst ? Array(vm.takes.reversed()) : vm.takes
+    }
+
+    /// `orderedTakes` narrowed through the live dock filter. The Obie is pinned
+    /// separately and never filtered.
     private var filteredTakes: [Take] {
         let filter = activeFilter
-        guard !filter.isEmpty else { return vm.takes }
-        return vm.takes.filter { filter.matches($0) }
+        guard !filter.isEmpty else { return orderedTakes }
+        return orderedTakes.filter { filter.matches($0) }
     }
 
     // MARK: - Month grouping
@@ -588,6 +710,16 @@ struct DailiesView: View {
 private struct ScrollOffsetKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
+/// The first timeline row's top Y (in the "dailies" space) — drives where the spine
+/// begins. Only the `isFirst` row publishes; `min` keeps the topmost if more than
+/// one ever reports during a transition. `.infinity` default ⇒ "not measured yet".
+private struct FirstRowTopKey: PreferenceKey {
+    static let defaultValue: CGFloat = .infinity
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = min(value, nextValue())
+    }
 }
 
 #Preview("Dailies — Night (populated)") {

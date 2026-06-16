@@ -98,6 +98,10 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
     // default size. Abandon exact dock alignment there and let the pills grow
     // full-width instead. At the default size and below, the grid is unchanged.
     @Environment(\.dynamicTypeSize) private var dynamicSize
+    /// Bottom safe-area inset — section 4 / D-041. The onboarding/paywall pill
+    /// row mirrors the resting dock's geometry, so it must lift by the same
+    /// home-indicator inset to line up with the dock at rest.
+    @Environment(\.deviceBottomInset) private var deviceBottomInset
 
     var body: some View {
         if dynamicSize > .large {
@@ -113,7 +117,7 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
             }
             .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
             .padding(.top, 10)
-            .padding(.bottom, 8)
+            .padding(.bottom, deviceBottomInset + 8)
         } else {
             GeometryReader { geo in
                 // slot-i button centre = slotW·(i+0.5); pill edges = centre ∓ d/2.
@@ -135,7 +139,7 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
             .frame(height: CatchlightLayout.minTouchTarget)
             .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
             .padding(.top, 10)
-            .padding(.bottom, 8)
+            .padding(.bottom, deviceBottomInset + 8)
         }
     }
 }
