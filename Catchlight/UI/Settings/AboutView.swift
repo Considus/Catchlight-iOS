@@ -26,6 +26,7 @@ struct AboutView: View {
                     headline
                     tagline
                     licences
+                    privacyPolicy
                     madeBy
                     Spacer(minLength: 0)
                 }
@@ -96,6 +97,33 @@ struct AboutView: View {
                 .fill(Color.ckSurface)
                 .daylightCardShadow()   // DS §4.1
         )
+    }
+
+    /// External link to the hosted privacy policy. Same URL as the paywall's legal
+    /// block (PaywallView). Styled to match the licences card above it.
+    private var privacyPolicy: some View {
+        Link(destination: URL(string: "https://catchlight.app/privacy")!) {
+            HStack(spacing: 12) {
+                Text("Privacy Policy")
+                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.ckAccent)
+                    .accessibilityHidden(true)
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.ckSurface)
+                    .daylightCardShadow()   // DS §4.1 — matches the licences card
+            )
+        }
+        .accessibilityLabel("Privacy Policy")
+        .accessibilityHint("Opens catchlight.app/privacy in your browser.")
     }
 
     private var madeBy: some View {
