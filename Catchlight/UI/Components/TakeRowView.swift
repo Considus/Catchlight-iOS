@@ -43,6 +43,20 @@ struct TakeRowView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
+    /// The user's "Preview" length (Single/Some/All) — how many body lines a
+    /// collapsed Take shows on the timeline. Independent of "View" density.
+    @AppStorage(SettingsViewModel.TakePreview.defaultsKey)
+    private var takePreviewRaw: String = SettingsViewModel.TakePreview.default.rawValue
+    private var takePreview: SettingsViewModel.TakePreview {
+        SettingsViewModel.TakePreview(rawValue: takePreviewRaw) ?? .default
+    }
+    /// Body line cap: the Preview choice, but never below 4 at accessibility text
+    /// sizes so a sentence is not cut mid-word (`nil` = unlimited / "All").
+    private var bodyLineLimit: Int? {
+        guard let base = takePreview.lineLimit else { return nil }
+        return dynamicSize.isAccessibilitySize ? max(base, 4) : base
+    }
+
     private var firstLine: String {
         let line = take.plainText
             .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
@@ -50,6 +64,14 @@ struct TakeRowView: View {
             .map(String.init) ?? ""
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         return trimmed.isEmpty ? "Untitled take" : trimmed
+    }
+
+    /// The full Take body shown on the card — the `lineLimit` (driven by the
+    /// "Preview" setting) decides how much is visible. `firstLine` is kept for the
+    /// VoiceOver label (which reads the title, then status, then reminder).
+    private var displayBody: String {
+        let text = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? "Untitled Take" : text
     }
 
     /// Composed VoiceOver label: text + status (+ progress) + reminder date.
@@ -181,15 +203,14 @@ struct TakeRowView: View {
     /// 24/14/14/14, Daylight shadow / Night tonal-only, variant borders).
     private var cardColumn: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(firstLine)
+            Text(displayBody)
                 // DM Sans 14 (.tt) — Take content is never the display face
                 // (DS §2.2 / D-042). Was Cormorant display 20 italic.
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
                 .foregroundStyle(textColor)
-                // Compact 2-line preview at default sizes; let the row grow
-                // up to 4 lines at accessibility text sizes so a Take's first
-                // sentence is never cut off mid-word.
-                .lineLimit(dynamicSize.isAccessibilitySize ? 4 : 2)
+                // Body length follows the "Preview" setting (Single 1 / Some 3 /
+                // All = unlimited), with a 4-line floor at accessibility text sizes.
+                .lineLimit(bodyLineLimit)
                 .multilineTextAlignment(.leading)
                 // A complete Task recedes by COLOUR only (`.ckTextComplete` via
                 // `textColor`), no strikethrough (owner 2026-06-16).
