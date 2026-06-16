@@ -11,9 +11,9 @@
 //
 //  Interaction (see BlockTextEditor for the UITextView plumbing):
 //    • Type prose in a text row; Return is a normal newline.
-//    • Focus-ring "Task" Mark ON → the cursor's text block is split on newlines
-//      into check items and focus drops into the first one (the user types
-//      immediately). OFF → check items join back into prose.
+//    • Focus-ring "Task" Mark ON → existing prose is kept as-is and ONE empty
+//      check item is added (the first task entry), with focus dropped into it so
+//      the user types immediately. OFF → check items join back into prose.
 //    • Return in a non-empty check row continues the list; Return in an EMPTY
 //      check row exits back to prose. Backspace on an empty row merges upward.
 //    • Tap a checkbox to tick; drag (the trailing handle) to reorder; swipe to
@@ -327,8 +327,9 @@ struct TakeEditView: View {
         draft.isNote = command.isNote
 
         if command.isTask && !draft.isTask {
-            // Turn ON: split the cursor's prose line(s) into items, drop focus in.
-            let firstItem = draft.convertToChecklist(splitting: focusedBlockID)
+            // Turn ON: keep existing prose, add one empty check item, drop focus in
+            // (owner 2026-06-17 — Task no longer eats the lines already written).
+            let firstItem = draft.convertToChecklist()
             focusedBlockID = firstItem ?? draft.checkItems.first?.id
         } else if !command.isTask && draft.isTask {
             draft.convertToProse()

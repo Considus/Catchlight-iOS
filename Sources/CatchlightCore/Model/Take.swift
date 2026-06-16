@@ -177,50 +177,17 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         if on { _ = convertToChecklist() } else { convertToProse() }
     }
 
-    /// Turn prose into check items. With a `splitting` block id (the text block
-    /// the cursor is in), only THAT block is split — each newline-separated line
-    /// becomes its own check item — leaving the rest of the document untouched
-    /// (so "milk\neggs\nbread" becomes three tickable items). With no id, every
-    /// prose block is split the same way; an empty Take gains one empty item.
-    /// Returns the id of the FIRST resulting check item so the editor can focus
-    /// it (drop the user straight into typing).
+    /// Begin a Task WITHOUT consuming existing prose (owner 2026-06-17). Picking
+    /// the Task Mark no longer turns the lines you already wrote into checkboxes:
+    /// any existing content is left exactly as prose, and ONE empty check item is
+    /// added so the next line you type becomes the first task entry. An empty Take
+    /// becomes a one-item checklist immediately (so the first entry has a checkbox).
+    /// Returns the new item's id so the editor can drop focus straight into it.
     @discardableResult
-    public mutating func convertToChecklist(splitting blockID: UUID? = nil) -> UUID? {
-        func items(from text: String) -> [TakeBlock] {
-            // Split on newlines so each line becomes an item; an empty block
-            // still yields one (empty) item so the list is never zero-length.
-            let lines = text.isEmpty ? [""] : text.components(separatedBy: "\n")
-            return lines.map { .check(ChecklistItem(text: $0)) }
-        }
-
-        if blocks.isEmpty {
-            let seeded = items(from: "")
-            blocks = seeded
-            return seeded.first?.id
-        }
-
-        if let blockID, let index = blocks.firstIndex(where: { $0.id == blockID }),
-           case .text(let textBlock) = blocks[index] {
-            let replacement = items(from: textBlock.text)
-            blocks.replaceSubrange(index...index, with: replacement)
-            return replacement.first?.id
-        }
-
-        // No (usable) cursor target: split every prose block in place.
-        var firstNewID: UUID?
-        var rebuilt: [TakeBlock] = []
-        for block in blocks {
-            if case .text(let textBlock) = block {
-                let replacement = items(from: textBlock.text)
-                if firstNewID == nil { firstNewID = replacement.first?.id }
-                rebuilt.append(contentsOf: replacement)
-            } else {
-                if firstNewID == nil { firstNewID = block.id }
-                rebuilt.append(block)
-            }
-        }
-        blocks = rebuilt
-        return firstNewID
+    public mutating func convertToChecklist() -> UUID? {
+        let item = ChecklistItem(text: "")
+        blocks.append(.check(item))   // append works for both empty and content-ful Takes
+        return item.id
     }
 
     /// Turn the Take back into prose: each maximal run of consecutive check

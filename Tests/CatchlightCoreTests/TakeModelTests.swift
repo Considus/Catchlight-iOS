@@ -98,11 +98,15 @@ final class TakeModelTests: XCTestCase {
 
     // MARK: - Block editing (D-035 / Phase 2)
 
-    func testSetTask_promotesProseToCheckItems() {
+    func testSetTask_keepsProseAndAddsEmptyEntry() {
+        // Owner 2026-06-17: Task no longer eats existing prose. The line stays as
+        // prose; one empty check item is added (the first task entry).
         var take = Take(blocks: [.textLine("buy milk")])
         take.setTask(true)
         XCTAssertTrue(take.isTask)
-        XCTAssertEqual(take.checkItems.map(\.text), ["buy milk"], "prose text carries into the item")
+        XCTAssertEqual(take.plainText.split(separator: "\n").first.map(String.init), "buy milk",
+                       "existing prose is preserved, not converted")
+        XCTAssertEqual(take.checkItems.map(\.text), [""], "exactly one new empty entry is added")
     }
 
     func testSetTask_onEmptyTakeAddsOneItem() {
@@ -119,21 +123,22 @@ final class TakeModelTests: XCTestCase {
         XCTAssertEqual(take.plainText, "buy milk", "item text is preserved as prose")
     }
 
-    func testConvertToChecklist_splittingTargetBlock_splitsOnNewlines() {
-        // The Focus-ring Task ON path: only the cursor's text block is split,
-        // each line becoming its own check item.
+    func testConvertToChecklist_keepsProseAndAppendsOneEmptyEntry() {
+        // Owner 2026-06-17: prose is preserved verbatim; ONE empty check item is
+        // appended and its id returned so the editor can focus it.
         let prose = TakeBlock.text(TextBlock(text: "milk\neggs\nbread"))
         var take = Take(blocks: [.textLine("header"), prose])
-        let firstID = take.convertToChecklist(splitting: prose.id)
-        XCTAssertEqual(take.checkItems.map(\.text), ["milk", "eggs", "bread"])
-        XCTAssertEqual(take.blocks.first?.text, "header", "other prose is untouched")
-        XCTAssertEqual(firstID, take.checkItems.first?.id, "returns the first new item to focus")
+        let newID = take.convertToChecklist()
+        XCTAssertEqual(take.blocks.first?.text, "header", "existing prose is untouched")
+        XCTAssertEqual(take.checkItems.map(\.text), [""], "exactly one new empty entry")
+        XCTAssertEqual(newID, take.checkItems.first?.id, "returns the new item to focus")
     }
 
-    func testConvertToChecklist_noTarget_splitsEveryProseBlock() {
-        var take = Take(blocks: [.textLine("a\nb"), .textLine("c")])
-        take.convertToChecklist()
-        XCTAssertEqual(take.checkItems.map(\.text), ["a", "b", "c"])
+    func testConvertToChecklist_onEmptyTakeCreatesOneEntry() {
+        var take = Take()
+        let newID = take.convertToChecklist()
+        XCTAssertEqual(take.checkItems.count, 1)
+        XCTAssertEqual(newID, take.checkItems.first?.id)
     }
 
     func testConvertToProse_joinsCheckRunsIntoTextBlocks() {

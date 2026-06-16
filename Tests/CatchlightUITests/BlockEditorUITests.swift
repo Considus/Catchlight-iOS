@@ -105,11 +105,12 @@ final class BlockEditorUITests: XCTestCase {
         app.buttons.matching(identifier: "take-edit-checkbox")
     }
 
-    // MARK: - Focus ring builds a checklist (line-split)
+    // MARK: - Focus ring begins a checklist without eating prose
 
-    /// Type three lines of prose, then Focus-ring → Task ON. The cursor's text
-    /// block splits on newlines into three tickable items (rule 2).
-    func testFocusRing_makeTask_splitsProseLinesIntoItems() throws {
+    /// Type prose, then Focus-ring → Task ON. Owner 2026-06-17: the existing prose
+    /// is preserved as a text row, and exactly ONE empty check item is added (the
+    /// first task entry) — Task no longer converts the lines already written.
+    func testFocusRing_makeTask_keepsProseAddsEmptyEntry() throws {
         let app = launchAppForUITesting()
         let body = openNewEditor(app)
         body.tap()
@@ -118,10 +119,10 @@ final class BlockEditorUITests: XCTestCase {
         try toggleTaskOnViaFocusRing(app)
         try requireChecklistRendered(app)
 
-        XCTAssertTrue(waitForCount(checkFields(app), 3),
-                      "Three prose lines should become three check items; got \(checkFields(app).count)")
-        XCTAssertFalse(app.textViews["take-edit-body"].exists,
-                       "The prose row should have become check rows")
+        XCTAssertTrue(waitForCount(checkFields(app), 1),
+                      "Task ON adds exactly one empty entry; got \(checkFields(app).count)")
+        XCTAssertTrue(app.textViews["take-edit-body"].exists,
+                      "Existing prose should be preserved as a text row, not converted")
     }
 
     // MARK: - Return continues / exits the list
