@@ -273,7 +273,7 @@ struct PaywallView: View {
                      destination: URL(string: "https://catchlight.app/privacy")!)
                 Spacer()
                 Link("Terms of Service",
-                     destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stgvs/")!)
+                     destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
             }
             .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .footnote))
             .foregroundStyle(Color.ckTextObie)

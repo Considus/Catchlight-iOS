@@ -63,17 +63,19 @@ struct AboutView: View {
         .padding(.top, 12)
     }
 
-    /// Tagline with the version directly beneath it, both left-justified (owner
-    /// 2026-06-16 — version moved out from under the wordmark to under the tagline).
+    /// Tagline with the version directly beneath it, both CENTRED under the brand
+    /// mark (owner 2026-06-16 — revised from left-justified).
     private var taglineBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(spacing: 6) {
             Text("Privacy-first notes and reminders.")
                 .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
                 .foregroundStyle(Color.ckTextPrimary)
+                .multilineTextAlignment(.center)
             Text(Self.versionString)
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)
         }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private var licences: some View {
@@ -109,7 +111,7 @@ struct AboutView: View {
         VStack(spacing: 0) {
             linkRow("Privacy Policy", url: "https://catchlight.app/privacy", opensMail: false)
             linkDivider
-            linkRow("Terms of Service", url: "https://www.apple.com/legal/internet-services/itunes/dev/stgvs/", opensMail: false)
+            linkRow("Terms of Service", url: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/", opensMail: false)
             linkDivider
             linkRow("Support", url: "mailto:support@catchlight.app", opensMail: true)
             linkDivider
