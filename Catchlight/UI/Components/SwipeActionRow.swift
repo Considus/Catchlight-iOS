@@ -62,7 +62,7 @@ struct SwipeActionRow<Content: View>: View {
     @ViewBuilder var content: (CGFloat) -> Content
 
     // MARK: Tunables (device review may nudge these)
-    private let actionWidth: CGFloat = 84            // card slide that settles "open"
+    private let actionWidth: CGFloat = 42            // card slide that settles "open" (owner 2026-06-16: halved 84→42 for a smaller button)
     private let revealSnapFraction: CGFloat = 0.55   // settle open past this × actionWidth
     private let commitFraction: CGFloat = 0.5        // full-swipe commit past this × row width
     /// The fill fades 0→1 over the first `fadeInDistance` pt of swipe, so the card's
@@ -91,7 +91,16 @@ struct SwipeActionRow<Content: View>: View {
                     // and commit (the bug was a full-width catcher swallowing them).
                     if offset != 0 { closeCatcher }
                 }
-                .gesture(dragGesture)
+                // UIKit-bridged pan, NOT a SwiftUI DragGesture (owner bug 2026-06-16).
+                // A SwiftUI gesture (even `.simultaneousGesture`) only coordinates with
+                // OTHER SwiftUI gestures — never the ScrollView's own UIKit pan. So once
+                // the swipe claimed the touch, a mid-stroke switch to vertical couldn't
+                // reach the scroll and the page froze until you lifted. This recognizer's
+                // delegate fixes both ends: it only BEGINS on a horizontal-led pan (so
+                // vertical scrolls are never claimed) and returns
+                // `shouldRecognizeSimultaneouslyWith = true` (so the scroll's pan keeps
+                // tracking and vertical motion scrolls even after a partial swipe).
+                .gesture(HorizontalSwipePan(onChange: applySwipe, onEnd: endSwipe))
         }
         .onChange(of: openRowID) { _, newID in
             if newID != id, offset != 0 { close() }
@@ -160,32 +169,30 @@ struct SwipeActionRow<Content: View>: View {
 
     // MARK: Gesture
 
-    private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 14)
-            .onChanged { value in
-                // Horizontal-dominant only — vertical-led drags are ignored so the
-                // ScrollView keeps scrolling. (PRIMARY device-review risk: if the
-                // vertical scroll ever feels "grabbed," switch `.gesture` →
-                // `.simultaneousGesture` or raise the dominance ratio here.)
-                guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                offset = clamp(restOffset + value.translation.width)
-                if offset != 0, openRowID != id { openRowID = id }
-            }
-            .onEnded { _ in
-                let dx = offset
-                let commitDistance = max(rowWidth * commitFraction, actionWidth * 1.6)
-                if trailing != nil, dx <= -commitDistance {
-                    commit(trailing!)
-                } else if leading != nil, dx >= commitDistance {
-                    commit(leading!)
-                } else if trailing != nil, dx <= -(actionWidth * revealSnapFraction) {
-                    settle(to: -actionWidth)
-                } else if leading != nil, dx >= actionWidth * revealSnapFraction {
-                    settle(to: actionWidth)
-                } else {
-                    close()
-                }
-            }
+    /// Live swipe — `tx` is the recognizer's cumulative horizontal translation. The
+    /// recognizer only fires this for horizontal-led pans (its delegate gates the
+    /// start), so no vertical guard is needed here; vertical motion is left to the
+    /// ScrollView, which tracks simultaneously.
+    private func applySwipe(_ tx: CGFloat) {
+        offset = clamp(restOffset + tx)
+        if offset != 0, openRowID != id { openRowID = id }
+    }
+
+    /// Release — full-swipe commits, a shorter swipe settles open, otherwise closes.
+    private func endSwipe(_ tx: CGFloat) {
+        let dx = offset
+        let commitDistance = max(rowWidth * commitFraction, actionWidth * 1.6)
+        if trailing != nil, dx <= -commitDistance {
+            commit(trailing!)
+        } else if leading != nil, dx >= commitDistance {
+            commit(leading!)
+        } else if trailing != nil, dx <= -(actionWidth * revealSnapFraction) {
+            settle(to: -actionWidth)
+        } else if leading != nil, dx >= actionWidth * revealSnapFraction {
+            settle(to: actionWidth)
+        } else {
+            close()
+        }
     }
 
     /// Clamp the live offset to the available side, rubber-banding past the rest
@@ -235,6 +242,61 @@ struct SwipeActionRow<Content: View>: View {
             // Non-destructive (toggle done) — the row stays; perform and close.
             action.perform()
             close()
+        }
+    }
+}
+
+// MARK: - UIKit-bridged horizontal swipe pan
+
+/// A horizontal swipe pan bridged from UIKit (iOS 18 `UIGestureRecognizerRepresentable`)
+/// so its delegate can coordinate with the enclosing ScrollView's OWN pan recognizer —
+/// something a SwiftUI gesture cannot do. The delegate:
+///   • only lets the pan BEGIN when the stroke is horizontal-led, so vertical scrolls
+///     are never claimed; and
+///   • allows simultaneous recognition with every other recognizer (the scroll's pan,
+///     the Iris's tap/long-press), so the scroll keeps tracking the whole touch and
+///     vertical motion scrolls even after a partial swipe — without lifting the finger.
+/// Taps/long-presses are unaffected: a pan only begins on movement.
+struct HorizontalSwipePan: UIGestureRecognizerRepresentable {
+    /// Cumulative horizontal translation while the swipe is active.
+    var onChange: (CGFloat) -> Void
+    /// Final horizontal translation on release / cancel.
+    var onEnd: (CGFloat) -> Void
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+
+    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+        let pan = UIPanGestureRecognizer()
+        pan.delegate = context.coordinator
+        return pan
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context: Context) {
+        let tx = recognizer.translation(in: recognizer.view).x
+        switch recognizer.state {
+        case .changed:
+            onChange(tx)
+        case .ended, .cancelled, .failed:
+            onEnd(tx)
+        default:
+            break
+        }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        // Begin only for horizontal-led pans → vertical scrolls win outright.
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+            let v = pan.velocity(in: pan.view)
+            return abs(v.x) > abs(v.y)
+        }
+
+        // Coexist with the ScrollView's pan (and the Iris recognizers): returning true
+        // from our delegate is enough to guarantee simultaneous recognition, so the
+        // scroll never gets grabbed mid-stroke.
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            true
         }
     }
 }
