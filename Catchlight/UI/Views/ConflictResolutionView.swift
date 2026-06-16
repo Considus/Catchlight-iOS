@@ -91,7 +91,7 @@ struct ConflictResolutionView: View {
     }
 
     private var caption: some View {
-        Text("Both devices edited these takes. Choose which version to keep.")
+        Text("Both devices edited these Takes. Choose which version to keep.")
             .font(CatchlightFont.ui(.light, size: 14, relativeTo: .subheadline))
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
@@ -147,7 +147,7 @@ struct ConflictResolutionView: View {
                               selected: Bool,
                               tap: @escaping () -> Void) -> some View {
         let body = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let displayBody = body.isEmpty ? "Untitled take" : body
+        let displayBody = body.isEmpty ? "Untitled Take" : body
         return Button(action: tap) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
