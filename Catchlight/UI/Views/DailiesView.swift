@@ -85,6 +85,9 @@ struct DailiesView: View {
 
     @State private var scrolling = false
     @State private var scrollHideWork: DispatchWorkItem?
+    /// The row currently showing its swipe actions (Delete / Mark done), if any.
+    /// Shared across rows so opening one closes the rest (`SwipeActionRow`).
+    @State private var openSwipeRowID: UUID?
     /// The first row's top Y in the "dailies" space, published by the first row so
     /// the spine starts exactly at the first Iris (handles the pinned-Obie vs
     /// invisible-month-marker offset). `nil` until the first layout pass.
@@ -574,6 +577,74 @@ struct DailiesView: View {
     }
 
     private func row(for take: Take, isFirst: Bool = false) -> some View {
+        // Swipe actions (2026-06-16): swipe LEFT → Delete (all rows), swipe RIGHT →
+        // Mark done (Tasks only — `complete` has no meaning on a plain Note). The
+        // same mutations stay on the long-press context menu as the VoiceOver /
+        // fallback path; this is the discoverable, iOS-native promotion of them.
+        // The reveal sits INSIDE the row band, so this wraps before the leading/
+        // trailing padding that positions the band on the spine.
+        SwipeActionRow(
+            id: take.id,
+            leading: take.isTask
+                ? SwipeAction(
+                    title: take.isComplete ? "Not done" : "Done",
+                    systemImage: take.isComplete ? "arrow.uturn.left" : "checkmark",
+                    tint: .ckEmber,            // Task accent — owner to confirm on device
+                    style: .standard,
+                    perform: {
+                        guard app.ensureEntitled() else { return }
+                        vm.toggleComplete(take)
+                    }
+                )
+                : nil,
+            trailing: SwipeAction(
+                title: "Delete",
+                systemImage: "trash",
+                tint: .ckRuby,                 // HiFi alert red — owner to confirm on device
+                style: .destructive,
+                perform: {
+                    guard app.ensureEntitled() else { return }
+                    vm.delete(take)
+                }
+            ),
+            openRowID: $openSwipeRowID
+        ) {
+            rowContent(for: take, isFirst: isFirst)
+        }
+        // The row's leading edge IS the card's leading edge — `cardSpineInset`
+        // left of the spine, so the card covers the spine and the Iris nests in its
+        // corner (TakeRowView offsets the Iris back onto the spine). Independent of
+        // the Iris diameter (was derived from circleDiameter, which moved the card
+        // when the Iris grew).
+        .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
+        .padding(.trailing, 20)
+        .background(alignment: .top) {
+            // The first row publishes its top Y (shared "dailies" space) so the
+            // spine starts exactly at the first Iris — whether that's the pinned
+            // Obie or a row sitting under an invisible month marker.
+            if isFirst {
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: FirstRowTopKey.self,
+                        value: geo.frame(in: .named("dailies")).minY
+                    )
+                }
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            if isFirst && orientation.showIrisHint {
+                OrientationTooltip(text: "Tap the Iris to shape this Take.", arrowEdge: .leading)
+                    .fixedSize()
+                    .offset(x: spineX + CatchlightLayout.circleDiameter, y: -4)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    /// The row's visual content (Iris + card), independent of its swipe wrapper and
+    /// spine placement. Lives inside `SwipeActionRow` so the whole row slides as one.
+    private func rowContent(for take: Take, isFirst: Bool = false) -> some View {
         TakeRowView(
             take: take,
             onTapCircle: { irisCentre in
@@ -621,35 +692,6 @@ struct DailiesView: View {
                 .fill(Color.ckEmber.opacity(ui.spotlightTargetTakeID == take.id ? 0.18 : 0))
                 .animation(.easeInOut(duration: 0.4), value: ui.spotlightTargetTakeID)
         )
-        // The row's leading edge IS the card's leading edge — `cardSpineInset`
-        // left of the spine, so the card covers the spine and the Iris nests in its
-        // corner (TakeRowView offsets the Iris back onto the spine). Independent of
-        // the Iris diameter (was derived from circleDiameter, which moved the card
-        // when the Iris grew).
-        .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
-        .padding(.trailing, 20)
-        .background(alignment: .top) {
-            // The first row publishes its top Y (shared "dailies" space) so the
-            // spine starts exactly at the first Iris — whether that's the pinned
-            // Obie or a row sitting under an invisible month marker.
-            if isFirst {
-                GeometryReader { geo in
-                    Color.clear.preference(
-                        key: FirstRowTopKey.self,
-                        value: geo.frame(in: .named("dailies")).minY
-                    )
-                }
-            }
-        }
-        .overlay(alignment: .topLeading) {
-            if isFirst && orientation.showIrisHint {
-                OrientationTooltip(text: "Tap the Iris to shape this Take.", arrowEdge: .leading)
-                    .fixedSize()
-                    .offset(x: spineX + CatchlightLayout.circleDiameter, y: -4)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
-                    .allowsHitTesting(false)
-            }
-        }
     }
 
     // MARK: - Live filter (dock redesign 2026-06-10)
