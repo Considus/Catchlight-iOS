@@ -207,6 +207,32 @@ struct SettingsView: View {
             .frame(height: 52)
             .listRowBackground(Color.ckSurface)
 
+            // Take preview length — how much of a collapsed Take's body shows on the
+            // timeline (owner 2026-06-16). Independent of "View" density; the reminder
+            // time label always shows regardless. Ordered before Order (owner: Mode,
+            // View, Preview, Order, Scenes).
+            HStack(spacing: 14) {
+                Image(systemName: "text.alignleft")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("Preview")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("Preview", selection: takePreviewBinding) {
+                    ForEach(SettingsViewModel.TakePreview.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 220)
+                .accessibilityLabel("Take preview length")
+            }
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+
             // Timeline order — which end of time sits at the top (owner 2026-06-16).
             HStack(spacing: 14) {
                 Image(systemName: "arrow.up.arrow.down")
@@ -230,33 +256,8 @@ struct SettingsView: View {
             .frame(height: 52)
             .listRowBackground(Color.ckSurface)
 
-            // Take preview length — how much of a collapsed Take's body shows on the
-            // timeline (owner 2026-06-16). Independent of "View" density; the reminder
-            // time label always shows regardless.
-            HStack(spacing: 14) {
-                Image(systemName: "text.alignleft")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAccent)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text("Preview")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
-                Picker("Preview", selection: takePreviewBinding) {
-                    ForEach(SettingsViewModel.TakePreview.allCases) { option in
-                        Text(option.label).tag(option)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 220)
-                .accessibilityLabel("Take preview length")
-            }
-            .frame(height: 52)
-            .listRowBackground(Color.ckSurface)
-
             SettingsRow(icon: "paintpalette",
-                        label: "Themes",
+                        label: "Scenes",
                         disabled: true) {
                 SettingsDetailLabel(text: "Coming soon")
             }
@@ -264,7 +265,7 @@ struct SettingsView: View {
         } header: {
             sectionHeader("Appearance")
         } footer: {
-            Text("Spacing between Takes, and whether the oldest or newest Take sits at the top. The Obie always stays pinned at the top.")
+            Text("How much of each Take previews, the spacing between Takes, and whether the oldest or newest sits at the top. The Obie always stays pinned at the top.")
                 .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                 .foregroundStyle(Color.ckTextSecondary)
         }
