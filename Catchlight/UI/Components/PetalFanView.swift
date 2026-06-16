@@ -36,8 +36,12 @@
 //  (readable above cards), 1.5pt Ember@35% ring, no shadow, Ember glyphs at
 //  the light weight; the Obie petal draws the ring+specular glyph in
 //  ckTextObie. Active petals reverse like the dock toggles (Ember fill +
-//  background glyph). The veil is ckDim (background @90%, no blur) — the
-//  screens beneath stay full-opacity.
+//  background glyph). The veil is ckDim (background @90%, no blur): it recedes
+//  everything beneath it, then the TAPPED Take's card is lifted back LIT above
+//  the veil (owner 2026-06-16) so only that Take, its Iris (the rotating hub),
+//  and the Focus-ring stay readable while the rest of the timeline + chrome dim
+//  away (`showsFocusCard` / `TakeCardSurface`). From the editor footer there is
+//  no spotlight card — the editor is the context there.
 //
 //  Petal taps toggle the working selection; tapping the veil COMMITS and
 //  closes (unchanged semantics — Note remains the floor).
@@ -50,6 +54,14 @@ struct PetalFanView: View {
     let take: Take
     /// Screen-space point of the hub (centre of the tapped circle).
     let hubCentre: CGPoint
+    /// Full overlay width (screen width) — used to reconstruct the tapped Take's
+    /// card frame so a LIT copy can be lifted above the dim veil. See `focusCard`.
+    var containerWidth: CGFloat = 0
+    /// Whether to lift the tapped Take's card above the veil (owner 2026-06-16).
+    /// True when the fan blooms from a timeline Iris (`hubCentre` is a real row);
+    /// false from the editor footer (origin = screen centre — the editor IS the
+    /// context there, so no card to spotlight).
+    var showsFocusCard: Bool = false
     let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ isObie: Bool) -> Void
     let onDismiss: () -> Void
 
@@ -70,10 +82,14 @@ struct PetalFanView: View {
 
     init(take: Take,
          hubCentre: CGPoint,
+         containerWidth: CGFloat = 0,
+         showsFocusCard: Bool = false,
          onCommit: @escaping (Bool, Bool, Bool, Bool) -> Void,
          onDismiss: @escaping () -> Void) {
         self.take = take
         self.hubCentre = hubCentre
+        self.containerWidth = containerWidth
+        self.showsFocusCard = showsFocusCard
         self.onCommit = onCommit
         self.onDismiss = onDismiss
         _isNote = State(initialValue: take.isNote)
@@ -242,6 +258,20 @@ struct PetalFanView: View {
         return true
     }
 
+    // MARK: - Focus card geometry
+    //
+    // Reconstructs the tapped row's card frame from `hubCentre` (the Iris centre in
+    // overlay/window space) using the same layout constants DailiesView lays the row
+    // out with, so the lit copy lands exactly over the real (now-dimmed) card.
+
+    /// Card leading edge: the Iris centre is `cardSpineInset` right of it (the Iris
+    /// nests into the card's top-left corner, on the spine).
+    private var focusCardLeading: CGFloat { hubCentre.x - CatchlightLayout.cardSpineInset }
+    /// Card top edge: the Iris straddles it, so its centre sits exactly there.
+    private var focusCardTop: CGFloat { hubCentre.y }
+    /// Card width: from the leading edge out to the row's 20pt trailing margin.
+    private var focusCardWidth: CGFloat { containerWidth - 20 - focusCardLeading }
+
     // MARK: - Body
 
     var body: some View {
@@ -259,6 +289,25 @@ struct PetalFanView: View {
                     .accessibilityLabel("Save and close")
                     .accessibilityHint("Double-tap to apply your selection and close.")
                     .accessibilityAddTraits(.isButton)
+
+                // The tapped Take, lifted LIT above the veil (owner 2026-06-16). The
+                // veil dims everything; this restores the one Take the fan acts on so
+                // it stays clearly readable while its Iris (the hub below) and the
+                // Focus-ring sit on top. A pure-visual copy of the real row's card —
+                // non-interactive, so a tap here falls through to the veil (commit &
+                // close), exactly like tapping any other dimmed area. Positioned from
+                // `hubCentre`: the Iris centre sits on the card's top edge and is
+                // `cardSpineInset` right of the card's leading edge, and the card runs
+                // to the 20pt trailing margin — the same geometry DailiesView lays the
+                // row out with. Drawn BEFORE the petals so they still pass above it.
+                if showsFocusCard, focusCardWidth > 0 {
+                    TakeCardSurface(take: take)
+                        .frame(width: focusCardWidth, alignment: .leading)
+                        .offset(x: focusCardLeading, y: focusCardTop)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
 
                 ZStack {
                     ForEach(PetalKind.allCases.reversed(), id: \.rawValue) { kind in
