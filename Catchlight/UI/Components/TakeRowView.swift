@@ -27,7 +27,7 @@ struct TakeRowView: View {
     var onLongPressCircle: () -> Void = {}
     var onTapText: () -> Void = {}
     /// Optional row actions (2026-06-10): when supplied, a context menu on the
-    /// TEXT column offers "Mark as done" (Tasks only) and "Delete take". The
+    /// TEXT column offers "Mark as done" (Tasks only) and "Delete Take". The
     /// menu is deliberately NOT attached to the whole row — a row-level context
     /// menu's long-press recognizer preempts the circle's long-press (Obie
     /// designation). VoiceOver gets the same actions as named accessibility
@@ -63,7 +63,7 @@ struct TakeRowView: View {
             .first
             .map(String.init) ?? ""
         let trimmed = line.trimmingCharacters(in: .whitespaces)
-        return trimmed.isEmpty ? "Untitled take" : trimmed
+        return trimmed.isEmpty ? "Untitled Take" : trimmed
     }
 
     /// The full Take body shown on the card — the `lineLimit` (driven by the
@@ -259,7 +259,7 @@ struct TakeRowView: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("take-row")
         .accessibilityLabel(rowAccessibilityLabel)
-        .accessibilityHint("Double-tap to edit this take.")
+        .accessibilityHint("Double-tap to edit this Take.")
         .accessibilityActions { rowAccessibilityActions }
     }
 
@@ -292,7 +292,7 @@ struct TakeRowView: View {
             Button(role: .destructive) {
                 onDelete()
             } label: {
-                Label("Delete take", systemImage: "trash")
+                Label("Delete Take", systemImage: "trash")
             }
         }
     }
@@ -303,7 +303,7 @@ struct TakeRowView: View {
             Button(take.isComplete ? "Mark as not done" : "Mark as done") { onToggleComplete() }
         }
         if let onDelete {
-            Button("Delete take") { onDelete() }
+            Button("Delete Take") { onDelete() }
         }
     }
 }

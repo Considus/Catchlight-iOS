@@ -31,7 +31,7 @@
           },
           "localizations" : [
             {
-              "description" : "Unlimited Takes, Notes, Reminders, and encrypted cloud sync.",
+              "description" : "Unlimited Takes, tasks, reminders, and encrypted cloud sync.",
               "displayName" : "Catchlight Annual",
               "locale" : "en_GB"
             }
