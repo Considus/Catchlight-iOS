@@ -258,6 +258,19 @@ struct PetalFanView: View {
         return true
     }
 
+    /// The dim veil's opacity. It fades IN on open (via the overlay's `.transition`
+    /// + `fanFade`), but on CLOSE the petals' retract held the veil fully solid and
+    /// it then blinked away — owner 2026-06-17 wanted the veil to fade OUT the same
+    /// way it fades in. So during `.closing` we ramp it down on the close's own
+    /// clock, reaching 0 as the retract completes, for a symmetric dissolve. Opening
+    /// / open stay fully dimmed; Reduce Motion uses the overlay transition as before.
+    private func veilOpacity(now: Date) -> Double {
+        guard case .closing(let start, _) = phase else { return 1 }
+        let dur = Choreo.total / Choreo.closeSpeed
+        let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
+        return 1 - Self.easeInOutCubic(p)
+    }
+
     // MARK: - Focus card geometry
     //
     // Reconstructs the tapped row's card frame from `hubCentre` (the Iris centre in
@@ -282,6 +295,7 @@ struct PetalFanView: View {
                 // (Petal taps toggle but never close; the veil tap is the
                 // commit gesture — see the 4.5/7.4 audit note in history.)
                 Color.ckDim
+                    .opacity(veilOpacity(now: now))
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture { retractAndDismiss(commit: true) }
@@ -305,6 +319,10 @@ struct PetalFanView: View {
                         .frame(width: focusCardWidth, alignment: .leading)
                         .offset(x: focusCardLeading, y: focusCardTop)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        // Fades out with the veil on close (owner 2026-06-17) so the
+                        // lit Take resolves back into the brightening timeline rather
+                        // than blinking off when the overlay is removed.
+                        .opacity(veilOpacity(now: now))
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }
