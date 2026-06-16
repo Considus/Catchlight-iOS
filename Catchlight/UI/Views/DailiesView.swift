@@ -92,6 +92,9 @@ struct DailiesView: View {
     /// the spine starts exactly at the first Iris (handles the pinned-Obie vs
     /// invisible-month-marker offset). `nil` until the first layout pass.
     @State private var firstRowTop: CGFloat?
+    /// Measured height of the pinned Obie zone (the Obie row + its 12pt fade), used
+    /// to inset the scrolling Takes below it. 0 ⇒ no Obie / not yet measured.
+    @State private var pinnedObieZoneHeight: CGFloat = 0
 
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
@@ -99,10 +102,27 @@ struct DailiesView: View {
     /// top edge so its centre is there) → Iris top (−radius).
     private var spineTopInset: CGFloat {
         let radius = CatchlightLayout.circleDiameter / 2
+        // With an Obie, it's PINNED at the standard first-item position
+        // (`deviceTopInset + headingClearance`), so the wire begins right there — the
+        // same formula as the no-row fallback. Without one, it starts at the first
+        // scrolling row.
+        if vm.obie != nil {
+            return deviceTopInset + CatchlightLayout.headingClearance + 6 - radius
+        }
         if let t = firstRowTop, t.isFinite {
             return max(0, t + 6 - radius)
         }
         return deviceTopInset + CatchlightLayout.headingClearance + 6 - radius
+    }
+
+    /// The scroll's top inset. Without an Obie it's the plain heading clearance.
+    /// With one, it clears the pinned Obie row AND leaves the same visible gap the
+    /// "View" setting puts between two Takes — each card's 6pt top/bottom padding
+    /// already accounts for ~12pt of that, so we add the remainder.
+    private var timelineTopInset: CGFloat {
+        let base = deviceTopInset + CatchlightLayout.headingClearance
+        guard vm.obie != nil, pinnedObieZoneHeight > 0 else { return base }
+        return base + pinnedObieZoneHeight + max(0, takeSpacing.gap - 12)
     }
 
     var body: some View {
@@ -154,6 +174,11 @@ struct DailiesView: View {
             // dodges the status bar itself via deviceTopInset. Takes scroll
             // under the solid block and dissolve beneath the 12pt fade.
             heading
+
+            // The pinned Obie sits below the heading at the first-Take position, with
+            // its own solid backing + fade; scrolling Takes pass behind it and dissolve.
+            // Drawn after the heading so it owns its hit region (the heading is inert).
+            pinnedObie
         }
         .background {
             // Capture the layout width (NOT UIScreen) so spineX matches the
@@ -226,17 +251,67 @@ struct DailiesView: View {
             .padding(.leading, textColumnLeading)
             .padding(.top, deviceTopInset + 14)
             .padding(.bottom, 2)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
-            LinearGradient(
-                colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .frame(height: 12)
+            if vm.obie != nil {
+                // With a pinned Obie: SOLID right down to the Obie's card top (no fade
+                // — the gradient is semi-transparent and lets a scrolling Take peek).
+                // The opaque Obie card continues the mask below. Its own Iris is drawn
+                // ON TOP of the heading, so this doesn't cover it (owner 2026-06-16).
+                Color.ckBackground
+            } else {
+                // No Obie: the first Take's Iris lives in the SCROLL behind the heading,
+                // so the heading stays natural height and a 12pt fade dissolves Takes
+                // scrolling under it.
+                LinearGradient(
+                    colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: 12)
+            }
         }
+        // ONLY when an Obie is pinned, the solid mask extends down to the Obie's card
+        // BOTTOM edge (owner 2026-06-16) — not the top edge, because the card's rounded
+        // top corners curve below it and leave a sliver where scrolling Takes peeked.
+        // Anchoring to the bottom (measured, so it scales with a long Obie) guarantees
+        // every corner is above the mask edge. Natural height when there's no Obie.
+        .frame(height: vm.obie != nil
+                       ? deviceTopInset + CatchlightLayout.headingClearance + max(0, pinnedObieZoneHeight - 6)
+                       : nil,
+               alignment: .top)
         .animation(.easeInOut(duration: 0.18), value: headingTitle)
         .allowsHitTesting(false)
         .accessibilityAddTraits(.isHeader)
         .accessibilityLabel(headingTitle.capitalized)
+    }
+
+    /// The PINNED Obie (owner 2026-06-16) — a static element sitting at the SAME
+    /// position a plain first Take would (`deviceTopInset + headingClearance`), so the
+    /// top item is in the same place with or without an Obie. Scrolling Takes pass
+    /// behind its solid background and dissolve under the fade below it. It keeps its
+    /// swipe actions, so it stays interactive (the heading title/fade above do not).
+    @ViewBuilder
+    private var pinnedObie: some View {
+        if let obie = vm.obie {
+            // The Obie's own card is OPAQUE, so it alone hides Takes scrolling up
+            // behind it — no solid backing and no fade (both read as a page-coloured
+            // band obscuring the timeline + spine; owner 2026-06-16).
+            row(for: obie, isFirst: false)
+                // Pin to natural height — the swipe fill is `maxHeight: .infinity`,
+                // which would otherwise stretch this to fill the screen out here.
+                .fixedSize(horizontal: false, vertical: true)
+                .id(obie.id)
+                // Measure the Obie row so the scrolling Takes inset below it.
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear { pinnedObieZoneHeight = geo.size.height }
+                            .onChange(of: geo.size.height) { _, h in pinnedObieZoneHeight = h }
+                    }
+                )
+                // Sit at the standard first-item position (matches a plain first Take).
+                .padding(.top, deviceTopInset + CatchlightLayout.headingClearance)
+        }
     }
 
     // MARK: - Empty state
@@ -463,6 +538,11 @@ struct DailiesView: View {
         // (Task 6.19) can scroll programmatically to a target Take id.
         ScrollViewReader { proxy in
             ScrollView {
+              // Zero-spacing wrapper: a ScrollView's implicit VStack would add ~8pt
+              // between the offset reader and the list, pushing the first Take ~8pt
+              // below the pinned Obie (owner 2026-06-16 — the visible "jump" on
+              // designating an Obie). This makes them flush so positions match.
+              VStack(spacing: 0) {
                 // Track scroll offset to ghost month markers in/out.
                 GeometryReader { geo in
                     Color.clear.preference(
@@ -477,13 +557,9 @@ struct DailiesView: View {
                 // carries gives the visible card-to-card distance, sized so a lower
                 // card's Iris (straddling its top edge) never overlaps the card above.
                 LazyVStack(alignment: .leading, spacing: interCardSpacing) {
-                    // Pinned Obie — ALWAYS shown, even when it doesn't match
-                    // the active filter (dock redesign 2026-06-10). The LazyVStack
-                    // spacing now provides the gap below it (was a fixed 18pt spacer).
-                    if let obie = vm.obie {
-                        row(for: obie, isFirst: true)
-                            .id(obie.id)
-                    }
+                    // The Obie is no longer here — it's a STATIC pinned header now
+                    // (owner 2026-06-16; see `heading`). The scrolling list below is
+                    // the non-Obie Takes only, which scroll up and under the pinned Obie.
 
                     // Filter active but no non-Obie Take matches: quiet line in
                     // place of the grouped list (NOT the first-run empty state).
@@ -534,7 +610,7 @@ struct DailiesView: View {
                 // the first Take tucked under the fade on iPhone 17 / iOS 26.5.1).
                 // Bottom: lift the last-row clearance by the home-indicator inset
                 // so it still clears the now-raised dock.
-                .padding(.top, deviceTopInset + CatchlightLayout.headingClearance)
+                .padding(.top, timelineTopInset)
                 .padding(.bottom, CatchlightLayout.dockClearance + deviceBottomInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 // FILTERING exit: tapping empty timeline background (not rows /
@@ -551,7 +627,9 @@ struct DailiesView: View {
                             .accessibilityHint("Double-tap the timeline background to clear all filters.")
                     }
                 }
+              }   // VStack(spacing: 0)
             }
+            .scrollIndicators(.hidden)   // the spine is the timeline affordance (owner 2026-06-16)
             .coordinateSpace(name: "dailies")
             .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
             .onPreferenceChange(FirstRowTopKey.self) { firstRowTop = $0.isFinite ? $0 : nil }
