@@ -34,6 +34,11 @@ struct TakeRowView: View {
     /// actions on the combined row element.
     var onToggleComplete: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
+    /// Horizontal swipe offset applied to the CARD only (not the Iris). The Iris
+    /// stays anchored on the spine so the timeline "wire" is unbroken while a Take
+    /// is swiped for its actions — and so the future rings-on-a-wire still reads.
+    /// Driven by `SwipeActionRow`; 0 everywhere the row isn't swipeable.
+    var cardSwipeOffset: CGFloat = 0
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var dynamicSize
@@ -127,6 +132,9 @@ struct TakeRowView: View {
             // Iris is resized (previously the card was padded by the Iris diameter,
             // so enlarging the Iris pushed it right and narrowed it).
             cardColumn
+                // Only the card slides on swipe; the Iris (below) keeps its spine
+                // position so the wire stays threaded through it.
+                .offset(x: cardSwipeOffset)
             irisColumn
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
@@ -183,7 +191,8 @@ struct TakeRowView: View {
                 // sentence is never cut off mid-word.
                 .lineLimit(dynamicSize.isAccessibilitySize ? 4 : 2)
                 .multilineTextAlignment(.leading)
-                .strikethrough(take.isTask && take.isComplete, color: .ckTextComplete)
+                // A complete Task recedes by COLOUR only (`.ckTextComplete` via
+                // `textColor`), no strikethrough (owner 2026-06-16).
 
             // Quiet meta line: the checklist progress marker (2+ items) and/or
             // the reminder time. New marker — HiFi v1.7 is silent on it, so it

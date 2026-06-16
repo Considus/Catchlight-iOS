@@ -581,8 +581,14 @@ struct DailiesView: View {
         // Mark done (Tasks only — `complete` has no meaning on a plain Note). The
         // same mutations stay on the long-press context menu as the VoiceOver /
         // fallback path; this is the discoverable, iOS-native promotion of them.
-        // The reveal sits INSIDE the row band, so this wraps before the leading/
-        // trailing padding that positions the band on the spine.
+        //
+        // The action band spans from the card's leading edge to the SCREEN's
+        // trailing edge: only `.leading` padding is on the wrapper, while the card's
+        // 20pt right margin moves INSIDE the content. That lets the Delete fill flush
+        // to the screen edge on a full swipe (was stopping 20pt short), while the
+        // card looks identical at rest. `contentVerticalInset: 6` matches
+        // TakeRowView's `.padding(.vertical, 6)` so the reveal mirrors the card's
+        // height exactly (it already tracks the card's content-driven growth).
         SwipeActionRow(
             id: take.id,
             leading: take.isTask
@@ -607,17 +613,20 @@ struct DailiesView: View {
                     vm.delete(take)
                 }
             ),
-            openRowID: $openSwipeRowID
-        ) {
-            rowContent(for: take, isFirst: isFirst)
+            openRowID: $openSwipeRowID,
+            leadingInset: spineX - CatchlightLayout.cardSpineInset,
+            trailingInset: 20,
+            contentVerticalInset: 6
+        ) { swipeOffset in
+            // BOTH margins live inside the content so the wrapper spans the full
+            // screen width — letting each action fill reach its screen edge. The
+            // card's leading edge is `cardSpineInset` left of the spine (the card
+            // covers the spine; the Iris nests in its corner). `swipeOffset` slides
+            // the CARD only — TakeRowView keeps the Iris on the spine.
+            rowContent(for: take, cardSwipeOffset: swipeOffset, isFirst: isFirst)
+                .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
+                .padding(.trailing, 20)
         }
-        // The row's leading edge IS the card's leading edge — `cardSpineInset`
-        // left of the spine, so the card covers the spine and the Iris nests in its
-        // corner (TakeRowView offsets the Iris back onto the spine). Independent of
-        // the Iris diameter (was derived from circleDiameter, which moved the card
-        // when the Iris grew).
-        .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
-        .padding(.trailing, 20)
         .background(alignment: .top) {
             // The first row publishes its top Y (shared "dailies" space) so the
             // spine starts exactly at the first Iris — whether that's the pinned
@@ -642,9 +651,9 @@ struct DailiesView: View {
         }
     }
 
-    /// The row's visual content (Iris + card), independent of its swipe wrapper and
-    /// spine placement. Lives inside `SwipeActionRow` so the whole row slides as one.
-    private func rowContent(for take: Take, isFirst: Bool = false) -> some View {
+    /// The row's visual content (Iris + card). `cardSwipeOffset` slides the card
+    /// (only) for its swipe actions, supplied live by the enclosing `SwipeActionRow`.
+    private func rowContent(for take: Take, cardSwipeOffset: CGFloat = 0, isFirst: Bool = false) -> some View {
         TakeRowView(
             take: take,
             onTapCircle: { irisCentre in
@@ -682,7 +691,8 @@ struct DailiesView: View {
             onDelete: {
                 guard app.ensureEntitled() else { return }
                 vm.delete(take)
-            }
+            },
+            cardSwipeOffset: cardSwipeOffset
         )
         .background(
             // Task 6.19 — brief flash when this row is the Spotlight deep-link
