@@ -505,7 +505,7 @@ enum CatchlightLayout {
     /// the first row always clears the heading and the fade on large-inset
     /// devices (iPhone 17 / iOS 26.5.1 — section 4 / D-041). The previous fixed
     /// `52` ignored the inset, tucking the first Take under the fade.
-    static let headingClearance: CGFloat = 58   // 52 → 58: drop the topmost Take/Obie 6pt lower so the Obie fully clears the fade (owner 2026-06-16)
+    static let headingClearance: CGFloat = 66   // 52 → 58 → 66: drop the topmost Take/Obie lower so it clears the fade (owner 2026-06-16; +8 with the pinned-Obie header)
     /// Resting clearance the dock occupies above the timeline's bottom, BEFORE
     /// the device bottom inset is added. Last-row bottom padding is
     /// `dockClearance + deviceBottomInset` so the final Take clears the raised dock.
