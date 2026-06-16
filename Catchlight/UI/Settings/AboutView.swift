@@ -23,10 +23,10 @@ struct AboutView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    headline
-                    tagline
+                    brandMark
+                    taglineBlock
                     licences
-                    privacyPolicy
+                    links
                     madeBy
                     Spacer(minLength: 0)
                 }
@@ -48,29 +48,37 @@ struct AboutView: View {
         .presentationDragIndicator(.visible)
     }
 
-    private var headline: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Section 3b — the brand wordmark is the bundled SVG asset
-            // (`catchlight-wordmark.imageset`, Light/Dark appearance variants,
-            // vector preserved), NOT a font. The previous `Text("Catchlight")`
-            // rendered in the italic display face — wrong twice over (italic, and
-            // not the real wordmark). `.original` rendering intent keeps the
-            // brand colours; the asset adapts to Night / Daylight on its own.
+    /// The full brand mark — icon over wordmark — centred, mirroring the onboarding
+    /// hero (`IntroBrandMark`). Not that exact view: its `deviceTopInset + 114` offset
+    /// is tuned for the full-screen flow, whereas this sits inside a sheet's scroll.
+    private var brandMark: some View {
+        VStack(spacing: 16) {
+            Image("catchlight-icon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 72, height: 72)
+                .accessibilityHidden(true)
             Image("catchlight-wordmark")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 36)
+                .frame(height: 44)
                 .accessibilityLabel("Catchlight")
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.top, 12)
+    }
+
+    /// Tagline with the version directly beneath it, both left-justified (owner
+    /// 2026-06-16 — version moved out from under the wordmark to under the tagline).
+    private var taglineBlock: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Privacy-first notes and reminders.")
+                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                .foregroundStyle(Color.ckTextPrimary)
             Text(Self.versionString)
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)
         }
-    }
-
-    private var tagline: some View {
-        Text("Privacy-first notes and reminders.")
-            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-            .foregroundStyle(Color.ckTextPrimary)
     }
 
     private var licences: some View {
@@ -99,31 +107,51 @@ struct AboutView: View {
         )
     }
 
-    /// External link to the hosted privacy policy. Same URL as the paywall's legal
-    /// block (PaywallView). Styled to match the licences card above it.
-    private var privacyPolicy: some View {
-        Link(destination: URL(string: "https://catchlight.app/privacy")!) {
+    /// External links, grouped in one card (matches the licences card). Privacy +
+    /// Terms reuse the paywall's URLs; Website is the marketing/guides hub; Support
+    /// opens Mail. ⚠️ Support address is a placeholder pending owner confirmation.
+    private var links: some View {
+        VStack(spacing: 0) {
+            linkRow("Privacy Policy", url: "https://catchlight.app/privacy", opensMail: false)
+            linkDivider
+            linkRow("Terms of Service", url: "https://www.apple.com/legal/internet-services/itunes/dev/stgvs/", opensMail: false)
+            linkDivider
+            linkRow("Support", url: "mailto:support@catchlight.app", opensMail: true)
+            linkDivider
+            linkRow("Website", url: "https://catchlight.app", opensMail: false)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.ckSurface)
+                .daylightCardShadow()   // DS §4.1 — matches the licences card
+        )
+    }
+
+    private func linkRow(_ title: String, url: String, opensMail: Bool) -> some View {
+        Link(destination: URL(string: url)!) {
             HStack(spacing: 12) {
-                Text("Privacy Policy")
+                Text(title)
                     .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
                     .foregroundStyle(Color.ckTextPrimary)
                 Spacer()
-                Image(systemName: "arrow.up.right")
+                Image(systemName: opensMail ? "envelope" : "arrow.up.right")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
             }
-            .padding(.vertical, 16)
+            .padding(.vertical, 15)
             .padding(.horizontal, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.ckSurface)
-                    .daylightCardShadow()   // DS §4.1 — matches the licences card
-            )
+            .contentShape(Rectangle())
         }
-        .accessibilityLabel("Privacy Policy")
-        .accessibilityHint("Opens catchlight.app/privacy in your browser.")
+        .accessibilityLabel(title)
+        .accessibilityHint(opensMail ? "Opens your mail app." : "Opens in your browser.")
+    }
+
+    private var linkDivider: some View {
+        Divider()
+            .background(Color.ckTextSecondary.opacity(0.15))
+            .padding(.leading, 16)
     }
 
     private var madeBy: some View {
