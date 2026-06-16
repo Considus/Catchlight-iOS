@@ -141,7 +141,9 @@ struct DailiesView: View {
                 // (Ember @ 35% — `dockRing()` in BottomDockView) so the wire and the
                 // toolbar read as one family. (Was `ckSpine`, a fainter Catchlight/Ink
                 // tint; that token still serves onboarding + the conflict view.)
-                .fill(Color.ckAccent.opacity(0.35))
+                // Single-sourced via `ckSpineWire` so the gutter spine and the
+                // through-Iris segments (TakeRowView, "rings on a wire") never drift.
+                .fill(Color.ckSpineWire)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
