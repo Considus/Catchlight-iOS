@@ -64,6 +64,7 @@ enum DebugReset {
         standard.removeObject(forKey: SettingsViewModel.appearanceDefaultsKey)
         standard.removeObject(forKey: SettingsViewModel.TakeSpacing.defaultsKey)   // "View"
         standard.removeObject(forKey: SettingsViewModel.TakeSort.defaultsKey)      // "Order"
+        standard.removeObject(forKey: SettingsViewModel.TakePreview.defaultsKey)   // "Preview"
         standard.removeObject(forKey: SettingsViewModel.LockAfter.defaultsKey)     // "Lock after"
 
         // App-group defaults: cloud-folder bookmark / URL fallback + the

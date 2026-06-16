@@ -152,6 +152,42 @@ final class SettingsViewModel {
         }
     }
 
+    /// How much of a collapsed Take's body shows on the timeline (owner 2026-06-16:
+    /// "Preview" — deliberately INDEPENDENT of `TakeSpacing`/"View" density). The
+    /// reminder date/time label is unaffected (it's a separate line below the body).
+    enum TakePreview: String, CaseIterable, Identifiable {
+        case single, some, all
+
+        static let defaultsKey = "catchlight.takePreview"
+        static let `default`: TakePreview = .some
+
+        var id: String { rawValue }
+
+        /// Body line cap; `nil` = unlimited (show the whole Take).
+        var lineLimit: Int? {
+            switch self {
+            case .single: return 1
+            case .some:   return 3
+            case .all:    return nil
+            }
+        }
+
+        /// Short label for the segmented control.
+        var label: String {
+            switch self {
+            case .single: return "Single"
+            case .some:   return "Some"
+            case .all:    return "All"
+            }
+        }
+
+        static var current: TakePreview {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = TakePreview(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     var notificationStatus: UNAuthorizationStatus = .notDetermined
     var notificationStatusLoading: Bool = false
 
