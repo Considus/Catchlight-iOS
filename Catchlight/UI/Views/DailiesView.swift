@@ -85,6 +85,21 @@ struct DailiesView: View {
 
     @State private var scrolling = false
     @State private var scrollHideWork: DispatchWorkItem?
+    /// "Rings on a wire" texture (owner idea 2026-06-16): a STATIC dotted line laid
+    /// over the solid spine. As the rings scroll past the fixed dots, the eye reads
+    /// them sliding over a marked wire (relative motion at the true 1× scroll speed) —
+    /// no animation, the spine layer doesn't scroll, so static dots are all it takes.
+    ///
+    /// The dotted frame is anchored to `spineTopInset` — the SAME top as the solid
+    /// spine, so it begins exactly at the top Take (owner 2026-06-16). To keep the
+    /// dots screen-static even while that frame top tracks the first row (the no-Obie
+    /// case), the dash phase compensates by `+spineTopInset`: a dash lands at
+    /// screen-y `frameTop + (−phase + k·period)` = `k·period`, independent of the
+    /// frame top, so the dots hold fixed positions while the line still starts at the
+    /// top Take. (With an Obie, `spineTopInset` is constant and this is just a static
+    /// offset.) The sign MUST be `+`: `−` advances the phase the wrong way and the
+    /// dots slide at ~2× — the bug that put two dotted wires on screen at once.
+    private var dottedSpinePhase: CGFloat { spineTopInset }
     /// The row currently showing its swipe actions (Delete / Mark done), if any.
     /// Shared across rows so opening one closes the rest (`SwipeActionRow`).
     @State private var openSwipeRowID: UUID?
@@ -153,6 +168,25 @@ struct DailiesView: View {
                 // `dockBottomPadding + minTouchTarget` above the device bottom inset
                 // (BottomDockView lays the 44pt button `dockBottomPadding` above the
                 // home indicator), so the wire plugs into the top of the +.
+                .padding(.bottom, deviceBottomInset
+                         + CatchlightLayout.dockBottomPadding
+                         + CatchlightLayout.minTouchTarget)
+                .offset(x: spineX - CatchlightLayout.spineWidth / 2)
+                .accessibilityHidden(true)
+
+            // Owner idea 2026-06-16 — a STATIC dotted line laid OVER the solid spine.
+            // The dots never move; because this whole spine layer sits BEHIND the
+            // scrolling cards, the rings scroll past the fixed dots and the eye reads
+            // them sliding over a marked wire. Same x + z + footprint as the solid
+            // spine (behind the cards, visible only in the gaps), so it never paints
+            // over a card; brighter than the 35% base so the dots read. Anchored to
+            // `spineTopInset` (begins at the top Take, like the solid spine) with the
+            // dash phase compensating so the dots stay screen-static (see
+            // `dottedSpinePhase`).
+            DottedSpine(dashPhase: dottedSpinePhase)
+                .frame(width: CatchlightLayout.spineWidth)
+                .frame(maxHeight: .infinity)
+                .padding(.top, spineTopInset)
                 .padding(.bottom, deviceBottomInset
                          + CatchlightLayout.dockBottomPadding
                          + CatchlightLayout.minTouchTarget)
@@ -837,6 +871,7 @@ struct DailiesView: View {
         scrollHideWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.9, execute: work)
     }
+
 }
 
 private struct ScrollOffsetKey: PreferenceKey {
@@ -851,6 +886,48 @@ private struct FirstRowTopKey: PreferenceKey {
     static let defaultValue: CGFloat = .infinity
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = min(value, nextValue())
+    }
+}
+
+// MARK: - Rings-on-a-wire texture (static dotted spine overlay)
+
+/// The static dotted line laid over the solid spine. A plain vertical line stroked
+/// with a fixed dash pattern — no phase, no animation. It sits in the screen-fixed
+/// spine layer behind the scrolling cards, so the rings glide past the fixed dots and
+/// read as sliding over a marked wire. Brighter than the 35% solid base so the dots
+/// read; tune tone/spacing on device.
+private struct DottedSpine: View {
+    /// Offsets the dash pattern so the dots stay screen-static even as the frame top
+    /// is anchored to the (sometimes moving) top Take. See `dottedSpinePhase`.
+    var dashPhase: CGFloat = 0
+
+    var body: some View {
+        SpineLine()
+            .stroke(SpineDots.color, style: SpineDots.style(phase: dashPhase))
+    }
+}
+
+/// A vertical line down the centre of its frame — the path the dotted overlay strokes.
+/// Internal (not private) so the in-front-of-Iris crown overlay in `TakeRowView` can
+/// stroke the same dotted pattern.
+struct SpineLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        return p
+    }
+}
+
+/// The wire's dot pattern — shared by the gutter overlay (`DottedSpine`) and the
+/// in-front-of-Iris crown overlay (`TakeRowView`) so they read as one dotted wire.
+enum SpineDots {
+    // 1 on / 3 off (owner 2026-06-16): denser than the original 1/7 so the dotted
+    // spine reads as a more robust, present wire.
+    static let dash: [CGFloat] = [1, 3]
+    static var color: Color { Color.ckAccent.opacity(0.9) }
+    static func style(phase: CGFloat) -> StrokeStyle {
+        StrokeStyle(lineWidth: CatchlightLayout.spineWidth, lineCap: .round, dash: dash, dashPhase: phase)
     }
 }
 
