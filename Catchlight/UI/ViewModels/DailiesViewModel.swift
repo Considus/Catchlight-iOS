@@ -205,8 +205,12 @@ final class DailiesViewModel {
 
         if isObie {
             // Persist the base edits first, then designate via the store's Obie rule.
+            // `replaceExisting: false` (owner 2026-06-17): if another Obie already
+            // exists, the store throws `obieConflict` → `pendingObieConflict` → the
+            // same confirmation alert the long-press uses, so the Focus-ring path
+            // warns before bumping the current Obie rather than silently replacing it.
             save(updated)
-            designateObie(updated, replaceExisting: true)
+            designateObie(updated, replaceExisting: false)
         } else {
             if updated.isObie { updated.isObie = false }
             save(updated)

@@ -417,10 +417,14 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
     }
 
     /// Enforces the "Note is the floor" rule (UX §6). Call after any activity-type
-    /// mutation. Note is conceptually always true — it is never allowed to become
-    /// false. (Completion no longer needs clearing here: it is derived from the
-    /// check blocks, so a Take with no checks is never "complete".)
+    /// mutation. Note is the FLOOR, not a constant (owner 2026-06-17): it re-asserts
+    /// only when the Take has no OTHER activity type. A Take that is a Task and/or a
+    /// Reminder may carry Note explicitly removed (so the Iris drops the Note mark);
+    /// a Take that is neither always reads as a Note. Obie is not an activity type in
+    /// this sense — an Obie that is neither Task nor Reminder is still a Note.
+    /// (Completion no longer needs clearing here: it is derived from the check
+    /// blocks, so a Take with no checks is never "complete".)
     public mutating func normaliseActivityFloor() {
-        isNote = true
+        if !isTask && timeReminder == nil { isNote = true }
     }
 }

@@ -269,11 +269,28 @@ final class TakeModelTests: XCTestCase {
         XCTAssertTrue(take.isNote)
     }
 
-    func testNormaliseActivityFloor_noteAlwaysReasserts() {
-        // Even if a caller explicitly sets isNote=false, normalise re-asserts it.
+    func testNormaliseActivityFloor_taskMayDropNote() {
+        // A Task may carry Note explicitly removed (owner 2026-06-17): the floor
+        // does NOT re-assert while another activity type is present, so the Iris
+        // can drop the Note mark on a pure Task.
         var take = Take(blocks: [.checkItem("x")], isNote: false)
         take.normaliseActivityFloor()
-        XCTAssertTrue(take.isNote, "Note is the floor — it must always end true")
+        XCTAssertFalse(take.isNote, "A Task may have Note removed — the floor must not re-assert")
+    }
+
+    func testNormaliseActivityFloor_reminderMayDropNote() {
+        // Likewise a Reminder-only Take may drop Note.
+        var take = Take(blocks: [.textLine("x")], isNote: false)
+        take.timeReminder = TimeReminder(scheduledDate: .now, notificationIdentifier: take.id.uuidString)
+        take.normaliseActivityFloor()
+        XCTAssertFalse(take.isNote, "A Reminder may have Note removed — the floor must not re-assert")
+    }
+
+    func testNormaliseActivityFloor_plainTakeReasserts() {
+        // With no Task and no Reminder, removing Note re-asserts it (the floor).
+        var take = Take(blocks: [.textLine("x")], isNote: false)
+        take.normaliseActivityFloor()
+        XCTAssertTrue(take.isNote, "A Take with no other activity type is always a Note")
     }
 
     func testNormaliseActivityFloor_obieAloneKeepsNoteTrue() {
