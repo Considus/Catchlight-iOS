@@ -40,23 +40,6 @@ struct TakeRowView: View {
     /// Driven by `SwipeActionRow`; 0 everywhere the row isn't swipeable.
     var cardSwipeOffset: CGFloat = 0
 
-    @Environment(\.colorScheme) private var scheme
-    @Environment(\.dynamicTypeSize) private var dynamicSize
-
-    /// The user's "Preview" length (Single/Some/All) — how many body lines a
-    /// collapsed Take shows on the timeline. Independent of "View" density.
-    @AppStorage(SettingsViewModel.TakePreview.defaultsKey)
-    private var takePreviewRaw: String = SettingsViewModel.TakePreview.default.rawValue
-    private var takePreview: SettingsViewModel.TakePreview {
-        SettingsViewModel.TakePreview(rawValue: takePreviewRaw) ?? .default
-    }
-    /// Body line cap: the Preview choice, but never below 4 at accessibility text
-    /// sizes so a sentence is not cut mid-word (`nil` = unlimited / "All").
-    private var bodyLineLimit: Int? {
-        guard let base = takePreview.lineLimit else { return nil }
-        return dynamicSize.isAccessibilitySize ? max(base, 4) : base
-    }
-
     private var firstLine: String {
         let line = take.plainText
             .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
@@ -66,20 +49,12 @@ struct TakeRowView: View {
         return trimmed.isEmpty ? "Untitled Take" : trimmed
     }
 
-    /// The full Take body shown on the card — the `lineLimit` (driven by the
-    /// "Preview" setting) decides how much is visible. `firstLine` is kept for the
-    /// VoiceOver label (which reads the title, then status, then reminder).
-    private var displayBody: String {
-        let text = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return text.isEmpty ? "Untitled Take" : text
-    }
-
     /// Composed VoiceOver label: text + status (+ progress) + reminder date.
     /// Example: "Buy milk. Task, 3 of 5 complete." or "The north star. Obie, your
     /// pinned Take. Note. Reminder set. Tomorrow at 3 PM."
     private var rowAccessibilityLabel: String {
         var parts: [String] = [firstLine, Self.statusDescription(for: take)]
-        if let when = reminderLabel { parts.append(when) }
+        if let when = TakeCardSurface.reminderString(for: take) { parts.append(when) }
         return parts.filter { !$0.isEmpty }.joined(separator: ". ")
     }
 
@@ -99,41 +74,6 @@ struct TakeRowView: View {
         if take.timeReminder != nil { parts.append("Reminder set") }
         if take.isNote && !take.isTask && take.timeReminder == nil { parts.append("Note") }
         return parts.joined(separator: ". ")
-    }
-
-    /// The "3 of 5" progress marker, or nil (one-item Tasks / non-Tasks show none).
-    private var progressText: String? {
-        guard let progress = take.checklistProgress else { return nil }
-        return "\(progress.done) of \(progress.total)"
-    }
-
-    /// The Take's first-line colour. A complete Task recedes to the HiFi `.tt.done`
-    /// treatment (plus the strikethrough); Obie keeps its emphasis colour.
-    private var textColor: Color {
-        if take.isTask && take.isComplete { return .ckTextComplete }
-        return take.isObie ? .ckTextObie : .ckTextPrimary
-    }
-
-    /// Cached formatter — this label is evaluated twice per row render (body +
-    /// accessibility label), and a fresh `DateFormatter` per evaluation is one
-    /// of Foundation's most expensive allocations.
-    private static let reminderFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f
-    }()
-
-    private var reminderLabel: String? {
-        guard let r = take.timeReminder else { return nil }
-        return Self.reminderFormatter.string(from: r.scheduledDate)
-    }
-
-    /// Reminder date has passed — drives the overdue card variant (HiFi v1.7
-    /// .card.overdue). Obie always wins the card treatment when both apply.
-    private var isOverdue: Bool {
-        guard let r = take.timeReminder else { return false }
-        return r.scheduledDate < Date()
     }
 
     var body: some View {
@@ -254,9 +194,142 @@ struct TakeRowView: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    /// The Take's text column on the v1.7 card surface (radius 12, content pad
-    /// 24/14/14/14, Daylight shadow / Night tonal-only, variant borders).
+    /// The Take's text column on the v1.7 card surface. The visual is factored into
+    /// `TakeCardSurface` (single-sourced) so the Focus-ring can lift a lit copy of
+    /// the tapped Take's card above its dim veil (owner 2026-06-16: keep the tapped
+    /// Take readable while everything else recedes). Here it carries the row's
+    /// gestures, context menu, and combined VoiceOver element.
     private var cardColumn: some View {
+        TakeCardSurface(take: take)
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .onTapGesture { onTapText() }
+            .contextMenu { rowMenuItems }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("take-row")
+            .accessibilityLabel(rowAccessibilityLabel)
+            .accessibilityHint("Double-tap to edit this Take.")
+            .accessibilityActions { rowAccessibilityActions }
+    }
+
+    @ViewBuilder
+    private var rowMenuItems: some View {
+        if take.isTask, let onToggleComplete {
+            Button {
+                onToggleComplete()
+            } label: {
+                Label(take.isComplete ? "Mark as not done" : "Mark as done",
+                      systemImage: take.isComplete ? "circle" : "checkmark.circle")
+            }
+        }
+        if let onDelete {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete Take", systemImage: "trash")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var rowAccessibilityActions: some View {
+        if take.isTask, let onToggleComplete {
+            Button(take.isComplete ? "Mark as not done" : "Mark as done") { onToggleComplete() }
+        }
+        if let onDelete {
+            Button("Delete Take") { onDelete() }
+        }
+    }
+}
+
+/// The Take card's VISUAL surface — text column on the v1.7 card (radius 12,
+/// content pad 24/14/14/14, Daylight shadow / Night tonal-only, variant borders).
+/// Factored out of `TakeRowView` so the SAME card renders in two places without
+/// drifting: the timeline row (wrapped with gestures/menu/VoiceOver), and the
+/// Focus-ring's lit copy lifted above its dim veil (owner 2026-06-16 — keep the
+/// tapped Take readable while everything else recedes; `PetalFanView`). Purely
+/// visual: callers add interactivity. Fills the width PROPOSED to it (the row
+/// proposes full width; the fan proposes the card's reconstructed width), so the
+/// surface always reaches the card's trailing edge.
+struct TakeCardSurface: View {
+    let take: Take
+
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
+    /// The user's "Preview" length (Single/Some/All) — how many body lines a
+    /// collapsed Take shows on the timeline. Independent of "View" density.
+    @AppStorage(SettingsViewModel.TakePreview.defaultsKey)
+    private var takePreviewRaw: String = SettingsViewModel.TakePreview.default.rawValue
+    private var takePreview: SettingsViewModel.TakePreview {
+        SettingsViewModel.TakePreview(rawValue: takePreviewRaw) ?? .default
+    }
+    /// Body line cap: the Preview choice, but never below 4 at accessibility text
+    /// sizes so a sentence is not cut mid-word (`nil` = unlimited / "All").
+    private var bodyLineLimit: Int? {
+        guard let base = takePreview.lineLimit else { return nil }
+        return dynamicSize.isAccessibilitySize ? max(base, 4) : base
+    }
+
+    /// The full Take body shown on the card — the `lineLimit` (driven by the
+    /// "Preview" setting) decides how much is visible.
+    private var displayBody: String {
+        let text = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? "Untitled Take" : text
+    }
+
+    /// The "3 of 5" progress marker, or nil (one-item Tasks / non-Tasks show none).
+    private var progressText: String? {
+        guard let progress = take.checklistProgress else { return nil }
+        return "\(progress.done) of \(progress.total)"
+    }
+
+    /// The Take's first-line colour. A complete Task recedes to the HiFi `.tt.done`
+    /// treatment; Obie keeps its emphasis colour.
+    private var textColor: Color {
+        if take.isTask && take.isComplete { return .ckTextComplete }
+        return take.isObie ? .ckTextObie : .ckTextPrimary
+    }
+
+    /// Cached formatter — this label is evaluated on every render, and a fresh
+    /// `DateFormatter` per evaluation is one of Foundation's most expensive allocations.
+    private static let reminderFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+
+    /// The formatted reminder time, or nil. Static so `TakeRowView` can reuse it for
+    /// the row's VoiceOver label without re-deriving the formatter.
+    static func reminderString(for take: Take) -> String? {
+        guard let r = take.timeReminder else { return nil }
+        return reminderFormatter.string(from: r.scheduledDate)
+    }
+    private var reminderLabel: String? { Self.reminderString(for: take) }
+
+    /// Reminder date has passed — drives the overdue card variant (HiFi v1.7
+    /// .card.overdue). Obie always wins the card treatment when both apply.
+    private var isOverdue: Bool {
+        guard let r = take.timeReminder else { return false }
+        return r.scheduledDate < Date()
+    }
+
+    /// Card background — Obie warm tint, else the standard surface (overdue keeps
+    /// the standard surface; only its border + shadow change).
+    private var cardSurface: Color {
+        take.isObie ? .ckCardObieSurface : .ckSurface
+    }
+
+    /// Card border (1.5pt). Obie → Ember (reserved exclusively for the Obie);
+    /// overdue → overdue amber; standard → the surface colour (invisible, but
+    /// reserves the 1.5pt so all cards are the same size).
+    private var cardBorder: Color {
+        if take.isObie { return .ckCardObieBorder }
+        if isOverdue { return .ckCardOverdueBorder }
+        return cardSurface
+    }
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(displayBody)
                 // DM Sans 14 (.tt) — Take content is never the display face
@@ -272,8 +345,8 @@ struct TakeRowView: View {
 
             // Quiet meta line: the checklist progress marker (2+ items) and/or
             // the reminder time. New marker — HiFi v1.7 is silent on it, so it
-            // matches the reminder label's scale (DM Sans caption, Secondary);
-            // flagged for owner review. Stacked so neither fights the other.
+            // matches the reminder label's scale (DM Sans caption, Secondary).
+            // Stacked so neither fights the other.
             if let progressText {
                 // Quiet meta scale (matches .tm size; non-italic — it's a count).
                 Text(progressText)
@@ -308,58 +381,6 @@ struct TakeRowView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(cardBorder, lineWidth: 1.5)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .onTapGesture { onTapText() }
-        .contextMenu { rowMenuItems }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("take-row")
-        .accessibilityLabel(rowAccessibilityLabel)
-        .accessibilityHint("Double-tap to edit this Take.")
-        .accessibilityActions { rowAccessibilityActions }
-    }
-
-    /// Card background — Obie warm tint, else the standard surface (overdue keeps
-    /// the standard surface; only its border + shadow change).
-    private var cardSurface: Color {
-        take.isObie ? .ckCardObieSurface : .ckSurface
-    }
-
-    /// Card border (1.5pt). Obie → Ember (reserved exclusively for the Obie);
-    /// overdue → overdue amber; standard → the surface colour (invisible, but
-    /// reserves the 1.5pt so all cards are the same size).
-    private var cardBorder: Color {
-        if take.isObie { return .ckCardObieBorder }
-        if isOverdue { return .ckCardOverdueBorder }
-        return cardSurface
-    }
-
-    @ViewBuilder
-    private var rowMenuItems: some View {
-        if take.isTask, let onToggleComplete {
-            Button {
-                onToggleComplete()
-            } label: {
-                Label(take.isComplete ? "Mark as not done" : "Mark as done",
-                      systemImage: take.isComplete ? "circle" : "checkmark.circle")
-            }
-        }
-        if let onDelete {
-            Button(role: .destructive) {
-                onDelete()
-            } label: {
-                Label("Delete Take", systemImage: "trash")
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var rowAccessibilityActions: some View {
-        if take.isTask, let onToggleComplete {
-            Button(take.isComplete ? "Mark as not done" : "Mark as done") { onToggleComplete() }
-        }
-        if let onDelete {
-            Button("Delete Take") { onDelete() }
-        }
     }
 }
 

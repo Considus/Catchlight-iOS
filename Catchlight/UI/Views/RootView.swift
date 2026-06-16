@@ -227,6 +227,12 @@ struct RootView: View {
                     hubCentre: ui.petalFanOrigin == .zero
                         ? CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
                         : ui.petalFanOrigin,
+                    containerWidth: geo.size.width,
+                    // Lift the tapped Take lit above the veil only when the fan
+                    // blooms from a timeline Iris (real origin). From the editor
+                    // footer the origin is .zero (screen centre) and the editor is
+                    // already the context, so no spotlight card there.
+                    showsFocusCard: ui.petalFanOrigin != .zero,
                     onCommit: { isNote, isTask, hasReminder, isObie in
                         // Task 6.20: petal-fan commit is a mutation — gate it.
                         guard app.ensureEntitled() else {
