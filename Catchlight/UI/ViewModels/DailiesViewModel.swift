@@ -183,22 +183,26 @@ final class DailiesViewModel {
     // MARK: - Activity-type toggles (petal fan applies these)
 
     /// Apply the petal-fan selection to a Take, enforcing the Note floor.
+    /// `reminderDate` is the time chosen in the Focus-ring's picker (owner
+    /// 2026-06-17); falls back to any existing reminder time, then +24h.
     func applyActivityTypes(to take: Take,
                             isNote: Bool,
                             isTask: Bool,
                             hasReminder: Bool,
+                            reminderDate: Date?,
                             isObie: Bool) {
         var updated = take
         updated.isNote = isNote
         updated.setTask(isTask)
-        if hasReminder, updated.timeReminder == nil {
-            // Default a reminder to tomorrow morning; the edit surface refines it.
-            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        if hasReminder {
+            let when = reminderDate
+                ?? updated.timeReminder?.scheduledDate
+                ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
             updated.timeReminder = TimeReminder(
-                scheduledDate: tomorrow,
+                scheduledDate: when,
                 notificationIdentifier: updated.id.uuidString
             )
-        } else if !hasReminder {
+        } else {
             updated.timeReminder = nil
         }
         updated.normaliseActivityFloor()
