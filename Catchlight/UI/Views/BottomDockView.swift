@@ -148,6 +148,20 @@ struct BottomDockView: View {
                 }
             }
         }
+        // First-run Hint 3 — centred on the dock's x-axis (= screen centre),
+        // not the off-centre Dailies slot it used to hang over (owner 2026-06-16).
+        // The GeometryReader spans the full padded dock width, so `.top`-centre
+        // alignment lands the bubble dead-centre; the same vertical offset as
+        // before keeps it floating just above the toolbar.
+        .overlay(alignment: .top) {
+            if orientation.showSettingsHint {
+                OrientationTooltip(text: "Swipe up here for settings.", arrowEdge: .bottom)
+                    .fixedSize()
+                    .offset(y: -(buttonSize / 2 + 32))
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
+                    .allowsHitTesting(false)
+            }
+        }
         .frame(height: buttonSize)
         .animation(.easeInOut(duration: 0.2), value: ui.dockMode)
         .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
@@ -284,14 +298,12 @@ struct BottomDockView: View {
                     .frame(width: buttonSize, height: buttonSize)
                     .contentShape(Rectangle())
             }
-            .overlay(alignment: .top) {
-                if orientation.showSettingsHint {
-                    OrientationTooltip(text: "Swipe up here for settings.", arrowEdge: .bottom)
-                        .fixedSize()
-                        .offset(y: -(buttonSize / 2 + 32))
-                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
-                }
-            }
+            // The "Swipe up here for settings." tooltip is NOT hosted here any
+            // more — the swipe gesture lives on the whole dock, not this button,
+            // so a bubble centred on the off-centre Dailies slot read as lopsided.
+            // It now sits centred on the dock's x-axis (see `settingsHint` on the
+            // dock body, owner 2026-06-16). The dashed ring stays on this button
+            // as the visual "tap to dismiss" target.
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("dailies-tab")

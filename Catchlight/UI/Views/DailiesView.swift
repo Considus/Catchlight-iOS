@@ -722,7 +722,15 @@ struct DailiesView: View {
             if isFirst && orientation.showIrisHint {
                 OrientationTooltip(text: "Tap the Iris to shape this Take.", arrowEdge: .leading)
                     .fixedSize()
-                    .offset(x: spineX + CatchlightLayout.circleDiameter, y: -4)
+                    // Raise the bubble so its leading arrow — which sits at the
+                    // bubble's vertical centre — lines up with the Iris centre
+                    // rather than hanging below it (owner 2026-06-16). The Iris
+                    // centre sits on the card's top edge, which is TakeRowView's
+                    // own 6pt vertical pad below this overlay's top. Redefining
+                    // the .top guide as `center − 6` lands the bubble's centre at
+                    // y = 6 no matter how many lines it wraps to (height-independent).
+                    .alignmentGuide(.top) { d in d[VerticalAlignment.center] - 6 }
+                    .offset(x: spineX + CatchlightLayout.circleDiameter)
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
                     .allowsHitTesting(false)
             }
