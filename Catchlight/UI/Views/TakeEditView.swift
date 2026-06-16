@@ -326,11 +326,11 @@ struct TakeEditView: View {
     private func applyFanCommand(_ command: UIState.EditorFanCommand) {
         draft.isNote = command.isNote
 
+        var newTaskEntryID: UUID?
         if command.isTask && !draft.isTask {
-            // Turn ON: keep existing prose, add one empty check item, drop focus in
-            // (owner 2026-06-17 — Task no longer eats the lines already written).
-            let firstItem = draft.convertToChecklist()
-            focusedBlockID = firstItem ?? draft.checkItems.first?.id
+            // Turn ON: keep existing prose, add one empty check item (owner
+            // 2026-06-17 — Task no longer eats the lines already written).
+            newTaskEntryID = draft.convertToChecklist()
         } else if !command.isTask && draft.isTask {
             draft.convertToProse()
         }
@@ -347,6 +347,16 @@ struct TakeEditView: View {
 
         draft.isObie = command.isObie
         draft.normaliseActivityFloor()
+
+        // Drop the caret into the new task entry (owner 2026-06-17: "ready to record
+        // the first task"). Deferred one runloop tick so the appended check row is
+        // already in the view hierarchy when we point focus at it — set synchronously,
+        // its UITextView isn't in the window yet, the one-shot becomeFirstResponder is
+        // skipped (BlockTextEditor's `tv.window != nil` guard), and the caret stays in
+        // the prose row.
+        if let newTaskEntryID {
+            DispatchQueue.main.async { focusedBlockID = newTaskEntryID }
+        }
     }
 
     // MARK: - Footer (Iris + Shape this take)

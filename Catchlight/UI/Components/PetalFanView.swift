@@ -258,17 +258,25 @@ struct PetalFanView: View {
         return true
     }
 
-    /// The dim veil's opacity. It fades IN on open (via the overlay's `.transition`
-    /// + `fanFade`), but on CLOSE the petals' retract held the veil fully solid and
-    /// it then blinked away — owner 2026-06-17 wanted the veil to fade OUT the same
-    /// way it fades in. So during `.closing` we ramp it down on the close's own
-    /// clock, reaching 0 as the retract completes, for a symmetric dissolve. Opening
-    /// / open stay fully dimmed; Reduce Motion uses the overlay transition as before.
+    /// The dim veil's opacity, ramped on the fan's OWN clock so the veil dissolves
+    /// symmetrically — fade IN over the open, fade OUT over the close, both at the
+    /// same `dur` (owner 2026-06-17: the close felt right and the open should match
+    /// its slower pace; previously the open leaned on the 0.2s `fanFade` transition
+    /// while the close ramped over ~0.84s). The lit focus card rides the same value.
+    /// `.open` holds solid; Reduce Motion (phase jumps straight to `.open`) keeps the
+    /// overlay's plain transition.
     private func veilOpacity(now: Date) -> Double {
-        guard case .closing(let start, _) = phase else { return 1 }
         let dur = Choreo.total / Choreo.closeSpeed
-        let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
-        return 1 - Self.easeInOutCubic(p)
+        switch phase {
+        case .opening(let start):
+            let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
+            return Self.easeInOutCubic(p)
+        case .open:
+            return 1
+        case .closing(let start, _):
+            let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
+            return 1 - Self.easeInOutCubic(p)
+        }
     }
 
     // MARK: - Focus card geometry
