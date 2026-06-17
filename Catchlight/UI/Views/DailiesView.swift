@@ -407,6 +407,14 @@ struct DailiesView: View {
                 )
                 // Sit at the standard first-item position (matches a plain first Take).
                 .padding(.top, deviceTopInset + CatchlightLayout.headingClearance)
+                // While editing ANOTHER Take, the pinned Obie goes fully invisible
+                // (not just the row's 0.12 mask) — it sits ON TOP of the scroll, so at
+                // 12% a focused Take scrolling behind it reads as a ghost (owner
+                // 2026-06-17). Hidden, not removed, so it fades with the mask and its
+                // measured height (the scroll inset) is preserved — no position jump.
+                // When the Obie ITSELF is the focused Take it stays bright (editing it).
+                .opacity(ui.isEditingInPlace && ui.editingTakeID != obie.id ? 0 : 1)
+                .allowsHitTesting(!(ui.isEditingInPlace && ui.editingTakeID != obie.id))
         }
     }
 
