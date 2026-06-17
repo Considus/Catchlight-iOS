@@ -1072,6 +1072,9 @@ struct DailiesView: View {
                 vm.delete(take)
             },
             onDiscard: isEditingThis ? { discardInlineEdit() } : nil,
+            // The editing row's Iris is the shape control (tap = Focus ring), so it
+            // carries the retired editor's "editor-shape" id for tests + semantics.
+            irisIdentifier: isEditingThis ? "editor-shape" : "take-iris",
             cardSwipeOffset: cardSwipeOffset,
             editingCard: isEditingThis
                 ? { AnyView(InlineTakeEditCard(draft: editDraftBinding, focusedBlockID: $editFocusedBlockID)) }

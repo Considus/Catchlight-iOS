@@ -237,6 +237,12 @@ final class BlockEditorUITests: XCTestCase {
     /// A checklist Take shows the top-right Angle affordance; tapping it opens the
     /// full-screen list Angle, where tapping an item ticks it on the real Take.
     func testAngle_opensFromChecklist_andTicksItem() throws {
+        // Edit-in-place Phase 2 (2026-06-17) retired the top-anchored editor that
+        // hosted the Angle affordance (`angle-button`); the in-place editor doesn't
+        // carry it yet. The Angle button is being redefined in the in-place editor in
+        // Phase 4 (with the "Important" marker rolled in) — re-enable this then.
+        try XCTSkipIf(true, "Angle affordance moves into the in-place editor in Phase 4 (edit-in-place redesign).")
+
         let app = launchAppForUITesting()
         let body = openNewEditor(app)
         body.tap()
