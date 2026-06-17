@@ -306,13 +306,15 @@ struct DailiesView: View {
                 .frame(height: 12)
             }
         }
-        // ONLY when an Obie is pinned, the solid mask extends down to the Obie's card
-        // BOTTOM edge (owner 2026-06-16) — not the top edge, because the card's rounded
-        // top corners curve below it and leave a sliver where scrolling Takes peeked.
-        // Anchoring to the bottom (measured, so it scales with a long Obie) guarantees
-        // every corner is above the mask edge. Natural height when there's no Obie.
+        // ONLY when an Obie is pinned, the solid mask extends down to NEAR the Obie's
+        // card BOTTOM edge (owner 2026-06-16) — not the top edge, because the card's
+        // rounded top corners curve below it and leave a sliver where scrolling Takes
+        // peeked. Anchoring to the bottom (measured, so it scales with a long Obie)
+        // guarantees every corner is above the mask edge. The −12 pulls the mask edge
+        // up 12px from the true bottom (owner 2026-06-17: a 6px nudge up from the prior
+        // −6 to clear a small scroll-edge ugliness). Natural height when there's no Obie.
         .frame(height: vm.obie != nil
-                       ? deviceTopInset + CatchlightLayout.headingClearance + max(0, pinnedObieZoneHeight - 6)
+                       ? deviceTopInset + CatchlightLayout.headingClearance + max(0, pinnedObieZoneHeight - 12)
                        : nil,
                alignment: .top)
         .animation(.easeInOut(duration: 0.18), value: headingTitle)
