@@ -799,16 +799,17 @@ struct DailiesView: View {
                     proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
                 }
             }
-            // 2) AUTHORITATIVE settle: once the keyboard is fully up, re-scroll against
-            //    the keyboard-reduced viewport so it lands at the same anchor every time
-            //    (the initial scroll alone raced iOS keyboard avoidance → varying rest
-            //    position). Anchored LOW (0.82) — near the keyboard with a small gap;
-            //    Newest-first clamps to the top. Guarded so a stale target can't scroll
-            //    a later, unrelated edit.
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+            // 2) AUTHORITATIVE settle: on keyboard WILL-show (the START of the keyboard
+            //    animation, not the end), scroll to the final anchor using the
+            //    keyboard's OWN animation duration — so the Take rises IN SYNC with the
+            //    keyboard rather than a beat after it (owner 2026-06-18). Anchored LOW
+            //    (0.82) — near the keyboard with a small gap; Newest-first clamps to the
+            //    top. Guarded so a stale target can't scroll a later, unrelated edit.
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { note in
                 guard let id = scrollToTakeID else { return }
                 guard id == ui.editingTakeID else { scrollToTakeID = nil; return }
-                withAnimation(.easeInOut(duration: 0.3)) {
+                let duration = (note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.25
+                withAnimation(.easeOut(duration: duration)) {
                     proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
                 }
                 scrollToTakeID = nil
