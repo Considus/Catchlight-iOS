@@ -119,6 +119,11 @@ struct InlineTakeEditCard: View {
                     .contentShape(Rectangle())
                     .accessibilityIdentifier("take-edit-reorder")
                     .accessibilityLabel("Reorder item")
+                    // The drag handle is pointer/touch-only; VoiceOver gets explicit
+                    // Move actions (same pattern as ListAngleView) so reorder is
+                    // reachable without the drag gesture (owner 2026-06-17).
+                    .accessibilityAction(named: "Move up") { moveCheckItem(item.id, by: -1) }
+                    .accessibilityAction(named: "Move down") { moveCheckItem(item.id, by: 1) }
                     .draggable(item.id.uuidString)
             }
             .dropDestination(for: String.self) { ids, _ in
@@ -128,6 +133,15 @@ struct InlineTakeEditCard: View {
                 return true
             }
         }
+    }
+
+    /// VoiceOver-accessible reorder — swap a check block with its neighbour. The drag
+    /// handle covers touch/pointer; this backs the "Move up/down" actions on it.
+    private func moveCheckItem(_ id: UUID, by offset: Int) {
+        guard let i = draft.blocks.firstIndex(where: { $0.id == id }) else { return }
+        let j = i + offset
+        guard draft.blocks.indices.contains(j) else { return }
+        draft.blocks.swapAt(i, j)
     }
 
     // MARK: - Bindings & block-edit helpers (canonical — the overlay editor was retired Phase 3)
