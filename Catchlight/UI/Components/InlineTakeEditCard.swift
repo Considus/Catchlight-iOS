@@ -13,8 +13,8 @@
 //
 //  This is the CANONICAL block editor — the top-anchored overlay editor it was
 //  forked from was retired in Phase 3 (2026-06-17), so these block mutation/focus
-//  helpers no longer have a duplicate. Drag-to-reorder of check items returns in a
-//  follow-up increment.
+//  helpers no longer have a duplicate. Check items reorder via a drag handle
+//  (`.draggable`/`.dropDestination` + the model's `moveBlock`).
 //
 
 import SwiftUI
@@ -105,6 +105,27 @@ struct InlineTakeEditCard: View {
                     onReturn: { handleReturn(item.id) },
                     onBackspaceEmpty: { handleBackspaceEmpty(item.id, isCheck: true) }
                 )
+
+                // Drag handle to reorder (Phase 3 — restores the List `.onMove` lost
+                // when the editor moved to a VStack). Long-press-drag the handle and
+                // drop on another check row to move this item before it; the model's
+                // `moveBlock` does the reorder. `.draggable` needs a long-press first,
+                // so a plain vertical swipe still scrolls the timeline.
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.ckTextSecondary.opacity(0.5))
+                    .frame(width: CatchlightLayout.minTouchTarget,
+                           height: CatchlightLayout.minTouchTarget)
+                    .contentShape(Rectangle())
+                    .accessibilityIdentifier("take-edit-reorder")
+                    .accessibilityLabel("Reorder item")
+                    .draggable(item.id.uuidString)
+            }
+            .dropDestination(for: String.self) { ids, _ in
+                guard let raw = ids.first, let dragged = UUID(uuidString: raw),
+                      dragged != item.id else { return false }
+                draft.moveBlock(id: dragged, before: item.id)
+                return true
             }
         }
     }
