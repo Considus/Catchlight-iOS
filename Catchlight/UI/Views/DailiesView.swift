@@ -871,15 +871,20 @@ struct DailiesView: View {
     }
 
     /// Focus a Take for in-place editing: seed the draft (a blank Take gets one empty
-    /// prose row to type into, mirroring the top-anchored editor), drop the caret into
-    /// its first block, and raise the focus flag (which masks the rest).
+    /// prose row to type into) and drop the caret at the END of the content — the
+    /// "continue / append" position (owner 2026-06-17). The caret's block is the
+    /// text-entry row, and iOS keyboard avoidance keeps THAT row above the keyboard —
+    /// so focusing the LAST block pulls the bottom of the Take clear of the keyboard
+    /// (the obscured-bottom fix), and lands you ready to keep writing. (`BlockTextEditor`
+    /// places the caret at the end of the focused block's text on becoming first
+    /// responder.)
     private func beginInlineEdit(_ take: Take) {
         // Task 6.20: editing is gated for lapsed users — paywall opens instead.
         guard app.ensureEntitled() else { return }
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editDraft = t
-        editFocusedBlockID = t.blocks.first?.id
+        editFocusedBlockID = t.blocks.last?.id
         ui.beginEditingInPlace(take)
     }
 
