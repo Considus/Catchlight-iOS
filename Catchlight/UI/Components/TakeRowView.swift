@@ -39,6 +39,12 @@ struct TakeRowView: View {
     /// is swiped for its actions — and so the future rings-on-a-wire still reads.
     /// Driven by `SwipeActionRow`; 0 everywhere the row isn't swipeable.
     var cardSwipeOffset: CGFloat = 0
+    /// Edit-in-place (2026-06-17): when supplied, the read-only `TakeCardSurface` in
+    /// the card slot is replaced by this live editor, IN POSITION — the Iris, spine,
+    /// and card geometry are untouched (owner point 6). nil everywhere a row is at
+    /// rest. The editor owns its own gestures + accessibility, so the row's tap /
+    /// combined-element wrapping is dropped while editing.
+    var editingCard: (() -> AnyView)? = nil
 
     private var firstLine: String {
         let line = take.plainText
@@ -199,16 +205,24 @@ struct TakeRowView: View {
     /// the tapped Take's card above its dim veil (owner 2026-06-16: keep the tapped
     /// Take readable while everything else recedes). Here it carries the row's
     /// gestures, context menu, and combined VoiceOver element.
+    @ViewBuilder
     private var cardColumn: some View {
-        TakeCardSurface(take: take)
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .onTapGesture { onTapText() }
-            .contextMenu { rowMenuItems }
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("take-row")
-            .accessibilityLabel(rowAccessibilityLabel)
-            .accessibilityHint("Double-tap to edit this Take.")
-            .accessibilityActions { rowAccessibilityActions }
+        if let editingCard {
+            // Editing in place: the live editor takes the card slot and owns its own
+            // gestures + per-row accessibility (a combined element would merge the
+            // editable fields into one and break VoiceOver editing).
+            editingCard()
+        } else {
+            TakeCardSurface(take: take)
+                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .onTapGesture { onTapText() }
+                .contextMenu { rowMenuItems }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("take-row")
+                .accessibilityLabel(rowAccessibilityLabel)
+                .accessibilityHint("Double-tap to edit this Take.")
+                .accessibilityActions { rowAccessibilityActions }
+        }
     }
 
     @ViewBuilder

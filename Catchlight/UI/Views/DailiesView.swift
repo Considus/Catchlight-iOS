@@ -111,6 +111,14 @@ struct DailiesView: View {
     /// to inset the scrolling Takes below it. 0 ⇒ no Obie / not yet measured.
     @State private var pinnedObieZoneHeight: CGFloat = 0
 
+    // MARK: - Edit-in-place (2026-06-17)
+    /// The live draft of the Take being edited in position, and which of its blocks
+    /// holds the keyboard. `ui.editingTakeID` is the matching focus flag (shared so
+    /// RootView can mask the dock). Both clear on save/discard. The draft is committed
+    /// through the same `vm.save` chokepoint the top-anchored editor uses.
+    @State private var editDraft: Take?
+    @State private var editFocusedBlockID: UUID?
+
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
     /// estimate (no month marker). Row top → card top (+6, the Iris straddles the
@@ -209,7 +217,11 @@ struct DailiesView: View {
             // keyboard avoidance (Flow 5 regression, 2026-06-11). The heading
             // dodges the status bar itself via deviceTopInset. Takes scroll
             // under the solid block and dissolve beneath the 12pt fade.
+            // Masked while editing in place (owner 2026-06-17) — the focused Take is
+            // the only bright thing on screen. (The pinned Obie + rows mask via
+            // `row(for:)`'s own opacity, so only the heading needs dimming here.)
             heading
+                .opacity(ui.isEditingInPlace ? 0.12 : 1)
 
             // The pinned Obie sits below the heading at the first-Take position, with
             // its own solid backing + fade; scrolling Takes pass behind it and dissolve.
@@ -657,7 +669,17 @@ struct DailiesView: View {
                 // .background tap catcher (not an overlay) so row gestures and
                 // scrolling are unaffected; attached only in FILTERING.
                 .background {
-                    if ui.dockMode == .filtering {
+                    if ui.isEditingInPlace {
+                        // Tapping anywhere off the focused Take commits the edit
+                        // (owner 2026-06-17 — "tap the masked area to save"). Masked
+                        // rows commit via their own tap handlers; this catches the
+                        // empty gaps so a single-Take timeline can still be exited.
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { saveInlineEdit() }
+                            .accessibilityLabel("Save and close")
+                            .accessibilityHint("Double-tap to save this Take and stop editing.")
+                    } else if ui.dockMode == .filtering {
                         Color.clear
                             .contentShape(Rectangle())
                             .onTapGesture { ui.exitToResting() }
@@ -773,22 +795,87 @@ struct DailiesView: View {
                     .allowsHitTesting(false)
             }
         }
+        // Edit-in-place (owner 2026-06-17): mask every row except the one under
+        // focus — the "Iris-touch focus" applied to editing. The timeline still
+        // scrolls (the focused row scrolls with it); masked rows stay tappable so a
+        // tap on one commits the edit (see `rowContent`'s tap handlers).
+        .opacity(ui.isEditingInPlace && ui.editingTakeID != take.id ? 0.12 : 1)
+    }
+
+    // MARK: - Edit-in-place actions
+
+    /// A non-optional binding into `editDraft` for the inline editor. The fallback
+    /// `Take()` is never reached in practice — `beginInlineEdit` sets `editDraft`
+    /// before `editingTakeID`, so the editor only renders once the draft exists.
+    private var editDraftBinding: Binding<Take> {
+        Binding(get: { editDraft ?? Take() }, set: { editDraft = $0 })
+    }
+
+    /// Focus a Take for in-place editing: seed the draft (a blank Take gets one empty
+    /// prose row to type into, mirroring the top-anchored editor), drop the caret into
+    /// its first block, and raise the focus flag (which masks the rest).
+    private func beginInlineEdit(_ take: Take) {
+        // Task 6.20: editing is gated for lapsed users — paywall opens instead.
+        guard app.ensureEntitled() else { return }
+        var t = take
+        if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
+        editDraft = t
+        editFocusedBlockID = t.blocks.first?.id
+        ui.beginEditingInPlace(take)
+    }
+
+    /// Commit the in-place edit through the same path the old editor used: drop empty
+    /// prose rows, then either discard a never-saved blank Take or `vm.save`.
+    private func saveInlineEdit() {
+        editFocusedBlockID = nil            // release the keyboard first
+        defer { editDraft = nil; ui.endEditingInPlace() }
+        guard var t = editDraft else { return }
+        guard app.ensureEntitled() else { return }
+        t.removeEmptyTextBlocks()
+        let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !t.isTask && t.timeReminder == nil && !t.isObie
+            && t.attachments.isEmpty && t.locationReminder == nil
+        let storedCopy = try? vm.store.take(id: t.id)
+        let storedHadContent = (storedCopy?.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+        if isBlank && !storedHadContent {
+            vm.discardIfPresent(t)
+        } else {
+            vm.save(t)
+        }
+    }
+
+    /// Discard the edits (owner 2026-06-17 — via the row's long-press menu): drop the
+    /// draft and leave the stored Take exactly as it was. A no-op revert, never a
+    /// delete.
+    private func discardInlineEdit() {
+        editFocusedBlockID = nil
+        editDraft = nil
+        ui.endEditingInPlace()
     }
 
     /// The row's visual content (Iris + card). `cardSwipeOffset` slides the card
     /// (only) for its swipe actions, supplied live by the enclosing `SwipeActionRow`.
     private func rowContent(for take: Take, cardSwipeOffset: CGFloat = 0, isFirst: Bool = false) -> some View {
-        TakeRowView(
+        let isEditingThis = ui.editingTakeID == take.id
+        let editingActive = ui.isEditingInPlace
+        return TakeRowView(
             take: take,
             onTapCircle: { irisCentre in
+                // While another Take is focused, any tap outside it commits and exits.
+                if editingActive && !isEditingThis { saveInlineEdit(); return }
                 // Hint 2 is dismissed by tapping any Iris.
                 orientation.didTapIris()
                 // Section 8 — bloom the fan in place at the tapped Iris (window
                 // coords match the full-screen overlay space). The .zero fallback
-                // (screen centre) only survives as a last resort.
+                // (screen centre) only survives as a last resort. While editing THIS
+                // Take, the Iris still opens the fan (shape) — owner 2026-06-17.
                 ui.openPetalFan(for: take, origin: irisCentre)
             },
             onLongPressCircle: {
+                // Iris long-press is disabled during editing (discard moved to the
+                // Take's long-press menu — owner 2026-06-17); a press on a masked row
+                // just commits and exits.
+                if editingActive { if !isEditingThis { saveInlineEdit() }; return }
                 // Hint 4: arm the Obie introduction tooltip on the first long-press.
                 // The actual designation still proceeds — the tooltip provides
                 // context "before the action takes effect" (and persists over the
@@ -799,9 +886,13 @@ struct DailiesView: View {
                 vm.designateObie(take, replaceExisting: false)
             },
             onTapText: {
-                // Task 6.20: editing is gated for lapsed users — paywall opens instead.
-                guard app.ensureEntitled() else { return }
-                ui.openEditor(for: take)
+                // Edit-in-place (2026-06-17): a Take is edited in position, not in a
+                // top-anchored overlay. Tapping a masked row while editing commits.
+                if editingActive {
+                    if !isEditingThis { saveInlineEdit() }
+                    return
+                }
+                beginInlineEdit(take)
             },
             // Delete / complete paths (2026-06-10). Previously `vm.delete` had
             // no UI caller at all and nothing ever set `isComplete` — rows could
@@ -816,7 +907,10 @@ struct DailiesView: View {
                 guard app.ensureEntitled() else { return }
                 vm.delete(take)
             },
-            cardSwipeOffset: cardSwipeOffset
+            cardSwipeOffset: cardSwipeOffset,
+            editingCard: isEditingThis
+                ? { AnyView(InlineTakeEditCard(draft: editDraftBinding, focusedBlockID: $editFocusedBlockID)) }
+                : nil
         )
         .background(
             // Task 6.19 — brief flash when this row is the Spotlight deep-link
