@@ -990,13 +990,32 @@ struct DailiesView: View {
             // unreachable. The row exposes both via a context menu on its text
             // column (kept off the circle so the Obie long-press still wins).
             onToggleComplete: {
+                // While editing, apply to the live draft so it rides the save; at
+                // rest, toggle through the store as before.
+                if isEditingThis {
+                    guard var d = editDraft else { return }
+                    d.setAllItemsComplete(!d.isComplete)
+                    editDraft = d
+                    return
+                }
                 guard app.ensureEntitled() else { return }
                 vm.toggleComplete(take)
             },
             onDelete: {
                 guard app.ensureEntitled() else { return }
+                // Delete while editing: drop the draft and leave editing — there's
+                // nothing to save once the Take is gone.
+                if isEditingThis {
+                    let doomed = editDraft ?? take
+                    editFocusedBlockID = nil
+                    editDraft = nil
+                    ui.endEditingInPlace()
+                    vm.delete(doomed)
+                    return
+                }
                 vm.delete(take)
             },
+            onDiscard: isEditingThis ? { discardInlineEdit() } : nil,
             cardSwipeOffset: cardSwipeOffset,
             editingCard: isEditingThis
                 ? { AnyView(InlineTakeEditCard(draft: editDraftBinding, focusedBlockID: $editFocusedBlockID)) }
