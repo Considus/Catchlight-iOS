@@ -83,6 +83,13 @@ final class UIState {
     }
     var editorFanCommand: EditorFanCommand?
 
+    /// As `editorFanCommand`, but for the IN-PLACE editor (edit-in-place redesign
+    /// 2026-06-17). When the Focus ring is opened from a Take being edited inline,
+    /// its commit must reshape that editor's live draft — not the stored copy — so
+    /// the selection (incl. an Obie change) rides the inline save instead of being
+    /// silently reverted when the draft is written back. DailiesView consumes it.
+    var inlineFanCommand: EditorFanCommand?
+
     /// Settings sheet — a swipe UP on the dock toggles this once the first-run
     /// orientation has finished (step >= 4 in `FirstRunOrientationState`).
     /// (Owner redesign 2026-06-11 — replaces the long-press on Dailies.)
