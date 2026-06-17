@@ -81,17 +81,22 @@ struct BlockTextEditor: UIViewRepresentable {
         // Programmatic focus: become first responder when the editor points
         // `focusedBlockID` at us; resign only when focus is cleared entirely
         // (another row becoming first responder resigns us automatically). The
-        // `focusRequested` latch dedupes the async hop so repeated updateUIView
-        // passes can't pile up becomeFirstResponder calls (a render loop).
+        // `focusRequested` latch dedupes so repeated updateUIView passes can't pile up
+        // parallel retry chains (a render loop).
+        //
+        // A NEW Take is created off-screen / blooming, so the row often isn't in the
+        // window yet on the first pass — a single becomeFirstResponder attempt then
+        // silently fails and never retries, so the Take opens with no caret/keyboard
+        // (worst on a cold launch, fine on warm runs → the "inconsistent" report).
+        // `requestFocus` RETRIES on a short timer until the view is in the window and
+        // focus takes, so it's deterministic regardless of launch/scroll timing.
         if focusedBlockID == blockID {
             if !tv.isFirstResponder, !context.coordinator.focusRequested {
                 context.coordinator.focusRequested = true
+                // Defer out of the view-update cycle (becomeFirstResponder mid-update
+                // is unsafe), then retry on a timer until it takes.
                 DispatchQueue.main.async {
-                    context.coordinator.focusRequested = false
-                    guard !tv.isFirstResponder, tv.window != nil else { return }
-                    tv.becomeFirstResponder()
-                    let end = tv.endOfDocument
-                    tv.selectedTextRange = tv.textRange(from: end, to: end)
+                    context.coordinator.requestFocus(tv, attemptsLeft: 16)
                 }
             }
         } else if focusedBlockID == nil, tv.isFirstResponder {
@@ -123,6 +128,30 @@ struct BlockTextEditor: UIViewRepresentable {
         /// runs (prevents a focus/render loop).
         var focusRequested = false
         init(_ parent: BlockTextEditor) { self.parent = parent }
+
+        /// Retry becomeFirstResponder until the view is actually in a window and focus
+        /// takes (or we run out of attempts) — a new Take's row may not be realised /
+        /// on-screen on the first pass, and a single attempt loses the keyboard. Each
+        /// attempt is ~50ms apart; bails early if focus drifted elsewhere or already
+        /// landed. Clears `focusRequested` when it finishes so a later focus can re-arm.
+        func requestFocus(_ tv: BackspaceTextView, attemptsLeft: Int) {
+            // Focus moved away (or already there) — stop, don't steal it back.
+            guard parent.focusedBlockID == parent.blockID, !tv.isFirstResponder else {
+                focusRequested = false
+                return
+            }
+            if tv.window != nil, tv.becomeFirstResponder() {
+                let end = tv.endOfDocument
+                tv.selectedTextRange = tv.textRange(from: end, to: end)
+                focusRequested = false
+                return
+            }
+            guard attemptsLeft > 0 else { focusRequested = false; return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self, weak tv] in
+                guard let self, let tv else { return }
+                self.requestFocus(tv, attemptsLeft: attemptsLeft - 1)
+            }
+        }
 
         /// A slim bar with a centred grabber, hosted as the keyboard's
         /// `inputAccessoryView`. A tap or a downward swipe dismisses the keyboard by
