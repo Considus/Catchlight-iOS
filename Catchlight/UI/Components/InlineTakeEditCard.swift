@@ -13,8 +13,9 @@
 //
 //  This is the CANONICAL block editor — the top-anchored overlay editor it was
 //  forked from was retired in Phase 3 (2026-06-17), so these block mutation/focus
-//  helpers no longer have a duplicate. Check items reorder via a drag handle
-//  (`.draggable`/`.dropDestination` + the model's `moveBlock`).
+//  helpers no longer have a duplicate. Check items reorder via a drag handle that
+//  starts on touch-and-move (not a long-press, so it coexists with the card's
+//  long-press menu); VoiceOver gets explicit Move up/down actions.
 //
 
 import SwiftUI
@@ -23,6 +24,17 @@ import CatchlightCore
 struct InlineTakeEditCard: View {
     @Binding var draft: Take
     @Binding var focusedBlockID: UUID?
+
+    // MARK: - Reorder drag state (touch-and-move from the handle, so it doesn't
+    // collide with the card's long-press menu — owner 2026-06-17)
+    /// The check item being dragged, its live finger offset, and the index it started
+    /// at (fixed reference so the live reorder maths don't drift as rows shuffle).
+    @State private var draggingID: UUID?
+    @State private var dragOffsetY: CGFloat = 0
+    @State private var dragStartIndex: Int?
+    /// Approximate row height for translating drag distance → index steps. A check
+    /// row is ~the 44pt touch target; tuned on device.
+    private let estRowHeight: CGFloat = 44
 
     // MARK: - Card treatment (mirrors TakeCardSurface so read↔edit is seamless)
 
@@ -41,6 +53,10 @@ struct InlineTakeEditCard: View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(draft.blocks) { block in
                 row(for: block)
+                    // Lift the row being dragged so it follows the finger above its
+                    // neighbours while the order reflows underneath.
+                    .offset(y: dragVisualOffset(for: block.id))
+                    .zIndex(draggingID == block.id ? 1 : 0)
             }
         }
         // Match TakeCardSurface's v1.7 padding: 24 top (clears the overlapping Iris) /
@@ -106,33 +122,61 @@ struct InlineTakeEditCard: View {
                     onBackspaceEmpty: { handleBackspaceEmpty(item.id, isCheck: true) }
                 )
 
-                // Drag handle to reorder (Phase 3 — restores the List `.onMove` lost
-                // when the editor moved to a VStack). Long-press-drag the handle and
-                // drop on another check row to move this item before it; the model's
-                // `moveBlock` does the reorder. `.draggable` needs a long-press first,
-                // so a plain vertical swipe still scrolls the timeline.
+                // Drag handle to reorder. Owner 2026-06-17: it starts on touch-and-
+                // MOVE (a high-priority DragGesture), NOT a long-press — so it doesn't
+                // collide with the card's long-press menu (hold = menu, drag = reorder).
+                // The order reflows live as you drag; VoiceOver gets explicit Move
+                // actions instead (the gesture isn't reachable without sight/touch).
                 Image(systemName: "line.3.horizontal")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.ckTextSecondary.opacity(0.5))
+                    .foregroundStyle(Color.ckTextSecondary.opacity(draggingID == item.id ? 0.9 : 0.5))
                     .frame(width: CatchlightLayout.minTouchTarget,
                            height: CatchlightLayout.minTouchTarget)
                     .contentShape(Rectangle())
+                    .highPriorityGesture(reorderDrag(for: item.id))
                     .accessibilityIdentifier("take-edit-reorder")
                     .accessibilityLabel("Reorder item")
-                    // The drag handle is pointer/touch-only; VoiceOver gets explicit
-                    // Move actions (same pattern as ListAngleView) so reorder is
-                    // reachable without the drag gesture (owner 2026-06-17).
                     .accessibilityAction(named: "Move up") { moveCheckItem(item.id, by: -1) }
                     .accessibilityAction(named: "Move down") { moveCheckItem(item.id, by: 1) }
-                    .draggable(item.id.uuidString)
-            }
-            .dropDestination(for: String.self) { ids, _ in
-                guard let raw = ids.first, let dragged = UUID(uuidString: raw),
-                      dragged != item.id else { return false }
-                draft.moveBlock(id: dragged, before: item.id)
-                return true
             }
         }
+    }
+
+    /// Touch-and-move reorder for the drag handle. Begins on a small movement (not a
+    /// long-press, so the card's long-press menu still works on a hold), reflows the
+    /// order live, and settles on release. High-priority so it wins over the timeline
+    /// scroll once a drag starts on the handle.
+    private func reorderDrag(for id: UUID) -> some Gesture {
+        DragGesture(minimumDistance: 6)
+            .onChanged { value in
+                if draggingID != id {
+                    draggingID = id
+                    dragStartIndex = draft.blocks.firstIndex { $0.id == id }
+                }
+                dragOffsetY = value.translation.height
+                guard let start = dragStartIndex else { return }
+                let proposed = start + Int((value.translation.height / estRowHeight).rounded())
+                let target = min(max(proposed, 0), draft.blocks.count - 1)
+                guard let cur = draft.blocks.firstIndex(where: { $0.id == id }), cur != target else { return }
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    let b = draft.blocks.remove(at: cur)
+                    draft.blocks.insert(b, at: target)
+                }
+            }
+            .onEnded { _ in
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    dragOffsetY = 0
+                    draggingID = nil
+                    dragStartIndex = nil
+                }
+            }
+    }
+
+    /// Live offset that keeps the dragged row under the finger as the order reflows.
+    private func dragVisualOffset(for id: UUID) -> CGFloat {
+        guard draggingID == id, let start = dragStartIndex,
+              let cur = draft.blocks.firstIndex(where: { $0.id == id }) else { return 0 }
+        return dragOffsetY - CGFloat(cur - start) * estRowHeight
     }
 
     /// VoiceOver-accessible reorder — swap a check block with its neighbour. The drag
