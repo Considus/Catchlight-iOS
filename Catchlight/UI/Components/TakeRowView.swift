@@ -38,6 +38,11 @@ struct TakeRowView: View {
     /// is being edited in place, so "Discard changes" appears in the long-press menu
     /// (and as a VoiceOver action) exactly when there are edits to discard.
     var onDiscard: (() -> Void)? = nil
+    /// Accessibility id for the Iris. Defaults to "take-iris"; the row being edited in
+    /// place passes "editor-shape" — it plays the role the retired top-anchored
+    /// editor's footer Iris did (tap = open the Focus ring), so the test contract and
+    /// the semantic carry over.
+    var irisIdentifier: String = "take-iris"
     /// Horizontal swipe offset applied to the CARD only (not the Iris). The Iris
     /// stays anchored on the spine so the timeline "wire" is unbroken while a Take
     /// is swiped for its actions — and so the future rings-on-a-wire still reads.
@@ -193,7 +198,7 @@ struct TakeRowView: View {
             )
         )
         .accessibilityElement()
-        .accessibilityIdentifier("take-iris")
+        .accessibilityIdentifier(irisIdentifier)
         .accessibilityLabel(take.isObie
             ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
             : "Iris. \(TakeCircleView.activityDescription(for: take))")
