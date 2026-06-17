@@ -687,6 +687,12 @@ struct DailiesView: View {
                             let isFirstOverall = (vm.obie == nil) && groupIndex == 0 && takeIndex == 0
                             row(for: take, isFirst: isFirstOverall)
                                 .id(take.id)
+                                // Only the in-place NEW Take blooms in (scale+opacity
+                                // from its Iris corner); existing rows don't transition
+                                // on insert/remove (owner 2026-06-17 organic "appear").
+                                .transition(take.id == inlineNewTake?.id
+                                    ? .scale(scale: 0.92, anchor: .topLeading).combined(with: .opacity)
+                                    : .identity)
                         }
                     }
                 }
@@ -877,9 +883,15 @@ struct DailiesView: View {
     private func beginNewInlineEdit(_ take: Take) {
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
-        editDraft = t
         editFocusedBlockID = t.blocks.first?.id
-        ui.beginEditingInPlace(take)
+        // Organic "appear" (owner 2026-06-17 — should feel as natural as the fan):
+        // one animated state change blooms the new card in (its row carries a
+        // scale+opacity transition anchored at the Iris corner) while the rest masks
+        // back. A gentle spring with minimal overshoot, not the flat 0.2s mask fade.
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
+            editDraft = t
+            ui.editingTakeID = take.id
+        }
         // Bring it into view once it's laid out (off-screen at the bottom for
         // Oldest-first). Deferred a tick so the injected row exists first.
         DispatchQueue.main.async { scrollToTakeID = take.id }
