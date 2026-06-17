@@ -179,11 +179,6 @@ struct DailiesView: View {
                 // (owner 2026-06-17) — the bright wire otherwise reads as a
                 // "timeline remnant" behind the focused Take.
                 .opacity(ui.isEditingInPlace ? 0.12 : 1)
-                // Stay anchored to the + (screen bottom) even with the keyboard up
-                // (owner 2026-06-17): otherwise keyboard avoidance lifts the spine's
-                // terminus and it ends behind a new bottom Take instead of running
-                // down to where the + sits.
-                .ignoresSafeArea(.keyboard, edges: .bottom)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
@@ -211,7 +206,6 @@ struct DailiesView: View {
             DottedSpine(dashPhase: dottedSpinePhase)
                 // Masked with the timeline while editing in place (owner 2026-06-17).
                 .opacity(ui.isEditingInPlace ? 0.12 : 1)
-                .ignoresSafeArea(.keyboard, edges: .bottom)   // anchor to the + with the keyboard up (see solid spine)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
