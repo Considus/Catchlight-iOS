@@ -164,21 +164,24 @@ struct RootView: View {
             try? await Task.sleep(nanoseconds: 400_000_000)
             app.presentPaywallIfNeededAfterOnboarding()
         }
-        .alert("Replace your Obie?",
+        .alert("Make this your Obie?",
                isPresented: Binding(
                 get: { app.dailiesVM.pendingObieConflict != nil },
                 set: { if !$0 { app.dailiesVM.cancelObieReplacement() } }
                )) {
-            Button("Replace", role: .destructive) {
+            Button("Make Obie") {
                 app.dailiesVM.confirmObieReplacement()
                 orientation.didDismissObieIntro()
             }
-            Button("Keep current", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 app.dailiesVM.cancelObieReplacement()
                 orientation.didDismissObieIntro()
             }
         } message: {
-            Text("Only one Take can be your Obie. This will replace the current one.")
+            // Owner copy 2026-06-17: frame it as the existing Obie returning to the
+            // timeline (not "replaced"), since nothing is lost — only one Take can be
+            // the Obie at a time.
+            Text("Your existing Obie returns to the timeline — only one Take can be your Obie.")
         }
     }
 
@@ -227,7 +230,13 @@ struct RootView: View {
                     hubCentre: ui.petalFanOrigin == .zero
                         ? CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
                         : ui.petalFanOrigin,
-                    onCommit: { isNote, isTask, hasReminder, isObie in
+                    containerWidth: geo.size.width,
+                    // Lift the tapped Take lit above the veil only when the fan
+                    // blooms from a timeline Iris (real origin). From the editor
+                    // footer the origin is .zero (screen centre) and the editor is
+                    // already the context, so no spotlight card there.
+                    showsFocusCard: ui.petalFanOrigin != .zero,
+                    onCommit: { isNote, isTask, hasReminder, reminderDate, isObie in
                         // Task 6.20: petal-fan commit is a mutation — gate it.
                         guard app.ensureEntitled() else {
                             ui.closePetalFan()
@@ -242,13 +251,15 @@ struct RootView: View {
                             ui.editorFanCommand = UIState.EditorFanCommand(
                                 token: UUID(),
                                 isNote: isNote, isTask: isTask,
-                                hasReminder: hasReminder, isObie: isObie
+                                hasReminder: hasReminder, reminderDate: reminderDate,
+                                isObie: isObie
                             )
                         } else {
                             app.dailiesVM.applyActivityTypes(
                                 to: take,
                                 isNote: isNote, isTask: isTask,
-                                hasReminder: hasReminder, isObie: isObie
+                                hasReminder: hasReminder, reminderDate: reminderDate,
+                                isObie: isObie
                             )
                         }
                         ui.closePetalFan()
