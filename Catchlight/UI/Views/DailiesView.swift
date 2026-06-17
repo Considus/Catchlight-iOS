@@ -787,12 +787,16 @@ struct DailiesView: View {
                     if ui.spotlightTargetTakeID == id { ui.spotlightTargetTakeID = nil }
                 }
             }
-            // Edit-in-place Phase 2: bring a just-created Take into view. Anchored
-            // LOW in the viewport (0.82, owner 2026-06-17) so it sits near — but not
-            // hard against — the keyboard, rather than floating ~1/3 down. For
-            // Newest-first (Take at top) this clamps to the top, as wanted.
-            .onChange(of: scrollToTakeID) { _, id in
-                guard let id else { return }
+            // Edit-in-place Phase 2: reveal a just-created Take — but ONLY after its
+            // keyboard is fully up (owner 2026-06-18). Scrolling against the
+            // keyboard-reduced viewport here lands it at the same anchor every time;
+            // the previous immediate scroll raced iOS keyboard avoidance, so the rest
+            // position varied. Anchored LOW (0.82) so it sits near the keyboard with a
+            // small gap (Newest-first clamps to the top, as wanted). Guarded so a stale
+            // target (focus that never raised a keyboard) can't scroll a later edit.
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                guard let id = scrollToTakeID else { return }
+                guard id == ui.editingTakeID else { scrollToTakeID = nil; return }
                 withAnimation(.easeInOut(duration: 0.3)) {
                     proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
                 }
@@ -924,15 +928,19 @@ struct DailiesView: View {
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editFocusedBlockID = t.blocks.first?.id
-        // Insert the row COLLAPSED (bloom = 0 → scale 0.92 / opacity 0) as the rest
-        // masks back, then bloom it in explicitly after the scroll so the "appear" is
-        // visible wherever it lands (owner 2026-06-17 — should feel as natural as the
-        // fan; LazyVStack swallows insertion transitions, hence the explicit drive).
+        // Mark this Take to be revealed once its keyboard is fully up (see the
+        // keyboardDidShow handler). Scrolling AFTER the keyboard settles — against the
+        // keyboard-reduced viewport — lands it at the same anchor every time, instead of
+        // racing iOS keyboard avoidance (which made the rest position vary run-to-run:
+        // nice / half-behind the keyboard / sliding up — owner 2026-06-18).
+        scrollToTakeID = take.id
+        // Insert the row COLLAPSED (bloom 0.3 → scale 0.92) as the rest masks back, then
+        // bloom it in explicitly so the "appear" is visible wherever it lands (owner
+        // 2026-06-17 — should feel organic; LazyVStack swallows insertion transitions).
         newTakeBloom = 0
         editDraft = t
         withAnimation(UIState.fanFade) { ui.editingTakeID = take.id }
         DispatchQueue.main.async {
-            scrollToTakeID = take.id
             withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { newTakeBloom = 1 }
         }
     }
