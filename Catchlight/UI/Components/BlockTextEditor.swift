@@ -38,6 +38,12 @@ struct BlockTextEditor: UIViewRepresentable {
     var onReturn: () -> Void = {}
     /// Backspace pressed while the field is empty.
     var onBackspaceEmpty: () -> Void = {}
+    /// Show a grabber bar on top of the keyboard whose tap / downward-swipe dismisses
+    /// the keyboard (owner 2026-06-17 — a discoverable "swipe the keyboard out of the
+    /// way" affordance; dismissing then leaves the dimmed timeline tappable to save &
+    /// close). Dismiss = clearing `focusedBlockID`, so the field resigns and won't be
+    /// re-focused. Only the in-place editor sets this.
+    var showsKeyboardGrabber: Bool = false
 
     func makeUIView(context: Context) -> BackspaceTextView {
         let tv = BackspaceTextView()
@@ -58,6 +64,9 @@ struct BlockTextEditor: UIViewRepresentable {
             guard tv != nil else { return }
             context.coordinator.parent.onBackspaceEmpty()
         }
+        if showsKeyboardGrabber {
+            tv.inputAccessoryView = context.coordinator.makeGrabberBar()
+        }
         tv.text = text
         applyStyle(to: tv)
         return tv
@@ -72,17 +81,22 @@ struct BlockTextEditor: UIViewRepresentable {
         // Programmatic focus: become first responder when the editor points
         // `focusedBlockID` at us; resign only when focus is cleared entirely
         // (another row becoming first responder resigns us automatically). The
-        // `focusRequested` latch dedupes the async hop so repeated updateUIView
-        // passes can't pile up becomeFirstResponder calls (a render loop).
+        // `focusRequested` latch dedupes so repeated updateUIView passes can't pile up
+        // parallel retry chains (a render loop).
+        //
+        // A NEW Take is created off-screen / blooming, so the row often isn't in the
+        // window yet on the first pass — a single becomeFirstResponder attempt then
+        // silently fails and never retries, so the Take opens with no caret/keyboard
+        // (worst on a cold launch, fine on warm runs → the "inconsistent" report).
+        // `requestFocus` RETRIES on a short timer until the view is in the window and
+        // focus takes, so it's deterministic regardless of launch/scroll timing.
         if focusedBlockID == blockID {
             if !tv.isFirstResponder, !context.coordinator.focusRequested {
                 context.coordinator.focusRequested = true
+                // Defer out of the view-update cycle (becomeFirstResponder mid-update
+                // is unsafe), then retry on a timer until it takes.
                 DispatchQueue.main.async {
-                    context.coordinator.focusRequested = false
-                    guard !tv.isFirstResponder, tv.window != nil else { return }
-                    tv.becomeFirstResponder()
-                    let end = tv.endOfDocument
-                    tv.selectedTextRange = tv.textRange(from: end, to: end)
+                    context.coordinator.requestFocus(tv, attemptsLeft: 16)
                 }
             }
         } else if focusedBlockID == nil, tv.isFirstResponder {
@@ -114,6 +128,61 @@ struct BlockTextEditor: UIViewRepresentable {
         /// runs (prevents a focus/render loop).
         var focusRequested = false
         init(_ parent: BlockTextEditor) { self.parent = parent }
+
+        /// Retry becomeFirstResponder until the view is actually in a window and focus
+        /// takes (or we run out of attempts) — a new Take's row may not be realised /
+        /// on-screen on the first pass, and a single attempt loses the keyboard. Each
+        /// attempt is ~50ms apart; bails early if focus drifted elsewhere or already
+        /// landed. Clears `focusRequested` when it finishes so a later focus can re-arm.
+        func requestFocus(_ tv: BackspaceTextView, attemptsLeft: Int) {
+            // Focus moved away (or already there) — stop, don't steal it back.
+            guard parent.focusedBlockID == parent.blockID, !tv.isFirstResponder else {
+                focusRequested = false
+                return
+            }
+            if tv.window != nil, tv.becomeFirstResponder() {
+                let end = tv.endOfDocument
+                tv.selectedTextRange = tv.textRange(from: end, to: end)
+                focusRequested = false
+                return
+            }
+            guard attemptsLeft > 0 else { focusRequested = false; return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self, weak tv] in
+                guard let self, let tv else { return }
+                self.requestFocus(tv, attemptsLeft: attemptsLeft - 1)
+            }
+        }
+
+        /// A slim bar with a centred grabber, hosted as the keyboard's
+        /// `inputAccessoryView`. A tap or a downward swipe dismisses the keyboard by
+        /// clearing `focusedBlockID` (which makes the field resign and stay resigned).
+        func makeGrabberBar() -> UIView {
+            let bar = UIView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 28))
+            bar.backgroundColor = .clear
+            bar.autoresizingMask = [.flexibleWidth]
+            let grab = UIView()
+            grab.backgroundColor = UIColor(Color.ckTextSecondary).withAlphaComponent(0.4)
+            grab.layer.cornerRadius = 2.5
+            grab.translatesAutoresizingMaskIntoConstraints = false
+            bar.addSubview(grab)
+            NSLayoutConstraint.activate([
+                grab.centerXAnchor.constraint(equalTo: bar.centerXAnchor),
+                grab.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+                grab.widthAnchor.constraint(equalToConstant: 40),
+                grab.heightAnchor.constraint(equalToConstant: 5),
+            ])
+            bar.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard)))
+            bar.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(grabberPanned(_:))))
+            return bar
+        }
+
+        @objc func grabberPanned(_ g: UIPanGestureRecognizer) {
+            // Only a downward swipe dismisses (mirrors "pull the keyboard down").
+            guard g.state == .ended, g.translation(in: g.view).y > 8 else { return }
+            dismissKeyboard()
+        }
+
+        @objc func dismissKeyboard() { parent.focusedBlockID = nil }
 
         func textViewDidChange(_ tv: UITextView) {
             parent.text = tv.text

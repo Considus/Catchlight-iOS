@@ -268,7 +268,11 @@ struct DailiesView: View {
             // Kick off the first-run orientation tour the first time the main app
             // is visible. No-op once the tour has started or completed.
             orientation.beginIfNeeded()
+            // Let AppModel.relock save a mid-edit Take through our save path before it
+            // tears down the store (owner 2026-06-17 — lock auto-saves, never discards).
+            ui.commitInlineEdit = { saveInlineEdit() }
         }
+        .onDisappear { ui.commitInlineEdit = nil }
         // The Focus ring committed while a Take is edited in place — apply it to the
         // live draft (edit-in-place 2026-06-17). Guarded on `editingTakeID` so the
         // (behind) timeline ignores commits meant for the top-anchored new-Take editor.
@@ -711,8 +715,13 @@ struct DailiesView: View {
                                 // Iris corner, driven by `newTakeBloom` (explicit, so it
                                 // animates inside the LazyVStack and after the scroll).
                                 // Existing rows are pinned at full (owner 2026-06-17).
+                                // NB: the fade is FLOORED at 0.3, never 0 — SwiftUI maps
+                                // opacity 0 to isHidden, and UIKit refuses
+                                // becomeFirstResponder on a hidden view, so a 0-opacity
+                                // bloom silently swallowed the new Take's keyboard/caret
+                                // (you had to tap to focus). 0.3→1 still reads as a fade-in.
                                 .scaleEffect(isNewRow ? 0.92 + 0.08 * newTakeBloom : 1, anchor: .topLeading)
-                                .opacity(isNewRow ? newTakeBloom : 1)
+                                .opacity(isNewRow ? (0.3 + 0.7 * newTakeBloom) : 1)
                         }
                     }
                 }
@@ -753,6 +762,10 @@ struct DailiesView: View {
               }   // VStack(spacing: 0)
             }
             .scrollIndicators(.hidden)   // the spine is the timeline affordance (owner 2026-06-16)
+            // NOTE: deliberately NO `.scrollDismissesKeyboard` here — it interfered with
+            // a NEW Take's keyboard appearing (the programmatic scroll-to-new-row
+            // suppressed it). The keyboard is dismissed via the grabber bar on top of
+            // the keyboard instead (BlockTextEditor.showsKeyboardGrabber, owner 2026-06-17).
             .coordinateSpace(name: "dailies")
             .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
             .onPreferenceChange(FirstRowTopKey.self) { firstRowTop = $0.isFinite ? $0 : nil }
@@ -774,13 +787,29 @@ struct DailiesView: View {
                     if ui.spotlightTargetTakeID == id { ui.spotlightTargetTakeID = nil }
                 }
             }
-            // Edit-in-place Phase 2: bring a just-created Take into view. Anchored
-            // LOW in the viewport (0.82, owner 2026-06-17) so it sits near — but not
-            // hard against — the keyboard, rather than floating ~1/3 down. For
-            // Newest-first (Take at top) this clamps to the top, as wanted.
+            // Edit-in-place Phase 2 — revealing a just-created Take takes TWO scrolls:
+            // 1) INITIAL reveal (here): a new Take is created off-screen (bottom, under
+            //    Oldest-first), so the LazyVStack hasn't built its row yet — it can't
+            //    take focus or raise the keyboard until it's scrolled into view. This
+            //    instantiates it. Does NOT clear the target — the final position is set
+            //    on keyboardDidShow.
             .onChange(of: scrollToTakeID) { _, id in
                 guard let id else { return }
                 withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
+                }
+            }
+            // 2) AUTHORITATIVE settle: on keyboard WILL-show (the START of the keyboard
+            //    animation, not the end), scroll to the final anchor using the
+            //    keyboard's OWN animation duration — so the Take rises IN SYNC with the
+            //    keyboard rather than a beat after it (owner 2026-06-18). Anchored LOW
+            //    (0.82) — near the keyboard with a small gap; Newest-first clamps to the
+            //    top. Guarded so a stale target can't scroll a later, unrelated edit.
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { note in
+                guard let id = scrollToTakeID else { return }
+                guard id == ui.editingTakeID else { scrollToTakeID = nil; return }
+                let duration = (note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.25
+                withAnimation(.easeOut(duration: duration)) {
                     proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
                 }
                 scrollToTakeID = nil
@@ -911,15 +940,19 @@ struct DailiesView: View {
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editFocusedBlockID = t.blocks.first?.id
-        // Insert the row COLLAPSED (bloom = 0 → scale 0.92 / opacity 0) as the rest
-        // masks back, then bloom it in explicitly after the scroll so the "appear" is
-        // visible wherever it lands (owner 2026-06-17 — should feel as natural as the
-        // fan; LazyVStack swallows insertion transitions, hence the explicit drive).
+        // Mark this Take to be revealed once its keyboard is fully up (see the
+        // keyboardDidShow handler). Scrolling AFTER the keyboard settles — against the
+        // keyboard-reduced viewport — lands it at the same anchor every time, instead of
+        // racing iOS keyboard avoidance (which made the rest position vary run-to-run:
+        // nice / half-behind the keyboard / sliding up — owner 2026-06-18).
+        scrollToTakeID = take.id
+        // Insert the row COLLAPSED (bloom 0.3 → scale 0.92) as the rest masks back, then
+        // bloom it in explicitly so the "appear" is visible wherever it lands (owner
+        // 2026-06-17 — should feel organic; LazyVStack swallows insertion transitions).
         newTakeBloom = 0
         editDraft = t
         withAnimation(UIState.fanFade) { ui.editingTakeID = take.id }
         DispatchQueue.main.async {
-            scrollToTakeID = take.id
             withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { newTakeBloom = 1 }
         }
     }
