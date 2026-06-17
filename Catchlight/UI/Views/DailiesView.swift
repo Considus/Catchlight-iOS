@@ -345,16 +345,18 @@ struct DailiesView: View {
             .padding(.bottom, 2)
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
-            if vm.obie != nil {
+            if vm.obie != nil && !ui.isEditingInPlace {
                 // With a pinned Obie: SOLID right down to the Obie's card top (no fade
                 // — the gradient is semi-transparent and lets a scrolling Take peek).
                 // The opaque Obie card continues the mask below. Its own Iris is drawn
                 // ON TOP of the heading, so this doesn't cover it (owner 2026-06-16).
                 Color.ckBackground
             } else {
-                // No Obie: the first Take's Iris lives in the SCROLL behind the heading,
-                // so the heading stays natural height and a 12pt fade dissolves Takes
-                // scrolling under it.
+                // No Obie — OR editing in place (owner 2026-06-17): use the natural
+                // height + a 12pt fade so a grown focused Take dissolves under the
+                // top, exactly like the no-Obie timeline, instead of vanishing at the
+                // Obie heading's hard mid-screen edge. (The pinned Obie + insets stay
+                // put, so the focused Take's position doesn't jump.)
                 LinearGradient(
                     colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
                     startPoint: .top, endPoint: .bottom
@@ -369,7 +371,7 @@ struct DailiesView: View {
         // guarantees every corner is above the mask edge. The −12 pulls the mask edge
         // up 12px from the true bottom (owner 2026-06-17: a 6px nudge up from the prior
         // −6 to clear a small scroll-edge ugliness). Natural height when there's no Obie.
-        .frame(height: vm.obie != nil
+        .frame(height: (vm.obie != nil && !ui.isEditingInPlace)
                        ? deviceTopInset + CatchlightLayout.headingClearance + max(0, pinnedObieZoneHeight - 12)
                        : nil,
                alignment: .top)
