@@ -123,12 +123,13 @@ struct InlineTakeEditCard: View {
                 )
 
                 // Drag handle to reorder. UIKit-bridged (owner 2026-06-17, "do it
-                // right"): a short press-then-drag (`VerticalReorderGesture`, 0.2s
-                // long-press). The press delay cleanly separates reorder from a
-                // vertical SCROLL — same axis, so a velocity test can't — and preempts
-                // the card's long-press menu on the handle. Quick drags still scroll;
-                // holds elsewhere on the card still open the menu. The order reflows
-                // live; VoiceOver uses the explicit Move actions.
+                // right"): an IMMEDIATE pan on the handle (`VerticalReorderGesture`)
+                // whose delegate makes the enclosing ScrollView's pan wait for it to
+                // fail — so a vertical drag that STARTS on the handle reorders at once,
+                // while drags anywhere else scroll normally. No press-delay (the
+                // earlier long-press version was finicky — you had to hold dead-still
+                // first or it just scrolled). Holding the handle still still opens the
+                // card menu; dragging it reorders. Live reflow; VoiceOver = Move actions.
                 Image(systemName: "line.3.horizontal")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.ckTextSecondary.opacity(draggingID == item.id ? 0.9 : 0.5))
@@ -240,39 +241,35 @@ struct InlineTakeEditCard: View {
 
 // MARK: - UIKit-bridged press-then-drag reorder
 
-/// A "press the handle, then drag to reorder" gesture bridged from UIKit (iOS 18
+/// An immediate "drag the handle to reorder" gesture bridged from UIKit (iOS 18
 /// `UIGestureRecognizerRepresentable`) — the same approach as `HorizontalSwipePan`,
 /// and for the same reason: a SwiftUI gesture can't coordinate with the enclosing
-/// ScrollView's own pan. Reorder is VERTICAL — the same axis as scrolling — so the
-/// velocity test the swipe pan uses can't tell them apart; instead a short
-/// `UILongPressGestureRecognizer` (0.2s) uses the press DELAY to disambiguate: a
-/// quick drag scrolls, a brief hold-then-drag on the handle reorders. Exclusive
-/// recognition (no simultaneous) means once it arms it owns the touch — the scroll
-/// stays put and the card's long-press menu is preempted on the handle.
+/// ScrollView's own pan. Reorder is VERTICAL (same axis as scroll), so a velocity
+/// test can't separate it — instead the delegate makes the ScrollView's pan REQUIRE
+/// THIS ONE TO FAIL, so a vertical drag that starts on the handle wins outright and
+/// reorders with no press-delay, while drags anywhere else scroll normally.
 /// (Reused by the List Angle's reorder in Phase 4.)
 struct VerticalReorderGesture: UIGestureRecognizerRepresentable {
     var onBegan: () -> Void
-    /// Cumulative vertical travel (pt) since the press armed.
+    /// Cumulative vertical translation (pt) since the drag began.
     var onChanged: (CGFloat) -> Void
     var onEnded: () -> Void
 
     func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
 
-    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
-        let lp = UILongPressGestureRecognizer()
-        lp.minimumPressDuration = 0.2     // press delay = the scroll/menu disambiguator
-        lp.delegate = context.coordinator
-        return lp
+    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+        let pan = UIPanGestureRecognizer()
+        pan.delegate = context.coordinator
+        return pan
     }
 
-    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
-        let y = recognizer.location(in: recognizer.view).y
+    func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context: Context) {
+        let ty = recognizer.translation(in: recognizer.view).y
         switch recognizer.state {
         case .began:
-            context.coordinator.startY = y
             onBegan()
         case .changed:
-            onChanged(y - context.coordinator.startY)
+            onChanged(ty)
         case .ended, .cancelled, .failed:
             onEnded()
         default:
@@ -281,11 +278,26 @@ struct VerticalReorderGesture: UIGestureRecognizerRepresentable {
     }
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        var startY: CGFloat = 0
-        // Exclusive: once the press arms on the handle, reorder owns the touch — the
-        // ScrollView's pan yields and the card's long-press menu doesn't also fire.
-        // (Before it arms, a quick move fails the long-press, so normal scrolling is
-        // untouched.)
+        // Begin only on a VERTICAL-led drag, so a horizontal swipe on the handle still
+        // reaches the row's swipe action (orthogonal axis).
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+            let v = pan.velocity(in: pan.view)
+            return abs(v.y) > abs(v.x)
+        }
+
+        // Make the enclosing ScrollView's pan WAIT for ours to fail — so a vertical
+        // drag starting on the handle reorders instead of scrolling, with no delay.
+        // Only touches on the handle involve our recognizer, so normal scrolling
+        // (drags on the card body / elsewhere) is untouched.
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+            if let scroll = other.view as? UIScrollView, other === scroll.panGestureRecognizer {
+                return true
+            }
+            return false
+        }
+
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                                shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
             false
