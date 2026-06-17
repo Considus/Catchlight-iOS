@@ -128,7 +128,6 @@ struct RootView: View {
 
             dock
         }
-        .overlay { editorOverlay }
         .overlay { petalFanOverlay }
         .overlay { obieIntroOverlay }
         .sheet(isPresented: $ui.isSettingsPresented) {
@@ -224,16 +223,6 @@ struct RootView: View {
     // MARK: - Overlays
 
     @ViewBuilder
-    private var editorOverlay: some View {
-        if let take = ui.editorTake {
-            TakeEditView(take: take)
-                .environment(app.dailiesVM)
-                .environment(ui)
-                .transition(.move(edge: .top).combined(with: .opacity))
-        }
-    }
-
-    @ViewBuilder
     private var petalFanOverlay: some View {
         if let take = ui.petalFanTake {
             GeometryReader { geo in
@@ -255,23 +244,11 @@ struct RootView: View {
                             return
                         }
                         if ui.editingTakeID == take.id {
-                            // Edit-in-place (2026-06-17): the Take is being edited
-                            // inline. Hand the selection to that editor's draft so it
-                            // rides the inline save — routing to the store here lets
-                            // the stale draft revert it on save (e.g. an Obie change).
+                            // Edit-in-place: the Take is being edited inline. Hand the
+                            // selection to that editor's draft so it rides the inline
+                            // save — routing to the store here lets the stale draft
+                            // revert it on save (e.g. an Obie change).
                             ui.inlineFanCommand = UIState.EditorFanCommand(
-                                token: UUID(),
-                                isNote: isNote, isTask: isTask,
-                                hasReminder: hasReminder, reminderDate: reminderDate,
-                                isObie: isObie
-                            )
-                        } else if ui.editorTake?.id == take.id {
-                            // The editor is open for this Take: hand the selection
-                            // to it so the Task Mark reshapes the LIVE blocks the
-                            // user is editing (and reminder/Obie ride the editor's
-                            // own save on dismiss). Routing through the store here
-                            // would operate on the pre-typing copy.
-                            ui.editorFanCommand = UIState.EditorFanCommand(
                                 token: UUID(),
                                 isNote: isNote, isTask: isTask,
                                 hasReminder: hasReminder, reminderDate: reminderDate,

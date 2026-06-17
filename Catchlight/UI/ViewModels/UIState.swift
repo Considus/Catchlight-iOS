@@ -55,15 +55,14 @@ final class UIState {
     var petalFanOrigin: CGPoint = .zero
     var isPetalFanPresented: Bool { petalFanTake != nil }
 
-    // Take editor.
-    var editorTake: Take?
-    var isEditorPresented: Bool { editorTake != nil }
+    // Take editor — edit-in-place (the top-anchored overlay editor was retired in
+    // Phase 3, 2026-06-17; all create/edit happens in the timeline now).
 
     /// In-place editing (edit-in-place redesign 2026-06-17). When set, the matching
     /// timeline row becomes the live editable Take *in position* while every other
-    /// row + the chrome masks behind it — the "Iris-touch focus" applied to editing,
-    /// instead of the top-anchored `editorTake` overlay. The draft + focused-block
-    /// state live in DailiesView; this is just the id of the Take under focus.
+    /// row + the chrome masks behind it — the "Iris-touch focus" applied to editing.
+    /// The draft + focused-block state live in DailiesView; this is just the id of
+    /// the Take under focus.
     var editingTakeID: UUID?
     var isEditingInPlace: Bool { editingTakeID != nil }
 
@@ -74,11 +73,11 @@ final class UIState {
     /// until the inline save (a blank one dismissed leaves nothing behind).
     var pendingInlineNewTake: Take?
 
-    /// A petal-fan selection handed to the OPEN editor (the fan was opened from
-    /// the editor's footer). The editor applies it to its live block draft —
-    /// the Task Mark reshapes the on-screen blocks, never the stored copy — so a
-    /// make-checklist toggle lands on what the user is typing, not a stale row.
-    /// Carries a token so two identical selections in a row still trigger.
+    /// A petal-fan selection handed to the in-place editor, carrying the working
+    /// activity-type set. Reshapes the editor's live block DRAFT — the Task Mark
+    /// reshapes the on-screen blocks, never the stored copy — so a make-checklist
+    /// toggle lands on what the user is typing, not a stale row. Carries a token so
+    /// two identical selections in a row still trigger.
     struct EditorFanCommand: Equatable {
         let token: UUID
         let isNote: Bool
@@ -88,9 +87,8 @@ final class UIState {
         let reminderDate: Date?
         let isObie: Bool
     }
-    var editorFanCommand: EditorFanCommand?
 
-    /// As `editorFanCommand`, but for the IN-PLACE editor (edit-in-place redesign
+    /// The Focus-ring selection for the IN-PLACE editor (edit-in-place redesign
     /// 2026-06-17). When the Focus ring is opened from a Take being edited inline,
     /// its commit must reshape that editor's live draft — not the stored copy — so
     /// the selection (incl. an Obie change) rides the inline save instead of being
@@ -251,12 +249,6 @@ final class UIState {
     func closePetalFan() {
         withAnimation(Self.fanFade) { petalFanTake = nil }
     }
-
-    func openEditor(for take: Take) {
-        editorTake = take
-    }
-
-    func closeEditor() { editorTake = nil }
 
     /// Enter in-place editing on a timeline Take (edit-in-place redesign). The fade
     /// matches the petal fan's, so masking the surrounding timeline reads the same as

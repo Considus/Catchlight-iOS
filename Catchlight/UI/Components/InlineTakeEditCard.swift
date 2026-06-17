@@ -11,10 +11,10 @@
 //  VStack so the TIMELINE'S OWN scroll carries a long Take (owner 2026-06-17:
 //  "whole timeline scrolls"), rather than a nested fixed-height List.
 //
-//  Scope note (Phase 1): no drag-to-reorder handle here (the List's `.onMove` is
-//  gone with the List); reorder stays on the on-device list and returns in a later
-//  phase. The block mutation/focus helpers mirror `TakeEditView` for now and will
-//  be de-duplicated when the top-anchored editor is retired (Phase 3 tidy-up).
+//  This is the CANONICAL block editor — the top-anchored overlay editor it was
+//  forked from was retired in Phase 3 (2026-06-17), so these block mutation/focus
+//  helpers no longer have a duplicate. Drag-to-reorder of check items returns in a
+//  follow-up increment.
 //
 
 import SwiftUI
@@ -109,7 +109,7 @@ struct InlineTakeEditCard: View {
         }
     }
 
-    // MARK: - Bindings & block-edit helpers (mirror TakeEditView; deduped in Phase 3)
+    // MARK: - Bindings & block-edit helpers (canonical — the overlay editor was retired Phase 3)
 
     private func textBinding(_ id: UUID) -> Binding<String> {
         Binding(
