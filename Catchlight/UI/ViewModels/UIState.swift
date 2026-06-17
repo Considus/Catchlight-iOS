@@ -95,6 +95,13 @@ final class UIState {
     /// silently reverted when the draft is written back. DailiesView consumes it.
     var inlineFanCommand: EditorFanCommand?
 
+    /// Commit-in-progress hook, registered by DailiesView while it's on screen. Lets
+    /// the app save a mid-edit Take through DailiesView's own save path from outside
+    /// the view — specifically `AppModel.relock`, which must persist the draft BEFORE
+    /// it tears down the store (owner 2026-06-17: phone-lock should auto-save a
+    /// mid-edit Take, not discard it). nil when nothing is editing / DailiesView is gone.
+    var commitInlineEdit: (() -> Void)?
+
     /// Settings sheet — a swipe UP on the dock toggles this once the first-run
     /// orientation has finished (step >= 4 in `FirstRunOrientationState`).
     /// (Owner redesign 2026-06-11 — replaces the long-press on Dailies.)
