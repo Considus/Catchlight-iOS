@@ -24,6 +24,12 @@ import CatchlightCore
 struct InlineTakeEditCard: View {
     @Binding var draft: Take
     @Binding var focusedBlockID: UUID?
+    /// Opens the full-screen Angle for this draft. INTERIM entry point (2026-06-18):
+    /// the redesign moves the Angle launch to a right-side "selector ring" on every
+    /// Take, but that's a device-iterated visual control built in a later supervised
+    /// pass; meanwhile this top-right affordance keeps the Angle reachable for review.
+    /// Shown only when an Angle applies (the list Angle applies to a checklist Take).
+    var onOpenAngle: (() -> Void)? = nil
 
     // MARK: - Reorder drag state (touch-and-move from the handle, so it doesn't
     // collide with the card's long-press menu — owner 2026-06-17)
@@ -73,6 +79,28 @@ struct InlineTakeEditCard: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(cardBorder, lineWidth: 1.5)
         )
+        // Interim top-right Angle affordance (see `onOpenAngle`). Sits in the card's
+        // 24pt top padding, opposite the Iris. Shown only when an Angle applies.
+        .overlay(alignment: .topTrailing) { angleAffordance }
+    }
+
+    @ViewBuilder
+    private var angleAffordance: some View {
+        if let onOpenAngle, let angle = AngleRegistry.applicable(to: draft).first {
+            Button(action: onOpenAngle) {
+                Image(systemName: angle.systemImage)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .frame(width: CatchlightLayout.minTouchTarget,
+                           height: CatchlightLayout.minTouchTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 2)
+            .accessibilityIdentifier("angle-button")
+            .accessibilityLabel("Open as \(angle.title.lowercased())")
+            .accessibilityHint("Shows this Take as a full-screen \(angle.title.lowercased()).")
+        }
     }
 
     // MARK: - Rows
