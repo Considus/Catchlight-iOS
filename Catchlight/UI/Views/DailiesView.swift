@@ -126,6 +126,10 @@ struct DailiesView: View {
     /// landed at the bottom under Oldest-first). The timeline's ScrollViewReader
     /// consumes and clears it.
     @State private var scrollToTakeID: UUID?
+    /// Bloom progress (0→1) for the in-place NEW Take's "appear". Driven explicitly
+    /// (scale+opacity on the row) rather than via a LazyVStack insertion transition,
+    /// which doesn't animate reliably. 1 at rest so existing rows are unaffected.
+    @State private var newTakeBloom: Double = 1
 
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
@@ -685,14 +689,15 @@ struct DailiesView: View {
                             // The very first row across all months (when there's no Obie)
                             // anchors the Iris hint tooltip in Hint 2.
                             let isFirstOverall = (vm.obie == nil) && groupIndex == 0 && takeIndex == 0
+                            let isNewRow = take.id == inlineNewTake?.id
                             row(for: take, isFirst: isFirstOverall)
                                 .id(take.id)
-                                // Only the in-place NEW Take blooms in (scale+opacity
-                                // from its Iris corner); existing rows don't transition
-                                // on insert/remove (owner 2026-06-17 organic "appear").
-                                .transition(take.id == inlineNewTake?.id
-                                    ? .scale(scale: 0.92, anchor: .topLeading).combined(with: .opacity)
-                                    : .identity)
+                                // The in-place NEW Take blooms in — scale+fade from its
+                                // Iris corner, driven by `newTakeBloom` (explicit, so it
+                                // animates inside the LazyVStack and after the scroll).
+                                // Existing rows are pinned at full (owner 2026-06-17).
+                                .scaleEffect(isNewRow ? 0.92 + 0.08 * newTakeBloom : 1, anchor: .topLeading)
+                                .opacity(isNewRow ? newTakeBloom : 1)
                         }
                     }
                 }
@@ -886,17 +891,17 @@ struct DailiesView: View {
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editFocusedBlockID = t.blocks.first?.id
-        // Organic "appear" (owner 2026-06-17 — should feel as natural as the fan):
-        // one animated state change blooms the new card in (its row carries a
-        // scale+opacity transition anchored at the Iris corner) while the rest masks
-        // back. A gentle spring with minimal overshoot, not the flat 0.2s mask fade.
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
-            editDraft = t
-            ui.editingTakeID = take.id
+        // Insert the row COLLAPSED (bloom = 0 → scale 0.92 / opacity 0) as the rest
+        // masks back, then bloom it in explicitly after the scroll so the "appear" is
+        // visible wherever it lands (owner 2026-06-17 — should feel as natural as the
+        // fan; LazyVStack swallows insertion transitions, hence the explicit drive).
+        newTakeBloom = 0
+        editDraft = t
+        withAnimation(UIState.fanFade) { ui.editingTakeID = take.id }
+        DispatchQueue.main.async {
+            scrollToTakeID = take.id
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { newTakeBloom = 1 }
         }
-        // Bring it into view once it's laid out (off-screen at the bottom for
-        // Oldest-first). Deferred a tick so the injected row exists first.
-        DispatchQueue.main.async { scrollToTakeID = take.id }
     }
 
     /// Commit the in-place edit through the same path the old editor used: drop empty
