@@ -757,11 +757,10 @@ struct DailiesView: View {
               }   // VStack(spacing: 0)
             }
             .scrollIndicators(.hidden)   // the spine is the timeline affordance (owner 2026-06-16)
-            // Swipe the timeline DOWN to dismiss the keyboard while editing in place,
-            // then tap any dimmed area to save & close (owner 2026-06-17 — the chosen
-            // exit, replacing the rejected keyboard "Done" bar). `.interactively` so the
-            // keyboard tracks the drag down rather than vanishing abruptly.
-            .scrollDismissesKeyboard(.interactively)
+            // NOTE: deliberately NO `.scrollDismissesKeyboard` here — it interfered with
+            // a NEW Take's keyboard appearing (the programmatic scroll-to-new-row
+            // suppressed it). The keyboard is dismissed via the grabber bar on top of
+            // the keyboard instead (BlockTextEditor.showsKeyboardGrabber, owner 2026-06-17).
             .coordinateSpace(name: "dailies")
             .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
             .onPreferenceChange(FirstRowTopKey.self) { firstRowTop = $0.isFinite ? $0 : nil }
