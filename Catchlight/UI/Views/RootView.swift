@@ -191,10 +191,19 @@ struct RootView: View {
     // `mainApp` ZStack) so each ViewBuilder stays simple enough for SwiftUI's
     // type-checker.
 
-    /// Opacity for the DOCK behind the petal fan. The timeline itself stays at
-    /// full opacity — the fan's ckDim veil (background @90%) provides the
-    /// recede on its own (owner decision 2026-06-11; HiFi §4 technique).
-    private var fanOpacity: Double { ui.isPetalFanPresented ? 0.18 : 1 }
+    /// Opacity for the DOCK while a focus surface is up. Behind the petal fan the
+    /// fan's own ckDim veil does the timeline recede; while editing in place the
+    /// timeline masks itself (DailiesView), and the dock recedes + goes inert here so
+    /// it can't start a competing action mid-edit (owner 2026-06-17).
+    private var fanOpacity: Double {
+        if ui.isPetalFanPresented { return 0.18 }
+        // Fully hidden while editing in place: the keyboard's safe-area avoidance
+        // shoves the bottom dock up toward the heading, so even at low opacity it
+        // appeared as a stray toolbar over the Obie (owner 2026-06-17). It's inert
+        // during editing anyway, so hide it outright.
+        if ui.isEditingInPlace { return 0 }
+        return 1
+    }
 
     /// The ONE surface — the timeline. The dock's filtering/searching states
     /// narrow it live via `ui.activeTimelineFilter` (read inside DailiesView).
@@ -207,6 +216,9 @@ struct RootView: View {
         BottomDockView(onNewTake: { newTake() })
             .environment(ui)
             .opacity(fanOpacity)
+            // Inert while editing in place so a stray tap can't open a second editor
+            // or change the dock mode under the focused Take (owner 2026-06-17).
+            .allowsHitTesting(!ui.isEditingInPlace)
     }
 
     // MARK: - Overlays
@@ -242,7 +254,18 @@ struct RootView: View {
                             ui.closePetalFan()
                             return
                         }
-                        if ui.editorTake?.id == take.id {
+                        if ui.editingTakeID == take.id {
+                            // Edit-in-place (2026-06-17): the Take is being edited
+                            // inline. Hand the selection to that editor's draft so it
+                            // rides the inline save — routing to the store here lets
+                            // the stale draft revert it on save (e.g. an Obie change).
+                            ui.inlineFanCommand = UIState.EditorFanCommand(
+                                token: UUID(),
+                                isNote: isNote, isTask: isTask,
+                                hasReminder: hasReminder, reminderDate: reminderDate,
+                                isObie: isObie
+                            )
+                        } else if ui.editorTake?.id == take.id {
                             // The editor is open for this Take: hand the selection
                             // to it so the Task Mark reshapes the LIVE blocks the
                             // user is editing (and reminder/Obie ride the editor's
