@@ -235,11 +235,11 @@ struct DailiesView: View {
             // keyboard avoidance (Flow 5 regression, 2026-06-11). The heading
             // dodges the status bar itself via deviceTopInset. Takes scroll
             // under the solid block and dissolve beneath the 12pt fade.
-            // Masked while editing in place (owner 2026-06-17) — the focused Take is
-            // the only bright thing on screen. (The pinned Obie + rows mask via
-            // `row(for:)`'s own opacity, so only the heading needs dimming here.)
+            // While editing in place (owner 2026-06-17) the heading's page-coloured
+            // top MASK stays opaque — so a focused Take scrolled up still dissolves
+            // under it instead of running to the Dynamic Island — and only the title
+            // TEXT dims (the dimming lives on `Text(headingTitle)` inside `heading`).
             heading
-                .opacity(ui.isEditingInPlace ? 0.12 : 1)
 
             // The pinned Obie sits below the heading at the first-Take position, with
             // its own solid backing + fade; scrolling Takes pass behind it and dissolve.
@@ -333,6 +333,9 @@ struct DailiesView: View {
                     .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
                     .kerning(1.6)
                     .foregroundStyle(Color.ckTextPrimary)
+                    // Recede the title while editing in place; the mask below stays
+                    // opaque so scrolled-up content still dissolves under the top.
+                    .opacity(ui.isEditingInPlace ? 0.12 : 1)
                     .id(headingTitle)
                     .transition(.opacity)
                 Spacer()
