@@ -59,6 +59,14 @@ final class UIState {
     var editorTake: Take?
     var isEditorPresented: Bool { editorTake != nil }
 
+    /// In-place editing (edit-in-place redesign 2026-06-17). When set, the matching
+    /// timeline row becomes the live editable Take *in position* while every other
+    /// row + the chrome masks behind it — the "Iris-touch focus" applied to editing,
+    /// instead of the top-anchored `editorTake` overlay. The draft + focused-block
+    /// state live in DailiesView; this is just the id of the Take under focus.
+    var editingTakeID: UUID?
+    var isEditingInPlace: Bool { editingTakeID != nil }
+
     /// A petal-fan selection handed to the OPEN editor (the fan was opened from
     /// the editor's footer). The editor applies it to its live block draft —
     /// the Task Mark reshapes the on-screen blocks, never the stored copy — so a
@@ -235,4 +243,15 @@ final class UIState {
     }
 
     func closeEditor() { editorTake = nil }
+
+    /// Enter in-place editing on a timeline Take (edit-in-place redesign). The fade
+    /// matches the petal fan's, so masking the surrounding timeline reads the same as
+    /// the Iris-touch focus.
+    func beginEditingInPlace(_ take: Take) {
+        withAnimation(Self.fanFade) { editingTakeID = take.id }
+    }
+
+    func endEditingInPlace() {
+        withAnimation(Self.fanFade) { editingTakeID = nil }
+    }
 }

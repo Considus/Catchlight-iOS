@@ -191,10 +191,15 @@ struct RootView: View {
     // `mainApp` ZStack) so each ViewBuilder stays simple enough for SwiftUI's
     // type-checker.
 
-    /// Opacity for the DOCK behind the petal fan. The timeline itself stays at
-    /// full opacity — the fan's ckDim veil (background @90%) provides the
-    /// recede on its own (owner decision 2026-06-11; HiFi §4 technique).
-    private var fanOpacity: Double { ui.isPetalFanPresented ? 0.18 : 1 }
+    /// Opacity for the DOCK while a focus surface is up. Behind the petal fan the
+    /// fan's own ckDim veil does the timeline recede; while editing in place the
+    /// timeline masks itself (DailiesView), and the dock recedes + goes inert here so
+    /// it can't start a competing action mid-edit (owner 2026-06-17).
+    private var fanOpacity: Double {
+        if ui.isPetalFanPresented { return 0.18 }
+        if ui.isEditingInPlace { return 0.12 }
+        return 1
+    }
 
     /// The ONE surface — the timeline. The dock's filtering/searching states
     /// narrow it live via `ui.activeTimelineFilter` (read inside DailiesView).
@@ -207,6 +212,9 @@ struct RootView: View {
         BottomDockView(onNewTake: { newTake() })
             .environment(ui)
             .opacity(fanOpacity)
+            // Inert while editing in place so a stray tap can't open a second editor
+            // or change the dock mode under the focused Take (owner 2026-06-17).
+            .allowsHitTesting(!ui.isEditingInPlace)
     }
 
     // MARK: - Overlays
