@@ -787,13 +787,24 @@ struct DailiesView: View {
                     if ui.spotlightTargetTakeID == id { ui.spotlightTargetTakeID = nil }
                 }
             }
-            // Edit-in-place Phase 2: reveal a just-created Take — but ONLY after its
-            // keyboard is fully up (owner 2026-06-18). Scrolling against the
-            // keyboard-reduced viewport here lands it at the same anchor every time;
-            // the previous immediate scroll raced iOS keyboard avoidance, so the rest
-            // position varied. Anchored LOW (0.82) so it sits near the keyboard with a
-            // small gap (Newest-first clamps to the top, as wanted). Guarded so a stale
-            // target (focus that never raised a keyboard) can't scroll a later edit.
+            // Edit-in-place Phase 2 — revealing a just-created Take takes TWO scrolls:
+            // 1) INITIAL reveal (here): a new Take is created off-screen (bottom, under
+            //    Oldest-first), so the LazyVStack hasn't built its row yet — it can't
+            //    take focus or raise the keyboard until it's scrolled into view. This
+            //    instantiates it. Does NOT clear the target — the final position is set
+            //    on keyboardDidShow.
+            .onChange(of: scrollToTakeID) { _, id in
+                guard let id else { return }
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
+                }
+            }
+            // 2) AUTHORITATIVE settle: once the keyboard is fully up, re-scroll against
+            //    the keyboard-reduced viewport so it lands at the same anchor every time
+            //    (the initial scroll alone raced iOS keyboard avoidance → varying rest
+            //    position). Anchored LOW (0.82) — near the keyboard with a small gap;
+            //    Newest-first clamps to the top. Guarded so a stale target can't scroll
+            //    a later, unrelated edit.
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
                 guard let id = scrollToTakeID else { return }
                 guard id == ui.editingTakeID else { scrollToTakeID = nil; return }
