@@ -122,6 +122,14 @@ struct DailiesView: View {
     /// on (inline) while another Obie already exists — the same warning the timeline
     /// long-press uses, but targeting the draft (owner 2026-06-17).
     @State private var pendingInlineObieConfirm = false
+    /// One-shot scroll target — set to bring a Take into view (e.g. a new Take that
+    /// landed at the bottom under Oldest-first). The timeline's ScrollViewReader
+    /// consumes and clears it.
+    @State private var scrollToTakeID: UUID?
+    /// Bloom progress (0→1) for the in-place NEW Take's "appear". Driven explicitly
+    /// (scale+opacity on the row) rather than via a LazyVStack insertion transition,
+    /// which doesn't animate reliably. 1 at rest so existing rows are unaffected.
+    @State private var newTakeBloom: Double = 1
 
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
@@ -214,7 +222,7 @@ struct DailiesView: View {
             // A first-launch-empty store shows the Fog line; but when a dock
             // filter is active the timeline (with its own filter-empty line)
             // always wins, so the background-tap exit remains available.
-            if vm.isEmpty && activeFilter.isEmpty {
+            if vm.isEmpty && activeFilter.isEmpty && inlineNewTake == nil {
                 emptyState
             } else {
                 timeline
@@ -266,6 +274,13 @@ struct DailiesView: View {
             guard let command, ui.editingTakeID != nil else { return }
             applyInlineFanCommand(command)
             ui.inlineFanCommand = nil
+        }
+        // Dock + requested a new Take (Phase 2): create it in place at the
+        // Order-appropriate end and focus it.
+        .onChange(of: ui.pendingInlineNewTake) { _, take in
+            guard let take else { return }
+            beginNewInlineEdit(take)
+            ui.pendingInlineNewTake = nil
         }
         // Inline Obie confirmation — mirrors the timeline long-press warning, but
         // targets the draft (the existing Obie is demoted by the store on save).
@@ -674,8 +689,15 @@ struct DailiesView: View {
                             // The very first row across all months (when there's no Obie)
                             // anchors the Iris hint tooltip in Hint 2.
                             let isFirstOverall = (vm.obie == nil) && groupIndex == 0 && takeIndex == 0
+                            let isNewRow = take.id == inlineNewTake?.id
                             row(for: take, isFirst: isFirstOverall)
                                 .id(take.id)
+                                // The in-place NEW Take blooms in — scale+fade from its
+                                // Iris corner, driven by `newTakeBloom` (explicit, so it
+                                // animates inside the LazyVStack and after the scroll).
+                                // Existing rows are pinned at full (owner 2026-06-17).
+                                .scaleEffect(isNewRow ? 0.92 + 0.08 * newTakeBloom : 1, anchor: .topLeading)
+                                .opacity(isNewRow ? newTakeBloom : 1)
                         }
                     }
                 }
@@ -736,6 +758,17 @@ struct DailiesView: View {
                     try? await Task.sleep(nanoseconds: 1_400_000_000)
                     if ui.spotlightTargetTakeID == id { ui.spotlightTargetTakeID = nil }
                 }
+            }
+            // Edit-in-place Phase 2: bring a just-created Take into view. Anchored
+            // LOW in the viewport (0.82, owner 2026-06-17) so it sits near — but not
+            // hard against — the keyboard, rather than floating ~1/3 down. For
+            // Newest-first (Take at top) this clamps to the top, as wanted.
+            .onChange(of: scrollToTakeID) { _, id in
+                guard let id else { return }
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
+                }
+                scrollToTakeID = nil
             }
         }
     }
@@ -848,6 +881,27 @@ struct DailiesView: View {
         editDraft = t
         editFocusedBlockID = t.blocks.first?.id
         ui.beginEditingInPlace(take)
+    }
+
+    /// Create a NEW Take in place (Phase 2): seed the blank draft, inject it into the
+    /// timeline at the Order-appropriate end (via `displayedTakes`), focus it, and
+    /// scroll it into view (it may land off-screen at the bottom under Oldest-first).
+    /// Not persisted until the inline save — a blank one dismissed leaves nothing.
+    private func beginNewInlineEdit(_ take: Take) {
+        var t = take
+        if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
+        editFocusedBlockID = t.blocks.first?.id
+        // Insert the row COLLAPSED (bloom = 0 → scale 0.92 / opacity 0) as the rest
+        // masks back, then bloom it in explicitly after the scroll so the "appear" is
+        // visible wherever it lands (owner 2026-06-17 — should feel as natural as the
+        // fan; LazyVStack swallows insertion transitions, hence the explicit drive).
+        newTakeBloom = 0
+        editDraft = t
+        withAnimation(UIState.fanFade) { ui.editingTakeID = take.id }
+        DispatchQueue.main.async {
+            scrollToTakeID = take.id
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { newTakeBloom = 1 }
+        }
     }
 
     /// Commit the in-place edit through the same path the old editor used: drop empty
@@ -1010,12 +1064,17 @@ struct DailiesView: View {
                     editFocusedBlockID = nil
                     editDraft = nil
                     ui.endEditingInPlace()
-                    vm.delete(doomed)
+                    // `discardIfPresent` deletes an existing Take but no-ops a NEW
+                    // one that was never saved (Phase 2) — no spurious not-found error.
+                    vm.discardIfPresent(doomed)
                     return
                 }
                 vm.delete(take)
             },
             onDiscard: isEditingThis ? { discardInlineEdit() } : nil,
+            // The editing row's Iris is the shape control (tap = Focus ring), so it
+            // carries the retired editor's "editor-shape" id for tests + semantics.
+            irisIdentifier: isEditingThis ? "editor-shape" : "take-iris",
             cardSwipeOffset: cardSwipeOffset,
             editingCard: isEditingThis
                 ? { AnyView(InlineTakeEditCard(draft: editDraftBinding, focusedBlockID: $editFocusedBlockID)) }
@@ -1051,6 +1110,24 @@ struct DailiesView: View {
         return orderedTakes.filter { filter.matches($0) }
     }
 
+    /// The new Take being created IN PLACE (Phase 2), if any: it lives in `editDraft`
+    /// but is NOT yet in the store/`vm.takes` (or the Obie). nil when editing an
+    /// existing Take or not editing.
+    private var inlineNewTake: Take? {
+        guard let id = ui.editingTakeID, let draft = editDraft, draft.id == id else { return nil }
+        let known = vm.takes.contains { $0.id == id } || vm.obie?.id == id
+        return known ? nil : draft
+    }
+
+    /// `filteredTakes` plus the in-place new Take (if any) injected at the
+    /// Order-appropriate end — bottom for Oldest-first, top for Newest-first (its
+    /// `createdAt = now` would sort there anyway; placed explicitly since it isn't in
+    /// `vm.takes`). Bypasses the dock filter so a just-created Take is always visible.
+    private var displayedTakes: [Take] {
+        guard let newTake = inlineNewTake else { return filteredTakes }
+        return takeSort == .oldestFirst ? filteredTakes + [newTake] : [newTake] + filteredTakes
+    }
+
     // MARK: - Month grouping
 
     private struct MonthGroup { let month: String; let takes: [Take] }
@@ -1067,7 +1144,7 @@ struct DailiesView: View {
     private var monthGroups: [MonthGroup] {
         var order: [String] = []
         var map: [String: [Take]] = [:]
-        for take in filteredTakes {
+        for take in displayedTakes {
             let key = Self.monthFormatter.string(from: take.createdAt)
             if map[key] == nil { order.append(key); map[key] = [] }
             map[key]?.append(take)
