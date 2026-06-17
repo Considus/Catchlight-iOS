@@ -130,6 +130,11 @@ struct DailiesView: View {
     /// (scale+opacity on the row) rather than via a LazyVStack insertion transition,
     /// which doesn't animate reliably. 1 at rest so existing rows are unaffected.
     @State private var newTakeBloom: Double = 1
+    /// Whether the full-screen Angle is presented over the in-place editor. INTERIM
+    /// (2026-06-18) — the Angle's eventual entry point is the right-side selector ring;
+    /// this keeps it reachable for review until that's built. Bound to the live
+    /// `editDraft` so its ticks / reorders / deletes ride the inline save.
+    @State private var anglePresented = false
 
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
@@ -295,6 +300,12 @@ struct DailiesView: View {
             Button("Cancel", role: .cancel) { cancelInlineObie() }
         } message: {
             Text("Your existing Obie returns to the timeline — only one Take can be your Obie.")
+        }
+        // Interim Angle entry (2026-06-18): the full-screen list Angle, opened from the
+        // editor's top-right affordance, bound to the live draft so ticks / reorders /
+        // deletes ride the inline save. (Final entry point will be the selector ring.)
+        .fullScreenCover(isPresented: $anglePresented) {
+            angleCover
         }
     }
 
@@ -914,6 +925,17 @@ struct DailiesView: View {
         Binding(get: { editDraft ?? Take() }, set: { editDraft = $0 })
     }
 
+    /// The applicable Angle's full-screen presentation, bound to the live `editDraft`.
+    /// (Only the list Angle exists today; it applies whenever the draft has check items.)
+    @ViewBuilder
+    private var angleCover: some View {
+        if let angle = AngleRegistry.applicable(to: editDraft ?? Take()).first {
+            angle.makePresentation(editDraftBinding) { anglePresented = false }
+        } else {
+            Color.ckBackground.ignoresSafeArea().onAppear { anglePresented = false }
+        }
+    }
+
     /// Focus a Take for in-place editing: seed the draft (a blank Take gets one empty
     /// prose row to type into) and drop the caret at the END of the content — the
     /// "continue / append" position (owner 2026-06-17). The caret's block is the
@@ -1130,7 +1152,13 @@ struct DailiesView: View {
             irisIdentifier: isEditingThis ? "editor-shape" : "take-iris",
             cardSwipeOffset: cardSwipeOffset,
             editingCard: isEditingThis
-                ? { AnyView(InlineTakeEditCard(draft: editDraftBinding, focusedBlockID: $editFocusedBlockID)) }
+                ? { AnyView(InlineTakeEditCard(
+                    draft: editDraftBinding,
+                    focusedBlockID: $editFocusedBlockID,
+                    onOpenAngle: {
+                        editFocusedBlockID = nil   // drop the keyboard before the cover
+                        anglePresented = true
+                    })) }
                 : nil
         )
         .background(
