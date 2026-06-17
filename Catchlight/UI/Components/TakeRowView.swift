@@ -34,11 +34,21 @@ struct TakeRowView: View {
     /// actions on the combined row element.
     var onToggleComplete: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
+    /// Revert the in-progress edit (owner 2026-06-17). Supplied only while this row
+    /// is being edited in place, so "Discard changes" appears in the long-press menu
+    /// (and as a VoiceOver action) exactly when there are edits to discard.
+    var onDiscard: (() -> Void)? = nil
     /// Horizontal swipe offset applied to the CARD only (not the Iris). The Iris
     /// stays anchored on the spine so the timeline "wire" is unbroken while a Take
     /// is swiped for its actions — and so the future rings-on-a-wire still reads.
     /// Driven by `SwipeActionRow`; 0 everywhere the row isn't swipeable.
     var cardSwipeOffset: CGFloat = 0
+    /// Edit-in-place (2026-06-17): when supplied, the read-only `TakeCardSurface` in
+    /// the card slot is replaced by this live editor, IN POSITION — the Iris, spine,
+    /// and card geometry are untouched (owner point 6). nil everywhere a row is at
+    /// rest. The editor owns its own gestures + accessibility, so the row's tap /
+    /// combined-element wrapping is dropped while editing.
+    var editingCard: (() -> AnyView)? = nil
 
     private var firstLine: String {
         let line = take.plainText
@@ -199,16 +209,27 @@ struct TakeRowView: View {
     /// the tapped Take's card above its dim veil (owner 2026-06-16: keep the tapped
     /// Take readable while everything else recedes). Here it carries the row's
     /// gestures, context menu, and combined VoiceOver element.
+    @ViewBuilder
     private var cardColumn: some View {
-        TakeCardSurface(take: take)
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .onTapGesture { onTapText() }
-            .contextMenu { rowMenuItems }
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("take-row")
-            .accessibilityLabel(rowAccessibilityLabel)
-            .accessibilityHint("Double-tap to edit this Take.")
-            .accessibilityActions { rowAccessibilityActions }
+        if let editingCard {
+            // Editing in place: the live editor takes the card slot and owns its own
+            // gestures + per-row accessibility (a combined element would merge the
+            // editable fields into one and break VoiceOver editing). The long-press
+            // menu rides along so "Discard changes" / Delete / Mark-done are reachable
+            // mid-edit (owner 2026-06-17).
+            editingCard()
+                .contextMenu { rowMenuItems }
+        } else {
+            TakeCardSurface(take: take)
+                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .onTapGesture { onTapText() }
+                .contextMenu { rowMenuItems }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("take-row")
+                .accessibilityLabel(rowAccessibilityLabel)
+                .accessibilityHint("Double-tap to edit this Take.")
+                .accessibilityActions { rowAccessibilityActions }
+        }
     }
 
     @ViewBuilder
@@ -219,6 +240,15 @@ struct TakeRowView: View {
             } label: {
                 Label(take.isComplete ? "Mark as not done" : "Mark as done",
                       systemImage: take.isComplete ? "circle" : "checkmark.circle")
+            }
+        }
+        if let onDiscard {
+            // Edit-in-place: revert the unsaved edits (owner 2026-06-17). Reverts —
+            // never deletes — so it's not destructive-styled.
+            Button {
+                onDiscard()
+            } label: {
+                Label("Discard changes", systemImage: "arrow.uturn.backward")
             }
         }
         if let onDelete {
@@ -234,6 +264,9 @@ struct TakeRowView: View {
     private var rowAccessibilityActions: some View {
         if take.isTask, let onToggleComplete {
             Button(take.isComplete ? "Mark as not done" : "Mark as done") { onToggleComplete() }
+        }
+        if let onDiscard {
+            Button("Discard changes") { onDiscard() }
         }
         if let onDelete {
             Button("Delete Take") { onDelete() }

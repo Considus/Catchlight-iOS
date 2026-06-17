@@ -111,6 +111,18 @@ struct DailiesView: View {
     /// to inset the scrolling Takes below it. 0 ⇒ no Obie / not yet measured.
     @State private var pinnedObieZoneHeight: CGFloat = 0
 
+    // MARK: - Edit-in-place (2026-06-17)
+    /// The live draft of the Take being edited in position, and which of its blocks
+    /// holds the keyboard. `ui.editingTakeID` is the matching focus flag (shared so
+    /// RootView can mask the dock). Both clear on save/discard. The draft is committed
+    /// through the same `vm.save` chokepoint the top-anchored editor uses.
+    @State private var editDraft: Take?
+    @State private var editFocusedBlockID: UUID?
+    /// Drives the "Make this your Obie?" confirmation when the Focus ring turns Obie
+    /// on (inline) while another Obie already exists — the same warning the timeline
+    /// long-press uses, but targeting the draft (owner 2026-06-17).
+    @State private var pendingInlineObieConfirm = false
+
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
     /// estimate (no month marker). Row top → card top (+6, the Iris straddles the
@@ -159,6 +171,10 @@ struct DailiesView: View {
                 // Single-sourced via `ckSpineWire` so the gutter spine and the
                 // through-Iris segments (TakeRowView, "rings on a wire") never drift.
                 .fill(Color.ckSpineWire)
+                // Masked with the rest of the timeline while editing in place
+                // (owner 2026-06-17) — the bright wire otherwise reads as a
+                // "timeline remnant" behind the focused Take.
+                .opacity(ui.isEditingInPlace ? 0.12 : 1)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
@@ -184,6 +200,8 @@ struct DailiesView: View {
             // dash phase compensating so the dots stay screen-static (see
             // `dottedSpinePhase`).
             DottedSpine(dashPhase: dottedSpinePhase)
+                // Masked with the timeline while editing in place (owner 2026-06-17).
+                .opacity(ui.isEditingInPlace ? 0.12 : 1)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
@@ -209,7 +227,11 @@ struct DailiesView: View {
             // keyboard avoidance (Flow 5 regression, 2026-06-11). The heading
             // dodges the status bar itself via deviceTopInset. Takes scroll
             // under the solid block and dissolve beneath the 12pt fade.
+            // Masked while editing in place (owner 2026-06-17) — the focused Take is
+            // the only bright thing on screen. (The pinned Obie + rows mask via
+            // `row(for:)`'s own opacity, so only the heading needs dimming here.)
             heading
+                .opacity(ui.isEditingInPlace ? 0.12 : 1)
 
             // The pinned Obie sits below the heading at the first-Take position, with
             // its own solid backing + fade; scrolling Takes pass behind it and dissolve.
@@ -236,6 +258,22 @@ struct DailiesView: View {
             // Kick off the first-run orientation tour the first time the main app
             // is visible. No-op once the tour has started or completed.
             orientation.beginIfNeeded()
+        }
+        // The Focus ring committed while a Take is edited in place — apply it to the
+        // live draft (edit-in-place 2026-06-17). Guarded on `editingTakeID` so the
+        // (behind) timeline ignores commits meant for the top-anchored new-Take editor.
+        .onChange(of: ui.inlineFanCommand) { _, command in
+            guard let command, ui.editingTakeID != nil else { return }
+            applyInlineFanCommand(command)
+            ui.inlineFanCommand = nil
+        }
+        // Inline Obie confirmation — mirrors the timeline long-press warning, but
+        // targets the draft (the existing Obie is demoted by the store on save).
+        .alert("Make this your Obie?", isPresented: $pendingInlineObieConfirm) {
+            Button("Make Obie") { confirmInlineObie() }
+            Button("Cancel", role: .cancel) { cancelInlineObie() }
+        } message: {
+            Text("Your existing Obie returns to the timeline — only one Take can be your Obie.")
         }
     }
 
@@ -657,7 +695,17 @@ struct DailiesView: View {
                 // .background tap catcher (not an overlay) so row gestures and
                 // scrolling are unaffected; attached only in FILTERING.
                 .background {
-                    if ui.dockMode == .filtering {
+                    if ui.isEditingInPlace {
+                        // Tapping anywhere off the focused Take commits the edit
+                        // (owner 2026-06-17 — "tap the masked area to save"). Masked
+                        // rows commit via their own tap handlers; this catches the
+                        // empty gaps so a single-Take timeline can still be exited.
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { saveInlineEdit() }
+                            .accessibilityLabel("Save and close")
+                            .accessibilityHint("Double-tap to save this Take and stop editing.")
+                    } else if ui.dockMode == .filtering {
                         Color.clear
                             .contentShape(Rectangle())
                             .onTapGesture { ui.exitToResting() }
@@ -773,22 +821,151 @@ struct DailiesView: View {
                     .allowsHitTesting(false)
             }
         }
+        // Edit-in-place (owner 2026-06-17): mask every row except the one under
+        // focus — the "Iris-touch focus" applied to editing. The timeline still
+        // scrolls (the focused row scrolls with it); masked rows stay tappable so a
+        // tap on one commits the edit (see `rowContent`'s tap handlers).
+        .opacity(ui.isEditingInPlace && ui.editingTakeID != take.id ? 0.12 : 1)
+    }
+
+    // MARK: - Edit-in-place actions
+
+    /// A non-optional binding into `editDraft` for the inline editor. The fallback
+    /// `Take()` is never reached in practice — `beginInlineEdit` sets `editDraft`
+    /// before `editingTakeID`, so the editor only renders once the draft exists.
+    private var editDraftBinding: Binding<Take> {
+        Binding(get: { editDraft ?? Take() }, set: { editDraft = $0 })
+    }
+
+    /// Focus a Take for in-place editing: seed the draft (a blank Take gets one empty
+    /// prose row to type into, mirroring the top-anchored editor), drop the caret into
+    /// its first block, and raise the focus flag (which masks the rest).
+    private func beginInlineEdit(_ take: Take) {
+        // Task 6.20: editing is gated for lapsed users — paywall opens instead.
+        guard app.ensureEntitled() else { return }
+        var t = take
+        if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
+        editDraft = t
+        editFocusedBlockID = t.blocks.first?.id
+        ui.beginEditingInPlace(take)
+    }
+
+    /// Commit the in-place edit through the same path the old editor used: drop empty
+    /// prose rows, then either discard a never-saved blank Take or `vm.save`.
+    private func saveInlineEdit() {
+        editFocusedBlockID = nil            // release the keyboard first
+        defer { editDraft = nil; ui.endEditingInPlace() }
+        guard var t = editDraft else { return }
+        guard app.ensureEntitled() else { return }
+        t.removeEmptyTextBlocks()
+        let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !t.isTask && t.timeReminder == nil && !t.isObie
+            && t.attachments.isEmpty && t.locationReminder == nil
+        let storedCopy = try? vm.store.take(id: t.id)
+        let storedHadContent = (storedCopy?.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+        if isBlank && !storedHadContent {
+            vm.discardIfPresent(t)
+        } else {
+            vm.save(t)
+        }
+    }
+
+    /// Discard the edits (owner 2026-06-17 — via the row's long-press menu): drop the
+    /// draft and leave the stored Take exactly as it was. A no-op revert, never a
+    /// delete.
+    private func discardInlineEdit() {
+        editFocusedBlockID = nil
+        editDraft = nil
+        ui.endEditingInPlace()
+    }
+
+    /// Apply a Focus-ring selection to the inline draft — the in-place analogue of
+    /// `TakeEditView.applyFanCommand`. The draft is the single source of truth while
+    /// editing, so the selection rides the inline save (fixing the Obie revert: the
+    /// fan used to write the store, then the stale draft overwrote it). The Task Mark
+    /// reshapes the live blocks; Note/Reminder are flags; Obie warns-then-defers when
+    /// one already exists, mirroring the timeline long-press.
+    private func applyInlineFanCommand(_ command: UIState.EditorFanCommand) {
+        guard var d = editDraft else { return }
+        d.isNote = command.isNote
+
+        var newTaskEntryID: UUID?
+        if command.isTask && !d.isTask {
+            newTaskEntryID = d.convertToChecklist()
+        } else if !command.isTask && d.isTask {
+            d.convertToProse()
+        }
+
+        if command.hasReminder {
+            let when = command.reminderDate
+                ?? d.timeReminder?.scheduledDate
+                ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+            d.timeReminder = TimeReminder(scheduledDate: when, notificationIdentifier: d.id.uuidString)
+        } else {
+            d.timeReminder = nil
+        }
+
+        // Obie ON while another Obie exists → confirm first (the existing Obie is
+        // demoted by the store's single-Obie upsert when this draft saves). Leave it
+        // off until confirmed; otherwise apply the selection directly.
+        if command.isObie && !d.isObie, let other = vm.obie, other.id != d.id {
+            d.isObie = false
+            pendingInlineObieConfirm = true
+        } else {
+            d.isObie = command.isObie
+        }
+
+        d.normaliseActivityFloor()
+        editDraft = d
+
+        // Drop the caret into the freshly-added task entry, deferred one runloop tick
+        // so the new check row is in the hierarchy first (same reason as TakeEditView).
+        if let newTaskEntryID {
+            DispatchQueue.main.async { editFocusedBlockID = newTaskEntryID }
+        }
+    }
+
+    private func confirmInlineObie() {
+        pendingInlineObieConfirm = false
+        guard var d = editDraft else { return }
+        d.isObie = true
+        d.normaliseActivityFloor()
+        editDraft = d
+        orientation.didDismissObieIntro()
+    }
+
+    private func cancelInlineObie() {
+        pendingInlineObieConfirm = false   // draft.isObie was left off
+        orientation.didDismissObieIntro()
     }
 
     /// The row's visual content (Iris + card). `cardSwipeOffset` slides the card
     /// (only) for its swipe actions, supplied live by the enclosing `SwipeActionRow`.
     private func rowContent(for take: Take, cardSwipeOffset: CGFloat = 0, isFirst: Bool = false) -> some View {
-        TakeRowView(
-            take: take,
+        let isEditingThis = ui.editingTakeID == take.id
+        let editingActive = ui.isEditingInPlace
+        return TakeRowView(
+            // While editing this row, the Iris reflects the LIVE draft (Obie ring,
+            // reminder, task glyph update as you shape) — owner point 6, contextual
+            // features stay live. Other rows render their stored state.
+            take: isEditingThis ? (editDraft ?? take) : take,
             onTapCircle: { irisCentre in
+                // While another Take is focused, any tap outside it commits and exits.
+                if editingActive && !isEditingThis { saveInlineEdit(); return }
                 // Hint 2 is dismissed by tapping any Iris.
                 orientation.didTapIris()
                 // Section 8 — bloom the fan in place at the tapped Iris (window
                 // coords match the full-screen overlay space). The .zero fallback
-                // (screen centre) only survives as a last resort.
-                ui.openPetalFan(for: take, origin: irisCentre)
+                // (screen centre) only survives as a last resort. While editing THIS
+                // Take, the fan opens against the live draft so it reflects unsaved
+                // shaping, and its commit routes back to the draft (owner 2026-06-17).
+                ui.openPetalFan(for: isEditingThis ? (editDraft ?? take) : take, origin: irisCentre)
             },
             onLongPressCircle: {
+                // Iris long-press is disabled during editing (discard moved to the
+                // Take's long-press menu — owner 2026-06-17); a press on a masked row
+                // just commits and exits.
+                if editingActive { if !isEditingThis { saveInlineEdit() }; return }
                 // Hint 4: arm the Obie introduction tooltip on the first long-press.
                 // The actual designation still proceeds — the tooltip provides
                 // context "before the action takes effect" (and persists over the
@@ -799,9 +976,13 @@ struct DailiesView: View {
                 vm.designateObie(take, replaceExisting: false)
             },
             onTapText: {
-                // Task 6.20: editing is gated for lapsed users — paywall opens instead.
-                guard app.ensureEntitled() else { return }
-                ui.openEditor(for: take)
+                // Edit-in-place (2026-06-17): a Take is edited in position, not in a
+                // top-anchored overlay. Tapping a masked row while editing commits.
+                if editingActive {
+                    if !isEditingThis { saveInlineEdit() }
+                    return
+                }
+                beginInlineEdit(take)
             },
             // Delete / complete paths (2026-06-10). Previously `vm.delete` had
             // no UI caller at all and nothing ever set `isComplete` — rows could
@@ -809,14 +990,36 @@ struct DailiesView: View {
             // unreachable. The row exposes both via a context menu on its text
             // column (kept off the circle so the Obie long-press still wins).
             onToggleComplete: {
+                // While editing, apply to the live draft so it rides the save; at
+                // rest, toggle through the store as before.
+                if isEditingThis {
+                    guard var d = editDraft else { return }
+                    d.setAllItemsComplete(!d.isComplete)
+                    editDraft = d
+                    return
+                }
                 guard app.ensureEntitled() else { return }
                 vm.toggleComplete(take)
             },
             onDelete: {
                 guard app.ensureEntitled() else { return }
+                // Delete while editing: drop the draft and leave editing — there's
+                // nothing to save once the Take is gone.
+                if isEditingThis {
+                    let doomed = editDraft ?? take
+                    editFocusedBlockID = nil
+                    editDraft = nil
+                    ui.endEditingInPlace()
+                    vm.delete(doomed)
+                    return
+                }
                 vm.delete(take)
             },
-            cardSwipeOffset: cardSwipeOffset
+            onDiscard: isEditingThis ? { discardInlineEdit() } : nil,
+            cardSwipeOffset: cardSwipeOffset,
+            editingCard: isEditingThis
+                ? { AnyView(InlineTakeEditCard(draft: editDraftBinding, focusedBlockID: $editFocusedBlockID)) }
+                : nil
         )
         .background(
             // Task 6.19 — brief flash when this row is the Spotlight deep-link

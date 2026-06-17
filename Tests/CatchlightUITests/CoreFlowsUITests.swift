@@ -136,17 +136,21 @@ final class CoreFlowsUITests: XCTestCase {
         )
 
         let body = app.textViews["take-edit-body"]
-        // Replace existing text. Triple-tap to select all, then type.
+        // Replace existing text. Edit-in-place (2026-06-17): editing happens in the
+        // timeline row, not a top-anchored overlay — there is no `editor-done`;
+        // tapping a masked area commits. A long-press on the body would now raise the
+        // inline edit menu (Discard/Delete), so drive the clear with deletes from the
+        // caret (which lands at the document end on focus).
         body.tap()
-        body.press(forDuration: 1.2)   // surfaces Select / Select All in real life
-        // Fall back to clearing manually — XCUITest can't reliably drive the
-        // edit menu. Walk to the end and delete the seed phrase characters.
         let seedLength = "Buy film for the weekend shoot".count
         for _ in 0..<seedLength { body.typeText(XCUIKeyboardKey.delete.rawValue) }
         let updated = "Buy black-and-white film"
         body.typeText(updated)
 
-        tapWhenReady(app.buttons["editor-done"])
+        // Commit by tapping a masked area near the top of the screen (clear of both
+        // the focused card and the keyboard) — the "tap anywhere off the Take to
+        // save" gesture.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
 
         let updatedRow = takeRow(in: app, withLabelStarting: updated)
         XCTAssertTrue(updatedRow.waitForExistence(timeout: 3), "Updated Take text not visible in Dailies")
