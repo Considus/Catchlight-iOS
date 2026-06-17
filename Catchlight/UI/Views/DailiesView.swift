@@ -179,6 +179,11 @@ struct DailiesView: View {
                 // (owner 2026-06-17) — the bright wire otherwise reads as a
                 // "timeline remnant" behind the focused Take.
                 .opacity(ui.isEditingInPlace ? 0.12 : 1)
+                // Stay anchored to the + (screen bottom) even with the keyboard up
+                // (owner 2026-06-17): otherwise keyboard avoidance lifts the spine's
+                // terminus and it ends behind a new bottom Take instead of running
+                // down to where the + sits.
+                .ignoresSafeArea(.keyboard, edges: .bottom)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
@@ -206,6 +211,7 @@ struct DailiesView: View {
             DottedSpine(dashPhase: dottedSpinePhase)
                 // Masked with the timeline while editing in place (owner 2026-06-17).
                 .opacity(ui.isEditingInPlace ? 0.12 : 1)
+                .ignoresSafeArea(.keyboard, edges: .bottom)   // anchor to the + with the keyboard up (see solid spine)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
@@ -754,12 +760,14 @@ struct DailiesView: View {
                     if ui.spotlightTargetTakeID == id { ui.spotlightTargetTakeID = nil }
                 }
             }
-            // Edit-in-place Phase 2: bring a just-created Take into view (it lands at
-            // the bottom under Oldest-first). `.center` lifts it clear of the keyboard.
+            // Edit-in-place Phase 2: bring a just-created Take into view. Anchored
+            // LOW in the viewport (0.82, owner 2026-06-17) so it sits near — but not
+            // hard against — the keyboard, rather than floating ~1/3 down. For
+            // Newest-first (Take at top) this clamps to the top, as wanted.
             .onChange(of: scrollToTakeID) { _, id in
                 guard let id else { return }
                 withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo(id, anchor: .center)
+                    proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
                 }
                 scrollToTakeID = nil
             }
