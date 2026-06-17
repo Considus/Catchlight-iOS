@@ -179,10 +179,12 @@ struct DailiesView: View {
                 // Single-sourced via `ckSpineWire` so the gutter spine and the
                 // through-Iris segments (TakeRowView, "rings on a wire") never drift.
                 .fill(Color.ckSpineWire)
-                // Masked with the rest of the timeline while editing in place
-                // (owner 2026-06-17) — the bright wire otherwise reads as a
-                // "timeline remnant" behind the focused Take.
-                .opacity(ui.isEditingInPlace ? 0.12 : 1)
+                // Fully hidden while editing in place (owner 2026-06-17): a thin line
+                // reads as a "remnant" even at the 0.12 row-mask — especially once the
+                // Obie card (which used to cover it) goes invisible, exposing the spine
+                // at the empty Obie position. The faint masked CARDS carry the
+                // "part of the timeline" feel; the connecting wire isn't needed in focus.
+                .opacity(ui.isEditingInPlace ? 0 : 1)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
@@ -208,8 +210,8 @@ struct DailiesView: View {
             // dash phase compensating so the dots stay screen-static (see
             // `dottedSpinePhase`).
             DottedSpine(dashPhase: dottedSpinePhase)
-                // Masked with the timeline while editing in place (owner 2026-06-17).
-                .opacity(ui.isEditingInPlace ? 0.12 : 1)
+                // Fully hidden while editing in place (with the solid spine, above).
+                .opacity(ui.isEditingInPlace ? 0 : 1)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
