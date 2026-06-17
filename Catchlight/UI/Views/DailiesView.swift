@@ -122,6 +122,10 @@ struct DailiesView: View {
     /// on (inline) while another Obie already exists — the same warning the timeline
     /// long-press uses, but targeting the draft (owner 2026-06-17).
     @State private var pendingInlineObieConfirm = false
+    /// One-shot scroll target — set to bring a Take into view (e.g. a new Take that
+    /// landed at the bottom under Oldest-first). The timeline's ScrollViewReader
+    /// consumes and clears it.
+    @State private var scrollToTakeID: UUID?
 
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
@@ -214,7 +218,7 @@ struct DailiesView: View {
             // A first-launch-empty store shows the Fog line; but when a dock
             // filter is active the timeline (with its own filter-empty line)
             // always wins, so the background-tap exit remains available.
-            if vm.isEmpty && activeFilter.isEmpty {
+            if vm.isEmpty && activeFilter.isEmpty && inlineNewTake == nil {
                 emptyState
             } else {
                 timeline
@@ -266,6 +270,13 @@ struct DailiesView: View {
             guard let command, ui.editingTakeID != nil else { return }
             applyInlineFanCommand(command)
             ui.inlineFanCommand = nil
+        }
+        // Dock + requested a new Take (Phase 2): create it in place at the
+        // Order-appropriate end and focus it.
+        .onChange(of: ui.pendingInlineNewTake) { _, take in
+            guard let take else { return }
+            beginNewInlineEdit(take)
+            ui.pendingInlineNewTake = nil
         }
         // Inline Obie confirmation — mirrors the timeline long-press warning, but
         // targets the draft (the existing Obie is demoted by the store on save).
@@ -737,6 +748,15 @@ struct DailiesView: View {
                     if ui.spotlightTargetTakeID == id { ui.spotlightTargetTakeID = nil }
                 }
             }
+            // Edit-in-place Phase 2: bring a just-created Take into view (it lands at
+            // the bottom under Oldest-first). `.center` lifts it clear of the keyboard.
+            .onChange(of: scrollToTakeID) { _, id in
+                guard let id else { return }
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo(id, anchor: .center)
+                }
+                scrollToTakeID = nil
+            }
         }
     }
 
@@ -848,6 +868,21 @@ struct DailiesView: View {
         editDraft = t
         editFocusedBlockID = t.blocks.first?.id
         ui.beginEditingInPlace(take)
+    }
+
+    /// Create a NEW Take in place (Phase 2): seed the blank draft, inject it into the
+    /// timeline at the Order-appropriate end (via `displayedTakes`), focus it, and
+    /// scroll it into view (it may land off-screen at the bottom under Oldest-first).
+    /// Not persisted until the inline save — a blank one dismissed leaves nothing.
+    private func beginNewInlineEdit(_ take: Take) {
+        var t = take
+        if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
+        editDraft = t
+        editFocusedBlockID = t.blocks.first?.id
+        ui.beginEditingInPlace(take)
+        // Bring it into view once it's laid out (off-screen at the bottom for
+        // Oldest-first). Deferred a tick so the injected row exists first.
+        DispatchQueue.main.async { scrollToTakeID = take.id }
     }
 
     /// Commit the in-place edit through the same path the old editor used: drop empty
@@ -1010,7 +1045,9 @@ struct DailiesView: View {
                     editFocusedBlockID = nil
                     editDraft = nil
                     ui.endEditingInPlace()
-                    vm.delete(doomed)
+                    // `discardIfPresent` deletes an existing Take but no-ops a NEW
+                    // one that was never saved (Phase 2) — no spurious not-found error.
+                    vm.discardIfPresent(doomed)
                     return
                 }
                 vm.delete(take)
@@ -1051,6 +1088,24 @@ struct DailiesView: View {
         return orderedTakes.filter { filter.matches($0) }
     }
 
+    /// The new Take being created IN PLACE (Phase 2), if any: it lives in `editDraft`
+    /// but is NOT yet in the store/`vm.takes` (or the Obie). nil when editing an
+    /// existing Take or not editing.
+    private var inlineNewTake: Take? {
+        guard let id = ui.editingTakeID, let draft = editDraft, draft.id == id else { return nil }
+        let known = vm.takes.contains { $0.id == id } || vm.obie?.id == id
+        return known ? nil : draft
+    }
+
+    /// `filteredTakes` plus the in-place new Take (if any) injected at the
+    /// Order-appropriate end — bottom for Oldest-first, top for Newest-first (its
+    /// `createdAt = now` would sort there anyway; placed explicitly since it isn't in
+    /// `vm.takes`). Bypasses the dock filter so a just-created Take is always visible.
+    private var displayedTakes: [Take] {
+        guard let newTake = inlineNewTake else { return filteredTakes }
+        return takeSort == .oldestFirst ? filteredTakes + [newTake] : [newTake] + filteredTakes
+    }
+
     // MARK: - Month grouping
 
     private struct MonthGroup { let month: String; let takes: [Take] }
@@ -1067,7 +1122,7 @@ struct DailiesView: View {
     private var monthGroups: [MonthGroup] {
         var order: [String] = []
         var map: [String: [Take]] = [:]
-        for take in filteredTakes {
+        for take in displayedTakes {
             let key = Self.monthFormatter.string(from: take.createdAt)
             if map[key] == nil { order.append(key); map[key] = [] }
             map[key]?.append(take)

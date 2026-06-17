@@ -67,6 +67,13 @@ final class UIState {
     var editingTakeID: UUID?
     var isEditingInPlace: Bool { editingTakeID != nil }
 
+    /// A freshly-created blank Take handed to DailiesView to edit IN PLACE (Phase 2
+    /// 2026-06-17). The dock's + sets this instead of opening the top-anchored
+    /// overlay; DailiesView injects it into the timeline at the Order-appropriate end
+    /// (Oldest→bottom, Newest→top), focuses it, and clears this. It is NOT persisted
+    /// until the inline save (a blank one dismissed leaves nothing behind).
+    var pendingInlineNewTake: Take?
+
     /// A petal-fan selection handed to the OPEN editor (the fan was opened from
     /// the editor's footer). The editor applies it to its live block draft —
     /// the Task Mark reshapes the on-screen blocks, never the stored copy — so a
