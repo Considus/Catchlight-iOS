@@ -179,10 +179,12 @@ struct DailiesView: View {
                 // Single-sourced via `ckSpineWire` so the gutter spine and the
                 // through-Iris segments (TakeRowView, "rings on a wire") never drift.
                 .fill(Color.ckSpineWire)
-                // Masked with the rest of the timeline while editing in place
-                // (owner 2026-06-17) — the bright wire otherwise reads as a
-                // "timeline remnant" behind the focused Take.
-                .opacity(ui.isEditingInPlace ? 0.12 : 1)
+                // Fully hidden while editing in place (owner 2026-06-17): a thin line
+                // reads as a "remnant" even at the 0.12 row-mask — especially once the
+                // Obie card (which used to cover it) goes invisible, exposing the spine
+                // at the empty Obie position. The faint masked CARDS carry the
+                // "part of the timeline" feel; the connecting wire isn't needed in focus.
+                .opacity(ui.isEditingInPlace ? 0 : 1)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
@@ -208,8 +210,8 @@ struct DailiesView: View {
             // dash phase compensating so the dots stay screen-static (see
             // `dottedSpinePhase`).
             DottedSpine(dashPhase: dottedSpinePhase)
-                // Masked with the timeline while editing in place (owner 2026-06-17).
-                .opacity(ui.isEditingInPlace ? 0.12 : 1)
+                // Fully hidden while editing in place (with the solid spine, above).
+                .opacity(ui.isEditingInPlace ? 0 : 1)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
                 .padding(.top, spineTopInset)
@@ -235,11 +237,11 @@ struct DailiesView: View {
             // keyboard avoidance (Flow 5 regression, 2026-06-11). The heading
             // dodges the status bar itself via deviceTopInset. Takes scroll
             // under the solid block and dissolve beneath the 12pt fade.
-            // Masked while editing in place (owner 2026-06-17) — the focused Take is
-            // the only bright thing on screen. (The pinned Obie + rows mask via
-            // `row(for:)`'s own opacity, so only the heading needs dimming here.)
+            // While editing in place (owner 2026-06-17) the heading's page-coloured
+            // top MASK stays opaque — so a focused Take scrolled up still dissolves
+            // under it instead of running to the Dynamic Island — and only the title
+            // TEXT dims (the dimming lives on `Text(headingTitle)` inside `heading`).
             heading
-                .opacity(ui.isEditingInPlace ? 0.12 : 1)
 
             // The pinned Obie sits below the heading at the first-Take position, with
             // its own solid backing + fade; scrolling Takes pass behind it and dissolve.
@@ -333,6 +335,9 @@ struct DailiesView: View {
                     .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
                     .kerning(1.6)
                     .foregroundStyle(Color.ckTextPrimary)
+                    // Recede the title while editing in place; the mask below stays
+                    // opaque so scrolled-up content still dissolves under the top.
+                    .opacity(ui.isEditingInPlace ? 0.12 : 1)
                     .id(headingTitle)
                     .transition(.opacity)
                 Spacer()
@@ -342,16 +347,18 @@ struct DailiesView: View {
             .padding(.bottom, 2)
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
-            if vm.obie != nil {
+            if vm.obie != nil && !ui.isEditingInPlace {
                 // With a pinned Obie: SOLID right down to the Obie's card top (no fade
                 // — the gradient is semi-transparent and lets a scrolling Take peek).
                 // The opaque Obie card continues the mask below. Its own Iris is drawn
                 // ON TOP of the heading, so this doesn't cover it (owner 2026-06-16).
                 Color.ckBackground
             } else {
-                // No Obie: the first Take's Iris lives in the SCROLL behind the heading,
-                // so the heading stays natural height and a 12pt fade dissolves Takes
-                // scrolling under it.
+                // No Obie — OR editing in place (owner 2026-06-17): use the natural
+                // height + a 12pt fade so a grown focused Take dissolves under the
+                // top, exactly like the no-Obie timeline, instead of vanishing at the
+                // Obie heading's hard mid-screen edge. (The pinned Obie + insets stay
+                // put, so the focused Take's position doesn't jump.)
                 LinearGradient(
                     colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
                     startPoint: .top, endPoint: .bottom
@@ -366,7 +373,7 @@ struct DailiesView: View {
         // guarantees every corner is above the mask edge. The −12 pulls the mask edge
         // up 12px from the true bottom (owner 2026-06-17: a 6px nudge up from the prior
         // −6 to clear a small scroll-edge ugliness). Natural height when there's no Obie.
-        .frame(height: vm.obie != nil
+        .frame(height: (vm.obie != nil && !ui.isEditingInPlace)
                        ? deviceTopInset + CatchlightLayout.headingClearance + max(0, pinnedObieZoneHeight - 12)
                        : nil,
                alignment: .top)
@@ -402,6 +409,14 @@ struct DailiesView: View {
                 )
                 // Sit at the standard first-item position (matches a plain first Take).
                 .padding(.top, deviceTopInset + CatchlightLayout.headingClearance)
+                // While editing ANOTHER Take, the pinned Obie goes fully invisible
+                // (not just the row's 0.12 mask) — it sits ON TOP of the scroll, so at
+                // 12% a focused Take scrolling behind it reads as a ghost (owner
+                // 2026-06-17). Hidden, not removed, so it fades with the mask and its
+                // measured height (the scroll inset) is preserved — no position jump.
+                // When the Obie ITSELF is the focused Take it stays bright (editing it).
+                .opacity(ui.isEditingInPlace && ui.editingTakeID != obie.id ? 0 : 1)
+                .allowsHitTesting(!(ui.isEditingInPlace && ui.editingTakeID != obie.id))
         }
     }
 
@@ -871,15 +886,20 @@ struct DailiesView: View {
     }
 
     /// Focus a Take for in-place editing: seed the draft (a blank Take gets one empty
-    /// prose row to type into, mirroring the top-anchored editor), drop the caret into
-    /// its first block, and raise the focus flag (which masks the rest).
+    /// prose row to type into) and drop the caret at the END of the content — the
+    /// "continue / append" position (owner 2026-06-17). The caret's block is the
+    /// text-entry row, and iOS keyboard avoidance keeps THAT row above the keyboard —
+    /// so focusing the LAST block pulls the bottom of the Take clear of the keyboard
+    /// (the obscured-bottom fix), and lands you ready to keep writing. (`BlockTextEditor`
+    /// places the caret at the end of the focused block's text on becoming first
+    /// responder.)
     private func beginInlineEdit(_ take: Take) {
         // Task 6.20: editing is gated for lapsed users — paywall opens instead.
         guard app.ensureEntitled() else { return }
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editDraft = t
-        editFocusedBlockID = t.blocks.first?.id
+        editFocusedBlockID = t.blocks.last?.id
         ui.beginEditingInPlace(take)
     }
 
