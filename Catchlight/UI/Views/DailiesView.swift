@@ -268,7 +268,11 @@ struct DailiesView: View {
             // Kick off the first-run orientation tour the first time the main app
             // is visible. No-op once the tour has started or completed.
             orientation.beginIfNeeded()
+            // Let AppModel.relock save a mid-edit Take through our save path before it
+            // tears down the store (owner 2026-06-17 — lock auto-saves, never discards).
+            ui.commitInlineEdit = { saveInlineEdit() }
         }
+        .onDisappear { ui.commitInlineEdit = nil }
         // The Focus ring committed while a Take is edited in place — apply it to the
         // live draft (edit-in-place 2026-06-17). Guarded on `editingTakeID` so the
         // (behind) timeline ignores commits meant for the top-anchored new-Take editor.
@@ -753,6 +757,11 @@ struct DailiesView: View {
               }   // VStack(spacing: 0)
             }
             .scrollIndicators(.hidden)   // the spine is the timeline affordance (owner 2026-06-16)
+            // Swipe the timeline DOWN to dismiss the keyboard while editing in place,
+            // then tap any dimmed area to save & close (owner 2026-06-17 — the chosen
+            // exit, replacing the rejected keyboard "Done" bar). `.interactively` so the
+            // keyboard tracks the drag down rather than vanishing abruptly.
+            .scrollDismissesKeyboard(.interactively)
             .coordinateSpace(name: "dailies")
             .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
             .onPreferenceChange(FirstRowTopKey.self) { firstRowTop = $0.isFinite ? $0 : nil }

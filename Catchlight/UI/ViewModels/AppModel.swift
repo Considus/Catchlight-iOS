@@ -240,6 +240,11 @@ final class AppModel {
     /// No-op while onboarding (no key yet) or already locked.
     func relock() {
         guard !needsOnboarding, lockState == .unlocked else { return }
+        // Auto-save a mid-edit Take BEFORE the store is torn down (owner 2026-06-17 —
+        // locking should preserve in-progress work, not discard it). Runs DailiesView's
+        // own save path while the encrypted store is still bound; must precede
+        // `session.lock()` / the rebind below, after which a write would be lost.
+        ui.commitInlineEdit?()
         ui.endEditingInPlace()              // drop in-place edit focus (the draft lives in DailiesView, torn down with the locked timeline)
         session.lock()                      // zero the session's keys + decrypted cache
         Wiring.clearSessionKeys()           // drop the cached keys used by sync
