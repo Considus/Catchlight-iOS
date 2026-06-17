@@ -105,11 +105,12 @@ final class BlockEditorUITests: XCTestCase {
         app.buttons.matching(identifier: "take-edit-checkbox")
     }
 
-    // MARK: - Focus ring builds a checklist (line-split)
+    // MARK: - Focus ring begins a checklist without eating prose
 
-    /// Type three lines of prose, then Focus-ring → Task ON. The cursor's text
-    /// block splits on newlines into three tickable items (rule 2).
-    func testFocusRing_makeTask_splitsProseLinesIntoItems() throws {
+    /// Type prose, then Focus-ring → Task ON. Owner 2026-06-17: the existing prose
+    /// is preserved as a text row, and exactly ONE empty check item is added (the
+    /// first task entry) — Task no longer converts the lines already written.
+    func testFocusRing_makeTask_keepsProseAddsEmptyEntry() throws {
         let app = launchAppForUITesting()
         let body = openNewEditor(app)
         body.tap()
@@ -118,10 +119,10 @@ final class BlockEditorUITests: XCTestCase {
         try toggleTaskOnViaFocusRing(app)
         try requireChecklistRendered(app)
 
-        XCTAssertTrue(waitForCount(checkFields(app), 3),
-                      "Three prose lines should become three check items; got \(checkFields(app).count)")
-        XCTAssertFalse(app.textViews["take-edit-body"].exists,
-                       "The prose row should have become check rows")
+        XCTAssertTrue(waitForCount(checkFields(app), 1),
+                      "Task ON adds exactly one empty entry; got \(checkFields(app).count)")
+        XCTAssertTrue(app.textViews["take-edit-body"].exists,
+                      "Existing prose should be preserved as a text row, not converted")
     }
 
     // MARK: - Return continues / exits the list
@@ -129,19 +130,19 @@ final class BlockEditorUITests: XCTestCase {
     /// Return in a non-empty check item adds another item (rule 3).
     func testReturn_inNonEmptyCheckItem_continuesList() throws {
         let app = launchAppForUITesting()
-        let body = openNewEditor(app)
-        body.tap()
-        body.typeText("milk")
+        _ = openNewEditor(app)
 
+        // Task ON yields one empty, focused check item (owner 2026-06-17 — Task no
+        // longer fills items from prose). Type into it so it's NON-empty, then
+        // Return continues the list.
         try toggleTaskOnViaFocusRing(app)
         try requireChecklistRendered(app)
         XCTAssertTrue(waitForCount(checkFields(app), 1))
 
-        // Focus the item explicitly (robust vs relying on post-commit programmatic
-        // focus + keyboard timing), then Return continues the list.
         let field = checkFields(app).firstMatch
         tapWhenReady(field)
         _ = app.keyboards.firstMatch.waitForExistence(timeout: 3)
+        app.typeText("milk")
         app.typeText("\n")
 
         XCTAssertTrue(waitForCount(checkFields(app), 2), "Return in a non-empty item should add one")
@@ -195,12 +196,19 @@ final class BlockEditorUITests: XCTestCase {
     /// pre-TestFlight checklist.
     func testReorder_dragHandle_movesItem() throws {
         let app = launchAppForUITesting()
-        let body = openNewEditor(app)
-        body.tap()
-        body.typeText("alpha\nbravo")
+        _ = openNewEditor(app)
 
+        // Build a two-item checklist via the new Task flow (owner 2026-06-17): Task
+        // ON gives one empty entry; type the first, Return to continue, type the
+        // second — Task no longer splits pre-existing prose into items.
         try toggleTaskOnViaFocusRing(app)
         try requireChecklistRendered(app)
+        let firstField = checkFields(app).firstMatch
+        tapWhenReady(firstField)
+        _ = app.keyboards.firstMatch.waitForExistence(timeout: 3)
+        app.typeText("alpha")
+        app.typeText("\n")
+        app.typeText("bravo")
         XCTAssertTrue(waitForCount(checkFields(app), 2))
 
         let handles = app.images.matching(identifier: "take-edit-reorder")

@@ -36,8 +36,12 @@
 //  (readable above cards), 1.5pt Ember@35% ring, no shadow, Ember glyphs at
 //  the light weight; the Obie petal draws the ring+specular glyph in
 //  ckTextObie. Active petals reverse like the dock toggles (Ember fill +
-//  background glyph). The veil is ckDim (background @90%, no blur) — the
-//  screens beneath stay full-opacity.
+//  background glyph). The veil is ckDim (background @90%, no blur): it recedes
+//  everything beneath it, then the TAPPED Take's card is lifted back LIT above
+//  the veil (owner 2026-06-16) so only that Take, its Iris (the rotating hub),
+//  and the Focus-ring stay readable while the rest of the timeline + chrome dim
+//  away (`showsFocusCard` / `TakeCardSurface`). From the editor footer there is
+//  no spotlight card — the editor is the context there.
 //
 //  Petal taps toggle the working selection; tapping the veil COMMITS and
 //  closes (unchanged semantics — Note remains the floor).
@@ -50,16 +54,37 @@ struct PetalFanView: View {
     let take: Take
     /// Screen-space point of the hub (centre of the tapped circle).
     let hubCentre: CGPoint
-    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ isObie: Bool) -> Void
+    /// Full overlay width (screen width) — used to reconstruct the tapped Take's
+    /// card frame so a LIT copy can be lifted above the dim veil. See `focusCard`.
+    var containerWidth: CGFloat = 0
+    /// Whether to lift the tapped Take's card above the veil (owner 2026-06-16).
+    /// True when the fan blooms from a timeline Iris (`hubCentre` is a real row);
+    /// false from the editor footer (origin = screen centre — the editor IS the
+    /// context there, so no card to spotlight).
+    var showsFocusCard: Bool = false
+    /// `reminderDate` carries the time chosen in the picker (nil when no Reminder).
+    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ isObie: Bool) -> Void
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Default Reminder time when one is freshly added: 24h out (owner 2026-06-17 —
+    /// the picker opens pre-set here, the user refines or accepts it).
+    static var defaultReminderDate: Date {
+        Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+    }
 
     // Working selection (mutated as petals are tapped).
     @State private var isNote: Bool
     @State private var isTask: Bool
     @State private var hasReminder: Bool
     @State private var isObie: Bool
+    /// The working Reminder time. Seeded from the Take's existing reminder (or the
+    /// +24h default) and edited by the picker that pops when the Reminder Mark is
+    /// tapped on (owner 2026-06-17).
+    @State private var reminderDate: Date
+    /// Drives the date/time picker sheet the Reminder Mark pops.
+    @State private var showingReminderPicker = false
 
     private enum FanPhase: Equatable {
         case opening(start: Date)
@@ -70,16 +95,21 @@ struct PetalFanView: View {
 
     init(take: Take,
          hubCentre: CGPoint,
-         onCommit: @escaping (Bool, Bool, Bool, Bool) -> Void,
+         containerWidth: CGFloat = 0,
+         showsFocusCard: Bool = false,
+         onCommit: @escaping (Bool, Bool, Bool, Date?, Bool) -> Void,
          onDismiss: @escaping () -> Void) {
         self.take = take
         self.hubCentre = hubCentre
+        self.containerWidth = containerWidth
+        self.showsFocusCard = showsFocusCard
         self.onCommit = onCommit
         self.onDismiss = onDismiss
         _isNote = State(initialValue: take.isNote)
         _isTask = State(initialValue: take.isTask)
         _hasReminder = State(initialValue: take.timeReminder != nil)
         _isObie = State(initialValue: take.isObie)
+        _reminderDate = State(initialValue: take.timeReminder?.scheduledDate ?? Self.defaultReminderDate)
         _phase = State(initialValue: .opening(start: .now))
     }
 
@@ -242,6 +272,41 @@ struct PetalFanView: View {
         return true
     }
 
+    /// The dim veil's opacity, ramped on the fan's OWN clock so the veil dissolves
+    /// symmetrically — fade IN over the open, fade OUT over the close, both at the
+    /// same `dur` (owner 2026-06-17: the close felt right and the open should match
+    /// its slower pace; previously the open leaned on the 0.2s `fanFade` transition
+    /// while the close ramped over ~0.84s). The lit focus card rides the same value.
+    /// `.open` holds solid; Reduce Motion (phase jumps straight to `.open`) keeps the
+    /// overlay's plain transition.
+    private func veilOpacity(now: Date) -> Double {
+        let dur = Choreo.total / Choreo.closeSpeed
+        switch phase {
+        case .opening(let start):
+            let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
+            return Self.easeInOutCubic(p)
+        case .open:
+            return 1
+        case .closing(let start, _):
+            let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
+            return 1 - Self.easeInOutCubic(p)
+        }
+    }
+
+    // MARK: - Focus card geometry
+    //
+    // Reconstructs the tapped row's card frame from `hubCentre` (the Iris centre in
+    // overlay/window space) using the same layout constants DailiesView lays the row
+    // out with, so the lit copy lands exactly over the real (now-dimmed) card.
+
+    /// Card leading edge: the Iris centre is `cardSpineInset` right of it (the Iris
+    /// nests into the card's top-left corner, on the spine).
+    private var focusCardLeading: CGFloat { hubCentre.x - CatchlightLayout.cardSpineInset }
+    /// Card top edge: the Iris straddles it, so its centre sits exactly there.
+    private var focusCardTop: CGFloat { hubCentre.y }
+    /// Card width: from the leading edge out to the row's 20pt trailing margin.
+    private var focusCardWidth: CGFloat { containerWidth - 20 - focusCardLeading }
+
     // MARK: - Body
 
     var body: some View {
@@ -252,6 +317,7 @@ struct PetalFanView: View {
                 // (Petal taps toggle but never close; the veil tap is the
                 // commit gesture — see the 4.5/7.4 audit note in history.)
                 Color.ckDim
+                    .opacity(veilOpacity(now: now))
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture { retractAndDismiss(commit: true) }
@@ -259,6 +325,29 @@ struct PetalFanView: View {
                     .accessibilityLabel("Save and close")
                     .accessibilityHint("Double-tap to apply your selection and close.")
                     .accessibilityAddTraits(.isButton)
+
+                // The tapped Take, lifted LIT above the veil (owner 2026-06-16). The
+                // veil dims everything; this restores the one Take the fan acts on so
+                // it stays clearly readable while its Iris (the hub below) and the
+                // Focus-ring sit on top. A pure-visual copy of the real row's card —
+                // non-interactive, so a tap here falls through to the veil (commit &
+                // close), exactly like tapping any other dimmed area. Positioned from
+                // `hubCentre`: the Iris centre sits on the card's top edge and is
+                // `cardSpineInset` right of the card's leading edge, and the card runs
+                // to the 20pt trailing margin — the same geometry DailiesView lays the
+                // row out with. Drawn BEFORE the petals so they still pass above it.
+                if showsFocusCard, focusCardWidth > 0 {
+                    TakeCardSurface(take: take)
+                        .frame(width: focusCardWidth, alignment: .leading)
+                        .offset(x: focusCardLeading, y: focusCardTop)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        // Fades out with the veil on close (owner 2026-06-17) so the
+                        // lit Take resolves back into the brightening timeline rather
+                        // than blinking off when the overlay is removed.
+                        .opacity(veilOpacity(now: now))
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
 
                 ZStack {
                     ForEach(PetalKind.allCases.reversed(), id: \.rawValue) { kind in
@@ -296,6 +385,16 @@ struct PetalFanView: View {
                 if case .opening = phase { phase = .open }
             }
         }
+        // The Reminder Mark pops the standard iOS date/time picker (owner 2026-06-17).
+        // Done keeps the Reminder at the chosen time; Cancel removes it entirely
+        // (tapping the Mark on was the only commitment, so backing out clears it).
+        .sheet(isPresented: $showingReminderPicker) {
+            ReminderPickerSheet(
+                initialDate: reminderDate,
+                onSave: { reminderDate = $0; hasReminder = true },
+                onCancel: { hasReminder = false }
+            )
+        }
     }
 
     /// A synthetic Take reflecting the working selection, so the hub circle
@@ -305,9 +404,9 @@ struct PetalFanView: View {
         t.isNote = isNote
         t.setTask(isTask)
         t.isObie = isObie
-        if hasReminder, t.timeReminder == nil {
-            t.timeReminder = TimeReminder(scheduledDate: .now, notificationIdentifier: t.id.uuidString)
-        } else if !hasReminder {
+        if hasReminder {
+            t.timeReminder = TimeReminder(scheduledDate: reminderDate, notificationIdentifier: t.id.uuidString)
+        } else {
             t.timeReminder = nil
         }
         return t
@@ -372,6 +471,9 @@ struct PetalFanView: View {
             // Note is the floor: if nothing else is active, Note re-asserts.
             if !isTask && !hasReminder && !isObie { isNote = true }
         }
+        // Turning the Reminder Mark ON pops the date/time picker so the user sets
+        // the time there and then (owner 2026-06-17). Turning it off just clears it.
+        if kind == .remind && hasReminder { showingReminderPicker = true }
     }
 
     // MARK: - Retract
@@ -394,10 +496,59 @@ struct PetalFanView: View {
 
     private func finish(commit: Bool) {
         if commit {
-            onCommit(isNote, isTask, hasReminder, isObie)
+            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, isObie)
         } else {
             onDismiss()
         }
+    }
+}
+
+/// A standard iOS date/time picker presented as a sheet — the Reminder time editor.
+/// Popped by the Focus-ring's Reminder Mark (set the time at creation) and reused by
+/// the Take editor's reminder row to change it later (owner 2026-06-17). Purely a
+/// time chooser: the caller owns what Save/Cancel mean for its own state.
+struct ReminderPickerSheet: View {
+    let initialDate: Date
+    let onSave: (Date) -> Void
+    /// Optional — the Focus-ring uses Cancel to REMOVE a just-added reminder; the
+    /// editor leaves it nil (Cancel keeps the existing time untouched).
+    var onCancel: () -> Void = {}
+
+    @State private var date: Date
+    @Environment(\.dismiss) private var dismiss
+
+    init(initialDate: Date, onSave: @escaping (Date) -> Void, onCancel: @escaping () -> Void = {}) {
+        self.initialDate = initialDate
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _date = State(initialValue: initialDate)
+    }
+
+    var body: some View {
+        NavigationStack {
+            // Scrollable so every element (calendar AND the time row beneath it) is
+            // always reachable regardless of sheet height — owner 2026-06-17: at the
+            // half-height detent the graphical calendar pushed the time off-screen.
+            ScrollView {
+                DatePicker("Remind me", selection: $date)
+                    .datePickerStyle(.graphical)
+                    .labelsHidden()
+                    .padding()
+            }
+            .navigationTitle("Remind me")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel(); dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { onSave(date); dismiss() }
+                }
+            }
+        }
+        // Open at full height so the whole picker is visible at once (the half-height
+        // detent clipped the time selector).
+        .presentationDetents([.large])
     }
 }
 
@@ -406,7 +557,7 @@ struct PetalFanView: View {
         PetalFanView(
             take: Take(blocks: [.checkItem("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _ in },
+            onCommit: { _, _, _, _, _ in },
             onDismiss: {}
         )
     }
@@ -419,7 +570,7 @@ struct PetalFanView: View {
         PetalFanView(
             take: Take(blocks: [.textLine("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _ in },
+            onCommit: { _, _, _, _, _ in },
             onDismiss: {}
         )
     }
