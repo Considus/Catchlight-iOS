@@ -715,8 +715,13 @@ struct DailiesView: View {
                                 // Iris corner, driven by `newTakeBloom` (explicit, so it
                                 // animates inside the LazyVStack and after the scroll).
                                 // Existing rows are pinned at full (owner 2026-06-17).
+                                // NB: the fade is FLOORED at 0.3, never 0 — SwiftUI maps
+                                // opacity 0 to isHidden, and UIKit refuses
+                                // becomeFirstResponder on a hidden view, so a 0-opacity
+                                // bloom silently swallowed the new Take's keyboard/caret
+                                // (you had to tap to focus). 0.3→1 still reads as a fade-in.
                                 .scaleEffect(isNewRow ? 0.92 + 0.08 * newTakeBloom : 1, anchor: .topLeading)
-                                .opacity(isNewRow ? newTakeBloom : 1)
+                                .opacity(isNewRow ? (0.3 + 0.7 * newTakeBloom) : 1)
                         }
                     }
                 }
