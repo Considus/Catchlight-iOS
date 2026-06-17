@@ -122,18 +122,24 @@ struct InlineTakeEditCard: View {
                     onBackspaceEmpty: { handleBackspaceEmpty(item.id, isCheck: true) }
                 )
 
-                // Drag handle to reorder. Owner 2026-06-17: it starts on touch-and-
-                // MOVE (a high-priority DragGesture), NOT a long-press — so it doesn't
-                // collide with the card's long-press menu (hold = menu, drag = reorder).
-                // The order reflows live as you drag; VoiceOver gets explicit Move
-                // actions instead (the gesture isn't reachable without sight/touch).
+                // Drag handle to reorder. UIKit-bridged (owner 2026-06-17, "do it
+                // right"): a short press-then-drag (`VerticalReorderGesture`, 0.2s
+                // long-press). The press delay cleanly separates reorder from a
+                // vertical SCROLL — same axis, so a velocity test can't — and preempts
+                // the card's long-press menu on the handle. Quick drags still scroll;
+                // holds elsewhere on the card still open the menu. The order reflows
+                // live; VoiceOver uses the explicit Move actions.
                 Image(systemName: "line.3.horizontal")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.ckTextSecondary.opacity(draggingID == item.id ? 0.9 : 0.5))
                     .frame(width: CatchlightLayout.minTouchTarget,
                            height: CatchlightLayout.minTouchTarget)
                     .contentShape(Rectangle())
-                    .highPriorityGesture(reorderDrag(for: item.id))
+                    .gesture(VerticalReorderGesture(
+                        onBegan: { beginReorder(item.id) },
+                        onChanged: { updateReorder(item.id, translationY: $0) },
+                        onEnded: { endReorder() }
+                    ))
                     .accessibilityIdentifier("take-edit-reorder")
                     .accessibilityLabel("Reorder item")
                     .accessibilityAction(named: "Move up") { moveCheckItem(item.id, by: -1) }
@@ -142,34 +148,35 @@ struct InlineTakeEditCard: View {
         }
     }
 
-    /// Touch-and-move reorder for the drag handle. Begins on a small movement (not a
-    /// long-press, so the card's long-press menu still works on a hold), reflows the
-    /// order live, and settles on release. High-priority so it wins over the timeline
-    /// scroll once a drag starts on the handle.
-    private func reorderDrag(for id: UUID) -> some Gesture {
-        DragGesture(minimumDistance: 6)
-            .onChanged { value in
-                if draggingID != id {
-                    draggingID = id
-                    dragStartIndex = draft.blocks.firstIndex { $0.id == id }
-                }
-                dragOffsetY = value.translation.height
-                guard let start = dragStartIndex else { return }
-                let proposed = start + Int((value.translation.height / estRowHeight).rounded())
-                let target = min(max(proposed, 0), draft.blocks.count - 1)
-                guard let cur = draft.blocks.firstIndex(where: { $0.id == id }), cur != target else { return }
-                withAnimation(.easeInOut(duration: 0.18)) {
-                    let b = draft.blocks.remove(at: cur)
-                    draft.blocks.insert(b, at: target)
-                }
-            }
-            .onEnded { _ in
-                withAnimation(.easeInOut(duration: 0.18)) {
-                    dragOffsetY = 0
-                    draggingID = nil
-                    dragStartIndex = nil
-                }
-            }
+    // MARK: - Reorder (driven by the UIKit press-then-drag recognizer)
+
+    private func beginReorder(_ id: UUID) {
+        draggingID = id
+        dragStartIndex = draft.blocks.firstIndex { $0.id == id }
+        dragOffsetY = 0
+    }
+
+    /// `translationY` is the finger's vertical travel since the press armed. Reflow
+    /// the order live each time it crosses a row-height step (fixed `dragStartIndex`
+    /// reference so the maths don't drift as rows shuffle).
+    private func updateReorder(_ id: UUID, translationY: CGFloat) {
+        dragOffsetY = translationY
+        guard let start = dragStartIndex else { return }
+        let proposed = start + Int((translationY / estRowHeight).rounded())
+        let target = min(max(proposed, 0), draft.blocks.count - 1)
+        guard let cur = draft.blocks.firstIndex(where: { $0.id == id }), cur != target else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+            let b = draft.blocks.remove(at: cur)
+            draft.blocks.insert(b, at: target)
+        }
+    }
+
+    private func endReorder() {
+        withAnimation(.easeInOut(duration: 0.18)) {
+            dragOffsetY = 0
+            draggingID = nil
+            dragStartIndex = nil
+        }
     }
 
     /// Live offset that keeps the dragged row under the finger as the order reflows.
@@ -227,6 +234,61 @@ struct InlineTakeEditCard: View {
             let textBlock = TextBlock(text: "")
             draft.blocks = [.text(textBlock)]
             focusedBlockID = textBlock.id
+        }
+    }
+}
+
+// MARK: - UIKit-bridged press-then-drag reorder
+
+/// A "press the handle, then drag to reorder" gesture bridged from UIKit (iOS 18
+/// `UIGestureRecognizerRepresentable`) — the same approach as `HorizontalSwipePan`,
+/// and for the same reason: a SwiftUI gesture can't coordinate with the enclosing
+/// ScrollView's own pan. Reorder is VERTICAL — the same axis as scrolling — so the
+/// velocity test the swipe pan uses can't tell them apart; instead a short
+/// `UILongPressGestureRecognizer` (0.2s) uses the press DELAY to disambiguate: a
+/// quick drag scrolls, a brief hold-then-drag on the handle reorders. Exclusive
+/// recognition (no simultaneous) means once it arms it owns the touch — the scroll
+/// stays put and the card's long-press menu is preempted on the handle.
+/// (Reused by the List Angle's reorder in Phase 4.)
+struct VerticalReorderGesture: UIGestureRecognizerRepresentable {
+    var onBegan: () -> Void
+    /// Cumulative vertical travel (pt) since the press armed.
+    var onChanged: (CGFloat) -> Void
+    var onEnded: () -> Void
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+
+    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
+        let lp = UILongPressGestureRecognizer()
+        lp.minimumPressDuration = 0.2     // press delay = the scroll/menu disambiguator
+        lp.delegate = context.coordinator
+        return lp
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+        let y = recognizer.location(in: recognizer.view).y
+        switch recognizer.state {
+        case .began:
+            context.coordinator.startY = y
+            onBegan()
+        case .changed:
+            onChanged(y - context.coordinator.startY)
+        case .ended, .cancelled, .failed:
+            onEnded()
+        default:
+            break
+        }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var startY: CGFloat = 0
+        // Exclusive: once the press arms on the handle, reorder owns the touch — the
+        // ScrollView's pan yields and the card's long-press menu doesn't also fire.
+        // (Before it arms, a quick move fails the long-press, so normal scrolling is
+        // untouched.)
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            false
         }
     }
 }
