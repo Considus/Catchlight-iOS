@@ -933,9 +933,9 @@ struct DailiesView: View {
         ui.endEditingInPlace()
     }
 
-    /// Apply a Focus-ring selection to the inline draft — the in-place analogue of
-    /// `TakeEditView.applyFanCommand`. The draft is the single source of truth while
-    /// editing, so the selection rides the inline save (fixing the Obie revert: the
+    /// Apply a Focus-ring selection to the inline draft. The draft is the single
+    /// source of truth while editing, so the selection rides the inline save (fixing
+    /// the Obie revert: the
     /// fan used to write the store, then the stale draft overwrote it). The Task Mark
     /// reshapes the live blocks; Note/Reminder are flags; Obie warns-then-defers when
     /// one already exists, mirroring the timeline long-press.
@@ -973,7 +973,7 @@ struct DailiesView: View {
         editDraft = d
 
         // Drop the caret into the freshly-added task entry, deferred one runloop tick
-        // so the new check row is in the hierarchy first (same reason as TakeEditView).
+        // so the new check row is in the hierarchy first (the BlockTextEditor focus latch).
         if let newTaskEntryID {
             DispatchQueue.main.async { editFocusedBlockID = newTaskEntryID }
         }

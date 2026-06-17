@@ -240,7 +240,7 @@ final class AppModel {
     /// No-op while onboarding (no key yet) or already locked.
     func relock() {
         guard !needsOnboarding, lockState == .unlocked else { return }
-        ui.closeEditor()                    // drop any decrypted Take held for editing
+        ui.endEditingInPlace()              // drop in-place edit focus (the draft lives in DailiesView, torn down with the locked timeline)
         session.lock()                      // zero the session's keys + decrypted cache
         Wiring.clearSessionKeys()           // drop the cached keys used by sync
         rebind(to: InMemoryTakeStore())     // tear down the encrypted store (never written while locked)
