@@ -44,9 +44,10 @@ final class CoreFlowsUITests: XCTestCase {
         let phrase = "Pick up Brutalist proofs"
         body.typeText(phrase)
 
-        // Dismiss the editor — tap the "Done editing" affordance above the card.
-        // The editor saves on dismiss (DailiesViewModel.save).
-        tapWhenReady(app.buttons["editor-done"])
+        // Edit-in-place Phase 2 (2026-06-17): a new Take is created + edited IN PLACE
+        // on the timeline (no top-anchored overlay, no `editor-done`). Commit by
+        // tapping a masked area near the top, clear of the focused card + keyboard.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
 
         // The new Take should be visible in the Dailies list as a take-row.
         let newRow = takeRow(in: app, withLabelStarting: phrase)

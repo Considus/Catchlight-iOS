@@ -329,8 +329,10 @@ struct RootView: View {
     private func newTake() {
         // Task 6.20: lapsed users hit the paywall instead of creating a Take.
         guard app.ensureEntitled() else { return }
-        let take = app.dailiesVM.createTake()
-        ui.openEditor(for: take)
+        // Edit-in-place Phase 2 (2026-06-17): the new Take is created and edited IN
+        // PLACE on the timeline (at the Order-appropriate end), not in the
+        // top-anchored overlay. DailiesView picks this up and focuses it.
+        ui.pendingInlineNewTake = app.dailiesVM.createTake()
     }
 }
 
