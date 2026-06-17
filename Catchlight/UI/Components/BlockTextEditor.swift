@@ -38,6 +38,12 @@ struct BlockTextEditor: UIViewRepresentable {
     var onReturn: () -> Void = {}
     /// Backspace pressed while the field is empty.
     var onBackspaceEmpty: () -> Void = {}
+    /// Show a grabber bar on top of the keyboard whose tap / downward-swipe dismisses
+    /// the keyboard (owner 2026-06-17 — a discoverable "swipe the keyboard out of the
+    /// way" affordance; dismissing then leaves the dimmed timeline tappable to save &
+    /// close). Dismiss = clearing `focusedBlockID`, so the field resigns and won't be
+    /// re-focused. Only the in-place editor sets this.
+    var showsKeyboardGrabber: Bool = false
 
     func makeUIView(context: Context) -> BackspaceTextView {
         let tv = BackspaceTextView()
@@ -57,6 +63,9 @@ struct BlockTextEditor: UIViewRepresentable {
         tv.onBackspaceEmpty = { [weak tv] in
             guard tv != nil else { return }
             context.coordinator.parent.onBackspaceEmpty()
+        }
+        if showsKeyboardGrabber {
+            tv.inputAccessoryView = context.coordinator.makeGrabberBar()
         }
         tv.text = text
         applyStyle(to: tv)
@@ -114,6 +123,37 @@ struct BlockTextEditor: UIViewRepresentable {
         /// runs (prevents a focus/render loop).
         var focusRequested = false
         init(_ parent: BlockTextEditor) { self.parent = parent }
+
+        /// A slim bar with a centred grabber, hosted as the keyboard's
+        /// `inputAccessoryView`. A tap or a downward swipe dismisses the keyboard by
+        /// clearing `focusedBlockID` (which makes the field resign and stay resigned).
+        func makeGrabberBar() -> UIView {
+            let bar = UIView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 28))
+            bar.backgroundColor = .clear
+            bar.autoresizingMask = [.flexibleWidth]
+            let grab = UIView()
+            grab.backgroundColor = UIColor(Color.ckTextSecondary).withAlphaComponent(0.4)
+            grab.layer.cornerRadius = 2.5
+            grab.translatesAutoresizingMaskIntoConstraints = false
+            bar.addSubview(grab)
+            NSLayoutConstraint.activate([
+                grab.centerXAnchor.constraint(equalTo: bar.centerXAnchor),
+                grab.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+                grab.widthAnchor.constraint(equalToConstant: 40),
+                grab.heightAnchor.constraint(equalToConstant: 5),
+            ])
+            bar.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard)))
+            bar.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(grabberPanned(_:))))
+            return bar
+        }
+
+        @objc func grabberPanned(_ g: UIPanGestureRecognizer) {
+            // Only a downward swipe dismisses (mirrors "pull the keyboard down").
+            guard g.state == .ended, g.translation(in: g.view).y > 8 else { return }
+            dismissKeyboard()
+        }
+
+        @objc func dismissKeyboard() { parent.focusedBlockID = nil }
 
         func textViewDidChange(_ tv: UITextView) {
             parent.text = tv.text

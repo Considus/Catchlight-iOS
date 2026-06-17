@@ -89,7 +89,8 @@ struct InlineTakeEditCard: View {
                 isComplete: false,
                 axIdentifier: isFirstTextBlock(textBlock.id) ? "take-edit-body" : "take-edit-text",
                 axLabel: "Take text",
-                onBackspaceEmpty: { handleBackspaceEmpty(textBlock.id, isCheck: false) }
+                onBackspaceEmpty: { handleBackspaceEmpty(textBlock.id, isCheck: false) },
+                showsKeyboardGrabber: true
             )
         case .check(let item):
             HStack(alignment: .top, spacing: 8) {
@@ -119,7 +120,8 @@ struct InlineTakeEditCard: View {
                     axIdentifier: "take-edit-check-field",
                     axLabel: "Checklist item",
                     onReturn: { handleReturn(item.id) },
-                    onBackspaceEmpty: { handleBackspaceEmpty(item.id, isCheck: true) }
+                    onBackspaceEmpty: { handleBackspaceEmpty(item.id, isCheck: true) },
+                    showsKeyboardGrabber: true
                 )
 
                 // Drag handle to reorder. UIKit-bridged (owner 2026-06-17, "do it
