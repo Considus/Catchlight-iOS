@@ -55,6 +55,9 @@ struct BottomDockView: View {
     @Environment(UIState.self) private var ui
     @Environment(FirstRunOrientationState.self) private var orientation
     @Environment(\.dynamicTypeSize) private var dynamicSize
+    /// For the per-type filter-toggle fills (owner 2026-06-18): each filter's ON fill
+    /// uses its Iris quadrant colour, which is scheme-dependent.
+    @Environment(\.colorScheme) private var scheme
     /// Bottom safe-area inset (home-indicator zone), captured at the window root.
     /// Section 4 / D-041 — the full-bleed dock never re-added the bottom inset,
     /// so on a device with a home indicator it sat ~8pt off the physical edge,
@@ -422,20 +425,25 @@ struct BottomDockView: View {
     ///              the modifier (checkmark.circle = Done, clock.badge.exclamationmark = Expired)
     private enum ToggleVisual { case off, on, modified }
 
-    private func toggleLabel(system: String, visual: ToggleVisual) -> some View {
+    /// `onFill` is the toggle's ON/modified fill — each filter passes its Iris quadrant
+    /// colour so the dock toggle matches the Iris that type lights up (owner 2026-06-18).
+    /// The ON icon is `ckBackground` (the page colour) so it contrasts against ANY fill
+    /// in BOTH modes — the same "aperture" read as the Iris's hollow centre (the old
+    /// `ckOnAccent`/Ink icon went dark-on-dark over the new mid-tone Daylight fills).
+    private func toggleLabel(system: String, visual: ToggleVisual, onFill: Color = .ckEmber) -> some View {
         ZStack {
             switch visual {
             case .off:
                 // .db.toggle off = bare Ember icon inside the resting .db ring.
                 dockRing()
             case .on, .modified:
-                // .db.toggle.on/.mod = Ember fill (the fill edge IS the border).
-                Circle().fill(Color.ckEmber)
+                // Fill the toggle with its type colour (the fill edge IS the border).
+                Circle().fill(onFill)
                     .frame(width: dockCircle, height: dockCircle)
             }
             Image(systemName: system)
                 .font(.system(size: 22, weight: .light))   // scaled with the 36→44 circle
-                .foregroundStyle(visual == .off ? Color.ckAccent : Color.ckOnAccent)
+                .foregroundStyle(visual == .off ? Color.ckAccent : Color.ckBackground)
         }
         .frame(width: buttonSize, height: buttonSize)
         .contentShape(Circle())
@@ -446,7 +454,8 @@ struct BottomDockView: View {
         Button {
             ui.tapNotesFilter()
         } label: {
-            toggleLabel(system: "note.text", visual: ui.filterNotes ? .on : .off)
+            toggleLabel(system: "note.text", visual: ui.filterNotes ? .on : .off,
+                        onFill: Quadrant.note(scheme))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("filter-notes")
@@ -464,7 +473,7 @@ struct BottomDockView: View {
             ui.tapTasksFilter()
         } label: {
             toggleLabel(system: ui.filterTasksDone ? "checkmark.circle" : "checkmark.square",
-                        visual: visual)
+                        visual: visual, onFill: Quadrant.task(scheme))
         }
         .buttonStyle(.plain)
         .simultaneousGesture(
@@ -490,7 +499,7 @@ struct BottomDockView: View {
             ui.tapRemindersFilter()
         } label: {
             toggleLabel(system: ui.filterRemindersExpired ? "clock.badge.exclamationmark" : "bell",
-                        visual: visual)
+                        visual: visual, onFill: Quadrant.reminder(scheme))
         }
         .buttonStyle(.plain)
         .simultaneousGesture(
