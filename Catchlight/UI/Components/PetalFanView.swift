@@ -96,6 +96,16 @@ struct PetalFanView: View {
         case opening(start: Date)
         case open
         case closing(start: Date, commit: Bool)
+        /// Terminal STATIC state, set the instant the fan commits — BEFORE the overlay
+        /// is removed. `.closing` keeps the TimelineView animating, which prevented
+        /// SwiftUI from tearing the view down when `petalFanTake` went nil: the veil
+        /// lingered in `.closing` and ate every tap, stranding the user over a
+        /// perfectly-fine editor (owner-reported lockup 2026-06-18, confirmed via an
+        /// on-device state trace: `FAN:nil/closing`). `.dismissed` is non-animating
+        /// (TimelineView pauses → the view can be removed) and renders fully
+        /// retracted/invisible, matching the close animation's end frame so there's no
+        /// flash.
+        case dismissed
     }
     @State private var phase: FanPhase
 
@@ -240,6 +250,8 @@ struct PetalFanView: View {
             let tm = Choreo.total - now.timeIntervalSince(start) * Choreo.closeSpeed
             if tm <= 0 { return PetalState(angle: Choreo.riseAngle, radius: Choreo.startRadius, opacity: 0) }
             return Self.openState(kind, at: tm)
+        case .dismissed:
+            return PetalState(angle: Choreo.riseAngle, radius: Choreo.startRadius, opacity: 0)
         }
     }
 
@@ -272,12 +284,25 @@ struct PetalFanView: View {
             let tm = Choreo.total - now.timeIntervalSince(start) * Choreo.closeSpeed
             if tm <= 0 { return 0 }
             return Self.openHubRotation(at: tm)
+        case .dismissed:
+            return 0
         }
     }
 
+    /// Only the live phases drive the TimelineView; `.open` and `.dismissed` are
+    /// static so it pauses (and `.dismissed` lets the overlay be removed).
     private var isAnimating: Bool {
-        if case .open = phase { return false }
-        return true
+        switch phase {
+        case .opening, .closing: return true
+        case .open, .dismissed:  return false
+        }
+    }
+
+    /// The veil commits-and-closes only while the ring is OPEN. See the `.allowsHitTesting`
+    /// note on the veil — gating this prevents a lingering veil from eating taps.
+    private var veilIsInteractive: Bool {
+        if case .open = phase { return true }
+        return false
     }
 
     /// The dim veil's opacity, ramped on the fan's OWN clock so the veil dissolves
@@ -298,6 +323,8 @@ struct PetalFanView: View {
         case .closing(let start, _):
             let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
             return 1 - Self.easeInOutCubic(p)
+        case .dismissed:
+            return 0
         }
     }
 
@@ -382,6 +409,11 @@ struct PetalFanView: View {
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture { retractAndDismiss(commit: true) }
+                    // The veil only catches taps while the ring is genuinely OPEN.
+                    // Once it's opening/closing/dismissed, taps fall THROUGH to the
+                    // editor beneath — so a veil that lingers mid-teardown can never
+                    // strand the user (owner lockup 2026-06-18).
+                    .allowsHitTesting(veilIsInteractive)
                     .accessibilityIdentifier("dial-dim")
                     .accessibilityLabel("Save and close")
                     .accessibilityHint("Double-tap to apply your selection and close.")
@@ -540,6 +572,11 @@ struct PetalFanView: View {
     }
 
     private func finish(commit: Bool) {
+        // Go STATIC before removing the overlay so the TimelineView pauses and SwiftUI
+        // can actually tear the fan down — a still-animating subtree lingered as a
+        // tap-eating ghost veil (owner lockup 2026-06-18). `.dismissed` matches the
+        // close animation's end frame, so there's no flash.
+        phase = .dismissed
         if commit {
             onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, reminderAlarm, reminderAllDay, isObie)
         } else {
