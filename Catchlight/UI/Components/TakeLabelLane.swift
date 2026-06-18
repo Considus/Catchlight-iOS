@@ -51,7 +51,8 @@ struct TakeLabelLane: View {
                 .lineLimit(1)
                 .fixedSize()                       // lay out at natural size, THEN rotate
                 .rotationEffect(.degrees(-90))     // reads bottom-to-top, glanceable
-                .frame(width: width, maxHeight: .infinity)
+                .frame(width: width)
+                .frame(maxHeight: .infinity)
                 .accessibilityHidden(true)         // the row label already speaks the state
         }
     }
