@@ -72,6 +72,19 @@ public final class ReminderScheduler {
         (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
+    /// Localised "when" line for the notification subtitle — e.g. "Today at 3:00 PM" /
+    /// "Tomorrow at 09:00" / "14 Jul 2026 at 3:00 PM", following the user's Region and
+    /// 12/24-hour preference (style-based formatter, never a hardcoded pattern). An
+    /// all-day reminder shows the DAY only (its time component is meaningless — see the
+    /// all-day fire-hour substitution below).
+    static func scheduledSubtitle(for reminder: TimeReminder) -> String {
+        let formatter = DateFormatter()
+        formatter.doesRelativeDateFormatting = true   // "Today"/"Tomorrow" where apt
+        formatter.dateStyle = .medium
+        formatter.timeStyle = reminder.isAllDay ? .none : .short
+        return formatter.string(from: reminder.scheduledDate)
+    }
+
     /// Schedule the local notification for a Take's time reminder.
     ///
     /// SEMANTICS (decided 2026-06-10): `TimeReminder.scheduledDate` is an
@@ -108,8 +121,13 @@ public final class ReminderScheduler {
         }
 
         let content = UNMutableNotificationContent()
-        content.title = "Catchlight"
-        content.body = String(take.plainText.prefix(100))
+        // Content-first (owner 2026-06-18): the TAKE'S TEXT is the title, the scheduled
+        // "when" is the subtitle. iOS already shows "CATCHLIGHT" + the delivery time in
+        // the banner header, so the old `title = "Catchlight"` just duplicated it. The
+        // title is now the ONLY place Take content crosses the encrypted boundary (was
+        // the body) — same accepted, user-chosen lock-screen exposure, different field.
+        content.title = String(take.plainText.prefix(100))
+        content.subtitle = Self.scheduledSubtitle(for: reminder)
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier
         // Time Sensitive (owner 2026-06-18): a reminder the user explicitly set should
