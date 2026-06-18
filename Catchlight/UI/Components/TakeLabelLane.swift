@@ -29,13 +29,16 @@ struct TakeLabelLane: View {
         /// Vertical text label (string + colour), Time-note font. No fill.
         case systemText(String, Color)
         // FUTURE — user label: the lane filled with the colour + Take shadow, a
-        // floating chip. case colourChip(Color)
+        // floating chip (DEMO-wired now; a later release adds the data model + UI).
+        case colourChip(Color)
     }
 
     var content: Content
     /// Lane width = the strip from the card's left edge to the Iris's left edge
     /// (`cardSpineInset` − Iris radius), so the lane never reaches the Iris/spine.
     var width: CGFloat = CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2
+    /// The colour chip's inset — equal on left, top, and bottom (owner 2026-06-18).
+    static let chipGap: CGFloat = 4
 
     var body: some View {
         switch content {
@@ -54,6 +57,21 @@ struct TakeLabelLane: View {
                 .frame(width: width)
                 .frame(maxHeight: .infinity)
                 .accessibilityHidden(true)         // the row label already speaks the state
+        case .colourChip(let colour):
+            // FUTURE user label (DEMO render): a slim coloured pill hugging the left
+            // edge with an EQUAL gap on left/top/bottom, card-radius corners mirrored,
+            // and a visible drop shadow (both modes) so it floats just above the card.
+            RoundedRectangle(cornerRadius: min(12, width / 2), style: .continuous)
+                .fill(colour)
+                // Two-layer float (visible in BOTH modes): soft ambient + tighter
+                // contact. Pushed up so it reads clearly in Daylight on a white card.
+                .shadow(color: .black.opacity(0.30), radius: 8, y: 4)
+                .shadow(color: .black.opacity(0.22), radius: 2, y: 1)
+                .frame(width: max(0, width - Self.chipGap))
+                .frame(maxHeight: .infinity)
+                .padding(.vertical, Self.chipGap)
+                .padding(.leading, Self.chipGap)
+                .accessibilityHidden(true)
         }
     }
 }
