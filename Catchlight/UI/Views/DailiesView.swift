@@ -1050,10 +1050,13 @@ struct DailiesView: View {
         d.normaliseActivityFloor()
         editDraft = d
 
-        // Drop the caret into the freshly-added task entry, deferred one runloop tick
-        // so the new check row is in the hierarchy first (the BlockTextEditor focus latch).
-        if let newTaskEntryID {
-            DispatchQueue.main.async { editFocusedBlockID = newTaskEntryID }
+        // Restore the editor keyboard after the ring (and its reminder picker) — the
+        // ring-open path cleared focus, so re-assert it here. A freshly-added task
+        // entry takes the caret; otherwise the first block does.
+        let refocus = newTaskEntryID ?? d.blocks.first?.id
+        editFocusedBlockID = nil
+        if let refocus {
+            DispatchQueue.main.async { editFocusedBlockID = refocus }
         }
     }
 
@@ -1086,6 +1089,12 @@ struct DailiesView: View {
                 if editingActive && !isEditingThis { saveInlineEdit(); return }
                 // Hint 2 is dismissed by tapping any Iris.
                 orientation.didTapIris()
+                // Release the editor's keyboard BEFORE the Focus ring opens (owner
+                // lockup 2026-06-18). Leaving the editor first-responder while the ring
+                // + reminder picker sit on top made the keyboard fight the overlay —
+                // Done re-raised it / needed a second tap. The ring owns the
+                // interaction; the commit re-focuses (applyInlineFanCommand).
+                if isEditingThis { editFocusedBlockID = nil }
                 // Section 8 — bloom the fan in place at the tapped Iris (window
                 // coords match the full-screen overlay space). The .zero fallback
                 // (screen centre) only survives as a last resort. While editing THIS
