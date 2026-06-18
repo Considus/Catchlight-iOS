@@ -42,18 +42,11 @@ struct InlineTakeEditCard: View {
     /// row is ~the 44pt touch target; tuned on device.
     private let estRowHeight: CGFloat = 44
 
-    // MARK: - Card treatment (mirrors TakeCardSurface so read↔edit is seamless)
-
-    private var isOverdue: Bool {
-        guard let r = draft.timeReminder else { return false }
-        return r.scheduledDate < Date()
-    }
-    private var cardSurface: Color { draft.isObie ? .ckCardObieSurface : .ckSurface }
-    private var cardBorder: Color {
-        if draft.isObie { return .ckCardObieBorder }
-        if isOverdue { return .ckCardOverdueBorder }
-        return cardSurface
-    }
+    // MARK: - Card treatment (single-sourced with TakeCardSurface via TakeCardStyle
+    // so read↔edit never drift — owner 2026-06-18). The editor mirrors the surface,
+    // border, and shadow; text stays editable (not greyed) while you're in it.
+    @Environment(\.colorScheme) private var scheme
+    private var style: TakeCardStyle { TakeCardStyle(take: draft, scheme: scheme) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -72,12 +65,12 @@ struct InlineTakeEditCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(cardSurface)
-                .daylightCardShadow(strong: isOverdue && !draft.isObie)
+                .fill(style.surface)
+                .daylightCardShadow(strong: style.isOverdue && !draft.isObie)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(cardBorder, lineWidth: 1.5)
+                .strokeBorder(style.border, lineWidth: 1.5)
         )
         // Interim top-right Angle affordance (see `onOpenAngle`). Sits in the card's
         // 24pt top padding, opposite the Iris. Shown only when an Angle applies.

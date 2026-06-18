@@ -323,12 +323,10 @@ struct TakeCardSurface: View {
         return "\(progress.done) of \(progress.total) completed"
     }
 
-    /// The Take's first-line colour. A complete Task recedes to the HiFi `.tt.done`
-    /// treatment; Obie keeps its emphasis colour.
-    private var textColor: Color {
-        if take.isTask && take.isComplete { return .ckTextComplete }
-        return take.isObie ? .ckTextObie : .ckTextPrimary
-    }
+    /// The card's full colour treatment (surface, border, text, overdue/done flags),
+    /// derived from the Take + scheme. Single-sourced with the inline editor via
+    /// `TakeCardStyle` so read↔edit never drift (owner 2026-06-18).
+    private var style: TakeCardStyle { TakeCardStyle(take: take, scheme: scheme) }
 
     /// Cached formatter — this label is evaluated on every render, and a fresh
     /// `DateFormatter` per evaluation is one of Foundation's most expensive allocations.
@@ -347,26 +345,12 @@ struct TakeCardSurface: View {
     }
     private var reminderLabel: String? { Self.reminderString(for: take) }
 
-    /// Reminder date has passed — drives the overdue card variant (HiFi v1.7
-    /// .card.overdue). Obie always wins the card treatment when both apply.
-    private var isOverdue: Bool {
-        guard let r = take.timeReminder else { return false }
-        return r.scheduledDate < Date()
-    }
-
-    /// Card background — Obie warm tint, else the standard surface (overdue keeps
-    /// the standard surface; only its border + shadow change).
-    private var cardSurface: Color {
-        take.isObie ? .ckCardObieSurface : .ckSurface
-    }
-
-    /// Card border (1.5pt). Obie → Ember (reserved exclusively for the Obie);
-    /// overdue → overdue amber; standard → the surface colour (invisible, but
-    /// reserves the 1.5pt so all cards are the same size).
-    private var cardBorder: Color {
-        if take.isObie { return .ckCardObieBorder }
-        if isOverdue { return .ckCardOverdueBorder }
-        return cardSurface
+    /// The reminder subtext colour: ruby when overdue, the done grey when done, else
+    /// the quiet secondary scale.
+    private var reminderLabelColor: Color {
+        if style.isOverdue { return .ckTextOverdue }
+        if style.isDone { return .ckTextComplete }
+        return .ckTextSecondary
     }
 
     var body: some View {
@@ -375,7 +359,7 @@ struct TakeCardSurface: View {
                 // DM Sans 14 (.tt) — Take content is never the display face
                 // (DS §2.2 / D-042). Was Cormorant display 20 italic.
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
-                .foregroundStyle(textColor)
+                .foregroundStyle(style.bodyText)
                 // Body length follows the "Preview" setting (Single 1 / Some 3 /
                 // All = unlimited), with a 4-line floor at accessibility text sizes.
                 .lineLimit(bodyLineLimit)
@@ -396,12 +380,13 @@ struct TakeCardSurface: View {
             }
 
             if let reminderLabel {
-                // .tm — 11pt medium italic, Slate (overdue → overdue amber Daylight /
-                // full Glow Night, the .tm.overdue token — distinct from the @35% border).
+                // .tm — 11pt medium. Italic ONLY when overdue (owner 2026-06-18): the
+                // slant + ruby together signal "late"; active & done read upright.
+                // Colour: ruby overdue / done grey / quiet Secondary otherwise.
                 Text(reminderLabel)
                     .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
-                    .italic()
-                    .foregroundStyle(isOverdue ? Color.ckTextOverdue : Color.ckTextSecondary)
+                    .italic(style.isOverdue)
+                    .foregroundStyle(reminderLabelColor)
             }
         }
         // v1.7 .card padding: 24px top (clears the overlapping Iris) / 14 sides /
@@ -412,14 +397,14 @@ struct TakeCardSurface: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(cardSurface)
+                .fill(style.surface)
                 // Daylight elevation only; Night is tonal (surface lighter than
                 // bg). Overdue gets the slightly stronger shadow.
-                .daylightCardShadow(strong: isOverdue && !take.isObie)
+                .daylightCardShadow(strong: style.isOverdue && !take.isObie)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(cardBorder, lineWidth: 1.5)
+                .strokeBorder(style.border, lineWidth: 1.5)
         )
     }
 }
