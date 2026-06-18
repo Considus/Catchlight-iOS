@@ -58,11 +58,19 @@ struct SwipeActionRow<Content: View>: View {
     /// How far the fill tucks UNDER the card (≈ the card corner radius) so the card
     /// masks its inner edge and the boundary is the card's rounded corner.
     var tuckUnder: CGFloat = 12
+    /// Card slide that settles "open" (the resting static-button width). Default 42
+    /// (timeline, owner 2026-06-16); the list Angle passes a larger value (owner
+    /// 2026-06-18: the resting Delete button read too small there).
+    var actionWidth: CGFloat = 42
+    /// Centre the action label within the revealed fill instead of hugging it to the
+    /// screen edge. Timeline default = false (the leading label hugs out to clear the
+    /// Iris); the list Angle passes true so the resting button symmetrically surrounds
+    /// its glyph (owner 2026-06-18).
+    var centersActionLabel: Bool = false
     /// Receives the live horizontal offset; the caller applies it to the CARD only.
     @ViewBuilder var content: (CGFloat) -> Content
 
     // MARK: Tunables (device review may nudge these)
-    private let actionWidth: CGFloat = 42            // card slide that settles "open" (owner 2026-06-16: halved 84→42 for a smaller button)
     private let revealSnapFraction: CGFloat = 0.55   // settle open past this × actionWidth
     private let commitFraction: CGFloat = 0.5        // full-swipe commit past this × row width
     /// The fill fades 0→1 over the first `fadeInDistance` pt of swipe, so the card's
@@ -141,11 +149,14 @@ struct SwipeActionRow<Content: View>: View {
     }
 
     private func fill(_ action: SwipeAction, width: CGFloat, edge: HorizontalEdge) -> some View {
-        ZStack(alignment: edge == .leading ? .leading : .trailing) {
+        let labelAlignment: Alignment = centersActionLabel
+            ? .center
+            : (edge == .leading ? .leading : .trailing)
+        return ZStack(alignment: labelAlignment) {
             action.tint
             // Label hugged to the OUTER (screen) edge so it rides there as the fill
-            // grows AND clears the Iris, which stays on the spine and floats over the
-            // leading fill (owner 2026-06-16 — the Done label was under the Iris).
+            // grows AND clears the Iris (owner 2026-06-16) — UNLESS `centersActionLabel`
+            // (the Angle), which centres it so the button symmetrically surrounds it.
             VStack(spacing: 4) {
                 Image(systemName: action.systemImage)
                     .font(.system(size: 17, weight: .semibold))
@@ -153,7 +164,7 @@ struct SwipeActionRow<Content: View>: View {
                     .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
             }
             .foregroundStyle(.white)
-            .padding(edge == .leading ? .leading : .trailing, 8)
+            .padding(centersActionLabel ? .horizontal : (edge == .leading ? .leading : .trailing), 8)
         }
         .frame(width: max(0, width))
         .frame(maxHeight: .infinity)
