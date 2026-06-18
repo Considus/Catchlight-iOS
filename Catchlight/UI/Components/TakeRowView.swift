@@ -253,16 +253,26 @@ struct TakeRowView: View {
                         Color.clear.preference(key: CardWidthKey.self, value: g.size.width)
                     }
                 }
-                .onTapGesture { onTapText() }
-                // Custom preview so the long-press lift carries the Iris with the card
-                // (the menu is on the card only — its default snapshot left the Iris
-                // behind). owner 2026-06-18.
-                .contextMenu(menuItems: { rowMenuItems }, preview: { rowPreview })
+                // UIKit-bridged tap + long-press menu (TakeContextMenu): SwiftUI's
+                // .contextMenu(preview:) forces an opaque rounded platter behind the
+                // preview; the bridge lifts the card + Iris with a clear background and
+                // a shadow path that hugs the card (owner 2026-06-18). Tap-to-edit lives
+                // on the same overlay so the card beneath stays visual-only.
+                .overlay {
+                    TakeContextMenu(actions: rowMenuActions,
+                                    onTap: onTapText,
+                                    previewWidth: cardWidth,
+                                    preview: { rowPreview })
+                        .accessibilityHidden(true)
+                }
                 .onPreferenceChange(CardWidthKey.self) { cardWidth = $0 }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("take-row")
                 .accessibilityLabel(rowAccessibilityLabel)
                 .accessibilityHint("Double-tap to edit this Take.")
+                // VoiceOver activate = edit (the tap now lives on the UIKit overlay,
+                // which VO doesn't see); the row actions back the menu for VO.
+                .accessibilityAction { onTapText() }
                 .accessibilityActions { rowAccessibilityActions }
         }
     }
@@ -282,6 +292,32 @@ struct TakeRowView: View {
         }
         .padding(.top, d / 2)
         .fixedSize()
+    }
+
+    /// The resting row's menu as plain data for the UIKit bridge (`TakeContextMenu`).
+    /// Mirrors `rowMenuItems` (which the editing branch still uses via SwiftUI).
+    private var rowMenuActions: [RowMenuAction] {
+        var actions: [RowMenuAction] = []
+        if (take.isTask || take.timeReminder != nil), let onToggleComplete {
+            actions.append(RowMenuAction(
+                title: take.isMarkedDone ? "Mark as not done" : "Mark as done",
+                systemImage: take.isMarkedDone ? "circle" : "checkmark.circle",
+                handler: onToggleComplete))
+        }
+        if let onDiscard {
+            actions.append(RowMenuAction(
+                title: "Discard changes",
+                systemImage: "arrow.uturn.backward",
+                handler: onDiscard))
+        }
+        if let onDelete {
+            actions.append(RowMenuAction(
+                title: "Delete Take",
+                systemImage: "trash",
+                isDestructive: true,
+                handler: onDelete))
+        }
+        return actions
     }
 
     @ViewBuilder
