@@ -70,7 +70,7 @@ struct InlineTakeEditCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(style.border, lineWidth: 1.5)
+                .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
         )
         // Interim top-right Angle affordance (see `onOpenAngle`). Sits in the card's
         // 24pt top padding, opposite the Iris. Shown only when an Angle applies.

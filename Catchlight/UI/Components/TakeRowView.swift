@@ -27,7 +27,9 @@ struct TakeRowView: View {
     var onLongPressCircle: () -> Void = {}
     var onTapText: () -> Void = {}
     /// Optional row actions (2026-06-10): when supplied, a context menu on the
-    /// TEXT column offers "Mark as done" (Tasks only) and "Delete Take". The
+    /// TEXT column offers "Mark as done" (Tasks AND reminders — 2026-06-18) and
+    /// "Delete Take". For reminders the menu is the ONLY way to mark done (swipe-right
+    /// stays Task-only); marking done settles the whole Take (`setMarkedDone`). The
     /// menu is deliberately NOT attached to the whole row — a row-level context
     /// menu's long-press recognizer preempts the circle's long-press (Obie
     /// designation). VoiceOver gets the same actions as named accessibility
@@ -54,6 +56,13 @@ struct TakeRowView: View {
     /// rest. The editor owns its own gestures + accessibility, so the row's tap /
     /// combined-element wrapping is dropped while editing.
     var editingCard: (() -> AnyView)? = nil
+
+    /// The card's measured width, captured from the resting `TakeCardSurface` so the
+    /// long-press context-menu PREVIEW can reconstruct the card at its true size with
+    /// the Iris composited on top — the system lift then carries the Iris WITH the card
+    /// instead of leaving it behind (owner 2026-06-18; the menu is attached to the card
+    /// only, so its default snapshot excluded the sibling Iris).
+    @State private var cardWidth: CGFloat = 0
 
     private var firstLine: String {
         let line = take.plainText
@@ -97,6 +106,13 @@ struct TakeRowView: View {
         // edge (`position:absolute; left:6px` in v1.7). The Iris is drawn on TOP
         // so its long-press still wins hit-testing; the card's text taps clear
         // the 44pt Iris touch frame.
+        // Explicit `.zIndex` pins the paint order (card < occluder < Iris < wire <
+        // dots). Without it, when the card REPAINTS on a state change — e.g. the
+        // border recolouring on "mark done" (D-044, [[catchlight-take-colour-system]])
+        // — SwiftUI could momentarily reshuffle these siblings, and the freshly drawn
+        // card painted over the Iris's lower half (which overlaps the card's top-left
+        // corner) for a beat before the Iris re-composited. Pinning the order keeps
+        // the Iris above the card through any redraw (owner 2026-06-18).
         ZStack(alignment: .topLeading) {
             // The card fills from the row's leading edge, which DailiesView places
             // `cardSpineInset` (24) left of the spine — so the opaque card covers
@@ -112,6 +128,7 @@ struct TakeRowView: View {
                 // Only the card slides on swipe; the Iris (below) keeps its spine
                 // position so the wire stays threaded through it.
                 .offset(x: cardSwipeOffset)
+                .zIndex(0)
             // Crown occluder (owner 2026-06-16): the static dotted spine runs BEHIND
             // the whole row, so its bright dots were bleeding up through the Iris's
             // hollow aperture and making the crown look translucent. This page-coloured
@@ -127,9 +144,11 @@ struct TakeRowView: View {
                         y: -CatchlightLayout.circleDiameter / 2)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
+                .zIndex(1)
             irisColumn
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
+                .zIndex(2)
             // Rings on a wire (owner spec 2026-06-16): the spine lies ON TOP of the
             // Iris's upper half — from the ring's crown down to the card's top edge
             // — then ducks BEHIND the card, which (being opaque) hides it for the
@@ -151,6 +170,7 @@ struct TakeRowView: View {
                         y: -CatchlightLayout.circleDiameter / 2)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
+                .zIndex(3)
             // …and the DOTS pass IN FRONT of the ring too, so the dotted spine reads
             // as convincingly ABOVE the Iris (owner 2026-06-16) — not behind it. The
             // GeometryReader anchors the dash phase to the segment's live SCREEN Y
@@ -170,6 +190,7 @@ struct TakeRowView: View {
                     y: -CatchlightLayout.circleDiameter / 2)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+            .zIndex(4)
         }
         .padding(.vertical, 6)
     }
@@ -227,8 +248,17 @@ struct TakeRowView: View {
         } else {
             TakeCardSurface(take: take)
                 .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background {
+                    GeometryReader { g in
+                        Color.clear.preference(key: CardWidthKey.self, value: g.size.width)
+                    }
+                }
                 .onTapGesture { onTapText() }
-                .contextMenu { rowMenuItems }
+                // Custom preview so the long-press lift carries the Iris with the card
+                // (the menu is on the card only — its default snapshot left the Iris
+                // behind). owner 2026-06-18.
+                .contextMenu(menuItems: { rowMenuItems }, preview: { rowPreview })
+                .onPreferenceChange(CardWidthKey.self) { cardWidth = $0 }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("take-row")
                 .accessibilityLabel(rowAccessibilityLabel)
@@ -237,14 +267,31 @@ struct TakeRowView: View {
         }
     }
 
+    /// The composite the context menu lifts: the card with its Iris on top, laid out
+    /// at the same straddle as the live row, so the long-press preview rises as one
+    /// unit (owner-chosen 2026-06-18). Sized to the measured `cardWidth`; the top
+    /// padding makes room for the Iris's upward overhang so it isn't clipped.
+    private var rowPreview: some View {
+        let d = CatchlightLayout.circleDiameter
+        return ZStack(alignment: .topLeading) {
+            TakeCardSurface(take: take)
+                .frame(width: cardWidth > 0 ? cardWidth : nil)
+            TakeCircleView(take: take)
+                .frame(width: d, height: d)
+                .offset(x: CatchlightLayout.cardSpineInset - d / 2, y: -d / 2)
+        }
+        .padding(.top, d / 2)
+        .fixedSize()
+    }
+
     @ViewBuilder
     private var rowMenuItems: some View {
-        if take.isTask, let onToggleComplete {
+        if (take.isTask || take.timeReminder != nil), let onToggleComplete {
             Button {
                 onToggleComplete()
             } label: {
-                Label(take.isComplete ? "Mark as not done" : "Mark as done",
-                      systemImage: take.isComplete ? "circle" : "checkmark.circle")
+                Label(take.isMarkedDone ? "Mark as not done" : "Mark as done",
+                      systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
             }
         }
         if let onDiscard {
@@ -267,8 +314,8 @@ struct TakeRowView: View {
 
     @ViewBuilder
     private var rowAccessibilityActions: some View {
-        if take.isTask, let onToggleComplete {
-            Button(take.isComplete ? "Mark as not done" : "Mark as done") { onToggleComplete() }
+        if (take.isTask || take.timeReminder != nil), let onToggleComplete {
+            Button(take.isMarkedDone ? "Mark as not done" : "Mark as done") { onToggleComplete() }
         }
         if let onDiscard {
             Button("Discard changes") { onDiscard() }
@@ -276,6 +323,16 @@ struct TakeRowView: View {
         if let onDelete {
             Button("Delete Take") { onDelete() }
         }
+    }
+}
+
+/// Measures the resting card's width so the context-menu preview can rebuild it at
+/// the true size (the lifted preview carries the Iris with the card — see `rowPreview`).
+private struct CardWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        let next = nextValue()
+        if next > 0 { value = next }
     }
 }
 
@@ -404,7 +461,7 @@ struct TakeCardSurface: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(style.border, lineWidth: 1.5)
+                .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
         )
     }
 }
