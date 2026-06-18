@@ -24,21 +24,33 @@ struct EditorKeyboardBar: View {
         // width/4`), so the buttons sit on the dock's exact column centres (owner
         // 2026-06-19: spacing must match the bottom toolbar).
         HStack(spacing: 0) {
-            // Dismiss = the dock's Add button (strong ring) with its "+" rotated 45°
-            // so it reads as an × (owner 2026-06-19: "the add button rotates to an X").
-            button("plus", tint: .ckAccent, enabled: true, strong: true, rotate: 45,
-                   label: "Close keyboard", action: onDismiss)
-                .frame(maxWidth: .infinity)
-            button("exclamationmark.circle",
-                   tint: config.isImportant ? .ckEmber : .ckAccent, enabled: true,
-                   label: "Important", action: config.onToggleImportant)
-                .frame(maxWidth: .infinity)
-            button("bag", tint: .ckAccent, enabled: config.angleEnabled,
-                   identifier: "angle-button", label: "Open as list", action: config.onOpenAngle)
-                .frame(maxWidth: .infinity)
-            button("magnifyingglass", tint: .ckAccent, enabled: true,
-                   label: "Search", action: config.onSearch)
-                .frame(maxWidth: .infinity)
+            // 1 — Dismiss: the dock's Add button (strong ring) with its "+" rotated
+            // 45° so it reads as an × (owner: "the add button rotates to an X").
+            slot(enabled: true, strong: true, label: "Close keyboard", action: onDismiss) {
+                dockSymbol("plus", tint: .ckAccent, enabled: true).rotationEffect(.degrees(45))
+            }
+            .frame(maxWidth: .infinity)
+
+            // 2 — Important: the STANDARD Dailies glyph (slot 2 is the repurposed
+            // Dailies button — owner 2026-06-19). Ember when flagged, else Ember accent.
+            slot(enabled: true, label: "Important", action: config.onToggleImportant) {
+                DailiesGlyph(size: 24)
+                    .foregroundStyle(config.isImportant ? Color.ckEmber : Color.ckAccent)
+            }
+            .frame(maxWidth: .infinity)
+
+            // 3 — Angle (List): greyed when no task applies.
+            slot(enabled: config.angleEnabled, identifier: "angle-button",
+                 label: "Open as list", action: config.onOpenAngle) {
+                dockSymbol("bag", tint: .ckAccent, enabled: config.angleEnabled)
+            }
+            .frame(maxWidth: .infinity)
+
+            // 4 — Search.
+            slot(enabled: true, label: "Search", action: config.onSearch) {
+                dockSymbol("magnifyingglass", tint: .ckAccent, enabled: true)
+            }
+            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
         .padding(.top, 10)
@@ -47,26 +59,28 @@ struct EditorKeyboardBar: View {
         .dockFadeBackground()
     }
 
+    /// A dock-spec SF Symbol glyph: 24pt, .light, Ember (`ckAccent`); greys when disabled.
+    private func dockSymbol(_ systemImage: String, tint: Color, enabled: Bool) -> some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 24, weight: .light))
+            .foregroundStyle(enabled ? tint : Color.ckTextSecondary.opacity(0.4))
+    }
+
+    /// One toolbar slot: the dock ring (Ember @55% strong / @35% normal, 1.5pt) with a
+    /// centred glyph, in a 44pt button.
     @ViewBuilder
-    private func button(_ systemImage: String,
-                        tint: Color,
-                        enabled: Bool,
-                        strong: Bool = false,
-                        rotate: Double = 0,
-                        identifier: String? = nil,
-                        label: String,
-                        action: @escaping () -> Void) -> some View {
+    private func slot<Glyph: View>(enabled: Bool,
+                                   strong: Bool = false,
+                                   identifier: String? = nil,
+                                   label: String,
+                                   action: @escaping () -> Void,
+                                   @ViewBuilder glyph: () -> Glyph) -> some View {
         Button(action: action) {
             ZStack {
-                // Match the dock's ring: Ember @55% (Add) / @35% (others), 1.5pt.
                 Circle()
                     .strokeBorder(Color.ckAccent.opacity(strong ? 0.55 : 0.35), lineWidth: 1.5)
                     .frame(width: circle, height: circle)
-                // Match the dock's navIcon glyph: 24pt, .light, Ember (ckAccent).
-                Image(systemName: systemImage)
-                    .font(.system(size: 24, weight: .light))
-                    .foregroundStyle(enabled ? tint : Color.ckTextSecondary.opacity(0.4))
-                    .rotationEffect(.degrees(rotate))
+                glyph()
             }
             .frame(width: circle, height: circle)
             .contentShape(Circle())
