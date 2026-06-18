@@ -82,6 +82,9 @@ public final class ReminderScheduler {
     /// prevents picking past dates; this is the defence at the boundary.
     public func scheduleReminder(for take: Take) {
         guard let reminder = take.timeReminder else { return }
+        // Model C (owner 2026-06-18): a "when" only fires a notification when its alarm
+        // is enabled. A silent (planner-only) reminder schedules nothing.
+        guard reminder.alarmEnabled else { return }
         guard reminder.scheduledDate > now() else {
             Self.logger.warning("Refusing to schedule a past-dated reminder (id \(reminder.notificationIdentifier, privacy: .public))")
             return
