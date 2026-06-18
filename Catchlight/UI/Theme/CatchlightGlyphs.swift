@@ -91,7 +91,9 @@ struct ObiePetalGlyph: View {
 /// the 44pt touch target / Button.
 struct TaskCheckbox: View {
     let isComplete: Bool
-    var size: CGFloat = 19
+    /// 14pt (owner 2026-06-18: 25% smaller than the previous 19pt — read as chunky).
+    /// The caller still wraps it in the 44pt touch frame, so the tap target is unchanged.
+    var size: CGFloat = 14
     var body: some View {
         if isComplete {
             Image(systemName: "checkmark.circle.fill")
@@ -99,7 +101,8 @@ struct TaskCheckbox: View {
                 .foregroundStyle(Color.ckAccent)
         } else {
             RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                .strokeBorder(Color.ckTextSecondary, lineWidth: 2)
+                // Stroke scaled down with the box so the smaller glyph doesn't read heavy.
+                .strokeBorder(Color.ckTextSecondary, lineWidth: 1.5)
                 .frame(width: size, height: size)
         }
     }
