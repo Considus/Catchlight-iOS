@@ -114,7 +114,13 @@ struct InlineTakeEditCard: View {
                 showsKeyboardGrabber: true
             )
         case .check(let item):
-            HStack(alignment: .top, spacing: 8) {
+            // CENTRE-aligned to match the List Angle (owner 2026-06-18): the glyph is
+            // centred in its 44pt frame, so centring the row lines it up with the
+            // item's line. `.top` made the centred glyph sit ~8pt below the text's
+            // first line (text inset 6 + half-line vs half of 44) — the "text higher
+            // than the checkbox" the owner spotted. Scales with Dynamic Type for the
+            // common single-line item.
+            HStack(alignment: .center, spacing: 8) {
                 Button {
                     draft.toggleItemComplete(blockID: item.id)
                 } label: {
