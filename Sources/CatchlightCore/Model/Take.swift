@@ -86,7 +86,16 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
 
     /// `true` if this Take is the *current* Obie. Exactly one Take across the whole
     /// store may have this set (enforced by the store layer / UX, not the type).
-    public var isObie: Bool
+    ///
+    /// Designating a Take Obie AUTO-flags it Important and importance is STICKY —
+    /// removing the Obie designation leaves `isImportant` set (owner 2026-06-18). The
+    /// `didSet` enforces "Obie ⟹ Important" on every runtime mutation (the store's
+    /// `setObie`, the inline Focus-ring path, etc.); it does NOT fire during `init` /
+    /// decode, so persisted values are respected (and the init + decode below apply the
+    /// same rule for constructed / freshly-decoded Obie Takes).
+    public var isObie: Bool {
+        didSet { if isObie { isImportant = true } }
+    }
 
     // MARK: - Reminders
 
@@ -110,6 +119,14 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
     /// meaning and is encrypted with the rest of the payload like any other field.
     public var isSeeded: Bool
 
+    /// `true` when this Take is flagged Important — a tier BELOW Obie (important,
+    /// plural, unordered; owner 2026-06-17). For now the ONLY way a Take becomes
+    /// Important is by being designated Obie (auto-flag, see `isObie`); it stays set
+    /// after the Obie designation is removed ("sticky"). A manual mark is deferred
+    /// (owner 2026-06-18). Additive field: `decodeIfPresent` default false keeps older
+    /// payloads decoding, and it rides the encrypted payload like any other field.
+    public var isImportant: Bool
+
     public init(
         id: UUID = UUID(),
         createdAt: Date = Date(),
@@ -121,7 +138,8 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         timeReminder: TimeReminder? = nil,
         locationReminder: LocationTrigger? = nil,
         attachments: [Attachment] = [],
-        isSeeded: Bool = false
+        isSeeded: Bool = false,
+        isImportant: Bool = false
     ) {
         self.schemaVersion = Self.currentSchemaVersion
         self.id = id
@@ -135,6 +153,9 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         self.locationReminder = locationReminder
         self.attachments = attachments
         self.isSeeded = isSeeded
+        // didSet doesn't fire during init — apply the Obie ⟹ Important rule explicitly
+        // so an Obie constructed directly is also Important.
+        self.isImportant = isImportant || isObie
     }
 
     // MARK: - Derived content accessors
@@ -316,7 +337,7 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         case schemaVersion, id, createdAt, modifiedAt, blocks, contentType
         case isNote, isObie
         case timeReminder, locationReminder, attachments
-        case isSeeded
+        case isSeeded, isImportant
         // DROPPED in v2 (D-035): `bodyText`, `checklistItems` (now `blocks`), and
         // the formerly-stored `isTask` / `isComplete` (now derived). Old payloads
         // carrying those keys are upgraded in `init(from:)`; unknown keys on
@@ -363,6 +384,10 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         self.locationReminder = try c.decodeIfPresent(LocationTrigger.self, forKey: .locationReminder)
         self.attachments = try c.decodeIfPresent([Attachment].self, forKey: .attachments) ?? []
         self.isSeeded = try c.decodeIfPresent(Bool.self, forKey: .isSeeded) ?? false
+        // Obie ⟹ Important, including for OLD payloads written before this field
+        // existed (a pre-existing Obie decodes as Important). didSet doesn't fire in
+        // init, so apply the rule explicitly here.
+        self.isImportant = (try c.decodeIfPresent(Bool.self, forKey: .isImportant) ?? false) || self.isObie
         // NOTE for future versions: new fields added here MUST use
         // `decodeIfPresent` with a default so older payloads keep decoding.
     }
@@ -381,6 +406,7 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         try c.encodeIfPresent(locationReminder, forKey: .locationReminder)
         try c.encode(attachments, forKey: .attachments)
         try c.encode(isSeeded, forKey: .isSeeded)
+        try c.encode(isImportant, forKey: .isImportant)
     }
 
     /// Enforces the "Note is the floor" rule (UX §6). Call after any activity-type
