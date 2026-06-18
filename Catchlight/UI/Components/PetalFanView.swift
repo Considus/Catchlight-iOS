@@ -357,11 +357,16 @@ struct PetalFanView: View {
             // An in-hierarchy layer sidesteps that entirely.
             if showingReminderPicker {
                 reminderPickerLayer
-                    .transition(.opacity)
+                    // Slide UP from the bottom like a system sheet (owner 2026-06-18:
+                    // "I like the sheet's motion"). Purely the layer's transition — the
+                    // robustness fix (veil hit-testing + `.dismissed` teardown) is
+                    // independent, so the sheet-like motion costs no stability.
+                    .transition(.move(edge: .bottom))
                     .zIndex(2)
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: showingReminderPicker)
+        // A smooth, minimal-bounce spring approximating the iOS sheet present/dismiss.
+        .animation(.spring(response: 0.42, dampingFraction: 0.9), value: showingReminderPicker)
         .onAppear {
             if reduceMotion { phase = .open }
             else { phase = .opening(start: .now) }
