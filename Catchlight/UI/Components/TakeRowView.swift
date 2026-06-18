@@ -99,6 +99,13 @@ struct TakeRowView: View {
         // edge (`position:absolute; left:6px` in v1.7). The Iris is drawn on TOP
         // so its long-press still wins hit-testing; the card's text taps clear
         // the 44pt Iris touch frame.
+        // Explicit `.zIndex` pins the paint order (card < occluder < Iris < wire <
+        // dots). Without it, when the card REPAINTS on a state change — e.g. the
+        // border recolouring on "mark done" (D-044, [[catchlight-take-colour-system]])
+        // — SwiftUI could momentarily reshuffle these siblings, and the freshly drawn
+        // card painted over the Iris's lower half (which overlaps the card's top-left
+        // corner) for a beat before the Iris re-composited. Pinning the order keeps
+        // the Iris above the card through any redraw (owner 2026-06-18).
         ZStack(alignment: .topLeading) {
             // The card fills from the row's leading edge, which DailiesView places
             // `cardSpineInset` (24) left of the spine — so the opaque card covers
@@ -114,6 +121,7 @@ struct TakeRowView: View {
                 // Only the card slides on swipe; the Iris (below) keeps its spine
                 // position so the wire stays threaded through it.
                 .offset(x: cardSwipeOffset)
+                .zIndex(0)
             // Crown occluder (owner 2026-06-16): the static dotted spine runs BEHIND
             // the whole row, so its bright dots were bleeding up through the Iris's
             // hollow aperture and making the crown look translucent. This page-coloured
@@ -129,9 +137,11 @@ struct TakeRowView: View {
                         y: -CatchlightLayout.circleDiameter / 2)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
+                .zIndex(1)
             irisColumn
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
+                .zIndex(2)
             // Rings on a wire (owner spec 2026-06-16): the spine lies ON TOP of the
             // Iris's upper half — from the ring's crown down to the card's top edge
             // — then ducks BEHIND the card, which (being opaque) hides it for the
@@ -153,6 +163,7 @@ struct TakeRowView: View {
                         y: -CatchlightLayout.circleDiameter / 2)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
+                .zIndex(3)
             // …and the DOTS pass IN FRONT of the ring too, so the dotted spine reads
             // as convincingly ABOVE the Iris (owner 2026-06-16) — not behind it. The
             // GeometryReader anchors the dash phase to the segment's live SCREEN Y
@@ -172,6 +183,7 @@ struct TakeRowView: View {
                     y: -CatchlightLayout.circleDiameter / 2)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+            .zIndex(4)
         }
         .padding(.vertical, 6)
     }
