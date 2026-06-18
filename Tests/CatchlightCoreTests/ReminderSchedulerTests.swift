@@ -109,6 +109,26 @@ final class ReminderSchedulerTests: XCTestCase {
                        "an alarm-off reminder must not reach the notification center")
     }
 
+    /// Model C (owner 2026-06-18): an ALL-DAY "when" with its alarm ON fires at the
+    /// scheduler's default hour, NOT the (meaningless) stored time component.
+    func testSchedule_allDay_firesAtDefaultHour() throws {
+        // Stored time is deliberately odd (the all-day date component is what matters).
+        let oddTime = Calendar.current.date(bySettingHour: 3, minute: 17, second: 0,
+                                            of: now.addingTimeInterval(48 * 3600))!
+        let id = UUID()
+        let reminder = TimeReminder(scheduledDate: oddTime,
+                                    notificationIdentifier: id.uuidString,
+                                    isAllDay: true)
+        let take = Take(id: id, blocks: [.textLine("all day")], timeReminder: reminder)
+        scheduler.scheduleReminder(for: take)
+
+        let request = try XCTUnwrap(center.added.first)
+        let trigger = try XCTUnwrap(request.trigger as? UNCalendarNotificationTrigger)
+        XCTAssertEqual(trigger.dateComponents.hour, ReminderScheduler.allDayFireHour,
+                       "an all-day alarm fires at the default hour, not the stored time")
+        XCTAssertEqual(trigger.dateComponents.minute, 0)
+    }
+
     func testSchedule_setsCategoryAndBody() {
         let take = takeWithReminder(at: now.addingTimeInterval(60),
                                     body: "buy milk and bread")

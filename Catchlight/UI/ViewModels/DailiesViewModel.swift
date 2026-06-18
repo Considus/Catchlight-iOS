@@ -190,6 +190,8 @@ final class DailiesViewModel {
                             isTask: Bool,
                             hasReminder: Bool,
                             reminderDate: Date?,
+                            reminderAlarm: Bool = true,
+                            reminderAllDay: Bool = false,
                             isObie: Bool) {
         var updated = take
         updated.isNote = isNote
@@ -200,7 +202,9 @@ final class DailiesViewModel {
                 ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
             updated.timeReminder = TimeReminder(
                 scheduledDate: when,
-                notificationIdentifier: updated.id.uuidString
+                notificationIdentifier: updated.id.uuidString,
+                alarmEnabled: reminderAlarm,
+                isAllDay: reminderAllDay
             )
         } else {
             updated.timeReminder = nil
