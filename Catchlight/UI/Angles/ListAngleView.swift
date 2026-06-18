@@ -71,13 +71,15 @@ struct ListAngleView: View {
     /// under the close bar — the same "no-Obie" top treatment as the Dailies timeline,
     /// rather than a hard sheet edge.
     private var topFade: some View {
+        // Sits at the TOP SAFE-AREA edge (below the Dynamic Island), matching the
+        // Dailies heading-fade level — NOT `ignoresSafeArea` (that pushed it up level
+        // with the island, owner 2026-06-18). Items dissolve under the close bar.
         LinearGradient(
             colors: [Color.ckBackground, Color.ckBackground, Color.ckBackground.opacity(0)],
             startPoint: .top, endPoint: .bottom
         )
         .frame(height: 64)
         .frame(maxWidth: .infinity)
-        .ignoresSafeArea(edges: .top)
         .allowsHitTesting(false)
     }
 
@@ -155,14 +157,23 @@ struct ListAngleView: View {
                     perform: { deleteItem(item.id) }
                 ),
                 openRowID: $openRowID,
-                leadingInset: rowLeadingInset,
-                trailingInset: rowTrailingInset,
+                leadingInset: 0,
+                trailingInset: 0,
                 contentVerticalInset: 0,
                 tuckUnder: 0
             ) { offset in
+                // Full-bleed, OPAQUE row (page-coloured) so the whole 56pt band is
+                // hit-testable for the swipe pan (the timeline relies on the opaque
+                // card; the Angle's rows were transparent, so the pan never fired —
+                // "no swipe at all", owner 2026-06-18). It also cleanly hides the
+                // action fill until it slides. Insets are 0 so the fill reaches the
+                // screen edge; the row's own content is inset internally.
                 checkRow(item)
-                    .frame(height: rowHeight)
                     .padding(.horizontal, rowLeadingInset)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: rowHeight)
+                    .background(Color.ckBackground)
+                    .contentShape(Rectangle())
                     .offset(x: offset)
             }
         }
@@ -176,7 +187,7 @@ struct ListAngleView: View {
             Button {
                 toggle(item.id)
             } label: {
-                checkbox(isComplete: item.isComplete)
+                TaskCheckbox(isComplete: item.isComplete)
                     .frame(width: CatchlightLayout.minTouchTarget,
                            height: CatchlightLayout.minTouchTarget)
                     .contentShape(Rectangle())
@@ -216,19 +227,6 @@ struct ListAngleView: View {
                 ))
                 .accessibilityIdentifier("angle-reorder")
                 .accessibilityLabel("Reorder item")
-        }
-    }
-
-    @ViewBuilder
-    private func checkbox(isComplete: Bool) -> some View {
-        if isComplete {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 20))
-                .foregroundStyle(Color.ckAccent)
-        } else {
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .strokeBorder(Color.ckTextSecondary, lineWidth: 2)
-                .frame(width: 19, height: 19)
         }
     }
 
