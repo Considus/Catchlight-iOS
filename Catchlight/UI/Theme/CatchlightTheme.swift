@@ -114,11 +114,12 @@ extension Color {
     /// Completed-Task text — the receded "done" treatment (colour ONLY, no
     /// strikethrough). Tuned 2026-06-18 (owner): the original (Fog@55% / full Fog) was
     /// too close to active to tell apart; the first retune (40%/55%) went too faint.
-    /// This split-the-difference — Fog @ 50% (Night) / Fog @ 75% (Daylight) — is clearly
-    /// receded but still legible. Single token: the Angle, the inline editor, and the
+    /// Fog @ 58% (Night) / Fog @ 82% (Daylight) — receded but a touch darker than the
+    /// 50%/75% pass (owner 2026-06-18: "could be made a little darker"), still clearly
+    /// distinct from active. Single token: the Angle, the inline editor, and the
     /// timeline card all recede by the same amount.
-    static let ckTextComplete = Color(uiColor: .adaptive(dark: Palette.fog.withAlphaComponent(0.50),
-                                                         light: Palette.fog.withAlphaComponent(0.75)))
+    static let ckTextComplete = Color(uiColor: .adaptive(dark: Palette.fog.withAlphaComponent(0.58),
+                                                         light: Palette.fog.withAlphaComponent(0.82)))
 
     /// The timeline spine — Catchlight @ 18% (Night) / Ink @ 13% (Daylight).
     static let ckSpine = Color(uiColor: .adaptive(

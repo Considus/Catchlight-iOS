@@ -154,7 +154,8 @@ struct ListAngleView: View {
                 trailingInset: 0,
                 contentVerticalInset: 0,
                 tuckUnder: 0,
-                actionWidth: 60   // owner 2026-06-18: the resting Delete button read too small at 42
+                actionWidth: 64,           // owner 2026-06-18: the resting Delete button read too small at 42
+                centersActionLabel: true   // symmetrically surround the glyph (owner 2026-06-18)
             ) { offset in
                 // Full-bleed, OPAQUE row (page-coloured) so the whole 56pt band is
                 // hit-testable for the swipe pan (the timeline relies on the opaque

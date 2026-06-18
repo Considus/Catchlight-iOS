@@ -62,6 +62,11 @@ struct SwipeActionRow<Content: View>: View {
     /// (timeline, owner 2026-06-16); the list Angle passes a larger value (owner
     /// 2026-06-18: the resting Delete button read too small there).
     var actionWidth: CGFloat = 42
+    /// Centre the action label within the revealed fill instead of hugging it to the
+    /// screen edge. Timeline default = false (the leading label hugs out to clear the
+    /// Iris); the list Angle passes true so the resting button symmetrically surrounds
+    /// its glyph (owner 2026-06-18).
+    var centersActionLabel: Bool = false
     /// Receives the live horizontal offset; the caller applies it to the CARD only.
     @ViewBuilder var content: (CGFloat) -> Content
 
@@ -144,11 +149,14 @@ struct SwipeActionRow<Content: View>: View {
     }
 
     private func fill(_ action: SwipeAction, width: CGFloat, edge: HorizontalEdge) -> some View {
-        ZStack(alignment: edge == .leading ? .leading : .trailing) {
+        let labelAlignment: Alignment = centersActionLabel
+            ? .center
+            : (edge == .leading ? .leading : .trailing)
+        return ZStack(alignment: labelAlignment) {
             action.tint
             // Label hugged to the OUTER (screen) edge so it rides there as the fill
-            // grows AND clears the Iris, which stays on the spine and floats over the
-            // leading fill (owner 2026-06-16 — the Done label was under the Iris).
+            // grows AND clears the Iris (owner 2026-06-16) — UNLESS `centersActionLabel`
+            // (the Angle), which centres it so the button symmetrically surrounds it.
             VStack(spacing: 4) {
                 Image(systemName: action.systemImage)
                     .font(.system(size: 17, weight: .semibold))
@@ -156,7 +164,7 @@ struct SwipeActionRow<Content: View>: View {
                     .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
             }
             .foregroundStyle(.white)
-            .padding(edge == .leading ? .leading : .trailing, 8)
+            .padding(centersActionLabel ? .horizontal : (edge == .leading ? .leading : .trailing), 8)
         }
         .frame(width: max(0, width))
         .frame(maxHeight: .infinity)
