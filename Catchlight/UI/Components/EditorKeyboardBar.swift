@@ -20,21 +20,25 @@ struct EditorKeyboardBar: View {
     private let circle: CGFloat = 44
 
     var body: some View {
+        // FOUR EQUAL SLOTS, each glyph centred — same layout as the dock (`slotW =
+        // width/4`), so the buttons sit on the dock's exact column centres (owner
+        // 2026-06-19: spacing must match the bottom toolbar).
         HStack(spacing: 0) {
             // Dismiss = the dock's Add button (strong ring) with its "+" rotated 45°
             // so it reads as an × (owner 2026-06-19: "the add button rotates to an X").
             button("plus", tint: .ckAccent, enabled: true, strong: true, rotate: 45,
                    label: "Close keyboard", action: onDismiss)
-            Spacer(minLength: 0)
+                .frame(maxWidth: .infinity)
             button("exclamationmark.circle",
                    tint: config.isImportant ? .ckEmber : .ckAccent, enabled: true,
                    label: "Important", action: config.onToggleImportant)
-            Spacer(minLength: 0)
+                .frame(maxWidth: .infinity)
             button("bag", tint: .ckAccent, enabled: config.angleEnabled,
                    identifier: "angle-button", label: "Open as list", action: config.onOpenAngle)
-            Spacer(minLength: 0)
+                .frame(maxWidth: .infinity)
             button("magnifyingglass", tint: .ckAccent, enabled: true,
                    label: "Search", action: config.onSearch)
+                .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
         .padding(.top, 10)
