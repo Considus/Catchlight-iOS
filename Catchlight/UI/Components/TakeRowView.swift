@@ -348,6 +348,13 @@ struct TakeCardSurface: View {
     /// `TakeCardStyle` so read↔edit never drift (owner 2026-06-18).
     private var style: TakeCardStyle { TakeCardStyle(take: take, scheme: scheme) }
 
+    /// What the left-edge label lane shows. Today only the overdue system label (a
+    /// vertical ruby "OVERDUE", reinforcing the ruby border + italic time). Future
+    /// user colour-labels render through the same lane (`TakeLabelLane`).
+    private var laneContent: TakeLabelLane.Content {
+        style.isOverdue ? .systemText("OVERDUE", .ckRuby) : .none
+    }
+
     /// Cached formatter — this label is evaluated on every render, and a fresh
     /// `DateFormatter` per evaluation is one of Foundation's most expensive allocations.
     private static let reminderFormatter: DateFormatter = {
@@ -426,6 +433,11 @@ struct TakeCardSurface: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
         )
+        // The label lane hugs the card's left edge, in the clear strip before the
+        // Iris (owner 2026-06-18). Rides with the card (incl. swipe).
+        .overlay(alignment: .leading) {
+            TakeLabelLane(content: laneContent)
+        }
     }
 }
 
