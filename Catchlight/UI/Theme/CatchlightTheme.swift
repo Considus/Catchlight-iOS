@@ -227,13 +227,14 @@ extension Color {
         light: UIColor(hex: 0xF1F1F0)
     ))
 
-    /// Iris hairline OUTER ring (HiFi v1.7 — section 7). Daylight #E7E7E7 (the
-    /// v1.7 iris SVG uses the near-identical #ECECEC); Night rides the divider /
-    /// spine line token (Catchlight @18%) so it reads as a faint warm rim on Ink
-    /// rather than the bright Daylight grey.
+    /// Iris OUTER ring. Raised 2026-06-18 (owner-approved) to meet WCAG 1.4.11
+    /// non-text contrast (≥3:1): Daylight #8C8C8C ≈ 3.1:1 on the white card (was the
+    /// v1.7 hairline #E7E7E7 ≈ 1.2:1); Night Catchlight @ 45% ≈ 3.9:1 on Ink (was 18%).
+    /// The Iris reads bolder/clearer now — a deliberate move from the v1.7 soft rim to
+    /// a legible-without-VoiceOver control.
     static let ckIrisRing = Color(uiColor: .adaptive(
-        dark: Palette.catchlight.withAlphaComponent(0.18),
-        light: UIColor(hex: 0xE7E7E7)
+        dark: Palette.catchlight.withAlphaComponent(0.45),
+        light: UIColor(hex: 0x8C8C8C)
     ))
 
     /// Error / warning accent — used by the non-blocking error strips on the
@@ -258,18 +259,23 @@ extension Color {
 // and Remind is the lighter amber. (D-042; supersedes the DS §5.2 Ink-tint
 // Daylight values — flagged for DS reconciliation, sub-decision D-S1.)
 enum Quadrant {
-    /// Note — Daylight grey `#BCBCBB` (HiFi `--q-note`) / Night Catchlight @ 55%.
+    // Daylight fills raised 2026-06-18 (owner-approved) to meet WCAG 1.4.11 (≥3:1 on
+    // the white card): Note #BCBCBB→#8C8C8C (~1.9→~3.1:1), Task Ember #C9A96E→#A8843E
+    // (~2→~3.5:1), Remind #B5A283→#8A7A58 (~2→~3.7:1). Night values unchanged (already
+    // light-on-dark). Supersedes the v1.6.9 `--q-*` swatches for Daylight (D-042).
+    /// Note — Daylight grey / Night Catchlight @ 55%.
     static func note(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.ckCatchlight.opacity(0.55) : Color(hex: 0xBCBCBB)
+        scheme == .dark ? Color.ckCatchlight.opacity(0.55) : Color(hex: 0x8C8C8C)
     }
 
-    /// Task — the warm Ember accent (HiFi `--q-task` `#C9A96E`), both modes.
-    static func task(_ scheme: ColorScheme) -> Color { .ckEmber }
+    /// Task — the warm accent; Daylight darkened to a 3:1 amber, Night keeps Ember.
+    static func task(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? .ckEmber : Color(hex: 0xA8843E)
+    }
 
-    /// Remind — Daylight `#B5A283` (HiFi `--q-remind`, 50% tint of overdue) /
-    /// Night Glow @ 65% (a distinct gold from Task's Ember).
+    /// Remind — Daylight darkened to a 3:1 tan / Night Glow @ 65%.
     static func reminder(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.ckGlow.opacity(0.65) : Color(hex: 0xB5A283)
+        scheme == .dark ? Color.ckGlow.opacity(0.65) : Color(hex: 0x8A7A58)
     }
 
     /// Obie ring around the whole circle — Glow (Night) / Ember (Daylight).
