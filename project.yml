@@ -157,6 +157,12 @@ targets:
           - group.com.considus.catchlight
         keychain-access-groups:
           - $(AppIdentifierPrefix)com.considus.catchlight
+        # Time Sensitive notifications (owner 2026-06-18): lets a reminder break
+        # through Focus / Do Not Disturb and the Scheduled Summary, like Apple's own
+        # Reminders/Clock alerts. Paired with `content.interruptionLevel = .timeSensitive`
+        # in ReminderScheduler. Automatic signing registers the matching App ID
+        # capability on the next -allowProvisioningUpdates build.
+        com.apple.developer.usernotifications.time-sensitive: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight   # brief §3.1

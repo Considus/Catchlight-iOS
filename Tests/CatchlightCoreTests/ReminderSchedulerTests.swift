@@ -129,22 +129,34 @@ final class ReminderSchedulerTests: XCTestCase {
         XCTAssertEqual(trigger.dateComponents.minute, 0)
     }
 
-    func testSchedule_setsCategoryAndBody() {
+    /// Reminders are Time Sensitive (owner 2026-06-18) so they break through Focus /
+    /// Do Not Disturb, like Apple's Reminders. Requires the entitlement (project.yml).
+    func testSchedule_isTimeSensitive() {
+        let take = takeWithReminder(at: now.addingTimeInterval(60))
+        scheduler.scheduleReminder(for: take)
+        XCTAssertEqual(center.added.first?.content.interruptionLevel, .timeSensitive)
+    }
+
+    /// The Take's text is the notification TITLE (content-first, owner 2026-06-18) —
+    /// not the body and not the app name. The "when" rides the subtitle.
+    func testSchedule_setsCategoryAndTitle() {
         let take = takeWithReminder(at: now.addingTimeInterval(60),
                                     body: "buy milk and bread")
         scheduler.scheduleReminder(for: take)
         let request = try? XCTUnwrap(center.added.first)
         XCTAssertEqual(request?.content.categoryIdentifier, ReminderScheduler.categoryIdentifier)
-        XCTAssertEqual(request?.content.body, "buy milk and bread")
+        XCTAssertEqual(request?.content.title, "buy milk and bread")
+        XCTAssertFalse(request?.content.subtitle.isEmpty ?? true,
+                       "the scheduled 'when' should populate the subtitle")
     }
 
-    /// Body is truncated at 100 characters to keep notification payloads small
+    /// The title is truncated at 100 characters to keep notification payloads small
     /// (and to limit how much Take content surfaces outside the app boundary).
-    func testSchedule_longBodyTruncatedAt100Chars() {
+    func testSchedule_longTitleTruncatedAt100Chars() {
         let longBody = String(repeating: "a", count: 250)
         let take = takeWithReminder(at: now.addingTimeInterval(60), body: longBody)
         scheduler.scheduleReminder(for: take)
-        XCTAssertEqual(center.added.first?.content.body.count, 100)
+        XCTAssertEqual(center.added.first?.content.title.count, 100)
     }
 
     // MARK: - Past-date refusal (2026-06-10)
