@@ -37,6 +37,15 @@ struct RootView: View {
     /// ~2.5s per launch across the suite. Same flag `Wiring.makeAppModel` reads.
     @State private var showSplash = !ProcessInfo.processInfo.arguments.contains("--uitesting")
 
+    /// Cold-launch splash hold, tuned INDEPENDENTLY for the two destinations (owner
+    /// 2026-06-18). The destination is known when the splash `.task` runs, keyed on
+    /// `app.needsOnboarding`:
+    ///  • onboarding — a first impression; hold long enough to read the tagline.
+    ///  • onboarded app — a returning user; get them to the timeline sooner.
+    /// Two knobs, easy to retune on device.
+    private static let splashHoldOnboarding: TimeInterval = 2.5
+    private static let splashHoldOnboarded: TimeInterval = 1.0
+
     var body: some View {
         // ZStack with a full-bleed background guarantees children receive a full-screen
         // size proposal. A bare Group inherits the parent's bounded proposal, which left
@@ -83,9 +92,11 @@ struct RootView: View {
                 if app.lockState == .locked { await app.attemptUnlock() }
                 return
             }
-            // Hold the launch-screen branding long enough to actually READ the
-            // tagline (owner 2026-06-16: 1.2s was too fast). ~2.5s solo.
-            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            // Hold the launch-screen branding, independently per destination (owner
+            // 2026-06-18): longer into onboarding (read the tagline), shorter into the
+            // onboarded app (returning user). `needsOnboarding` is settled by now.
+            let hold = app.needsOnboarding ? Self.splashHoldOnboarding : Self.splashHoldOnboarded
+            try? await Task.sleep(nanoseconds: UInt64(hold * 1_000_000_000))
             // Keep the splash as the BACKDROP through the unlock so the happy path
             // never flashes the lock screen (owner 2026-06-16): splash → Face ID over
             // it → crossfade straight to the timeline on success. The lock screen is
