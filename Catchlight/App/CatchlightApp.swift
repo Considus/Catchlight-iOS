@@ -68,6 +68,11 @@ struct CatchlightApp: App {
         )
         // Must register before the app finishes launching.
         backgroundSync.registerLaunchHandler()
+        // Present reminders in the foreground too (owner-reported 2026-06-18: a
+        // reminder firing while the app was open showed nothing, then went overdue).
+        // The delegate is weakly held by UNUserNotificationCenter, so this installs
+        // a process-lifetime singleton — set early, before any delivery.
+        NotificationPresenter.install()
     }
 
     /// Capture the app handle so the scenePhase observer can drive subscription
