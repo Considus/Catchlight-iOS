@@ -84,6 +84,37 @@ final class SettingsViewModel {
         }
     }
 
+    /// How many HOURS ahead a freshly-added reminder defaults to (owner 2026-06-18 — a
+    /// user preference shown as a segmented control of 1/6/12/24/48). The raw value IS
+    /// the hour count. `PetalFanView.defaultReminderDate` reads `current` when seeding
+    /// the picker; the user always refines from there.
+    enum DefaultReminderHours: String, CaseIterable, Identifiable {
+        case one = "1", six = "6", twelve = "12", twentyFour = "24", fortyEight = "48"
+
+        static let defaultsKey = "catchlight.defaultReminderHours"
+        static let `default`: DefaultReminderHours = .twentyFour
+
+        var id: String { rawValue }
+
+        /// Segmented-button label — just the number (the row title carries "(hrs)").
+        var label: String { rawValue }
+
+        var hours: Int { Int(rawValue) ?? 24 }
+
+        /// Resolve to a concrete future date — simply `now` + N hours.
+        func date(from now: Date = Date()) -> Date {
+            now.addingTimeInterval(TimeInterval(hours) * 3600)
+        }
+
+        /// The user's current choice (falls back to the default), from the same
+        /// UserDefaults key the Settings picker writes via `@AppStorage`.
+        static var current: DefaultReminderHours {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = DefaultReminderHours(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     /// Timeline density — how much clear space sits between consecutive Takes on
     /// Dailies (owner 2026-06-16). Changes ONLY the inter-card gap; the cards, Iris,
     /// and spine are untouched. `gap` is the clear distance from one card's bottom to

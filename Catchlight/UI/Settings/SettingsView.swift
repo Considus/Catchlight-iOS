@@ -30,6 +30,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey) private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
     @AppStorage(SettingsViewModel.TakeSort.defaultsKey) private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
     @AppStorage(SettingsViewModel.TakePreview.defaultsKey) private var takePreviewRaw: String = SettingsViewModel.TakePreview.default.rawValue
+    @AppStorage(SettingsViewModel.DefaultReminderHours.defaultsKey) private var defaultReminderHoursRaw: String = SettingsViewModel.DefaultReminderHours.default.rawValue
 
     @State private var vm = SettingsViewModel()
 
@@ -44,6 +45,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appearanceSection
+                remindersSection
                 securitySection
                 syncSection
                 subscriptionSection
@@ -300,6 +302,50 @@ struct SettingsView: View {
     }
 
     // MARK: - Security
+
+    // MARK: - Reminders
+
+    private var remindersSection: some View {
+        Section {
+            // How many hours ahead a freshly-added reminder opens to (owner 2026-06-18).
+            // Segmented control like the View/Order rows — the labels are short numbers.
+            // `PetalFanView.defaultReminderDate` reads the same key.
+            HStack(spacing: 14) {
+                Image(systemName: "clock")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("Default timing (hrs)")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("Default timing", selection: defaultReminderHoursBinding) {
+                    ForEach(SettingsViewModel.DefaultReminderHours.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 220)
+                .accessibilityLabel("Default reminder timing in hours")
+            }
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+        } header: {
+            sectionHeader("Reminders")
+        } footer: {
+            Text("How many hours ahead a new reminder starts. You can always adjust the exact date and time before saving.")
+                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                .foregroundStyle(Color.ckTextSecondary)
+        }
+    }
+
+    private var defaultReminderHoursBinding: Binding<SettingsViewModel.DefaultReminderHours> {
+        Binding(
+            get: { SettingsViewModel.DefaultReminderHours(rawValue: defaultReminderHoursRaw) ?? .default },
+            set: { defaultReminderHoursRaw = $0.rawValue }
+        )
+    }
 
     private var securitySection: some View {
         Section {
