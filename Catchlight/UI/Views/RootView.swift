@@ -44,7 +44,7 @@ struct RootView: View {
     ///  • onboarded app — a returning user; get them to the timeline sooner.
     /// Two knobs, easy to retune on device.
     private static let splashHoldOnboarding: TimeInterval = 2.5
-    private static let splashHoldOnboarded: TimeInterval = 1.5
+    private static let splashHoldOnboarded: TimeInterval = 1.0
 
     var body: some View {
         // ZStack with a full-bleed background guarantees children receive a full-screen
