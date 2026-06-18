@@ -199,22 +199,29 @@ extension Color {
         light: Palette.ember.withAlphaComponent(0.65)
     ))
 
-    /// Overdue card BORDER (reminder date passed) — solid overdue amber #6B4508
-    /// (Daylight, matches the v1.7 overdue text token) / Glow @35% (Night).
-    /// Clearly distinct from the Obie Ember. (HiFi v1.7 .card.overdue, DS §12.3)
+    /// Overdue card BORDER (reminder date passed). RUBY (owner 2026-06-18 — the Take
+    /// border/colour system): overdue now reads as an ALERT, not warm amber, and ruby
+    /// is the only state that overrides the Obie's gold border. Same hue as `ckRuby`.
     static let ckCardOverdueBorder = Color(uiColor: .adaptive(
-        dark: Palette.glow.withAlphaComponent(0.35),
-        light: UIColor(hex: 0x6B4508)
+        dark: UIColor(red: 0.86, green: 0.32, blue: 0.32, alpha: 1.0),
+        light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
     ))
 
-    /// Overdue reminder META TEXT (`.tm.overdue`) — #6B4508 (Daylight, same as the
-    /// border) but FULL Glow in Night, NOT the Glow@35% the BORDER uses: HiFi v1.7
-    /// `.night .tm.overdue{color:var(--glow)}` keeps the overdue time legible while
-    /// the border stays a quiet @35%. (DS §12.3 — was incorrectly sharing the border
-    /// token, so Night overdue times read too faint; owner 2026-06-16.)
+    /// Overdue reminder META TEXT (`.tm.overdue`) — RUBY, matching the overdue border
+    /// (owner 2026-06-18). The subtext is italic ONLY when overdue, so the ruby + slant
+    /// together read as "this one's late." Same hue as `ckRuby` / `ckCardOverdueBorder`.
     static let ckTextOverdue = Color(uiColor: .adaptive(
-        dark: Palette.glow,
-        light: UIColor(hex: 0x6B4508)
+        dark: UIColor(red: 0.86, green: 0.32, blue: 0.32, alpha: 1.0),
+        light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
+    ))
+
+    /// Done card BORDER (a fully-ticked Task or a reminder marked done). Light grey,
+    /// defined at the SAME Fog alphas as `ckTextComplete` (Fog @58% Night / @82%
+    /// Daylight) so the done BORDER and the done TEXT are provably one grey — "done"
+    /// recedes by the same amount whether it's the edge or the words (owner 2026-06-18).
+    static let ckCardDoneBorder = Color(uiColor: .adaptive(
+        dark: Palette.fog.withAlphaComponent(0.58),
+        light: Palette.fog.withAlphaComponent(0.82)
     ))
 
     /// Iris OFF-quadrant annular fill (HiFi v1.7 `--q-off` — section 7). The
