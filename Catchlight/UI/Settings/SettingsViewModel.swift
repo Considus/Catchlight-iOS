@@ -84,6 +84,55 @@ final class SettingsViewModel {
         }
     }
 
+    /// What a freshly-added reminder's "when" defaults to (owner 2026-06-18 — a user
+    /// preference, not a baked-in +24h). `PetalFanView.defaultReminderDate` reads
+    /// `current` when seeding the picker; the user always refines from there.
+    enum DefaultReminderWhen: String, CaseIterable, Identifiable {
+        case inOneHour, thisEvening, tomorrowMorning, tomorrowSameTime
+
+        static let defaultsKey = "catchlight.defaultReminderWhen"
+        static let `default`: DefaultReminderWhen = .tomorrowMorning
+
+        private static let eveningHour = 18
+        private static let morningHour = 9   // matches ReminderScheduler.allDayFireHour
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .inOneHour:        return "In 1 hour"
+            case .thisEvening:      return "This evening"
+            case .tomorrowMorning:  return "Tomorrow morning"
+            case .tomorrowSameTime: return "Tomorrow, same time"
+            }
+        }
+
+        /// Resolve to a concrete FUTURE date from `now` — all Calendar math, no
+        /// hardcoded formats (the picker then shows it in the user's Region/12-24h style).
+        func date(from now: Date = Date(), calendar: Calendar = .current) -> Date {
+            switch self {
+            case .inOneHour:
+                return now.addingTimeInterval(3600)
+            case .thisEvening:
+                let today = calendar.date(bySettingHour: Self.eveningHour, minute: 0, second: 0, of: now) ?? now
+                return today > now ? today : (calendar.date(byAdding: .day, value: 1, to: today) ?? today)
+            case .tomorrowMorning:
+                let next = calendar.date(byAdding: .day, value: 1, to: now) ?? now
+                return calendar.date(bySettingHour: Self.morningHour, minute: 0, second: 0, of: next) ?? next
+            case .tomorrowSameTime:
+                return calendar.date(byAdding: .day, value: 1, to: now) ?? now
+            }
+        }
+
+        /// The user's current choice (falls back to the default), from the same
+        /// UserDefaults key the Settings picker writes via `@AppStorage`.
+        static var current: DefaultReminderWhen {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = DefaultReminderWhen(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     /// Timeline density — how much clear space sits between consecutive Takes on
     /// Dailies (owner 2026-06-16). Changes ONLY the inter-card gap; the cards, Iris,
     /// and spine are untouched. `gap` is the clear distance from one card's bottom to
