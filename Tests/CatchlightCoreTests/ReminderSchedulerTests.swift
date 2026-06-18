@@ -96,6 +96,19 @@ final class ReminderSchedulerTests: XCTestCase {
         XCTAssertEqual(center.added.count, 0)
     }
 
+    /// Model C (owner 2026-06-18): a future-dated "when" with its alarm OFF is a silent
+    /// planner placement — it must NOT schedule a notification.
+    func testSchedule_alarmDisabled_addsNothing() {
+        let id = UUID()
+        let reminder = TimeReminder(scheduledDate: now.addingTimeInterval(3600),
+                                    notificationIdentifier: id.uuidString,
+                                    alarmEnabled: false)
+        let take = Take(id: id, blocks: [.textLine("silent plan")], timeReminder: reminder)
+        scheduler.scheduleReminder(for: take)
+        XCTAssertEqual(center.added.count, 0,
+                       "an alarm-off reminder must not reach the notification center")
+    }
+
     func testSchedule_setsCategoryAndBody() {
         let take = takeWithReminder(at: now.addingTimeInterval(60),
                                     body: "buy milk and bread")
