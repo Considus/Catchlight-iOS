@@ -21,7 +21,9 @@ struct EditorKeyboardBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            button("chevron.down", tint: .ckAccent, enabled: true,
+            // Dismiss = the dock's Add button (strong ring) with its "+" rotated 45°
+            // so it reads as an × (owner 2026-06-19: "the add button rotates to an X").
+            button("plus", tint: .ckAccent, enabled: true, strong: true, rotate: 45,
                    label: "Close keyboard", action: onDismiss)
             Spacer(minLength: 0)
             button("exclamationmark.circle",
@@ -45,18 +47,22 @@ struct EditorKeyboardBar: View {
     private func button(_ systemImage: String,
                         tint: Color,
                         enabled: Bool,
+                        strong: Bool = false,
+                        rotate: Double = 0,
                         identifier: String? = nil,
                         label: String,
                         action: @escaping () -> Void) -> some View {
         Button(action: action) {
             ZStack {
-                // Same ring as the dock's resting buttons (Ember @35%, 1.5pt).
+                // Match the dock's ring: Ember @55% (Add) / @35% (others), 1.5pt.
                 Circle()
-                    .strokeBorder(Color.ckAccent.opacity(0.35), lineWidth: 1.5)
+                    .strokeBorder(Color.ckAccent.opacity(strong ? 0.55 : 0.35), lineWidth: 1.5)
                     .frame(width: circle, height: circle)
+                // Match the dock's navIcon glyph: 24pt, .light, Ember (ckAccent).
                 Image(systemName: systemImage)
-                    .font(.system(size: 20, weight: .regular))
+                    .font(.system(size: 24, weight: .light))
                     .foregroundStyle(enabled ? tint : Color.ckTextSecondary.opacity(0.4))
+                    .rotationEffect(.degrees(rotate))
             }
             .frame(width: circle, height: circle)
             .contentShape(Circle())
