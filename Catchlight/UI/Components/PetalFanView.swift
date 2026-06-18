@@ -366,7 +366,8 @@ struct PetalFanView: View {
             }
         }
         // A smooth, minimal-bounce spring approximating the iOS sheet present/dismiss.
-        .animation(.spring(response: 0.42, dampingFraction: 0.9), value: showingReminderPicker)
+        // Slowed to feel more deliberate in BOTH directions (owner 2026-06-18).
+        .animation(.spring(response: 0.52, dampingFraction: 0.9), value: showingReminderPicker)
         .onAppear {
             if reduceMotion { phase = .open }
             else { phase = .opening(start: .now) }
