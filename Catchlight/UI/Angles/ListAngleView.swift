@@ -1,64 +1,75 @@
 //
 //  ListAngleView.swift
-//  Catchlight (iOS app target) — Phase 3 list Angle (D-033)
+//  Catchlight (iOS app target) — Phase 3 list Angle (D-033); Phase 4 interactive list
 //
 //  The list Angle's presentation: the shopping-aisle view of a Take's checklist
-//  — full-screen, minimal chrome, large type, oversized checkboxes, reorderable,
-//  meant to be read and tapped at a glance with hands full. It shows the Take's
-//  blocks in order (prose as quiet context, check items large) and ticks /
-//  reorders the SAME Take through the ordinary block mutations, so every change
-//  persists and syncs exactly like an edit — there is no separate state.
+//  — fullscreen, minimal chrome, large type, meant to be read and tapped at a
+//  glance with hands full. It shows the Take's blocks in order (prose as quiet
+//  context, check items large) and ticks / reorders / deletes / marks-done the SAME
+//  Take through the ordinary block mutations, so every change persists and syncs
+//  exactly like an edit — there is no separate state and NO text editing here (no
+//  keyboard ever; renaming/adding items stays in the Dailies inline editor).
 //
-//  Accessibility is by construction here (this Angle IS the glanceability /
-//  low-vision affordance): each item is a single ≥44pt button exposing its text,
-//  checked state, and selected trait. The FORMAL VoiceOver / AX5 / Dynamic Type /
-//  named-reorder sweep is Phase 4 — but it must not ship VoiceOver-broken.
+//  Phase 4 (owner 2026-06-17/18): each checklist item is a discrete, id-stable UNIT
+//  with the full per-item interaction set — TICK (the box, ≤44pt target), REORDER
+//  (drag the handle), SWIPE-LEFT to Delete, SWIPE-RIGHT to mark Done. Reorder/swipe
+//  reuse the UIKit recognizers (orthogonal axes that coordinate with the scroll's
+//  own pan). Completed items recede by COLOUR only (no strikethrough), matching the
+//  normal Take view. Chrome is fullscreen + Dailies-style (a top fade, an X to
+//  close, scroll-only — no sheet grabber).
+//
+//  Accessibility is by construction: each item is a single ≥44pt button exposing its
+//  text, checked state and selected trait, plus named Move-up/down + Delete + Done
+//  actions so every gesture has a non-gesture path.
 //
 
 import SwiftUI
 import CatchlightCore
 
 struct ListAngleView: View {
-    /// The LIVE Take. Ticks / reorders mutate it in place (and persist via the
-    /// host's save), so the Angle is never a separate copy of the data.
+    /// The LIVE Take. Ticks / reorders / deletes mutate it in place (and persist via
+    /// the host's save), so the Angle is never a separate copy of the data.
     @Binding var take: Take
     let onClose: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Single-open swipe coordination (shared with `SwipeActionRow`): opening one
+    /// item's action closes any other.
+    @State private var openRowID: UUID?
+
+    // MARK: - Reorder drag state (immediate touch-and-move from the handle — the same
+    // UIKit recognizer the inline editor uses, owner-approved "works great")
+    @State private var draggingID: UUID?
+    @State private var dragOffsetY: CGFloat = 0
+    @State private var dragStartIndex: Int?
+
+    // Row geometry. A fixed row height keeps the swipe-reveal fill exactly row-height
+    // (the old maxHeight:.infinity fill drove the row taller on first layout, then
+    // shrank — the "double-height then jumps the neighbours" report, owner 2026-06-18)
+    // and makes the reorder step maths exact.
+    private let rowHeight: CGFloat = 56
+    private let rowLeadingInset: CGFloat = 16
+    private let rowTrailingInset: CGFloat = 16
+
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            itemList
-        }
-        .background(Color.ckBackground.ignoresSafeArea())
-        // NOTE: no `.accessibilityIdentifier` on this container — SwiftUI merges a
-        // container identifier onto shallow children (it overrode the close
-        // button's "angle-close" with the container id). The per-element ids
+        // The chrome is a `.safeAreaInset` top band — an OPAQUE X-row + a 12pt fade —
+        // exactly like the Dailies heading (owner 2026-06-18). Content scrolls UNDER
+        // the opaque band (so it's truly masked, not just behind a translucent gradient
+        // that let it peek above), and the 12pt gradient softens the dissolve edge.
+        itemList
+            .background(Color.ckBackground.ignoresSafeArea())
+            .safeAreaInset(edge: .top, spacing: 0) { topChrome }
+        // NOTE: no `.accessibilityIdentifier` on the container — SwiftUI merges a
+        // container identifier onto shallow children. The per-element ids
         // ("angle-close" / "angle-checkbox" / "angle-reorder") are the contract.
     }
 
-    // MARK: - Chrome (minimal: a grabber to swipe down, an explicit close)
+    // MARK: - Chrome (fullscreen, Dailies-style mask: opaque band + 12pt fade + an X;
+    // scroll-only, no sheet grabber — owner 2026-06-18)
 
-    private var header: some View {
-        ZStack {
-            // Grabber: drag it down to dismiss (the shopping-aisle exit). The
-            // swipe gesture is scoped to THIS sibling only — putting it on the
-            // whole header would merge the close button into one a11y element and
-            // hide its identifier.
-            Capsule()
-                .fill(Color.ckTextSecondary.opacity(0.35))
-                .frame(width: 44, height: 5)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 20)
-                        .onEnded { value in
-                            if value.translation.height > 60 { onClose() }
-                        }
-                )
-                .accessibilityHidden(true)
-
+    private var topChrome: some View {
+        VStack(spacing: 0) {
             HStack {
                 Spacer()
                 Button(action: onClose) {
@@ -73,78 +84,114 @@ struct ListAngleView: View {
                 .accessibilityIdentifier("angle-close")
                 .accessibilityLabel("Close list")
             }
+            .padding(.horizontal, 12)
+            .padding(.top, 4)
+            .background(Color.ckBackground)   // OPAQUE — content scrolls under and is hidden
+            // The soft dissolve edge (matches the Dailies no-Obie heading fade).
+            LinearGradient(
+                colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 12)
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
     }
 
-    // MARK: - The list
+    // MARK: - The list (ScrollView + LazyVStack so the UIKit reorder/swipe recognizers
+    // can coordinate with the scroll's own pan)
 
     private var itemList: some View {
-        List {
-            ForEach(take.blocks) { block in
-                row(for: block)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 12))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(take.blocks) { block in
+                    rowContainer(for: block)
+                        // Lift the row being dragged so it follows the finger above its
+                        // neighbours while the order reflows underneath.
+                        .offset(y: dragVisualOffset(for: block.id))
+                        .zIndex(draggingID == block.id ? 1 : 0)
+                }
             }
-            .onMove { from, to in
-                take.blocks.move(fromOffsets: from, toOffset: to)
-            }
+            .padding(.top, 4)
+            .padding(.bottom, 24)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .environment(\.defaultMinListRowHeight, 56)
+        .scrollIndicators(.hidden)   // owner 2026-06-18: no scrollbar
     }
 
-    /// Move the block one step up (-1) or down (+1) — the VoiceOver-operable
-    /// reorder, since drag isn't. Operates on the real Take, so it persists.
-    private func moveItem(_ id: UUID, by offset: Int) {
-        guard let from = take.blocks.firstIndex(where: { $0.id == id }) else { return }
-        let to = from + offset
-        guard to >= 0, to < take.blocks.count else { return }
-        take.blocks.swapAt(from, to)
-    }
+    // MARK: - Rows
 
     @ViewBuilder
-    private func row(for block: TakeBlock) -> some View {
+    private func rowContainer(for block: TakeBlock) -> some View {
         switch block {
         case .text(let textBlock):
-            // Prose is quiet context: smaller and muted.
+            // Prose is quiet context: smaller, muted, non-interactive (no tick /
+            // reorder / swipe — only checklist items are units).
             Text(textBlock.text)
                 .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
                 .foregroundStyle(Color.ckTextSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 2)
+                .padding(.horizontal, rowLeadingInset)
+                .padding(.vertical, 8)
                 .accessibilityAddTraits(.isStaticText)
         case .check(let item):
-            checkRow(item)
+            // Swipe LEFT → Delete, swipe RIGHT → mark Done (in addition to the box tap).
+            SwipeActionRow(
+                id: item.id,
+                leading: SwipeAction(
+                    title: item.isComplete ? "Not done" : "Done",
+                    systemImage: item.isComplete ? "circle" : "checkmark.circle",
+                    tint: .ckAccent,
+                    style: .standard,
+                    perform: { toggle(item.id) }
+                ),
+                trailing: SwipeAction(
+                    title: "Delete",
+                    systemImage: "trash",
+                    tint: .ckRuby,
+                    style: .destructive,
+                    perform: { deleteItem(item.id) }
+                ),
+                openRowID: $openRowID,
+                leadingInset: 0,
+                trailingInset: 0,
+                contentVerticalInset: 0,
+                tuckUnder: 0,
+                actionWidth: 64,           // owner 2026-06-18: the resting Delete button read too small at 42
+                centersActionLabel: true   // symmetrically surround the glyph (owner 2026-06-18)
+            ) { offset in
+                // Full-bleed, OPAQUE row (page-coloured) so the whole 56pt band is
+                // hit-testable for the swipe pan (the timeline relies on the opaque
+                // card; the Angle's rows were transparent, so the pan never fired —
+                // "no swipe at all", owner 2026-06-18). It also cleanly hides the
+                // action fill until it slides. Insets are 0 so the fill reaches the
+                // screen edge; the row's own content is inset internally.
+                checkRow(item)
+                    .padding(.horizontal, rowLeadingInset)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: rowHeight)
+                    .background(Color.ckBackground)
+                    .contentShape(Rectangle())
+                    .offset(x: offset)
+            }
+            // Clamp the WHOLE swipe row to the fixed height: the action fill is
+            // `maxHeight: .infinity`, so without this it stretched the row taller the
+            // moment it appeared (the "double-height / neighbours jump" — owner
+            // 2026-06-18, the same class we fixed on Dailies). Clamping the ZStack
+            // bounds the fill to the row height.
+            .frame(height: rowHeight)
         }
     }
 
     private func checkRow(_ item: ChecklistItem) -> some View {
-        HStack(spacing: 16) {
-            // The whole label (oversized box + big text) is one tap target.
+        HStack(spacing: 12) {
+            // TICK — the touch target is the box only (≤44pt), NOT the whole row
+            // (owner 2026-06-18). Rounded square when open, ticked circle when done,
+            // about half the previous glyph size.
             Button {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
-                    take.toggleItemComplete(blockID: item.id)
-                }
+                toggle(item.id)
             } label: {
-                HStack(spacing: 16) {
-                    Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 32))
-                        .foregroundStyle(item.isComplete ? Color.ckAccent : Color.ckTextSecondary)
-                    Text(item.text.isEmpty ? " " : item.text)
-                        // DM Sans (Take content is never the display face, DS §2.2
-                        // / D-042). 17pt for the full-screen list — provisional,
-                        // flagged for Phase-3 review (D-S3). Was Cormorant 26.
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .title3))
-                        .foregroundStyle(item.isComplete ? Color.ckTextSecondary : Color.ckTextPrimary)
-                        .strikethrough(item.isComplete, color: Color.ckTextSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(minHeight: 52)
-                .contentShape(Rectangle())
+                TaskCheckbox(isComplete: item.isComplete)
+                    .frame(width: CatchlightLayout.minTouchTarget,
+                           height: CatchlightLayout.minTouchTarget)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("angle-checkbox")
@@ -152,21 +199,94 @@ struct ListAngleView: View {
             .accessibilityValue(item.isComplete ? "checked" : "unchecked")
             .accessibilityHint("Double-tap to \(item.isComplete ? "untick" : "tick") this item.")
             .accessibilityAddTraits(item.isComplete ? [.isButton, .isSelected] : .isButton)
-            // Drag-to-reorder is not VoiceOver-operable, so expose reorder as named
-            // actions on each item (D-033 accessibility).
             .accessibilityAction(named: "Move up") { moveItem(item.id, by: -1) }
             .accessibilityAction(named: "Move down") { moveItem(item.id, by: 1) }
+            .accessibilityAction(named: "Delete item") { deleteItem(item.id) }
 
-            // Reorder handle — List `.onMove` lifts the row on a long-press here,
-            // away from the tick button. Drag fidelity is on the on-device list.
+            // Item text — non-interactive; completed recedes by COLOUR only (no
+            // strikethrough), matching the normal Take view (`ckTextComplete`).
+            Text(item.text.isEmpty ? " " : item.text)
+                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .title3))
+                .foregroundStyle(item.isComplete ? Color.ckTextComplete : Color.ckTextPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .lineLimit(1)
+                .accessibilityHidden(true)
+
+            // Reorder handle — immediate vertical pan (shared with the inline editor),
+            // whose delegate makes the scroll's pan wait for it to fail. Horizontal
+            // drags on the handle fall through to the row's swipe (orthogonal axis).
             Image(systemName: "line.3.horizontal")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.ckTextSecondary.opacity(0.4))
+                .foregroundStyle(Color.ckTextSecondary.opacity(draggingID == item.id ? 0.9 : 0.4))
                 .frame(width: CatchlightLayout.minTouchTarget,
                        height: CatchlightLayout.minTouchTarget)
                 .contentShape(Rectangle())
+                .gesture(VerticalReorderGesture(
+                    onBegan: { beginReorder(item.id) },
+                    onChanged: { updateReorder(item.id, translationY: $0) },
+                    onEnded: { endReorder() }
+                ))
                 .accessibilityIdentifier("angle-reorder")
                 .accessibilityLabel("Reorder item")
         }
+    }
+
+    // MARK: - Mutations
+
+    private func toggle(_ id: UUID) {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
+            take.toggleItemComplete(blockID: id)
+        }
+    }
+
+    private func deleteItem(_ id: UUID) {
+        take.removeBlock(blockID: id)
+        // Never leave a Take with no blocks (an empty Take is invalid); keep one empty
+        // text line so it survives as a (now blank) note.
+        if take.blocks.isEmpty {
+            take.blocks = [.text(TextBlock(text: ""))]
+        }
+    }
+
+    /// VoiceOver-accessible reorder — swap the item with its neighbour.
+    private func moveItem(_ id: UUID, by offset: Int) {
+        guard let from = take.blocks.firstIndex(where: { $0.id == id }) else { return }
+        let to = from + offset
+        guard to >= 0, to < take.blocks.count else { return }
+        take.blocks.swapAt(from, to)
+    }
+
+    // MARK: - Reorder (driven by the UIKit immediate-pan recognizer)
+
+    private func beginReorder(_ id: UUID) {
+        draggingID = id
+        dragStartIndex = take.blocks.firstIndex { $0.id == id }
+        dragOffsetY = 0
+    }
+
+    private func updateReorder(_ id: UUID, translationY: CGFloat) {
+        dragOffsetY = translationY
+        guard let start = dragStartIndex else { return }
+        let proposed = start + Int((translationY / rowHeight).rounded())
+        let target = min(max(proposed, 0), take.blocks.count - 1)
+        guard let cur = take.blocks.firstIndex(where: { $0.id == id }), cur != target else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+            let b = take.blocks.remove(at: cur)
+            take.blocks.insert(b, at: target)
+        }
+    }
+
+    private func endReorder() {
+        withAnimation(.easeInOut(duration: 0.18)) {
+            dragOffsetY = 0
+            draggingID = nil
+            dragStartIndex = nil
+        }
+    }
+
+    private func dragVisualOffset(for id: UUID) -> CGFloat {
+        guard draggingID == id, let start = dragStartIndex,
+              let cur = take.blocks.firstIndex(where: { $0.id == id }) else { return 0 }
+        return dragOffsetY - CGFloat(cur - start) * rowHeight
     }
 }
