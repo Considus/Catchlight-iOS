@@ -516,19 +516,29 @@ struct PetalFanView: View {
                 // Dock-button language: background face + Ember@35% ring;
                 // active reverses (Ember fill + background glyph), exactly
                 // like the filter toggles.
+                // Explicit `.zIndex` pins fill < ring < glyph: toggling `active`
+                // recolours the fill AND the ring together, and without a pinned
+                // order SwiftUI could momentarily paint the fresh fill over the ring
+                // (the same repaint reshuffle fixed in TakeRowView — D-044,
+                // [[catchlight-take-colour-system]]).
                 Circle().fill(active ? Color.ckEmber : Color.ckBackground)
+                    .zIndex(0)
                 Circle().strokeBorder(
                     active ? Color.ckEmber : Color.ckEmber.opacity(0.35),
                     lineWidth: 1.5
                 )
-                if let symbol = kind.systemImage {
-                    Image(systemName: symbol)
-                        .font(.system(size: 20, weight: .light))   // scaled with the 36→44 Mark
-                        .foregroundStyle(active ? Color.ckBackground : Color.ckEmber)
-                } else {
-                    ObiePetalGlyph(size: 20)   // scaled with the 36→44 Mark, keeping the petal's tuned ratio (D-042)
-                        .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
+                .zIndex(1)
+                Group {
+                    if let symbol = kind.systemImage {
+                        Image(systemName: symbol)
+                            .font(.system(size: 20, weight: .light))   // scaled with the 36→44 Mark
+                            .foregroundStyle(active ? Color.ckBackground : Color.ckEmber)
+                    } else {
+                        ObiePetalGlyph(size: 20)   // scaled with the 36→44 Mark, keeping the petal's tuned ratio (D-042)
+                            .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
+                    }
                 }
+                .zIndex(2)
             }
             .frame(width: 44, height: 44)
             .frame(minWidth: CatchlightLayout.minTouchTarget,
