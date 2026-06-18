@@ -85,6 +85,26 @@ struct ObiePetalGlyph: View {
     }
 }
 
+/// The shared checklist checkbox glyph (owner 2026-06-18): a rounded SQUARE when
+/// open, a ticked CIRCLE when complete, about half the old size. Used by both the
+/// list Angle and the inline editor so the two never drift. The caller wraps it in
+/// the 44pt touch target / Button.
+struct TaskCheckbox: View {
+    let isComplete: Bool
+    var size: CGFloat = 19
+    var body: some View {
+        if isComplete {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: size + 1))
+                .foregroundStyle(Color.ckAccent)
+        } else {
+            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                .strokeBorder(Color.ckTextSecondary, lineWidth: 2)
+                .frame(width: size, height: size)
+        }
+    }
+}
+
 // MARK: - Device metrics environment
 
 /// The window's top safe-area inset, captured ONCE at the window root in

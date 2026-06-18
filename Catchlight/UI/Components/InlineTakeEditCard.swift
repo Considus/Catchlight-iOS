@@ -125,9 +125,9 @@ struct InlineTakeEditCard: View {
                 Button {
                     draft.toggleItemComplete(blockID: item.id)
                 } label: {
-                    Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 20))
-                        .foregroundStyle(item.isComplete ? Color.ckAccent : Color.ckTextSecondary)
+                    // Shared glyph (owner 2026-06-18): rounded square open / ticked
+                    // circle done — consistent with the list Angle.
+                    TaskCheckbox(isComplete: item.isComplete)
                         .frame(width: CatchlightLayout.minTouchTarget,
                                height: CatchlightLayout.minTouchTarget)
                         .contentShape(Rectangle())
