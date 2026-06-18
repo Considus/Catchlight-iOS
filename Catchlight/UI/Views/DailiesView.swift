@@ -1029,7 +1029,10 @@ struct DailiesView: View {
             let when = command.reminderDate
                 ?? d.timeReminder?.scheduledDate
                 ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-            d.timeReminder = TimeReminder(scheduledDate: when, notificationIdentifier: d.id.uuidString)
+            d.timeReminder = TimeReminder(scheduledDate: when,
+                                          notificationIdentifier: d.id.uuidString,
+                                          alarmEnabled: command.reminderAlarm,
+                                          isAllDay: command.reminderAllDay)
         } else {
             d.timeReminder = nil
         }

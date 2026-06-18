@@ -63,7 +63,9 @@ struct PetalFanView: View {
     /// context there, so no card to spotlight).
     var showsFocusCard: Bool = false
     /// `reminderDate` carries the time chosen in the picker (nil when no Reminder).
-    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ isObie: Bool) -> Void
+    /// `reminderAlarm` / `reminderAllDay` carry the model-C picker choices (owner
+    /// 2026-06-18) — undefined/ignored when `hasReminder` is false.
+    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ isObie: Bool) -> Void
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -83,6 +85,10 @@ struct PetalFanView: View {
     /// +24h default) and edited by the picker that pops when the Reminder Mark is
     /// tapped on (owner 2026-06-17).
     @State private var reminderDate: Date
+    /// Model-C picker choices (owner 2026-06-18): whether the "when" also rings, and
+    /// whether it's a date-only (all-day) placement. Seeded from any existing reminder.
+    @State private var reminderAlarm: Bool
+    @State private var reminderAllDay: Bool
     /// Drives the date/time picker sheet the Reminder Mark pops.
     @State private var showingReminderPicker = false
 
@@ -97,7 +103,7 @@ struct PetalFanView: View {
          hubCentre: CGPoint,
          containerWidth: CGFloat = 0,
          showsFocusCard: Bool = false,
-         onCommit: @escaping (Bool, Bool, Bool, Date?, Bool) -> Void,
+         onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, Bool) -> Void,
          onDismiss: @escaping () -> Void) {
         self.take = take
         self.hubCentre = hubCentre
@@ -110,6 +116,8 @@ struct PetalFanView: View {
         _hasReminder = State(initialValue: take.timeReminder != nil)
         _isObie = State(initialValue: take.isObie)
         _reminderDate = State(initialValue: take.timeReminder?.scheduledDate ?? Self.defaultReminderDate)
+        _reminderAlarm = State(initialValue: take.timeReminder?.alarmEnabled ?? true)
+        _reminderAllDay = State(initialValue: take.timeReminder?.isAllDay ?? false)
         _phase = State(initialValue: .opening(start: .now))
     }
 
@@ -310,6 +318,59 @@ struct PetalFanView: View {
     // MARK: - Body
 
     var body: some View {
+        ZStack {
+            fanContent
+            // The reminder "when" editor rides INSIDE the fan's own hierarchy, NOT a
+            // system `.sheet`. Presenting a sheet from within this Focus-ring overlay
+            // (itself a conditionally-rendered `.overlay` in RootView) left the ring
+            // wedged after the picker dismissed — the veil's commit tap went dead and
+            // the ring could not be closed, stranding the user (owner-reported lockup,
+            // 2026-06-18). A modal presented from inside such an overlay isn't reliably
+            // torn down by UIKit, so its gesture/first-responder state never restores.
+            // An in-hierarchy layer sidesteps that entirely.
+            if showingReminderPicker {
+                reminderPickerLayer
+                    .transition(.opacity)
+                    .zIndex(2)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showingReminderPicker)
+        .onAppear {
+            if reduceMotion { phase = .open }
+            else { phase = .opening(start: .now) }
+            // Settle into the static .open phase once the choreography ends so
+            // the TimelineView stops ticking.
+            DispatchQueue.main.asyncAfter(deadline: .now() + Choreo.total + 0.05) {
+                if case .opening = phase { phase = .open }
+            }
+        }
+    }
+
+    /// The reminder "when" editor, drawn as an opaque layer over the fan (see `body`
+    /// for why it is NOT a system sheet). Save/Cancel hide it by clearing
+    /// `showingReminderPicker`; `ReminderPickerSheet`'s own `dismiss()` is an inert
+    /// no-op in this in-place context, so these closures own the hide.
+    private var reminderPickerLayer: some View {
+        ReminderPickerSheet(
+            initialDate: reminderDate,
+            initialAlarm: reminderAlarm,
+            initialAllDay: reminderAllDay,
+            onSave: { date, alarm, allDay in
+                reminderDate = date
+                reminderAlarm = alarm
+                reminderAllDay = allDay
+                hasReminder = true
+                showingReminderPicker = false
+            },
+            onCancel: {
+                hasReminder = false
+                showingReminderPicker = false
+            }
+        )
+        .background(Color.ckBackground.ignoresSafeArea())
+    }
+
+    private var fanContent: some View {
         TimelineView(.animation(minimumInterval: nil, paused: !isAnimating)) { context in
             let now = context.date
             ZStack {
@@ -376,25 +437,6 @@ struct PetalFanView: View {
                 .accessibilityElement(children: .contain)
             }
         }
-        .onAppear {
-            if reduceMotion { phase = .open }
-            else { phase = .opening(start: .now) }
-            // Settle into the static .open phase once the choreography ends so
-            // the TimelineView stops ticking.
-            DispatchQueue.main.asyncAfter(deadline: .now() + Choreo.total + 0.05) {
-                if case .opening = phase { phase = .open }
-            }
-        }
-        // The Reminder Mark pops the standard iOS date/time picker (owner 2026-06-17).
-        // Done keeps the Reminder at the chosen time; Cancel removes it entirely
-        // (tapping the Mark on was the only commitment, so backing out clears it).
-        .sheet(isPresented: $showingReminderPicker) {
-            ReminderPickerSheet(
-                initialDate: reminderDate,
-                onSave: { reminderDate = $0; hasReminder = true },
-                onCancel: { hasReminder = false }
-            )
-        }
     }
 
     /// A synthetic Take reflecting the working selection, so the hub circle
@@ -405,7 +447,10 @@ struct PetalFanView: View {
         t.setTask(isTask)
         t.isObie = isObie
         if hasReminder {
-            t.timeReminder = TimeReminder(scheduledDate: reminderDate, notificationIdentifier: t.id.uuidString)
+            t.timeReminder = TimeReminder(scheduledDate: reminderDate,
+                                          notificationIdentifier: t.id.uuidString,
+                                          alarmEnabled: reminderAlarm,
+                                          isAllDay: reminderAllDay)
         } else {
             t.timeReminder = nil
         }
@@ -496,59 +541,179 @@ struct PetalFanView: View {
 
     private func finish(commit: Bool) {
         if commit {
-            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, isObie)
+            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, reminderAlarm, reminderAllDay, isObie)
         } else {
             onDismiss()
         }
     }
 }
 
-/// A standard iOS date/time picker presented as a sheet — the Reminder time editor.
-/// Popped by the Focus-ring's Reminder Mark (set the time at creation) and reused by
-/// the Take editor's reminder row to change it later (owner 2026-06-17). Purely a
-/// time chooser: the caller owns what Save/Cancel mean for its own state.
+/// The Reminder "when" editor — model C (owner 2026-06-18). A "when" is a scheduled
+/// date with two selectable properties: whether it ALSO rings (`alarm`) and whether
+/// it's a date-only placement (`allDay`). Popped by the Focus-ring's Reminder Mark
+/// (set the "when" at creation) and reusable to change it later. The caller owns what
+/// Save/Cancel mean for its own state (the Focus ring uses Cancel to REMOVE a
+/// just-added reminder).
+///
+/// LAYOUT (owner 2026-06-18): quick presets → options (all-day + alarm) → calendar.
+/// The actionable controls sit ABOVE the bulky calendar so they're always visible;
+/// the calendar — self-evidently a calendar — is what scrolls partially off-screen,
+/// never the toggles. All dates come from `Calendar`/style-based formatters, so the
+/// picker follows the user's Region (DD/MM vs MM/DD) and 12/24-hour preference.
 struct ReminderPickerSheet: View {
     let initialDate: Date
-    let onSave: (Date) -> Void
+    let onSave: (_ date: Date, _ alarm: Bool, _ allDay: Bool) -> Void
     /// Optional — the Focus-ring uses Cancel to REMOVE a just-added reminder; the
     /// editor leaves it nil (Cancel keeps the existing time untouched).
     var onCancel: () -> Void = {}
 
     @State private var date: Date
+    @State private var alarm: Bool
+    @State private var allDay: Bool
     @Environment(\.dismiss) private var dismiss
 
-    init(initialDate: Date, onSave: @escaping (Date) -> Void, onCancel: @escaping () -> Void = {}) {
+    init(initialDate: Date,
+         initialAlarm: Bool = true,
+         initialAllDay: Bool = false,
+         onSave: @escaping (Date, Bool, Bool) -> Void,
+         onCancel: @escaping () -> Void = {}) {
         self.initialDate = initialDate
         self.onSave = onSave
         self.onCancel = onCancel
         _date = State(initialValue: initialDate)
+        _alarm = State(initialValue: initialAlarm)
+        _allDay = State(initialValue: initialAllDay)
+    }
+
+    /// Quick "when" presets — one tap fills the calendar below. All computed from
+    /// `Calendar.current` (no hardcoded formats), evening at 18:00, the rest at the
+    /// scheduler's all-day fire hour so an alarm lands at a sensible time of day.
+    private enum Preset: String, CaseIterable, Identifiable {
+        case thisEvening = "This evening"
+        case tomorrow    = "Tomorrow"
+        case thisWeekend = "This weekend"
+        case nextWeek    = "Next week"
+        var id: String { rawValue }
+
+        func date(now: Date, calendar: Calendar) -> Date {
+            let morning = ReminderScheduler.allDayFireHour
+            switch self {
+            case .thisEvening:
+                // 18:00 today, or tomorrow evening if it's already past.
+                let today6 = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: now) ?? now
+                return today6 > now ? today6
+                    : (calendar.date(byAdding: .day, value: 1, to: today6) ?? today6)
+            case .tomorrow:
+                let next = calendar.date(byAdding: .day, value: 1, to: now) ?? now
+                return calendar.date(bySettingHour: morning, minute: 0, second: 0, of: next) ?? next
+            case .thisWeekend:
+                let sat = Self.nextWeekday(7, after: now, calendar: calendar)   // Saturday
+                return calendar.date(bySettingHour: morning, minute: 0, second: 0, of: sat) ?? sat
+            case .nextWeek:
+                let mon = Self.nextWeekday(2, after: now, calendar: calendar)   // Monday
+                return calendar.date(bySettingHour: morning, minute: 0, second: 0, of: mon) ?? mon
+            }
+        }
+
+        /// The next occurrence of `weekday` (1 = Sunday … 7 = Saturday) strictly after
+        /// `date`, ignoring the time of day.
+        private static func nextWeekday(_ weekday: Int, after date: Date, calendar: Calendar) -> Date {
+            var comps = DateComponents()
+            comps.weekday = weekday
+            return calendar.nextDate(after: date, matching: comps,
+                                     matchingPolicy: .nextTime) ?? date
+        }
     }
 
     var body: some View {
         NavigationStack {
-            // Scrollable so every element (calendar AND the time row beneath it) is
-            // always reachable regardless of sheet height — owner 2026-06-17: at the
-            // half-height detent the graphical calendar pushed the time off-screen.
             ScrollView {
-                DatePicker("Remind me", selection: $date)
-                    .datePickerStyle(.graphical)
-                    .labelsHidden()
-                    .padding()
+                VStack(alignment: .leading, spacing: 20) {
+                    presetsSection
+                    optionsSection
+                    calendarSection
+                }
+                .padding()
             }
-            .navigationTitle("Remind me")
+            .navigationTitle("When")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { onCancel(); dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { onSave(date); dismiss() }
+                    Button("Done") { onSave(date, alarm, allDay); dismiss() }
                 }
             }
         }
-        // Open at full height so the whole picker is visible at once (the half-height
-        // detent clipped the time selector).
+        // Open at full height so the controls + as much calendar as fits are visible.
         .presentationDetents([.large])
+    }
+
+    // MARK: - Sections
+
+    private var presetsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionLabel("Quick set")
+            // Two columns at this width — chips wrap rather than scroll, so all four
+            // presets are visible at once.
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(Preset.allCases) { preset in
+                    Button { date = preset.date(now: Date(), calendar: .current) } label: {
+                        Text(preset.rawValue)
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.ckSurface, in: Capsule())
+                            .overlay(Capsule().strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .accessibilityIdentifier("reminder-preset-\(preset.rawValue)")
+                }
+            }
+        }
+    }
+
+    private var optionsSection: some View {
+        VStack(spacing: 0) {
+            Toggle(isOn: $allDay) {
+                Label("All-day", systemImage: "calendar")
+            }
+            .accessibilityIdentifier("reminder-allday-toggle")
+            .padding(.vertical, 6)
+
+            Divider()
+
+            Toggle(isOn: $alarm) {
+                Label("Alarm", systemImage: alarm ? "bell.fill" : "bell")
+            }
+            .accessibilityIdentifier("reminder-alarm-toggle")
+            .padding(.vertical, 6)
+        }
+        .tint(Color.ckEmber)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 4)
+        .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var calendarSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // All-day collapses the time row: a date-only "when" has no meaningful time.
+            DatePicker("When",
+                       selection: $date,
+                       displayedComponents: allDay ? [.date] : [.date, .hourAndMinute])
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .tint(Color.ckEmber)
+        }
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text.uppercased())
+            .font(.caption2)
+            .tracking(0.6)
+            .foregroundStyle(Color.ckTextSecondary)
     }
 }
 
@@ -557,7 +722,7 @@ struct ReminderPickerSheet: View {
         PetalFanView(
             take: Take(blocks: [.checkItem("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _, _ in },
+            onCommit: { _, _, _, _, _, _, _ in },
             onDismiss: {}
         )
     }
@@ -570,7 +735,7 @@ struct ReminderPickerSheet: View {
         PetalFanView(
             take: Take(blocks: [.textLine("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _, _ in },
+            onCommit: { _, _, _, _, _, _, _ in },
             onDismiss: {}
         )
     }

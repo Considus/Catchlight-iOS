@@ -85,6 +85,9 @@ final class UIState {
         let hasReminder: Bool
         /// The time chosen in the Reminder picker (nil when no Reminder).
         let reminderDate: Date?
+        /// Model-C picker choices (owner 2026-06-18) — ignored when `hasReminder` is false.
+        let reminderAlarm: Bool
+        let reminderAllDay: Bool
         let isObie: Bool
     }
 

@@ -49,6 +49,12 @@ public final class ReminderScheduler {
     public static let categoryIdentifier = "TAKE_REMINDER"
     static let logger = Logger(subsystem: "com.considus.catchlight", category: "reminders")
 
+    /// The time of day an ALL-DAY reminder's alarm fires (model C, owner 2026-06-18).
+    /// An all-day "when" has no meaningful time component, so when its alarm is on the
+    /// scheduler substitutes this hour rather than firing at the stored (midnight-ish)
+    /// time. 9am — a morning nudge for "today"-type items.
+    public static let allDayFireHour = 9
+
     private let center: NotificationScheduling
     private let now: () -> Date
 
@@ -85,7 +91,18 @@ public final class ReminderScheduler {
         // Model C (owner 2026-06-18): a "when" only fires a notification when its alarm
         // is enabled. A silent (planner-only) reminder schedules nothing.
         guard reminder.alarmEnabled else { return }
-        guard reminder.scheduledDate > now() else {
+
+        // An all-day "when" has no meaningful time component — fire at the default
+        // hour instead of the stored (effectively-midnight) time (model C). The
+        // past-date guard and the trigger both use this resolved instant.
+        let fireDate: Date = {
+            guard reminder.isAllDay else { return reminder.scheduledDate }
+            return Calendar.current.date(bySettingHour: Self.allDayFireHour,
+                                         minute: 0, second: 0,
+                                         of: reminder.scheduledDate) ?? reminder.scheduledDate
+        }()
+
+        guard fireDate > now() else {
             Self.logger.warning("Refusing to schedule a past-dated reminder (id \(reminder.notificationIdentifier, privacy: .public))")
             return
         }
@@ -98,7 +115,7 @@ public final class ReminderScheduler {
 
         var components = Calendar.current.dateComponents(
             [.year, .month, .day, .hour, .minute],
-            from: reminder.scheduledDate
+            from: fireDate
         )
         components.timeZone = TimeZone.current   // pin: absolute-instant semantics
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
