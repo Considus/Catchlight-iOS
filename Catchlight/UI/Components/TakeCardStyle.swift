@@ -30,6 +30,13 @@ import SwiftUI
 import CatchlightCore
 
 struct TakeCardStyle {
+    /// The card's border stroke width — one knob, shared by `TakeCardSurface` and the
+    /// inline editor so they can't drift. 0.75pt (owner 2026-06-18: halved from 1.5pt
+    /// to make the state colour a subtle HINT of an edge rather than an objective
+    /// border). The invisible note border reserves this same width so all cards stay
+    /// one size.
+    static let borderWidth: CGFloat = 0.75
+
     /// Card background fill.
     let surface: Color
     /// 1.5pt stroke colour (equals `surface` when the card has no visible border).

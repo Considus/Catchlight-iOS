@@ -418,7 +418,7 @@ struct TakeCardSurface: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(style.border, lineWidth: 1.5)
+                .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
         )
     }
 }
