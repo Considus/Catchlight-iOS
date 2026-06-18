@@ -208,51 +208,34 @@ struct BlockTextEditor: UIViewRepresentable {
 
         // MARK: - Editing toolbar (inputAccessoryView)
 
-        weak var importantItem: UIBarButtonItem?
-        weak var angleItem: UIBarButtonItem?
+        /// Hosts the SwiftUI `EditorKeyboardBar` so the toolbar matches the dock's
+        /// styling (Ember-ringed buttons + faded background) rather than a plain UIKit
+        /// toolbar (owner 2026-06-19). Retained here for the keyboard's lifetime.
+        var toolbarHost: UIHostingController<EditorKeyboardBar>?
 
-        /// The editing toolbar: dismiss · Important · Angle (shopping bag) · Search,
-        /// evenly spaced (owner 2026-06-18). Dismiss reuses the grabber's focus-clear;
-        /// the others fire the `EditorToolbarConfig` callbacks.
-        func makeEditingToolbar() -> UIToolbar {
-            let tb = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
-            tb.autoresizingMask = [.flexibleWidth]
-            tb.isTranslucent = false
-            tb.barTintColor = UIColor(Color.ckBackground)
-            tb.tintColor = UIColor(Color.ckAccent)
-            let dismiss = UIBarButtonItem(image: UIImage(systemName: "chevron.down"),
-                                          style: .plain, target: self, action: #selector(dismissKeyboard))
-            dismiss.accessibilityLabel = "Close keyboard"
-            let important = UIBarButtonItem(image: UIImage(systemName: "exclamationmark.circle"),
-                                            style: .plain, target: self, action: #selector(tappedImportant))
-            important.accessibilityLabel = "Important"
-            let angle = UIBarButtonItem(image: UIImage(systemName: "bag"),
-                                        style: .plain, target: self, action: #selector(tappedAngle))
-            angle.accessibilityLabel = "Open as list"
-            angle.accessibilityIdentifier = "angle-button"   // preserves the (skipped) Angle UITest
-            let search = UIBarButtonItem(image: UIImage(systemName: "magnifyingglass"),
-                                         style: .plain, target: self, action: #selector(tappedSearch))
-            search.accessibilityLabel = "Search"
-            func flex() -> UIBarButtonItem { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
-            importantItem = important
-            angleItem = angle
-            tb.items = [dismiss, flex(), important, flex(), angle, flex(), search]
-            refreshToolbar()
-            return tb
+        /// Build the dock-styled bar as the keyboard's `inputAccessoryView`. Height =
+        /// 44pt circle + 10/8 padding.
+        func makeEditingToolbar() -> UIView {
+            let host = UIHostingController(rootView: editorBar())
+            host.view.backgroundColor = .clear
+            host.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 62)
+            host.view.autoresizingMask = [.flexibleWidth]
+            toolbarHost = host
+            return host.view
         }
 
-        /// Reflect the live Take state: Important glyph stays the same shape, its
-        /// TINT reads the state (owner "glyph remains"); the Angle button greys out
-        /// when no Angle applies.
+        /// Re-render the bar from the live config (Important tint, Angle enablement).
         func refreshToolbar() {
-            guard let cfg = parent.toolbar else { return }
-            importantItem?.tintColor = UIColor(cfg.isImportant ? Color.ckEmber : Color.ckTextSecondary)
-            angleItem?.isEnabled = cfg.angleEnabled
+            toolbarHost?.rootView = editorBar()
         }
 
-        @objc func tappedImportant() { parent.toolbar?.onToggleImportant() }
-        @objc func tappedAngle() { parent.toolbar?.onOpenAngle() }
-        @objc func tappedSearch() { parent.toolbar?.onSearch() }
+        private func editorBar() -> EditorKeyboardBar {
+            EditorKeyboardBar(
+                config: parent.toolbar ?? .init(isImportant: false, angleEnabled: false,
+                                                onToggleImportant: {}, onOpenAngle: {}, onSearch: {}),
+                onDismiss: { [weak self] in self?.dismissKeyboard() }
+            )
+        }
 
         func textViewDidChange(_ tv: UITextView) {
             parent.text = tv.text
