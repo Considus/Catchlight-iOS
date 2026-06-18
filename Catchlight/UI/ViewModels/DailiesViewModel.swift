@@ -180,6 +180,17 @@ final class DailiesViewModel {
         save(updated)
     }
 
+    /// Toggle the WHOLE Take done/not-done — Tasks AND reminders (owner 2026-06-18,
+    /// [[catchlight-take-colour-system]]). One "Mark as done" ticks every item and
+    /// flips any reminder's `isDone`, so a Take that is both settles in one move; the
+    /// card then reads the done grey. The reminder-done state is otherwise unreachable.
+    func toggleDone(_ take: Take) {
+        guard take.isTask || take.timeReminder != nil else { return }
+        var updated = take
+        updated.setMarkedDone(!take.isMarkedDone)
+        save(updated)
+    }
+
     // MARK: - Activity-type toggles (petal fan applies these)
 
     /// Apply the petal-fan selection to a Take, enforcing the Note floor.

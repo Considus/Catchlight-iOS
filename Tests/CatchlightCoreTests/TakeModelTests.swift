@@ -70,6 +70,39 @@ final class TakeModelTests: XCTestCase {
                       "interleaved prose doesn't affect completion")
     }
 
+    func testTake_isMarkedDone_acrossTaskAndReminder() {
+        // A plain note is never "done".
+        XCTAssertFalse(Take(blocks: [.textLine("just a thought")]).isMarkedDone)
+        // Task: done only when every item is ticked.
+        XCTAssertFalse(Take(blocks: [.checkItem("a"), .checkItem("b", isComplete: true)]).isMarkedDone)
+        XCTAssertTrue(Take(blocks: [.checkItem("a", isComplete: true)]).isMarkedDone)
+        // Reminder: tracks isDone.
+        var rem = Take(blocks: [.textLine("call back")])
+        rem.timeReminder = TimeReminder(scheduledDate: Date(), notificationIdentifier: "x")
+        XCTAssertFalse(rem.isMarkedDone, "an active reminder is not done")
+        rem.timeReminder?.isDone = true
+        XCTAssertTrue(rem.isMarkedDone)
+        // Both a Task AND a reminder ⇒ done needs both settled.
+        var both = Take(blocks: [.checkItem("a", isComplete: true)])
+        both.timeReminder = TimeReminder(scheduledDate: Date(), notificationIdentifier: "y")
+        XCTAssertFalse(both.isMarkedDone, "items ticked but reminder still open ⇒ not done")
+        both.timeReminder?.isDone = true
+        XCTAssertTrue(both.isMarkedDone)
+    }
+
+    func testTake_setMarkedDone_settlesItemsAndReminderTogether() {
+        var t = Take(blocks: [.checkItem("a"), .checkItem("b")])
+        t.timeReminder = TimeReminder(scheduledDate: Date(), notificationIdentifier: "z")
+        t.setMarkedDone(true)
+        XCTAssertTrue(t.isComplete, "every item ticked")
+        XCTAssertEqual(t.timeReminder?.isDone, true, "reminder flipped done")
+        XCTAssertTrue(t.isMarkedDone)
+        t.setMarkedDone(false)
+        XCTAssertFalse(t.isComplete)
+        XCTAssertEqual(t.timeReminder?.isDone, false)
+        XCTAssertFalse(t.isMarkedDone)
+    }
+
     func testTake_plainText_joinsProseAndItemLabels() {
         let take = Take(blocks: [.textLine("Shopping"),
                                  .checkItem("milk"),

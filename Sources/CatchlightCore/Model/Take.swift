@@ -331,6 +331,26 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         }
     }
 
+    /// Whether the Take reads as "done" — drives the card's grey border + grey text
+    /// (D-044, [[catchlight-take-colour-system]]) and the long-press "Mark as done"
+    /// toggle. A Take is done when every actionable marker it carries is settled: a
+    /// Task with all items ticked AND/OR a reminder marked `isDone`. Only meaningful
+    /// for a Take that IS a Task or has a reminder (a plain Note is never "done").
+    public var isMarkedDone: Bool {
+        guard isTask || timeReminder != nil else { return false }
+        let taskDone = !isTask || isComplete
+        let reminderDone = timeReminder?.isDone ?? true
+        return taskDone && reminderDone
+    }
+
+    /// Mark the WHOLE Take done / not-done in one move (owner 2026-06-18): ticks or
+    /// unticks every check item and flips any reminder's `isDone`, so a single
+    /// "Mark as done" settles a Take that is both a Task and a reminder.
+    public mutating func setMarkedDone(_ done: Bool) {
+        if isTask { setAllItemsComplete(done) }
+        if timeReminder != nil { timeReminder?.isDone = done }
+    }
+
     // MARK: - Codable (explicit so future fields can carry decoding defaults)
 
     enum CodingKeys: String, CodingKey {

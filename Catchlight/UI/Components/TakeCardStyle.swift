@@ -48,10 +48,7 @@ struct TakeCardStyle {
             guard let r = take.timeReminder else { return false }
             return !r.isDone && r.scheduledDate < now
         }()
-        let done: Bool = {
-            if let r = take.timeReminder, r.isDone { return true }
-            return take.isTask && take.isComplete
-        }()
+        let done = take.isMarkedDone
 
         let surfaceColor: Color = take.isImportant ? .ckCardObieSurface : .ckSurface
         self.surface = surfaceColor
