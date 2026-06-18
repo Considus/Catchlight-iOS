@@ -112,6 +112,11 @@ public final class ReminderScheduler {
         content.body = String(take.plainText.prefix(100))
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier
+        // Time Sensitive (owner 2026-06-18): a reminder the user explicitly set should
+        // break through Focus / Do Not Disturb and the Scheduled Summary, like Apple's
+        // Reminders. Requires the matching entitlement (see project.yml). If the alarm
+        // is off we never get here (guarded above), so only real alarms are elevated.
+        content.interruptionLevel = .timeSensitive
 
         var components = Calendar.current.dateComponents(
             [.year, .month, .day, .hour, .minute],
