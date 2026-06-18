@@ -318,6 +318,59 @@ struct PetalFanView: View {
     // MARK: - Body
 
     var body: some View {
+        ZStack {
+            fanContent
+            // The reminder "when" editor rides INSIDE the fan's own hierarchy, NOT a
+            // system `.sheet`. Presenting a sheet from within this Focus-ring overlay
+            // (itself a conditionally-rendered `.overlay` in RootView) left the ring
+            // wedged after the picker dismissed — the veil's commit tap went dead and
+            // the ring could not be closed, stranding the user (owner-reported lockup,
+            // 2026-06-18). A modal presented from inside such an overlay isn't reliably
+            // torn down by UIKit, so its gesture/first-responder state never restores.
+            // An in-hierarchy layer sidesteps that entirely.
+            if showingReminderPicker {
+                reminderPickerLayer
+                    .transition(.opacity)
+                    .zIndex(2)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showingReminderPicker)
+        .onAppear {
+            if reduceMotion { phase = .open }
+            else { phase = .opening(start: .now) }
+            // Settle into the static .open phase once the choreography ends so
+            // the TimelineView stops ticking.
+            DispatchQueue.main.asyncAfter(deadline: .now() + Choreo.total + 0.05) {
+                if case .opening = phase { phase = .open }
+            }
+        }
+    }
+
+    /// The reminder "when" editor, drawn as an opaque layer over the fan (see `body`
+    /// for why it is NOT a system sheet). Save/Cancel hide it by clearing
+    /// `showingReminderPicker`; `ReminderPickerSheet`'s own `dismiss()` is an inert
+    /// no-op in this in-place context, so these closures own the hide.
+    private var reminderPickerLayer: some View {
+        ReminderPickerSheet(
+            initialDate: reminderDate,
+            initialAlarm: reminderAlarm,
+            initialAllDay: reminderAllDay,
+            onSave: { date, alarm, allDay in
+                reminderDate = date
+                reminderAlarm = alarm
+                reminderAllDay = allDay
+                hasReminder = true
+                showingReminderPicker = false
+            },
+            onCancel: {
+                hasReminder = false
+                showingReminderPicker = false
+            }
+        )
+        .background(Color.ckBackground.ignoresSafeArea())
+    }
+
+    private var fanContent: some View {
         TimelineView(.animation(minimumInterval: nil, paused: !isAnimating)) { context in
             let now = context.date
             ZStack {
@@ -383,32 +436,6 @@ struct PetalFanView: View {
                 .position(hubCentre)
                 .accessibilityElement(children: .contain)
             }
-        }
-        .onAppear {
-            if reduceMotion { phase = .open }
-            else { phase = .opening(start: .now) }
-            // Settle into the static .open phase once the choreography ends so
-            // the TimelineView stops ticking.
-            DispatchQueue.main.asyncAfter(deadline: .now() + Choreo.total + 0.05) {
-                if case .opening = phase { phase = .open }
-            }
-        }
-        // The Reminder Mark pops the standard iOS date/time picker (owner 2026-06-17).
-        // Done keeps the Reminder at the chosen time; Cancel removes it entirely
-        // (tapping the Mark on was the only commitment, so backing out clears it).
-        .sheet(isPresented: $showingReminderPicker) {
-            ReminderPickerSheet(
-                initialDate: reminderDate,
-                initialAlarm: reminderAlarm,
-                initialAllDay: reminderAllDay,
-                onSave: { date, alarm, allDay in
-                    reminderDate = date
-                    reminderAlarm = alarm
-                    reminderAllDay = allDay
-                    hasReminder = true
-                },
-                onCancel: { hasReminder = false }
-            )
         }
     }
 
