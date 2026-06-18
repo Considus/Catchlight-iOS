@@ -1131,16 +1131,18 @@ struct DailiesView: View {
             // unreachable. The row exposes both via a context menu on its text
             // column (kept off the circle so the Obie long-press still wins).
             onToggleComplete: {
+                // Unified "mark done" — Tasks AND reminders (2026-06-18). Settles the
+                // whole Take (ticks items + flips reminder isDone) via setMarkedDone.
                 // While editing, apply to the live draft so it rides the save; at
-                // rest, toggle through the store as before.
+                // rest, toggle through the store.
                 if isEditingThis {
                     guard var d = editDraft else { return }
-                    d.setAllItemsComplete(!d.isComplete)
+                    d.setMarkedDone(!d.isMarkedDone)
                     editDraft = d
                     return
                 }
                 guard app.ensureEntitled() else { return }
-                vm.toggleComplete(take)
+                vm.toggleDone(take)
             },
             onDelete: {
                 guard app.ensureEntitled() else { return }

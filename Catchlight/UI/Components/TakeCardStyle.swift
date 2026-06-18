@@ -30,6 +30,13 @@ import SwiftUI
 import CatchlightCore
 
 struct TakeCardStyle {
+    /// The card's border stroke width — one knob, shared by `TakeCardSurface` and the
+    /// inline editor so they can't drift. 0.75pt (owner 2026-06-18: halved from 1.5pt
+    /// to make the state colour a subtle HINT of an edge rather than an objective
+    /// border). The invisible note border reserves this same width so all cards stay
+    /// one size.
+    static let borderWidth: CGFloat = 0.75
+
     /// Card background fill.
     let surface: Color
     /// 1.5pt stroke colour (equals `surface` when the card has no visible border).
@@ -48,10 +55,7 @@ struct TakeCardStyle {
             guard let r = take.timeReminder else { return false }
             return !r.isDone && r.scheduledDate < now
         }()
-        let done: Bool = {
-            if let r = take.timeReminder, r.isDone { return true }
-            return take.isTask && take.isComplete
-        }()
+        let done = take.isMarkedDone
 
         let surfaceColor: Color = take.isImportant ? .ckCardObieSurface : .ckSurface
         self.surface = surfaceColor
