@@ -58,11 +58,14 @@ struct SwipeActionRow<Content: View>: View {
     /// How far the fill tucks UNDER the card (≈ the card corner radius) so the card
     /// masks its inner edge and the boundary is the card's rounded corner.
     var tuckUnder: CGFloat = 12
+    /// Card slide that settles "open" (the resting static-button width). Default 42
+    /// (timeline, owner 2026-06-16); the list Angle passes a larger value (owner
+    /// 2026-06-18: the resting Delete button read too small there).
+    var actionWidth: CGFloat = 42
     /// Receives the live horizontal offset; the caller applies it to the CARD only.
     @ViewBuilder var content: (CGFloat) -> Content
 
     // MARK: Tunables (device review may nudge these)
-    private let actionWidth: CGFloat = 42            // card slide that settles "open" (owner 2026-06-16: halved 84→42 for a smaller button)
     private let revealSnapFraction: CGFloat = 0.55   // settle open past this × actionWidth
     private let commitFraction: CGFloat = 0.5        // full-swipe commit past this × row width
     /// The fill fades 0→1 over the first `fadeInDistance` pt of swipe, so the card's

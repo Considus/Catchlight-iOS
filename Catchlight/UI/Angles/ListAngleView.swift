@@ -53,53 +53,47 @@ struct ListAngleView: View {
     private let rowTrailingInset: CGFloat = 16
 
     var body: some View {
-        ZStack(alignment: .top) {
-            Color.ckBackground.ignoresSafeArea()
-            itemList
-            topFade
-            closeBar
-        }
-        // NOTE: no `.accessibilityIdentifier` on this container — SwiftUI merges a
+        // The chrome is a `.safeAreaInset` top band — an OPAQUE X-row + a 12pt fade —
+        // exactly like the Dailies heading (owner 2026-06-18). Content scrolls UNDER
+        // the opaque band (so it's truly masked, not just behind a translucent gradient
+        // that let it peek above), and the 12pt gradient softens the dissolve edge.
+        itemList
+            .background(Color.ckBackground.ignoresSafeArea())
+            .safeAreaInset(edge: .top, spacing: 0) { topChrome }
+        // NOTE: no `.accessibilityIdentifier` on the container — SwiftUI merges a
         // container identifier onto shallow children. The per-element ids
         // ("angle-close" / "angle-checkbox" / "angle-reorder") are the contract.
     }
 
-    // MARK: - Chrome (fullscreen, Dailies-style: a top fade + an X; scroll-only, no
-    // sheet grabber — owner 2026-06-18)
+    // MARK: - Chrome (fullscreen, Dailies-style mask: opaque band + 12pt fade + an X;
+    // scroll-only, no sheet grabber — owner 2026-06-18)
 
-    /// A soft page-coloured fade at the very top so items dissolve as they scroll up
-    /// under the close bar — the same "no-Obie" top treatment as the Dailies timeline,
-    /// rather than a hard sheet edge.
-    private var topFade: some View {
-        // Sits at the TOP SAFE-AREA edge (below the Dynamic Island), matching the
-        // Dailies heading-fade level — NOT `ignoresSafeArea` (that pushed it up level
-        // with the island, owner 2026-06-18). Items dissolve under the close bar.
-        LinearGradient(
-            colors: [Color.ckBackground, Color.ckBackground, Color.ckBackground.opacity(0)],
-            startPoint: .top, endPoint: .bottom
-        )
-        .frame(height: 64)
-        .frame(maxWidth: .infinity)
-        .allowsHitTesting(false)
-    }
-
-    private var closeBar: some View {
-        HStack {
-            Spacer()
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color.ckTextSecondary)
-                    .frame(width: CatchlightLayout.minTouchTarget,
-                           height: CatchlightLayout.minTouchTarget)
-                    .contentShape(Rectangle())
+    private var topChrome: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .frame(width: CatchlightLayout.minTouchTarget,
+                               height: CatchlightLayout.minTouchTarget)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("angle-close")
+                .accessibilityLabel("Close list")
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("angle-close")
-            .accessibilityLabel("Close list")
+            .padding(.horizontal, 12)
+            .padding(.top, 4)
+            .background(Color.ckBackground)   // OPAQUE — content scrolls under and is hidden
+            // The soft dissolve edge (matches the Dailies no-Obie heading fade).
+            LinearGradient(
+                colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 12)
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 4)
     }
 
     // MARK: - The list (ScrollView + LazyVStack so the UIKit reorder/swipe recognizers
@@ -116,8 +110,7 @@ struct ListAngleView: View {
                         .zIndex(draggingID == block.id ? 1 : 0)
                 }
             }
-            // Clear the close bar / top fade.
-            .padding(.top, CatchlightLayout.minTouchTarget + 8)
+            .padding(.top, 4)
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)   // owner 2026-06-18: no scrollbar
@@ -160,7 +153,8 @@ struct ListAngleView: View {
                 leadingInset: 0,
                 trailingInset: 0,
                 contentVerticalInset: 0,
-                tuckUnder: 0
+                tuckUnder: 0,
+                actionWidth: 60   // owner 2026-06-18: the resting Delete button read too small at 42
             ) { offset in
                 // Full-bleed, OPAQUE row (page-coloured) so the whole 56pt band is
                 // hit-testable for the swipe pan (the timeline relies on the opaque
@@ -176,6 +170,12 @@ struct ListAngleView: View {
                     .contentShape(Rectangle())
                     .offset(x: offset)
             }
+            // Clamp the WHOLE swipe row to the fixed height: the action fill is
+            // `maxHeight: .infinity`, so without this it stretched the row taller the
+            // moment it appeared (the "double-height / neighbours jump" — owner
+            // 2026-06-18, the same class we fixed on Dailies). Clamping the ZStack
+            // bounds the fill to the row height.
+            .frame(height: rowHeight)
         }
     }
 

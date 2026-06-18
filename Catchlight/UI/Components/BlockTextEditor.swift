@@ -116,7 +116,9 @@ struct BlockTextEditor: UIViewRepresentable {
     }
 
     private func applyStyle(to tv: BackspaceTextView) {
-        tv.textColor = UIColor(isComplete ? Color.ckTextSecondary : Color.ckTextPrimary)
+        // Completed check items recede via the shared `ckTextComplete` (owner 2026-06-18
+        // — was `ckTextSecondary`, so the editor didn't match the Angle / timeline).
+        tv.textColor = UIColor(isComplete ? Color.ckTextComplete : Color.ckTextPrimary)
         tv.tintColor = UIColor(Color.ckAccent)
     }
 
