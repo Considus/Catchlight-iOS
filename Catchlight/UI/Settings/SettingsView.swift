@@ -30,7 +30,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey) private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
     @AppStorage(SettingsViewModel.TakeSort.defaultsKey) private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
     @AppStorage(SettingsViewModel.TakePreview.defaultsKey) private var takePreviewRaw: String = SettingsViewModel.TakePreview.default.rawValue
-    @AppStorage(SettingsViewModel.DefaultReminderWhen.defaultsKey) private var defaultReminderWhenRaw: String = SettingsViewModel.DefaultReminderWhen.default.rawValue
+    @AppStorage(SettingsViewModel.DefaultReminderHours.defaultsKey) private var defaultReminderHoursRaw: String = SettingsViewModel.DefaultReminderHours.default.rawValue
 
     @State private var vm = SettingsViewModel()
 
@@ -307,45 +307,43 @@ struct SettingsView: View {
 
     private var remindersSection: some View {
         Section {
-            // The "when" a freshly-added reminder opens to (owner 2026-06-18). Menu
-            // picker (labels too long for a segmented control); mirrors the Lock-after
-            // row's style. `PetalFanView.defaultReminderDate` reads the same key.
+            // How many hours ahead a freshly-added reminder opens to (owner 2026-06-18).
+            // Segmented control like the View/Order rows — the labels are short numbers.
+            // `PetalFanView.defaultReminderDate` reads the same key.
             HStack(spacing: 14) {
-                Image(systemName: "bell.badge")
+                Image(systemName: "clock")
                     .font(.system(size: 20, weight: .regular))
                     .foregroundStyle(Color.ckAccent)
                     .frame(width: 26)
                     .accessibilityHidden(true)
-                Text("Default when")
+                Text("Default timing (hrs)")
                     .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
                     .foregroundStyle(Color.ckTextPrimary)
                 Spacer()
-                Picker("Default when", selection: defaultReminderWhenBinding) {
-                    ForEach(SettingsViewModel.DefaultReminderWhen.allCases) { option in
+                Picker("Default timing", selection: defaultReminderHoursBinding) {
+                    ForEach(SettingsViewModel.DefaultReminderHours.allCases) { option in
                         Text(option.label).tag(option)
                     }
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .tint(Color.ckTextSecondary)
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 220)
+                .accessibilityLabel("Default reminder timing in hours")
             }
             .frame(height: 52)
             .listRowBackground(Color.ckSurface)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Default reminder when, \(defaultReminderWhenBinding.wrappedValue.label)")
         } header: {
             sectionHeader("Reminders")
         } footer: {
-            Text("The date and time a new reminder opens to. You can always adjust it before saving.")
+            Text("How many hours ahead a new reminder starts. You can always adjust the exact date and time before saving.")
                 .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                 .foregroundStyle(Color.ckTextSecondary)
         }
     }
 
-    private var defaultReminderWhenBinding: Binding<SettingsViewModel.DefaultReminderWhen> {
+    private var defaultReminderHoursBinding: Binding<SettingsViewModel.DefaultReminderHours> {
         Binding(
-            get: { SettingsViewModel.DefaultReminderWhen(rawValue: defaultReminderWhenRaw) ?? .default },
-            set: { defaultReminderWhenRaw = $0.rawValue }
+            get: { SettingsViewModel.DefaultReminderHours(rawValue: defaultReminderHoursRaw) ?? .default },
+            set: { defaultReminderHoursRaw = $0.rawValue }
         )
     }
 
