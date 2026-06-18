@@ -71,11 +71,11 @@ struct PetalFanView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Default "when" a freshly-added reminder opens to — now a user preference
-    /// (Settings → Reminders → Default when; owner 2026-06-18). Read at call time from
-    /// UserDefaults so it always reflects the current setting; the picker opens here
-    /// and the user refines or accepts it.
+    /// (Settings → Reminders → Default timing (hrs); owner 2026-06-18). Read at call
+    /// time from UserDefaults so it always reflects the current setting; the picker
+    /// opens here and the user refines or accepts it.
     static var defaultReminderDate: Date {
-        SettingsViewModel.DefaultReminderWhen.current.date()
+        SettingsViewModel.DefaultReminderHours.current.date()
     }
 
     // Working selection (mutated as petals are tapped).
