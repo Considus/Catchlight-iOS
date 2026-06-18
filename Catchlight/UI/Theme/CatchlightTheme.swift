@@ -112,12 +112,13 @@ extension Color {
     static let ckTextSecondary = Color(uiColor: .adaptive(dark: Palette.fog, light: Palette.slate))
 
     /// Completed-Task text — the receded "done" treatment (colour ONLY, no
-    /// strikethrough). Strengthened 2026-06-18 (owner: the old Fog@55% / full-Fog read
-    /// too close to active text to tell done from not-done) — now clearly more faded:
-    /// Fog @ 40% (Night) / Fog @ 55% (Daylight). Single token, so the Angle, the inline
-    /// editor, and the timeline card all recede by the same amount.
-    static let ckTextComplete = Color(uiColor: .adaptive(dark: Palette.fog.withAlphaComponent(0.40),
-                                                         light: Palette.fog.withAlphaComponent(0.55)))
+    /// strikethrough). Tuned 2026-06-18 (owner): the original (Fog@55% / full Fog) was
+    /// too close to active to tell apart; the first retune (40%/55%) went too faint.
+    /// This split-the-difference — Fog @ 50% (Night) / Fog @ 75% (Daylight) — is clearly
+    /// receded but still legible. Single token: the Angle, the inline editor, and the
+    /// timeline card all recede by the same amount.
+    static let ckTextComplete = Color(uiColor: .adaptive(dark: Palette.fog.withAlphaComponent(0.50),
+                                                         light: Palette.fog.withAlphaComponent(0.75)))
 
     /// The timeline spine — Catchlight @ 18% (Night) / Ink @ 13% (Daylight).
     static let ckSpine = Color(uiColor: .adaptive(
