@@ -27,7 +27,9 @@ struct TakeRowView: View {
     var onLongPressCircle: () -> Void = {}
     var onTapText: () -> Void = {}
     /// Optional row actions (2026-06-10): when supplied, a context menu on the
-    /// TEXT column offers "Mark as done" (Tasks only) and "Delete Take". The
+    /// TEXT column offers "Mark as done" (Tasks AND reminders — 2026-06-18) and
+    /// "Delete Take". For reminders the menu is the ONLY way to mark done (swipe-right
+    /// stays Task-only); marking done settles the whole Take (`setMarkedDone`). The
     /// menu is deliberately NOT attached to the whole row — a row-level context
     /// menu's long-press recognizer preempts the circle's long-press (Obie
     /// designation). VoiceOver gets the same actions as named accessibility
@@ -239,12 +241,12 @@ struct TakeRowView: View {
 
     @ViewBuilder
     private var rowMenuItems: some View {
-        if take.isTask, let onToggleComplete {
+        if (take.isTask || take.timeReminder != nil), let onToggleComplete {
             Button {
                 onToggleComplete()
             } label: {
-                Label(take.isComplete ? "Mark as not done" : "Mark as done",
-                      systemImage: take.isComplete ? "circle" : "checkmark.circle")
+                Label(take.isMarkedDone ? "Mark as not done" : "Mark as done",
+                      systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
             }
         }
         if let onDiscard {
@@ -267,8 +269,8 @@ struct TakeRowView: View {
 
     @ViewBuilder
     private var rowAccessibilityActions: some View {
-        if take.isTask, let onToggleComplete {
-            Button(take.isComplete ? "Mark as not done" : "Mark as done") { onToggleComplete() }
+        if (take.isTask || take.timeReminder != nil), let onToggleComplete {
+            Button(take.isMarkedDone ? "Mark as not done" : "Mark as done") { onToggleComplete() }
         }
         if let onDiscard {
             Button("Discard changes") { onDiscard() }
