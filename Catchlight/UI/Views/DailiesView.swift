@@ -1047,10 +1047,18 @@ struct DailiesView: View {
         d.normaliseActivityFloor()
         editDraft = d
 
-        // Drop the caret into the freshly-added task entry, deferred one runloop tick
-        // so the new check row is in the hierarchy first (the BlockTextEditor focus latch).
-        if let newTaskEntryID {
-            DispatchQueue.main.async { editFocusedBlockID = newTaskEntryID }
+        // Restore the editor's keyboard after the fan — and any reminder-picker SHEET
+        // it popped — stole first-responder (owner-reported 2026-06-18 lockup). On
+        // return the focus binding is UNCHANGED, so BlockTextEditor's update sees no
+        // edge to act on and never re-runs becomeFirstResponder: the user lands back
+        // in the editor with NO keyboard, and the keyboard (its grabber) is the only
+        // way out — a dead end. KICK the binding (nil → target) so the editor re-arms
+        // a fresh focus-retry chain. A freshly-added task entry takes the caret;
+        // otherwise the block that was being edited (or the first block) does.
+        let refocus = newTaskEntryID ?? editFocusedBlockID ?? d.blocks.first?.id
+        editFocusedBlockID = nil
+        if let refocus {
+            DispatchQueue.main.async { editFocusedBlockID = refocus }
         }
     }
 
