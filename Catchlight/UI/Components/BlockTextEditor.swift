@@ -45,6 +45,23 @@ struct BlockTextEditor: UIViewRepresentable {
     /// re-focused. Only the in-place editor sets this.
     var showsKeyboardGrabber: Bool = false
 
+    /// When set, the keyboard shows the editing TOOLBAR (dismiss · Important · Angle ·
+    /// Search) as its `inputAccessoryView` instead of the plain grabber (owner
+    /// 2026-06-18). The down-arrow takes over the grabber's dismiss role.
+    var toolbar: EditorToolbarConfig? = nil
+
+    /// The editing toolbar's state + actions — the Take-level context a per-block
+    /// editor doesn't otherwise hold. Dismiss is handled internally (clears focus).
+    struct EditorToolbarConfig {
+        var isImportant: Bool
+        /// The Angle (shopping-bag) button is enabled only when an Angle applies
+        /// (a checklist Take); greyed out otherwise.
+        var angleEnabled: Bool
+        var onToggleImportant: () -> Void
+        var onOpenAngle: () -> Void
+        var onSearch: () -> Void
+    }
+
     func makeUIView(context: Context) -> BackspaceTextView {
         let tv = BackspaceTextView()
         tv.delegate = context.coordinator
@@ -64,7 +81,9 @@ struct BlockTextEditor: UIViewRepresentable {
             guard tv != nil else { return }
             context.coordinator.parent.onBackspaceEmpty()
         }
-        if showsKeyboardGrabber {
+        if toolbar != nil {
+            tv.inputAccessoryView = context.coordinator.makeEditingToolbar()
+        } else if showsKeyboardGrabber {
             tv.inputAccessoryView = context.coordinator.makeGrabberBar()
         }
         tv.text = text
@@ -77,6 +96,7 @@ struct BlockTextEditor: UIViewRepresentable {
         if tv.text != text { tv.text = text }
         tv.accessibilityLabel = axLabel
         applyStyle(to: tv)
+        if toolbar != nil { context.coordinator.refreshToolbar() }
 
         // Programmatic focus: become first responder when the editor points
         // `focusedBlockID` at us; resign only when focus is cleared entirely
@@ -185,6 +205,37 @@ struct BlockTextEditor: UIViewRepresentable {
         }
 
         @objc func dismissKeyboard() { parent.focusedBlockID = nil }
+
+        // MARK: - Editing toolbar (inputAccessoryView)
+
+        /// Hosts the SwiftUI `EditorKeyboardBar` so the toolbar matches the dock's
+        /// styling (Ember-ringed buttons + faded background) rather than a plain UIKit
+        /// toolbar (owner 2026-06-19). Retained here for the keyboard's lifetime.
+        var toolbarHost: UIHostingController<EditorKeyboardBar>?
+
+        /// Build the dock-styled bar as the keyboard's `inputAccessoryView`. Height =
+        /// 44pt circle + 10/8 padding.
+        func makeEditingToolbar() -> UIView {
+            let host = UIHostingController(rootView: editorBar())
+            host.view.backgroundColor = .clear
+            host.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 62)
+            host.view.autoresizingMask = [.flexibleWidth]
+            toolbarHost = host
+            return host.view
+        }
+
+        /// Re-render the bar from the live config (Important tint, Angle enablement).
+        func refreshToolbar() {
+            toolbarHost?.rootView = editorBar()
+        }
+
+        private func editorBar() -> EditorKeyboardBar {
+            EditorKeyboardBar(
+                config: parent.toolbar ?? .init(isImportant: false, angleEnabled: false,
+                                                onToggleImportant: {}, onOpenAngle: {}, onSearch: {}),
+                onDismiss: { [weak self] in self?.dismissKeyboard() }
+            )
+        }
 
         func textViewDidChange(_ tv: UITextView) {
             parent.text = tv.text
