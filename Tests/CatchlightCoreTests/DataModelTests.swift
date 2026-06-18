@@ -76,6 +76,35 @@ final class DataModelTests: XCTestCase {
         XCTAssertNil(TestFixtures.richTake().locationReminder)
     }
 
+    // Model C (owner 2026-06-18): TimeReminder gained alarmEnabled / isDone / isAllDay.
+    func testTimeReminder_roundTripsNewFields() throws {
+        let r = TimeReminder(scheduledDate: Date(timeIntervalSince1970: 1_780_000_000),
+                             notificationIdentifier: "abc",
+                             alarmEnabled: false, isDone: true, isAllDay: true)
+        let back = try JSONDecoder().decode(TimeReminder.self,
+                                            from: try JSONEncoder().encode(r))
+        XCTAssertEqual(back, r)
+    }
+
+    /// An OLD payload (written before these fields existed) must decode with the
+    /// migration defaults — crucially `alarmEnabled == true`, so existing reminders
+    /// keep notifying; `isDone` / `isAllDay` default false. Simulated by encoding a
+    /// current reminder and stripping the new keys (so the date format matches the
+    /// decoder's, whatever the strategy).
+    func testTimeReminder_legacyPayload_defaultsAlarmOn() throws {
+        let current = TimeReminder(scheduledDate: Date(timeIntervalSince1970: 1_780_000_000),
+                                   notificationIdentifier: "abc")
+        var dict = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try JSONEncoder().encode(current)) as? [String: Any]
+        )
+        ["alarmEnabled", "isDone", "isAllDay"].forEach { dict.removeValue(forKey: $0) }
+        let legacyData = try JSONSerialization.data(withJSONObject: dict)
+        let r = try JSONDecoder().decode(TimeReminder.self, from: legacyData)
+        XCTAssertTrue(r.alarmEnabled, "a pre-field reminder must keep notifying")
+        XCTAssertFalse(r.isDone)
+        XCTAssertFalse(r.isAllDay)
+    }
+
     // "Note is the floor" (UX §6): removing all activity types re-asserts Note,
     // and completion (derived) falls away once there are no check items.
     func testNoteFloor() {
