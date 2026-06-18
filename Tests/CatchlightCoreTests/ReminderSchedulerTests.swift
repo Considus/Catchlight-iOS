@@ -129,6 +129,14 @@ final class ReminderSchedulerTests: XCTestCase {
         XCTAssertEqual(trigger.dateComponents.minute, 0)
     }
 
+    /// Reminders are Time Sensitive (owner 2026-06-18) so they break through Focus /
+    /// Do Not Disturb, like Apple's Reminders. Requires the entitlement (project.yml).
+    func testSchedule_isTimeSensitive() {
+        let take = takeWithReminder(at: now.addingTimeInterval(60))
+        scheduler.scheduleReminder(for: take)
+        XCTAssertEqual(center.added.first?.content.interruptionLevel, .timeSensitive)
+    }
+
     func testSchedule_setsCategoryAndBody() {
         let take = takeWithReminder(at: now.addingTimeInterval(60),
                                     body: "buy milk and bread")
