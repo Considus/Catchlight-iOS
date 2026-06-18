@@ -57,6 +57,13 @@ struct TakeRowView: View {
     /// combined-element wrapping is dropped while editing.
     var editingCard: (() -> AnyView)? = nil
 
+    /// The card's measured width, captured from the resting `TakeCardSurface` so the
+    /// long-press context-menu PREVIEW can reconstruct the card at its true size with
+    /// the Iris composited on top — the system lift then carries the Iris WITH the card
+    /// instead of leaving it behind (owner 2026-06-18; the menu is attached to the card
+    /// only, so its default snapshot excluded the sibling Iris).
+    @State private var cardWidth: CGFloat = 0
+
     private var firstLine: String {
         let line = take.plainText
             .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
@@ -241,14 +248,40 @@ struct TakeRowView: View {
         } else {
             TakeCardSurface(take: take)
                 .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background {
+                    GeometryReader { g in
+                        Color.clear.preference(key: CardWidthKey.self, value: g.size.width)
+                    }
+                }
                 .onTapGesture { onTapText() }
-                .contextMenu { rowMenuItems }
+                // Custom preview so the long-press lift carries the Iris with the card
+                // (the menu is on the card only — its default snapshot left the Iris
+                // behind). owner 2026-06-18.
+                .contextMenu(menuItems: { rowMenuItems }, preview: { rowPreview })
+                .onPreferenceChange(CardWidthKey.self) { cardWidth = $0 }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("take-row")
                 .accessibilityLabel(rowAccessibilityLabel)
                 .accessibilityHint("Double-tap to edit this Take.")
                 .accessibilityActions { rowAccessibilityActions }
         }
+    }
+
+    /// The composite the context menu lifts: the card with its Iris on top, laid out
+    /// at the same straddle as the live row, so the long-press preview rises as one
+    /// unit (owner-chosen 2026-06-18). Sized to the measured `cardWidth`; the top
+    /// padding makes room for the Iris's upward overhang so it isn't clipped.
+    private var rowPreview: some View {
+        let d = CatchlightLayout.circleDiameter
+        return ZStack(alignment: .topLeading) {
+            TakeCardSurface(take: take)
+                .frame(width: cardWidth > 0 ? cardWidth : nil)
+            TakeCircleView(take: take)
+                .frame(width: d, height: d)
+                .offset(x: CatchlightLayout.cardSpineInset - d / 2, y: -d / 2)
+        }
+        .padding(.top, d / 2)
+        .fixedSize()
     }
 
     @ViewBuilder
@@ -290,6 +323,16 @@ struct TakeRowView: View {
         if let onDelete {
             Button("Delete Take") { onDelete() }
         }
+    }
+}
+
+/// Measures the resting card's width so the context-menu preview can rebuild it at
+/// the true size (the lifted preview carries the Iris with the card — see `rowPreview`).
+private struct CardWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        let next = nextValue()
+        if next > 0 { value = next }
     }
 }
 
