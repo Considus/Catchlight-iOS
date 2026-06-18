@@ -45,6 +45,23 @@ struct BlockTextEditor: UIViewRepresentable {
     /// re-focused. Only the in-place editor sets this.
     var showsKeyboardGrabber: Bool = false
 
+    /// When set, the keyboard shows the editing TOOLBAR (dismiss · Important · Angle ·
+    /// Search) as its `inputAccessoryView` instead of the plain grabber (owner
+    /// 2026-06-18). The down-arrow takes over the grabber's dismiss role.
+    var toolbar: EditorToolbarConfig? = nil
+
+    /// The editing toolbar's state + actions — the Take-level context a per-block
+    /// editor doesn't otherwise hold. Dismiss is handled internally (clears focus).
+    struct EditorToolbarConfig {
+        var isImportant: Bool
+        /// The Angle (shopping-bag) button is enabled only when an Angle applies
+        /// (a checklist Take); greyed out otherwise.
+        var angleEnabled: Bool
+        var onToggleImportant: () -> Void
+        var onOpenAngle: () -> Void
+        var onSearch: () -> Void
+    }
+
     func makeUIView(context: Context) -> BackspaceTextView {
         let tv = BackspaceTextView()
         tv.delegate = context.coordinator
@@ -64,7 +81,9 @@ struct BlockTextEditor: UIViewRepresentable {
             guard tv != nil else { return }
             context.coordinator.parent.onBackspaceEmpty()
         }
-        if showsKeyboardGrabber {
+        if toolbar != nil {
+            tv.inputAccessoryView = context.coordinator.makeEditingToolbar()
+        } else if showsKeyboardGrabber {
             tv.inputAccessoryView = context.coordinator.makeGrabberBar()
         }
         tv.text = text
@@ -77,6 +96,7 @@ struct BlockTextEditor: UIViewRepresentable {
         if tv.text != text { tv.text = text }
         tv.accessibilityLabel = axLabel
         applyStyle(to: tv)
+        if toolbar != nil { context.coordinator.refreshToolbar() }
 
         // Programmatic focus: become first responder when the editor points
         // `focusedBlockID` at us; resign only when focus is cleared entirely
@@ -185,6 +205,54 @@ struct BlockTextEditor: UIViewRepresentable {
         }
 
         @objc func dismissKeyboard() { parent.focusedBlockID = nil }
+
+        // MARK: - Editing toolbar (inputAccessoryView)
+
+        weak var importantItem: UIBarButtonItem?
+        weak var angleItem: UIBarButtonItem?
+
+        /// The editing toolbar: dismiss · Important · Angle (shopping bag) · Search,
+        /// evenly spaced (owner 2026-06-18). Dismiss reuses the grabber's focus-clear;
+        /// the others fire the `EditorToolbarConfig` callbacks.
+        func makeEditingToolbar() -> UIToolbar {
+            let tb = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
+            tb.autoresizingMask = [.flexibleWidth]
+            tb.isTranslucent = false
+            tb.barTintColor = UIColor(Color.ckBackground)
+            tb.tintColor = UIColor(Color.ckAccent)
+            let dismiss = UIBarButtonItem(image: UIImage(systemName: "chevron.down"),
+                                          style: .plain, target: self, action: #selector(dismissKeyboard))
+            dismiss.accessibilityLabel = "Close keyboard"
+            let important = UIBarButtonItem(image: UIImage(systemName: "exclamationmark.circle"),
+                                            style: .plain, target: self, action: #selector(tappedImportant))
+            important.accessibilityLabel = "Important"
+            let angle = UIBarButtonItem(image: UIImage(systemName: "bag"),
+                                        style: .plain, target: self, action: #selector(tappedAngle))
+            angle.accessibilityLabel = "Open as list"
+            angle.accessibilityIdentifier = "angle-button"   // preserves the (skipped) Angle UITest
+            let search = UIBarButtonItem(image: UIImage(systemName: "magnifyingglass"),
+                                         style: .plain, target: self, action: #selector(tappedSearch))
+            search.accessibilityLabel = "Search"
+            func flex() -> UIBarButtonItem { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
+            importantItem = important
+            angleItem = angle
+            tb.items = [dismiss, flex(), important, flex(), angle, flex(), search]
+            refreshToolbar()
+            return tb
+        }
+
+        /// Reflect the live Take state: Important glyph stays the same shape, its
+        /// TINT reads the state (owner "glyph remains"); the Angle button greys out
+        /// when no Angle applies.
+        func refreshToolbar() {
+            guard let cfg = parent.toolbar else { return }
+            importantItem?.tintColor = UIColor(cfg.isImportant ? Color.ckEmber : Color.ckTextSecondary)
+            angleItem?.isEnabled = cfg.angleEnabled
+        }
+
+        @objc func tappedImportant() { parent.toolbar?.onToggleImportant() }
+        @objc func tappedAngle() { parent.toolbar?.onOpenAngle() }
+        @objc func tappedSearch() { parent.toolbar?.onSearch() }
 
         func textViewDidChange(_ tv: UITextView) {
             parent.text = tv.text
