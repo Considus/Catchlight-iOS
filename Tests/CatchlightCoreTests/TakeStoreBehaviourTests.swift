@@ -204,6 +204,27 @@ final class TakeStoreBehaviourTests: XCTestCase {
         }
     }
 
+    // MARK: - Important auto-flag (owner 2026-06-18): Obie ⟹ Important, sticky.
+
+    func testObie_setObie_autoFlagsImportant() throws {
+        let t = Take(blocks: [.textLine("the one")])
+        XCTAssertFalse(t.isImportant, "A plain Take starts not-Important")
+        try store.upsert(t)
+        try store.setObie(id: t.id, replaceExisting: false)
+        let current = try XCTUnwrap(try store.currentObie())
+        XCTAssertTrue(current.isImportant, "Designating Obie must auto-flag Important")
+    }
+
+    func testObie_demotedTake_staysImportant_sticky() throws {
+        let a = Take(blocks: [.textLine("a")]); let b = Take(blocks: [.textLine("b")])
+        try store.upsert(a); try store.upsert(b)
+        try store.setObie(id: a.id, replaceExisting: false)   // a → Obie + Important
+        try store.setObie(id: b.id, replaceExisting: true)    // b → Obie; a demoted
+        let oldA = try XCTUnwrap(try store.take(id: a.id))
+        XCTAssertFalse(oldA.isObie, "a is no longer the Obie")
+        XCTAssertTrue(oldA.isImportant, "Importance is STICKY — it survives losing Obie")
+    }
+
     // MARK: - Sequences
 
     func testSequence_upsertAndFetch_roundTrip() throws {
