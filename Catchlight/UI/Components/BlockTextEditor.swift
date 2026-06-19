@@ -70,7 +70,7 @@ struct BlockTextEditor: UIViewRepresentable {
         var onToggleDone: () -> Void
         /// The keyboard ⌄/× — commit the edit and EXIT (owner 2026-06-19): the host
         /// saves and drops the focused-edit overlay in one step, back to the timeline
-        /// (or Planner), rather than just lowering the keyboard onto a still-focused
+        /// (or Storyboard), rather than just lowering the keyboard onto a still-focused
         /// Take. Default no-op (the keyboard still resigns).
         var onDismiss: () -> Void = {}
     }
@@ -249,7 +249,7 @@ struct BlockTextEditor: UIViewRepresentable {
                                                 onToggleImportant: {}, onOpenAngle: {}, onToggleDone: {}),
                 onDismiss: { [weak self] in
                     // Lower the keyboard AND commit-and-exit the edit (owner
-                    // 2026-06-19) — one step back to the timeline / Planner, not a
+                    // 2026-06-19) — one step back to the timeline / Storyboard, not a
                     // keyboard-down-but-still-focused intermediate.
                     self?.dismissKeyboard()
                     self?.parent.toolbar?.onDismiss()

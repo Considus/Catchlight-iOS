@@ -152,8 +152,8 @@ struct RootView: View {
             PaywallView()
                 .environment(app)
         }
-        .fullScreenCover(isPresented: $ui.isPlannerPresented) {
-            PlannerView(onClose: { ui.isPlannerPresented = false })
+        .fullScreenCover(isPresented: $ui.isStoryboardPresented) {
+            StoryboardView(onClose: { ui.isStoryboardPresented = false })
                 .environment(app.dailiesVM)
                 .environment(ui)
                 .environment(app)

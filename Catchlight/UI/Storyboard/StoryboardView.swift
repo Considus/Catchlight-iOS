@@ -1,12 +1,12 @@
 //
-//  PlannerView.swift
-//  Catchlight (iOS app target) — the Planner (owner spec 2026-06-19)
+//  StoryboardView.swift
+//  Catchlight (iOS app target) — the Storyboard (owner spec 2026-06-19)
 //
 //  A full-screen, chrome-light list of every Take that carries a TASK (a checkbox
 //  block). Reminders alone do NOT qualify; a Take that is both task + reminder is
 //  in, because it has a task (owner 2026-06-19).
 //
-//  The Planner is NOT the timeline: there is no spine, no Iris, and no dock. It is
+//  The Storyboard is NOT the timeline: there is no spine, no Iris, and no dock. It is
 //  just the real Take cards — `TakeCardSurface`, so they carry the SAME colour /
 //  border markings and the SAME left-edge label lane (the vertical ruby "OVERDUE"
 //  shows here too; the future user-label chip lane is structurally present but
@@ -18,23 +18,22 @@
 //  editor (`InlineTakeEditCard`) — background masked, the keyboard editing toolbar
 //  kept — but with NO Iris (owner 2026-06-19). It commits on a tap off the focused
 //  card, exactly like the timeline (DailiesView's masked-background catcher). The
-//  edit state is LOCAL to the Planner so the timeline underneath never thinks it is
+//  edit state is LOCAL to the Storyboard so the timeline underneath never thinks it is
 //  editing.
 //
-//  Entry point is still being decided by the owner; this view is reachable for
-//  review via a DEBUG-only Settings row. Leaving is the X (owner: "same as the
-//  shopping list").
+//  Opened from the main dock's Angle button (∠, slot 2 — owner 2026-06-19);
+//  leaving is the X, top-right (owner: "same as the shopping list").
 //
 
 import SwiftUI
 import CatchlightCore
 
-struct PlannerView: View {
+struct StoryboardView: View {
     @Environment(DailiesViewModel.self) private var vm
     @Environment(AppModel.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Dismiss the Planner (the X).
+    /// Dismiss the Storyboard (the X).
     let onClose: () -> Void
 
     // MARK: - View / Order / Preview (the same three settings the timeline reads)
@@ -54,19 +53,19 @@ struct PlannerView: View {
 
     /// The inter-card gap. The "View" setting's gap is tuned for Dailies, where each
     /// card's Iris straddles its top edge — the Iris's top HALF (its radius, 22pt of
-    /// the 44pt circle) sits up in the gap. The Planner has no Iris, so we reclaim
+    /// the 44pt circle) sits up in the gap. The Storyboard has no Iris, so we reclaim
     /// exactly that radius from every gap (owner 2026-06-19), keeping the perceived
     /// rhythm identical to Dailies. Floored at 0 so Compact can't go negative.
-    private var plannerGap: CGFloat {
+    private var storyboardGap: CGFloat {
         max(0, takeSpacing.gap - CatchlightLayout.circleDiameter / 2)
     }
 
     /// Leading inset for the heading — the card's TEXT column (card left + the
     /// card's internal leading pad), identical to the DAILIES/SEQUENCE heading, so
-    /// PLANNER ANGLE lines up exactly with the Take text below it.
+    /// STORYBOARD ANGLE lines up exactly with the Take text below it.
     private var headingLeading: CGFloat { cardLeading + CatchlightLayout.cardTextLeadingPad }
 
-    // MARK: - Edit-in-place state (LOCAL to the Planner)
+    // MARK: - Edit-in-place state (LOCAL to the Storyboard)
 
     @State private var editDraft: Take?
     @State private var editFocusedBlockID: UUID?
@@ -78,7 +77,7 @@ struct PlannerView: View {
     private var isEditing: Bool { editDraft != nil }
     private var editingID: UUID? { editDraft?.id }
 
-    /// Card-column geometry, matched to Dailies (owner 2026-06-19) so the Planner
+    /// Card-column geometry, matched to Dailies (owner 2026-06-19) so the Storyboard
     /// cards — and the heading above them — sit in the SAME column as the timeline.
     /// Dailies insets each row leading by `spineX − cardSpineInset` and trailing by
     /// 20 (DailiesView), and the card's own `cardTextLeadingPad` then lands the text
@@ -95,8 +94,8 @@ struct PlannerView: View {
     /// Every task-bearing Take (the Obie included when it has a task), in the user's
     /// chosen Order. We sort newest-first with an id tie-break — matching the VM's
     /// deterministic order — then reverse for Oldest-first. The Obie is folded in by
-    /// the same order (the Planner is a flat list — no pinning, owner 2026-06-19).
-    private var plannedTakes: [Take] {
+    /// the same order (the Storyboard is a flat list — no pinning, owner 2026-06-19).
+    private var storyboardTakes: [Take] {
         var all = vm.takes
         if let obie = vm.obie { all.append(obie) }
         let tasks = all.filter { $0.isTask }
@@ -132,13 +131,13 @@ struct PlannerView: View {
                 // Explicit view heading, in the DAILIES house style (Cormorant Roman,
                 // kerned caps) — owner 2026-06-19: name it as an Angle so the ∠ glyph,
                 // the heading, and the concept all read the same.
-                Text("PLANNER ANGLE")
+                Text("STORYBOARD ANGLE")
                     .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
                     .kerning(1.6)
                     .foregroundStyle(Color.ckTextPrimary)
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
-                Button(action: closePlanner) {
+                Button(action: closeStoryboard) {
                     Image(systemName: "xmark")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(Color.ckTextSecondary)
@@ -147,8 +146,8 @@ struct PlannerView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("planner-close")
-                .accessibilityLabel("Close planner")
+                .accessibilityIdentifier("storyboard-close")
+                .accessibilityLabel("Close storyboard")
             }
             .padding(.leading, headingLeading)
             .padding(.trailing, 12)
@@ -166,11 +165,11 @@ struct PlannerView: View {
 
     private var list: some View {
         ScrollView {
-            LazyVStack(spacing: plannerGap) {
-                if plannedTakes.isEmpty {
+            LazyVStack(spacing: storyboardGap) {
+                if storyboardTakes.isEmpty {
                     emptyState
                 } else {
-                    ForEach(plannedTakes) { take in
+                    ForEach(storyboardTakes) { take in
                         row(for: take)
                     }
                 }
@@ -247,7 +246,7 @@ struct PlannerView: View {
     private var angleCover: some View {
         if let angle = AngleRegistry.applicable(to: editDraft ?? Take()).first {
             // Closing the Angle commits and EXITS the edit (owner 2026-06-19), so it
-            // returns to the Planner list, not the keyboard-less focused Take.
+            // returns to the Storyboard list, not the keyboard-less focused Take.
             angle.makePresentation(editDraftBinding) {
                 anglePresented = false
                 commitEdit()
@@ -268,7 +267,7 @@ struct PlannerView: View {
     }
 
     /// Commit the focused edit through the same `vm.save` chokepoint the timeline
-    /// uses, then clear focus. Every Planner Take already has content (it carries a
+    /// uses, then clear focus. Every Storyboard Take already has content (it carries a
     /// task), so there is no blank-discard case to handle.
     private func commitEdit() {
         editFocusedBlockID = nil
@@ -279,16 +278,16 @@ struct PlannerView: View {
         vm.save(t)
     }
 
-    private func closePlanner() {
+    private func closeStoryboard() {
         if isEditing { commitEdit() }
         onClose()
     }
 
     // MARK: - Long-press / VoiceOver menu
 
-    /// The Planner card menu — mirrors the timeline's global menu in order and
+    /// The Storyboard card menu — mirrors the timeline's global menu in order and
     /// wording (owner 2026-06-19): Mark done · Set as Important · Delete. ("Discard"
-    /// is omitted — it only applies mid-edit.) Every Planner card carries a task, so
+    /// is omitted — it only applies mid-edit.) Every Storyboard card carries a task, so
     /// "Mark done" always applies. Used for both the long-press menu and the
     /// VoiceOver actions.
     @ViewBuilder
