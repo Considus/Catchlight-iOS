@@ -165,8 +165,9 @@ struct DailiesView: View {
     private let caretPinGap: CGFloat = 72
     /// How far below the pinned heading the caret may rise before the content scrolls
     /// back DOWN — the UPPER bound of the caret band (owner 2026-06-19: deleting a long
-    /// Take let the caret climb off the top under the heading). Tunable on device.
-    private let caretTopGap: CGFloat = 24
+    /// Take let the caret climb off the top under the heading). Dropped one text line
+    /// (24 → 46) so the caret rests a line lower at the top (owner 2026-06-19). Tunable.
+    private let caretTopGap: CGFloat = 46
 
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
