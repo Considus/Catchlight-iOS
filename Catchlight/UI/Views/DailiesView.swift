@@ -144,16 +144,20 @@ struct DailiesView: View {
 
     /// The keyboard's top edge in screen coordinates (incl. its docked toolbar — the
     /// keyboard frame reports the inputAccessoryView too). `.greatestFiniteMagnitude`
-    /// when the keyboard is down, so the caret-follow gate below never fires at rest.
-    /// Used ONLY to decide WHEN the caret is about to hide — not for any layout inset
-    /// (native keyboard avoidance handles that).
+    /// when the keyboard is down, so the caret pin below never fires at rest.
     @State private var keyboardTopY: CGFloat = .greatestFiniteMagnitude
-    /// Bumped whenever the focused caret moves below (near) the keyboard top, so the
-    /// timeline's ScrollViewReader can scroll the focused block back into view. A tick
-    /// (not the rect) so the proxy-scoped `.onChange` stays decoupled from the
-    /// caret-report closure, which runs outside the ScrollViewReader (owner device
-    /// "caret disappears on Return" fix 2026-06-19).
-    @State private var caretFollowTick: Int = 0
+    /// The timeline's underlying `UIScrollView`, captured by `ScrollViewFinder`, so the
+    /// caret pin can drive `contentOffset` DIRECTLY (owner 2026-06-19 "pin the caret"):
+    /// SwiftUI's `scrollTo(_:anchor:)` can only align a view's edge to the viewport, not
+    /// hold an arbitrary interior point (the caret) on a fixed line — and on device its
+    /// idea of the viewport bottom didn't account for the keyboard toolbar, so the caret
+    /// slid behind it. Direct offset maths against the real caret + keyboard frame is
+    /// deterministic on device.
+    @State private var caretScrollView: UIScrollView?
+    /// How far above the keyboard's top edge the caret is held (owner screenshot
+    /// 2026-06-19 — the caret sits ~one card's breathing room above the toolbar).
+    /// Tunable on device.
+    private let caretPinGap: CGFloat = 72
 
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
@@ -685,12 +689,19 @@ struct DailiesView: View {
               // below the pinned Obie (owner 2026-06-16 — the visible "jump" on
               // designating an Obie). This makes them flush so positions match.
               VStack(spacing: 0) {
-                // Track scroll offset to ghost month markers in/out.
+                // Track scroll offset to ghost month markers in/out. Also hosts the
+                // ScrollViewFinder — placed INSIDE the scroll content so its superview
+                // chain reaches the timeline's UIScrollView (a .background on the reader
+                // would sit beside it, not within). Feeds `caretScrollView` for the pin.
                 GeometryReader { geo in
-                    Color.clear.preference(
-                        key: ScrollOffsetKey.self,
-                        value: geo.frame(in: .named("dailies")).minY
-                    )
+                    Color.clear
+                        .preference(
+                            key: ScrollOffsetKey.self,
+                            value: geo.frame(in: .named("dailies")).minY
+                        )
+                        .background(ScrollViewFinder { sv in
+                            if caretScrollView !== sv { caretScrollView = sv }
+                        })
                 }
                 .frame(height: 0)
 
@@ -862,19 +873,6 @@ struct DailiesView: View {
                 guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
                 else { return }
                 keyboardTopY = frame.origin.y
-            }
-            // 3) CARET FOLLOW while typing: a growing TEXT block (Return adds a newline
-            //    to the SAME block) pushes the caret down with no block change, so
-            //    native avoidance never scrolls — the caret slid behind the keyboard
-            //    on device (owner 2026-06-19). The focused editor reports its caret;
-            //    `caretFollowTick` bumps only when the caret nears/passes the keyboard
-            //    top, so a SHORT Take keeps its rest position and only an overflowing
-            //    one scrolls. Pin the focused BLOCK's bottom (where the caret sits when
-            //    appending) just above the keyboard. No animation — tracks each
-            //    keystroke without jitter.
-            .onChange(of: caretFollowTick) { _, _ in
-                guard ui.isEditingInPlace, let block = editFocusedBlockID else { return }
-                proxy.scrollTo(block, anchor: .bottom)
             }
         }
     }
@@ -1061,18 +1059,26 @@ struct DailiesView: View {
         }
     }
 
-    /// Caret-follow gate (owner device "caret disappears on Return" fix 2026-06-19).
-    /// The focused editor reports its caret rect (window coords); when the caret bottom
-    /// nears or passes the keyboard top, bump `caretFollowTick` so the timeline scrolls
-    /// the focused block back into view. Gating on the keyboard top means a SHORT Take
-    /// whose caret already sits clear keeps its rest position — only an overflowing one
-    /// scrolls. The 24pt margin scrolls a touch BEFORE the caret reaches the keyboard,
-    /// leaving a line of breathing room.
-    private func handleCaretMoved(_ caretRect: CGRect) {
-        guard ui.isEditingInPlace else { return }
-        if caretRect.maxY > keyboardTopY - 24 {
-            caretFollowTick &+= 1
-        }
+    /// PIN the caret to a fixed line above the keyboard (owner 2026-06-19 — "pin the
+    /// caret … as long as it stays in view"). The focused editor reports its caret rect
+    /// in window coords on every keystroke; whenever the caret would drop below the pin
+    /// line (`keyboardTop − caretPinGap`), scroll the timeline's UIScrollView up by
+    /// exactly the overshoot so the caret holds on that line and the text scrolls under
+    /// it. Driving `contentOffset` directly (not `scrollTo`) is what makes it land on an
+    /// exact line and respect the keyboard TOOLBAR, which `scrollTo` missed on device.
+    /// Only pulls the caret UP (never forces a high caret down), so a short Take keeps
+    /// its natural rest position; clamped so it can't overscroll past the content.
+    private func pinCaret(_ caretRect: CGRect) {
+        guard ui.isEditingInPlace, let sv = caretScrollView, keyboardTopY.isFinite else { return }
+        let pinY = keyboardTopY - caretPinGap
+        let overshoot = caretRect.maxY - pinY
+        guard overshoot > 0.5 else { return }            // caret already at/above the line
+        let minOffset = -sv.adjustedContentInset.top
+        let maxOffset = max(minOffset,
+                            sv.contentSize.height - sv.bounds.height + sv.adjustedContentInset.bottom)
+        let target = min(sv.contentOffset.y + overshoot, maxOffset)
+        guard target - sv.contentOffset.y > 0.5 else { return }
+        sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: target), animated: false)
     }
 
     /// Discard the edits (owner 2026-06-17 — via the row's long-press menu): drop the
@@ -1279,7 +1285,7 @@ struct DailiesView: View {
                         anglePresented = true
                     },
                     onCommit: { saveInlineEdit() },
-                    onCaretMoved: { caretRect in handleCaretMoved(caretRect) })) }
+                    onCaretMoved: { caretRect in pinCaret(caretRect) })) }
                 : nil
         )
         .background(
@@ -1382,6 +1388,29 @@ private struct FirstRowTopKey: PreferenceKey {
     static let defaultValue: CGFloat = .infinity
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = min(value, nextValue())
+    }
+}
+
+// MARK: - UIScrollView capture (caret pin)
+
+/// Finds the enclosing `UIScrollView` by walking up from a zero-size probe placed
+/// INSIDE the ScrollView's content, and hands it back. The caret pin needs the real
+/// scroll view to drive `contentOffset` precisely (SwiftUI exposes no such handle),
+/// which is the only way to hold the caret on a fixed line above the keyboard
+/// regardless of the toolbar (owner 2026-06-19). Reports once it's found / changes.
+private struct ScrollViewFinder: UIViewRepresentable {
+    var onFound: (UIScrollView) -> Void
+
+    func makeUIView(context: Context) -> UIView { UIView(frame: .zero) }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        DispatchQueue.main.async {
+            var view: UIView? = uiView.superview
+            while let current = view {
+                if let scroll = current as? UIScrollView { onFound(scroll); return }
+                view = current.superview
+            }
+        }
     }
 }
 
