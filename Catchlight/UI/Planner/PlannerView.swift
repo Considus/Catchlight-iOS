@@ -61,14 +61,10 @@ struct PlannerView: View {
         max(0, takeSpacing.gap - CatchlightLayout.circleDiameter / 2)
     }
 
-    /// Leading inset for the heading — the SAME column the DAILIES / SEQUENCE
-    /// headings use (owner 2026-06-19), so PLANNER ANGLE lines up with the timeline
-    /// headings rather than floating at a different margin. Full-screen, so the
-    /// screen width is the container width (matches DailiesView's spineX fallback).
-    private var headingLeading: CGFloat {
-        CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
-            - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad
-    }
+    /// Leading inset for the heading — the card's TEXT column (card left + the
+    /// card's internal leading pad), identical to the DAILIES/SEQUENCE heading, so
+    /// PLANNER ANGLE lines up exactly with the Take text below it.
+    private var headingLeading: CGFloat { cardLeading + CatchlightLayout.cardTextLeadingPad }
 
     // MARK: - Edit-in-place state (LOCAL to the Planner)
 
@@ -82,7 +78,17 @@ struct PlannerView: View {
     private var isEditing: Bool { editDraft != nil }
     private var editingID: UUID? { editDraft?.id }
 
-    private let cardHInset: CGFloat = 16
+    /// Card-column geometry, matched to Dailies (owner 2026-06-19) so the Planner
+    /// cards — and the heading above them — sit in the SAME column as the timeline.
+    /// Dailies insets each row leading by `spineX − cardSpineInset` and trailing by
+    /// 20 (DailiesView), and the card's own `cardTextLeadingPad` then lands the text
+    /// at the heading's column. Full-screen, so the screen width is the container
+    /// width (matches DailiesView's spineX fallback).
+    private var cardLeading: CGFloat {
+        CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
+            - CatchlightLayout.cardSpineInset
+    }
+    private let cardTrailing: CGFloat = 20
 
     // MARK: - The planned Takes
 
@@ -169,7 +175,8 @@ struct PlannerView: View {
                     }
                 }
             }
-            .padding(.horizontal, cardHInset)
+            .padding(.leading, cardLeading)
+            .padding(.trailing, cardTrailing)
             .padding(.top, 8)
             .padding(.bottom, 32)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -211,9 +218,11 @@ struct PlannerView: View {
                 .onTapGesture {
                     if isEditing { commitEdit() } else { beginEdit(take) }
                 }
+                .contextMenu { rowMenu(for: take) }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(TakeRowView.statusDescription(for: take))
                 .accessibilityHint("Double-tap to edit this Take.")
+                .accessibilityActions { rowMenu(for: take) }
         }
     }
 
@@ -267,5 +276,38 @@ struct PlannerView: View {
     private func closePlanner() {
         if isEditing { commitEdit() }
         onClose()
+    }
+
+    // MARK: - Long-press / VoiceOver menu
+
+    /// The Planner card menu — mirrors the timeline's global menu in order and
+    /// wording (owner 2026-06-19): Mark done · Set as Important · Delete. ("Discard"
+    /// is omitted — it only applies mid-edit.) Every Planner card carries a task, so
+    /// "Mark done" always applies. Used for both the long-press menu and the
+    /// VoiceOver actions.
+    @ViewBuilder
+    private func rowMenu(for take: Take) -> some View {
+        Button {
+            guard app.ensureEntitled() else { return }
+            vm.toggleDone(take)
+        } label: {
+            Label(take.isMarkedDone ? "Mark as not done" : "Mark as done",
+                  systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
+        }
+        Button {
+            guard app.ensureEntitled() else { return }
+            var t = take
+            t.isImportant.toggle()
+            vm.save(t)
+        } label: {
+            Label(take.isImportant ? "Remove Important" : "Set as Important",
+                  systemImage: take.isImportant ? "star.slash" : "star")
+        }
+        Button(role: .destructive) {
+            guard app.ensureEntitled() else { return }
+            vm.delete(take)
+        } label: {
+            Label("Delete Take", systemImage: "trash")
+        }
     }
 }
