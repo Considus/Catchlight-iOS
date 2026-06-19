@@ -361,6 +361,12 @@ struct DailiesView: View {
                     }
                 }
                 .scrollIndicators(.hidden)
+                // DISABLE SwiftUI's automatic keyboard avoidance here (owner 2026-06-19):
+                // it was driving the scroll — holding the caret at a fixed spot and
+                // scrolling the card+Iris up off the top — and OVERRIDING our scrollTo
+                // (which is why anchor changes had "no observable change"). With it off,
+                // our `scrollTo(.bottom)` below is the ONLY scroll force.
+                .ignoresSafeArea(.keyboard, edges: .bottom)
                 // Bound the scroll area to ABOVE the keyboard (+ its docked toolbar —
                 // the keyboard frame includes the inputAccessoryView), so content can't
                 // sit behind the keyboard.

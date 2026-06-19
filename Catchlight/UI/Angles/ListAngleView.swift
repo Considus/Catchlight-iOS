@@ -88,7 +88,7 @@ struct ListAngleView: View {
             HStack {
                 // Explicit view heading, DAILIES house style (Cormorant Roman, kerned
                 // caps) — owner 2026-06-19: named as an Angle, sibling to PLANNER ANGLE.
-                Text("SHOT LIST ANGLE")
+                Text("SHOT LIST")
                     .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
                     .kerning(1.6)
                     .foregroundStyle(Color.ckTextPrimary)
