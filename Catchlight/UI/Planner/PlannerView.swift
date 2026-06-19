@@ -246,7 +246,12 @@ struct PlannerView: View {
     @ViewBuilder
     private var angleCover: some View {
         if let angle = AngleRegistry.applicable(to: editDraft ?? Take()).first {
-            angle.makePresentation(editDraftBinding) { anglePresented = false }
+            // Closing the Angle commits and EXITS the edit (owner 2026-06-19), so it
+            // returns to the Planner list, not the keyboard-less focused Take.
+            angle.makePresentation(editDraftBinding) {
+                anglePresented = false
+                commitEdit()
+            }
         } else {
             Color.ckBackground.ignoresSafeArea().onAppear { anglePresented = false }
         }
