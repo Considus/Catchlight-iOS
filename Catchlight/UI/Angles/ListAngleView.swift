@@ -52,6 +52,14 @@ struct ListAngleView: View {
     private let rowLeadingInset: CGFloat = 16
     private let rowTrailingInset: CGFloat = 16
 
+    /// Leading inset for the LIST ANGLE heading — the SAME column the DAILIES /
+    /// SEQUENCE headings use (owner 2026-06-19), so it lines up with the timeline
+    /// headings (and its sibling PLANNER ANGLE).
+    private var headingLeading: CGFloat {
+        CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
+            - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad
+    }
+
     var body: some View {
         // The chrome is a `.safeAreaInset` top band — an OPAQUE X-row + a 12pt fade —
         // exactly like the Dailies heading (owner 2026-06-18). Content scrolls UNDER
@@ -91,7 +99,7 @@ struct ListAngleView: View {
                 .accessibilityIdentifier("angle-close")
                 .accessibilityLabel("Close list")
             }
-            .padding(.leading, 16)
+            .padding(.leading, headingLeading)
             .padding(.trailing, 12)
             .padding(.top, 4)
             .background(Color.ckBackground)   // OPAQUE — content scrolls under and is hidden

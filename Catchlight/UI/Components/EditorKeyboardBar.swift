@@ -6,8 +6,8 @@
 //  (owner 2026-06-19): Ember-ringed circular buttons + the dock's faded background
 //  (`dockFadeBackground`), so it reads as the same control family rather than a plain
 //  UIKit toolbar. Hosted in `BlockTextEditor`'s `inputAccessoryView` via a
-//  `UIHostingController`. Four buttons: ⌄ dismiss · Important · Angle (greyed when no
-//  task) · Done (tick — marks the Take done; greyed for a pure note).
+//  `UIHostingController`. Four buttons: ⌄ dismiss · Angle (greyed when no task) ·
+//  Important · Done (tick — marks the Take done; greyed for a pure note).
 //
 
 import SwiftUI
@@ -31,18 +31,20 @@ struct EditorKeyboardBar: View {
             }
             .frame(maxWidth: .infinity)
 
-            // 2 — Important: the STANDARD Dailies glyph (slot 2 is the repurposed
-            // Dailies button — owner 2026-06-19). Ember when flagged, else Ember accent.
-            slot(enabled: true, label: "Important", action: config.onToggleImportant) {
-                DailiesGlyph(size: 24)
-                    .foregroundStyle(config.isImportant ? Color.ckEmber : Color.ckAccent)
-            }
-            .frame(maxWidth: .infinity)
-
-            // 3 — Angle (List): greyed when no task applies.
+            // 2 — Angle (List): opens this Take's shopping list. Slot 2 to match the
+            // main dock's Angle position, so it's the SAME button in the same place
+            // (owner 2026-06-19). Greyed when no task applies.
             slot(enabled: config.angleEnabled, identifier: "angle-button",
                  label: "Open as list", action: config.onOpenAngle) {
                 dockSymbol("bag", tint: .ckAccent, enabled: config.angleEnabled)
+            }
+            .frame(maxWidth: .infinity)
+
+            // 3 — Important: the STANDARD Dailies glyph (the app's Important glyph).
+            // Ember when flagged, else Ember accent.
+            slot(enabled: true, label: "Important", action: config.onToggleImportant) {
+                DailiesGlyph(size: 24)
+                    .foregroundStyle(config.isImportant ? Color.ckEmber : Color.ckAccent)
             }
             .frame(maxWidth: .infinity)
 
