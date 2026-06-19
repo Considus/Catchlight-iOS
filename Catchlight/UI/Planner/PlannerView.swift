@@ -207,7 +207,8 @@ struct PlannerView: View {
                 onOpenAngle: {
                     editFocusedBlockID = nil   // drop the keyboard before the cover
                     anglePresented = true
-                }
+                },
+                onCommit: { commitEdit() }
             )
         } else {
             // A read-only card. Tapping it begins editing; tapping it while ANOTHER

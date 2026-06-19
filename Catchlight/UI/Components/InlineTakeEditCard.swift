@@ -24,9 +24,12 @@ import CatchlightCore
 struct InlineTakeEditCard: View {
     @Binding var draft: Take
     @Binding var focusedBlockID: UUID?
-    /// Opens the full-screen Angle (the shopping-bag button now lives on the keyboard
+    /// Opens the full-screen Angle (the list button now lives on the keyboard
     /// toolbar, owner 2026-06-18). Shown only when an Angle applies (a checklist Take).
     var onOpenAngle: (() -> Void)? = nil
+    /// Commit-and-exit, fired by the keyboard's ⌄/× (owner 2026-06-19) — the host
+    /// saves the draft and drops the focused-edit overlay in one step.
+    var onCommit: (() -> Void)? = nil
 
     /// The editing toolbar's state + actions, passed to every block editor so the
     /// keyboard shows it. Angle enabled only when an Angle applies to the draft; the
@@ -40,7 +43,8 @@ struct InlineTakeEditCard: View {
             doneEnabled: draft.isTask || draft.timeReminder != nil,
             onToggleImportant: { draft.isImportant.toggle() },
             onOpenAngle: { onOpenAngle?() },
-            onToggleDone: { draft.setMarkedDone(!draft.isMarkedDone) }
+            onToggleDone: { draft.setMarkedDone(!draft.isMarkedDone) },
+            onDismiss: { onCommit?() }
         )
     }
 

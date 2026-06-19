@@ -68,6 +68,11 @@ struct BlockTextEditor: UIViewRepresentable {
         var onOpenAngle: () -> Void
         /// Mark the whole Take done / not-done (all checklist items + the reminder).
         var onToggleDone: () -> Void
+        /// The keyboard ⌄/× — commit the edit and EXIT (owner 2026-06-19): the host
+        /// saves and drops the focused-edit overlay in one step, back to the timeline
+        /// (or Planner), rather than just lowering the keyboard onto a still-focused
+        /// Take. Default no-op (the keyboard still resigns).
+        var onDismiss: () -> Void = {}
     }
 
     func makeUIView(context: Context) -> BackspaceTextView {
@@ -242,7 +247,13 @@ struct BlockTextEditor: UIViewRepresentable {
                 config: parent.toolbar ?? .init(isImportant: false, angleEnabled: false,
                                                 isDone: false, doneEnabled: false,
                                                 onToggleImportant: {}, onOpenAngle: {}, onToggleDone: {}),
-                onDismiss: { [weak self] in self?.dismissKeyboard() }
+                onDismiss: { [weak self] in
+                    // Lower the keyboard AND commit-and-exit the edit (owner
+                    // 2026-06-19) — one step back to the timeline / Planner, not a
+                    // keyboard-down-but-still-focused intermediate.
+                    self?.dismissKeyboard()
+                    self?.parent.toolbar?.onDismiss()
+                }
             )
         }
 

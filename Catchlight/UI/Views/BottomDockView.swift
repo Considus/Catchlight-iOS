@@ -286,7 +286,7 @@ struct BottomDockView: View {
     /// WHOLE dock; while the first-run settings hint is up a tap dismisses it (the
     /// dashed ring is the "tap to dismiss" target), and the explicit "Open Settings"
     /// VoiceOver action moves here. The glyph is the literal angle (∠) — distinct
-    /// from the keyboard Angle's shopping bag, so each icon hints what it opens
+    /// from the keyboard Angle's checklist glyph, so each icon hints what it opens
     /// (the Planner vs a single Take's list).
     private var angleNavButton: some View {
         Button {
