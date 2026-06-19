@@ -30,6 +30,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey) private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
     @AppStorage(SettingsViewModel.TakeSort.defaultsKey) private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
     @AppStorage(SettingsViewModel.TakePreview.defaultsKey) private var takePreviewRaw: String = SettingsViewModel.TakePreview.default.rawValue
+    @AppStorage(SettingsViewModel.AutoCleanup.defaultsKey) private var autoCleanupRaw: String = SettingsViewModel.AutoCleanup.default.rawValue
     @AppStorage(SettingsViewModel.DefaultReminderHours.defaultsKey) private var defaultReminderHoursRaw: String = SettingsViewModel.DefaultReminderHours.default.rawValue
 
     @State private var vm = SettingsViewModel()
@@ -321,6 +322,13 @@ struct SettingsView: View {
         )
     }
 
+    private var autoCleanupBinding: Binding<SettingsViewModel.AutoCleanup> {
+        Binding(
+            get: { SettingsViewModel.AutoCleanup(rawValue: autoCleanupRaw) ?? .default },
+            set: { autoCleanupRaw = $0.rawValue }
+        )
+    }
+
     // MARK: - Security
 
     // MARK: - Reminders
@@ -396,6 +404,34 @@ struct SettingsView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Lock after \(lockAfterBinding.wrappedValue.label)")
 
+            // Auto-delete — data minimisation (owner 2026-06-19: lives under Security,
+            // since trimming finished data you no longer need limits your exposure).
+            // The user decides the window ([[catchlight-user-decides-principle]]); only
+            // done, note-free Takes are ever eligible (see the footer + Take.isAutoCleanupEligible).
+            HStack(spacing: 14) {
+                Image(systemName: "trash")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("Auto-delete")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("Auto-delete", selection: autoCleanupBinding) {
+                    ForEach(SettingsViewModel.AutoCleanup.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(Color.ckTextSecondary)
+            }
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Auto-delete completed Takes, \(autoCleanupBinding.wrappedValue.label)")
+
             SettingsRow(icon: "key.horizontal",
                         label: "Privacy phrase",
                         chevron: true,
@@ -413,7 +449,7 @@ struct SettingsView: View {
         } header: {
             sectionHeader("Security")
         } footer: {
-            Text("Catchlight locks after this long in the background. It always locks when you quit the app or lock your phone while it's open.")
+            Text("Catchlight locks after this long in the background. It always locks when you quit the app or lock your phone while it's open.\n\nAuto-delete keeps your stored data lean: once all its tasks and reminders are done and it holds no note, a Take is removed after the time you choose. Notes — and anything still in progress — are never deleted. Off by default.")
                 .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                 .foregroundStyle(Color.ckTextSecondary)
         }

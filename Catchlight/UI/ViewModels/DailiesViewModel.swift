@@ -168,6 +168,27 @@ final class DailiesViewModel {
         reload()
     }
 
+    /// Opt-in auto-cleanup sweep (owner 2026-06-19): delete finished, note-free Takes
+    /// that have been untouched longer than the user's chosen window. The eligibility
+    /// rule lives in `Take.isAutoCleanupEligible` (protects notes, in-progress Takes,
+    /// and the Obie). A `nil` window (Settings = Never) is a no-op, so cleanup is
+    /// strictly opt-in. Tears each match down through the same Spotlight/reminder path
+    /// as `delete`, reloading once. `now` is injected for tests. Returns the count.
+    @discardableResult
+    func runAutoCleanup(olderThan maxAge: TimeInterval?, now: Date = Date()) -> Int {
+        guard let maxAge else { return 0 }
+        let all = (try? store.allTakes()) ?? []
+        let doomed = all.filter { $0.isAutoCleanupEligible(olderThan: maxAge, now: now) }
+        guard !doomed.isEmpty else { return 0 }
+        for take in doomed {
+            try? store.delete(id: take.id)
+            spotlight.deindex(takeID: take.id)
+            reminders.cancelReminder(identifier: take.id.uuidString)
+        }
+        reload()
+        return doomed.count
+    }
+
     /// Toggle a Task's completion state. No-op for non-Tasks (completion is
     /// meaningless there; `normaliseActivityFloor` would clear it anyway).
     func toggleComplete(_ take: Take) {

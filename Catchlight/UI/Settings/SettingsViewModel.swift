@@ -219,6 +219,52 @@ final class SettingsViewModel {
         }
     }
 
+    /// Opt-in automatic cleanup of finished, note-free Takes (owner 2026-06-19). The
+    /// user — never the app — sets retention ([[catchlight-user-decides-principle]]):
+    /// the choice is an AGE/GRACE window after which an eligible Take (all tasks /
+    /// reminders done, no note, not the Obie — see `Take.isAutoCleanupEligible`) is
+    /// deleted on the next app open. Default `never` ⇒ nothing is ever auto-deleted.
+    enum AutoCleanup: String, CaseIterable, Identifiable {
+        case never, daily, weekly, monthly, annually
+
+        static let defaultsKey = "catchlight.autoCleanup"
+        static let `default`: AutoCleanup = .never
+
+        var id: String { rawValue }
+
+        /// Menu-picker label (matches the Lock after dropdown); reads as a retention
+        /// window. Segmented was too cramped for five options (owner 2026-06-19).
+        var label: String {
+            switch self {
+            case .never:    return "Never"
+            case .daily:    return "After a day"
+            case .weekly:   return "After a week"
+            case .monthly:  return "After a month"
+            case .annually: return "After a year"
+            }
+        }
+
+        /// The age threshold a finished, note-free Take must exceed before it's swept;
+        /// `nil` for `never` (cleanup off). Daily 24h · Weekly 7d · Monthly 31d ·
+        /// Annually 365d (owner 2026-06-19).
+        var maxAge: TimeInterval? {
+            let day: TimeInterval = 24 * 60 * 60
+            switch self {
+            case .never:    return nil
+            case .daily:    return day
+            case .weekly:   return 7 * day
+            case .monthly:  return 31 * day
+            case .annually: return 365 * day
+            }
+        }
+
+        static var current: AutoCleanup {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = AutoCleanup(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     var notificationStatus: UNAuthorizationStatus = .notDetermined
     var notificationStatusLoading: Bool = false
 
