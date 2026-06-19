@@ -1187,7 +1187,8 @@ struct DailiesView: View {
                     onOpenAngle: {
                         editFocusedBlockID = nil   // drop the keyboard before the cover
                         anglePresented = true
-                    })) }
+                    },
+                    onCommit: { saveInlineEdit() })) }
                 : nil
         )
         .background(

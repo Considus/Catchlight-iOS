@@ -36,10 +36,12 @@ struct EditorKeyboardBar: View {
             // (owner 2026-06-19). Greyed when no task applies.
             slot(enabled: config.angleEnabled, identifier: "angle-button",
                  label: "Open as list", action: config.onOpenAngle) {
-                // Bag when a list exists (it WILL open the shopping list); the
-                // neutral ∠ when greyed, so the disabled state doesn't imply a
-                // shopping list that isn't there (owner 2026-06-19).
-                dockSymbol(config.angleEnabled ? "bag" : "angle",
+                // A list glyph when a list exists (it WILL open the checklist —
+                // owner 2026-06-19, replacing the shopping bag, which read as
+                // shopping-specific; matches the Angle's registered `checklist`
+                // icon); the neutral ∠ when greyed, so the disabled state doesn't
+                // imply a list that isn't there.
+                dockSymbol(config.angleEnabled ? "checklist" : "angle",
                            tint: .ckAccent, enabled: config.angleEnabled)
             }
             .frame(maxWidth: .infinity)
