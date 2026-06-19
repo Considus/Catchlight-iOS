@@ -136,6 +136,12 @@ struct DailiesView: View {
     /// `editDraft` so its ticks / reorders / deletes ride the inline save.
     @State private var anglePresented = false
 
+    /// Extra bottom scroll room added while editing so the focused Take — even the
+    /// last one under Oldest-first — can scroll up to its clear position above the
+    /// keyboard rather than clamping against the content end (owner 2026-06-19).
+    /// A generous screen fraction; it's empty space below the keyboard, never seen.
+    private let editScrollRoom: CGFloat = 420
+
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
     /// estimate (no month marker). Row top → card top (+6, the Iris straddles the
@@ -744,7 +750,14 @@ struct DailiesView: View {
                 // Bottom: lift the last-row clearance by the home-indicator inset
                 // so it still clears the now-raised dock.
                 .padding(.top, timelineTopInset)
-                .padding(.bottom, CatchlightLayout.dockClearance + deviceBottomInset)
+                // While editing, add a screenful of scroll room below the cards so the
+                // focused Take can ALWAYS scroll up to its clear position above the
+                // keyboard — otherwise the bottom-most Take (where new ones land under
+                // Oldest-first) clamps against the content end and sits high, its top
+                // tucked under the heading fade (owner 2026-06-19). Empty space below
+                // the keyboard, so it's never visible; removed on exit.
+                .padding(.bottom, CatchlightLayout.dockClearance + deviceBottomInset
+                         + (ui.isEditingInPlace ? editScrollRoom : 0))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 // FILTERING exit: tapping empty timeline background (not rows /
                 // Irises — they stay fully interactive and win hit-testing)
