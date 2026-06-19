@@ -232,15 +232,15 @@ final class SettingsViewModel {
 
         var id: String { rawValue }
 
-        /// Short segment label for the house segmented control (the "after a …"
-        /// meaning is carried by the Security footer; mirrors how Order/View read).
+        /// Menu-picker label (matches the Lock after dropdown); reads as a retention
+        /// window. Segmented was too cramped for five options (owner 2026-06-19).
         var label: String {
             switch self {
             case .never:    return "Never"
-            case .daily:    return "Day"
-            case .weekly:   return "Week"
-            case .monthly:  return "Month"
-            case .annually: return "Year"
+            case .daily:    return "After a day"
+            case .weekly:   return "After a week"
+            case .monthly:  return "After a month"
+            case .annually: return "After a year"
             }
         }
 
