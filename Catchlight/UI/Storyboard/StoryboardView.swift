@@ -12,7 +12,7 @@
 //  shows here too; the future user-label chip lane is structurally present but
 //  renders nothing yet) — laid out in the user's chosen Order, capped by Preview,
 //  spaced by View (the same three Settings the timeline honours). An X in the
-//  top-right (the List Angle's chrome) is the only way out.
+//  top-right (the Shot List's chrome) is the only way out.
 //
 //  Editing: tapping a card focuses it for editing through the standard inline
 //  editor (`InlineTakeEditCard`) — background masked, the keyboard editing toolbar
@@ -62,14 +62,14 @@ struct StoryboardView: View {
 
     /// Leading inset for the heading — the card's TEXT column (card left + the
     /// card's internal leading pad), identical to the DAILIES/SEQUENCE heading, so
-    /// STORYBOARD ANGLE lines up exactly with the Take text below it.
+    /// STORYBOARD lines up exactly with the Take text below it.
     private var headingLeading: CGFloat { cardLeading + CatchlightLayout.cardTextLeadingPad }
 
     // MARK: - Edit-in-place state (LOCAL to the Storyboard)
 
     @State private var editDraft: Take?
     @State private var editFocusedBlockID: UUID?
-    /// Whether the full-screen List Angle is presented over the editor (the
+    /// Whether the full-screen Shot List is presented over the editor (the
     /// keyboard toolbar's bag button), bound to the live draft so its ticks ride
     /// the same save.
     @State private var anglePresented = false
@@ -91,20 +91,22 @@ struct StoryboardView: View {
 
     // MARK: - The planned Takes
 
-    /// Every task-bearing Take (the Obie included when it has a task), in the user's
-    /// chosen Order. We sort newest-first with an id tie-break — matching the VM's
-    /// deterministic order — then reverse for Oldest-first. The Obie is folded in by
-    /// the same order (the Storyboard is a flat list — no pinning, owner 2026-06-19).
+    /// Every task-bearing Take in the user's chosen Order, with **Important** Takes
+    /// leading. The Obie is NOT included (owner 2026-06-19: "No Obie in the Storyboard
+    /// — defaults to Important") — it has its own home pinned in Dailies; here it's
+    /// Importance, not Obie-ness, that surfaces a Take to the top. We sort newest-first
+    /// with an id tie-break (matching the VM's deterministic order), reverse for
+    /// Oldest-first, then stably partition Important ahead of the rest so the chosen
+    /// Order is preserved within each group.
     private var storyboardTakes: [Take] {
-        var all = vm.takes
-        if let obie = vm.obie { all.append(obie) }
-        let tasks = all.filter { $0.isTask }
+        let tasks = vm.takes.filter { $0.isTask }   // vm.takes already excludes the Obie
         let newestFirst = tasks.sorted {
             $0.createdAt != $1.createdAt
                 ? $0.createdAt > $1.createdAt
                 : $0.id.uuidString > $1.id.uuidString
         }
-        return takeSort == .oldestFirst ? newestFirst.reversed() : newestFirst
+        let ordered = takeSort == .oldestFirst ? newestFirst.reversed() : newestFirst
+        return ordered.filter { $0.isImportant } + ordered.filter { !$0.isImportant }
     }
 
     private var editDraftBinding: Binding<Take> {
@@ -117,9 +119,9 @@ struct StoryboardView: View {
         list
             .background(Color.ckBackground.ignoresSafeArea())
             // Dailies-style chrome: an opaque X-row + a 12pt fade, content scrolling
-            // under it (same as the List Angle — owner 2026-06-19).
+            // under it (same as the Shot List — owner 2026-06-19).
             .safeAreaInset(edge: .top, spacing: 0) { topChrome }
-            // The keyboard toolbar's bag → the full-screen List Angle on the draft.
+            // The keyboard toolbar's bag → the full-screen Shot List on the draft.
             .fullScreenCover(isPresented: $anglePresented) { angleCover }
     }
 
@@ -147,7 +149,7 @@ struct StoryboardView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("storyboard-close")
-                .accessibilityLabel("Close storyboard")
+                .accessibilityLabel("Close Storyboard")
             }
             .padding(.leading, headingLeading)
             .padding(.trailing, 12)
