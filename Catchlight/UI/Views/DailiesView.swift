@@ -810,17 +810,18 @@ struct DailiesView: View {
                     proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
                 }
             }
-            // 2) AUTHORITATIVE settle: on keyboard WILL-show (the START of the keyboard
-            //    animation, not the end), scroll to the final anchor using the
-            //    keyboard's OWN animation duration — so the Take rises IN SYNC with the
-            //    keyboard rather than a beat after it (owner 2026-06-18). Anchored LOW
-            //    (0.82) — near the keyboard with a small gap; Newest-first clamps to the
-            //    top. Guarded so a stale target can't scroll a later, unrelated edit.
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { note in
+            // 2) AUTHORITATIVE settle: on keyboard DID-show — AFTER the keyboard has
+            //    shrunk the scroll viewport — scroll the focused Take to the low
+            //    anchor. Measuring `0.82` against the REDUCED viewport lands the Take
+            //    just above the keyboard EVERY time. Scrolling on willShow instead
+            //    (against the still-animating, not-yet-shrunk viewport) made the rest
+            //    position vary run-to-run / sit too low — owner 2026-06-19, reverting
+            //    the 2026-06-18 "in sync" switch in favour of consistency. Guarded so
+            //    a stale target can't scroll a later, unrelated edit.
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
                 guard let id = scrollToTakeID else { return }
                 guard id == ui.editingTakeID else { scrollToTakeID = nil; return }
-                let duration = (note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.25
-                withAnimation(.easeOut(duration: duration)) {
+                withAnimation(.easeOut(duration: 0.22)) {
                     proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
                 }
                 scrollToTakeID = nil
@@ -958,6 +959,11 @@ struct DailiesView: View {
         editDraft = t
         editFocusedBlockID = t.blocks.last?.id
         ui.beginEditingInPlace(take)
+        // Lift the Take above the keyboard via the same one-shot target the new-Take
+        // and fan paths use (owner 2026-06-19). Previously an existing Take set no
+        // target and leaned on iOS's native avoidance, which scrolled it up only a
+        // little — "nowhere near enough" when it started below the keyboard line.
+        scrollToTakeID = take.id
     }
 
     /// Create a NEW Take in place (Phase 2): seed the blank draft, inject it into the
@@ -1066,8 +1072,8 @@ struct DailiesView: View {
             // closed with the keyboard down, and re-focusing raises it again. Without
             // a scroll target the Take can sit under the keyboard — e.g. a new Take
             // just reshaped to a Task, sorted to the bottom under Oldest-first. Same
-            // one-shot target the new-Take flow uses; the keyboardWillShow handler
-            // settles it to the low anchor in sync with the keyboard.
+            // one-shot target the new-Take flow uses; the keyboardDidShow handler
+            // settles it to the low anchor against the keyboard-reduced viewport.
             scrollToTakeID = d.id
             DispatchQueue.main.async { editFocusedBlockID = refocus }
         }
