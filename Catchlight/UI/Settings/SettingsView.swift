@@ -46,7 +46,6 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appearanceSection
-                autoCleanupSection
                 remindersSection
                 securitySection
                 syncSection
@@ -282,41 +281,6 @@ struct SettingsView: View {
         }
     }
 
-    /// Opt-in retention (owner 2026-06-19 — the user decides, the app only provides the
-    /// lever). A menu picker, since there are five options; default Never. The footer
-    /// spells out EXACTLY what's eligible, so enabling it is never a surprise.
-    private var autoCleanupSection: some View {
-        Section {
-            HStack(spacing: 14) {
-                Image(systemName: "trash")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAccent)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text("Auto-delete")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
-                Picker("Auto-delete", selection: autoCleanupBinding) {
-                    ForEach(SettingsViewModel.AutoCleanup.allCases) { option in
-                        Text(option.label).tag(option)
-                    }
-                }
-                .pickerStyle(.menu)
-                .tint(Color.ckTextSecondary)
-                .accessibilityLabel("Auto-delete completed Takes")
-            }
-            .frame(height: 52)
-            .listRowBackground(Color.ckSurface)
-        } header: {
-            sectionHeader("Cleanup")
-        } footer: {
-            Text("Automatically delete a Take once every task and reminder on it is done and it holds no note — after the time you choose. Notes, and anything still in progress, are never deleted. Off by default.")
-                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
-                .foregroundStyle(Color.ckTextSecondary)
-        }
-    }
-
     /// The scheme to FORCE on the Settings sheet. Night/Daylight map directly; System
     /// resolves to the DEVICE scheme read from the SCREEN — not
     /// `UITraitCollection.current`, which carries this view's own (stale) override and
@@ -440,6 +404,34 @@ struct SettingsView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Lock after \(lockAfterBinding.wrappedValue.label)")
 
+            // Auto-delete — data minimisation (owner 2026-06-19: lives under Security,
+            // since trimming finished data you no longer need limits your exposure).
+            // The user decides the window ([[catchlight-user-decides-principle]]); only
+            // done, note-free Takes are ever eligible (see the footer + Take.isAutoCleanupEligible).
+            HStack(spacing: 14) {
+                Image(systemName: "trash")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("Auto-delete")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("Auto-delete", selection: autoCleanupBinding) {
+                    ForEach(SettingsViewModel.AutoCleanup.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(Color.ckTextSecondary)
+            }
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Auto-delete completed Takes: \(autoCleanupBinding.wrappedValue.label)")
+
             SettingsRow(icon: "key.horizontal",
                         label: "Privacy phrase",
                         chevron: true,
@@ -457,7 +449,7 @@ struct SettingsView: View {
         } header: {
             sectionHeader("Security")
         } footer: {
-            Text("Catchlight locks after this long in the background. It always locks when you quit the app or lock your phone while it's open.")
+            Text("Catchlight locks after this long in the background. It always locks when you quit the app or lock your phone while it's open.\n\nAuto-delete keeps your stored data lean: a Take is removed once all its tasks and reminders are done and it holds no note, after the time you choose. Notes — and anything still in progress — are never deleted. Off by default.")
                 .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                 .foregroundStyle(Color.ckTextSecondary)
         }
