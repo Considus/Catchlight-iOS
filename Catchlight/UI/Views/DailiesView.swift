@@ -259,6 +259,9 @@ struct DailiesView: View {
             // Drawn after the heading so it owns its hit region (the heading is inert).
             pinnedObie
         }
+        // The focused Take, pinned at a fixed spot above the keyboard (owner
+        // 2026-06-19). Sits above the dimmed timeline; see `focusEditOverlay`.
+        .overlay { focusEditOverlay }
         .background {
             // Capture the layout width (NOT UIScreen) so spineX matches the
             // dock, which is laid out in the same safe-area coordinate space —
@@ -312,6 +315,41 @@ struct DailiesView: View {
         // deletes ride the inline save. (Final entry point will be the selector ring.)
         .fullScreenCover(isPresented: $anglePresented) {
             angleCover
+        }
+    }
+
+    // MARK: - Pinned focus editor (owner 2026-06-19)
+
+    /// The Take being edited, PINNED at a fixed spot just below the heading and above
+    /// the keyboard — replacing the old "scroll the timeline to it" positioning, which
+    /// fought iOS's keyboard avoidance and landed inconsistently. It's lifted out of
+    /// `displayedTakes`, so this is the ONLY live editor (no duplicate / first-responder
+    /// clash). Reuses the same `row(for:)` as the timeline, so the Iris (Focus ring /
+    /// fan), the editor, swipe and menu behave exactly as before — only the position
+    /// changes. A short Take is unaffected by keyboard avoidance (it already fits above
+    /// the keyboard) so its rest position is deterministic; tapping off the card commits.
+    @ViewBuilder
+    private var focusEditOverlay: some View {
+        if ui.isEditingInPlace, let draft = editDraft {
+            // A scroll container so a LONG Take scrolls to keep the caret visible
+            // (keyboard avoidance settles the focused line above the keyboard), while
+            // a SHORT Take stays put at the pinned spot (it fits, so nothing scrolls).
+            // `row(for:)` applies its own leading/trailing insets, so it spans the full
+            // width exactly as in the timeline — only the top position is fixed.
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    row(for: draft, isFirst: false)
+                        .padding(.top, deviceTopInset + CatchlightLayout.headingClearance + 8)
+                    // Tap off the card (the area below it) commits & exits — the
+                    // masked-background catcher, now living in the overlay. Tall enough
+                    // to fill the gap down to the keyboard so it's reachable.
+                    Color.clear
+                        .frame(maxWidth: .infinity, minHeight: 400)
+                        .contentShape(Rectangle())
+                        .onTapGesture { saveInlineEdit() }
+                }
+            }
+            .scrollIndicators(.hidden)
         }
     }
 
@@ -436,8 +474,12 @@ struct DailiesView: View {
                 // 2026-06-17). Hidden, not removed, so it fades with the mask and its
                 // measured height (the scroll inset) is preserved — no position jump.
                 // When the Obie ITSELF is the focused Take it stays bright (editing it).
-                .opacity(ui.isEditingInPlace && ui.editingTakeID != obie.id ? 0 : 1)
-                .allowsHitTesting(!(ui.isEditingInPlace && ui.editingTakeID != obie.id))
+                // Hidden whenever editing (owner 2026-06-19): the focused Take — Obie
+                // or not — is lifted into the pinned focus overlay, so the pinned Obie
+                // slot is empty while editing. Hidden (not removed) so its measured
+                // height stays for the scroll inset and there's no position jump.
+                .opacity(ui.isEditingInPlace ? 0 : 1)
+                .allowsHitTesting(!ui.isEditingInPlace)
         }
     }
 
@@ -1269,11 +1311,18 @@ struct DailiesView: View {
         return known ? nil : draft
     }
 
-    /// `filteredTakes` plus the in-place new Take (if any) injected at the
-    /// Order-appropriate end — bottom for Oldest-first, top for Newest-first (its
-    /// `createdAt = now` would sort there anyway; placed explicitly since it isn't in
-    /// `vm.takes`). Bypasses the dock filter so a just-created Take is always visible.
+    /// The Takes the TIMELINE renders. While editing, the focused Take is lifted out
+    /// into the pinned focus overlay (owner 2026-06-19 — "pin the focus card"), so it
+    /// is removed from the list here: no duplicate editor, and the timeline stays a
+    /// static, dimmed backdrop. A NEW Take being created lives only in the overlay
+    /// (it isn't in `vm.takes`), so nothing is injected during edit.
+    ///
+    /// At rest, the in-place new Take (if any) is injected at the Order-appropriate
+    /// end — bottom for Oldest-first, top for Newest-first.
     private var displayedTakes: [Take] {
+        if ui.isEditingInPlace {
+            return filteredTakes.filter { $0.id != ui.editingTakeID }
+        }
         guard let newTake = inlineNewTake else { return filteredTakes }
         return takeSort == .oldestFirst ? filteredTakes + [newTake] : [newTake] + filteredTakes
     }
