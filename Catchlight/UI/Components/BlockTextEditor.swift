@@ -109,6 +109,7 @@ struct BlockTextEditor: UIViewRepresentable {
         }
         tv.text = text
         applyStyle(to: tv)
+        context.coordinator.observeKeyboardForCaret(tv)
         return tv
     }
 
@@ -170,7 +171,30 @@ struct BlockTextEditor: UIViewRepresentable {
         /// Latch so a queued becomeFirstResponder isn't scheduled again before it
         /// runs (prevents a focus/render loop).
         var focusRequested = false
+        private weak var observedTextView: BackspaceTextView?
+        private var keyboardShowObserver: NSObjectProtocol?
         init(_ parent: BlockTextEditor) { self.parent = parent }
+        deinit {
+            if let keyboardShowObserver { NotificationCenter.default.removeObserver(keyboardShowObserver) }
+        }
+
+        /// Re-report the caret once the keyboard has FULLY shown. The host pins the
+        /// caret above the keyboard, but on ENTRY there's no keystroke to trigger a
+        /// report and the keyboard's frame isn't known until it's up — so a freshly
+        /// opened Take could sit with its card tucked under the dock until the first
+        /// keypress jolted the pin awake (owner device report 2026-06-19). Firing on
+        /// keyboardDidShow positions it correctly on appear. Only the focused row's
+        /// observer passes the guard, so the others are no-ops.
+        func observeKeyboardForCaret(_ tv: BackspaceTextView) {
+            observedTextView = tv
+            guard keyboardShowObserver == nil else { return }
+            keyboardShowObserver = NotificationCenter.default.addObserver(
+                forName: UIResponder.keyboardDidShowNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                guard let self, let tv = self.observedTextView, tv.isFirstResponder else { return }
+                self.reportCaret(tv)
+            }
+        }
 
         /// Retry becomeFirstResponder until the view is actually in a window and focus
         /// takes (or we run out of attempts) — a new Take's row may not be realised /
