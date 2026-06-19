@@ -131,7 +131,7 @@ struct StoryboardView: View {
                 // Explicit view heading, in the DAILIES house style (Cormorant Roman,
                 // kerned caps) — owner 2026-06-19: name it as an Angle so the ∠ glyph,
                 // the heading, and the concept all read the same.
-                Text("STORYBOARD ANGLE")
+                Text("STORYBOARD")
                     .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
                     .kerning(1.6)
                     .foregroundStyle(Color.ckTextPrimary)
