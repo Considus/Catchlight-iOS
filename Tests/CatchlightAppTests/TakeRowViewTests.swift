@@ -26,11 +26,14 @@ final class TakeRowViewTests: XCTestCase {
         XCTAssertEqual(TakeRowView.statusDescription(for: take), "Task, 2 of 2 complete")
     }
 
-    func testStatus_oneItemTask_speaksCompleteWithoutCount() {
+    func testStatus_oneItemTask_speaksProgressWithCount() {
+        // A single-item Task now speaks its count too (owner 2026-06-19: single-item
+        // tasks show "0 of 1 completed"), matching the visible progress marker — was
+        // "Task, complete" / "Task" with no count under the old 2+ progress threshold.
         XCTAssertEqual(TakeRowView.statusDescription(for: Take(blocks: [.checkItem("x", isComplete: true)])),
-                       "Task, complete")
+                       "Task, 1 of 1 complete")
         XCTAssertEqual(TakeRowView.statusDescription(for: Take(blocks: [.checkItem("x")])),
-                       "Task")
+                       "Task, 0 of 1 complete")
     }
 
     func testStatus_plainNote() {
