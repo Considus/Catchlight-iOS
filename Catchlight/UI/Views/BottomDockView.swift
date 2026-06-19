@@ -279,7 +279,7 @@ struct BottomDockView: View {
 
     // MARK: - RESTING nav buttons
 
-    /// The Angle nav button (slot 2, RESTING) — opens the PLANNER ANGLE, the
+    /// The Angle nav button (slot 2, RESTING) — opens the STORYBOARD ANGLE, the
     /// full-screen list of every task-bearing Take (owner 2026-06-19). Replaces the
     /// old Dailies button, which was inert now there is one surface: its tap only
     /// ever dismissed the settings hint. The settings swipe-up still lives on the
@@ -287,13 +287,13 @@ struct BottomDockView: View {
     /// dashed ring is the "tap to dismiss" target), and the explicit "Open Settings"
     /// VoiceOver action moves here. The glyph is the literal angle (∠) — distinct
     /// from the keyboard Angle's checklist glyph, so each icon hints what it opens
-    /// (the Planner vs a single Take's list).
+    /// (the Storyboard vs a single Take's list).
     private var angleNavButton: some View {
         Button {
             if orientation.showSettingsHint {
                 orientation.didDismissSettingsHint()
             } else {
-                ui.isPlannerPresented = true
+                ui.isStoryboardPresented = true
             }
         } label: {
             ZStack {
@@ -320,8 +320,8 @@ struct BottomDockView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("angle-tab")
-        .accessibilityLabel("Planner")
-        .accessibilityHint("Opens the Planner — every Take with a task. Swipe up on the toolbar to open Settings.")
+        .accessibilityLabel("Storyboard")
+        .accessibilityHint("Opens the Storyboard — every Take with a task. Swipe up on the toolbar to open Settings.")
         // The swipe is a VoiceOver-incompatible gesture, so expose Settings as
         // an explicit named action too.
         .accessibilityAction(named: "Open Settings") { ui.isSettingsPresented = true }

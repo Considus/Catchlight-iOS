@@ -123,10 +123,10 @@ final class UIState {
     /// and continue using the app in read-only mode.
     var isPaywallPresented = false
 
-    /// The Planner — a full-screen list of every task-bearing Take (owner 2026-06-19).
+    /// The Storyboard — a full-screen list of every task-bearing Take (owner 2026-06-19).
     /// Presented over the timeline; the entry point is still being decided, so for now
     /// it is opened from a DEBUG-only Settings row and closed by its own X.
-    var isPlannerPresented = false
+    var isStoryboardPresented = false
 
     /// Task 6.19 — Spotlight deep-link target. Set by the app's
     /// `onContinueUserActivity` handler when a Take is tapped in Spotlight;
