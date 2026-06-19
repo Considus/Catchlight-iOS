@@ -91,22 +91,20 @@ struct StoryboardView: View {
 
     // MARK: - The planned Takes
 
-    /// Every task-bearing Take in the user's chosen Order, with **Important** Takes
-    /// leading. The Obie is NOT included (owner 2026-06-19: "No Obie in the Storyboard
-    /// — defaults to Important") — it has its own home pinned in Dailies; here it's
-    /// Importance, not Obie-ness, that surfaces a Take to the top. We sort newest-first
-    /// with an id tie-break (matching the VM's deterministic order), reverse for
-    /// Oldest-first, then stably partition Important ahead of the rest so the chosen
-    /// Order is preserved within each group.
+    /// Every task-bearing Take that still has work to do, in plain timeline Order — NO
+    /// reordering (owner 2026-06-19: "they sit in timeline order"). Excluded: the Obie
+    /// (its own pinned home is Dailies; `vm.takes` already omits it) and any Take whose
+    /// tasks are ALL complete (`isComplete` — nothing left to plan, owner 2026-06-19).
+    /// Sort newest-first with an id tie-break (matching the VM's deterministic order),
+    /// reversed for Oldest-first.
     private var storyboardTakes: [Take] {
-        let tasks = vm.takes.filter { $0.isTask }   // vm.takes already excludes the Obie
-        let newestFirst = tasks.sorted {
+        let open = vm.takes.filter { $0.isTask && !$0.isComplete }
+        let newestFirst = open.sorted {
             $0.createdAt != $1.createdAt
                 ? $0.createdAt > $1.createdAt
                 : $0.id.uuidString > $1.id.uuidString
         }
-        let ordered = takeSort == .oldestFirst ? newestFirst.reversed() : newestFirst
-        return ordered.filter { $0.isImportant } + ordered.filter { !$0.isImportant }
+        return takeSort == .oldestFirst ? newestFirst.reversed() : newestFirst
     }
 
     private var editDraftBinding: Binding<Take> {
