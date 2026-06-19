@@ -33,6 +33,13 @@ struct ListAngleView: View {
     let onClose: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
+
+    /// The Shopping view's surface follows the Take's REAL card colour (owner
+    /// 2026-06-19): light (`ckSurface`) for a normal Take, the darker emphasis
+    /// surface (`ckCardObieSurface`) for an Important / Obie one. Single-sourced via
+    /// `TakeCardStyle` so it can never drift from the card on the timeline.
+    private var surface: Color { TakeCardStyle(take: take, scheme: scheme).surface }
 
     /// Single-open swipe coordination (shared with `SwipeActionRow`): opening one
     /// item's action closes any other.
@@ -52,13 +59,21 @@ struct ListAngleView: View {
     private let rowLeadingInset: CGFloat = 16
     private let rowTrailingInset: CGFloat = 16
 
+    /// Leading inset for the LIST ANGLE heading — aligned with the checklist ITEM
+    /// text column (owner 2026-06-19), not the abstract DAILIES column: the row's
+    /// leading pad + the checkbox (minTouchTarget) + the row HStack's 12pt spacing,
+    /// so the heading sits directly above the item text below it.
+    private var headingLeading: CGFloat {
+        rowLeadingInset + CatchlightLayout.minTouchTarget + 12
+    }
+
     var body: some View {
         // The chrome is a `.safeAreaInset` top band — an OPAQUE X-row + a 12pt fade —
         // exactly like the Dailies heading (owner 2026-06-18). Content scrolls UNDER
         // the opaque band (so it's truly masked, not just behind a translucent gradient
         // that let it peek above), and the 12pt gradient softens the dissolve edge.
         itemList
-            .background(Color.ckBackground.ignoresSafeArea())
+            .background(surface.ignoresSafeArea())
             .safeAreaInset(edge: .top, spacing: 0) { topChrome }
         // NOTE: no `.accessibilityIdentifier` on the container — SwiftUI merges a
         // container identifier onto shallow children. The per-element ids
@@ -71,6 +86,13 @@ struct ListAngleView: View {
     private var topChrome: some View {
         VStack(spacing: 0) {
             HStack {
+                // Explicit view heading, DAILIES house style (Cormorant Roman, kerned
+                // caps) — owner 2026-06-19: named as an Angle, sibling to PLANNER ANGLE.
+                Text("SHOT LIST")
+                    .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
+                    .kerning(1.6)
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark")
@@ -82,14 +104,15 @@ struct ListAngleView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("angle-close")
-                .accessibilityLabel("Close list")
+                .accessibilityLabel("Close Shot List")
             }
-            .padding(.horizontal, 12)
+            .padding(.leading, headingLeading)
+            .padding(.trailing, 12)
             .padding(.top, 4)
-            .background(Color.ckBackground)   // OPAQUE — content scrolls under and is hidden
+            .background(surface)   // OPAQUE — content scrolls under and is hidden
             // The soft dissolve edge (matches the Dailies no-Obie heading fade).
             LinearGradient(
-                colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
+                colors: [surface, surface.opacity(0)],
                 startPoint: .top, endPoint: .bottom
             )
             .frame(height: 12)
@@ -167,7 +190,7 @@ struct ListAngleView: View {
                     .padding(.horizontal, rowLeadingInset)
                     .frame(maxWidth: .infinity)
                     .frame(height: rowHeight)
-                    .background(Color.ckBackground)
+                    .background(surface)
                     .contentShape(Rectangle())
                     .offset(x: offset)
             }

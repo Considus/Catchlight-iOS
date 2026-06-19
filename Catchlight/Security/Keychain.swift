@@ -78,11 +78,27 @@ public struct MasterKeyKeychain {
         case seWrapped = 0x02  // hardware: ECIES ciphertext under the SE key
     }
 
+    /// Whether to take the Secure-Enclave wrapping path. The SE is hardware-only,
+    /// but Apple-silicon **Simulators** report `SecureEnclave.isAvailable == true`
+    /// while rejecting SE key generation with a biometric access control
+    /// (`LocalAuthentication` is "not supported on iOS Simulator" — OSStatus -25293
+    /// wrapping LA -1020). So on the Simulator we fall back to the documented raw-key
+    /// path (§ DESIGN above). This whole branch is `#if`-compiled OUT of device
+    /// builds, so real-hardware behaviour and the shipping security model are
+    /// completely unchanged.
+    private static var useSecureEnclave: Bool {
+        #if targetEnvironment(simulator)
+        return false
+        #else
+        return SecureEnclave.isAvailable
+        #endif
+    }
+
     // MARK: - Store
 
     /// Store (or replace) the 32-byte master key.
     public static func store(_ masterKeyData: Data) throws {
-        if SecureEnclave.isAvailable {
+        if useSecureEnclave {
             let privateKey = try fetchOrCreateSEKey()
             guard let publicKey = SecKeyCopyPublicKey(privateKey) else {
                 throw KeychainError.secureEnclaveFailed("SecKeyCopyPublicKey returned nil")

@@ -68,6 +68,13 @@ struct SettingsView: View {
                 }
             }
         }
+        // The sheet owns its colour scheme directly (owner 2026-06-19): an already-
+        // presented sheet doesn't reliably re-follow the app-level preferredColorScheme,
+        // and crucially won't RELEASE a forced scheme back to `nil` — so System (nil)
+        // left the overlay stuck on the last forced scheme. `settingsScheme` resolves
+        // System to an explicit value (read from the screen), so the sheet always gets
+        // a concrete scheme and re-themes live in every direction.
+        .preferredColorScheme(settingsScheme)
         .presentationDragIndicator(.visible)
         .task {
             await vm.refreshNotificationStatus()
@@ -270,6 +277,19 @@ struct SettingsView: View {
             Text("How much of each Take previews, the spacing between Takes, and whether the oldest or newest sits at the top. The Obie always stays pinned at the top.")
                 .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                 .foregroundStyle(Color.ckTextSecondary)
+        }
+    }
+
+    /// The scheme to FORCE on the Settings sheet. Night/Daylight map directly; System
+    /// resolves to the DEVICE scheme read from the SCREEN — not
+    /// `UITraitCollection.current`, which carries this view's own (stale) override and
+    /// would keep System stuck on the previously-forced scheme (owner 2026-06-19).
+    private var settingsScheme: ColorScheme? {
+        switch SettingsViewModel.AppearanceMode(rawValue: appearanceModeRaw) ?? .system {
+        case .night: return .dark
+        case .daylight: return .light
+        case .system:
+            return UIScreen.main.traitCollection.userInterfaceStyle == .dark ? .dark : .light
         }
     }
 

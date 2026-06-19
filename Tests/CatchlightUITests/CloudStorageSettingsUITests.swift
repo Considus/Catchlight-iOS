@@ -26,7 +26,7 @@ final class CloudStorageSettingsUITests: XCTestCase {
         // replaces the long-press on Dailies). Swiping up on any dock button
         // starts the drag on the toolbar, which is the gesture surface.
         let dailiesTab = app.descendants(matching: .any)
-            .matching(identifier: "dailies-tab").firstMatch
+            .matching(identifier: "angle-tab").firstMatch
         swipeUpWhenReady(dailiesTab)
 
         let settingsSheet = app.descendants(matching: .any)

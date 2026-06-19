@@ -6,8 +6,8 @@
 //  (owner 2026-06-19): Ember-ringed circular buttons + the dock's faded background
 //  (`dockFadeBackground`), so it reads as the same control family rather than a plain
 //  UIKit toolbar. Hosted in `BlockTextEditor`'s `inputAccessoryView` via a
-//  `UIHostingController`. Four buttons: ⌄ dismiss · Important · Angle (greyed when no
-//  task) · Search.
+//  `UIHostingController`. Four buttons: ⌄ dismiss · Angle (greyed when no task) ·
+//  Important · Done (tick — marks the Take done; greyed for a pure note).
 //
 
 import SwiftUI
@@ -31,24 +31,44 @@ struct EditorKeyboardBar: View {
             }
             .frame(maxWidth: .infinity)
 
-            // 2 — Important: the STANDARD Dailies glyph (slot 2 is the repurposed
-            // Dailies button — owner 2026-06-19). Ember when flagged, else Ember accent.
+            // 2 — Angle (List): opens this Take's shopping list. Slot 2 to match the
+            // main dock's Angle position, so it's the SAME button in the same place
+            // (owner 2026-06-19). Greyed when no task applies.
+            slot(enabled: config.angleEnabled, identifier: "angle-button",
+                 label: "Open as list", action: config.onOpenAngle) {
+                // A list glyph when a list exists (it WILL open the checklist —
+                // owner 2026-06-19, replacing the shopping bag, which read as
+                // shopping-specific; matches the Angle's registered `checklist`
+                // icon); the neutral ∠ when greyed, so the disabled state doesn't
+                // imply a list that isn't there.
+                dockSymbol(config.angleEnabled ? "checklist" : "angle",
+                           tint: .ckAccent, enabled: config.angleEnabled,
+                           // checklist renders heavier than ∠ at the same point size,
+                           // so size it down to match the dock's optical weight.
+                           size: config.angleEnabled ? 20 : 24)
+            }
+            .frame(maxWidth: .infinity)
+
+            // 3 — Important: the STANDARD Dailies glyph (the app's Important glyph).
+            // Ember when flagged, else Ember accent.
             slot(enabled: true, label: "Important", action: config.onToggleImportant) {
                 DailiesGlyph(size: 24)
                     .foregroundStyle(config.isImportant ? Color.ckEmber : Color.ckAccent)
             }
             .frame(maxWidth: .infinity)
 
-            // 3 — Angle (List): greyed when no task applies.
-            slot(enabled: config.angleEnabled, identifier: "angle-button",
-                 label: "Open as list", action: config.onOpenAngle) {
-                dockSymbol("bag", tint: .ckAccent, enabled: config.angleEnabled)
-            }
-            .frame(maxWidth: .infinity)
-
-            // 4 — Search.
-            slot(enabled: true, label: "Search", action: config.onSearch) {
-                dockSymbol("magnifyingglass", tint: .ckAccent, enabled: true)
+            // 4 — Done: marks the whole Take done (all checklist items + the
+            // reminder). Greyed for a pure note (nothing to complete). Was Search
+            // (owner 2026-06-19 — Search did nothing useful while inside one Take).
+            slot(enabled: config.doneEnabled,
+                 label: config.isDone ? "Mark not done" : "Mark done",
+                 action: config.onToggleDone) {
+                // A plain tick (no circle) — done is signalled by the Ember tint, in
+                // keeping with "done = colour, not a new shape" (owner 2026-06-19).
+                dockSymbol("checkmark",
+                           tint: config.isDone ? .ckEmber : .ckAccent,
+                           enabled: config.doneEnabled,
+                           size: 22)
             }
             .frame(maxWidth: .infinity)
         }
@@ -60,10 +80,13 @@ struct EditorKeyboardBar: View {
     }
 
     /// A dock-spec SF Symbol glyph: 24pt, .light, Ember (`ckAccent`); greys when disabled.
-    private func dockSymbol(_ systemImage: String, tint: Color, enabled: Bool) -> some View {
+    private func dockSymbol(_ systemImage: String, tint: Color, enabled: Bool, size: CGFloat = 24) -> some View {
         Image(systemName: systemImage)
-            .font(.system(size: 24, weight: .light))
+            .font(.system(size: size, weight: .light))
             .foregroundStyle(enabled ? tint : Color.ckTextSecondary.opacity(0.4))
+            // The ∠ symbol's mass sits low-left, so nudge it up to optically centre —
+            // matching the main dock's Angle glyph (owner 2026-06-19).
+            .offset(y: systemImage == "angle" ? -2 : 0)
     }
 
     /// One toolbar slot: the dock ring (uniform Ember @ 0.55, 1.5pt — matches

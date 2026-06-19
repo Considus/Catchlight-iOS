@@ -46,9 +46,18 @@ struct BlockTextEditor: UIViewRepresentable {
     var showsKeyboardGrabber: Bool = false
 
     /// When set, the keyboard shows the editing TOOLBAR (dismiss · Important · Angle ·
-    /// Search) as its `inputAccessoryView` instead of the plain grabber (owner
-    /// 2026-06-18). The down-arrow takes over the grabber's dismiss role.
+    /// Done) as its `inputAccessoryView` instead of the plain grabber (owner
+    /// 2026-06-18; Search → Done 2026-06-19 — Search did nothing useful while inside
+    /// one Take). The down-arrow takes over the grabber's dismiss role.
     var toolbar: EditorToolbarConfig? = nil
+
+    /// Reports the caret's rect in WINDOW coordinates whenever it moves (typing,
+    /// Return, selection). The host uses it to keep the caret above the keyboard as a
+    /// growing TEXT block pushes it down — pressing Return adds a newline to the SAME
+    /// block, so no block-change scroll fires and SwiftUI's own avoidance never
+    /// follows the caret (owner device report 2026-06-19, the "caret disappears on
+    /// Return" bug).
+    var onCaretMoved: ((CGRect) -> Void)? = nil
 
     /// The editing toolbar's state + actions — the Take-level context a per-block
     /// editor doesn't otherwise hold. Dismiss is handled internally (clears focus).
@@ -57,9 +66,21 @@ struct BlockTextEditor: UIViewRepresentable {
         /// The Angle (shopping-bag) button is enabled only when an Angle applies
         /// (a checklist Take); greyed out otherwise.
         var angleEnabled: Bool
+        /// Whether the Take currently reads as done (drives the Done button's
+        /// filled/active look).
+        var isDone: Bool
+        /// The Done (tick) button is enabled only for a task or reminder Take —
+        /// a pure note can't be "done"; greyed otherwise.
+        var doneEnabled: Bool
         var onToggleImportant: () -> Void
         var onOpenAngle: () -> Void
-        var onSearch: () -> Void
+        /// Mark the whole Take done / not-done (all checklist items + the reminder).
+        var onToggleDone: () -> Void
+        /// The keyboard ⌄/× — commit the edit and EXIT (owner 2026-06-19): the host
+        /// saves and drops the focused-edit overlay in one step, back to the timeline
+        /// (or Storyboard), rather than just lowering the keyboard onto a still-focused
+        /// Take. Default no-op (the keyboard still resigns).
+        var onDismiss: () -> Void = {}
     }
 
     func makeUIView(context: Context) -> BackspaceTextView {
@@ -88,6 +109,7 @@ struct BlockTextEditor: UIViewRepresentable {
         }
         tv.text = text
         applyStyle(to: tv)
+        context.coordinator.observeKeyboardForCaret(tv)
         return tv
     }
 
@@ -149,7 +171,30 @@ struct BlockTextEditor: UIViewRepresentable {
         /// Latch so a queued becomeFirstResponder isn't scheduled again before it
         /// runs (prevents a focus/render loop).
         var focusRequested = false
+        private weak var observedTextView: BackspaceTextView?
+        private var keyboardShowObserver: NSObjectProtocol?
         init(_ parent: BlockTextEditor) { self.parent = parent }
+        deinit {
+            if let keyboardShowObserver { NotificationCenter.default.removeObserver(keyboardShowObserver) }
+        }
+
+        /// Re-report the caret once the keyboard has FULLY shown. The host pins the
+        /// caret above the keyboard, but on ENTRY there's no keystroke to trigger a
+        /// report and the keyboard's frame isn't known until it's up — so a freshly
+        /// opened Take could sit with its card tucked under the dock until the first
+        /// keypress jolted the pin awake (owner device report 2026-06-19). Firing on
+        /// keyboardDidShow positions it correctly on appear. Only the focused row's
+        /// observer passes the guard, so the others are no-ops.
+        func observeKeyboardForCaret(_ tv: BackspaceTextView) {
+            observedTextView = tv
+            guard keyboardShowObserver == nil else { return }
+            keyboardShowObserver = NotificationCenter.default.addObserver(
+                forName: UIResponder.keyboardDidShowNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                guard let self, let tv = self.observedTextView, tv.isFirstResponder else { return }
+                self.reportCaret(tv)
+            }
+        }
 
         /// Retry becomeFirstResponder until the view is actually in a window and focus
         /// takes (or we run out of attempts) — a new Take's row may not be realised /
@@ -232,19 +277,43 @@ struct BlockTextEditor: UIViewRepresentable {
         private func editorBar() -> EditorKeyboardBar {
             EditorKeyboardBar(
                 config: parent.toolbar ?? .init(isImportant: false, angleEnabled: false,
-                                                onToggleImportant: {}, onOpenAngle: {}, onSearch: {}),
-                onDismiss: { [weak self] in self?.dismissKeyboard() }
+                                                isDone: false, doneEnabled: false,
+                                                onToggleImportant: {}, onOpenAngle: {}, onToggleDone: {}),
+                onDismiss: { [weak self] in
+                    // Lower the keyboard AND commit-and-exit the edit (owner
+                    // 2026-06-19) — one step back to the timeline / Storyboard, not a
+                    // keyboard-down-but-still-focused intermediate.
+                    self?.dismissKeyboard()
+                    self?.parent.toolbar?.onDismiss()
+                }
             )
         }
 
         func textViewDidChange(_ tv: UITextView) {
             parent.text = tv.text
+            reportCaret(tv)
+        }
+
+        func textViewDidChangeSelection(_ tv: UITextView) {
+            reportCaret(tv)
         }
 
         func textViewDidBeginEditing(_ tv: UITextView) {
             if parent.focusedBlockID != parent.blockID {
                 parent.focusedBlockID = parent.blockID
             }
+        }
+
+        /// Caret rect in WINDOW coordinates → host (see `onCaretMoved`). Guards the
+        /// not-yet-in-window / non-finite rects UIKit hands back mid-setup. The
+        /// textview's top in the window stays put as a block grows downward, so the
+        /// caret's window Y is accurate even before SwiftUI re-lays-out the taller row.
+        private func reportCaret(_ tv: UITextView) {
+            guard let report = parent.onCaretMoved, tv.window != nil,
+                  let sel = tv.selectedTextRange else { return }
+            let caret = tv.caretRect(for: sel.end)
+            guard caret.origin.y.isFinite, caret.size.height.isFinite else { return }
+            report(tv.convert(caret, to: nil))
         }
 
         func textView(_ tv: UITextView,
