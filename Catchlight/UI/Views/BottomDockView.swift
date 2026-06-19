@@ -87,11 +87,13 @@ struct BottomDockView: View {
     private let dockCircle: CGFloat = 44
 
     /// The resting border ring shared by every dock button (HiFi v1.7 .db).
-    /// `strong` = the 0.55 opacity reserved for the Add + (.db.add) and the
-    /// active Dailies button (.db.active); everything else rests at 0.35.
-    private func dockRing(strong: Bool = false) -> some View {
+    /// Uniform Ember @ 0.55, 1.5pt across ALL dock buttons (owner 2026-06-19).
+    /// The old two-tier split (0.55 for Add + active Dailies, 0.35 for
+    /// Sequence/Search and the filter/cancel rings) read as a colour mismatch
+    /// between the slot pairs, so it's retired in favour of one weight.
+    private func dockRing() -> some View {
         Circle()
-            .strokeBorder(Color.ckAccent.opacity(strong ? 0.55 : 0.35), lineWidth: 1.5)
+            .strokeBorder(Color.ckAccent.opacity(0.55), lineWidth: 1.5)
             .frame(width: dockCircle, height: dockCircle)
             .allowsHitTesting(false)
     }
@@ -221,7 +223,7 @@ struct BottomDockView: View {
                 // dock state is a SELECTED FILTER TOGGLE (see toggleLabel .on/.mod);
                 // Add and active-Dailies are distinguished by the 0.55 border, not
                 // a fill. Was a filled ckAdd droplet with an Ink "+".
-                dockRing(strong: true)   // .db.add — Ember border @55%
+                dockRing()   // .db.add — Ember border @55%
                 Image(systemName: "plus")
                     // .regular (was .medium): the + read slightly heavier than the
                     // .light sibling glyphs; nudged down one step (owner 2026-06-16).
@@ -295,7 +297,7 @@ struct BottomDockView: View {
                         .frame(width: buttonSize, height: buttonSize)
                         .transition(.opacity)
                 }
-                dockRing(strong: true)   // .db.active — Ember border @55%
+                dockRing()   // .db.active — Ember border @55%
                 DailiesGlyph(size: 24)   // scaled with the 36→44 circle
                     .foregroundStyle(Color.ckAccent)
                     .frame(width: buttonSize, height: buttonSize)
