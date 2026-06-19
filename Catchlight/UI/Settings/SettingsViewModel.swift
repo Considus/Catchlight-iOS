@@ -232,14 +232,15 @@ final class SettingsViewModel {
 
         var id: String { rawValue }
 
-        /// Settings row label (reads as a retention window, not a frequency).
+        /// Short segment label for the house segmented control (the "after a …"
+        /// meaning is carried by the Security footer; mirrors how Order/View read).
         var label: String {
             switch self {
             case .never:    return "Never"
-            case .daily:    return "After a day"
-            case .weekly:   return "After a week"
-            case .monthly:  return "After a month"
-            case .annually: return "After a year"
+            case .daily:    return "Day"
+            case .weekly:   return "Week"
+            case .monthly:  return "Month"
+            case .annually: return "Year"
             }
         }
 
