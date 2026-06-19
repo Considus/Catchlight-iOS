@@ -310,6 +310,10 @@ struct BottomDockView: View {
                 Image(systemName: "angle")
                     .font(.system(size: 24, weight: .light))
                     .foregroundStyle(Color.ckAccent)
+                    // The ∠ symbol's mass sits low-left, so centred in the ring it
+                    // reads as sitting low — nudge it up ~2pt to optically centre
+                    // (owner 2026-06-19). Tunable.
+                    .offset(y: -2)
                     .frame(width: buttonSize, height: buttonSize)
                     .contentShape(Rectangle())
             }

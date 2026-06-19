@@ -36,7 +36,11 @@ struct EditorKeyboardBar: View {
             // (owner 2026-06-19). Greyed when no task applies.
             slot(enabled: config.angleEnabled, identifier: "angle-button",
                  label: "Open as list", action: config.onOpenAngle) {
-                dockSymbol("bag", tint: .ckAccent, enabled: config.angleEnabled)
+                // Bag when a list exists (it WILL open the shopping list); the
+                // neutral ∠ when greyed, so the disabled state doesn't imply a
+                // shopping list that isn't there (owner 2026-06-19).
+                dockSymbol(config.angleEnabled ? "bag" : "angle",
+                           tint: .ckAccent, enabled: config.angleEnabled)
             }
             .frame(maxWidth: .infinity)
 
@@ -54,7 +58,9 @@ struct EditorKeyboardBar: View {
             slot(enabled: config.doneEnabled,
                  label: config.isDone ? "Mark not done" : "Mark done",
                  action: config.onToggleDone) {
-                dockSymbol(config.isDone ? "checkmark.circle.fill" : "checkmark.circle",
+                // A plain tick (no circle) — done is signalled by the Ember tint, in
+                // keeping with "done = colour, not a new shape" (owner 2026-06-19).
+                dockSymbol("checkmark",
                            tint: config.isDone ? .ckEmber : .ckAccent,
                            enabled: config.doneEnabled)
             }
@@ -72,6 +78,9 @@ struct EditorKeyboardBar: View {
         Image(systemName: systemImage)
             .font(.system(size: 24, weight: .light))
             .foregroundStyle(enabled ? tint : Color.ckTextSecondary.opacity(0.4))
+            // The ∠ symbol's mass sits low-left, so nudge it up to optically centre —
+            // matching the main dock's Angle glyph (owner 2026-06-19).
+            .offset(y: systemImage == "angle" ? -2 : 0)
     }
 
     /// One toolbar slot: the dock ring (uniform Ember @ 0.55, 1.5pt — matches
