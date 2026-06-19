@@ -175,12 +175,13 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         blocks.map { $0.text }.joined(separator: "\n")
     }
 
-    /// `(done, total)` for the timeline row's "3 of 5" progress marker — only for
-    /// a Task with 2+ check items. A one-item Task returns nil: its checked /
-    /// strikethrough state already reads the progress, so a count would be noise.
+    /// `(done, total)` for the card's "0 of 1 / 3 of 5 completed" progress marker —
+    /// shown for ANY Task with 1+ check items (owner 2026-06-19: a single-item Task
+    /// should still read "0 of 1 completed"; previously one-item Tasks were silent).
+    /// A pure note (no check items) returns nil.
     public var checklistProgress: (done: Int, total: Int)? {
         let items = checkItems
-        guard items.count >= 2 else { return nil }
+        guard !items.isEmpty else { return nil }
         return (items.filter(\.isComplete).count, items.count)
     }
 

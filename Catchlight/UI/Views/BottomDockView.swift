@@ -130,7 +130,7 @@ struct BottomDockView: View {
                 switch ui.dockMode {
                 case .resting:
                     addButton.frame(width: slotW)
-                    dailiesNavButton
+                    angleNavButton
                         .frame(width: slotW)
                         .offset(x: mergeProgress * slotW * 0.5)
                         .opacity(1 - Double(mergeProgress))
@@ -140,7 +140,7 @@ struct BottomDockView: View {
                         .opacity(1 - Double(mergeProgress))
                     searchNavButton.frame(width: slotW)
                 case .filtering:
-                    addButton.frame(width: slotW)
+                    importantToggle.frame(width: slotW)
                     notesToggle.frame(width: slotW)
                     tasksToggle.frame(width: slotW)
                     remindersToggle.frame(width: slotW)
@@ -279,13 +279,22 @@ struct BottomDockView: View {
 
     // MARK: - RESTING nav buttons
 
-    /// The Dailies nav button — always the active surface (there is only one).
-    /// Settings moved to the dock swipe-up (owner redesign 2026-06-11); while
-    /// first-run Hint 3 is visible a tap dismisses the hint, shown with a
-    /// dashed ring + tooltip. The custom spine glyph IS the Dailies icon.
-    private var dailiesNavButton: some View {
+    /// The Angle nav button (slot 2, RESTING) — opens the STORYBOARD ANGLE, the
+    /// full-screen list of every task-bearing Take (owner 2026-06-19). Replaces the
+    /// old Dailies button, which was inert now there is one surface: its tap only
+    /// ever dismissed the settings hint. The settings swipe-up still lives on the
+    /// WHOLE dock; while the first-run settings hint is up a tap dismisses it (the
+    /// dashed ring is the "tap to dismiss" target), and the explicit "Open Settings"
+    /// VoiceOver action moves here. The glyph is the literal angle (∠) — distinct
+    /// from the keyboard Angle's checklist glyph, so each icon hints what it opens
+    /// (the Storyboard vs a single Take's list).
+    private var angleNavButton: some View {
         Button {
-            if orientation.showSettingsHint { orientation.didDismissSettingsHint() }
+            if orientation.showSettingsHint {
+                orientation.didDismissSettingsHint()
+            } else {
+                ui.isStoryboardPresented = true
+            }
         } label: {
             ZStack {
                 if orientation.showSettingsHint {
@@ -297,28 +306,26 @@ struct BottomDockView: View {
                         .frame(width: buttonSize, height: buttonSize)
                         .transition(.opacity)
                 }
-                dockRing()   // .db.active — Ember border @55%
-                DailiesGlyph(size: 24)   // scaled with the 36→44 circle
+                dockRing()
+                Image(systemName: "angle")
+                    .font(.system(size: 24, weight: .light))
                     .foregroundStyle(Color.ckAccent)
+                    // The ∠ symbol's mass sits low-left, so centred in the ring it
+                    // reads as sitting low — nudge it up ~2pt to optically centre
+                    // (owner 2026-06-19). Tunable.
+                    .offset(y: -2)
                     .frame(width: buttonSize, height: buttonSize)
                     .contentShape(Rectangle())
             }
-            // The "Swipe up here for settings." tooltip is NOT hosted here any
-            // more — the swipe gesture lives on the whole dock, not this button,
-            // so a bubble centred on the off-centre Dailies slot read as lopsided.
-            // It now sits centred on the dock's x-axis (see `settingsHint` on the
-            // dock body, owner 2026-06-16). The dashed ring stays on this button
-            // as the visual "tap to dismiss" target.
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("dailies-tab")
-        .accessibilityLabel("Dailies")
-        .accessibilityValue("selected")
-        .accessibilityHint("Your timeline. Swipe up on the toolbar to open Settings.")
+        .accessibilityIdentifier("angle-tab")
+        .accessibilityLabel("Storyboard")
+        .accessibilityHint("Opens the Storyboard — every Take with a task. Swipe up on the toolbar to open Settings.")
         // The swipe is a VoiceOver-incompatible gesture, so expose Settings as
         // an explicit named action too.
         .accessibilityAction(named: "Open Settings") { ui.isSettingsPresented = true }
-        .accessibilityAddTraits([.isSelected, .isButton])
+        .accessibilityAddTraits(.isButton)
     }
 
     /// Sequence (slot 3, RESTING) — morphs the dock to the FILTERING state.
@@ -449,6 +456,35 @@ struct BottomDockView: View {
         }
         .frame(width: buttonSize, height: buttonSize)
         .contentShape(Circle())
+    }
+
+    /// Important (slot 1, FILTERING) — replaces the Add button while filtering
+    /// (owner 2026-06-19: all filters now live under Sequence). Off ↔ on; orthogonal
+    /// to the type toggles, so it neither clears them nor is cleared. Uses the
+    /// Dailies glyph — the app's Important glyph — and the shared Ember ON fill.
+    private var importantToggle: some View {
+        Button {
+            ui.tapImportantFilter()
+        } label: {
+            ZStack {
+                if ui.filterImportant {
+                    Circle().fill(Color.ckEmber)
+                        .frame(width: dockCircle, height: dockCircle)
+                } else {
+                    dockRing()
+                }
+                DailiesGlyph(size: 22)
+                    .foregroundStyle(ui.filterImportant ? Color.ckBackground : Color.ckAccent)
+            }
+            .frame(width: buttonSize, height: buttonSize)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("filter-important")
+        .accessibilityLabel("Important filter")
+        .accessibilityValue(ui.filterImportant ? "on" : "off")
+        .accessibilityHint("Double-tap to show only Important Takes.")
+        .accessibilityAddTraits(ui.filterImportant ? [.isSelected, .isButton] : [.isButton])
     }
 
     /// Notes — plain on/off toggle, mutually exclusive with Tasks/Reminders.

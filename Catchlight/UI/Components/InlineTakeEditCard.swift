@@ -24,21 +24,31 @@ import CatchlightCore
 struct InlineTakeEditCard: View {
     @Binding var draft: Take
     @Binding var focusedBlockID: UUID?
-    /// Opens the full-screen Angle (the shopping-bag button now lives on the keyboard
+    /// Opens the full-screen Angle (the list button now lives on the keyboard
     /// toolbar, owner 2026-06-18). Shown only when an Angle applies (a checklist Take).
     var onOpenAngle: (() -> Void)? = nil
-    /// Search from the editing toolbar (owner 2026-06-18) — routes to `enterSearching`.
-    var onSearch: (() -> Void)? = nil
+    /// Commit-and-exit, fired by the keyboard's ⌄/× (owner 2026-06-19) — the host
+    /// saves the draft and drops the focused-edit overlay in one step.
+    var onCommit: (() -> Void)? = nil
+    /// The focused block's caret rect (window coords), forwarded from the active
+    /// `BlockTextEditor` so the timeline can keep it above the keyboard while a block
+    /// grows (owner device report 2026-06-19). Only the focused row fires.
+    var onCaretMoved: ((CGRect) -> Void)? = nil
 
     /// The editing toolbar's state + actions, passed to every block editor so the
-    /// keyboard shows it. Angle enabled only when an Angle applies to the draft.
+    /// keyboard shows it. Angle enabled only when an Angle applies to the draft; the
+    /// Done (tick) button — slot 4, replacing Search (owner 2026-06-19) — marks the
+    /// whole draft done and is enabled only for a task / reminder Take.
     private var toolbarConfig: BlockTextEditor.EditorToolbarConfig {
         .init(
             isImportant: draft.isImportant,
             angleEnabled: AngleRegistry.applicable(to: draft).first != nil,
+            isDone: draft.isMarkedDone,
+            doneEnabled: draft.isTask || draft.timeReminder != nil,
             onToggleImportant: { draft.isImportant.toggle() },
             onOpenAngle: { onOpenAngle?() },
-            onSearch: { onSearch?() }
+            onToggleDone: { draft.setMarkedDone(!draft.isMarkedDone) },
+            onDismiss: { onCommit?() }
         )
     }
 
@@ -59,10 +69,18 @@ struct InlineTakeEditCard: View {
     @Environment(\.colorScheme) private var scheme
     private var style: TakeCardStyle { TakeCardStyle(take: draft, scheme: scheme) }
 
+    /// A fixed minimum height for the focused editing card (owner 2026-06-19), so a
+    /// one-line Take is still a proper editing surface and every focused Take is a
+    /// consistent target — steadier to position above the keyboard. Tunable.
+    private let focusMinHeight: CGFloat = 96
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(draft.blocks) { block in
                 row(for: block)
+                    // Tagged so the pinned focus overlay's ScrollViewReader can scroll
+                    // the focused block into view on a long Take (owner 2026-06-19).
+                    .id(block.id)
                     // Lift the row being dragged so it follows the finger above its
                     // neighbours while the order reflows underneath.
                     .offset(y: dragVisualOffset(for: block.id))
@@ -73,7 +91,7 @@ struct InlineTakeEditCard: View {
         // 14 sides / 14 bottom; leading uses the shared text-column token.
         .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
                             bottom: 14, trailing: 14))
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: focusMinHeight, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(style.surface)
@@ -102,7 +120,8 @@ struct InlineTakeEditCard: View {
                 axIdentifier: isFirstTextBlock(textBlock.id) ? "take-edit-body" : "take-edit-text",
                 axLabel: "Take text",
                 onBackspaceEmpty: { handleBackspaceEmpty(textBlock.id, isCheck: false) },
-                toolbar: toolbarConfig
+                toolbar: toolbarConfig,
+                onCaretMoved: onCaretMoved
             )
         case .check(let item):
             // CENTRE-aligned to match the List Angle (owner 2026-06-18): the glyph is
@@ -139,7 +158,8 @@ struct InlineTakeEditCard: View {
                     axLabel: "Checklist item",
                     onReturn: { handleReturn(item.id) },
                     onBackspaceEmpty: { handleBackspaceEmpty(item.id, isCheck: true) },
-                    toolbar: toolbarConfig
+                    toolbar: toolbarConfig,
+                    onCaretMoved: onCaretMoved
                 )
 
                 // Drag handle to reorder. UIKit-bridged (owner 2026-06-17, "do it
