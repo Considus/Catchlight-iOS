@@ -61,6 +61,15 @@ struct PlannerView: View {
         max(0, takeSpacing.gap - CatchlightLayout.circleDiameter / 2)
     }
 
+    /// Leading inset for the heading — the SAME column the DAILIES / SEQUENCE
+    /// headings use (owner 2026-06-19), so PLANNER ANGLE lines up with the timeline
+    /// headings rather than floating at a different margin. Full-screen, so the
+    /// screen width is the container width (matches DailiesView's spineX fallback).
+    private var headingLeading: CGFloat {
+        CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
+            - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad
+    }
+
     // MARK: - Edit-in-place state (LOCAL to the Planner)
 
     @State private var editDraft: Take?
@@ -135,7 +144,7 @@ struct PlannerView: View {
                 .accessibilityIdentifier("planner-close")
                 .accessibilityLabel("Close planner")
             }
-            .padding(.leading, 16)
+            .padding(.leading, headingLeading)
             .padding(.trailing, 12)
             .padding(.top, 4)
             .background(Color.ckBackground)

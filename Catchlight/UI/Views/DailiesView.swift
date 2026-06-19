@@ -1144,6 +1144,21 @@ struct DailiesView: View {
                 guard app.ensureEntitled() else { return }
                 vm.toggleDone(take)
             },
+            onSetImportant: {
+                // Manual Important mark (owner 2026-06-19). While editing, ride the
+                // draft so it persists on the inline save; at rest, toggle through
+                // the store.
+                if isEditingThis {
+                    guard var d = editDraft else { return }
+                    d.isImportant.toggle()
+                    editDraft = d
+                    return
+                }
+                guard app.ensureEntitled() else { return }
+                var t = take
+                t.isImportant.toggle()
+                vm.save(t)
+            },
             onDelete: {
                 guard app.ensureEntitled() else { return }
                 // Delete while editing: drop the draft and leave editing — there's
