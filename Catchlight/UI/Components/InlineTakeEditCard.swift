@@ -124,7 +124,7 @@ struct InlineTakeEditCard: View {
                 onCaretMoved: onCaretMoved
             )
         case .check(let item):
-            // CENTRE-aligned to match the List Angle (owner 2026-06-18): the glyph is
+            // CENTRE-aligned to match the Shot List (owner 2026-06-18): the glyph is
             // centred in its 44pt frame, so centring the row lines it up with the
             // item's line. `.top` made the centred glyph sit ~8pt below the text's
             // first line (text inset 6 + half-line vs half of 44) — the "text higher
@@ -288,7 +288,7 @@ struct InlineTakeEditCard: View {
 /// test can't separate it — instead the delegate makes the ScrollView's pan REQUIRE
 /// THIS ONE TO FAIL, so a vertical drag that starts on the handle wins outright and
 /// reorders with no press-delay, while drags anywhere else scroll normally.
-/// (Reused by the List Angle's reorder in Phase 4.)
+/// (Reused by the Shot List's reorder in Phase 4.)
 struct VerticalReorderGesture: UIGestureRecognizerRepresentable {
     var onBegan: () -> Void
     /// Cumulative vertical translation (pt) since the drag began.
