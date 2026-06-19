@@ -29,7 +29,7 @@ final class TwoTapRegressionTests: XCTestCase {
 
     func testReachability_search_inOneTap() {
         let app = launchAppForUITesting()
-        XCTAssertTrue(app.buttons["dailies-tab"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["angle-tab"].waitForExistence(timeout: 3))
         assertReachableInOneInteraction(
             "Search",
             interaction: { tapWhenReady(app.buttons["search-tab"]) },
@@ -39,7 +39,7 @@ final class TwoTapRegressionTests: XCTestCase {
 
     func testReachability_sequence_inOneTap() {
         let app = launchAppForUITesting()
-        XCTAssertTrue(app.buttons["dailies-tab"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["angle-tab"].waitForExistence(timeout: 3))
         // Dock redesign (2026-06-10): Sequence morphs the dock to its FILTERING
         // state — the three live filter toggles appear in one interaction.
         assertReachableInOneInteraction(
@@ -51,12 +51,12 @@ final class TwoTapRegressionTests: XCTestCase {
 
     func testReachability_settings_inOneSwipe() {
         let app = launchAppForUITesting()
-        XCTAssertTrue(app.buttons["dailies-tab"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["angle-tab"].waitForExistence(timeout: 3))
         // The most-violated invariant historically — Settings keeps trying to
         // grow its own tab, which would push it OFF the two-tap path.
         assertReachableInOneInteraction(
             "Settings",
-            interaction: { swipeUpWhenReady(app.buttons["dailies-tab"]) },
+            interaction: { swipeUpWhenReady(app.buttons["angle-tab"]) },
             expectedElement: app.navigationBars["Settings"]
         )
     }

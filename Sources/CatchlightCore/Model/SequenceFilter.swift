@@ -38,6 +38,10 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
     /// Expired Reminders: scheduled date already passed ("Expired" — long-press
     /// on the Reminders toggle).
     public var requireExpiredReminder: Bool
+    /// Important Takes (the Sequence Important toggle, 2026-06-19). Orthogonal to
+    /// the type chips — an Important Take can be a note, task, or reminder — so it
+    /// AND-composes with everything and clears nothing.
+    public var requireImportant: Bool
 
     /// Month buckets as "yyyy-MM" keys (e.g. "2026-06"), matched against the
     /// Take's `createdAt` in the caller's calendar. Multiple months are OR-ed
@@ -50,6 +54,7 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
                 requireNoteOnly: Bool = false,
                 requireCompleted: Bool = false,
                 requireExpiredReminder: Bool = false,
+                requireImportant: Bool = false,
                 months: [String] = []) {
         self.text = text
         self.requireTask = requireTask
@@ -57,6 +62,7 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
         self.requireNoteOnly = requireNoteOnly
         self.requireCompleted = requireCompleted
         self.requireExpiredReminder = requireExpiredReminder
+        self.requireImportant = requireImportant
         self.months = months
     }
 
@@ -64,7 +70,7 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
     // break old payloads (same discipline as Take).
     enum CodingKeys: String, CodingKey {
         case text, requireTask, requireReminder, requireNoteOnly, requireCompleted
-        case requireExpiredReminder, months
+        case requireExpiredReminder, requireImportant, months
     }
 
     public init(from decoder: Decoder) throws {
@@ -75,6 +81,7 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
         requireNoteOnly = try c.decodeIfPresent(Bool.self, forKey: .requireNoteOnly) ?? false
         requireCompleted = try c.decodeIfPresent(Bool.self, forKey: .requireCompleted) ?? false
         requireExpiredReminder = try c.decodeIfPresent(Bool.self, forKey: .requireExpiredReminder) ?? false
+        requireImportant = try c.decodeIfPresent(Bool.self, forKey: .requireImportant) ?? false
         months = try c.decodeIfPresent([String].self, forKey: .months) ?? []
     }
 
@@ -82,7 +89,7 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
     public var isEmpty: Bool {
         text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !requireTask && !requireReminder && !requireNoteOnly && !requireCompleted
-            && !requireExpiredReminder && months.isEmpty
+            && !requireExpiredReminder && !requireImportant && months.isEmpty
     }
 
     // MARK: - Matching
@@ -98,6 +105,7 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
         if requireExpiredReminder {
             guard let reminder = take.timeReminder, reminder.scheduledDate < now else { return false }
         }
+        if requireImportant && !take.isImportant { return false }
         if !months.isEmpty,
            !months.contains(Self.monthKey(for: take.createdAt, calendar: calendar)) {
             return false
@@ -125,6 +133,7 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
         if requireNoteOnly { parts.append("Notes") }
         if requireCompleted { parts.append("Done") }
         if requireExpiredReminder { parts.append("Expired") }
+        if requireImportant { parts.append("Important") }
         parts.append(contentsOf: months.map(monthLabel))
         return parts.isEmpty ? "Everything" : parts.joined(separator: " · ")
     }

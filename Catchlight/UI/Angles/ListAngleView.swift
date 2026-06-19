@@ -71,6 +71,13 @@ struct ListAngleView: View {
     private var topChrome: some View {
         VStack(spacing: 0) {
             HStack {
+                // Explicit view heading, DAILIES house style (Cormorant Roman, kerned
+                // caps) — owner 2026-06-19: named as an Angle, sibling to PLANNER ANGLE.
+                Text("LIST ANGLE")
+                    .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
+                    .kerning(1.6)
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark")
@@ -84,7 +91,8 @@ struct ListAngleView: View {
                 .accessibilityIdentifier("angle-close")
                 .accessibilityLabel("Close list")
             }
-            .padding(.horizontal, 12)
+            .padding(.leading, 16)
+            .padding(.trailing, 12)
             .padding(.top, 4)
             .background(Color.ckBackground)   // OPAQUE — content scrolls under and is hidden
             // The soft dissolve edge (matches the Dailies no-Obie heading fade).

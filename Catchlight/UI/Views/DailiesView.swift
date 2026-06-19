@@ -1172,11 +1172,6 @@ struct DailiesView: View {
                     onOpenAngle: {
                         editFocusedBlockID = nil   // drop the keyboard before the cover
                         anglePresented = true
-                    },
-                    onSearch: {
-                        // Commit the edit, then enter search (keyboard toolbar, 2026-06-18).
-                        saveInlineEdit()
-                        ui.enterSearching()
                     })) }
                 : nil
         )

@@ -46,8 +46,9 @@ struct BlockTextEditor: UIViewRepresentable {
     var showsKeyboardGrabber: Bool = false
 
     /// When set, the keyboard shows the editing TOOLBAR (dismiss · Important · Angle ·
-    /// Search) as its `inputAccessoryView` instead of the plain grabber (owner
-    /// 2026-06-18). The down-arrow takes over the grabber's dismiss role.
+    /// Done) as its `inputAccessoryView` instead of the plain grabber (owner
+    /// 2026-06-18; Search → Done 2026-06-19 — Search did nothing useful while inside
+    /// one Take). The down-arrow takes over the grabber's dismiss role.
     var toolbar: EditorToolbarConfig? = nil
 
     /// The editing toolbar's state + actions — the Take-level context a per-block
@@ -57,9 +58,16 @@ struct BlockTextEditor: UIViewRepresentable {
         /// The Angle (shopping-bag) button is enabled only when an Angle applies
         /// (a checklist Take); greyed out otherwise.
         var angleEnabled: Bool
+        /// Whether the Take currently reads as done (drives the Done button's
+        /// filled/active look).
+        var isDone: Bool
+        /// The Done (tick) button is enabled only for a task or reminder Take —
+        /// a pure note can't be "done"; greyed otherwise.
+        var doneEnabled: Bool
         var onToggleImportant: () -> Void
         var onOpenAngle: () -> Void
-        var onSearch: () -> Void
+        /// Mark the whole Take done / not-done (all checklist items + the reminder).
+        var onToggleDone: () -> Void
     }
 
     func makeUIView(context: Context) -> BackspaceTextView {
@@ -232,7 +240,8 @@ struct BlockTextEditor: UIViewRepresentable {
         private func editorBar() -> EditorKeyboardBar {
             EditorKeyboardBar(
                 config: parent.toolbar ?? .init(isImportant: false, angleEnabled: false,
-                                                onToggleImportant: {}, onOpenAngle: {}, onSearch: {}),
+                                                isDone: false, doneEnabled: false,
+                                                onToggleImportant: {}, onOpenAngle: {}, onToggleDone: {}),
                 onDismiss: { [weak self] in self?.dismissKeyboard() }
             )
         }

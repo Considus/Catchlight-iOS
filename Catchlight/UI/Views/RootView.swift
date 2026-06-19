@@ -152,6 +152,12 @@ struct RootView: View {
             PaywallView()
                 .environment(app)
         }
+        .fullScreenCover(isPresented: $ui.isPlannerPresented) {
+            PlannerView(onClose: { ui.isPlannerPresented = false })
+                .environment(app.dailiesVM)
+                .environment(ui)
+                .environment(app)
+        }
         .onChange(of: app.needsOnboarding) { _, isOnboarding in
             // Post-onboarding paywall trigger (Task 6.20). When the flag flips
             // false we've just exited onboarding; surface the paywall if the
