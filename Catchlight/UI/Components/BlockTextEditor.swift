@@ -51,6 +51,14 @@ struct BlockTextEditor: UIViewRepresentable {
     /// one Take). The down-arrow takes over the grabber's dismiss role.
     var toolbar: EditorToolbarConfig? = nil
 
+    /// Reports the caret's rect in WINDOW coordinates whenever it moves (typing,
+    /// Return, selection). The host uses it to keep the caret above the keyboard as a
+    /// growing TEXT block pushes it down — pressing Return adds a newline to the SAME
+    /// block, so no block-change scroll fires and SwiftUI's own avoidance never
+    /// follows the caret (owner device report 2026-06-19, the "caret disappears on
+    /// Return" bug).
+    var onCaretMoved: ((CGRect) -> Void)? = nil
+
     /// The editing toolbar's state + actions — the Take-level context a per-block
     /// editor doesn't otherwise hold. Dismiss is handled internally (clears focus).
     struct EditorToolbarConfig {
@@ -259,12 +267,29 @@ struct BlockTextEditor: UIViewRepresentable {
 
         func textViewDidChange(_ tv: UITextView) {
             parent.text = tv.text
+            reportCaret(tv)
+        }
+
+        func textViewDidChangeSelection(_ tv: UITextView) {
+            reportCaret(tv)
         }
 
         func textViewDidBeginEditing(_ tv: UITextView) {
             if parent.focusedBlockID != parent.blockID {
                 parent.focusedBlockID = parent.blockID
             }
+        }
+
+        /// Caret rect in WINDOW coordinates → host (see `onCaretMoved`). Guards the
+        /// not-yet-in-window / non-finite rects UIKit hands back mid-setup. The
+        /// textview's top in the window stays put as a block grows downward, so the
+        /// caret's window Y is accurate even before SwiftUI re-lays-out the taller row.
+        private func reportCaret(_ tv: UITextView) {
+            guard let report = parent.onCaretMoved, tv.window != nil,
+                  let sel = tv.selectedTextRange else { return }
+            let caret = tv.caretRect(for: sel.end)
+            guard caret.origin.y.isFinite, caret.size.height.isFinite else { return }
+            report(tv.convert(caret, to: nil))
         }
 
         func textView(_ tv: UITextView,
