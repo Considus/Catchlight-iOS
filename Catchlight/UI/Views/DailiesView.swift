@@ -345,12 +345,17 @@ struct DailiesView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
+                        // Top pad clears the heading AND the Iris, which straddles the
+                        // card's top edge (extends one radius above it) — otherwise the
+                        // Iris tucks under the heading (owner screenshots 2026-06-19).
                         row(for: draft, isFirst: false)
-                            .padding(.top, deviceTopInset + CatchlightLayout.headingClearance + 8)
+                            .padding(.top, deviceTopInset + CatchlightLayout.headingClearance
+                                     + CatchlightLayout.circleDiameter / 2 + 8)
                         // Tap off the card (the area below it) commits & exits — the
-                        // masked-background catcher, now living in the overlay.
+                        // masked-background catcher, now living in the overlay. Kept
+                        // small so it doesn't inflate the content into scrolling early.
                         Color.clear
-                            .frame(maxWidth: .infinity, minHeight: 160)
+                            .frame(maxWidth: .infinity, minHeight: 60)
                             .contentShape(Rectangle())
                             .onTapGesture { saveInlineEdit() }
                     }
@@ -360,13 +365,15 @@ struct DailiesView: View {
                 // the keyboard frame includes the inputAccessoryView), so content can't
                 // sit behind the keyboard.
                 .padding(.bottom, keyboardHeight)
-                // Keep the focused block visible: scroll the MINIMAL amount to reveal
-                // it (no anchor) — so a short Take stays pinned at the top, while
-                // pressing Return down a long Take scrolls just enough to keep the
-                // caret above the keyboard.
+                // Anchor .bottom: while the Take FITS the band the ScrollView can't
+                // scroll, so the card stays PINNED at the top (caret just moves down as
+                // you type); once it OVERFLOWS, the focused block rides just above the
+                // keyboard and earlier content scrolls off — and backspacing reflows it
+                // back down. (Plain scrollTo pinned the block to the TOP, dragging the
+                // card off above the clock — owner screenshots 2026-06-19.)
                 .onChange(of: editFocusedBlockID) { _, id in
                     guard let id else { return }
-                    withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo(id) }
+                    withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo(id, anchor: .bottom) }
                 }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIResponder.keyboardWillChangeFrameNotification)) { note in
