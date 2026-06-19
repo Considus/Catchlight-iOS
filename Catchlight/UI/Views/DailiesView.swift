@@ -154,10 +154,19 @@ struct DailiesView: View {
     /// slid behind it. Direct offset maths against the real caret + keyboard frame is
     /// deterministic on device.
     @State private var caretScrollView: UIScrollView?
+    /// One-shot: the NEXT caret pin should animate (a smooth glide) rather than snap.
+    /// Set when the keyboard is appearing so the ENTRY pin glides into place in one
+    /// motion instead of the reveal-then-jump "two steps" (owner 2026-06-19); typing
+    /// pins stay instant so they track keystrokes without lag.
+    @State private var animateNextPin = false
     /// How far above the keyboard's top edge the caret is held (owner screenshot
     /// 2026-06-19 — the caret sits ~one card's breathing room above the toolbar).
-    /// Tunable on device.
+    /// The LOWER bound of the caret band. Tunable on device.
     private let caretPinGap: CGFloat = 72
+    /// How far below the pinned heading the caret may rise before the content scrolls
+    /// back DOWN — the UPPER bound of the caret band (owner 2026-06-19: deleting a long
+    /// Take let the caret climb off the top under the heading). Tunable on device.
+    private let caretTopGap: CGFloat = 24
 
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
@@ -837,17 +846,17 @@ struct DailiesView: View {
                     if ui.spotlightTargetTakeID == id { ui.spotlightTargetTakeID = nil }
                 }
             }
-            // Edit-in-place Phase 2 — revealing a just-created Take takes TWO scrolls:
-            // 1) INITIAL reveal (here): a new Take is created off-screen (bottom, under
+            // 1) INITIAL reveal: a new Take is created off-screen (bottom, under
             //    Oldest-first), so the LazyVStack hasn't built its row yet — it can't
-            //    take focus or raise the keyboard until it's scrolled into view. This
-            //    instantiates it. Does NOT clear the target — the final position is set
-            //    on keyboardDidShow.
+            //    take focus or raise the keyboard until it's scrolled into view. A
+            //    MINIMAL, instant `scrollTo` (no anchor) just realises it — no-op if
+            //    it's already visible (so an on-screen Take doesn't jump pre-keyboard).
+            //    The final resting position is the entry caret pin (keyboardDidShow),
+            //    which glides in one motion — replacing the old animated scroll-to-0.82
+            //    that fought the pin and read as a jerky "two steps" (owner 2026-06-19).
             .onChange(of: scrollToTakeID) { _, id in
                 guard let id else { return }
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
-                }
+                proxy.scrollTo(id)
             }
             // 2) ENTRY position is no longer a separate scrollTo here. The focused
             //    editor re-reports its caret on keyboardDidShow (BlockTextEditor), which
@@ -866,6 +875,11 @@ struct DailiesView: View {
                 for: UIResponder.keyboardWillChangeFrameNotification)) { note in
                 guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
                 else { return }
+                // Keyboard APPEARING (was off-screen, now on) → glide the entry pin
+                // smoothly into place rather than snapping after a separate reveal.
+                if keyboardTopY >= UIScreen.main.bounds.height && frame.origin.y < UIScreen.main.bounds.height {
+                    animateNextPin = true
+                }
                 keyboardTopY = frame.origin.y
             }
         }
@@ -1063,16 +1077,33 @@ struct DailiesView: View {
     /// Only pulls the caret UP (never forces a high caret down), so a short Take keeps
     /// its natural rest position; clamped so it can't overscroll past the content.
     private func pinCaret(_ caretRect: CGRect) {
-        guard ui.isEditingInPlace, let sv = caretScrollView, keyboardTopY.isFinite else { return }
-        let pinY = keyboardTopY - caretPinGap
-        let overshoot = caretRect.maxY - pinY
-        guard overshoot > 0.5 else { return }            // caret already at/above the line
+        // Only act while the keyboard is actually UP — otherwise the focus-time report
+        // (keyboard still down) could spuriously scroll.
+        guard ui.isEditingInPlace, let sv = caretScrollView,
+              keyboardTopY < UIScreen.main.bounds.height else { return }
+        let animated = animateNextPin
+        animateNextPin = false
         let minOffset = -sv.adjustedContentInset.top
         let maxOffset = max(minOffset,
                             sv.contentSize.height - sv.bounds.height + sv.adjustedContentInset.bottom)
-        let target = min(sv.contentOffset.y + overshoot, maxOffset)
-        guard target - sv.contentOffset.y > 0.5 else { return }
-        sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: target), animated: false)
+        // Keep the caret inside a BAND: not below the line above the keyboard
+        // (`pinY` — scroll content UP), and not above a line just under the heading
+        // (`topY` — scroll content DOWN, so deleting a long Take brings it back into
+        // view instead of letting the caret climb off the top). Between the two it
+        // roams freely (the Notes feel).
+        let pinY = keyboardTopY - caretPinGap
+        let topY = deviceTopInset + CatchlightLayout.headingClearance + caretTopGap
+        var target = sv.contentOffset.y
+        if caretRect.maxY > pinY {
+            target += caretRect.maxY - pinY
+        } else if caretRect.minY < topY {
+            target -= topY - caretRect.minY
+        } else {
+            return                                       // within the band — leave it
+        }
+        target = min(max(target, minOffset), maxOffset)
+        guard abs(target - sv.contentOffset.y) > 0.5 else { return }
+        sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: target), animated: animated)
     }
 
     /// Discard the edits (owner 2026-06-17 — via the row's long-press menu): drop the
