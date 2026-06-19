@@ -65,6 +65,11 @@ struct InlineTakeEditCard: View {
     @Environment(\.colorScheme) private var scheme
     private var style: TakeCardStyle { TakeCardStyle(take: draft, scheme: scheme) }
 
+    /// A fixed minimum height for the focused editing card (owner 2026-06-19), so a
+    /// one-line Take is still a proper editing surface and every focused Take is a
+    /// consistent target — steadier to position above the keyboard. Tunable.
+    private let focusMinHeight: CGFloat = 96
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(draft.blocks) { block in
@@ -79,7 +84,7 @@ struct InlineTakeEditCard: View {
         // 14 sides / 14 bottom; leading uses the shared text-column token.
         .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
                             bottom: 14, trailing: 14))
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: focusMinHeight, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(style.surface)
