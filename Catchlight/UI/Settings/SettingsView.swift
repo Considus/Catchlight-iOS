@@ -423,12 +423,14 @@ struct SettingsView: View {
                         Text(option.label).tag(option)
                     }
                 }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 220)
-                .accessibilityLabel("Auto-delete completed Takes")
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(Color.ckTextSecondary)
             }
             .frame(height: 52)
             .listRowBackground(Color.ckSurface)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Auto-delete completed Takes, \(autoCleanupBinding.wrappedValue.label)")
 
             SettingsRow(icon: "key.horizontal",
                         label: "Privacy phrase",
@@ -447,7 +449,7 @@ struct SettingsView: View {
         } header: {
             sectionHeader("Security")
         } footer: {
-            Text("Catchlight locks after this long in the background. It always locks when you quit the app or lock your phone while it's open.\n\nAuto-delete keeps your stored data lean: once all its tasks and reminders are done and it holds no note, a Take is removed after the window you pick — a day, week, month or year. Notes — and anything still in progress — are never deleted. Off by default.")
+            Text("Catchlight locks after this long in the background. It always locks when you quit the app or lock your phone while it's open.\n\nAuto-delete keeps your stored data lean: once all its tasks and reminders are done and it holds no note, a Take is removed after the time you choose. Notes — and anything still in progress — are never deleted. Off by default.")
                 .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                 .foregroundStyle(Color.ckTextSecondary)
         }
