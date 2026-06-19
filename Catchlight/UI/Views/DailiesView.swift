@@ -930,7 +930,13 @@ struct DailiesView: View {
     @ViewBuilder
     private var angleCover: some View {
         if let angle = AngleRegistry.applicable(to: editDraft ?? Take()).first {
-            angle.makePresentation(editDraftBinding) { anglePresented = false }
+            // Closing the Angle commits and EXITS the edit (owner 2026-06-19) —
+            // otherwise it dropped back onto the keyboard-less focused Take (the
+            // "dead screen"). The Angle's ticks rode the draft, so the save keeps them.
+            angle.makePresentation(editDraftBinding) {
+                anglePresented = false
+                saveInlineEdit()
+            }
         } else {
             Color.ckBackground.ignoresSafeArea().onAppear { anglePresented = false }
         }
@@ -1158,6 +1164,13 @@ struct DailiesView: View {
                 var t = take
                 t.isImportant.toggle()
                 vm.save(t)
+            },
+            // Make Obie from the card long-press (owner 2026-06-19 accessibility
+            // path). Resting rows only — designating mid-edit goes through the Focus
+            // ring. Same designation path as the Iris long-press (warns on conflict).
+            onMakeObie: isEditingThis ? nil : {
+                guard app.ensureEntitled() else { return }
+                vm.designateObie(take, replaceExisting: false)
             },
             onDelete: {
                 guard app.ensureEntitled() else { return }

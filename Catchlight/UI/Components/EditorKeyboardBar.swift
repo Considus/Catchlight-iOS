@@ -42,7 +42,10 @@ struct EditorKeyboardBar: View {
                 // icon); the neutral ∠ when greyed, so the disabled state doesn't
                 // imply a list that isn't there.
                 dockSymbol(config.angleEnabled ? "checklist" : "angle",
-                           tint: .ckAccent, enabled: config.angleEnabled)
+                           tint: .ckAccent, enabled: config.angleEnabled,
+                           // checklist renders heavier than ∠ at the same point size,
+                           // so size it down to match the dock's optical weight.
+                           size: config.angleEnabled ? 20 : 24)
             }
             .frame(maxWidth: .infinity)
 
@@ -64,7 +67,8 @@ struct EditorKeyboardBar: View {
                 // keeping with "done = colour, not a new shape" (owner 2026-06-19).
                 dockSymbol("checkmark",
                            tint: config.isDone ? .ckEmber : .ckAccent,
-                           enabled: config.doneEnabled)
+                           enabled: config.doneEnabled,
+                           size: 22)
             }
             .frame(maxWidth: .infinity)
         }
@@ -76,9 +80,9 @@ struct EditorKeyboardBar: View {
     }
 
     /// A dock-spec SF Symbol glyph: 24pt, .light, Ember (`ckAccent`); greys when disabled.
-    private func dockSymbol(_ systemImage: String, tint: Color, enabled: Bool) -> some View {
+    private func dockSymbol(_ systemImage: String, tint: Color, enabled: Bool, size: CGFloat = 24) -> some View {
         Image(systemName: systemImage)
-            .font(.system(size: 24, weight: .light))
+            .font(.system(size: size, weight: .light))
             .foregroundStyle(enabled ? tint : Color.ckTextSecondary.opacity(0.4))
             // The ∠ symbol's mass sits low-left, so nudge it up to optically centre —
             // matching the main dock's Angle glyph (owner 2026-06-19).

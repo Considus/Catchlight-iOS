@@ -39,6 +39,10 @@ struct TakeRowView: View {
     /// the manual mark, mirroring the keyboard dock's Important button). Orthogonal
     /// to type, so it's offered on every Take.
     var onSetImportant: (() -> Void)? = nil
+    /// Designate this Take as the Obie from the long-press menu (owner 2026-06-19 —
+    /// an accessible, discoverable path alongside the Iris long-press). Offered only
+    /// when the Take isn't already the Obie.
+    var onMakeObie: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
     /// Revert the in-progress edit (owner 2026-06-17). Supplied only while this row
     /// is being edited in place, so "Discard changes" appears in the long-press menu
@@ -279,6 +283,13 @@ struct TakeRowView: View {
                       systemImage: take.isImportant ? "star.slash" : "star")
             }
         }
+        if let onMakeObie, !take.isObie {
+            Button {
+                onMakeObie()
+            } label: {
+                Label("Make Obie", systemImage: "pin")
+            }
+        }
         if let onDiscard {
             // Edit-in-place: revert the unsaved edits (owner 2026-06-17). Reverts —
             // never deletes — so it's not destructive-styled.
@@ -304,6 +315,9 @@ struct TakeRowView: View {
         }
         if let onSetImportant {
             Button(take.isImportant ? "Remove Important" : "Set as Important") { onSetImportant() }
+        }
+        if let onMakeObie, !take.isObie {
+            Button("Make Obie") { onMakeObie() }
         }
         if let onDiscard {
             Button("Discard changes") { onDiscard() }
@@ -350,8 +364,8 @@ struct TakeCardSurface: View {
         return text.isEmpty ? "Untitled Take" : text
     }
 
-    /// The "3 of 5 completed" progress marker, or nil (one-item Tasks / non-Tasks
-    /// show none). The trailing word makes the count self-explanatory on the card
+    /// The "0 of 1 / 3 of 5 completed" progress marker, or nil (non-Tasks show
+    /// none). The trailing word makes the count self-explanatory on the card
     /// (owner 2026-06-17) — the bare "3 of 5" read ambiguously.
     private var progressText: String? {
         guard let progress = take.checklistProgress else { return nil }
