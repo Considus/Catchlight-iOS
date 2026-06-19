@@ -849,20 +849,14 @@ struct DailiesView: View {
                     proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
                 }
             }
-            // 2) AUTHORITATIVE settle: on keyboard DID-show — AFTER the keyboard has
-            //    shrunk the scroll viewport — scroll the focused Take to the low
-            //    anchor. Measuring `0.82` against the REDUCED viewport lands the Take
-            //    just above the keyboard EVERY time. Scrolling on willShow instead
-            //    (against the still-animating, not-yet-shrunk viewport) made the rest
-            //    position vary run-to-run / sit too low — owner 2026-06-19, reverting
-            //    the 2026-06-18 "in sync" switch in favour of consistency. Guarded so
-            //    a stale target can't scroll a later, unrelated edit.
+            // 2) ENTRY position is no longer a separate scrollTo here. The focused
+            //    editor re-reports its caret on keyboardDidShow (BlockTextEditor), which
+            //    runs the SAME caret pin used while typing — so a freshly opened Take
+            //    lands at the identical resting position every time (the "jumps to the
+            //    right spot when you start typing" inconsistency — owner 2026-06-19).
+            //    A separate scrollTo here would RACE the pin (undefined notification
+            //    order) and could re-drop the card. We only clear the one-shot target.
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                guard let id = scrollToTakeID else { return }
-                guard id == ui.editingTakeID else { scrollToTakeID = nil; return }
-                withAnimation(.easeOut(duration: 0.22)) {
-                    proxy.scrollTo(id, anchor: UnitPoint(x: 0.5, y: 0.82))
-                }
                 scrollToTakeID = nil
             }
             // Track the keyboard's top edge (incl. its docked toolbar) so the
