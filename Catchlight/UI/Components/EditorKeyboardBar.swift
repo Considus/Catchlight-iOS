@@ -24,9 +24,9 @@ struct EditorKeyboardBar: View {
         // width/4`), so the buttons sit on the dock's exact column centres (owner
         // 2026-06-19: spacing must match the bottom toolbar).
         HStack(spacing: 0) {
-            // 1 — Dismiss: the dock's Add button (strong ring) with its "+" rotated
-            // 45° so it reads as an × (owner: "the add button rotates to an X").
-            slot(enabled: true, strong: true, label: "Close keyboard", action: onDismiss) {
+            // 1 — Dismiss: the dock's Add button with its "+" rotated 45° so it
+            // reads as an × (owner: "the add button rotates to an X").
+            slot(enabled: true, label: "Close keyboard", action: onDismiss) {
                 dockSymbol("plus", tint: .ckAccent, enabled: true).rotationEffect(.degrees(45))
             }
             .frame(maxWidth: .infinity)
@@ -66,11 +66,11 @@ struct EditorKeyboardBar: View {
             .foregroundStyle(enabled ? tint : Color.ckTextSecondary.opacity(0.4))
     }
 
-    /// One toolbar slot: the dock ring (Ember @55% strong / @35% normal, 1.5pt) with a
-    /// centred glyph, in a 44pt button.
+    /// One toolbar slot: the dock ring (uniform Ember @ 0.55, 1.5pt — matches
+    /// `BottomDockView.dockRing`, owner 2026-06-19) with a centred glyph, in a
+    /// 44pt button.
     @ViewBuilder
     private func slot<Glyph: View>(enabled: Bool,
-                                   strong: Bool = false,
                                    identifier: String? = nil,
                                    label: String,
                                    action: @escaping () -> Void,
@@ -78,7 +78,7 @@ struct EditorKeyboardBar: View {
         Button(action: action) {
             ZStack {
                 Circle()
-                    .strokeBorder(Color.ckAccent.opacity(strong ? 0.55 : 0.35), lineWidth: 1.5)
+                    .strokeBorder(Color.ckAccent.opacity(0.55), lineWidth: 1.5)
                     .frame(width: circle, height: circle)
                 glyph()
             }
