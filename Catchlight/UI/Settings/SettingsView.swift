@@ -30,6 +30,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey) private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
     @AppStorage(SettingsViewModel.TakeSort.defaultsKey) private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
     @AppStorage(SettingsViewModel.TakePreview.defaultsKey) private var takePreviewRaw: String = SettingsViewModel.TakePreview.default.rawValue
+    @AppStorage(SettingsViewModel.AutoCleanup.defaultsKey) private var autoCleanupRaw: String = SettingsViewModel.AutoCleanup.default.rawValue
     @AppStorage(SettingsViewModel.DefaultReminderHours.defaultsKey) private var defaultReminderHoursRaw: String = SettingsViewModel.DefaultReminderHours.default.rawValue
 
     @State private var vm = SettingsViewModel()
@@ -45,6 +46,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appearanceSection
+                autoCleanupSection
                 remindersSection
                 securitySection
                 syncSection
@@ -280,6 +282,41 @@ struct SettingsView: View {
         }
     }
 
+    /// Opt-in retention (owner 2026-06-19 — the user decides, the app only provides the
+    /// lever). A menu picker, since there are five options; default Never. The footer
+    /// spells out EXACTLY what's eligible, so enabling it is never a surprise.
+    private var autoCleanupSection: some View {
+        Section {
+            HStack(spacing: 14) {
+                Image(systemName: "trash")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("Auto-delete")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("Auto-delete", selection: autoCleanupBinding) {
+                    ForEach(SettingsViewModel.AutoCleanup.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(Color.ckTextSecondary)
+                .accessibilityLabel("Auto-delete completed Takes")
+            }
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+        } header: {
+            sectionHeader("Cleanup")
+        } footer: {
+            Text("Automatically delete a Take once every task and reminder on it is done and it holds no note — after the time you choose. Notes, and anything still in progress, are never deleted. Off by default.")
+                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                .foregroundStyle(Color.ckTextSecondary)
+        }
+    }
+
     /// The scheme to FORCE on the Settings sheet. Night/Daylight map directly; System
     /// resolves to the DEVICE scheme read from the SCREEN — not
     /// `UITraitCollection.current`, which carries this view's own (stale) override and
@@ -318,6 +355,13 @@ struct SettingsView: View {
         Binding(
             get: { SettingsViewModel.TakeSort(rawValue: takeSortRaw) ?? .default },
             set: { takeSortRaw = $0.rawValue }
+        )
+    }
+
+    private var autoCleanupBinding: Binding<SettingsViewModel.AutoCleanup> {
+        Binding(
+            get: { SettingsViewModel.AutoCleanup(rawValue: autoCleanupRaw) ?? .default },
+            set: { autoCleanupRaw = $0.rawValue }
         )
     }
 

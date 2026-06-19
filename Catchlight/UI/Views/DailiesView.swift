@@ -303,6 +303,10 @@ struct DailiesView: View {
         .animation(.easeInOut(duration: 0.2), value: app.quarantinedCount)
         .onAppear {
             vm.reload()
+            // Opt-in auto-cleanup sweep on open (owner 2026-06-19): delete finished,
+            // note-free Takes past the user's chosen retention window. No-op unless the
+            // user turned it on (Settings default = Never); see DailiesViewModel.
+            vm.runAutoCleanup(olderThan: SettingsViewModel.AutoCleanup.current.maxAge)
             // Kick off the first-run orientation tour the first time the main app
             // is visible. No-op once the tour has started or completed.
             orientation.beginIfNeeded()
