@@ -74,6 +74,9 @@ struct InlineTakeEditCard: View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(draft.blocks) { block in
                 row(for: block)
+                    // Tagged so the pinned focus overlay's ScrollViewReader can scroll
+                    // the focused block into view on a long Take (owner 2026-06-19).
+                    .id(block.id)
                     // Lift the row being dragged so it follows the finger above its
                     // neighbours while the order reflows underneath.
                     .offset(y: dragVisualOffset(for: block.id))

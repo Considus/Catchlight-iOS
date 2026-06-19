@@ -142,6 +142,12 @@ struct DailiesView: View {
     /// A generous screen fraction; it's empty space below the keyboard, never seen.
     private let editScrollRoom: CGFloat = 420
 
+    /// Live keyboard height (incl. its docked toolbar — the keyboard frame reports
+    /// the inputAccessoryView too), captured while editing. Bounds the pinned focus
+    /// overlay's scroll area to ABOVE the keyboard, since the full-bleed root means
+    /// SwiftUI's own keyboard avoidance doesn't inset it (owner 2026-06-19).
+    @State private var keyboardHeight: CGFloat = 0
+
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
     /// estimate (no month marker). Row top → card top (+6, the Iris straddles the
@@ -336,20 +342,39 @@ struct DailiesView: View {
             // a SHORT Take stays put at the pinned spot (it fits, so nothing scrolls).
             // `row(for:)` applies its own leading/trailing insets, so it spans the full
             // width exactly as in the timeline — only the top position is fixed.
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    row(for: draft, isFirst: false)
-                        .padding(.top, deviceTopInset + CatchlightLayout.headingClearance + 8)
-                    // Tap off the card (the area below it) commits & exits — the
-                    // masked-background catcher, now living in the overlay. Tall enough
-                    // to fill the gap down to the keyboard so it's reachable.
-                    Color.clear
-                        .frame(maxWidth: .infinity, minHeight: 400)
-                        .contentShape(Rectangle())
-                        .onTapGesture { saveInlineEdit() }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        row(for: draft, isFirst: false)
+                            .padding(.top, deviceTopInset + CatchlightLayout.headingClearance + 8)
+                        // Tap off the card (the area below it) commits & exits — the
+                        // masked-background catcher, now living in the overlay.
+                        Color.clear
+                            .frame(maxWidth: .infinity, minHeight: 160)
+                            .contentShape(Rectangle())
+                            .onTapGesture { saveInlineEdit() }
+                    }
+                }
+                .scrollIndicators(.hidden)
+                // Bound the scroll area to ABOVE the keyboard (+ its docked toolbar —
+                // the keyboard frame includes the inputAccessoryView), so content can't
+                // sit behind the keyboard.
+                .padding(.bottom, keyboardHeight)
+                // Keep the focused block visible: scroll the MINIMAL amount to reveal
+                // it (no anchor) — so a short Take stays pinned at the top, while
+                // pressing Return down a long Take scrolls just enough to keep the
+                // caret above the keyboard.
+                .onChange(of: editFocusedBlockID) { _, id in
+                    guard let id else { return }
+                    withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo(id) }
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+                    guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+                    else { return }
+                    keyboardHeight = max(0, UIScreen.main.bounds.height - frame.origin.y)
                 }
             }
-            .scrollIndicators(.hidden)
         }
     }
 
