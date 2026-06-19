@@ -1062,6 +1062,13 @@ struct DailiesView: View {
         let refocus = newTaskEntryID ?? d.blocks.first?.id
         editFocusedBlockID = nil
         if let refocus {
+            // Bring the Take above the rising keyboard (owner 2026-06-19): the ring
+            // closed with the keyboard down, and re-focusing raises it again. Without
+            // a scroll target the Take can sit under the keyboard — e.g. a new Take
+            // just reshaped to a Task, sorted to the bottom under Oldest-first. Same
+            // one-shot target the new-Take flow uses; the keyboardWillShow handler
+            // settles it to the low anchor in sync with the keyboard.
+            scrollToTakeID = d.id
             DispatchQueue.main.async { editFocusedBlockID = refocus }
         }
     }
