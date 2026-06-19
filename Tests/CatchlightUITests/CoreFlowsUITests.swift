@@ -261,7 +261,7 @@ final class CoreFlowsUITests: XCTestCase {
     func testFlow6_openSettings_isReachableInOneSwipe() {
         let app = launchAppForUITesting()
 
-        let dailiesTab = app.buttons["dailies-tab"]
+        let dailiesTab = app.buttons["angle-tab"]
         XCTAssertTrue(dailiesTab.waitForExistence(timeout: 3))
 
         assertReachableInOneInteraction(

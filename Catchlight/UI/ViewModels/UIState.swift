@@ -46,6 +46,9 @@ final class UIState {
     var filterReminders = false
     /// "Expired" modifier — reminder date already passed. Implies `filterReminders`.
     var filterRemindersExpired = false
+    /// Important toggle (slot 1 in FILTERING, 2026-06-19). Orthogonal — composes
+    /// with the type toggles and clears nothing (an Important Take can be any type).
+    var filterImportant = false
 
     // SEARCHING-state live query. Every keystroke narrows the timeline.
     var searchQuery = ""
@@ -120,6 +123,11 @@ final class UIState {
     /// and continue using the app in read-only mode.
     var isPaywallPresented = false
 
+    /// The Planner — a full-screen list of every task-bearing Take (owner 2026-06-19).
+    /// Presented over the timeline; the entry point is still being decided, so for now
+    /// it is opened from a DEBUG-only Settings row and closed by its own X.
+    var isPlannerPresented = false
+
     /// Task 6.19 — Spotlight deep-link target. Set by the app's
     /// `onContinueUserActivity` handler when a Take is tapped in Spotlight;
     /// DailiesView reads this to scroll-and-flash the matching row. The
@@ -150,10 +158,17 @@ final class UIState {
         filterTasksDone = false
         filterReminders = false
         filterRemindersExpired = false
+        filterImportant = false
         searchQuery = ""
     }
 
     // MARK: - Filter toggle mutations (semantics documented in the header)
+
+    /// Tap on the Important toggle: off ↔ on. Orthogonal to the type toggles, so
+    /// it neither clears them nor is cleared by them (2026-06-19).
+    func tapImportantFilter() {
+        filterImportant.toggle()
+    }
 
     /// Tap on the Notes toggle: off ↔ on. Turning ON clears Tasks/Reminders
     /// (and their modifiers) — a pure note can't also be a task/reminder.
@@ -236,7 +251,8 @@ final class UIState {
                 requireReminder: filterReminders,
                 requireNoteOnly: filterNotes,
                 requireCompleted: filterTasksDone,
-                requireExpiredReminder: filterRemindersExpired
+                requireExpiredReminder: filterRemindersExpired,
+                requireImportant: filterImportant
             )
         case .searching:
             return SequenceFilter(text: searchQuery)

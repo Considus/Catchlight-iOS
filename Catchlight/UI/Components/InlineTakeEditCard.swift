@@ -27,18 +27,20 @@ struct InlineTakeEditCard: View {
     /// Opens the full-screen Angle (the shopping-bag button now lives on the keyboard
     /// toolbar, owner 2026-06-18). Shown only when an Angle applies (a checklist Take).
     var onOpenAngle: (() -> Void)? = nil
-    /// Search from the editing toolbar (owner 2026-06-18) — routes to `enterSearching`.
-    var onSearch: (() -> Void)? = nil
 
     /// The editing toolbar's state + actions, passed to every block editor so the
-    /// keyboard shows it. Angle enabled only when an Angle applies to the draft.
+    /// keyboard shows it. Angle enabled only when an Angle applies to the draft; the
+    /// Done (tick) button — slot 4, replacing Search (owner 2026-06-19) — marks the
+    /// whole draft done and is enabled only for a task / reminder Take.
     private var toolbarConfig: BlockTextEditor.EditorToolbarConfig {
         .init(
             isImportant: draft.isImportant,
             angleEnabled: AngleRegistry.applicable(to: draft).first != nil,
+            isDone: draft.isMarkedDone,
+            doneEnabled: draft.isTask || draft.timeReminder != nil,
             onToggleImportant: { draft.isImportant.toggle() },
             onOpenAngle: { onOpenAngle?() },
-            onSearch: { onSearch?() }
+            onToggleDone: { draft.setMarkedDone(!draft.isMarkedDone) }
         )
     }
 

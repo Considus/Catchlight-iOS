@@ -7,7 +7,7 @@
 //  (`dockFadeBackground`), so it reads as the same control family rather than a plain
 //  UIKit toolbar. Hosted in `BlockTextEditor`'s `inputAccessoryView` via a
 //  `UIHostingController`. Four buttons: ⌄ dismiss · Important · Angle (greyed when no
-//  task) · Search.
+//  task) · Done (tick — marks the Take done; greyed for a pure note).
 //
 
 import SwiftUI
@@ -46,9 +46,15 @@ struct EditorKeyboardBar: View {
             }
             .frame(maxWidth: .infinity)
 
-            // 4 — Search.
-            slot(enabled: true, label: "Search", action: config.onSearch) {
-                dockSymbol("magnifyingglass", tint: .ckAccent, enabled: true)
+            // 4 — Done: marks the whole Take done (all checklist items + the
+            // reminder). Greyed for a pure note (nothing to complete). Was Search
+            // (owner 2026-06-19 — Search did nothing useful while inside one Take).
+            slot(enabled: config.doneEnabled,
+                 label: config.isDone ? "Mark not done" : "Mark done",
+                 action: config.onToggleDone) {
+                dockSymbol(config.isDone ? "checkmark.circle.fill" : "checkmark.circle",
+                           tint: config.isDone ? .ckEmber : .ckAccent,
+                           enabled: config.doneEnabled)
             }
             .frame(maxWidth: .infinity)
         }
