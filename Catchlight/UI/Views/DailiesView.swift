@@ -142,12 +142,6 @@ struct DailiesView: View {
     /// A generous screen fraction; it's empty space below the keyboard, never seen.
     private let editScrollRoom: CGFloat = 420
 
-    /// Live keyboard height (incl. its docked toolbar — the keyboard frame reports
-    /// the inputAccessoryView too), captured while editing. Bounds the pinned focus
-    /// overlay's scroll area to ABOVE the keyboard, since the full-bleed root means
-    /// SwiftUI's own keyboard avoidance doesn't inset it (owner 2026-06-19).
-    @State private var keyboardHeight: CGFloat = 0
-
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
     /// estimate (no month marker). Row top → card top (+6, the Iris straddles the
@@ -265,9 +259,6 @@ struct DailiesView: View {
             // Drawn after the heading so it owns its hit region (the heading is inert).
             pinnedObie
         }
-        // The focused Take, pinned at a fixed spot above the keyboard (owner
-        // 2026-06-19). Sits above the dimmed timeline; see `focusEditOverlay`.
-        .overlay { focusEditOverlay }
         .background {
             // Capture the layout width (NOT UIScreen) so spineX matches the
             // dock, which is laid out in the same safe-area coordinate space —
@@ -321,73 +312,6 @@ struct DailiesView: View {
         // deletes ride the inline save. (Final entry point will be the selector ring.)
         .fullScreenCover(isPresented: $anglePresented) {
             angleCover
-        }
-    }
-
-    // MARK: - Pinned focus editor (owner 2026-06-19)
-
-    /// The Take being edited, PINNED at a fixed spot just below the heading and above
-    /// the keyboard — replacing the old "scroll the timeline to it" positioning, which
-    /// fought iOS's keyboard avoidance and landed inconsistently. It's lifted out of
-    /// `displayedTakes`, so this is the ONLY live editor (no duplicate / first-responder
-    /// clash). Reuses the same `row(for:)` as the timeline, so the Iris (Focus ring /
-    /// fan), the editor, swipe and menu behave exactly as before — only the position
-    /// changes. A short Take is unaffected by keyboard avoidance (it already fits above
-    /// the keyboard) so its rest position is deterministic; tapping off the card commits.
-    @ViewBuilder
-    private var focusEditOverlay: some View {
-        if ui.isEditingInPlace, let draft = editDraft {
-            // A scroll container so a LONG Take scrolls to keep the caret visible
-            // (keyboard avoidance settles the focused line above the keyboard), while
-            // a SHORT Take stays put at the pinned spot (it fits, so nothing scrolls).
-            // `row(for:)` applies its own leading/trailing insets, so it spans the full
-            // width exactly as in the timeline — only the top position is fixed.
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        // Top pad clears the heading AND the Iris, which straddles the
-                        // card's top edge (extends one radius above it) — otherwise the
-                        // Iris tucks under the heading (owner screenshots 2026-06-19).
-                        row(for: draft, isFirst: false)
-                            .padding(.top, deviceTopInset + CatchlightLayout.headingClearance
-                                     + CatchlightLayout.circleDiameter / 2 + 8)
-                        // Tap off the card (the area below it) commits & exits — the
-                        // masked-background catcher, now living in the overlay. Kept
-                        // small so it doesn't inflate the content into scrolling early.
-                        Color.clear
-                            .frame(maxWidth: .infinity, minHeight: 60)
-                            .contentShape(Rectangle())
-                            .onTapGesture { saveInlineEdit() }
-                    }
-                }
-                .scrollIndicators(.hidden)
-                // DISABLE SwiftUI's automatic keyboard avoidance here (owner 2026-06-19):
-                // it was driving the scroll — holding the caret at a fixed spot and
-                // scrolling the card+Iris up off the top — and OVERRIDING our scrollTo
-                // (which is why anchor changes had "no observable change"). With it off,
-                // our `scrollTo(.bottom)` below is the ONLY scroll force.
-                .ignoresSafeArea(.keyboard, edges: .bottom)
-                // Bound the scroll area to ABOVE the keyboard (+ its docked toolbar —
-                // the keyboard frame includes the inputAccessoryView), so content can't
-                // sit behind the keyboard.
-                .padding(.bottom, keyboardHeight)
-                // Anchor .bottom: while the Take FITS the band the ScrollView can't
-                // scroll, so the card stays PINNED at the top (caret just moves down as
-                // you type); once it OVERFLOWS, the focused block rides just above the
-                // keyboard and earlier content scrolls off — and backspacing reflows it
-                // back down. (Plain scrollTo pinned the block to the TOP, dragging the
-                // card off above the clock — owner screenshots 2026-06-19.)
-                .onChange(of: editFocusedBlockID) { _, id in
-                    guard let id else { return }
-                    withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo(id, anchor: .bottom) }
-                }
-                .onReceive(NotificationCenter.default.publisher(
-                    for: UIResponder.keyboardWillChangeFrameNotification)) { note in
-                    guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
-                    else { return }
-                    keyboardHeight = max(0, UIScreen.main.bounds.height - frame.origin.y)
-                }
-            }
         }
     }
 
@@ -511,13 +435,11 @@ struct DailiesView: View {
                 // 12% a focused Take scrolling behind it reads as a ghost (owner
                 // 2026-06-17). Hidden, not removed, so it fades with the mask and its
                 // measured height (the scroll inset) is preserved — no position jump.
-                // When the Obie ITSELF is the focused Take it stays bright (editing it).
-                // Hidden whenever editing (owner 2026-06-19): the focused Take — Obie
-                // or not — is lifted into the pinned focus overlay, so the pinned Obie
-                // slot is empty while editing. Hidden (not removed) so its measured
-                // height stays for the scroll inset and there's no position jump.
-                .opacity(ui.isEditingInPlace ? 0 : 1)
-                .allowsHitTesting(!ui.isEditingInPlace)
+                // When the Obie ITSELF is the focused Take it stays bright and
+                // interactive — the pinned slot IS its inline editor (owner-agreed
+                // re-engineer 2026-06-19, back to in-place editing).
+                .opacity(ui.isEditingInPlace && ui.editingTakeID != obie.id ? 0 : 1)
+                .allowsHitTesting(!(ui.isEditingInPlace && ui.editingTakeID != obie.id))
         }
     }
 
@@ -1349,18 +1271,15 @@ struct DailiesView: View {
         return known ? nil : draft
     }
 
-    /// The Takes the TIMELINE renders. While editing, the focused Take is lifted out
-    /// into the pinned focus overlay (owner 2026-06-19 — "pin the focus card"), so it
-    /// is removed from the list here: no duplicate editor, and the timeline stays a
-    /// static, dimmed backdrop. A NEW Take being created lives only in the overlay
-    /// (it isn't in `vm.takes`), so nothing is injected during edit.
+    /// The Takes the TIMELINE renders. The focused Take is edited IN PLACE in the
+    /// timeline's own ScrollView (owner-agreed re-engineer 2026-06-19), which keeps
+    /// native keyboard avoidance — so it stays in the list; `row(for:)` swaps in the
+    /// inline editor for the row under focus. The other rows dim to 0.12 (see `row`).
     ///
-    /// At rest, the in-place new Take (if any) is injected at the Order-appropriate
-    /// end — bottom for Oldest-first, top for Newest-first.
+    /// A NEW Take being created (not yet in `vm.takes`) is injected at the
+    /// Order-appropriate end — bottom for Oldest-first, top for Newest-first — both at
+    /// rest and while editing it.
     private var displayedTakes: [Take] {
-        if ui.isEditingInPlace {
-            return filteredTakes.filter { $0.id != ui.editingTakeID }
-        }
         guard let newTake = inlineNewTake else { return filteredTakes }
         return takeSort == .oldestFirst ? filteredTakes + [newTake] : [newTake] + filteredTakes
     }
