@@ -68,6 +68,12 @@ struct SettingsView: View {
                 }
             }
         }
+        // The sheet owns its colour scheme directly (owner 2026-06-19): the app-level
+        // `preferredColorScheme` updates the background immediately, but an already-
+        // presented sheet doesn't re-follow it when switching dark→light, so the
+        // Settings overlay stayed dark until reopened. Reading the same setting here
+        // makes the overlay re-theme live in every direction.
+        .preferredColorScheme((SettingsViewModel.AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme)
         .presentationDragIndicator(.visible)
         .task {
             await vm.refreshNotificationStatus()
