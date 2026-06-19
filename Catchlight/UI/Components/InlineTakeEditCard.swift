@@ -30,6 +30,10 @@ struct InlineTakeEditCard: View {
     /// Commit-and-exit, fired by the keyboard's ⌄/× (owner 2026-06-19) — the host
     /// saves the draft and drops the focused-edit overlay in one step.
     var onCommit: (() -> Void)? = nil
+    /// The focused block's caret rect (window coords), forwarded from the active
+    /// `BlockTextEditor` so the timeline can keep it above the keyboard while a block
+    /// grows (owner device report 2026-06-19). Only the focused row fires.
+    var onCaretMoved: ((CGRect) -> Void)? = nil
 
     /// The editing toolbar's state + actions, passed to every block editor so the
     /// keyboard shows it. Angle enabled only when an Angle applies to the draft; the
@@ -116,7 +120,8 @@ struct InlineTakeEditCard: View {
                 axIdentifier: isFirstTextBlock(textBlock.id) ? "take-edit-body" : "take-edit-text",
                 axLabel: "Take text",
                 onBackspaceEmpty: { handleBackspaceEmpty(textBlock.id, isCheck: false) },
-                toolbar: toolbarConfig
+                toolbar: toolbarConfig,
+                onCaretMoved: onCaretMoved
             )
         case .check(let item):
             // CENTRE-aligned to match the List Angle (owner 2026-06-18): the glyph is
@@ -153,7 +158,8 @@ struct InlineTakeEditCard: View {
                     axLabel: "Checklist item",
                     onReturn: { handleReturn(item.id) },
                     onBackspaceEmpty: { handleBackspaceEmpty(item.id, isCheck: true) },
-                    toolbar: toolbarConfig
+                    toolbar: toolbarConfig,
+                    onCaretMoved: onCaretMoved
                 )
 
                 // Drag handle to reorder. UIKit-bridged (owner 2026-06-17, "do it

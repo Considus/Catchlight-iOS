@@ -142,6 +142,19 @@ struct DailiesView: View {
     /// A generous screen fraction; it's empty space below the keyboard, never seen.
     private let editScrollRoom: CGFloat = 420
 
+    /// The keyboard's top edge in screen coordinates (incl. its docked toolbar — the
+    /// keyboard frame reports the inputAccessoryView too). `.greatestFiniteMagnitude`
+    /// when the keyboard is down, so the caret-follow gate below never fires at rest.
+    /// Used ONLY to decide WHEN the caret is about to hide — not for any layout inset
+    /// (native keyboard avoidance handles that).
+    @State private var keyboardTopY: CGFloat = .greatestFiniteMagnitude
+    /// Bumped whenever the focused caret moves below (near) the keyboard top, so the
+    /// timeline's ScrollViewReader can scroll the focused block back into view. A tick
+    /// (not the rect) so the proxy-scoped `.onChange` stays decoupled from the
+    /// caret-report closure, which runs outside the ScrollViewReader (owner device
+    /// "caret disappears on Return" fix 2026-06-19).
+    @State private var caretFollowTick: Int = 0
+
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
     /// estimate (no month marker). Row top → card top (+6, the Iris straddles the
@@ -841,6 +854,28 @@ struct DailiesView: View {
                 }
                 scrollToTakeID = nil
             }
+            // Track the keyboard's top edge (incl. its docked toolbar) so the
+            // caret-follow gate knows when the caret is about to slip behind it.
+            // willHide reports origin.y = screen height, which resets the gate off.
+            .onReceive(NotificationCenter.default.publisher(
+                for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+                guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+                else { return }
+                keyboardTopY = frame.origin.y
+            }
+            // 3) CARET FOLLOW while typing: a growing TEXT block (Return adds a newline
+            //    to the SAME block) pushes the caret down with no block change, so
+            //    native avoidance never scrolls — the caret slid behind the keyboard
+            //    on device (owner 2026-06-19). The focused editor reports its caret;
+            //    `caretFollowTick` bumps only when the caret nears/passes the keyboard
+            //    top, so a SHORT Take keeps its rest position and only an overflowing
+            //    one scrolls. Pin the focused BLOCK's bottom (where the caret sits when
+            //    appending) just above the keyboard. No animation — tracks each
+            //    keystroke without jitter.
+            .onChange(of: caretFollowTick) { _, _ in
+                guard ui.isEditingInPlace, let block = editFocusedBlockID else { return }
+                proxy.scrollTo(block, anchor: .bottom)
+            }
         }
     }
 
@@ -1023,6 +1058,20 @@ struct DailiesView: View {
             vm.discardIfPresent(t)
         } else {
             vm.save(t)
+        }
+    }
+
+    /// Caret-follow gate (owner device "caret disappears on Return" fix 2026-06-19).
+    /// The focused editor reports its caret rect (window coords); when the caret bottom
+    /// nears or passes the keyboard top, bump `caretFollowTick` so the timeline scrolls
+    /// the focused block back into view. Gating on the keyboard top means a SHORT Take
+    /// whose caret already sits clear keeps its rest position — only an overflowing one
+    /// scrolls. The 24pt margin scrolls a touch BEFORE the caret reaches the keyboard,
+    /// leaving a line of breathing room.
+    private func handleCaretMoved(_ caretRect: CGRect) {
+        guard ui.isEditingInPlace else { return }
+        if caretRect.maxY > keyboardTopY - 24 {
+            caretFollowTick &+= 1
         }
     }
 
@@ -1229,7 +1278,8 @@ struct DailiesView: View {
                         editFocusedBlockID = nil   // drop the keyboard before the cover
                         anglePresented = true
                     },
-                    onCommit: { saveInlineEdit() })) }
+                    onCommit: { saveInlineEdit() },
+                    onCaretMoved: { caretRect in handleCaretMoved(caretRect) })) }
                 : nil
         )
         .background(
