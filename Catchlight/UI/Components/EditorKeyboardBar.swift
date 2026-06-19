@@ -31,11 +31,11 @@ struct EditorKeyboardBar: View {
             }
             .frame(maxWidth: .infinity)
 
-            // 2 — Angle (List): opens this Take's shopping list. Slot 2 to match the
+            // 2 — Angle (Shot List): opens this Take's Shot List. Slot 2 to match the
             // main dock's Angle position, so it's the SAME button in the same place
             // (owner 2026-06-19). Greyed when no task applies.
             slot(enabled: config.angleEnabled, identifier: "angle-button",
-                 label: "Open as list", action: config.onOpenAngle) {
+                 label: "Open Shot List", action: config.onOpenAngle) {
                 // A list glyph when a list exists (it WILL open the checklist —
                 // owner 2026-06-19, replacing the shopping bag, which read as
                 // shopping-specific; matches the Angle's registered `checklist`
