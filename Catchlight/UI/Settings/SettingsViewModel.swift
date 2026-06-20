@@ -140,11 +140,13 @@ final class SettingsViewModel {
             }
         }
 
+        // "mins" (not "minutes") so the notification action "Snooze for 15 mins" stays on
+        // one line like the hours; the hours fit already (owner 2026-06-20).
         var label: String {
             switch self {
-            case .fiveMinutes:     return "5 minutes"
-            case .fifteenMinutes:  return "15 minutes"
-            case .thirtyMinutes:   return "30 minutes"
+            case .fiveMinutes:     return "5 mins"
+            case .fifteenMinutes:  return "15 mins"
+            case .thirtyMinutes:   return "30 mins"
             case .oneHour:         return "1 hour"
             case .sixHours:        return "6 hours"
             case .twelveHours:     return "12 hours"
