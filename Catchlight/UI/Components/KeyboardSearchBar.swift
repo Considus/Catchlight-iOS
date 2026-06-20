@@ -125,18 +125,45 @@ final class SearchBarAccessory: UIView {
     private static let textSecondary = adaptive(dark: 0xB8B0A3, light: 0x5C5650)
     private static let pageBackground = adaptive(dark: 0x0F0E0C, light: 0xF7F4EF)
 
+    /// The dock's soft fade (HiFi v1.11.5 / `dockFadeBackground`): scrolling content
+    /// dissolves UNDER the bar instead of meeting a hard edge. A solid fill here
+    /// blocked too much of the timeline and left a hard line where it crossed the Iris
+    /// below (owner 2026-06-20). Same stops as the SwiftUI gradient so the search bar
+    /// mirrors the dock + editor bar exactly: clear → 0.85 @ 28% → solid @ 55%.
+    private let fade = CAGradientLayer()
+
     init(controller: SearchInputController) {
         self.controller = controller
-        // A generous height for the 44pt circle + dock-matching padding.
-        super.init(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 64))
+        // Height matches the editor keyboard bar: 10 top + 44 circle + 8 bottom.
+        super.init(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 62))
         autoresizingMask = [.flexibleWidth]
-        backgroundColor = Self.pageBackground.withAlphaComponent(0.98)
+        backgroundColor = .clear
+        fade.startPoint = CGPoint(x: 0.5, y: 0)
+        fade.endPoint = CGPoint(x: 0.5, y: 1)
+        fade.locations = [0, 0.28, 0.55]
+        layer.insertSublayer(fade, at: 0)
+        applyFadeColors()
         buildLayout()
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: 64) }
+    override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: 62) }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        fade.frame = bounds
+    }
+
+    /// CGColors don't auto-resolve for the Scene, so set them explicitly (and refresh
+    /// in `traitCollectionDidChange`).
+    private func applyFadeColors() {
+        fade.colors = [
+            Self.pageBackground.withAlphaComponent(0).cgColor,
+            Self.pageBackground.withAlphaComponent(0.85).cgColor,
+            Self.pageBackground.cgColor,
+        ]
+    }
 
     // Dock grid (matches BottomDockView / CatchlightLayout exactly so × lands where +
     // sits at rest and the magnifier on the resting magnifier).
@@ -241,9 +268,10 @@ final class SearchBarAccessory: UIView {
 
     override func traitCollectionDidChange(_ previous: UITraitCollection?) {
         super.traitCollectionDidChange(previous)
-        // Re-resolve the dynamic border colour for the new Scene (CGColor doesn't adapt).
+        // Re-resolve the dynamic colours for the new Scene (CGColor doesn't adapt).
         cancelButton.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
         dismissButton.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
+        applyFadeColors()
     }
 
     /// Dynamic UIColor from a dark/light hex pair (Night / Daylight).
