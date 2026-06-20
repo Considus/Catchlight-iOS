@@ -8,11 +8,15 @@
 //  rendering — no gestures here; callers attach taps/long-presses.
 //
 //  Quadrant map — N/E/S/W DIAMOND (HiFi §2 Iris SVG, owner-confirmed 2026-06-14,
-//  D-042). Each wedge is a 90° slice centred on a cardinal direction:
-//    • Top    (N) → Note     (grey #BCBCBB Daylight / Catchlight@55% Night)
-//    • Right  (E) → Task     (Ember — the warm accent, HiFi v1.6.9)
-//    • Left   (W) → Remind   (#B5A283 Daylight / Glow@65% Night)
-//    • Bottom (S) → Reserved (always empty)
+//  D-042; North reassigned 2026-06-20). Each wedge is a 90° slice centred on a
+//  cardinal direction:
+//    • Top    (N) → Important (Shadow Daylight / Stone Night — indicator only)
+//    • Right  (E) → Task      (Ember — the warm accent, HiFi v1.6.9)
+//    • Left   (W) → Remind    (#B5A283 Daylight / Glow@65% Night)
+//    • Bottom (S) → Note      (grey Daylight / Catchlight@55% Night — moved from N)
+//  Important moved INTO the formerly-reserved diamond (North), pushing Note to the
+//  South wedge (owner 2026-06-20). Important is an indicator, not a toggle; it is
+//  suppressed on an Obie (the Obie ring already carries elevated importance).
 //  (Supersedes the prior NE/SE/SW X-orientation and the DS §5.2 prose table.)
 //
 
@@ -80,13 +84,14 @@ struct TakeCircleView: View {
             Circle()
                 .strokeBorder(Color.ckIrisOff, lineWidth: diameter * 0.225)
 
-            // N/E/S/W diamond (D-042): each wedge is centred on a cardinal point,
-            // spanning ±45° from it (corner-to-corner), so the slices read as a
-            // diamond, not an X. 0° = 3 o'clock, increasing clockwise.
-            // Top (N): Note — centred on -90°, spans -135°..-45°.
-            if take.isNote {
+            // N/E/S/W diamond (D-042; North reassigned 2026-06-20): each wedge is
+            // centred on a cardinal point, spanning ±45° from it (corner-to-corner),
+            // so the slices read as a diamond, not an X. 0° = 3 o'clock, clockwise.
+            // Top (N): Important — centred on -90°, spans -135°..-45°. Indicator
+            // only; suppressed on an Obie (its ring already signals top importance).
+            if take.isImportant && !take.isObie {
                 QuadrantSlice(startDegrees: -135, endDegrees: -45)
-                    .fill(Quadrant.note(scheme))
+                    .fill(Quadrant.important(scheme))
             }
             // Right (E): Task — centred on 0°, spans -45°..45°.
             if take.isTask {
@@ -98,7 +103,11 @@ struct TakeCircleView: View {
                 QuadrantSlice(startDegrees: 135, endDegrees: 225)
                     .fill(Quadrant.reminder(scheme))
             }
-            // Bottom (S, 45°..135°) is reserved — intentionally empty.
+            // Bottom (S): Note — centred on 90°, spans 45°..135° (moved from N 2026-06-20).
+            if take.isNote {
+                QuadrantSlice(startDegrees: 45, endDegrees: 135)
+                    .fill(Quadrant.note(scheme))
+            }
 
             // Hairline outer ring (HiFi v1.7 — section 7): a 0.75pt rim around
             // the annular quadrants. Daylight #E7E7E7 (v1.7's iris SVG uses the
@@ -145,6 +154,10 @@ struct TakeCircleView: View {
     static func activityDescription(for take: Take) -> String {
         var parts: [String] = []
         if take.isObie { parts.append("Obie") }
+        // Important is announced only off an Obie — an Obie is already the top of the
+        // Important set, so "Obie, Important" would be redundant (matches the wedge,
+        // which is likewise suppressed on an Obie).
+        if take.isImportant && !take.isObie { parts.append("Important") }
         if take.isNote { parts.append("Note") }
         if take.isTask { parts.append(take.isComplete ? "completed Task" : "Task") }
         if take.timeReminder != nil { parts.append("Reminder") }
@@ -158,6 +171,7 @@ struct TakeCircleView: View {
         TakeCircleView(take: Take(blocks: [.textLine("Note")]), diameter: 44)
         TakeCircleView(take: Take(blocks: [.checkItem("Task")]), diameter: 44)
         TakeCircleView(take: { var t = Take(blocks: [.textLine("Remind")]); t.timeReminder = reminder; return t }(), diameter: 44)
+        TakeCircleView(take: Take(blocks: [.textLine("Important")], isImportant: true), diameter: 44)
         TakeCircleView(take: Take(blocks: [.textLine("Obie")], isObie: true), diameter: 44)
         TakeCircleView(take: { var t = Take(blocks: [.checkItem("All")]); t.timeReminder = reminder; return t }(), diameter: 44)
     }
@@ -172,6 +186,7 @@ struct TakeCircleView: View {
         TakeCircleView(take: Take(blocks: [.textLine("Note")]), diameter: 44)
         TakeCircleView(take: Take(blocks: [.checkItem("Task")]), diameter: 44)
         TakeCircleView(take: { var t = Take(blocks: [.textLine("Remind")]); t.timeReminder = reminder; return t }(), diameter: 44)
+        TakeCircleView(take: Take(blocks: [.textLine("Important")], isImportant: true), diameter: 44)
         TakeCircleView(take: Take(blocks: [.textLine("Obie")], isObie: true), diameter: 44)
     }
     .padding()
