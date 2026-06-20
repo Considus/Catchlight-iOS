@@ -15,8 +15,9 @@
 //    • Left   (W) → Remind    (#B5A283 Daylight / Glow@65% Night)
 //    • Bottom (S) → Note      (grey Daylight / Catchlight@55% Night — moved from N)
 //  Important moved INTO the formerly-reserved diamond (North), pushing Note to the
-//  South wedge (owner 2026-06-20). Important is an indicator, not a toggle; it is
-//  suppressed on an Obie (the Obie ring already carries elevated importance).
+//  South wedge (owner 2026-06-20). Important is an indicator, not a toggle, and it
+//  shows on an Obie too (an Obie auto-flags Important; owner wants the flag visible
+//  there alongside the ring).
 //  (Supersedes the prior NE/SE/SW X-orientation and the DS §5.2 prose table.)
 //
 
@@ -88,8 +89,9 @@ struct TakeCircleView: View {
             // centred on a cardinal point, spanning ±45° from it (corner-to-corner),
             // so the slices read as a diamond, not an X. 0° = 3 o'clock, clockwise.
             // Top (N): Important — centred on -90°, spans -135°..-45°. Indicator
-            // only; suppressed on an Obie (its ring already signals top importance).
-            if take.isImportant && !take.isObie {
+            // only. Shown on an Obie too (owner 2026-06-20): an Obie auto-flags
+            // Important, and the flag should still read on its Iris alongside the ring.
+            if take.isImportant {
                 QuadrantSlice(startDegrees: -135, endDegrees: -45)
                     .fill(Quadrant.important(scheme))
             }
@@ -154,10 +156,9 @@ struct TakeCircleView: View {
     static func activityDescription(for take: Take) -> String {
         var parts: [String] = []
         if take.isObie { parts.append("Obie") }
-        // Important is announced only off an Obie — an Obie is already the top of the
-        // Important set, so "Obie, Important" would be redundant (matches the wedge,
-        // which is likewise suppressed on an Obie).
-        if take.isImportant && !take.isObie { parts.append("Important") }
+        // Important is announced whenever flagged, including on an Obie — the wedge
+        // shows there too (owner 2026-06-20), so the spoken label matches.
+        if take.isImportant { parts.append("Important") }
         if take.isNote { parts.append("Note") }
         if take.isTask { parts.append(take.isComplete ? "completed Task" : "Task") }
         if take.timeReminder != nil { parts.append("Reminder") }
