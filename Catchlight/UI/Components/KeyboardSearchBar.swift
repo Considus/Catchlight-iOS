@@ -150,6 +150,13 @@ final class SearchBarAccessory: UIView {
     private static let textPrimary = adaptive(dark: 0xF5EDD8, light: 0x0F0E0C)
     private static let textSecondary = adaptive(dark: 0xB8B0A3, light: 0x5C5650)
     private static let pageBackground = adaptive(dark: 0x0F0E0C, light: 0xF7F4EF)
+    /// The completed-Take grey (`ckTextComplete`): Fog #B8B0A3 @ 0.58 Night / 0.82
+    /// Daylight. Owner 2026-06-20: the placeholder uses this receded "done" tone.
+    private static let placeholderGrey = UIColor { tc in
+        tc.userInterfaceStyle == .dark
+            ? UIColor(hex: 0xB8B0A3).withAlphaComponent(0.58)
+            : UIColor(hex: 0xB8B0A3).withAlphaComponent(0.82)
+    }
 
     /// The dock's soft fade (HiFi v1.11.5 / `dockFadeBackground`): scrolling content
     /// dissolves UNDER the bar instead of meeting a hard edge. A solid fill here
@@ -235,7 +242,7 @@ final class SearchBarAccessory: UIView {
         field.clearButtonMode = .whileEditing
         field.attributedPlaceholder = NSAttributedString(
             string: "Search your Takes",
-            attributes: [.foregroundColor: Self.textSecondary])
+            attributes: [.foregroundColor: Self.placeholderGrey])
         field.accessibilityIdentifier = "search-field"
         field.accessibilityLabel = "Search Takes"
         field.delegate = controller?.coordinator
