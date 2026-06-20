@@ -38,8 +38,13 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
     static func install() {
         let center = UNUserNotificationCenter.current()
         center.delegate = shared
+        // `zzz` SF Symbol on the action (iOS 15+). The ONLY visual control Apple exposes
+        // for a notification action — its position + the button's shape/colour/font are
+        // system-styled and can't be changed (owner asked re: centring 2026-06-20).
         let snooze = UNNotificationAction(identifier: snoozeActionIdentifier,
-                                          title: "Snooze", options: [])
+                                          title: "Snooze",
+                                          options: [],
+                                          icon: UNNotificationActionIcon(systemImageName: "zzz"))
         let category = UNNotificationCategory(
             identifier: ReminderScheduler.categoryIdentifier,
             actions: [snooze],
