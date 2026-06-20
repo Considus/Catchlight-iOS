@@ -108,16 +108,10 @@ struct BottomDockView: View {
     @State private var suppressTasksTap = false
     @State private var suppressRemindersTap = false
 
-    /// Autofocus for the SEARCHING-state capsule field.
-    @FocusState private var searchFocused: Bool
-
-    // ── Morph state (resting ⇄ searching) ──
-    /// 0→1 while Dailies/Sequence glide toward the dock centre (icons dissolve).
+    /// Retained for the resting-dock layout (Dailies/Sequence offset/opacity read it);
+    /// stays 0 now that search no longer morphs the dock (the field rides the keyboard,
+    /// 2026-06-20), so those buttons simply sit still.
     @State private var mergeProgress: CGFloat = 0
-    /// Capsule width: false = the fused 44pt droplet, true = full slots 2+3.
-    @State private var capsuleExpanded = true
-    /// Re-entrancy guard while a morph sequence is running.
-    @State private var morphing = false
 
     var body: some View {
         @Bindable var ui = ui
@@ -145,11 +139,18 @@ struct BottomDockView: View {
                     tasksToggle.frame(width: slotW)
                     remindersToggle.frame(width: slotW)
                 case .searching:
-                    searchCancelButton.frame(width: slotW)
-                    searchField
-                        .frame(width: capsuleExpanded ? slotW * 2 : buttonSize)
-                        .frame(width: slotW * 2)   // reserve slots 2+3; droplet centres in them
-                    searchDismissButton.frame(width: slotW)
+                    if ui.searchKeyboardUp {
+                        // Keyboard + the docked search bar are up; the bottom dock sits
+                        // BEHIND the keyboard, so render nothing here — and crucially
+                        // avoid a second `search-field`/`search-cancel` in the tree.
+                        Color.clear.frame(maxWidth: .infinity)
+                    } else {
+                        // Keyboard lowered but still searching: a tap-to-resume bar so
+                        // results stay browsable and the keyboard can come back.
+                        searchCancelButton.frame(width: slotW)
+                        searchResumeField.frame(width: slotW * 2)
+                        searchDismissButton.frame(width: slotW)
+                    }
                 }
             }
         }
@@ -356,7 +357,10 @@ struct BottomDockView: View {
     /// Search (slot 4, RESTING) — runs the merge-stretch morph into SEARCHING.
     private var searchNavButton: some View {
         Button {
-            morphToSearch()
+            // Enter search — the keyboard + the docked search bar (KeyboardSearchBar,
+            // a UIKit inputAccessoryView in RootView) come up. No in-dock morph: the
+            // search field now rides the keyboard, not the bottom dock (owner 2026-06-20).
+            ui.enterSearching()
         } label: {
             navIcon("magnifyingglass")
         }
@@ -378,50 +382,6 @@ struct BottomDockView: View {
                 .foregroundStyle(Color.ckAccent)
                 .frame(width: buttonSize, height: buttonSize)
                 .contentShape(Rectangle())
-        }
-    }
-
-    // MARK: - Resting ⇄ searching morph
-
-    /// Dailies + Sequence glide together (icons dissolving), fuse, and the
-    /// capsule stretches out of the fusion point; + crossfades to ×. The whole
-    /// gesture lives inside the toolbar — no rotation. Reduce Motion gets the
-    /// plain crossfade the dock already does on mode changes.
-    private func morphToSearch() {
-        guard !morphing else { return }
-        guard !reduceMotion else { ui.enterSearching(); searchFocused = true; return }
-        morphing = true
-        withAnimation(.easeInOut(duration: 0.28)) { mergeProgress = 1 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.29) {
-            capsuleExpanded = false
-            ui.enterSearching()
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.72)) {
-                capsuleExpanded = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
-                searchFocused = true
-                mergeProgress = 0
-                morphing = false
-            }
-        }
-    }
-
-    /// Exit mirror, quicker: capsule contracts to the droplet, which splits
-    /// back into Dailies + Sequence as their icons breathe back in.
-    private func morphFromSearch() {
-        guard !morphing else { return }
-        guard !reduceMotion else { ui.exitToResting(); return }
-        morphing = true
-        searchFocused = false
-        withAnimation(.easeIn(duration: 0.22)) { capsuleExpanded = false }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.23) {
-            mergeProgress = 1
-            ui.exitToResting()
-            withAnimation(.easeOut(duration: 0.26)) { mergeProgress = 0 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.27) {
-                capsuleExpanded = true
-                morphing = false
-            }
         }
     }
 
@@ -554,13 +514,18 @@ struct BottomDockView: View {
         .accessibilityAddTraits(ui.filterReminders ? [.isSelected, .isButton] : [.isButton])
     }
 
-    // MARK: - SEARCHING state
+    // MARK: - SEARCHING state (keyboard-lowered "resume" bar)
+    //
+    // The editable search field rides the keyboard as a UIKit inputAccessoryView
+    // (`KeyboardSearchBar`, presented in RootView) — the device-reliable mechanism,
+    // 2026-06-20. These dock controls appear ONLY when the keyboard has been lowered
+    // (`!ui.searchKeyboardUp`) but search is still active: a tap-to-resume bar so the
+    // results stay browsable and the keyboard can be brought back.
 
-    /// × (slot 1 — exactly where + sits at rest) — morphs back to RESTING and
-    /// clears the query.
+    /// × (slot 1 — exactly where + sits at rest) — leaves search and clears the query.
     private var searchCancelButton: some View {
         Button {
-            morphFromSearch()
+            ui.exitToResting()
         } label: {
             ZStack {
                 Circle().fill(Color.ckSurface)
@@ -579,43 +544,44 @@ struct BottomDockView: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    /// The merged capsule field spanning slots 2+3 — the two circles fused.
-    /// Take-card surface, Take-row type, NO magnifier — just the Ember caret
-    /// (owner: the field on first view is the blinking cursor alone). Focus is
-    /// driven by the morph (or onAppear as a fallback for direct entry).
-    private var searchField: some View {
-        @Bindable var ui = ui
-        return TextField("Search your Takes", text: $ui.searchQuery)
-            .focused($searchFocused)
-            // §5: the search field is Take-row type — DM Sans 14, not the
-            // display face (D-042; was Cormorant display 20).
-            .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
-            .foregroundStyle(Color.ckTextPrimary)
-            .tint(Color.ckEmber)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .submitLabel(.search)
-            .onSubmit { searchFocused = false }
-            .accessibilityIdentifier("search-field")
-            .accessibilityLabel("Search Takes")
-            .accessibilityHint("Type to filter the timeline by text.")
+    /// The capsule spanning slots 2+3 — a non-editable display of the current query
+    /// (or the placeholder). Tapping it brings the keyboard + the docked search bar
+    /// back up to keep typing.
+    private var searchResumeField: some View {
+        Button {
+            ui.raiseSearchKeyboard()
+        } label: {
+            HStack {
+                Text(ui.searchQuery.isEmpty ? "Search your Takes" : ui.searchQuery)
+                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
+                    .foregroundStyle(ui.searchQuery.isEmpty ? Color.ckTextSecondary : Color.ckTextPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
             .padding(.horizontal, 16)
             .frame(height: buttonSize)
+            .frame(maxWidth: .infinity)
             .background(Capsule().fill(Color.ckSurface))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("search-resume")
+        .accessibilityLabel("Search Takes")
+        .accessibilityValue(ui.searchQuery)
+        .accessibilityHint("Double-tap to resume typing your search.")
     }
 
-    /// Search (slot 4, SEARCHING) — dismisses the keyboard; the Return-key
-    /// equivalent. The query (and live filtering) stays.
+    /// Magnifier (slot 4) — while the keyboard is lowered, brings it back up to type.
     private var searchDismissButton: some View {
         Button {
-            searchFocused = false
+            ui.raiseSearchKeyboard()
         } label: {
             navIcon("magnifyingglass")
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("search-tab")
         .accessibilityLabel("Search")
-        .accessibilityHint("Double-tap to dismiss the keyboard and review results.")
+        .accessibilityHint("Double-tap to bring the keyboard back and keep typing.")
         .accessibilityAddTraits(.isButton)
     }
 

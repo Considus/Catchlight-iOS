@@ -138,6 +138,19 @@ struct RootView: View {
             timeline   // full opacity behind the fan — the veil does the work
 
             dock
+
+            // The search field rides the keyboard as a UIKit inputAccessoryView
+            // (2026-06-20) — OS-positioned, so it sits correctly on device with no
+            // manual frame math. Zero-size here; it only owns the keyboard accessory.
+            // Active while searching with the keyboard raised.
+            KeyboardSearchBar(
+                query: $ui.searchQuery,
+                isActive: ui.dockMode == .searching && ui.searchKeyboardUp,
+                onCancel: { ui.exitToResting() },
+                onSubmitDismiss: { ui.lowerSearchKeyboard() }
+            )
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
         }
         .overlay { petalFanOverlay }
         .overlay { obieIntroOverlay }
