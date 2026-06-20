@@ -152,6 +152,13 @@ struct RootView: View {
             .frame(width: 0, height: 0)
             .accessibilityHidden(true)
         }
+        // Opt the whole surface OUT of SwiftUI's automatic keyboard avoidance. Nothing
+        // needs it: the search bar rides the keyboard as a UIKit inputAccessoryView
+        // (OS-positioned) and the edit-in-place editor pins its caret by driving the
+        // timeline scroll offset directly (D-048). Without this, native avoidance flung
+        // the bottom-aligned resting dock up to the heading whenever it happened to be
+        // showing while a keyboard was up — the stray-toolbar bug (owner 2026-06-20).
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .overlay { petalFanOverlay }
         .overlay { obieIntroOverlay }
         .sheet(isPresented: $ui.isSettingsPresented) {
