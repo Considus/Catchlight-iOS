@@ -223,6 +223,16 @@ struct CatchlightApp: App {
                 }
             }
         }
+        .onChange(of: app.lockState) { _, newState in
+            // The app-entry unlock owns the ONLY Face ID prompt; sync never authenticates
+            // (see Wiring.makeSyncEngine). On a cold launch the `.active` sync trigger above
+            // races ahead of the unlock and now skips (keys aren't cached yet), so kick a
+            // sync the moment the unlock caches them — inbound changes still arrive on
+            // launch, with no second Face ID prompt (owner 2026-06-20).
+            if newState == .unlocked {
+                backgroundSync.syncNow(trigger: .appBecameActive)
+            }
+        }
     }
 }
 
