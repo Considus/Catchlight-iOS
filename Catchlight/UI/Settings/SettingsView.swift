@@ -408,7 +408,11 @@ struct SettingsView: View {
     private var snoozeDurationBinding: Binding<SettingsViewModel.SnoozeDuration> {
         Binding(
             get: { SettingsViewModel.SnoozeDuration(rawValue: snoozeDurationRaw) ?? .default },
-            set: { snoozeDurationRaw = $0.rawValue }
+            set: {
+                snoozeDurationRaw = $0.rawValue
+                // Refresh the banner action's "Snooze for …" label to match the new default.
+                NotificationPresenter.registerReminderCategory()
+            }
         )
     }
 

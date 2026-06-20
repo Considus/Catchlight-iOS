@@ -32,25 +32,35 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
     /// (`SettingsViewModel.SnoozeDuration`, a plain preference readable while locked).
     private static let snoozeActionIdentifier = "SNOOZE"
 
-    /// Install as the notification-centre delegate AND register the reminder category's
-    /// Snooze action. Idempotent — call once, early in launch (before a notification
-    /// could be delivered to a foreground app).
+    /// Install as the notification-centre delegate AND register the reminder category.
+    /// Idempotent — call once, early in launch (before a notification could be delivered
+    /// to a foreground app).
     static func install() {
-        let center = UNUserNotificationCenter.current()
-        center.delegate = shared
-        // `zzz` SF Symbol on the action (iOS 15+). The ONLY visual control Apple exposes
-        // for a notification action — its position + the button's shape/colour/font are
-        // system-styled and can't be changed (owner asked re: centring 2026-06-20).
-        let snooze = UNNotificationAction(identifier: snoozeActionIdentifier,
-                                          title: "Snooze",
-                                          options: [],
-                                          icon: UNNotificationActionIcon(systemImageName: "zzz"))
+        UNUserNotificationCenter.current().delegate = shared
+        registerReminderCategory()
+    }
+
+    /// (Re)register the reminder category's Snooze action. Called at launch and again
+    /// whenever the snooze-duration setting changes (from Settings), so the button label
+    /// ("Snooze for 1 hour") stays in sync with `SettingsViewModel.SnoozeDuration`. The
+    /// action TITLE is fixed at registration, hence the refresh; the snooze BEHAVIOUR
+    /// reads the duration live at tap time regardless (see `didReceive`).
+    ///
+    /// `zzz` SF Symbol on the action (iOS 15+) — the ONLY visual control Apple exposes
+    /// for a notification action; its position + the button's shape/colour/font are
+    /// system-styled and can't be changed (owner 2026-06-20).
+    static func registerReminderCategory() {
+        let snooze = UNNotificationAction(
+            identifier: snoozeActionIdentifier,
+            title: "Snooze for \(SettingsViewModel.SnoozeDuration.current.label)",
+            options: [],
+            icon: UNNotificationActionIcon(systemImageName: "zzz"))
         let category = UNNotificationCategory(
             identifier: ReminderScheduler.categoryIdentifier,
             actions: [snooze],
             intentIdentifiers: [],
             options: [])
-        center.setNotificationCategories([category])
+        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 
     /// Present reminders in the foreground too: banner + sound, and list them in
