@@ -103,9 +103,12 @@ final class SearchInputController: UIViewController {
 
     @objc private func keyboardWillShow(_ note: Notification) {
         guard bar.alpha < 1 else { return }
-        let duration = (note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey]
+        // Fade over DOUBLE the keyboard's slide-up time (owner 2026-06-20) so the bar
+        // materialises more gradually — it keeps easing in for a beat after the keyboard
+        // has settled, softening the entry.
+        let keyboardDuration = (note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey]
             as? Double) ?? 0.25
-        UIView.animate(withDuration: duration, delay: 0, options: .curveEaseOut) {
+        UIView.animate(withDuration: keyboardDuration * 2, delay: 0, options: .curveEaseOut) {
             self.bar.alpha = 1
         }
     }
