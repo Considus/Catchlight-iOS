@@ -138,8 +138,14 @@ final class SearchBarAccessory: UIView {
 
     override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: 64) }
 
+    // Dock grid (matches BottomDockView / CatchlightLayout exactly so × lands where +
+    // sits at rest and the magnifier on the resting magnifier).
+    private static let pad: CGFloat = 12        // dockHorizontalPadding
+    private static let circle: CGFloat = 44     // minTouchTarget / circleDiameter
+    private static let topPad: CGFloat = 10
+
     private func buildLayout() {
-        // × cancel — circular Ember ring.
+        // × cancel — circular Ember ring (slot 1).
         configureCircleButton(cancelButton, systemName: "xmark")
         cancelButton.accessibilityIdentifier = "search-cancel"
         cancelButton.accessibilityLabel = "Cancel search"
@@ -147,7 +153,7 @@ final class SearchBarAccessory: UIView {
                                action: #selector(KeyboardSearchBar.Coordinator.cancelTapped),
                                for: .touchUpInside)
 
-        // Magnifier dismiss / Return — circular Ember ring.
+        // Magnifier dismiss / Return — circular Ember ring (slot 4).
         configureCircleButton(dismissButton, systemName: "magnifyingglass")
         dismissButton.accessibilityIdentifier = "search-tab"
         dismissButton.accessibilityLabel = "Search"
@@ -155,9 +161,14 @@ final class SearchBarAccessory: UIView {
                                 action: #selector(KeyboardSearchBar.Coordinator.dismissTapped),
                                 for: .touchUpInside)
 
-        // Capsule field.
+        // The field IS the capsule — same height (44) and end-radius (22) as the
+        // buttons (owner 2026-06-20), so it reads as the dock's control family.
+        field.translatesAutoresizingMaskIntoConstraints = false
         field.borderStyle = .none
         field.backgroundColor = Self.surface
+        field.layer.cornerRadius = Self.circle / 2   // 22 — matches the button circles
+        field.layer.cornerCurve = .continuous
+        field.layer.masksToBounds = true
         field.textColor = Self.textPrimary
         field.tintColor = UIColor(red: 0xC9/255, green: 0xA9/255, blue: 0x6E/255, alpha: 1) // Ember caret
         field.font = .systemFont(ofSize: 14)
@@ -174,38 +185,43 @@ final class SearchBarAccessory: UIView {
         field.addTarget(controller?.coordinator,
                         action: #selector(KeyboardSearchBar.Coordinator.textChanged),
                         for: .editingChanged)
-        // Inset the text from the capsule edge.
-        field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 14, height: 1))
+        // Insets so text/placeholder clear the rounded ends (radius 22) — fixes the
+        // left cut-off; the right pad keeps the placeholder off the curve when the
+        // clear button is hidden.
+        field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 18, height: 1))
         field.leftViewMode = .always
+        field.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 12, height: 1))
+        field.rightViewMode = .unlessEditing
 
-        let fieldContainer = UIView()
-        fieldContainer.backgroundColor = Self.surface
-        fieldContainer.layer.cornerRadius = 22
-        fieldContainer.layer.cornerCurve = .continuous
-        fieldContainer.addSubview(field)
-        field.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            field.leadingAnchor.constraint(equalTo: fieldContainer.leadingAnchor),
-            field.trailingAnchor.constraint(equalTo: fieldContainer.trailingAnchor, constant: -8),
-            field.topAnchor.constraint(equalTo: fieldContainer.topAnchor),
-            field.bottomAnchor.constraint(equalTo: fieldContainer.bottomAnchor),
-        ])
+        [cancelButton, dismissButton, field].forEach(addSubview)
 
-        // Four-slot grid like the dock: × | field (2 slots) | magnifier.
-        let stack = UIStackView(arrangedSubviews: [cancelButton, fieldContainer, dismissButton])
-        stack.axis = .horizontal
-        stack.alignment = .center
-        stack.spacing = 12
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: 10),
-            fieldContainer.heightAnchor.constraint(equalToConstant: 44),
-            cancelButton.widthAnchor.constraint(equalToConstant: 44),
-            dismissButton.widthAnchor.constraint(equalToConstant: 44),
-        ])
+        // Four equal slots across the padded content, exactly like the dock's
+        // `geo.size.width / 4` grid. Buttons centre in slots 1 & 4; the field spans
+        // from slot 2's leading to slot 3's trailing — the owner's "outer limit".
+        let slots = (0..<4).map { _ -> UILayoutGuide in
+            let g = UILayoutGuide(); addLayoutGuide(g); return g
+        }
+        var cons: [NSLayoutConstraint] = []
+        for (i, slot) in slots.enumerated() {
+            cons.append(slot.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad))
+            cons.append(slot.heightAnchor.constraint(equalToConstant: Self.circle))
+            cons.append(i == 0
+                ? slot.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.pad)
+                : slot.leadingAnchor.constraint(equalTo: slots[i - 1].trailingAnchor))
+            if i == 3 { cons.append(slot.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.pad)) }
+            if i > 0 { cons.append(slot.widthAnchor.constraint(equalTo: slots[0].widthAnchor)) }
+        }
+        cons += [
+            cancelButton.centerXAnchor.constraint(equalTo: slots[0].centerXAnchor),
+            cancelButton.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
+            dismissButton.centerXAnchor.constraint(equalTo: slots[3].centerXAnchor),
+            dismissButton.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
+            field.leadingAnchor.constraint(equalTo: slots[1].leadingAnchor),
+            field.trailingAnchor.constraint(equalTo: slots[2].trailingAnchor),
+            field.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
+            field.heightAnchor.constraint(equalToConstant: Self.circle),
+        ]
+        NSLayoutConstraint.activate(cons)
     }
 
     private func configureCircleButton(_ button: UIButton, systemName: String) {
@@ -214,10 +230,13 @@ final class SearchBarAccessory: UIView {
                                 withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .light)),
                         for: .normal)
         button.tintColor = Self.ember
-        button.layer.cornerRadius = 22
+        button.layer.cornerRadius = Self.circle / 2
         button.layer.borderWidth = 1.5
         button.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
-        button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: Self.circle),
+            button.heightAnchor.constraint(equalToConstant: Self.circle),
+        ])
     }
 
     override func traitCollectionDidChange(_ previous: UITraitCollection?) {
