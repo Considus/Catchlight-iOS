@@ -53,6 +53,13 @@ final class UIState {
     // SEARCHING-state live query. Every keystroke narrows the timeline.
     var searchQuery = ""
 
+    /// Whether the search keyboard (and its docked search bar) is raised. The search
+    /// field rides the keyboard as a UIKit `inputAccessoryView` (2026-06-20), so this
+    /// gates that accessory. True on entering search; the magnifier / Return lowers it
+    /// (keeping the query + results, the dock shows a tap-to-resume bar); tapping the
+    /// dock bar raises it again. Only meaningful while `dockMode == .searching`.
+    var searchKeyboardUp = false
+
     // Petal fan.
     var petalFanTake: Take?
     var petalFanOrigin: CGPoint = .zero
@@ -143,11 +150,20 @@ final class UIState {
         dockMode = .filtering
     }
 
-    /// Enter SEARCHING (the Search dock button). The query starts empty.
+    /// Enter SEARCHING (the Search dock button). The query starts empty and the
+    /// keyboard (with the docked search bar) comes up.
     func enterSearching() {
         searchQuery = ""
         dockMode = .searching
+        searchKeyboardUp = true
     }
+
+    /// Lower the search keyboard but STAY in search — the query and filtered results
+    /// remain, and the dock shows a tap-to-resume search bar (magnifier / Return).
+    func lowerSearchKeyboard() { searchKeyboardUp = false }
+
+    /// Raise the search keyboard again (tapping the dock's resumed search bar).
+    func raiseSearchKeyboard() { searchKeyboardUp = true }
 
     /// Return the dock to RESTING and clear every filter/search input, so the
     /// timeline is unfiltered. Safe to call from any state (idempotent).
