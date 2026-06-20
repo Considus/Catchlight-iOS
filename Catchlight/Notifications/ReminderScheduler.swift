@@ -168,4 +168,34 @@ public final class ReminderScheduler {
         cancelReminder(for: take)
         scheduleReminder(for: take)
     }
+
+    /// Re-nudge a reminder at a snoozed time (owner 2026-06-20). Notification-level ONLY:
+    /// it does NOT touch the encrypted store, so it's safe to call from a notification
+    /// action that may run while the phone is locked / the app is backgrounded (no key).
+    /// Reuses the Take's UUID `identifier` so the snoozed nudge stays tied to the Take
+    /// (an in-app "done"/edit, which cancels by UUID, also clears the snooze) and the
+    /// already-decrypted `title` (no re-read across the encrypted boundary).
+    public func scheduleSnooze(title: String, identifier: String, fireAt: Date) {
+        let interval = fireAt.timeIntervalSince(now())
+        guard interval > 0 else { return }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.subtitle = "Snoozed — \(Self.snoozeSubtitle(for: fireAt))"
+        content.sound = .default
+        content.categoryIdentifier = Self.categoryIdentifier   // snoozed nudge is snoozable again
+        content.interruptionLevel = .timeSensitive
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        center.add(request)
+    }
+
+    /// "Today at 3:15 PM" / "Tomorrow at 09:00" for the snoozed-until subtitle, honouring
+    /// the user's Region + 12/24-hour preference (style-based, never a hardcoded pattern).
+    static func snoozeSubtitle(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.doesRelativeDateFormatting = true
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
 }
