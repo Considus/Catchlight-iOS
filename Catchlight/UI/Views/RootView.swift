@@ -138,7 +138,27 @@ struct RootView: View {
             timeline   // full opacity behind the fan — the veil does the work
 
             dock
+
+            // The search field rides the keyboard as a UIKit inputAccessoryView
+            // (2026-06-20) — OS-positioned, so it sits correctly on device with no
+            // manual frame math. Zero-size here; it only owns the keyboard accessory.
+            // Active while searching with the keyboard raised.
+            KeyboardSearchBar(
+                query: $ui.searchQuery,
+                isActive: ui.dockMode == .searching && ui.searchKeyboardUp,
+                onCancel: { ui.exitToResting() },
+                onSubmitDismiss: { ui.lowerSearchKeyboard() }
+            )
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
         }
+        // Opt the whole surface OUT of SwiftUI's automatic keyboard avoidance. Nothing
+        // needs it: the search bar rides the keyboard as a UIKit inputAccessoryView
+        // (OS-positioned) and the edit-in-place editor pins its caret by driving the
+        // timeline scroll offset directly (D-048). Without this, native avoidance flung
+        // the bottom-aligned resting dock up to the heading whenever it happened to be
+        // showing while a keyboard was up — the stray-toolbar bug (owner 2026-06-20).
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .overlay { petalFanOverlay }
         .overlay { obieIntroOverlay }
         .sheet(isPresented: $ui.isSettingsPresented) {
@@ -211,13 +231,21 @@ struct RootView: View {
     /// fan's own ckDim veil does the timeline recede; while editing in place the
     /// timeline masks itself (DailiesView), and the dock recedes + goes inert here so
     /// it can't start a competing action mid-edit (owner 2026-06-17).
+    /// True while the search keyboard (and its docked search bar) is up. The bottom
+    /// dock is redundant then — the search bar IS the UI — so hide + inert it, exactly
+    /// as for editing. Leaving it live let its swipe-up-for-Settings gesture compete
+    /// with the timeline scroll (owner 2026-06-20: scrolling opened Settings instead).
+    private var searchKeyboardUp: Bool {
+        ui.dockMode == .searching && ui.searchKeyboardUp
+    }
+
     private var fanOpacity: Double {
         if ui.isPetalFanPresented { return 0.18 }
         // Fully hidden while editing in place: the keyboard's safe-area avoidance
         // shoves the bottom dock up toward the heading, so even at low opacity it
         // appeared as a stray toolbar over the Obie (owner 2026-06-17). It's inert
-        // during editing anyway, so hide it outright.
-        if ui.isEditingInPlace { return 0 }
+        // during editing anyway, so hide it outright. Same for the search keyboard.
+        if ui.isEditingInPlace || searchKeyboardUp { return 0 }
         return 1
     }
 
@@ -232,9 +260,10 @@ struct RootView: View {
         BottomDockView(onNewTake: { newTake() })
             .environment(ui)
             .opacity(fanOpacity)
-            // Inert while editing in place so a stray tap can't open a second editor
-            // or change the dock mode under the focused Take (owner 2026-06-17).
-            .allowsHitTesting(!ui.isEditingInPlace)
+            // Inert while editing in place (so a stray tap can't open a second editor)
+            // AND while the search keyboard is up (so its swipe-up Settings gesture
+            // doesn't hijack the timeline scroll — owner 2026-06-20).
+            .allowsHitTesting(!ui.isEditingInPlace && !searchKeyboardUp)
     }
 
     // MARK: - Overlays
