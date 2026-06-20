@@ -26,29 +26,23 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
 
     static let shared = NotificationPresenter()
 
-    /// Snooze actions shown when the user pulls down / long-presses a reminder banner
-    /// (owner 2026-06-20). Background actions (no `.foreground`) so snoozing never opens
-    /// the app or demands Face ID — it just re-nudges the notification.
-    private enum Snooze {
-        static let fifteenMinutes = "SNOOZE_15M"
-        static let oneHour = "SNOOZE_1H"
-        static let tomorrow = "SNOOZE_TOMORROW"
-    }
+    /// The single "Snooze" pull-down action on a reminder banner (owner 2026-06-20). A
+    /// BACKGROUND action (no `.foreground`) so snoozing never opens the app or demands
+    /// Face ID — it just re-nudges the notification by the user's default duration
+    /// (`SettingsViewModel.SnoozeDuration`, a plain preference readable while locked).
+    private static let snoozeActionIdentifier = "SNOOZE"
 
     /// Install as the notification-centre delegate AND register the reminder category's
-    /// snooze actions. Idempotent — call once, early in launch (before a notification
+    /// Snooze action. Idempotent — call once, early in launch (before a notification
     /// could be delivered to a foreground app).
     static func install() {
         let center = UNUserNotificationCenter.current()
         center.delegate = shared
-        let actions = [
-            UNNotificationAction(identifier: Snooze.fifteenMinutes, title: "Snooze 15 minutes", options: []),
-            UNNotificationAction(identifier: Snooze.oneHour, title: "Snooze 1 hour", options: []),
-            UNNotificationAction(identifier: Snooze.tomorrow, title: "Tomorrow morning", options: []),
-        ]
+        let snooze = UNNotificationAction(identifier: snoozeActionIdentifier,
+                                          title: "Snooze", options: [])
         let category = UNNotificationCategory(
             identifier: ReminderScheduler.categoryIdentifier,
-            actions: actions,
+            actions: [snooze],
             intentIdentifiers: [],
             options: [])
         center.setNotificationCategories([category])
@@ -75,27 +69,12 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         defer { completionHandler() }
-        guard let fireAt = Self.snoozeDate(for: response.actionIdentifier) else { return }
+        guard response.actionIdentifier == Self.snoozeActionIdentifier else { return }
+        let fireAt = Date().addingTimeInterval(SettingsViewModel.SnoozeDuration.current.seconds)
         let request = response.notification.request
         ReminderScheduler().scheduleSnooze(
             title: request.content.title,
             identifier: request.identifier,
             fireAt: fireAt)
-    }
-
-    /// The target instant for a snooze action, or nil for any non-snooze action
-    /// (e.g. the default tap, which just opens the app).
-    private static func snoozeDate(for actionIdentifier: String, now: Date = Date()) -> Date? {
-        switch actionIdentifier {
-        case Snooze.fifteenMinutes: return now.addingTimeInterval(15 * 60)
-        case Snooze.oneHour:        return now.addingTimeInterval(60 * 60)
-        case Snooze.tomorrow:
-            let cal = Calendar.current
-            let tomorrow = cal.date(byAdding: .day, value: 1, to: now) ?? now
-            return cal.date(bySettingHour: ReminderScheduler.allDayFireHour,
-                            minute: 0, second: 0, of: tomorrow)
-        default:
-            return nil
-        }
     }
 }
