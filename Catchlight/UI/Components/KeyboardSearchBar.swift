@@ -50,20 +50,26 @@ struct KeyboardSearchBar: UIViewControllerRepresentable {
         if !vc.bar.field.isFirstResponder, vc.bar.field.text != query {
             vc.bar.field.text = query
         }
-        // Drive focus from SwiftUI state, but only on an actual transition — running
-        // become/resignFirstResponder on every update churned focus.
-        guard isActive != context.coordinator.lastActive else { return }
-        context.coordinator.lastActive = isActive
+        // Reconcile the keyboard/bar against the field's ACTUAL first-responder state,
+        // not a one-shot "did isActive flip" flag. The flag approach left a stuck state:
+        // if the app was backgrounded / re-locked WHILE searching, iOS tore down the
+        // keyboard + bar, but `isActive` (still searching) never changed — so on return
+        // nothing re-showed them, leaving the search screen with no keyboard and no
+        // toolbar (owner 2026-06-20; only escapable by opening an editor). Re-activating
+        // when active-but-not-focused restores them. The `!isFirstResponder` gate means a
+        // focused field (normal typing) never re-triggers focus, so there's no churn.
         DispatchQueue.main.async {
-            if isActive { vc.activate() } else { vc.deactivate() }
+            if isActive {
+                if !vc.bar.field.isFirstResponder { vc.activate() }
+            } else if vc.bar.field.isFirstResponder {
+                vc.deactivate()
+            }
         }
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         var parent: KeyboardSearchBar
         weak var controller: SearchInputController?
-        /// Last `isActive` seen, so focus changes fire only on a real transition.
-        var lastActive = false
         init(_ parent: KeyboardSearchBar) { self.parent = parent }
 
         @objc func textChanged(_ field: UITextField) {
