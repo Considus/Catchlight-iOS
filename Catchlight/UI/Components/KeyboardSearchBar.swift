@@ -43,9 +43,17 @@ struct KeyboardSearchBar: UIViewControllerRepresentable {
 
     func updateUIViewController(_ vc: SearchInputController, context: Context) {
         context.coordinator.parent = self
-        vc.bar.field.text = query
-        // Drive focus from SwiftUI state. Defer to the next runloop so the controller
-        // is in a window before becoming first responder on first activation.
+        // Push the query INTO the field only when the field is NOT being edited (e.g.
+        // an external clear, or the resume bar). While the user is typing, the field
+        // is the source of truth — writing `query` back every SwiftUI update would race
+        // the binding (which lags a keystroke behind) and WIPE the just-typed character.
+        if !vc.bar.field.isFirstResponder, vc.bar.field.text != query {
+            vc.bar.field.text = query
+        }
+        // Drive focus from SwiftUI state, but only on an actual transition — running
+        // become/resignFirstResponder on every update churned focus.
+        guard isActive != context.coordinator.lastActive else { return }
+        context.coordinator.lastActive = isActive
         DispatchQueue.main.async {
             if isActive { vc.activate() } else { vc.deactivate() }
         }
@@ -54,6 +62,8 @@ struct KeyboardSearchBar: UIViewControllerRepresentable {
     final class Coordinator: NSObject, UITextFieldDelegate {
         var parent: KeyboardSearchBar
         weak var controller: SearchInputController?
+        /// Last `isActive` seen, so focus changes fire only on a real transition.
+        var lastActive = false
         init(_ parent: KeyboardSearchBar) { self.parent = parent }
 
         @objc func textChanged(_ field: UITextField) {
@@ -78,11 +88,19 @@ final class SearchInputController: UIViewController {
     override var canBecomeFirstResponder: Bool { true }
     override var inputAccessoryView: UIView? { bar }
 
-    /// Show the keyboard with the bar docked above it, and focus the field.
+    /// Show the keyboard with the bar docked above it, and focus the field. The
+    /// controller becomes first responder FIRST so its `inputAccessoryView` (the bar)
+    /// is attached to the window; the field can only take focus once it's on screen,
+    /// so that step is deferred to the next runloop (calling it synchronously was a
+    /// no-op — the field wasn't in a window yet, so nothing focused and typing went
+    /// nowhere).
     func activate() {
         guard view.window != nil else { return }
         if !isFirstResponder { _ = becomeFirstResponder() }
-        if !bar.field.isFirstResponder { bar.field.becomeFirstResponder() }
+        guard !bar.field.isFirstResponder else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.bar.field.becomeFirstResponder()
+        }
     }
 
     /// Lower the keyboard and the bar.
