@@ -95,12 +95,15 @@ final class SearchInputController: UIViewController {
     /// no-op — the field wasn't in a window yet, so nothing focused and typing went
     /// nowhere).
     func activate() {
-        guard view.window != nil else { return }
+        guard view.window != nil, !bar.field.isFirstResponder else { return }
+        // Become first responder so the accessory (the bar) is attached, force it to
+        // lay out so the field is in the window THIS cycle, then focus the field in the
+        // SAME pass — so the keyboard + bar rise as ONE motion. Doing the field focus a
+        // runloop later made the bar appear first (a small move) and the keyboard lift
+        // it a beat later (the two-step the owner saw, 2026-06-20).
         if !isFirstResponder { _ = becomeFirstResponder() }
-        guard !bar.field.isFirstResponder else { return }
-        DispatchQueue.main.async { [weak self] in
-            self?.bar.field.becomeFirstResponder()
-        }
+        bar.layoutIfNeeded()
+        bar.field.becomeFirstResponder()
     }
 
     /// Lower the keyboard and the bar.

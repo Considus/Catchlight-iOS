@@ -231,13 +231,21 @@ struct RootView: View {
     /// fan's own ckDim veil does the timeline recede; while editing in place the
     /// timeline masks itself (DailiesView), and the dock recedes + goes inert here so
     /// it can't start a competing action mid-edit (owner 2026-06-17).
+    /// True while the search keyboard (and its docked search bar) is up. The bottom
+    /// dock is redundant then — the search bar IS the UI — so hide + inert it, exactly
+    /// as for editing. Leaving it live let its swipe-up-for-Settings gesture compete
+    /// with the timeline scroll (owner 2026-06-20: scrolling opened Settings instead).
+    private var searchKeyboardUp: Bool {
+        ui.dockMode == .searching && ui.searchKeyboardUp
+    }
+
     private var fanOpacity: Double {
         if ui.isPetalFanPresented { return 0.18 }
         // Fully hidden while editing in place: the keyboard's safe-area avoidance
         // shoves the bottom dock up toward the heading, so even at low opacity it
         // appeared as a stray toolbar over the Obie (owner 2026-06-17). It's inert
-        // during editing anyway, so hide it outright.
-        if ui.isEditingInPlace { return 0 }
+        // during editing anyway, so hide it outright. Same for the search keyboard.
+        if ui.isEditingInPlace || searchKeyboardUp { return 0 }
         return 1
     }
 
@@ -252,9 +260,10 @@ struct RootView: View {
         BottomDockView(onNewTake: { newTake() })
             .environment(ui)
             .opacity(fanOpacity)
-            // Inert while editing in place so a stray tap can't open a second editor
-            // or change the dock mode under the focused Take (owner 2026-06-17).
-            .allowsHitTesting(!ui.isEditingInPlace)
+            // Inert while editing in place (so a stray tap can't open a second editor)
+            // AND while the search keyboard is up (so its swipe-up Settings gesture
+            // doesn't hijack the timeline scroll — owner 2026-06-20).
+            .allowsHitTesting(!ui.isEditingInPlace && !searchKeyboardUp)
     }
 
     // MARK: - Overlays
