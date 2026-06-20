@@ -88,27 +88,45 @@ final class SearchInputController: UIViewController {
     override var canBecomeFirstResponder: Bool { true }
     override var inputAccessoryView: UIView? { bar }
 
-    /// Show the keyboard with the bar docked above it, and focus the field. The
-    /// controller becomes first responder FIRST so its `inputAccessoryView` (the bar)
-    /// is attached to the window; the field can only take focus once it's on screen,
-    /// so that step is deferred to the next runloop (calling it synchronously was a
-    /// no-op — the field wasn't in a window yet, so nothing focused and typing went
-    /// nowhere).
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Fade the bar IN as the keyboard rises — the entrance animation (owner
+        // 2026-06-20). The bar is hidden (alpha 0) during the accessory attach, so the
+        // "two-step" (bar appears at the bottom, then the keyboard lifts it) is never
+        // visible: the user only sees the bar materialise riding up with the keyboard.
+        // The editor avoids the two-step structurally (its text view is already in the
+        // hierarchy); the search field lives in the accessory, so we mask the attach.
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(keyboardWillShow),
+            name: UIResponder.keyboardWillShowNotification, object: nil)
+    }
+
+    @objc private func keyboardWillShow(_ note: Notification) {
+        guard bar.alpha < 1 else { return }
+        let duration = (note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey]
+            as? Double) ?? 0.25
+        UIView.animate(withDuration: duration, delay: 0, options: .curveEaseOut) {
+            self.bar.alpha = 1
+        }
+    }
+
+    /// Show the keyboard with the bar riding up above it, and focus the field. The
+    /// controller becomes first responder so its `inputAccessoryView` (the bar) attaches;
+    /// the field can only focus once it's in the window, so force a layout pass first.
+    /// The bar starts hidden (alpha 0) and `keyboardWillShow` fades it in as the keyboard
+    /// rises, so the attach step is invisible and the entry reads as one motion.
     func activate() {
         guard view.window != nil, !bar.field.isFirstResponder else { return }
-        // Become first responder so the accessory (the bar) is attached, force it to
-        // lay out so the field is in the window THIS cycle, then focus the field in the
-        // SAME pass — so the keyboard + bar rise as ONE motion. Doing the field focus a
-        // runloop later made the bar appear first (a small move) and the keyboard lift
-        // it a beat later (the two-step the owner saw, 2026-06-20).
-        // Attach the accessory WITHOUT animation so it doesn't slide up on its own
-        // first (the "small step"); then focusing the field raises the keyboard, and
-        // the already-placed bar rides up with it — a single motion.
-        UIView.performWithoutAnimation {
-            if !isFirstResponder { _ = becomeFirstResponder() }
-            bar.layoutIfNeeded()
-        }
+        bar.alpha = 0
+        if !isFirstResponder { _ = becomeFirstResponder() }
+        bar.layoutIfNeeded()
         bar.field.becomeFirstResponder()
+        // Fallback: if no software keyboard appears (e.g. a hardware keyboard is
+        // attached, so `keyboardWillShow` never fires), don't leave the bar invisible.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
+            guard let self, self.bar.alpha < 1 else { return }
+            UIView.animate(withDuration: 0.2) { self.bar.alpha = 1 }
+        }
     }
 
     /// Lower the keyboard and the bar.
