@@ -101,8 +101,13 @@ final class SearchInputController: UIViewController {
         // SAME pass — so the keyboard + bar rise as ONE motion. Doing the field focus a
         // runloop later made the bar appear first (a small move) and the keyboard lift
         // it a beat later (the two-step the owner saw, 2026-06-20).
-        if !isFirstResponder { _ = becomeFirstResponder() }
-        bar.layoutIfNeeded()
+        // Attach the accessory WITHOUT animation so it doesn't slide up on its own
+        // first (the "small step"); then focusing the field raises the keyboard, and
+        // the already-placed bar rides up with it — a single motion.
+        UIView.performWithoutAnimation {
+            if !isFirstResponder { _ = becomeFirstResponder() }
+            bar.layoutIfNeeded()
+        }
         bar.field.becomeFirstResponder()
     }
 
@@ -199,6 +204,10 @@ final class SearchBarAccessory: UIView {
         field.layer.cornerRadius = Self.circle / 2   // 22 — matches the button circles
         field.layer.cornerCurve = .continuous
         field.layer.masksToBounds = true
+        // Same ring as the buttons (owner 2026-06-20: makes the bar feel sturdier) —
+        // Ember @ 0.55, 1.5pt, matching `configureCircleButton` / the dock's `dockRing`.
+        field.layer.borderWidth = 1.5
+        field.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
         field.textColor = Self.textPrimary
         field.tintColor = UIColor(red: 0xC9/255, green: 0xA9/255, blue: 0x6E/255, alpha: 1) // Ember caret
         field.font = .systemFont(ofSize: 14)
@@ -274,6 +283,7 @@ final class SearchBarAccessory: UIView {
         // Re-resolve the dynamic colours for the new Scene (CGColor doesn't adapt).
         cancelButton.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
         dismissButton.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
+        field.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
         applyFadeColors()
     }
 
