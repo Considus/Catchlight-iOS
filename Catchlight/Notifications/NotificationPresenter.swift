@@ -26,10 +26,41 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
 
     static let shared = NotificationPresenter()
 
-    /// Install as the notification-centre delegate. Idempotent — call once, early in
-    /// launch (before a notification could be delivered to a foreground app).
+    /// The single "Snooze" pull-down action on a reminder banner (owner 2026-06-20). A
+    /// BACKGROUND action (no `.foreground`) so snoozing never opens the app or demands
+    /// Face ID — it just re-nudges the notification by the user's default duration
+    /// (`SettingsViewModel.SnoozeDuration`, a plain preference readable while locked).
+    private static let snoozeActionIdentifier = "SNOOZE"
+
+    /// Install as the notification-centre delegate AND register the reminder category.
+    /// Idempotent — call once, early in launch (before a notification could be delivered
+    /// to a foreground app).
     static func install() {
         UNUserNotificationCenter.current().delegate = shared
+        registerReminderCategory()
+    }
+
+    /// (Re)register the reminder category's Snooze action. Called at launch and again
+    /// whenever the snooze-duration setting changes (from Settings), so the button label
+    /// ("Snooze for 1 hour") stays in sync with `SettingsViewModel.SnoozeDuration`. The
+    /// action TITLE is fixed at registration, hence the refresh; the snooze BEHAVIOUR
+    /// reads the duration live at tap time regardless (see `didReceive`).
+    ///
+    /// `zzz` SF Symbol on the action (iOS 15+) — the ONLY visual control Apple exposes
+    /// for a notification action; its position + the button's shape/colour/font are
+    /// system-styled and can't be changed (owner 2026-06-20).
+    static func registerReminderCategory() {
+        let snooze = UNNotificationAction(
+            identifier: snoozeActionIdentifier,
+            title: "Snooze for \(SettingsViewModel.SnoozeDuration.current.label)",
+            options: [],
+            icon: UNNotificationActionIcon(systemImageName: "zzz"))
+        let category = UNNotificationCategory(
+            identifier: ReminderScheduler.categoryIdentifier,
+            actions: [snooze],
+            intentIdentifiers: [],
+            options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 
     /// Present reminders in the foreground too: banner + sound, and list them in
@@ -40,5 +71,25 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner, .sound, .list])
+    }
+
+    /// Handle a tapped notification action. A snooze re-nudges the SAME reminder (its
+    /// UUID identifier) at the chosen time, reusing the banner's already-decrypted title.
+    /// It deliberately does NOT rewrite the Take's stored reminder time — that needs the
+    /// encryption key, which is unavailable while the phone is locked / the app is
+    /// backgrounded (where snooze runs). Snooze is a notification-level re-nudge.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        defer { completionHandler() }
+        guard response.actionIdentifier == Self.snoozeActionIdentifier else { return }
+        let fireAt = Date().addingTimeInterval(SettingsViewModel.SnoozeDuration.current.seconds)
+        let request = response.notification.request
+        ReminderScheduler().scheduleSnooze(
+            title: request.content.title,
+            identifier: request.identifier,
+            fireAt: fireAt)
     }
 }

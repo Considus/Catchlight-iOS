@@ -115,6 +115,54 @@ final class SettingsViewModel {
         }
     }
 
+    /// Default duration for the reminder notification's "Snooze" pull-down action
+    /// (owner 2026-06-20). Read by the notification handler (`NotificationPresenter`)
+    /// from the same UserDefaults key the Settings picker writes — a plain preference,
+    /// so it's readable even while the phone is LOCKED (when the encrypted store, and so
+    /// the reminder data, is not). Snooze re-nudges the notification by this much.
+    enum SnoozeDuration: String, CaseIterable, Identifiable {
+        case fiveMinutes, fifteenMinutes, thirtyMinutes, oneHour, sixHours, twelveHours, twentyFourHours
+
+        static let defaultsKey = "catchlight.snoozeDuration"
+        static let `default`: SnoozeDuration = .oneHour
+
+        var id: String { rawValue }
+
+        var seconds: TimeInterval {
+            switch self {
+            case .fiveMinutes:     return 300
+            case .fifteenMinutes:  return 900
+            case .thirtyMinutes:   return 1800
+            case .oneHour:         return 3600
+            case .sixHours:        return 21600
+            case .twelveHours:     return 43200
+            case .twentyFourHours: return 86400
+            }
+        }
+
+        // "mins" (not "minutes") so the notification action "Snooze for 15 mins" stays on
+        // one line like the hours; the hours fit already (owner 2026-06-20).
+        var label: String {
+            switch self {
+            case .fiveMinutes:     return "5 mins"
+            case .fifteenMinutes:  return "15 mins"
+            case .thirtyMinutes:   return "30 mins"
+            case .oneHour:         return "1 hour"
+            case .sixHours:        return "6 hours"
+            case .twelveHours:     return "12 hours"
+            case .twentyFourHours: return "24 hours"
+            }
+        }
+
+        /// The user's current choice (falls back to the default), from the same
+        /// UserDefaults key the Settings picker writes via `@AppStorage`.
+        static var current: SnoozeDuration {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = SnoozeDuration(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     /// Timeline density — how much clear space sits between consecutive Takes on
     /// Dailies (owner 2026-06-16). Changes ONLY the inter-card gap; the cards, Iris,
     /// and spine are untouched. `gap` is the clear distance from one card's bottom to
