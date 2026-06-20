@@ -32,6 +32,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.TakePreview.defaultsKey) private var takePreviewRaw: String = SettingsViewModel.TakePreview.default.rawValue
     @AppStorage(SettingsViewModel.AutoCleanup.defaultsKey) private var autoCleanupRaw: String = SettingsViewModel.AutoCleanup.default.rawValue
     @AppStorage(SettingsViewModel.DefaultReminderHours.defaultsKey) private var defaultReminderHoursRaw: String = SettingsViewModel.DefaultReminderHours.default.rawValue
+    @AppStorage(SettingsViewModel.SnoozeDuration.defaultsKey) private var snoozeDurationRaw: String = SettingsViewModel.SnoozeDuration.default.rawValue
 
     @State private var vm = SettingsViewModel()
 
@@ -359,10 +360,39 @@ struct SettingsView: View {
             }
             .frame(height: 52)
             .listRowBackground(Color.ckSurface)
+
+            // Snooze duration — how long the reminder notification's "Snooze" pull-down
+            // action defers by (owner 2026-06-20). Read by `NotificationPresenter` from
+            // this preference (works while locked, when the encrypted store doesn't).
+            // Menu picker like Lock after / Auto-delete (the labels are too long for a
+            // segmented control).
+            HStack(spacing: 14) {
+                Image(systemName: "zzz")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                Text("Snooze")
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Picker("Snooze", selection: snoozeDurationBinding) {
+                    ForEach(SettingsViewModel.SnoozeDuration.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(Color.ckTextSecondary)
+            }
+            .frame(height: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Snooze duration \(snoozeDurationBinding.wrappedValue.label)")
         } header: {
             sectionHeader("Reminders")
         } footer: {
-            Text("How many hours ahead a new reminder starts. You can always adjust the exact date and time before saving.")
+            Text("How many hours ahead a new reminder starts (you can always adjust the exact time before saving), and how long the notification's Snooze button defers by.")
                 .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                 .foregroundStyle(Color.ckTextSecondary)
         }
@@ -372,6 +402,13 @@ struct SettingsView: View {
         Binding(
             get: { SettingsViewModel.DefaultReminderHours(rawValue: defaultReminderHoursRaw) ?? .default },
             set: { defaultReminderHoursRaw = $0.rawValue }
+        )
+    }
+
+    private var snoozeDurationBinding: Binding<SettingsViewModel.SnoozeDuration> {
+        Binding(
+            get: { SettingsViewModel.SnoozeDuration(rawValue: snoozeDurationRaw) ?? .default },
+            set: { snoozeDurationRaw = $0.rawValue }
         )
     }
 
