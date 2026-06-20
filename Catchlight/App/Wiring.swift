@@ -259,19 +259,15 @@ enum Wiring {
         guard let cloud = makeCloudFolder() else {
             return nil   // local-only mode
         }
-        // Prefer the session's already-unlocked keys (no prompt; works in
-        // foreground triggers and in any background window the session is
-        // still alive). Fall back to a fresh Keychain retrieve, which on
-        // hardware demands user presence — a true cold background task fails
-        // that gracefully and the coordinator treats it as "locked: skip".
-        let keys: KeyHierarchy
-        if let cached = sessionKeys {
-            keys = cached
-        } else if let masterKey = try? MasterKeyKeychain.retrieve(reason: "Sync your Takes") {
-            keys = KeyHierarchy(masterKey: masterKey)
-        } else {
-            return nil
-        }
+        // Sync NEVER authenticates — only the app-entry unlock owns the Face ID prompt
+        // (D-042). Reuse the keys the unlock cached; if the app isn't unlocked yet
+        // (`sessionKeys` nil), SKIP this sync pass rather than retrieving the master key
+        // ourselves. That fallback fired a SECOND Face ID sheet ("Sync your Takes") when
+        // a launch sync raced ahead of the unlock on a cold start with a cloud folder
+        // configured (owner 2026-06-20). A post-unlock trigger (CatchlightApp) re-runs
+        // sync once the keys are cached, so nothing is lost. (Background tasks can't show
+        // a prompt anyway, so skip-when-locked was always the correct behaviour there.)
+        guard let keys = sessionKeys else { return nil }
         let store = try? EncryptedTakeStore(keys: keys)
         guard let store else { return nil }
         return SyncEngine(store: store, cloud: cloud, keys: keys, deviceId: deviceId())
