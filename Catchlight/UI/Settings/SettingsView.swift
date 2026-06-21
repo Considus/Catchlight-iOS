@@ -51,6 +51,7 @@ struct SettingsView: View {
                 securitySection
                 subscriptionSection
                 systemSection
+                supportSection
                 #if DEBUG
                 debugSection
                 #endif
@@ -326,8 +327,8 @@ struct SettingsView: View {
             // How many hours ahead a freshly-added reminder opens to (owner 2026-06-18).
             // `PetalFanView.defaultReminderDate` reads the same key.
             menuPickerRow(icon: "clock",
-                          label: "Default timing (hrs)",
-                          accessibilityLabel: "Default reminder timing in hours",
+                          label: "Default timing",
+                          accessibilityLabel: "Default reminder timing",
                           selectionLabel: defaultReminderHoursBinding.wrappedValue.label) {
                 Picker("Default timing", selection: defaultReminderHoursBinding) {
                     ForEach(SettingsViewModel.DefaultReminderHours.allCases) { option in
@@ -340,7 +341,7 @@ struct SettingsView: View {
             // action defers by (owner 2026-06-20). Read by `NotificationPresenter` from
             // this preference (works while locked, when the encrypted store doesn't).
             menuPickerRow(icon: "zzz",
-                          label: "Snooze",
+                          label: "Snooze Duration",
                           accessibilityLabel: "Snooze duration",
                           selectionLabel: snoozeDurationBinding.wrappedValue.label) {
                 Picker("Snooze", selection: snoozeDurationBinding) {
@@ -393,8 +394,8 @@ struct SettingsView: View {
             // The user decides the window ([[catchlight-user-decides-principle]]); only
             // done, note-free Takes are ever eligible (see Take.isAutoCleanupEligible).
             menuPickerRow(icon: "trash",
-                          label: "Auto-delete",
-                          accessibilityLabel: "Auto-delete completed Takes,",
+                          label: "Auto-Delete (exc. notes)",
+                          accessibilityLabel: "Auto-delete completed Takes, excluding notes,",
                           selectionLabel: autoCleanupBinding.wrappedValue.label) {
                 Picker("Auto-delete", selection: autoCleanupBinding) {
                     ForEach(SettingsViewModel.AutoCleanup.allCases) { option in
@@ -517,14 +518,6 @@ struct SettingsView: View {
             }
             .accessibilityIdentifier("settings-export-takes")
             .accessibilityHint("Export all your Takes as a Markdown file.")
-            // Report an issue (owner 2026-06-21) — with no analytics or crash
-            // reporting, a prefilled mail to support is our only inbound signal.
-            SettingsRow(icon: "envelope",
-                        label: "Report an issue",
-                        chevron: false,
-                        action: { reportAnIssue() })
-                .accessibilityIdentifier("settings-report-issue")
-                .accessibilityHint("Opens a prefilled email to Catchlight support.")
             SettingsRow(icon: "info.circle",
                         label: "About",
                         chevron: true,
@@ -534,6 +527,23 @@ struct SettingsView: View {
             .accessibilityLabel("About. \(aboutString)")
         } header: {
             sectionHeader("System")
+        }
+    }
+
+    // MARK: - Support
+
+    /// Its own section below System (owner 2026-06-21). With no analytics or crash
+    /// reporting, a prefilled mail to support is our only inbound signal.
+    private var supportSection: some View {
+        Section {
+            SettingsRow(icon: "envelope",
+                        label: "Report an issue",
+                        chevron: false,
+                        action: { reportAnIssue() })
+                .accessibilityIdentifier("settings-report-issue")
+                .accessibilityHint("Opens a prefilled email to Catchlight support.")
+        } header: {
+            sectionHeader("Support")
         }
     }
 

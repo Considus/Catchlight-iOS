@@ -24,13 +24,16 @@ final class SettingsViewModel {
     static let appearanceDefaultsKey = "appearanceMode"
 
     enum AppearanceMode: String, CaseIterable, Identifiable {
-        case system, night, daylight
+        // Declaration order = picker order: System / Light / Dark (owner 2026-06-21).
+        // rawValues are unchanged (persisted @AppStorage keys), only the order and
+        // the user-facing labels move to the conventional iOS System/Light/Dark.
+        case system, daylight, night
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .system: return "System"
-            case .night: return "Night"
-            case .daylight: return "Daylight"
+            case .system:   return "System"
+            case .daylight: return "Light"
+            case .night:    return "Dark"
             }
         }
         /// Translate to SwiftUI's preferredColorScheme. `nil` means "follow system".
@@ -96,8 +99,17 @@ final class SettingsViewModel {
 
         var id: String { rawValue }
 
-        /// Segmented-button label — just the number (the row title carries "(hrs)").
-        var label: String { rawValue }
+        /// Menu label — full duration (owner 2026-06-21). 24h reads "1 day",
+        /// 48h "2 days"; the rawValue is still the hour count used by `hours`.
+        var label: String {
+            switch self {
+            case .one:        return "1 hour"
+            case .six:        return "6 hours"
+            case .twelve:     return "12 hours"
+            case .twentyFour: return "1 day"
+            case .fortyEight: return "2 days"
+            }
+        }
 
         var hours: Int { Int(rawValue) ?? 24 }
 
@@ -216,11 +228,10 @@ final class SettingsViewModel {
 
         var id: String { rawValue }
 
-        /// Short label for the segmented control.
         var label: String {
             switch self {
-            case .oldestFirst: return "Oldest"
-            case .newestFirst: return "Newest"
+            case .oldestFirst: return "Oldest first"
+            case .newestFirst: return "Newest first"
             }
         }
 
@@ -285,10 +296,10 @@ final class SettingsViewModel {
         var label: String {
             switch self {
             case .never:    return "Never"
-            case .daily:    return "After a day"
-            case .weekly:   return "After a week"
-            case .monthly:  return "After a month"
-            case .annually: return "After a year"
+            case .daily:    return "Daily"
+            case .weekly:   return "Weekly"
+            case .monthly:  return "Monthly"
+            case .annually: return "Annually"
             }
         }
 
