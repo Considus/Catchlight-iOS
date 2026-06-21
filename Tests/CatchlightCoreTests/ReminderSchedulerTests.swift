@@ -223,8 +223,10 @@ final class ReminderSchedulerTests: XCTestCase {
         scheduler.scheduleReminder(for: take)
         scheduler.cancelReminder(for: take)
         XCTAssertEqual(center.added.count, 0)
+        // Cancel clears the one-shot id AND the whole recurring window (`<id>#0…`), so a
+        // single cancel works whichever kind the Take was (owner 2026-06-21).
         XCTAssertEqual(center.removedIdentifiers.last,
-                       [take.timeReminder!.notificationIdentifier])
+                       ReminderScheduler.allIdentifiers(base: take.timeReminder!.notificationIdentifier))
     }
 
     func testCancel_takeWithoutReminder_isNoOp() {
@@ -248,7 +250,8 @@ final class ReminderSchedulerTests: XCTestCase {
         scheduler.reschedule(for: take)
         XCTAssertEqual(center.added.count, 1, "Only the latest request should be pending")
         XCTAssertEqual(center.added.first?.identifier, id.uuidString)
-        XCTAssertEqual(center.removedIdentifiers.last, [id.uuidString])
+        // Reschedule cancels via the full id set (one-shot id + recurring window).
+        XCTAssertEqual(center.removedIdentifiers.last, ReminderScheduler.allIdentifiers(base: id.uuidString))
     }
 }
 #endif
