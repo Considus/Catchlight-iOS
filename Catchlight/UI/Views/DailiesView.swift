@@ -122,6 +122,10 @@ struct DailiesView: View {
     /// on (inline) while another Obie already exists — the same warning the timeline
     /// long-press uses, but targeting the draft (owner 2026-06-17).
     @State private var pendingInlineObieConfirm = false
+    /// The repeating-reminder Take awaiting a Delete choice (owner 2026-06-21). Swiping
+    /// Delete on a recurring reminder asks "this occurrence" vs "the whole series"
+    /// rather than deleting outright; nil when no such prompt is up.
+    @State private var pendingRecurringDelete: Take?
     /// One-shot scroll target — set to bring a Take into view (e.g. a new Take that
     /// landed at the bottom under Oldest-first). The timeline's ScrollViewReader
     /// consumes and clears it.
@@ -337,6 +341,27 @@ struct DailiesView: View {
             Button("Cancel", role: .cancel) { cancelInlineObie() }
         } message: {
             Text("Your existing Obie returns to the timeline — only one Take can be your Obie.")
+        }
+        // Recurring-reminder Delete (owner 2026-06-21): this occurrence vs the series.
+        // "This occurrence" rolls the reminder forward (series + alarm stay live);
+        // "Delete series" removes the whole Take like a normal delete.
+        .confirmationDialog(
+            "This is a repeating reminder.",
+            isPresented: Binding(get: { pendingRecurringDelete != nil },
+                                 set: { if !$0 { pendingRecurringDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete This Occurrence") {
+                if let t = pendingRecurringDelete { vm.advanceRecurring(t) }
+                pendingRecurringDelete = nil
+            }
+            Button("Delete Series", role: .destructive) {
+                if let t = pendingRecurringDelete { vm.delete(t) }
+                pendingRecurringDelete = nil
+            }
+            Button("Cancel", role: .cancel) { pendingRecurringDelete = nil }
+        } message: {
+            Text("Delete only the next occurrence, or the whole repeating series?")
         }
         // Interim Angle entry (2026-06-18): the full-screen list Angle, opened from the
         // editor's top-right affordance, bound to the live draft so ticks / reorders /
@@ -927,10 +952,18 @@ struct DailiesView: View {
                 title: "Delete",
                 systemImage: "trash",
                 tint: .ckRuby,                 // HiFi alert red — owner to confirm on device
-                style: .destructive,
+                // A repeating reminder asks "this occurrence vs the series" first, so it
+                // must NOT fly off on swipe (the row stays if "this occurrence" wins) —
+                // `.standard` triggers the dialog; a normal Take keeps the destructive
+                // slide-off (owner 2026-06-21).
+                style: take.timeReminder?.repeats == true ? .standard : .destructive,
                 perform: {
                     guard app.ensureEntitled() else { return }
-                    vm.delete(take)
+                    if take.timeReminder?.repeats == true {
+                        pendingRecurringDelete = take
+                    } else {
+                        vm.delete(take)
+                    }
                 }
             ),
             openRowID: $openSwipeRowID,
@@ -1150,7 +1183,8 @@ struct DailiesView: View {
             d.timeReminder = TimeReminder(scheduledDate: when,
                                           notificationIdentifier: d.id.uuidString,
                                           alarmEnabled: command.reminderAlarm,
-                                          isAllDay: command.reminderAllDay)
+                                          isAllDay: command.reminderAllDay,
+                                          recurrence: command.reminderRecurrence)
         } else {
             d.timeReminder = nil
         }

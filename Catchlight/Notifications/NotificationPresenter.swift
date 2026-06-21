@@ -87,9 +87,16 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         guard response.actionIdentifier == Self.snoozeActionIdentifier else { return }
         let fireAt = Date().addingTimeInterval(SettingsViewModel.SnoozeDuration.current.seconds)
         let request = response.notification.request
+        // The ORIGINAL "when" text, stamped at first schedule and carried across snoozes,
+        // so the re-nudge reads "Originally due …" rather than the (redundant) re-fire
+        // time. Fall back to the current subtitle for notifications scheduled before this
+        // existed (only true for ones already pending at upgrade).
+        let dueText = (request.content.userInfo[ReminderScheduler.dueTextKey] as? String)
+            ?? request.content.subtitle
         ReminderScheduler().scheduleSnooze(
             title: request.content.title,
             identifier: request.identifier,
-            fireAt: fireAt)
+            fireAt: fireAt,
+            dueText: dueText)
     }
 }

@@ -65,7 +65,7 @@ struct PetalFanView: View {
     /// `reminderDate` carries the time chosen in the picker (nil when no Reminder).
     /// `reminderAlarm` / `reminderAllDay` carry the model-C picker choices (owner
     /// 2026-06-18) — undefined/ignored when `hasReminder` is false.
-    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ isObie: Bool) -> Void
+    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ isObie: Bool) -> Void
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -91,6 +91,9 @@ struct PetalFanView: View {
     /// whether it's a date-only (all-day) placement. Seeded from any existing reminder.
     @State private var reminderAlarm: Bool
     @State private var reminderAllDay: Bool
+    /// How often the reminder repeats (owner 2026-06-21). Seeded from any existing
+    /// reminder; `.none` for a one-shot.
+    @State private var reminderRecurrence: TimeReminder.Recurrence
     /// Drives the date/time picker sheet the Reminder Mark pops.
     @State private var showingReminderPicker = false
 
@@ -115,7 +118,7 @@ struct PetalFanView: View {
          hubCentre: CGPoint,
          containerWidth: CGFloat = 0,
          showsFocusCard: Bool = false,
-         onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, Bool) -> Void,
+         onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, TimeReminder.Recurrence, Bool) -> Void,
          onDismiss: @escaping () -> Void) {
         self.take = take
         self.hubCentre = hubCentre
@@ -130,6 +133,7 @@ struct PetalFanView: View {
         _reminderDate = State(initialValue: take.timeReminder?.scheduledDate ?? Self.defaultReminderDate)
         _reminderAlarm = State(initialValue: take.timeReminder?.alarmEnabled ?? true)
         _reminderAllDay = State(initialValue: take.timeReminder?.isAllDay ?? false)
+        _reminderRecurrence = State(initialValue: take.timeReminder?.recurrence ?? .none)
         _phase = State(initialValue: .opening(start: .now))
     }
 
@@ -390,10 +394,12 @@ struct PetalFanView: View {
             initialDate: reminderDate,
             initialAlarm: reminderAlarm,
             initialAllDay: reminderAllDay,
-            onSave: { date, alarm, allDay in
+            initialRecurrence: reminderRecurrence,
+            onSave: { date, alarm, allDay, recurrence in
                 reminderDate = date
                 reminderAlarm = alarm
                 reminderAllDay = allDay
+                reminderRecurrence = recurrence
                 hasReminder = true
                 showingReminderPicker = false
             },
@@ -490,7 +496,8 @@ struct PetalFanView: View {
             t.timeReminder = TimeReminder(scheduledDate: reminderDate,
                                           notificationIdentifier: t.id.uuidString,
                                           alarmEnabled: reminderAlarm,
-                                          isAllDay: reminderAllDay)
+                                          isAllDay: reminderAllDay,
+                                          recurrence: reminderRecurrence)
         } else {
             t.timeReminder = nil
         }
@@ -596,7 +603,7 @@ struct PetalFanView: View {
         // close animation's end frame, so there's no flash.
         phase = .dismissed
         if commit {
-            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, reminderAlarm, reminderAllDay, isObie)
+            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, reminderAlarm, reminderAllDay, reminderRecurrence, isObie)
         } else {
             onDismiss()
         }
@@ -617,7 +624,7 @@ struct PetalFanView: View {
 /// picker follows the user's Region (DD/MM vs MM/DD) and 12/24-hour preference.
 struct ReminderPickerSheet: View {
     let initialDate: Date
-    let onSave: (_ date: Date, _ alarm: Bool, _ allDay: Bool) -> Void
+    let onSave: (_ date: Date, _ alarm: Bool, _ allDay: Bool, _ recurrence: TimeReminder.Recurrence) -> Void
     /// Optional — the Focus-ring uses Cancel to REMOVE a just-added reminder; the
     /// editor leaves it nil (Cancel keeps the existing time untouched).
     var onCancel: () -> Void = {}
@@ -625,12 +632,14 @@ struct ReminderPickerSheet: View {
     @State private var date: Date
     @State private var alarm: Bool
     @State private var allDay: Bool
+    @State private var recurrence: TimeReminder.Recurrence
     @Environment(\.dismiss) private var dismiss
 
     init(initialDate: Date,
          initialAlarm: Bool = true,
          initialAllDay: Bool = false,
-         onSave: @escaping (Date, Bool, Bool) -> Void,
+         initialRecurrence: TimeReminder.Recurrence = .none,
+         onSave: @escaping (Date, Bool, Bool, TimeReminder.Recurrence) -> Void,
          onCancel: @escaping () -> Void = {}) {
         self.initialDate = initialDate
         self.onSave = onSave
@@ -638,6 +647,7 @@ struct ReminderPickerSheet: View {
         _date = State(initialValue: initialDate)
         _alarm = State(initialValue: initialAlarm)
         _allDay = State(initialValue: initialAllDay)
+        _recurrence = State(initialValue: initialRecurrence)
     }
 
     /// Quick "when" presets — one tap fills the calendar below. All computed from
@@ -697,7 +707,7 @@ struct ReminderPickerSheet: View {
                     Button("Cancel") { onCancel(); dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { onSave(date, alarm, allDay); dismiss() }
+                    Button("Done") { onSave(date, alarm, allDay, recurrence); dismiss() }
                 }
             }
         }
@@ -741,11 +751,55 @@ struct ReminderPickerSheet: View {
             Divider()
 
             Toggle(isOn: $alarm) {
-                Label("Alarm", systemImage: alarm ? "bell.fill" : "bell")
+                // "Notify" (owner 2026-06-21) — more accurate than "Alarm" to what the
+                // toggle does (fire a local notification). The model field stays
+                // `alarmEnabled`; only the user-facing label changes.
+                Label("Notify", systemImage: alarm ? "bell.fill" : "bell")
             }
             .accessibilityIdentifier("reminder-alarm-toggle")
             .padding(.vertical, 6)
+
+            Divider()
+
+            // Repeat (owner 2026-06-21): a toggle that REVEALS the cadence chooser when
+            // on, mirroring the All-day / Notify row rhythm. Off = a one-shot (`.none`);
+            // turning it on defaults to Daily and the revealed menu refines it. The
+            // anchor date below supplies the cadence's time-of-day / weekday / day.
+            Toggle(isOn: Binding(
+                get: { recurrence != .none },
+                set: { recurrence = $0 ? (recurrence == .none ? .daily : recurrence) : .none }
+            )) {
+                Label("Repeat", systemImage: "repeat")
+            }
+            .accessibilityIdentifier("reminder-repeat-toggle")
+            .padding(.vertical, 6)
+
+            if recurrence != .none {
+                Divider()
+                Menu {
+                    Picker("Repeat", selection: $recurrence) {
+                        // Every cadence EXCEPT `.none` — the toggle owns on/off.
+                        ForEach(TimeReminder.Recurrence.allCases.filter { $0 != .none }, id: \.self) { option in
+                            Text(option.label).tag(option)
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text("Every")
+                            .foregroundStyle(Color.ckTextPrimary)
+                        Spacer()
+                        Text(recurrence.label)
+                            .foregroundStyle(Color.ckTextSecondary)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(Color.ckTextSecondary)
+                    }
+                }
+                .accessibilityIdentifier("reminder-repeat-cadence")
+                .padding(.vertical, 6)
+            }
         }
+        .animation(.snappy(duration: 0.2), value: recurrence != .none)
         .tint(Color.ckEmber)
         .padding(.horizontal, 14)
         .padding(.vertical, 4)
@@ -777,7 +831,7 @@ struct ReminderPickerSheet: View {
         PetalFanView(
             take: Take(blocks: [.checkItem("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _, _, _, _ in },
+            onCommit: { _, _, _, _, _, _, _, _ in },
             onDismiss: {}
         )
     }
@@ -790,7 +844,7 @@ struct ReminderPickerSheet: View {
         PetalFanView(
             take: Take(blocks: [.textLine("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _, _, _, _ in },
+            onCommit: { _, _, _, _, _, _, _, _ in },
             onDismiss: {}
         )
     }
