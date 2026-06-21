@@ -30,9 +30,9 @@ struct PaywallView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppModel.self) private var app
-    // D-030 (+ owner refinement: Default is the floor). The subscribe CTA is not
-    // a DockPill but shares the dock geometry, so it mirrors the same rule:
-    // above the default text size the label grows/wraps instead of shrinking.
+    // D-030 (+ owner refinement: Default is the floor). Above the default text
+    // size the inline CTA's label wraps to two lines and the button grows
+    // instead of shrinking the text.
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
     /// Bound to the manager so price / trial copy update reactively as soon
@@ -49,43 +49,36 @@ struct PaywallView: View {
         ZStack(alignment: .topTrailing) {
             Color.ckBackground.ignoresSafeArea()
 
-            GeometryReader { geo in
-                ScrollView {
-                    VStack(spacing: 22) {
-                        hero
-                        eyebrow
-                        valueProps
-                        Spacer(minLength: 12)
-                        pricingLine
-                        Spacer(minLength: 12)
-                        renewalCopy
-                        secondaryActions
-                        legalBlock
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 26)   // standard heading line (HiFi v1.11.3)
-                    .padding(.bottom, 8)
-                    .frame(maxWidth: .infinity)
-                    // Fill the viewport so the equal-split Spacers lay out like
-                    // the static mock; the view only actually scrolls at
-                    // accessibility text sizes.
-                    .frame(minHeight: geo.size.height)
+            ScrollView {
+                // Owner 2026-06-21: the CTA moves up into the flow, directly under
+                // the price (its natural conversion spot) — it no longer pins to the
+                // bottom beneath the legal block. Content now flows top-down with even
+                // spacing instead of the old equal-split that marooned the price and
+                // crammed the bottom third.
+                VStack(spacing: 22) {
+                    hero
+                    eyebrow
+                    valueProps
+                    pricingLine
+                        .padding(.top, 8)
+                    primaryCTA
+                    renewalCopy
+                    secondaryActions
+                    legalBlock
                 }
-                // The sheet marker lives on the ScrollView, NOT the container
-                // ZStack (2026-06-10): a container-level accessibilityIdentifier
-                // propagates onto every descendant accessibility element on the
-                // current SwiftUI runtime, which overwrote the dismiss button's
-                // own "paywall-dismiss" identifier and broke the UI tests.
-                .accessibilityIdentifier("paywall-sheet")
+                .padding(.horizontal, 24)
+                .padding(.top, 26)   // standard heading line (HiFi v1.11.3)
+                .padding(.bottom, 16)
+                .frame(maxWidth: .infinity)
             }
+            // The sheet marker lives on the ScrollView, NOT the container
+            // ZStack (2026-06-10): a container-level accessibilityIdentifier
+            // propagates onto every descendant accessibility element on the
+            // current SwiftUI runtime, which overwrote the dismiss button's
+            // own "paywall-dismiss" identifier and broke the UI tests.
+            .accessibilityIdentifier("paywall-sheet")
 
             dismissButton
-        }
-        .safeAreaInset(edge: .bottom) {
-            // The dock's soft edge (HiFi v1.11.5) — the legal block fades out
-            // beneath the CTA zone when the view scrolls at large text sizes.
-            DockPillRow { primaryCTA }
-                .dockFadeBackground()
         }
         .task {
             await manager.loadProduct()
@@ -95,7 +88,9 @@ struct PaywallView: View {
     // MARK: - Sections
 
     private var hero: some View {
-        Text("A quieter way\nto hold the day.")
+        // Owner-chosen conversion heading (2026-06-21): leads with the free trial
+        // and the core privacy promise. Three clauses, one per line, for rhythm.
+        Text("Start free,\nkeep your thoughts,\nprivately.")
             .font(CatchlightFont.displayFixed(size: 38))
             .foregroundStyle(Color.ckTextPrimary)
             .lineSpacing(4)   // ≈ the standard heading's 1.25 line-height (HiFi v1.11.3)
@@ -137,14 +132,13 @@ struct PaywallView: View {
     /// values↔auto-renews space via the equal Spacers in `body`.
     private var pricingLine: some View {
         Group {
-            if manager.isEligibleForIntroOffer, let trial = manager.trialDurationCopy {
-                // L10N: composed phrase. `trial` ("14 days") and `priceCopy`
-                // ("£14.99/year") are both locale-aware via StoreKit, but the
-                // glue copy ("free, then") needs the order to be locale-aware
-                // too — e.g. RTL layouts may want the duration last. SwiftUI
-                // Text+LocalizedStringKey extracts this as a format string
-                // with two %@ args; the future xcstrings will pick it up.
-                Text("\(trial) free, then \(priceCopy)")
+            if manager.isEligibleForIntroOffer, let trial = manager.trialDurationAdjectiveCopy {
+                // Owner copy (2026-06-21): "Start your 14-day trial now, then only
+                // £14.99/year". `trial` ("14-day") and `priceCopy` ("£14.99/year")
+                // stay live from StoreKit so the line is never stale; shown only
+                // when the user is actually eligible for the intro offer (else the
+                // bare price below — claiming a trial they can't get would be false).
+                Text("Start your \(trial) trial now, then only \(priceCopy)")
             } else {
                 Text(priceCopy)
             }
@@ -169,9 +163,10 @@ struct PaywallView: View {
 
     // MARK: - CTAs
 
-    /// Dock-geometry pill (HiFi v1.11.2): Ember fill, ckOnAccent (Ink) label —
-    /// the same button system as onboarding. Ink label both modes (D-028):
-    /// Paper-on-Ember fails WCAG in Daylight. Sized by the enclosing DockPillRow.
+    /// Inline primary CTA (owner 2026-06-21): a full content-width Ember capsule
+    /// with a fixed, substantial height, sitting directly under the price rather
+    /// than pinned at the bottom in dock geometry. Ember fill, ckOnAccent (Ink)
+    /// label both modes (D-028): Paper-on-Ember fails WCAG in Daylight.
     private var primaryCTA: some View {
         Button {
             Task {
@@ -186,15 +181,15 @@ struct PaywallView: View {
                         .tint(Color.ckOnAccent)
                 } else {
                     Text(ctaText)
-                        .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                        .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
                         .lineLimit(dynamicSize > .large ? 2 : 1)
                         .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)
                         .multilineTextAlignment(.center)
                 }
             }
-            .frame(maxWidth: .infinity,
-                   minHeight: dynamicSize > .large ? CatchlightLayout.minTouchTarget : nil,
-                   maxHeight: dynamicSize > .large ? nil : .infinity)
+            // Grows past 54pt only when the label wraps at large text sizes.
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .padding(.vertical, dynamicSize > .large ? 8 : 0)
             .foregroundStyle(Color.ckOnAccent)
             .background(Capsule().fill(Color.ckEmber))
             .contentShape(Capsule())
