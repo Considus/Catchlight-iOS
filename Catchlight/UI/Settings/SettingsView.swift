@@ -18,6 +18,7 @@
 
 import SwiftUI
 import UserNotifications
+import CatchlightCore
 
 struct SettingsView: View {
 
@@ -35,6 +36,8 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.SnoozeDuration.defaultsKey) private var snoozeDurationRaw: String = SettingsViewModel.SnoozeDuration.default.rawValue
 
     @State private var vm = SettingsViewModel()
+    /// Drives the Markdown / Plain Text chooser for Export Takes (owner 2026-06-21).
+    @State private var showExportFormatDialog = false
 
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
@@ -103,6 +106,17 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $vm.isAboutSheetPresented) {
             AboutView()
+        }
+        // Export format chooser (owner 2026-06-21) — tap Export Takes, pick a
+        // format, then the share sheet presents. No persisted preference.
+        .confirmationDialog("Export Takes",
+                            isPresented: $showExportFormatDialog,
+                            titleVisibility: .visible) {
+            Button("Markdown") { exportTakes(format: .markdown) }
+            Button("Plain Text") { exportTakes(format: .plainText) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Choose a format. Both include every Take and stay readable forever.")
         }
         #if DEBUG
         .alert("Reset Catchlight?", isPresented: $showResetConfirm) {
@@ -514,11 +528,9 @@ struct SettingsView: View {
             SettingsRow(icon: "square.and.arrow.up",
                         label: "Export Takes",
                         chevron: false,
-                        action: { exportTakes() }) {
-                SettingsDetailLabel(text: "Markdown")
-            }
-            .accessibilityIdentifier("settings-export-takes")
-            .accessibilityHint("Export all your Takes as a Markdown file.")
+                        action: { showExportFormatDialog = true })
+                .accessibilityIdentifier("settings-export-takes")
+                .accessibilityHint("Export all your Takes as a Markdown or plain-text file.")
             SettingsRow(icon: "info.circle",
                         label: "About",
                         chevron: true,
@@ -594,13 +606,13 @@ struct SettingsView: View {
     }
 
     @MainActor
-    private func exportTakes() {
+    private func exportTakes(format: TakeExporter.Format) {
         // Reads through the live DailiesViewModel's store so the export reflects
         // whatever the user can see in the timeline (one store, one source of
         // truth). `allTakes()` already returns `createdAt` ascending; the
         // exporter re-sorts defensively.
         let takes = (try? app.dailiesVM.store.allTakes()) ?? []
-        ExportCoordinator.presentShareSheet(takes: takes)
+        ExportCoordinator.presentShareSheet(takes: takes, format: format)
     }
 
     private var aboutString: String {
