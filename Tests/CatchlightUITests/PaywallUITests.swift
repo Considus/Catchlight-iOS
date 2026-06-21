@@ -66,6 +66,14 @@ final class PaywallUITests: XCTestCase {
         let restore = app.descendants(matching: .any)
             .matching(identifier: "paywall-restore").firstMatch
         XCTAssertTrue(restore.waitForExistence(timeout: 3))
+        // The CTA now sits inline under the price (owner 2026-06-21), so Restore
+        // can fall below the fold on smaller devices — scroll it into view. Being
+        // reachable + hittable is what the Apple-mandatory element requires.
+        var scrolls = 0
+        while !restore.isHittable && scrolls < 6 {
+            app.swipeUp()
+            scrolls += 1
+        }
         XCTAssertTrue(restore.isHittable, "Restore Purchases must be tappable.")
     }
 }
