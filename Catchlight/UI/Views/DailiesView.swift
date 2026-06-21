@@ -361,11 +361,16 @@ struct DailiesView: View {
             titleVisibility: .visible
         ) {
             Button("Delete This Occurrence") {
-                if let t = pendingRecurringDelete { vm.advanceRecurring(t) }
+                if let t = pendingRecurringDelete {
+                    // Exit the editor first if this Take is being edited — otherwise a
+                    // later save of the stale draft would overwrite (undo) the advance.
+                    if ui.editingTakeID == t.id { discardInlineEdit() }
+                    vm.advanceRecurring(t)
+                }
                 pendingRecurringDelete = nil
             }
             Button("Delete Series", role: .destructive) {
-                if let t = pendingRecurringDelete { vm.delete(t) }
+                if let t = pendingRecurringDelete { deleteTake(t) }
                 pendingRecurringDelete = nil
             }
             Button("Cancel", role: .cancel) { pendingRecurringDelete = nil }
@@ -1022,7 +1027,7 @@ struct DailiesView: View {
                     if take.timeReminder?.repeats == true {
                         pendingRecurringDelete = take
                     } else {
-                        vm.delete(take)
+                        deleteTake(take)
                     }
                 }
             ),
@@ -1219,6 +1224,26 @@ struct DailiesView: View {
         ui.endEditingInPlace()
     }
 
+    /// Delete a Take from ANY entry point (swipe, context menu, recurring "Delete series"),
+    /// exiting the in-place editor FIRST when the deleted Take is the one being edited
+    /// (owner 2026-06-21). Without this, deleting the focused Take left `isEditingInPlace`
+    /// true — a masked "dead" screen with no card, keyboard, or controls — and a tap on the
+    /// mask ran `saveInlineEdit`, which would `vm.save` the still-set draft and RESURRECT
+    /// the Take. The single rule: a Take action must never strand the user on the edit mask.
+    private func deleteTake(_ take: Take) {
+        if ui.editingTakeID == take.id {
+            let doomed = editDraft ?? take
+            editFocusedBlockID = nil
+            editDraft = nil
+            ui.endEditingInPlace()
+            // `discardIfPresent` deletes an existing Take but no-ops a NEW one never saved
+            // (Phase 2) — no spurious not-found error if the editor held an unsaved Take.
+            vm.discardIfPresent(doomed)
+            return
+        }
+        vm.delete(take)
+    }
+
     /// Apply a Focus-ring selection to the inline draft. The draft is the single
     /// source of truth while editing, so the selection rides the inline save (fixing
     /// the Obie revert: the
@@ -1388,19 +1413,7 @@ struct DailiesView: View {
             },
             onDelete: {
                 guard app.ensureEntitled() else { return }
-                // Delete while editing: drop the draft and leave editing — there's
-                // nothing to save once the Take is gone.
-                if isEditingThis {
-                    let doomed = editDraft ?? take
-                    editFocusedBlockID = nil
-                    editDraft = nil
-                    ui.endEditingInPlace()
-                    // `discardIfPresent` deletes an existing Take but no-ops a NEW
-                    // one that was never saved (Phase 2) — no spurious not-found error.
-                    vm.discardIfPresent(doomed)
-                    return
-                }
-                vm.delete(take)
+                deleteTake(take)
             },
             onDiscard: isEditingThis ? { discardInlineEdit() } : nil,
             // The editing row's Iris is the shape control (tap = Focus ring), so it
