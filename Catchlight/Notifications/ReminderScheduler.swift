@@ -104,6 +104,11 @@ public final class ReminderScheduler {
         // Model C (owner 2026-06-18): a "when" only fires a notification when its alarm
         // is enabled. A silent (planner-only) reminder schedules nothing.
         guard reminder.alarmEnabled else { return }
+        // A reminder marked done schedules nothing — so a FUTURE reminder completed
+        // before its trigger never fires (owner 2026-06-21). `reconcileNotification`
+        // cancels-then-schedules on every save, so this no-op nets to a cancelled
+        // notification when the user marks an upcoming reminder done.
+        guard !reminder.isDone else { return }
 
         // An all-day "when" has no meaningful time component — fire at the default
         // hour instead of the stored (effectively-midnight) time (model C). The
