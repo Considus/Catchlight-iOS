@@ -49,7 +49,6 @@ struct SettingsView: View {
                 appearanceSection
                 remindersSection
                 securitySection
-                syncSection
                 subscriptionSection
                 systemSection
                 #if DEBUG
@@ -57,6 +56,11 @@ struct SettingsView: View {
                 #endif
             }
             .listStyle(.insetGrouped)
+            // Density pass (owner 2026-06-21): let rows sit below the system's
+            // ~44pt floor so the 40pt rows aren't padded back up, and pull the
+            // inter-section gaps in.
+            .environment(\.defaultMinListRowHeight, 40)
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .background(Color.ckBackground)
             .accessibilityIdentifier("settings-sheet")
@@ -133,7 +137,7 @@ struct SettingsView: View {
                         .multilineTextAlignment(.leading)
                     Spacer(minLength: 8)
                 }
-                .frame(minHeight: 52)
+                .frame(minHeight: 40)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -170,102 +174,57 @@ struct SettingsView: View {
 
     private var appearanceSection: some View {
         Section {
-            // Mode picker — segmented control inline, no navigation push.
-            HStack(spacing: 14) {
-                Image(systemName: "circle.lefthalf.filled")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAccent)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text("Mode")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
+            // Mode picker — menu dropdown, matching Lock after / Snooze etc. so the
+            // whole sheet is one consistent control language (owner 2026-06-21).
+            menuPickerRow(icon: "circle.lefthalf.filled",
+                          label: "Mode",
+                          accessibilityLabel: "Appearance mode",
+                          selectionLabel: appearanceBinding.wrappedValue.label) {
                 Picker("Appearance mode", selection: appearanceBinding) {
                     ForEach(SettingsViewModel.AppearanceMode.allCases) { mode in
                         Text(mode.label).tag(mode)
                     }
                 }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 220)
-                .accessibilityLabel("Appearance mode")
             }
-            .frame(height: 52)
-            .listRowBackground(Color.ckSurface)
 
             // Timeline density — the gap between Takes on Dailies (owner 2026-06-16).
-            // Segmented control matching the Mode row; labelled "View" so the three
-            // options fit the inline 220pt width.
-            HStack(spacing: 14) {
-                Image(systemName: "arrow.up.and.down.text.horizontal")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAccent)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text("View")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
+            menuPickerRow(icon: "arrow.up.and.down.text.horizontal",
+                          label: "View",
+                          accessibilityLabel: "Take spacing",
+                          selectionLabel: takeSpacingBinding.wrappedValue.label) {
                 Picker("View", selection: takeSpacingBinding) {
                     ForEach(SettingsViewModel.TakeSpacing.allCases) { option in
                         Text(option.label).tag(option)
                     }
                 }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 220)
-                .accessibilityLabel("Take spacing")
             }
-            .frame(height: 52)
-            .listRowBackground(Color.ckSurface)
 
             // Take preview length — how much of a collapsed Take's body shows on the
             // timeline (owner 2026-06-16). Independent of "View" density; the reminder
             // time label always shows regardless. Ordered before Order (owner: Mode,
             // View, Preview, Order, Scenes).
-            HStack(spacing: 14) {
-                Image(systemName: "text.alignleft")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAccent)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text("Preview")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
+            menuPickerRow(icon: "text.alignleft",
+                          label: "Preview",
+                          accessibilityLabel: "Take preview length",
+                          selectionLabel: takePreviewBinding.wrappedValue.label) {
                 Picker("Preview", selection: takePreviewBinding) {
                     ForEach(SettingsViewModel.TakePreview.allCases) { option in
                         Text(option.label).tag(option)
                     }
                 }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 220)
-                .accessibilityLabel("Take preview length")
             }
-            .frame(height: 52)
-            .listRowBackground(Color.ckSurface)
 
             // Timeline order — which end of time sits at the top (owner 2026-06-16).
-            HStack(spacing: 14) {
-                Image(systemName: "arrow.up.arrow.down")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAccent)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text("Order")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
+            menuPickerRow(icon: "arrow.up.arrow.down",
+                          label: "Order",
+                          accessibilityLabel: "Timeline order",
+                          selectionLabel: takeSortBinding.wrappedValue.label) {
                 Picker("Order", selection: takeSortBinding) {
                     ForEach(SettingsViewModel.TakeSort.allCases) { option in
                         Text(option.label).tag(option)
                     }
                 }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 220)
-                .accessibilityLabel("Timeline order")
             }
-            .frame(height: 52)
-            .listRowBackground(Color.ckSurface)
 
             SettingsRow(icon: "paintpalette",
                         label: "Scenes",
@@ -275,11 +234,39 @@ struct SettingsView: View {
             .accessibilityHint("Coming soon.")
         } header: {
             sectionHeader("Appearance")
-        } footer: {
-            Text("How much of each Take previews, the spacing between Takes, and whether the oldest or newest sits at the top. The Obie always stays pinned at the top.")
-                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
-                .foregroundStyle(Color.ckTextSecondary)
         }
+    }
+
+    /// Shared row for an inline menu-style `Picker` — one consistent control
+    /// language across the whole sheet (owner 2026-06-21: ditch the segmented
+    /// controls in favour of the Snooze / Lock after dropdown). Leading icon +
+    /// label, the picker's current value as a tappable trailing menu. Compact
+    /// 40pt height (owner 2026-06-21 density pass); the picker keeps its own
+    /// ≥44pt tap region via the menu chevron's hit area.
+    private func menuPickerRow<P: View>(icon: String,
+                                        label: String,
+                                        accessibilityLabel: String,
+                                        selectionLabel: String,
+                                        @ViewBuilder picker: () -> P) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .regular))
+                .foregroundStyle(Color.ckAccent)
+                .frame(width: 26)
+                .accessibilityHidden(true)
+            Text(label)
+                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                .foregroundStyle(Color.ckTextPrimary)
+            Spacer()
+            picker()
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(Color.ckTextSecondary)
+        }
+        .frame(height: 40)
+        .listRowBackground(Color.ckSurface)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(accessibilityLabel) \(selectionLabel)")
     }
 
     /// The scheme to FORCE on the Settings sheet. Night/Daylight map directly; System
@@ -337,64 +324,33 @@ struct SettingsView: View {
     private var remindersSection: some View {
         Section {
             // How many hours ahead a freshly-added reminder opens to (owner 2026-06-18).
-            // Segmented control like the View/Order rows — the labels are short numbers.
             // `PetalFanView.defaultReminderDate` reads the same key.
-            HStack(spacing: 14) {
-                Image(systemName: "clock")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAccent)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text("Default timing (hrs)")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
+            menuPickerRow(icon: "clock",
+                          label: "Default timing (hrs)",
+                          accessibilityLabel: "Default reminder timing in hours",
+                          selectionLabel: defaultReminderHoursBinding.wrappedValue.label) {
                 Picker("Default timing", selection: defaultReminderHoursBinding) {
                     ForEach(SettingsViewModel.DefaultReminderHours.allCases) { option in
                         Text(option.label).tag(option)
                     }
                 }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 220)
-                .accessibilityLabel("Default reminder timing in hours")
             }
-            .frame(height: 52)
-            .listRowBackground(Color.ckSurface)
 
             // Snooze duration — how long the reminder notification's "Snooze" pull-down
             // action defers by (owner 2026-06-20). Read by `NotificationPresenter` from
             // this preference (works while locked, when the encrypted store doesn't).
-            // Menu picker like Lock after / Auto-delete (the labels are too long for a
-            // segmented control).
-            HStack(spacing: 14) {
-                Image(systemName: "zzz")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAccent)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text("Snooze")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
+            menuPickerRow(icon: "zzz",
+                          label: "Snooze",
+                          accessibilityLabel: "Snooze duration",
+                          selectionLabel: snoozeDurationBinding.wrappedValue.label) {
                 Picker("Snooze", selection: snoozeDurationBinding) {
                     ForEach(SettingsViewModel.SnoozeDuration.allCases) { option in
                         Text(option.label).tag(option)
                     }
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .tint(Color.ckTextSecondary)
             }
-            .frame(height: 52)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Snooze duration \(snoozeDurationBinding.wrappedValue.label)")
         } header: {
             sectionHeader("Reminders")
-        } footer: {
-            Text("How many hours ahead a new reminder starts (you can always adjust the exact time before saving), and how long the notification's Snooze button defers by.")
-                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
-                .foregroundStyle(Color.ckTextSecondary)
         }
     }
 
@@ -421,57 +377,31 @@ struct SettingsView: View {
             // Lock after — the background grace window before a return re-locks
             // (D-042). The app ALWAYS locks on cold launch and when the phone locks
             // while Catchlight is in front; this only governs the in-background grace.
-            HStack(spacing: 14) {
-                Image(systemName: "lock")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAccent)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text("Lock after")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
+            menuPickerRow(icon: "lock",
+                          label: "Lock after",
+                          accessibilityLabel: "Lock after",
+                          selectionLabel: lockAfterBinding.wrappedValue.label) {
                 Picker("Lock after", selection: lockAfterBinding) {
                     ForEach(SettingsViewModel.LockAfter.allCases) { option in
                         Text(option.label).tag(option)
                     }
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .tint(Color.ckTextSecondary)
             }
-            .frame(height: 52)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Lock after \(lockAfterBinding.wrappedValue.label)")
 
             // Auto-delete — data minimisation (owner 2026-06-19: lives under Security,
             // since trimming finished data you no longer need limits your exposure).
             // The user decides the window ([[catchlight-user-decides-principle]]); only
-            // done, note-free Takes are ever eligible (see the footer + Take.isAutoCleanupEligible).
-            HStack(spacing: 14) {
-                Image(systemName: "trash")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(Color.ckAccent)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text("Auto-delete")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
+            // done, note-free Takes are ever eligible (see Take.isAutoCleanupEligible).
+            menuPickerRow(icon: "trash",
+                          label: "Auto-delete",
+                          accessibilityLabel: "Auto-delete completed Takes,",
+                          selectionLabel: autoCleanupBinding.wrappedValue.label) {
                 Picker("Auto-delete", selection: autoCleanupBinding) {
                     ForEach(SettingsViewModel.AutoCleanup.allCases) { option in
                         Text(option.label).tag(option)
                     }
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .tint(Color.ckTextSecondary)
             }
-            .frame(height: 52)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Auto-delete completed Takes, \(autoCleanupBinding.wrappedValue.label)")
 
             SettingsRow(icon: "key.horizontal",
                         label: "Privacy phrase",
@@ -489,10 +419,6 @@ struct SettingsView: View {
             .accessibilityHint("Coming soon.")
         } header: {
             sectionHeader("Security")
-        } footer: {
-            Text("Catchlight locks after this long in the background. It always locks when you quit the app or lock your phone while it's open.\n\nAuto-delete keeps your stored data lean: once all its tasks and reminders are done and it holds no note, a Take is removed after the time you choose. Notes — and anything still in progress — are never deleted. Off by default.")
-                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
-                .foregroundStyle(Color.ckTextSecondary)
         }
     }
 
@@ -505,20 +431,18 @@ struct SettingsView: View {
 
     // MARK: - Sync
 
-    private var syncSection: some View {
-        Section {
-            SettingsRow(icon: "icloud",
-                        label: "Cloud Storage",
-                        chevron: true,
-                        action: { vm.isCloudStorageSheetPresented = true }) {
-                SettingsDetailLabel(text: cloudStorageDetail)
-            }
-            .accessibilityIdentifier("settings-cloud-storage")
-            .accessibilityHint("Choose where encrypted Takes are stored.")
-            .accessibilityValue(cloudStorageDetail)
-        } header: {
-            sectionHeader("Sync")
+    /// The Cloud Storage row — sync now lives under System (owner 2026-06-21),
+    /// so this is composed into `systemSection` rather than owning a section.
+    private var cloudStorageRow: some View {
+        SettingsRow(icon: "icloud",
+                    label: "Cloud Storage",
+                    chevron: true,
+                    action: { vm.isCloudStorageSheetPresented = true }) {
+            SettingsDetailLabel(text: cloudStorageDetail)
         }
+        .accessibilityIdentifier("settings-cloud-storage")
+        .accessibilityHint("Choose where encrypted Takes are stored.")
+        .accessibilityValue(cloudStorageDetail)
     }
 
     /// Task 6.13 — Detail label for the Cloud Storage row. Shows the picked
@@ -580,6 +504,8 @@ struct SettingsView: View {
     private var systemSection: some View {
         Section {
             notificationsRow
+            // Sync lives under System now (owner 2026-06-21).
+            cloudStorageRow
             // Task 6.22 — always available, regardless of subscription status.
             // Decisions doc §5: "your data is yours, always" must hold even in
             // lapsed read-only mode. Do NOT wrap this in `ensureEntitled`.
@@ -591,6 +517,14 @@ struct SettingsView: View {
             }
             .accessibilityIdentifier("settings-export-takes")
             .accessibilityHint("Export all your Takes as a Markdown file.")
+            // Report an issue (owner 2026-06-21) — with no analytics or crash
+            // reporting, a prefilled mail to support is our only inbound signal.
+            SettingsRow(icon: "envelope",
+                        label: "Report an issue",
+                        chevron: false,
+                        action: { reportAnIssue() })
+                .accessibilityIdentifier("settings-report-issue")
+                .accessibilityHint("Opens a prefilled email to Catchlight support.")
             SettingsRow(icon: "info.circle",
                         label: "About",
                         chevron: true,
@@ -601,6 +535,51 @@ struct SettingsView: View {
         } header: {
             sectionHeader("System")
         }
+    }
+
+    /// Open a prefilled support email (owner 2026-06-21). We collect no analytics
+    /// or crash reports, so a `mailto:` with the app/OS/device stamped into the
+    /// body is the entire bug-report channel — the diagnostics line saves a
+    /// round-trip asking the reporter what they're running. No Take content is
+    /// ever included (it's encrypted and none of our business). If no mail
+    /// account is configured iOS simply no-ops the open.
+    @MainActor
+    private func reportAnIssue() {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+        let subject = "Catchlight issue — v\(version) (\(build))"
+        let body = """
+        Describe the issue or feedback here:
+
+
+        ———
+        The details below help us investigate (we collect no analytics):
+        App: Catchlight \(version) (\(build))
+        iOS: \(UIDevice.current.systemVersion)
+        Device: \(deviceModelIdentifier())
+        """
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = "support@catchlight.app"
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: subject),
+            URLQueryItem(name: "body", value: body),
+        ]
+        guard let url = components.url else { return }
+        UIApplication.shared.open(url)
+    }
+
+    /// Hardware identifier (e.g. `iPhone17,1`) for the support-mail diagnostics
+    /// line — `UIDevice.model` only ever returns the generic "iPhone".
+    private func deviceModelIdentifier() -> String {
+        var info = utsname()
+        uname(&info)
+        let mirror = Mirror(reflecting: info.machine)
+        let identifier = mirror.children.reduce(into: "") { partial, element in
+            guard let value = element.value as? Int8, value != 0 else { return }
+            partial.append(Character(UnicodeScalar(UInt8(value))))
+        }
+        return identifier.isEmpty ? UIDevice.current.model : identifier
     }
 
     @MainActor
