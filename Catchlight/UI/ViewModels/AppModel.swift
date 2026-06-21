@@ -53,6 +53,12 @@ final class AppModel {
     /// Dismiss in the view resets to zero.
     var quarantinedCount: Int = 0
 
+    /// Fire a manual "Sync Now" pass (owner 2026-06-21). Wired by `CatchlightApp`
+    /// to the shared `BackgroundSyncCoordinator` so a tap reuses the same
+    /// conflict / remote-change callbacks as an automatic pass. nil until wired
+    /// (previews / tests) — the Cloud Storage button is a no-op in that case.
+    var performManualSync: (() -> Void)?
+
     private(set) var needsOnboarding: Bool
     private(set) var onboardingVM: OnboardingViewModel?
 

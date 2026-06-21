@@ -44,7 +44,7 @@ struct CatchlightApp: App {
         self._app = State(initialValue: app)
         // Background sync runs off the main thread; surfaced conflicts hop back to
         // the main actor and land in `AppModel.conflictQueue` for the UI to resolve.
-        self.backgroundSync = BackgroundSyncCoordinator(
+        let backgroundSync = BackgroundSyncCoordinator(
             makeEngine: { Wiring.makeSyncEngine() },
             onConflicts: { conflicts in
                 app.conflictQueue.enqueue(conflicts)
@@ -66,6 +66,10 @@ struct CatchlightApp: App {
                 app.dailiesVM.reload()
             }
         )
+        self.backgroundSync = backgroundSync
+        // Manual "Sync Now" hook (owner 2026-06-21) — reuses the same coordinator
+        // (and so the same conflict / remote-change callbacks) as automatic passes.
+        app.performManualSync = { backgroundSync.syncNow(trigger: .manualButton) }
         // Must register before the app finishes launching.
         backgroundSync.registerLaunchHandler()
         // Present reminders in the foreground too (owner-reported 2026-06-18: a
