@@ -77,6 +77,14 @@ struct CatchlightApp: App {
         // The delegate is weakly held by UNUserNotificationCenter, so this installs
         // a process-lifetime singleton — set early, before any delivery.
         NotificationPresenter.install()
+        // Hide scroll indicators app-wide (owner 2026-06-21). SwiftUI ScrollView and
+        // List are both UIScrollView-backed, so the appearance proxy is the single
+        // point that covers every current AND future scroll surface — no per-view
+        // `.scrollIndicators(.hidden)` hunt, and nothing regresses when a screen is
+        // added. The few explicit `.scrollIndicators(.hidden)` already in the tree
+        // stay (harmless, and they document intent at those sites).
+        UIScrollView.appearance().showsVerticalScrollIndicator = false
+        UIScrollView.appearance().showsHorizontalScrollIndicator = false
     }
 
     /// Capture the app handle so the scenePhase observer can drive subscription

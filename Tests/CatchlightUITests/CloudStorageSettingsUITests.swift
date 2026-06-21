@@ -56,9 +56,13 @@ final class CloudStorageSettingsUITests: XCTestCase {
         XCTAssertTrue(chooseButton.waitForExistence(timeout: 3),
                       "Cloud Storage sub-sheet should present.")
 
-        // Dismiss via the Done toolbar button — leaves no state change behind.
-        tapWhenReady(app.buttons["Done"].firstMatch)
-        XCTAssertTrue(settingsSheet.waitForExistence(timeout: 2),
+        // No Done button (owner 2026-06-21 — matches the About sheet). Dismiss by
+        // dragging the sheet down from near its top (the drag indicator region)
+        // to the bottom — leaves no state change behind.
+        let dragStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12))
+        let dragEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95))
+        dragStart.press(forDuration: 0.05, thenDragTo: dragEnd)
+        XCTAssertTrue(settingsSheet.waitForExistence(timeout: 3),
                       "Settings sheet should still be visible after Cloud Storage dismisses.")
     }
 }

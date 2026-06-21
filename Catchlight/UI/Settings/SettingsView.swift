@@ -62,6 +62,7 @@ struct SettingsView: View {
             // inter-section gaps in.
             .environment(\.defaultMinListRowHeight, 40)
             .listSectionSpacing(.compact)
+            .scrollIndicators(.hidden)
             .scrollContentBackground(.hidden)
             .background(Color.ckBackground)
             .accessibilityIdentifier("settings-sheet")

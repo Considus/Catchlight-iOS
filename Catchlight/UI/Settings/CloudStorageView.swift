@@ -42,39 +42,36 @@ struct CloudStorageView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    header
+            // Static, non-scrolling layout (owner 2026-06-21) — the content fits the
+            // sheet, so it sits still like the About sheet rather than bouncing in a
+            // ScrollView. No Done button either; dismiss by swiping down (the drag
+            // indicator shows the affordance), matching About.
+            VStack(alignment: .leading, spacing: 24) {
+                header
 
-                    pickerSection
+                pickerSection
 
-                    divider
+                divider
 
-                    urlSection
+                urlSection
 
-                    syncModeSection
+                syncModeSection
 
-                    if let errorText {
-                        Text(errorText)
-                            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
-                            .foregroundStyle(Color.ckRuby)
-                    }
-
-                    Spacer(minLength: 0)
+                if let errorText {
+                    Text(errorText)
+                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                        .foregroundStyle(Color.ckRuby)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 24)
+
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
             .navigationTitle("Cloud Storage")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(Color.ckTextObie)
-                }
-            }
         }
         .presentationDragIndicator(.visible)
         .sheet(isPresented: $pickerPresented) {
