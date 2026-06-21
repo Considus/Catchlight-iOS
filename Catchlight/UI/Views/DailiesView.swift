@@ -905,15 +905,21 @@ struct DailiesView: View {
         // height exactly (it already tracks the card's content-driven growth).
         SwipeActionRow(
             id: take.id,
-            leading: take.isTask
+            // Done is offered for any settle-able Take — a Task OR a reminder (owner
+            // 2026-06-21). Previously Task-only, so an overdue/future reminder had no
+            // swipe-Done at all. Routes through `toggleDone` (the whole-Take settle the
+            // long-press menu uses), so a reminder's `isDone` flips: the card greys and
+            // an overdue reminder clears its ruby. `isMarkedDone` (not `isComplete`)
+            // drives the label so a reminder reads correctly.
+            leading: (take.isTask || take.timeReminder != nil)
                 ? SwipeAction(
-                    title: take.isComplete ? "Not done" : "Done",
-                    systemImage: take.isComplete ? "arrow.uturn.left" : "checkmark",
+                    title: take.isMarkedDone ? "Not done" : "Done",
+                    systemImage: take.isMarkedDone ? "arrow.uturn.left" : "checkmark",
                     tint: .ckEmber,            // Task accent — owner to confirm on device
                     style: .standard,
                     perform: {
                         guard app.ensureEntitled() else { return }
-                        vm.toggleComplete(take)
+                        vm.toggleDone(take)
                     }
                 )
                 : nil,
