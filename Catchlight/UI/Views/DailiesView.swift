@@ -1406,6 +1406,7 @@ struct DailiesView: View {
             // carries the retired editor's "editor-shape" id for tests + semantics.
             irisIdentifier: isEditingThis ? "editor-shape" : "take-iris",
             cardSwipeOffset: cardSwipeOffset,
+            isSnoozed: vm.snoozedReminderIDs.contains(take.id),
             editingCard: isEditingThis
                 ? { AnyView(InlineTakeEditCard(
                     draft: editDraftBinding,

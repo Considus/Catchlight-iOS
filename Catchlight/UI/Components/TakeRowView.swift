@@ -58,6 +58,10 @@ struct TakeRowView: View {
     /// is swiped for its actions — and so the future rings-on-a-wire still reads.
     /// Driven by `SwipeActionRow`; 0 everywhere the row isn't swipeable.
     var cardSwipeOffset: CGFloat = 0
+    /// This Take's reminder currently has a pending snoozed re-nudge — the edge reads
+    /// "SNOOZED" instead of "OVERDUE" (owner 2026-06-21). Defaults false everywhere the
+    /// snooze state isn't tracked.
+    var isSnoozed: Bool = false
     /// Edit-in-place (2026-06-17): when supplied, the read-only `TakeCardSurface` in
     /// the card slot is replaced by this live editor, IN POSITION — the Iris, spine,
     /// and card geometry are untouched (owner point 6). nil everywhere a row is at
@@ -247,7 +251,7 @@ struct TakeRowView: View {
             editingCard()
                 .contextMenu { rowMenuItems }
         } else {
-            TakeCardSurface(take: take)
+            TakeCardSurface(take: take, isSnoozed: isSnoozed)
                 .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .onTapGesture { onTapText() }
                 // iOS's standard long-press lift: the card rises cleanly (its own
@@ -339,6 +343,9 @@ struct TakeRowView: View {
 /// surface always reaches the card's trailing edge.
 struct TakeCardSurface: View {
     let take: Take
+    /// This Take's reminder has a pending snoozed re-nudge — the edge reads "SNOOZED"
+    /// instead of "OVERDUE" (owner 2026-06-21). Defaults false (e.g. previews).
+    var isSnoozed: Bool = false
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var dynamicSize
@@ -377,11 +384,13 @@ struct TakeCardSurface: View {
     /// `TakeCardStyle` so read↔edit never drift (owner 2026-06-18).
     private var style: TakeCardStyle { TakeCardStyle(take: take, scheme: scheme) }
 
-    /// What the left-edge label lane shows. Today only the overdue system label (a
-    /// vertical ruby "OVERDUE", reinforcing the ruby border + italic time). Future
-    /// user colour-labels render through the same lane (`TakeLabelLane`).
+    /// What the left-edge label lane shows. An overdue reminder reads vertical ruby
+    /// "OVERDUE" — or "SNOOZED" (same ruby, ruby border/italic kept) when it currently
+    /// has a pending snoozed re-nudge (owner 2026-06-21). Future user colour-labels
+    /// render through the same lane (`TakeLabelLane`).
     private var laneContent: TakeLabelLane.Content {
-        style.isOverdue ? .systemText("OVERDUE", .ckRuby) : .none
+        guard style.isOverdue else { return .none }
+        return .systemText(isSnoozed ? "SNOOZED" : "OVERDUE", .ckRuby)
     }
 
     /// Cached formatters — this label is evaluated on every render, and a fresh

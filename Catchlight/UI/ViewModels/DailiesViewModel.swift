@@ -220,6 +220,22 @@ final class DailiesViewModel {
         save(updated)
     }
 
+    /// Take IDs with a pending snoozed re-nudge (owner 2026-06-21) — the timeline reads
+    /// this to show "SNOOZED" instead of "OVERDUE" on those Takes' edges. Snooze is
+    /// notification-only (no store write while locked), so this is refreshed from the OS
+    /// pending queue when the app comes to the foreground; it can lag a lock-screen
+    /// snooze until the next open, which is acceptable.
+    private(set) var snoozedReminderIDs: Set<UUID> = []
+
+    /// Refresh `snoozedReminderIDs` from the OS pending queue. No encryption key needed
+    /// (it reads notifications, not the store), so it's safe even while locked.
+    @MainActor
+    func refreshSnoozedReminders() {
+        Task { @MainActor in
+            self.snoozedReminderIDs = await reminders.pendingSnoozedTakeIDs()
+        }
+    }
+
     /// Re-arm the rolling notification window for every repeating reminder (owner
     /// 2026-06-21). A recurring reminder is scheduled as a finite window of individual
     /// occurrences (so any one can be skipped); the window doesn't auto-extend, so we
