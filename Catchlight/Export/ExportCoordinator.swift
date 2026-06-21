@@ -27,9 +27,9 @@ enum ExportCoordinator {
     ///
     /// Returns immediately; presentation is asynchronous. Logging is intentionally
     /// absent — Take content is sensitive and must never reach the system log.
-    static func presentShareSheet(takes: [Take]) {
-        let markdown = TakeExporter.export(takes)
-        guard let fileURL = writeTempFile(markdown: markdown) else { return }
+    static func presentShareSheet(takes: [Take], format: TakeExporter.Format = .markdown) {
+        let payload = TakeExporter.export(takes, format: format)
+        guard let fileURL = writeTempFile(text: payload, format: format) else { return }
 
         let activityVC = UIActivityViewController(
             activityItems: [fileURL],
@@ -63,17 +63,17 @@ enum ExportCoordinator {
 
     // MARK: - File staging
 
-    private static func writeTempFile(markdown: String) -> URL? {
-        let filename = TakeExporter.suggestedFilename()
+    private static func writeTempFile(text: String, format: TakeExporter.Format) -> URL? {
+        let filename = TakeExporter.suggestedFilename(format: format)
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         do {
             // `.completeFileProtectionUnlessOpen`: the file holds the user's
             // ENTIRE decrypted corpus, so it gets the strongest protection class
             // compatible with the share sheet reading it while the device is
-            // unlocked. `Data(markdown.utf8)` cannot fail (the previous
+            // unlocked. `Data(text.utf8)` cannot fail (the previous
             // `data(using:)?` optional chain could silently skip the write and
             // still return the URL).
-            try Data(markdown.utf8).write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
+            try Data(text.utf8).write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
             return url
         } catch {
             return nil

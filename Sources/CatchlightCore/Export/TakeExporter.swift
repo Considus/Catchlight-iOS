@@ -33,56 +33,80 @@ import Foundation
 
 public enum TakeExporter {
 
-    /// Build the Markdown payload for sharing. Pure: deterministic for a given
-    /// `(takes, exportedAt)` pair so tests can pin the timestamp.
+    /// Export format (owner 2026-06-21). `markdown` is the format pinned by the
+    /// decisions doc §5; `plainText` is the same structure with the Markdown
+    /// syntax stripped (no `---` frontmatter fences, no `##` headings, no `- `
+    /// list dashes) for users who want a clean text file.
+    public enum Format: String, CaseIterable, Sendable {
+        case markdown, plainText
+    }
+
+    /// Build the payload for sharing. Pure: deterministic for a given
+    /// `(takes, format, exportedAt)` so tests can pin the timestamp.
     ///
     /// - Parameters:
     ///   - takes: Takes to export. Re-sorted by `createdAt` ascending so the
     ///            caller doesn't have to pre-sort.
+    ///   - format: Markdown (default — unchanged byte layout) or plain text.
     ///   - exportedAt: The export timestamp; injected so tests are deterministic.
     ///                 Defaults to `Date()` in production callers.
-    public static func export(_ takes: [Take], exportedAt: Date = Date()) -> String {
+    public static func export(_ takes: [Take], format: Format = .markdown, exportedAt: Date = Date()) -> String {
         let sorted = takes.sorted { $0.createdAt < $1.createdAt }
 
-        var out = ""
-        out += "---\n"
-        out += "exported: \(Self.isoUTC(exportedAt))\n"
-        out += "takes: \(sorted.count)\n"
-        out += "---\n"
+        var out = preamble(format: format, count: sorted.count, exportedAt: exportedAt)
 
         for take in sorted {
             out += "\n"
-            out += "## \(heading(for: take))\n"
-            out += "\(body(for: take))\n"
+            let h = heading(for: take)
+            out += (format == .markdown ? "## \(h)" : h) + "\n"
+            out += "\(body(for: take, format: format))\n"
         }
 
         return out
     }
 
+    /// File header. Markdown keeps the pinned YAML frontmatter; plain text uses a
+    /// two-line human header with no `---` fences.
+    private static func preamble(format: Format, count: Int, exportedAt: Date) -> String {
+        switch format {
+        case .markdown:
+            return "---\nexported: \(isoUTC(exportedAt))\ntakes: \(count)\n---\n"
+        case .plainText:
+            let noun = count == 1 ? "Take" : "Takes"
+            return "Catchlight export — \(isoUTC(exportedAt))\n\(count) \(noun)\n"
+        }
+    }
+
     /// Render a Take's blocks in order: prose lines as-is, check items as
-    /// `- [ ]` / `- [x]` (D-035). One block per line.
-    static func body(for take: Take) -> String {
+    /// `- [ ]` / `- [x]` in Markdown (D-035) or `[ ]` / `[x]` in plain text.
+    /// One block per line.
+    static func body(for take: Take, format: Format = .markdown) -> String {
         take.blocks.map { block in
             switch block {
             case .text(let textBlock):
                 return textBlock.text
             case .check(let item):
-                return "- [\(item.isComplete ? "x" : " ")] \(item.text)"
+                let box = item.isComplete ? "[x]" : "[ ]"
+                let prefix = format == .markdown ? "- \(box)" : box
+                return "\(prefix) \(item.text)"
             }
         }.joined(separator: "\n")
     }
 
-    /// Suggested filename for the share sheet, e.g. `catchlight-2026-06-09.md`.
-    /// Always `.md`. Single timestamp granularity (day) — multiple same-day
-    /// exports are disambiguated by the OS's "Save As" dialog.
-    public static func suggestedFilename(exportedAt: Date = Date()) -> String {
-        "catchlight-\(ymdFormatter.string(from: exportedAt)).md"
+    /// Suggested filename for the share sheet, e.g. `catchlight-2026-06-09.md`
+    /// (Markdown) or `…-.txt` (plain text). Single timestamp granularity (day) —
+    /// multiple same-day exports are disambiguated by the OS's "Save As" dialog.
+    public static func suggestedFilename(format: Format = .markdown, exportedAt: Date = Date()) -> String {
+        let ext = format == .markdown ? "md" : "txt"
+        return "catchlight-\(ymdFormatter.string(from: exportedAt)).\(ext)"
     }
 
     /// Whether a filename matches the export naming pattern. Used by the app
-    /// target's stale-tmp-file sweep so it only ever deletes Catchlight exports.
+    /// target's stale-tmp-file sweep so it only ever deletes Catchlight exports —
+    /// must cover BOTH extensions, or a plain-text export's decrypted corpus would
+    /// linger in tmp uncollected (owner 2026-06-21).
     public static func isExportFilename(_ name: String) -> Bool {
-        name.hasPrefix("catchlight-") && name.hasSuffix(".md")
+        name.hasPrefix("catchlight-") && (name.hasSuffix(".md") || name.hasSuffix(".txt"))
     }
 
     // MARK: - Heading
