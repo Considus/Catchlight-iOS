@@ -51,12 +51,11 @@ struct TakeCardStyle {
     let isDone: Bool
 
     init(take: Take, scheme: ColorScheme, now: Date = Date()) {
-        let overdue: Bool = {
-            guard let r = take.timeReminder else { return false }
-            // A repeating reminder is never overdue — its anchor sits in the past by
-            // design and it always has a next occurrence (owner 2026-06-21).
-            return !r.isDone && !r.repeats && r.scheduledDate < now
-        }()
+        // Overdue is single-sourced on `TimeReminder.isOverdue` so the card edge and the
+        // "Expired" Sequence filter can never disagree (owner 2026-06-21). A repeating
+        // reminder is never overdue — its anchor sits in the past by design yet it always
+        // has a next occurrence ahead.
+        let overdue = take.timeReminder?.isOverdue(now: now) ?? false
         let done = take.isMarkedDone
 
         let surfaceColor: Color = take.isImportant ? .ckCardObieSurface : .ckSurface

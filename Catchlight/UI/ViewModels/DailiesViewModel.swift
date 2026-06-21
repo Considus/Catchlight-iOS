@@ -207,16 +207,13 @@ final class DailiesViewModel {
     /// card then reads the done grey. The reminder-done state is otherwise unreachable.
     func toggleDone(_ take: Take) {
         guard take.isTask || take.timeReminder != nil else { return }
-        // A REPEATING reminder is never permanently "done" (owner 2026-06-21): marking
-        // it done completes the current occurrence and rolls the series forward to the
-        // next one — the recurrence (and its OS alarm) stays live. The series only ends
-        // via Delete → "Delete series".
-        if let r = take.timeReminder, r.repeats {
-            advanceRecurring(take)
-            return
-        }
+        // A REPEATING reminder is never permanently "done" (owner 2026-06-21): marking it
+        // done completes the current occurrence and rolls the series forward to the next —
+        // the recurrence (and its OS alarm) stays live. The series only ends via Delete →
+        // "Delete series". Centralised in `toggleMarkedDoneAdvancingRecurring` so the
+        // inline-editor / row-while-editing toggle paths apply the same rule.
         var updated = take
-        updated.setMarkedDone(!take.isMarkedDone)
+        updated.toggleMarkedDoneAdvancingRecurring(now: Date())
         save(updated)
     }
 
@@ -244,21 +241,21 @@ final class DailiesViewModel {
     /// store is unlocked. Best-effort: a load failure leaves existing alarms intact.
     func refreshRecurringSchedules() {
         guard let all = try? store.allTakes() else { return }
-        for take in all where take.timeReminder?.repeats == true {
-            reminders.reschedule(for: take)
-        }
+        // Global rebuild (owner 2026-06-21): re-arms recurring windows AND keeps the whole
+        // pending set within iOS's 64-alarm cap by favouring the soonest occurrences across
+        // every reminder (one-shot + recurring). Pending snoozes are preserved.
+        reminders.rescheduleAll(takes: all)
     }
 
     /// Roll a repeating reminder to its next occurrence — shared by "Done" (complete
     /// this one) and Delete → "Delete this occurrence" (skip this one). The series and
     /// its OS-repeating alarm are untouched; only the displayed next-due advances.
     func advanceRecurring(_ take: Take) {
-        guard let r = take.timeReminder, r.repeats else { return }
+        guard take.timeReminder?.repeats == true else { return }
         var updated = take
         // Advance past the occurrence currently shown, so the card visibly jumps to the
-        // following one. `effectiveNextDue` is what the card displays right now.
-        updated.timeReminder?.scheduledDate = r.nextOccurrence(after: r.effectiveNextDue(now: Date()))
-        updated.timeReminder?.isDone = false
+        // following one (the advance maths is single-sourced on the model).
+        updated.advanceRecurringOccurrence(now: Date())
         save(updated)
     }
 
