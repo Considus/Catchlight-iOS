@@ -103,6 +103,29 @@ final class TakeModelTests: XCTestCase {
         XCTAssertFalse(t.isMarkedDone)
     }
 
+    /// "Mark done" on a NON-repeating reminder pins it done (toggle semantics); on a
+    /// REPEATING one it ADVANCES to the next occurrence and stays not-done, so the series
+    /// and its alarm survive (owner 2026-06-21). This is the shared rule the inline editor,
+    /// the row toggle, and DailiesViewModel.toggleDone all route through.
+    func testTake_toggleMarkedDoneAdvancingRecurring_advancesRepeatingNeverPinsDone() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        // One-shot: behaves like setMarkedDone toggle.
+        var oneShot = Take(blocks: [])
+        oneShot.timeReminder = TimeReminder(scheduledDate: now, notificationIdentifier: "a")
+        oneShot.toggleMarkedDoneAdvancingRecurring(now: now)
+        XCTAssertEqual(oneShot.timeReminder?.isDone, true, "one-shot pins done")
+
+        // Repeating: advances the anchor forward and leaves isDone false.
+        var daily = Take(blocks: [])
+        let anchor = now.addingTimeInterval(-3600)   // an hour ago, already past
+        daily.timeReminder = TimeReminder(scheduledDate: anchor, notificationIdentifier: "b",
+                                          recurrence: .daily)
+        daily.toggleMarkedDoneAdvancingRecurring(now: now)
+        XCTAssertEqual(daily.timeReminder?.isDone, false, "repeating series never pinned done")
+        XCTAssertGreaterThan(daily.timeReminder!.scheduledDate, now, "advanced to a future occurrence")
+        XCTAssertFalse(daily.isMarkedDone, "a live recurring reminder is not 'done'")
+    }
+
     func testTake_plainText_joinsProseAndItemLabels() {
         let take = Take(blocks: [.textLine("Shopping"),
                                  .checkItem("milk"),

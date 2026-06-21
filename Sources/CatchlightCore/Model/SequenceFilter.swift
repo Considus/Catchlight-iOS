@@ -103,7 +103,12 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
         if requireNoteOnly && (take.isTask || take.timeReminder != nil) { return false }
         if requireCompleted && !(take.isTask && take.isComplete) { return false }
         if requireExpiredReminder {
-            guard let reminder = take.timeReminder, reminder.scheduledDate < now else { return false }
+            // "Expired" == the timeline's ruby OVERDUE state, single-sourced on
+            // `TimeReminder.isOverdue` (owner 2026-06-21): past its time and not done, and
+            // never a repeating reminder (its anchor sits in the past by design but it
+            // always has a next occurrence ahead). Previously this read the raw
+            // `scheduledDate`, so every recurring reminder showed as permanently Expired.
+            guard let reminder = take.timeReminder, reminder.isOverdue(now: now) else { return false }
         }
         if requireImportant && !take.isImportant { return false }
         if !months.isEmpty,

@@ -145,11 +145,38 @@ public extension TimeReminder {
     /// The next time this reminder fires strictly after `date`, by its cadence. A
     /// one-shot just returns its scheduled instant. The cadence components are read
     /// from `scheduledDate`, so a "weekly" set on a Tuesday lands on the next Tuesday.
+    ///
+    /// Month-end safety (owner 2026-06-21): a `monthly` reminder anchored on the 29th–
+    /// 31st, or an `annually` one on 29 Feb, would otherwise be SKIPPED by
+    /// `Calendar.nextDate` in any month/year lacking that day — it finds no match and
+    /// jumps to the next period that has one, so "monthly on the 31st" silently fires
+    /// only ~7 months a year. We instead CLAMP to the last valid day of the period
+    /// (matching Apple Reminders): "monthly on the 31st" lands on 28/29/30 Feb and the
+    /// 30th of a 30-day month, and "annually on 29 Feb" lands on 28 Feb in common years.
     func nextOccurrence(after date: Date, calendar: Calendar = .current) -> Date {
-        guard repeats else { return scheduledDate }
-        let comps = recurrence.matchingComponents(from: scheduledDate, calendar: calendar)
-        return calendar.nextDate(after: date, matching: comps,
-                                 matchingPolicy: .nextTimePreservingSmallerComponents) ?? scheduledDate
+        switch recurrence {
+        case .none:
+            return scheduledDate
+        case .hourly, .daily, .weekly:
+            // These cadences match only components present in EVERY period (minute, hour,
+            // weekday), so the system policy can never skip an occurrence — no clamp needed.
+            let comps = recurrence.matchingComponents(from: scheduledDate, calendar: calendar)
+            return calendar.nextDate(after: date, matching: comps,
+                                     matchingPolicy: .nextTimePreservingSmallerComponents) ?? scheduledDate
+        case .monthly:
+            return Self.nextClamped(after: date, anchor: scheduledDate, steppingBy: .month, calendar: calendar)
+        case .annually:
+            return Self.nextClamped(after: date, anchor: scheduledDate, steppingBy: .year, calendar: calendar)
+        }
+    }
+
+    /// Whether this reminder is OVERDUE — past its time and not yet done — and so wants
+    /// attention. Single source (owner 2026-06-21) for the ruby "OVERDUE" card edge AND
+    /// the "Expired" Sequence filter, so the timeline and the filter can never disagree.
+    /// A REPEATING reminder is never overdue: its anchor sits in the past by design yet it
+    /// always has a next occurrence ahead — its card shows the next due, not "OVERDUE".
+    func isOverdue(now: Date) -> Bool {
+        !isDone && !repeats && scheduledDate < now
     }
 
     /// The upcoming due instant to DISPLAY (owner 2026-06-21): the stored date while it
@@ -159,5 +186,55 @@ public extension TimeReminder {
     func effectiveNextDue(now: Date, calendar: Calendar = .current) -> Date {
         guard repeats else { return scheduledDate }
         return scheduledDate > now ? scheduledDate : nextOccurrence(after: now, calendar: calendar)
+    }
+
+    /// The first occurrence strictly after `date` for a `monthly` (`steppingBy: .month`)
+    /// or `annually` (`steppingBy: .year`) cadence, clamping the anchor's day-of-month to
+    /// the last valid day of any short period so no occurrence is skipped (owner
+    /// 2026-06-21). Walks period-by-period from `date`; the bound only guards a
+    /// pathological non-terminating search and is never reached in practice.
+    private static func nextClamped(after date: Date, anchor: Date,
+                                    steppingBy component: Calendar.Component,
+                                    calendar: Calendar) -> Date {
+        let a = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: anchor)
+        guard let anchorDay = a.day else { return anchor }
+        var probe = date
+        for _ in 0..<800 {
+            let p = calendar.dateComponents([.year, .month], from: probe)
+            guard let year = p.year, let probeMonth = p.month else { return anchor }
+            // Annually pins the anchor's month; monthly walks the probe's month.
+            let month = (component == .year) ? (a.month ?? probeMonth) : probeMonth
+            if let candidate = clampedDate(year: year, month: month, day: anchorDay,
+                                           hour: a.hour ?? 0, minute: a.minute ?? 0, second: a.second ?? 0,
+                                           calendar: calendar),
+               candidate > date {
+                return candidate
+            }
+            guard let stepped = calendar.date(byAdding: component, value: 1, to: probe) else { return anchor }
+            probe = stepped
+        }
+        return anchor
+    }
+
+    /// Build a concrete instant for `year`/`month` at the anchor's day + time, clamping the
+    /// day DOWN to the month's length (so day 31 in February becomes 28/29). Returns nil
+    /// only if the calendar can't form the date at all.
+    private static func clampedDate(year: Int, month: Int, day: Int,
+                                    hour: Int, minute: Int, second: Int,
+                                    calendar: Calendar) -> Date? {
+        var firstOfMonth = DateComponents()
+        firstOfMonth.year = year
+        firstOfMonth.month = month
+        firstOfMonth.day = 1
+        guard let first = calendar.date(from: firstOfMonth),
+              let range = calendar.range(of: .day, in: .month, for: first) else { return nil }
+        var comps = DateComponents()
+        comps.year = year
+        comps.month = month
+        comps.day = min(day, range.count)
+        comps.hour = hour
+        comps.minute = minute
+        comps.second = second
+        return calendar.date(from: comps)
     }
 }

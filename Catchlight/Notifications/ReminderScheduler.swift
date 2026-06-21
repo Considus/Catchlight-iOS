@@ -72,14 +72,41 @@ public final class ReminderScheduler {
     /// between app opens (weeks/months for the coarser cadences).
     static let recurrenceWindow = 12
 
+    /// Global ceiling on pending alarms the app keeps registered at once (owner
+    /// 2026-06-21). iOS hard-caps the system at 64 across the WHOLE app and silently
+    /// drops the rest, so a fleet of recurring reminders (each wanting a window) could
+    /// starve a coarse-cadence series out entirely. `rescheduleAll` plans every alarm,
+    /// then keeps only the soonest `maxPendingAlarms`, leaving headroom under 64 for the
+    /// snooze/catch-up ids and any single-edit scheduled between rebuilds.
+    static let maxPendingAlarms = 60
+
+    /// How long after the app notices a missed all-day fire time it nudges anyway (owner
+    /// 2026-06-21). See `scheduleReminder`'s all-day catch-up.
+    static let allDayLateLeadSeconds: TimeInterval = 60
+
     /// Identifier of the `index`-th occurrence in a repeating reminder's window. Namespaced
     /// under the Take's base identifier so the whole window cancels together.
     static func windowIdentifier(base: String, index: Int) -> String { "\(base)#\(index)" }
 
-    /// Every identifier a reminder might own — the one-shot id plus the full recurring
-    /// window — so a single cancel clears it whichever kind it is.
-    static func allIdentifiers(base: String) -> [String] {
+    /// Identifier for a SNOOZED re-nudge (owner 2026-06-21). A dedicated namespace — NOT a
+    /// window slot — so the app-open recurring rebuild (which only clears base+window) can
+    /// never clobber a pending snooze, while an explicit edit/delete still clears it.
+    static func snoozeIdentifier(base: String) -> String { "\(base)#snooze" }
+
+    /// Identifier for an all-day "catch-up" nudge (owner 2026-06-21) — the same reasoning
+    /// as snooze: dedicated namespace so a rebuild neither drops nor repeats it.
+    static func catchUpIdentifier(base: String) -> String { "\(base)#today" }
+
+    /// The base one-shot id plus the full recurring window — the scope a periodic REBUILD
+    /// clears. Deliberately EXCLUDES the snooze + catch-up ids so those survive a rebuild.
+    static func windowAndBaseIdentifiers(base: String) -> [String] {
         [base] + (0..<recurrenceWindow).map { windowIdentifier(base: base, index: $0) }
+    }
+
+    /// EVERY identifier a reminder might own — base, window, snooze, and catch-up — so a
+    /// single explicit cancel (reminder removed, Take deleted/edited) clears all of them.
+    static func allIdentifiers(base: String) -> [String] {
+        windowAndBaseIdentifiers(base: base) + [snoozeIdentifier(base: base), catchUpIdentifier(base: base)]
     }
 
     private let center: NotificationScheduling
@@ -134,57 +161,95 @@ public final class ReminderScheduler {
     /// prevents picking past dates; this is the defence at the boundary.
     public func scheduleReminder(for take: Take) {
         guard let reminder = take.timeReminder else { return }
-        // Model C (owner 2026-06-18): a "when" only fires a notification when its alarm
-        // is enabled. A silent (planner-only) reminder schedules nothing.
-        guard reminder.alarmEnabled else { return }
-        // A reminder marked done schedules nothing — so a FUTURE reminder completed
-        // before its trigger never fires (owner 2026-06-21). `reconcileNotification`
-        // cancels-then-schedules on every save, so this no-op nets to a cancelled
-        // notification when the user marks an upcoming reminder done.
-        guard !reminder.isDone else { return }
+        // Model C (owner 2026-06-18): a "when" only fires a notification when its alarm is
+        // enabled; a silent (planner-only) reminder schedules nothing. A reminder marked
+        // done also schedules nothing (a future reminder completed early never fires).
+        guard reminder.alarmEnabled, !reminder.isDone else { return }
 
-        if reminder.repeats {
-            scheduleRecurringWindow(for: take, reminder: reminder)
-        } else {
-            scheduleOneShot(for: take, reminder: reminder)
-        }
-    }
-
-    /// Schedule a single (non-repeating) reminder. Past dates are refused: a
-    /// `repeats: false` calendar trigger whose components are in the past never fires,
-    /// so scheduling one leaves the model holding a reminder the OS silently drops.
-    private func scheduleOneShot(for take: Take, reminder: TimeReminder) {
-        let fireDate = resolvedFireDate(reminder)
-        guard fireDate > now() else {
-            Self.logger.warning("Refusing to schedule a past-dated reminder (id \(reminder.notificationIdentifier, privacy: .public))")
+        let alarms = plannedAlarms(for: take, now: now())
+        if !alarms.isEmpty {
+            alarms.forEach { center.add($0.request) }
             return
         }
-        center.add(request(for: take, occurrence: fireDate, isAllDay: reminder.isAllDay,
-                           identifier: reminder.notificationIdentifier))
+
+        // No future occurrence to schedule. R5 (owner 2026-06-21): an ALL-DAY reminder set
+        // for TODAY whose default 9am fire time has already passed still deserves its nudge
+        // — previously it was silently dropped. Fire promptly under a dedicated catch-up id
+        // so a later app-open rebuild (which clears only base+window) neither drops nor
+        // repeats it.
+        if !reminder.repeats, reminder.isAllDay,
+           Calendar.current.isDate(reminder.scheduledDate, inSameDayAs: now()) {
+            center.add(catchUpRequest(for: take, reminder: reminder))
+            return
+        }
+        // Genuinely past one-shot: a calendar trigger in the past never fires, so refuse it
+        // rather than leave the model holding a reminder the OS silently drops.
+        Self.logger.warning("Refusing to schedule a past-dated reminder (id \(reminder.notificationIdentifier, privacy: .public))")
     }
 
-    /// Schedule a REPEATING reminder as a rolling window of individual one-shot alarms,
-    /// one per upcoming occurrence (owner 2026-06-21). iOS offers no "repeat but skip
-    /// this date" or "repeat starting from X" for calendar alarms, so a series can only
-    /// be expressed as discrete occurrences — which is what makes "delete this
-    /// occurrence" able to drop exactly one and keep the rest. The window doesn't
-    /// auto-extend; `DailiesViewModel.refreshRecurringSchedules()` re-arms it whenever
-    /// the app opens. iOS keeps only the 64 soonest pending alarms across the whole app,
-    /// so a large fleet of recurring reminders naturally favours the nearest occurrences.
-    private func scheduleRecurringWindow(for take: Take, reminder original: TimeReminder) {
-        // Anchor an all-day series at the all-day fire hour so every occurrence lands at
-        // 9am (not the stored midnight) and the "next occurrence" maths agrees with the
-        // actual fire time.
-        var reminder = original
-        if reminder.isAllDay {
-            reminder.scheduledDate = resolvedFireDate(original)
+    /// Rebuild the ENTIRE pending-alarm set from the authoritative Take list, capped at the
+    /// global iOS budget and favouring the soonest occurrences (owner 2026-06-21). Called on
+    /// every app open via `DailiesViewModel`. Clears each reminder's base+window (so stale
+    /// occurrences drop and recurring windows re-arm) but deliberately NOT its snooze /
+    /// catch-up ids, so a pending snooze survives the rebuild. Then plans every alarm across
+    /// all reminders, keeps only the soonest `maxPendingAlarms`, and registers them — so a
+    /// large fleet can never silently overflow iOS's 64-pending cap.
+    public func rescheduleAll(takes: [Take]) {
+        let n = now()
+        let toClear = takes
+            .compactMap { $0.timeReminder?.notificationIdentifier }
+            .flatMap { Self.windowAndBaseIdentifiers(base: $0) }
+        if !toClear.isEmpty {
+            center.removePendingNotificationRequests(withIdentifiers: toClear)
         }
-        var occurrence = reminder.effectiveNextDue(now: now())   // first future fire
-        for index in 0..<Self.recurrenceWindow {
-            let id = Self.windowIdentifier(base: reminder.notificationIdentifier, index: index)
-            center.add(request(for: take, occurrence: occurrence, isAllDay: original.isAllDay, identifier: id))
-            occurrence = reminder.nextOccurrence(after: occurrence)
+        let chosen = takes
+            .flatMap { plannedAlarms(for: $0, now: n) }
+            .sorted { $0.fireDate < $1.fireDate }
+            .prefix(Self.maxPendingAlarms)
+        chosen.forEach { center.add($0.request) }
+    }
+
+    /// A planned alarm + the instant it fires, so the global rebuild can sort by soonest.
+    private struct PlannedAlarm {
+        let request: UNNotificationRequest
+        let fireDate: Date
+    }
+
+    /// The set of alarms a Take's reminder wants right now — empty for a silent/done
+    /// reminder or a genuinely-past one-shot, one for a future one-shot, or the rolling
+    /// window for a repeating reminder. Single-sourced so the per-save and global-rebuild
+    /// paths schedule identical content. (The all-day "today" catch-up is intentionally NOT
+    /// here — it is a single-save-only extra; see `scheduleReminder`.)
+    private func plannedAlarms(for take: Take, now: Date) -> [PlannedAlarm] {
+        guard let reminder = take.timeReminder, reminder.alarmEnabled, !reminder.isDone else { return [] }
+
+        if reminder.repeats {
+            // Anchor an all-day series at the all-day fire hour so every occurrence lands at
+            // 9am (not the stored midnight) and the "next occurrence" maths agrees with the
+            // fire time. iOS offers no "repeat but skip this date", so a series is expressed
+            // as discrete occurrences — which is what lets "delete this occurrence" drop one.
+            var r = reminder
+            if r.isAllDay { r.scheduledDate = resolvedFireDate(reminder) }
+            var occurrence = r.effectiveNextDue(now: now)
+            var out: [PlannedAlarm] = []
+            for index in 0..<Self.recurrenceWindow {
+                let id = Self.windowIdentifier(base: reminder.notificationIdentifier, index: index)
+                out.append(PlannedAlarm(
+                    request: calendarRequest(for: take, occurrence: occurrence,
+                                             isAllDay: reminder.isAllDay, identifier: id),
+                    fireDate: occurrence))
+                occurrence = r.nextOccurrence(after: occurrence)
+            }
+            return out
         }
+
+        let fireDate = resolvedFireDate(reminder)
+        guard fireDate > now else { return [] }
+        return [PlannedAlarm(
+            request: calendarRequest(for: take, occurrence: fireDate,
+                                     isAllDay: reminder.isAllDay,
+                                     identifier: reminder.notificationIdentifier),
+            fireDate: fireDate)]
     }
 
     /// Resolve a reminder's fire instant — the stored time, or the all-day fire hour for
@@ -195,29 +260,39 @@ public final class ReminderScheduler {
                                      of: reminder.scheduledDate) ?? reminder.scheduledDate
     }
 
-    /// Build a one-shot notification request for a single occurrence instant. Shared by
-    /// the one-shot and per-occurrence (window) paths so their content stays identical.
-    private func request(for take: Take, occurrence: Date, isAllDay: Bool, identifier: String) -> UNNotificationRequest {
+    /// Shared notification content for a single occurrence — the TAKE'S TEXT as title, the
+    /// "when" as subtitle (the title is the ONLY place Take content crosses the encrypted
+    /// boundary). Time-Sensitive so an explicit reminder breaks through Focus / DND.
+    private func makeContent(for take: Take, occurrence: Date, isAllDay: Bool) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        // Content-first (owner 2026-06-18): the TAKE'S TEXT is the title, the scheduled
-        // "when" is the subtitle. iOS already shows "CATCHLIGHT" + the delivery time in
-        // the banner header, so the old `title = "Catchlight"` just duplicated it. The
-        // title is the ONLY place Take content crosses the encrypted boundary.
         content.title = String(take.plainText.prefix(100))
         content.subtitle = Self.subtitle(for: occurrence, isAllDay: isAllDay)
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier
-        // Stamp the original "when" text so a later Snooze can show "Originally due …"
-        // (owner 2026-06-21), carried forward unchanged on each re-snooze. Text only.
+        // Stamp the original "when" text so a later Snooze can show "Originally due …".
         content.userInfo[Self.dueTextKey] = content.subtitle
-        // Time Sensitive (owner 2026-06-18): an explicit reminder should break through
-        // Focus / DND and the Scheduled Summary. Alarm-off reminders never reach here.
         content.interruptionLevel = .timeSensitive
+        return content
+    }
 
+    /// Build a calendar-triggered request for a single occurrence instant.
+    private func calendarRequest(for take: Take, occurrence: Date, isAllDay: Bool, identifier: String) -> UNNotificationRequest {
+        let content = makeContent(for: take, occurrence: occurrence, isAllDay: isAllDay)
         var components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: occurrence)
         components.timeZone = TimeZone.current   // pin: absolute-instant semantics
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         return UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+    }
+
+    /// Build the all-day "catch-up" request (R5): a short interval trigger so a same-day
+    /// all-day reminder whose 9am slot has passed still nudges today. The subtitle shows the
+    /// day (its time is meaningless); the dedicated `#today` id keeps a rebuild from
+    /// dropping or repeating it.
+    private func catchUpRequest(for take: Take, reminder: TimeReminder) -> UNNotificationRequest {
+        let content = makeContent(for: take, occurrence: reminder.scheduledDate, isAllDay: true)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: Self.allDayLateLeadSeconds, repeats: false)
+        return UNNotificationRequest(identifier: Self.catchUpIdentifier(base: reminder.notificationIdentifier),
+                                     content: content, trigger: trigger)
     }
 
     public func cancelReminder(for take: Take) {

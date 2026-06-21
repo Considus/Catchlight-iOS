@@ -53,7 +53,7 @@ struct InlineTakeEditCard: View {
             onToggleImportant: { draft.isImportant.toggle() },
             onOpenAngle: { onOpenAngle?() },
             onReminder: onEditReminder,
-            onToggleDone: { draft.setMarkedDone(!draft.isMarkedDone) },
+            onToggleDone: { draft.toggleMarkedDoneAdvancingRecurring(now: Date()) },
             onDismiss: { onCommit?() }
         )
     }

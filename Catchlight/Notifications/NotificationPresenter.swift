@@ -93,9 +93,16 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         // existed (only true for ones already pending at upgrade).
         let dueText = (request.content.userInfo[ReminderScheduler.dueTextKey] as? String)
             ?? request.content.subtitle
+        // Re-nudge under the reminder's DEDICATED snooze id, not the fired request's own id
+        // (owner 2026-06-21). A recurring occurrence fires as `<uuid>#n`; reusing that id
+        // let the next app-open window rebuild overwrite the snooze. Derive the base UUID
+        // (strip any `#n`) and snooze under `<uuid>#snooze`, a namespace the rebuild leaves
+        // untouched — so the snooze survives, and an in-app edit/delete (which cancels every
+        // id including `#snooze`) still clears it.
+        let base = request.identifier.split(separator: "#", maxSplits: 1).first.map(String.init) ?? request.identifier
         ReminderScheduler().scheduleSnooze(
             title: request.content.title,
-            identifier: request.identifier,
+            identifier: ReminderScheduler.snoozeIdentifier(base: base),
             fireAt: fireAt,
             dueText: dueText)
     }

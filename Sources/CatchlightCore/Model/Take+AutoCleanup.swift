@@ -33,6 +33,11 @@ public extension Take {
     /// clock and keeps it. `now` is injected for testability.
     func isAutoCleanupEligible(olderThan maxAge: TimeInterval, now: Date) -> Bool {
         guard !isObie else { return false }
+        // A REPEATING reminder is never "finished" — it always rolls to a next occurrence,
+        // so it is never a cleanup candidate even if a stale `isDone` slipped through
+        // (owner 2026-06-21). Defence-in-depth alongside `toggleMarkedDoneAdvancingRecurring`,
+        // which keeps the toggle paths from ever pinning a recurring series done.
+        guard timeReminder?.repeats != true else { return false }
         guard isMarkedDone else { return false }
         guard !hasNoteContent else { return false }
         return now.timeIntervalSince(modifiedAt) > maxAge
