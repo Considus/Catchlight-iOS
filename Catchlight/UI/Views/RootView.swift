@@ -240,12 +240,17 @@ struct RootView: View {
     }
 
     private var fanOpacity: Double {
-        if ui.isPetalFanPresented { return 0.18 }
-        // Fully hidden while editing in place: the keyboard's safe-area avoidance
-        // shoves the bottom dock up toward the heading, so even at low opacity it
-        // appeared as a stray toolbar over the Obie (owner 2026-06-17). It's inert
-        // during editing anyway, so hide it outright. Same for the search keyboard.
+        // Editing / search hide the dock OUTRIGHT — and this is checked BEFORE the fan
+        // dim (owner 2026-06-21): a Focus ring opened FROM the editor sets BOTH
+        // `isEditingInPlace` and `isPetalFanPresented`, and if the fan check won the dock
+        // re-appeared at 18% and the keyboard's safe-area avoidance shoved it mid-screen
+        // — the "ghostly toolbar" bug. While editing, the keyboard toolbar replaces the
+        // dock, so hide it outright regardless of the fan. (The original reason still
+        // holds: even at low opacity the keyboard pushes a stray dock over the heading.)
         if ui.isEditingInPlace || searchKeyboardUp { return 0 }
+        // The 0.18 dim is for a fan opened from the RESTING timeline (dock recedes
+        // behind the veil but stays visible).
+        if ui.isPetalFanPresented { return 0.18 }
         return 1
     }
 

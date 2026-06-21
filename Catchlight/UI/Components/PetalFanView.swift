@@ -785,7 +785,7 @@ struct ReminderPickerSheet: View {
                     }
                 } label: {
                     HStack {
-                        Text("Every")
+                        Text("Interval")
                             .foregroundStyle(Color.ckTextPrimary)
                         Spacer()
                         Text(recurrence.label)

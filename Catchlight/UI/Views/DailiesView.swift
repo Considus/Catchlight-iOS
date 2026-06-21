@@ -127,6 +127,10 @@ struct DailiesView: View {
     /// keyboard is dropped before it presents (the established overlay-vs-keyboard
     /// pattern, [[catchlight-edit-in-place]]).
     @State private var editingReminder = false
+    /// The block to re-focus when the reminder picker closes — so editing returns to a
+    /// clean keyboard-up state rather than a focus-desynced one (owner 2026-06-21 ghost
+    /// toolbar). Captured when the picker opens.
+    @State private var reminderReturnFocus: UUID?
     /// The repeating-reminder Take awaiting a Delete choice (owner 2026-06-21). Swiping
     /// Delete on a recurring reminder asks "this occurrence" vs "the whole series"
     /// rather than deleting outright; nil when no such prompt is up.
@@ -404,17 +408,27 @@ struct DailiesView: View {
                     d.normaliseActivityFloor()
                     editDraft = d
                 }
-                editingReminder = false
+                closeReminderEditor()
             },
-            onCancel: { editingReminder = false }
+            onCancel: { closeReminderEditor() }
         )
     }
 
-    /// Open the reminder editor for the focused draft: drop the keyboard first (the
-    /// proven overlay-vs-keyboard ordering — owner lockup 2026-06-18), then present.
+    /// Open the reminder editor for the focused draft: remember the focused block, drop
+    /// the keyboard (the proven overlay-vs-keyboard ordering — owner lockup 2026-06-18),
+    /// then present.
     private func presentReminderEditor() {
+        reminderReturnFocus = editFocusedBlockID
         editFocusedBlockID = nil
         editingReminder = true
+    }
+
+    /// Dismiss the reminder editor and restore the editor's focus, so the keyboard
+    /// returns and the editing state isn't left focus-desynced (owner 2026-06-21).
+    private func closeReminderEditor() {
+        editingReminder = false
+        editFocusedBlockID = reminderReturnFocus
+        reminderReturnFocus = nil
     }
 
     // MARK: - Heading
