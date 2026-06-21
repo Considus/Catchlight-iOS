@@ -81,7 +81,10 @@ public final class BackgroundSyncCoordinator {
     private static let logger = Logger(subsystem: "com.considus.catchlight", category: "background-sync")
 
     /// Schedule the next refresh. Call on every foreground → background transition.
+    /// No-op outside `.auto` (owner 2026-06-21): Manual and Disabled never run a
+    /// background pass, so don't claim a background-refresh slot for one.
     public func scheduleNext(earliestInterval: TimeInterval = 15 * 60) {
+        guard SettingsViewModel.SyncMode.current == .auto else { return }
         let request = BGAppRefreshTaskRequest(identifier: Self.taskIdentifier)
         request.earliestBeginDate = Date(timeIntervalSinceNow: earliestInterval)
         do {
@@ -132,6 +135,9 @@ public final class BackgroundSyncCoordinator {
     public enum ForegroundSyncTrigger {
         case appBecameActive
         case appEnteringBackground
+        /// Explicit "Sync Now" tap from Cloud Storage (owner 2026-06-21). The ONLY
+        /// trigger that still fires when SyncMode is `.manual`.
+        case manualButton
     }
 
     /// Minimum spacing between consecutive `appBecameActive` syncs.
@@ -153,6 +159,18 @@ public final class BackgroundSyncCoordinator {
     /// while a pass is in flight is dropped (the running pass already covers
     /// it; sync is idempotent). Call from the main thread.
     public func syncNow(trigger: ForegroundSyncTrigger, now: Date = Date()) {
+        // Sync-mode gate (owner 2026-06-21). `disabled` blocks everything;
+        // `manual` blocks every automatic trigger and lets only the explicit
+        // "Sync Now" tap through. `auto` is unchanged.
+        switch SettingsViewModel.SyncMode.current {
+        case .disabled:
+            return
+        case .manual where trigger != .manualButton:
+            return
+        case .manual, .auto:
+            break
+        }
+
         stateLock.lock()
         if trigger == .appBecameActive,
            !Self.shouldRunActivationSync(lastRun: lastActivationSync, now: now,
@@ -230,7 +248,13 @@ public final class BackgroundSyncCoordinator {
     }
 
     private func handle(task: BGAppRefreshTask) {
-        scheduleNext()   // always reschedule
+        // A pass scheduled while in `.auto` can still fire after the user switches
+        // to Manual/Disabled — honour the current mode and bail without resyncing
+        // or rescheduling (owner 2026-06-21).
+        guard SettingsViewModel.SyncMode.current == .auto else {
+            task.setTaskCompleted(success: true); return
+        }
+        scheduleNext()   // always reschedule (auto-only, guarded above)
 
         guard let engine = makeEngine() else { task.setTaskCompleted(success: true); return }
 

@@ -324,6 +324,40 @@ final class SettingsViewModel {
         }
     }
 
+    /// How sync runs once a cloud folder is configured (owner 2026-06-21). The
+    /// user owns the lever ([[catchlight-user-decides-principle]]):
+    ///   • `auto`     — the shipped behaviour: foreground triggers + background
+    ///                  refresh push/pull automatically.
+    ///   • `manual`   — nothing syncs except an explicit "Sync Now" tap; no
+    ///                  foreground or background passes.
+    ///   • `disabled` — sync never runs at all (the engine isn't even built).
+    /// Read on the trigger paths (`BackgroundSyncCoordinator`) and as a kill-switch
+    /// in `Wiring.makeSyncEngine`. Default `auto` so existing installs are
+    /// unchanged. Pure UserDefaults preference — no key/store access, so it's safe
+    /// to read from the background-sync queue and while locked.
+    enum SyncMode: String, CaseIterable, Identifiable {
+        case auto, manual, disabled
+
+        static let defaultsKey = "catchlight.syncMode"
+        static let `default`: SyncMode = .auto
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .auto:     return "Automatic"
+            case .manual:   return "Manual"
+            case .disabled: return "Disabled"
+            }
+        }
+
+        static var current: SyncMode {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = SyncMode(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     var notificationStatus: UNAuthorizationStatus = .notDetermined
     var notificationStatusLoading: Bool = false
 
