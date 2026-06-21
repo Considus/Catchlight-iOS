@@ -174,6 +174,72 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertNotNil(try local.take(id: y.id))
     }
 
+    /// REGRESSION (owner-reported 2026-06-21): a Take deleted locally but not yet pushed
+    /// must NOT be resurrected by the pull half of the same sync. `sync()` is pull-then-push,
+    /// and the cloud manifest still lists the Take with no tombstone — without the guard,
+    /// `ConflictResolver` reads `local == nil` as "new from another device" and re-creates
+    /// it, the re-creating `upsert` clears the pending tombstone, and the deletion can never
+    /// propagate (it silently comes back on every app open).
+    func testPull_doesNotResurrectLocallyDeletedTakeNotYetPushed() throws {
+        let k = keys()
+        let store = InMemoryTakeStore()
+        let cloud = InMemoryCloudFolder()
+        let take = TestFixtures.richTake()
+        try store.upsert(take)
+        let engine = makeEngine(store: store, cloud: cloud, keys: k)
+        try engine.pushOutbound()                          // cloud now has blob + manifest entry
+
+        // Delete locally — records a pending tombstone; NOT pushed yet.
+        try store.delete(id: take.id)
+        XCTAssertNil(try store.take(id: take.id))
+        XCTAssertEqual(try store.tombstones().map(\.id), [take.id])
+
+        // The next sync pulls FIRST. The deletion must survive, not resurrect.
+        let report = try engine.pullInbound()
+        XCTAssertNil(try store.take(id: take.id),
+                     "a not-yet-pushed deletion must not be resurrected by pull")
+        XCTAssertFalse(report.applied.contains(take.id))
+        XCTAssertEqual(try store.tombstones().map(\.id), [take.id],
+                       "the pending tombstone survives the pull so push can propagate it")
+
+        // The push half then propagates the deletion end-to-end.
+        try engine.pushOutbound()
+        let manifest = try Manifest.parse(try XCTUnwrap(cloud.read(Manifest.fileName)))
+        XCTAssertTrue(manifest.tombstones.contains { $0.uuid == take.id }, "manifest records the tombstone")
+        XCTAssertFalse(manifest.takes.contains { $0.uuid == take.id }, "manifest no longer lists the Take")
+        XCTAssertNil(try cloud.read("\(take.id.uuidString).clk"), "the blob is deleted")
+    }
+
+    /// Edit-wins is preserved: if ANOTHER device edits the Take strictly AFTER our local
+    /// deletion, that remote edit still resurrects it on pull (the guard only suppresses
+    /// resurrection while our deletion is the most-recent event).
+    func testPull_remoteEditAfterLocalDeletion_stillResurrects_editWins() throws {
+        let k = keys()
+        let cloud = InMemoryCloudFolder()
+        let deviceA = UUID(), deviceB = UUID()
+        let take = TestFixtures.richTake()
+
+        // A creates + pushes; B pulls it into its baseline.
+        let storeA = InMemoryTakeStore()
+        try storeA.upsert(take)
+        try TestFixtures.engine(store: storeA, cloud: cloud, keys: k, deviceId: deviceA).pushOutbound()
+        let storeB = InMemoryTakeStore()
+        try TestFixtures.engine(store: storeB, cloud: cloud, keys: k, deviceId: deviceB).pullInbound()
+
+        // A deletes locally (not pushed). B edits the SAME Take strictly later and pushes.
+        try storeA.delete(id: take.id)
+        var edited = try XCTUnwrap(storeB.take(id: take.id))
+        edited.modifiedAt = Date().addingTimeInterval(3600)     // after A's deletion
+        edited.blocks = [.textLine("edited on B after A deleted it")]
+        try storeB.upsert(edited)
+        try TestFixtures.engine(store: storeB, cloud: cloud, keys: k, deviceId: deviceB).pushOutbound()
+
+        // A pulls: the remote edit is newer than A's deletion → edit wins, Take resurrects.
+        try TestFixtures.engine(store: storeA, cloud: cloud, keys: k, deviceId: deviceA).pullInbound()
+        XCTAssertNotNil(try storeA.take(id: take.id),
+                        "a remote edit made after the local deletion wins (resurrects)")
+    }
+
     // §12.4 — Conflict detection: two offline edits to the same Take.
     func testConflictDetection() throws {
         let lastSync = Date(timeIntervalSince1970: 1_700_000_000)
