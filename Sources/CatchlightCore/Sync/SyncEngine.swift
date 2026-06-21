@@ -287,6 +287,11 @@ public final class SyncEngine {
         //     manifest is the durable confirmation. Only purge when the
         //     manifest's record is at least as new as ours.
         let pendingLocal = try store.tombstones()
+        // A LOCAL deletion that hasn't been pushed yet (the cloud manifest still lists the
+        // Take, with no tombstone). The push half of this same sync will propagate it; the
+        // pull half below must NOT resurrect it in the meantime (see step 3).
+        let pendingTombstoneByID = Dictionary(pendingLocal.map { ($0.id, $0.deletedAt) },
+                                              uniquingKeysWith: { first, _ in first })
         if !pendingLocal.isEmpty {
             let remoteTombstones = Dictionary(uniqueKeysWithValues: manifest.tombstones.map { ($0.uuid, $0) })
             let confirmed = pendingLocal.filter { local in
@@ -324,6 +329,19 @@ public final class SyncEngine {
             }
 
             let local = try store.take(id: entry.uuid)
+            // RESURRECTION GUARD (2026-06-21): the Take is absent locally because we
+            // DELETED it and that tombstone hasn't reached the cloud yet — so the manifest
+            // still lists it with no tombstone. Without this, `ConflictResolver` reads
+            // `local == nil` as "new from another device" and re-creates it, and the
+            // re-creating `upsert` clears our pending tombstone — the deletion can then
+            // NEVER propagate (pull runs before push every sync). Skip it; the push half
+            // records the manifest tombstone and deletes the blob. Edit-wins is preserved:
+            // a remote version edited STRICTLY AFTER our deletion still resurrects.
+            if local == nil,
+               let deletedAt = pendingTombstoneByID[entry.uuid],
+               deletedAt >= remoteTake.modifiedAt {
+                continue
+            }
             switch ConflictResolver.decide(local: local, remote: remoteTake, lastSync: lastSync) {
             case .takeRemote(let t):
                 try store.upsert(t)
