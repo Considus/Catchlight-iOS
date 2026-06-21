@@ -191,11 +191,19 @@ struct SwipeActionRow<Content: View>: View {
 
     /// Release — full-swipe commits, a shorter swipe settles open, otherwise closes.
     private func endSwipe(_ tx: CGFloat) {
+        // Full-swipe intent is judged on the RAW finger travel, not `offset`: past
+        // `actionWidth` the offset is rubber-banded to 0.5× the finger, so the visible
+        // card position can never reach a commit distance proportional to row width
+        // (you'd have to physically drag the whole row across the screen). `restOffset`
+        // carries any already-open distance so a second swipe from the resting button
+        // still commits. The snap/settle branches keep using `offset` — their
+        // thresholds are below the rubber-band zone, so there offset == travel anyway.
+        let travel = restOffset + tx
         let dx = offset
         let commitDistance = max(rowWidth * commitFraction, actionWidth * 1.6)
-        if trailing != nil, dx <= -commitDistance {
+        if trailing != nil, travel <= -commitDistance {
             commit(trailing!)
-        } else if leading != nil, dx >= commitDistance {
+        } else if leading != nil, travel >= commitDistance {
             commit(leading!)
         } else if trailing != nil, dx <= -(actionWidth * revealSnapFraction) {
             settle(to: -actionWidth)
