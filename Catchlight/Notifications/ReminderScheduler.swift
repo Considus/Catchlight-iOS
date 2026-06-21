@@ -47,6 +47,9 @@ extension UNUserNotificationCenter: NotificationScheduling {
 public final class ReminderScheduler {
 
     public static let categoryIdentifier = "TAKE_REMINDER"
+    /// `userInfo` key carrying the reminder's ORIGINAL "when" text across snoozes, so a
+    /// snoozed re-nudge can read "Snoozed — Originally due …" (owner 2026-06-21).
+    static let dueTextKey = "ckDueText"
     static let logger = Logger(subsystem: "com.considus.catchlight", category: "reminders")
 
     /// The time of day an ALL-DAY reminder's alarm fires (model C, owner 2026-06-18).
@@ -54,6 +57,24 @@ public final class ReminderScheduler {
     /// scheduler substitutes this hour rather than firing at the stored (midnight-ish)
     /// time. 9am — a morning nudge for "today"-type items.
     public static let allDayFireHour = 9
+
+    /// How many upcoming occurrences of a repeating reminder are pre-scheduled as
+    /// individual alarms (owner 2026-06-21). Each is independently cancellable, so
+    /// "delete this occurrence" drops exactly one. The window is re-armed whenever the
+    /// app opens, so it stays full as occurrences fire; sized modestly because iOS caps
+    /// total pending alarms at 64 across all reminders. 12 ⇒ ~12 days of daily cover
+    /// between app opens (weeks/months for the coarser cadences).
+    static let recurrenceWindow = 12
+
+    /// Identifier of the `index`-th occurrence in a repeating reminder's window. Namespaced
+    /// under the Take's base identifier so the whole window cancels together.
+    static func windowIdentifier(base: String, index: Int) -> String { "\(base)#\(index)" }
+
+    /// Every identifier a reminder might own — the one-shot id plus the full recurring
+    /// window — so a single cancel clears it whichever kind it is.
+    static func allIdentifiers(base: String) -> [String] {
+        [base] + (0..<recurrenceWindow).map { windowIdentifier(base: base, index: $0) }
+    }
 
     private let center: NotificationScheduling
     private let now: () -> Date
@@ -78,11 +99,17 @@ public final class ReminderScheduler {
     /// all-day reminder shows the DAY only (its time component is meaningless — see the
     /// all-day fire-hour substitution below).
     static func scheduledSubtitle(for reminder: TimeReminder) -> String {
+        subtitle(for: reminder.scheduledDate, isAllDay: reminder.isAllDay)
+    }
+
+    /// Subtitle for a specific occurrence instant — used per-occurrence when a recurring
+    /// reminder is scheduled as a window of individual alarms (owner 2026-06-21).
+    static func subtitle(for date: Date, isAllDay: Bool) -> String {
         let formatter = DateFormatter()
         formatter.doesRelativeDateFormatting = true   // "Today"/"Tomorrow" where apt
         formatter.dateStyle = .medium
-        formatter.timeStyle = reminder.isAllDay ? .none : .short
-        return formatter.string(from: reminder.scheduledDate)
+        formatter.timeStyle = isAllDay ? .none : .short
+        return formatter.string(from: date)
     }
 
     /// Schedule the local notification for a Take's time reminder.
@@ -110,62 +137,95 @@ public final class ReminderScheduler {
         // notification when the user marks an upcoming reminder done.
         guard !reminder.isDone else { return }
 
-        // An all-day "when" has no meaningful time component — fire at the default
-        // hour instead of the stored (effectively-midnight) time (model C). The
-        // past-date guard and the trigger both use this resolved instant.
-        let fireDate: Date = {
-            guard reminder.isAllDay else { return reminder.scheduledDate }
-            return Calendar.current.date(bySettingHour: Self.allDayFireHour,
-                                         minute: 0, second: 0,
-                                         of: reminder.scheduledDate) ?? reminder.scheduledDate
-        }()
+        if reminder.repeats {
+            scheduleRecurringWindow(for: take, reminder: reminder)
+        } else {
+            scheduleOneShot(for: take, reminder: reminder)
+        }
+    }
 
+    /// Schedule a single (non-repeating) reminder. Past dates are refused: a
+    /// `repeats: false` calendar trigger whose components are in the past never fires,
+    /// so scheduling one leaves the model holding a reminder the OS silently drops.
+    private func scheduleOneShot(for take: Take, reminder: TimeReminder) {
+        let fireDate = resolvedFireDate(reminder)
         guard fireDate > now() else {
             Self.logger.warning("Refusing to schedule a past-dated reminder (id \(reminder.notificationIdentifier, privacy: .public))")
             return
         }
+        center.add(request(for: take, occurrence: fireDate, isAllDay: reminder.isAllDay,
+                           identifier: reminder.notificationIdentifier))
+    }
 
+    /// Schedule a REPEATING reminder as a rolling window of individual one-shot alarms,
+    /// one per upcoming occurrence (owner 2026-06-21). iOS offers no "repeat but skip
+    /// this date" or "repeat starting from X" for calendar alarms, so a series can only
+    /// be expressed as discrete occurrences — which is what makes "delete this
+    /// occurrence" able to drop exactly one and keep the rest. The window doesn't
+    /// auto-extend; `DailiesViewModel.refreshRecurringSchedules()` re-arms it whenever
+    /// the app opens. iOS keeps only the 64 soonest pending alarms across the whole app,
+    /// so a large fleet of recurring reminders naturally favours the nearest occurrences.
+    private func scheduleRecurringWindow(for take: Take, reminder original: TimeReminder) {
+        // Anchor an all-day series at the all-day fire hour so every occurrence lands at
+        // 9am (not the stored midnight) and the "next occurrence" maths agrees with the
+        // actual fire time.
+        var reminder = original
+        if reminder.isAllDay {
+            reminder.scheduledDate = resolvedFireDate(original)
+        }
+        var occurrence = reminder.effectiveNextDue(now: now())   // first future fire
+        for index in 0..<Self.recurrenceWindow {
+            let id = Self.windowIdentifier(base: reminder.notificationIdentifier, index: index)
+            center.add(request(for: take, occurrence: occurrence, isAllDay: original.isAllDay, identifier: id))
+            occurrence = reminder.nextOccurrence(after: occurrence)
+        }
+    }
+
+    /// Resolve a reminder's fire instant — the stored time, or the all-day fire hour for
+    /// a date-only "when" (its stored time component is meaningless).
+    private func resolvedFireDate(_ reminder: TimeReminder) -> Date {
+        guard reminder.isAllDay else { return reminder.scheduledDate }
+        return Calendar.current.date(bySettingHour: Self.allDayFireHour, minute: 0, second: 0,
+                                     of: reminder.scheduledDate) ?? reminder.scheduledDate
+    }
+
+    /// Build a one-shot notification request for a single occurrence instant. Shared by
+    /// the one-shot and per-occurrence (window) paths so their content stays identical.
+    private func request(for take: Take, occurrence: Date, isAllDay: Bool, identifier: String) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         // Content-first (owner 2026-06-18): the TAKE'S TEXT is the title, the scheduled
         // "when" is the subtitle. iOS already shows "CATCHLIGHT" + the delivery time in
         // the banner header, so the old `title = "Catchlight"` just duplicated it. The
-        // title is now the ONLY place Take content crosses the encrypted boundary (was
-        // the body) — same accepted, user-chosen lock-screen exposure, different field.
+        // title is the ONLY place Take content crosses the encrypted boundary.
         content.title = String(take.plainText.prefix(100))
-        content.subtitle = Self.scheduledSubtitle(for: reminder)
+        content.subtitle = Self.subtitle(for: occurrence, isAllDay: isAllDay)
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier
-        // Time Sensitive (owner 2026-06-18): a reminder the user explicitly set should
-        // break through Focus / Do Not Disturb and the Scheduled Summary, like Apple's
-        // Reminders. Requires the matching entitlement (see project.yml). If the alarm
-        // is off we never get here (guarded above), so only real alarms are elevated.
+        // Stamp the original "when" text so a later Snooze can show "Originally due …"
+        // (owner 2026-06-21), carried forward unchanged on each re-snooze. Text only.
+        content.userInfo[Self.dueTextKey] = content.subtitle
+        // Time Sensitive (owner 2026-06-18): an explicit reminder should break through
+        // Focus / DND and the Scheduled Summary. Alarm-off reminders never reach here.
         content.interruptionLevel = .timeSensitive
 
-        var components = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute],
-            from: fireDate
-        )
+        var components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: occurrence)
         components.timeZone = TimeZone.current   // pin: absolute-instant semantics
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: reminder.notificationIdentifier,
-            content: content,
-            trigger: trigger
-        )
-        center.add(request)
+        return UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
     }
 
     public func cancelReminder(for take: Take) {
         guard let reminder = take.timeReminder else { return }
-        center.removePendingNotificationRequests(withIdentifiers: [reminder.notificationIdentifier])
+        cancelReminder(identifier: reminder.notificationIdentifier)
     }
 
     /// Cancel by raw identifier — used when the Take no longer carries its
     /// `timeReminder` (reminder removed via the petal fan, Take deleted) so
-    /// `cancelReminder(for:)` has nothing to read the identifier from. The app
-    /// uses the Take's UUID string as the notification identifier.
+    /// `cancelReminder(for:)` has nothing to read the identifier from. The app uses the
+    /// Take's UUID string as the identifier. Clears BOTH the one-shot id and the whole
+    /// recurring window (`<id>#0…`), so it doesn't matter which kind the Take was.
     public func cancelReminder(identifier: String) {
-        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        center.removePendingNotificationRequests(withIdentifiers: Self.allIdentifiers(base: identifier))
     }
 
     /// Reschedule on edit: cancel the prior request and add the current one.
@@ -180,27 +240,23 @@ public final class ReminderScheduler {
     /// Reuses the Take's UUID `identifier` so the snoozed nudge stays tied to the Take
     /// (an in-app "done"/edit, which cancels by UUID, also clears the snooze) and the
     /// already-decrypted `title` (no re-read across the encrypted boundary).
-    public func scheduleSnooze(title: String, identifier: String, fireAt: Date) {
+    ///
+    /// `dueText` is the reminder's ORIGINAL "when" text (e.g. "Today at 3:00 PM"), shown
+    /// as "Snoozed — Originally due …" and carried forward unchanged so it still reads as
+    /// the original due time after repeated snoozes (owner 2026-06-21). The re-nudge's
+    /// own delivery time is already in the banner header, so echoing it was redundant.
+    public func scheduleSnooze(title: String, identifier: String, fireAt: Date, dueText: String) {
         let interval = fireAt.timeIntervalSince(now())
         guard interval > 0 else { return }
         let content = UNMutableNotificationContent()
         content.title = title
-        content.subtitle = "Snoozed — \(Self.snoozeSubtitle(for: fireAt))"
+        content.subtitle = dueText.isEmpty ? "Snoozed" : "Snoozed — Originally due \(dueText)"
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier   // snoozed nudge is snoozable again
         content.interruptionLevel = .timeSensitive
+        content.userInfo[Self.dueTextKey] = dueText             // carry the original "when" across re-snoozes
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         center.add(request)
-    }
-
-    /// "Today at 3:15 PM" / "Tomorrow at 09:00" for the snoozed-until subtitle, honouring
-    /// the user's Region + 12/24-hour preference (style-based, never a hardcoded pattern).
-    static func snoozeSubtitle(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.doesRelativeDateFormatting = true
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }

@@ -384,20 +384,39 @@ struct TakeCardSurface: View {
         style.isOverdue ? .systemText("OVERDUE", .ckRuby) : .none
     }
 
-    /// Cached formatter — this label is evaluated on every render, and a fresh
+    /// Cached formatters — this label is evaluated on every render, and a fresh
     /// `DateFormatter` per evaluation is one of Foundation's most expensive allocations.
+    /// `reminderFormatter` shows an absolute date + time; the date-only variant drops
+    /// the (meaningless) time for an all-day "when". Both relative-format so today /
+    /// tomorrow read naturally; all locale-driven (no hardcoded patterns).
     private static let reminderFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         f.timeStyle = .short
+        f.doesRelativeDateFormatting = true
+        return f
+    }()
+    private static let dateOnlyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        f.doesRelativeDateFormatting = true
         return f
     }()
 
-    /// The formatted reminder time, or nil. Static so `TakeRowView` can reuse it for
-    /// the row's VoiceOver label without re-deriving the formatter.
+    /// The formatted reminder "when", or nil. Static so `TakeRowView` can reuse it for
+    /// the row's VoiceOver label without re-deriving the formatter. A repeating reminder
+    /// always shows its NEXT due instant plus the cadence word — e.g. "Tomorrow at 9:00
+    /// AM · Daily" (owner 2026-06-21), so the card never goes stale and reads as a live
+    /// recurring entry.
     static func reminderString(for take: Take) -> String? {
         guard let r = take.timeReminder else { return nil }
-        return reminderFormatter.string(from: r.scheduledDate)
+        let formatter = r.isAllDay ? dateOnlyFormatter : reminderFormatter
+        if r.repeats {
+            let due = r.effectiveNextDue(now: Date())
+            return "\(formatter.string(from: due)) · \(r.recurrence.label)"
+        }
+        return formatter.string(from: r.scheduledDate)
     }
     private var reminderLabel: String? { Self.reminderString(for: take) }
 

@@ -98,6 +98,8 @@ final class UIState {
         /// Model-C picker choices (owner 2026-06-18) — ignored when `hasReminder` is false.
         let reminderAlarm: Bool
         let reminderAllDay: Bool
+        /// Repeat cadence (owner 2026-06-21) — `.none` for a one-shot.
+        let reminderRecurrence: TimeReminder.Recurrence
         let isObie: Bool
     }
 

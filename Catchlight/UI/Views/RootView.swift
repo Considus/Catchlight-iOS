@@ -283,7 +283,7 @@ struct RootView: View {
                     // footer the origin is .zero (screen centre) and the editor is
                     // already the context, so no spotlight card there.
                     showsFocusCard: ui.petalFanOrigin != .zero,
-                    onCommit: { isNote, isTask, hasReminder, reminderDate, reminderAlarm, reminderAllDay, isObie in
+                    onCommit: { isNote, isTask, hasReminder, reminderDate, reminderAlarm, reminderAllDay, reminderRecurrence, isObie in
                         // Task 6.20: petal-fan commit is a mutation — gate it.
                         guard app.ensureEntitled() else {
                             ui.closePetalFan()
@@ -299,6 +299,7 @@ struct RootView: View {
                                 isNote: isNote, isTask: isTask,
                                 hasReminder: hasReminder, reminderDate: reminderDate,
                                 reminderAlarm: reminderAlarm, reminderAllDay: reminderAllDay,
+                                reminderRecurrence: reminderRecurrence,
                                 isObie: isObie
                             )
                         } else {
@@ -307,6 +308,7 @@ struct RootView: View {
                                 isNote: isNote, isTask: isTask,
                                 hasReminder: hasReminder, reminderDate: reminderDate,
                                 reminderAlarm: reminderAlarm, reminderAllDay: reminderAllDay,
+                                reminderRecurrence: reminderRecurrence,
                                 isObie: isObie
                             )
                         }

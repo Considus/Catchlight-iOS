@@ -350,6 +350,59 @@ do {
     check("Seed Takes round-trip through JSON", rt)
 }
 
+// MARK: - Recurrence maths (owner 2026-06-21)
+
+section("Recurrence (TimeReminder)")
+do {
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = TimeZone(identifier: "UTC")!
+    // Anchor: Tue 2026-06-16, 09:00 UTC.
+    let anchor = ISO8601.date(from: "2026-06-16T09:00:00.000Z")!
+    let id = UUID().uuidString
+
+    func reminder(_ rec: TimeReminder.Recurrence) -> TimeReminder {
+        TimeReminder(scheduledDate: anchor, notificationIdentifier: id, recurrence: rec)
+    }
+
+    check("none does not repeat", !reminder(.none).repeats)
+    check("daily repeats", reminder(.daily).repeats)
+
+    // Daily: next occurrence after an instant just past the anchor is +1 day, same time.
+    let justAfter = anchor.addingTimeInterval(60)
+    let nextDaily = reminder(.daily).nextOccurrence(after: justAfter, calendar: cal)
+    check("daily next = +1 day same time",
+          nextDaily == cal.date(byAdding: .day, value: 1, to: anchor))
+
+    // Weekly: lands on the next same weekday (Tuesday → following Tuesday, +7 days).
+    let nextWeekly = reminder(.weekly).nextOccurrence(after: justAfter, calendar: cal)
+    check("weekly next = +7 days, same weekday",
+          nextWeekly == cal.date(byAdding: .day, value: 7, to: anchor)
+          && cal.component(.weekday, from: nextWeekly) == cal.component(.weekday, from: anchor))
+
+    // Monthly: same day-of-month, next month.
+    let nextMonthly = reminder(.monthly).nextOccurrence(after: justAfter, calendar: cal)
+    check("monthly next = same date next month",
+          cal.component(.day, from: nextMonthly) == 16
+          && nextMonthly == cal.date(byAdding: .month, value: 1, to: anchor))
+
+    // Annually: same month+day, next year.
+    let nextAnnual = reminder(.annually).nextOccurrence(after: justAfter, calendar: cal)
+    check("annually next = same date next year",
+          nextAnnual == cal.date(byAdding: .year, value: 1, to: anchor))
+
+    // effectiveNextDue: while the anchor is still future it IS the next due; once past,
+    // it rolls to the live next occurrence (never stale).
+    let beforeAnchor = anchor.addingTimeInterval(-3600)
+    check("effectiveNextDue = anchor while future",
+          reminder(.daily).effectiveNextDue(now: beforeAnchor, calendar: cal) == anchor)
+    check("effectiveNextDue rolls forward once past",
+          reminder(.daily).effectiveNextDue(now: justAfter, calendar: cal) == nextDaily)
+
+    // Recurrence survives a JSON round-trip (decode default is .none for old payloads).
+    let rt = try PlatformJSON.decode(TimeReminder.self, from: PlatformJSON.encode(reminder(.weekly)))
+    check("recurrence round-trips through JSON", rt.recurrence == .weekly)
+}
+
 // MARK: - Summary
 
 print("\n────────────────────────────────────────")

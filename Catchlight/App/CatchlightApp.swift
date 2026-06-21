@@ -231,6 +231,10 @@ struct CatchlightApp: App {
             // launch, with no second Face ID prompt (owner 2026-06-20).
             if newState == .unlocked {
                 backgroundSync.syncNow(trigger: .appBecameActive)
+                // Top up the rolling windows of any repeating reminders now the store is
+                // readable (keys cached) — they don't auto-extend, so opening the app is
+                // when we re-arm the next batch (owner 2026-06-21).
+                app.dailiesVM.refreshRecurringSchedules()
             }
         }
     }
