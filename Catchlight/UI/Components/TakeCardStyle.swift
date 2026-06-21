@@ -53,7 +53,9 @@ struct TakeCardStyle {
     init(take: Take, scheme: ColorScheme, now: Date = Date()) {
         let overdue: Bool = {
             guard let r = take.timeReminder else { return false }
-            return !r.isDone && r.scheduledDate < now
+            // A repeating reminder is never overdue — its anchor sits in the past by
+            // design and it always has a next occurrence (owner 2026-06-21).
+            return !r.isDone && !r.repeats && r.scheduledDate < now
         }()
         let done = take.isMarkedDone
 

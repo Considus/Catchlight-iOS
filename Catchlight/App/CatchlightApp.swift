@@ -212,6 +212,10 @@ struct CatchlightApp: App {
                 // `.inactive → .active` also fires for Face ID sheets,
                 // Notification Centre, and the app switcher.
                 backgroundSync.syncNow(trigger: .appBecameActive)
+                // Refresh which reminders are currently snoozed (owner 2026-06-21) so
+                // the timeline shows "SNOOZED" not "OVERDUE". Reads the OS pending queue
+                // (no key needed), so it's fine here regardless of lock state.
+                app.dailiesVM.refreshSnoozedReminders()
                 Task { @MainActor in
                     await subscriptionRef.refreshEntitlements()
                 }
@@ -231,6 +235,10 @@ struct CatchlightApp: App {
             // launch, with no second Face ID prompt (owner 2026-06-20).
             if newState == .unlocked {
                 backgroundSync.syncNow(trigger: .appBecameActive)
+                // Top up the rolling windows of any repeating reminders now the store is
+                // readable (keys cached) — they don't auto-extend, so opening the app is
+                // when we re-arm the next batch (owner 2026-06-21).
+                app.dailiesVM.refreshRecurringSchedules()
             }
         }
     }

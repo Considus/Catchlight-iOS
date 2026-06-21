@@ -122,6 +122,19 @@ struct DailiesView: View {
     /// on (inline) while another Obie already exists — the same warning the timeline
     /// long-press uses, but targeting the draft (owner 2026-06-17).
     @State private var pendingInlineObieConfirm = false
+    /// Drives the reminder picker opened from the editor keyboard's slot-2 Reminder
+    /// button (owner 2026-06-21) — edits the editing draft's reminder in place. The
+    /// keyboard is dropped before it presents (the established overlay-vs-keyboard
+    /// pattern, [[catchlight-edit-in-place]]).
+    @State private var editingReminder = false
+    /// The block to re-focus when the reminder picker closes — so editing returns to a
+    /// clean keyboard-up state rather than a focus-desynced one (owner 2026-06-21 ghost
+    /// toolbar). Captured when the picker opens.
+    @State private var reminderReturnFocus: UUID?
+    /// The repeating-reminder Take awaiting a Delete choice (owner 2026-06-21). Swiping
+    /// Delete on a recurring reminder asks "this occurrence" vs "the whole series"
+    /// rather than deleting outright; nil when no such prompt is up.
+    @State private var pendingRecurringDelete: Take?
     /// One-shot scroll target — set to bring a Take into view (e.g. a new Take that
     /// landed at the bottom under Oldest-first). The timeline's ScrollViewReader
     /// consumes and clears it.
@@ -338,12 +351,84 @@ struct DailiesView: View {
         } message: {
             Text("Your existing Obie returns to the timeline — only one Take can be your Obie.")
         }
+        // Recurring-reminder Delete (owner 2026-06-21): this occurrence vs the series.
+        // "This occurrence" rolls the reminder forward (series + alarm stay live);
+        // "Delete series" removes the whole Take like a normal delete.
+        .confirmationDialog(
+            "This is a repeating reminder.",
+            isPresented: Binding(get: { pendingRecurringDelete != nil },
+                                 set: { if !$0 { pendingRecurringDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete This Occurrence") {
+                if let t = pendingRecurringDelete { vm.advanceRecurring(t) }
+                pendingRecurringDelete = nil
+            }
+            Button("Delete Series", role: .destructive) {
+                if let t = pendingRecurringDelete { vm.delete(t) }
+                pendingRecurringDelete = nil
+            }
+            Button("Cancel", role: .cancel) { pendingRecurringDelete = nil }
+        } message: {
+            Text("Delete only the next occurrence, or the whole repeating series?")
+        }
         // Interim Angle entry (2026-06-18): the full-screen list Angle, opened from the
         // editor's top-right affordance, bound to the live draft so ticks / reorders /
         // deletes ride the inline save. (Final entry point will be the selector ring.)
         .fullScreenCover(isPresented: $anglePresented) {
             angleCover
         }
+        // Reminder editor from the keyboard's slot-2 button (owner 2026-06-21): edit a
+        // reminder Take's time/cadence, or add one to a note, in place — the same picker
+        // the Focus ring uses, applied straight to the editing draft.
+        .sheet(isPresented: $editingReminder) {
+            reminderEditorSheet
+        }
+    }
+
+    /// The in-editor reminder picker, seeded from the draft's current reminder (or the
+    /// user's default timing when adding one). Save writes the draft's `timeReminder`;
+    /// Cancel leaves it untouched (we only mutate on Save, so both paths are safe).
+    @ViewBuilder
+    private var reminderEditorSheet: some View {
+        let existing = editDraft?.timeReminder
+        ReminderPickerSheet(
+            initialDate: existing?.scheduledDate ?? PetalFanView.defaultReminderDate,
+            initialAlarm: existing?.alarmEnabled ?? true,
+            initialAllDay: existing?.isAllDay ?? false,
+            initialRecurrence: existing?.recurrence ?? .none,
+            onSave: { date, alarm, allDay, recurrence in
+                if var d = editDraft {
+                    d.timeReminder = TimeReminder(
+                        scheduledDate: date,
+                        notificationIdentifier: d.id.uuidString,
+                        alarmEnabled: alarm,
+                        isAllDay: allDay,
+                        recurrence: recurrence)
+                    d.normaliseActivityFloor()
+                    editDraft = d
+                }
+                closeReminderEditor()
+            },
+            onCancel: { closeReminderEditor() }
+        )
+    }
+
+    /// Open the reminder editor for the focused draft: remember the focused block, drop
+    /// the keyboard (the proven overlay-vs-keyboard ordering — owner lockup 2026-06-18),
+    /// then present.
+    private func presentReminderEditor() {
+        reminderReturnFocus = editFocusedBlockID
+        editFocusedBlockID = nil
+        editingReminder = true
+    }
+
+    /// Dismiss the reminder editor and restore the editor's focus, so the keyboard
+    /// returns and the editing state isn't left focus-desynced (owner 2026-06-21).
+    private func closeReminderEditor() {
+        editingReminder = false
+        editFocusedBlockID = reminderReturnFocus
+        reminderReturnFocus = nil
     }
 
     // MARK: - Heading
@@ -905,15 +990,21 @@ struct DailiesView: View {
         // height exactly (it already tracks the card's content-driven growth).
         SwipeActionRow(
             id: take.id,
-            leading: take.isTask
+            // Done is offered for any settle-able Take — a Task OR a reminder (owner
+            // 2026-06-21). Previously Task-only, so an overdue/future reminder had no
+            // swipe-Done at all. Routes through `toggleDone` (the whole-Take settle the
+            // long-press menu uses), so a reminder's `isDone` flips: the card greys and
+            // an overdue reminder clears its ruby. `isMarkedDone` (not `isComplete`)
+            // drives the label so a reminder reads correctly.
+            leading: (take.isTask || take.timeReminder != nil)
                 ? SwipeAction(
-                    title: take.isComplete ? "Not done" : "Done",
-                    systemImage: take.isComplete ? "arrow.uturn.left" : "checkmark",
+                    title: take.isMarkedDone ? "Not done" : "Done",
+                    systemImage: take.isMarkedDone ? "arrow.uturn.left" : "checkmark",
                     tint: .ckEmber,            // Task accent — owner to confirm on device
                     style: .standard,
                     perform: {
                         guard app.ensureEntitled() else { return }
-                        vm.toggleComplete(take)
+                        vm.toggleDone(take)
                     }
                 )
                 : nil,
@@ -921,10 +1012,18 @@ struct DailiesView: View {
                 title: "Delete",
                 systemImage: "trash",
                 tint: .ckRuby,                 // HiFi alert red — owner to confirm on device
-                style: .destructive,
+                // A repeating reminder asks "this occurrence vs the series" first, so it
+                // must NOT fly off on swipe (the row stays if "this occurrence" wins) —
+                // `.standard` triggers the dialog; a normal Take keeps the destructive
+                // slide-off (owner 2026-06-21).
+                style: take.timeReminder?.repeats == true ? .standard : .destructive,
                 perform: {
                     guard app.ensureEntitled() else { return }
-                    vm.delete(take)
+                    if take.timeReminder?.repeats == true {
+                        pendingRecurringDelete = take
+                    } else {
+                        vm.delete(take)
+                    }
                 }
             ),
             openRowID: $openSwipeRowID,
@@ -1144,7 +1243,8 @@ struct DailiesView: View {
             d.timeReminder = TimeReminder(scheduledDate: when,
                                           notificationIdentifier: d.id.uuidString,
                                           alarmEnabled: command.reminderAlarm,
-                                          isAllDay: command.reminderAllDay)
+                                          isAllDay: command.reminderAllDay,
+                                          recurrence: command.reminderRecurrence)
         } else {
             d.timeReminder = nil
         }
@@ -1306,6 +1406,7 @@ struct DailiesView: View {
             // carries the retired editor's "editor-shape" id for tests + semantics.
             irisIdentifier: isEditingThis ? "editor-shape" : "take-iris",
             cardSwipeOffset: cardSwipeOffset,
+            isSnoozed: vm.snoozedReminderIDs.contains(take.id),
             editingCard: isEditingThis
                 ? { AnyView(InlineTakeEditCard(
                     draft: editDraftBinding,
@@ -1314,6 +1415,7 @@ struct DailiesView: View {
                         editFocusedBlockID = nil   // drop the keyboard before the cover
                         anglePresented = true
                     },
+                    onEditReminder: { presentReminderEditor() },
                     onCommit: { saveInlineEdit() },
                     onCaretMoved: { caretRect in pinCaret(caretRect) })) }
                 : nil
