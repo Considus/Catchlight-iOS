@@ -401,6 +401,30 @@ do {
     // Recurrence survives a JSON round-trip (decode default is .none for old payloads).
     let rt = try PlatformJSON.decode(TimeReminder.self, from: PlatformJSON.encode(reminder(.weekly)))
     check("recurrence round-trips through JSON", rt.recurrence == .weekly)
+
+    // Month-end clamp (owner 2026-06-21): a monthly-on-31 reminder must fire in February
+    // (clamped to the 28th), not skip it.
+    let jan31 = TimeReminder(scheduledDate: ISO8601.date(from: "2026-01-31T09:00:00.000Z")!,
+                             notificationIdentifier: id, recurrence: .monthly)
+    let febFire = jan31.nextOccurrence(after: ISO8601.date(from: "2026-01-31T09:00:01.000Z")!, calendar: cal)
+    check("monthly on the 31st clamps to 28 Feb (not skipped)",
+          cal.component(.month, from: febFire) == 2 && cal.component(.day, from: febFire) == 28)
+
+    // Leap-day clamp: annually-on-29-Feb fires 28 Feb in a common year.
+    let feb29 = TimeReminder(scheduledDate: ISO8601.date(from: "2024-02-29T07:00:00.000Z")!,
+                             notificationIdentifier: id, recurrence: .annually)
+    let commonYearFire = feb29.nextOccurrence(after: ISO8601.date(from: "2024-02-29T07:00:01.000Z")!, calendar: cal)
+    check("annually on 29 Feb clamps to 28 Feb in a common year",
+          cal.component(.year, from: commonYearFire) == 2025
+          && cal.component(.month, from: commonYearFire) == 2
+          && cal.component(.day, from: commonYearFire) == 28)
+
+    // isOverdue is the single source for the OVERDUE edge + Expired filter.
+    let nowOverdue = ISO8601.date(from: "2026-06-10T12:00:00.000Z")!
+    check("one-shot past & undone is overdue",
+          reminder(.none).isOverdue(now: anchor.addingTimeInterval(86_400)))
+    check("repeating reminder is never overdue",
+          !reminder(.daily).isOverdue(now: nowOverdue))
 }
 
 // MARK: - Summary

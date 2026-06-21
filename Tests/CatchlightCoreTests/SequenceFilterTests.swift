@@ -23,12 +23,16 @@ final class SequenceFilterTests: XCTestCase {
                       complete: Bool = false,
                       reminder: Bool = false,
                       reminderDate: Date = Date(timeIntervalSince1970: 2_000_000_000),
+                      recurrence: TimeReminder.Recurrence = .none,
+                      reminderDone: Bool = false,
                       createdAt: String = "2026-06-05T09:00:00.000Z") -> Take {
         Take(createdAt: ISO8601.date(from: createdAt)!,
              blocks: task ? [.checkItem(body, isComplete: complete)] : [.textLine(body)],
              timeReminder: reminder
                 ? TimeReminder(scheduledDate: reminderDate,
-                               notificationIdentifier: "x")
+                               notificationIdentifier: "x",
+                               isDone: reminderDone,
+                               recurrence: recurrence)
                 : nil)
     }
 
@@ -81,6 +85,17 @@ final class SequenceFilterTests: XCTestCase {
         // The constraint counts toward isEmpty.
         XCTAssertFalse(f.isEmpty)
         XCTAssertTrue(SequenceFilter().isEmpty)
+
+        // A DONE past reminder is not "expired" (owner 2026-06-21): Expired now mirrors
+        // the timeline's OVERDUE state, which a completed reminder suppresses.
+        XCTAssertFalse(f.matches(take(reminder: true, reminderDate: past, reminderDone: true),
+                                 calendar: utc, now: now))
+        // A REPEATING reminder is NEVER expired even though its anchor is in the past —
+        // it always has a next occurrence ahead. Previously this matched (the bug).
+        XCTAssertFalse(f.matches(take(reminder: true, reminderDate: past, recurrence: .daily),
+                                 calendar: utc, now: now))
+        XCTAssertFalse(f.matches(take(reminder: true, reminderDate: past, recurrence: .monthly),
+                                 calendar: utc, now: now))
     }
 
     /// Owner's exact case (2026-06-10): Tasks + Reminders both toggled on →
