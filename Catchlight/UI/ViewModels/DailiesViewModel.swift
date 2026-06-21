@@ -180,13 +180,29 @@ final class DailiesViewModel {
         let all = (try? store.allTakes()) ?? []
         let doomed = all.filter { $0.isAutoCleanupEligible(olderThan: maxAge, now: now) }
         guard !doomed.isEmpty else { return 0 }
+        var deleted = 0
+        var failed = 0
         for take in doomed {
-            try? store.delete(id: take.id)
-            spotlight.deindex(takeID: take.id)
-            reminders.cancelReminder(identifier: take.id.uuidString)
+            do {
+                try store.delete(id: take.id)
+                // De-index Spotlight + cancel the reminder ONLY after the authoritative
+                // store delete succeeds (owner 2026-06-21) — previously a swallowed
+                // `try?` delete still ran these, leaving a de-indexed but still-present
+                // Take (unsearchable yet on the timeline) with no signal of the failure.
+                spotlight.deindex(takeID: take.id)
+                reminders.cancelReminder(identifier: take.id.uuidString)
+                deleted += 1
+            } catch {
+                failed += 1
+            }
         }
-        reload()
-        return doomed.count
+        if failed > 0 {
+            // Cleanup is best-effort; surface a quiet note rather than fail silently. The
+            // un-deleted Takes are still eligible, so the next sweep (next app open) retries.
+            lastError = "Some finished Takes couldn't be cleaned up — they'll be retried."
+        }
+        if deleted > 0 { reload() }
+        return deleted
     }
 
     /// Toggle a Task's completion state. No-op for non-Tasks (completion is
