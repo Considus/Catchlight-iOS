@@ -20,7 +20,11 @@ struct AboutView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                // Spacing tightened (owner 2026-06-21) so the static content fits the
+                // sheet without scrolling at the default text size — no structural
+                // change, just smaller gaps. It stays a ScrollView so it still
+                // accommodates larger Dynamic Type sizes gracefully.
+                VStack(alignment: .leading, spacing: 18) {
                     brandMark
                     taglineBlock
                     licences
@@ -29,10 +33,11 @@ struct AboutView: View {
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 24)
-                .padding(.bottom, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .scrollIndicators(.hidden)
             .background(Color.ckBackground)
             .navigationTitle("About")
             .navigationBarTitleDisplayMode(.inline)
@@ -60,7 +65,7 @@ struct AboutView: View {
                 .accessibilityLabel("Catchlight")
         }
         .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.top, 12)
+        .padding(.top, 6)
     }
 
     /// Tagline with the version directly beneath it, both CENTRED under the brand
@@ -137,7 +142,7 @@ struct AboutView: View {
                     .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
             }
-            .padding(.vertical, 15)
+            .padding(.vertical, 13)
             .padding(.horizontal, 16)
             .contentShape(Rectangle())
         }
