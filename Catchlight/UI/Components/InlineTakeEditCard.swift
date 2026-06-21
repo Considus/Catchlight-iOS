@@ -65,9 +65,18 @@ struct InlineTakeEditCard: View {
     @State private var draggingID: UUID?
     @State private var dragOffsetY: CGFloat = 0
     @State private var dragStartIndex: Int?
-    /// Approximate row height for translating drag distance → index steps. A check
-    /// row is ~the 44pt touch target; tuned on device.
+    /// Measured height of each block row, keyed by block id (owner 2026-06-21). The
+    /// reorder maths use REAL heights so a dragged item lands correctly even when rows
+    /// wrap to multiple lines — the editor (unlike the list Angle) doesn't line-limit, so
+    /// a fixed row height under/overshot the target on wrapped items.
+    @State private var rowHeights: [UUID: CGFloat] = [:]
+    /// Row centre-Y positions captured at drag start (the stable reference the live
+    /// reorder maps the finger against, so it doesn't drift as rows reflow).
+    @State private var dragStartCenters: [CGFloat] = []
+    /// Fallback height for a row not yet measured (matches the 44pt touch target).
     private let estRowHeight: CGFloat = 44
+    /// Matches the editor `VStack(spacing:)`, so the measured centres line up with layout.
+    private let rowSpacing: CGFloat = 2
 
     // MARK: - Card treatment (single-sourced with TakeCardSurface via TakeCardStyle
     // so read↔edit never drift — owner 2026-06-18). The editor mirrors the surface,
@@ -87,12 +96,19 @@ struct InlineTakeEditCard: View {
                     // Tagged so the pinned focus overlay's ScrollViewReader can scroll
                     // the focused block into view on a long Take (owner 2026-06-19).
                     .id(block.id)
+                    // Measure the row's natural height (before the drag offset) so the
+                    // reorder maths know the real geometry of wrapped multi-line rows.
+                    .background(GeometryReader { proxy in
+                        Color.clear.preference(key: RowHeightKey.self,
+                                               value: [block.id: proxy.size.height])
+                    })
                     // Lift the row being dragged so it follows the finger above its
                     // neighbours while the order reflows underneath.
                     .offset(y: dragVisualOffset(for: block.id))
                     .zIndex(draggingID == block.id ? 1 : 0)
             }
         }
+        .onPreferenceChange(RowHeightKey.self) { rowHeights = $0 }
         // Match TakeCardSurface's v1.7 padding: 24 top (clears the overlapping Iris) /
         // 14 sides / 14 bottom; leading uses the shared text-column token.
         .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
@@ -200,18 +216,23 @@ struct InlineTakeEditCard: View {
     private func beginReorder(_ id: UUID) {
         draggingID = id
         dragStartIndex = draft.blocks.firstIndex { $0.id == id }
+        // Snapshot the resting row centres (real measured heights) as the fixed reference
+        // the live reorder maps the finger against.
+        let heights = draft.blocks.map { rowHeights[$0.id] ?? estRowHeight }
+        dragStartCenters = Self.rowCenters(heights: heights, spacing: rowSpacing)
         dragOffsetY = 0
     }
 
-    /// `translationY` is the finger's vertical travel since the press armed. Reflow
-    /// the order live each time it crosses a row-height step (fixed `dragStartIndex`
-    /// reference so the maths don't drift as rows shuffle).
+    /// `translationY` is the finger's vertical travel since the press armed. Reflow the
+    /// order live: the dragged row's centre is `startCentre + translationY`, and its target
+    /// slot is the row whose resting centre is nearest — so a drag over wrapped, taller
+    /// rows lands where the finger actually is, not where a fixed row height guessed.
     private func updateReorder(_ id: UUID, translationY: CGFloat) {
         dragOffsetY = translationY
         guard let start = dragStartIndex else { return }
-        let proposed = start + Int((translationY / estRowHeight).rounded())
-        let target = min(max(proposed, 0), draft.blocks.count - 1)
-        guard let cur = draft.blocks.firstIndex(where: { $0.id == id }), cur != target else { return }
+        let target = Self.reorderTarget(centers: dragStartCenters, start: start, translationY: translationY)
+        guard let cur = draft.blocks.firstIndex(where: { $0.id == id }), cur != target,
+              draft.blocks.indices.contains(target) else { return }
         withAnimation(.easeInOut(duration: 0.18)) {
             let b = draft.blocks.remove(at: cur)
             draft.blocks.insert(b, at: target)
@@ -223,14 +244,52 @@ struct InlineTakeEditCard: View {
             dragOffsetY = 0
             draggingID = nil
             dragStartIndex = nil
+            dragStartCenters = []
         }
     }
 
-    /// Live offset that keeps the dragged row under the finger as the order reflows.
+    /// Live offset that keeps the dragged row under the finger as the order reflows —
+    /// the finger's absolute Y (from the start snapshot) minus the dragged row's CURRENT
+    /// resting centre, both from real heights.
     private func dragVisualOffset(for id: UUID) -> CGFloat {
         guard draggingID == id, let start = dragStartIndex,
+              start < dragStartCenters.count,
               let cur = draft.blocks.firstIndex(where: { $0.id == id }) else { return 0 }
-        return dragOffsetY - CGFloat(cur - start) * estRowHeight
+        let fingerAbsY = dragStartCenters[start] + dragOffsetY
+        let currentHeights = draft.blocks.map { rowHeights[$0.id] ?? estRowHeight }
+        let currentCenters = Self.rowCenters(heights: currentHeights, spacing: rowSpacing)
+        guard cur < currentCenters.count else { return 0 }
+        return fingerAbsY - currentCenters[cur]
+    }
+
+    // MARK: - Reorder geometry (pure — unit-tested without a view)
+
+    /// The centre-Y of each stacked row, given each row's height and the inter-row spacing.
+    static func rowCenters(heights: [CGFloat], spacing: CGFloat) -> [CGFloat] {
+        var centers: [CGFloat] = []
+        var y: CGFloat = 0
+        for h in heights {
+            centers.append(y + h / 2)
+            y += h + spacing
+        }
+        return centers
+    }
+
+    /// The index of the row whose resting centre is nearest the dragged row's live centre
+    /// (`centers[start] + translationY`). Falls back to `start` when the snapshot is empty.
+    static func reorderTarget(centers: [CGFloat], start: Int, translationY: CGFloat) -> Int {
+        guard start >= 0, start < centers.count else { return start }
+        let fingerCenter = centers[start] + translationY
+        var best = start
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        for (index, centre) in centers.enumerated() {
+            let distance = abs(centre - fingerCenter)
+            if distance < bestDistance {
+                bestDistance = distance
+                best = index
+            }
+        }
+        return best
     }
 
     /// VoiceOver-accessible reorder — swap a check block with its neighbour. The drag
@@ -348,5 +407,14 @@ struct VerticalReorderGesture: UIGestureRecognizerRepresentable {
                                shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
             false
         }
+    }
+}
+
+/// Collects each block row's measured height (keyed by block id) so the reorder maths
+/// use real geometry. Last writer wins per id; the dict merges across all rows.
+private struct RowHeightKey: PreferenceKey {
+    static var defaultValue: [UUID: CGFloat] = [:]
+    static func reduce(value: inout [UUID: CGFloat], nextValue: () -> [UUID: CGFloat]) {
+        value.merge(nextValue()) { _, new in new }
     }
 }
