@@ -50,6 +50,12 @@ public final class ReminderScheduler {
     /// `userInfo` key carrying the reminder's ORIGINAL "when" text across snoozes, so a
     /// snoozed re-nudge can read "Snoozed — Originally due …" (owner 2026-06-21).
     static let dueTextKey = "ckDueText"
+    /// `userInfo` flag marking a notification as a SNOOZED re-nudge (owner 2026-06-21),
+    /// so the app can detect — by inspecting pending requests on foreground — which
+    /// reminders are currently snoozed and show "SNOOZED" rather than "OVERDUE" on the
+    /// Take edge. Snooze never writes the encrypted store (it runs while locked), so a
+    /// pending notification is the only place this state lives.
+    static let snoozedFlagKey = "ckSnoozed"
     static let logger = Logger(subsystem: "com.considus.catchlight", category: "reminders")
 
     /// The time of day an ALL-DAY reminder's alarm fires (model C, owner 2026-06-18).
@@ -234,6 +240,23 @@ public final class ReminderScheduler {
         scheduleReminder(for: take)
     }
 
+    /// The Take IDs that currently have a PENDING snoozed re-nudge (owner 2026-06-21) —
+    /// used to show "SNOOZED" instead of "OVERDUE" on the Take edge. Reads the OS pending
+    /// queue (no encryption key needed, so it works even while locked); a notification is
+    /// "snoozed" if it carries `snoozedFlagKey`. Identifiers may be a base UUID or a
+    /// recurring-window id (`<uuid>#n`), so the base is taken before the `#`. Uses
+    /// `UNUserNotificationCenter.current()` directly — this is an app-runtime query, not
+    /// part of the injected scheduling seam.
+    public func pendingSnoozedTakeIDs() async -> Set<UUID> {
+        let requests = await UNUserNotificationCenter.current().pendingNotificationRequests()
+        var ids = Set<UUID>()
+        for request in requests where (request.content.userInfo[Self.snoozedFlagKey] as? Bool) == true {
+            let base = request.identifier.split(separator: "#", maxSplits: 1).first.map(String.init) ?? request.identifier
+            if let uuid = UUID(uuidString: base) { ids.insert(uuid) }
+        }
+        return ids
+    }
+
     /// Re-nudge a reminder at a snoozed time (owner 2026-06-20). Notification-level ONLY:
     /// it does NOT touch the encrypted store, so it's safe to call from a notification
     /// action that may run while the phone is locked / the app is backgrounded (no key).
@@ -255,6 +278,7 @@ public final class ReminderScheduler {
         content.categoryIdentifier = Self.categoryIdentifier   // snoozed nudge is snoozable again
         content.interruptionLevel = .timeSensitive
         content.userInfo[Self.dueTextKey] = dueText             // carry the original "when" across re-snoozes
+        content.userInfo[Self.snoozedFlagKey] = true           // mark as snoozed so the edge can read "SNOOZED"
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         center.add(request)

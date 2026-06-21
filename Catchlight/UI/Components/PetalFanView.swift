@@ -785,7 +785,9 @@ struct ReminderPickerSheet: View {
                     }
                 } label: {
                     HStack {
-                        Text("Interval")
+                        // Leading icon so the row matches the toggle rows above it
+                        // (All-day/Notify/Repeat all carry one) — owner 2026-06-21.
+                        Label("Interval", systemImage: "clock")
                             .foregroundStyle(Color.ckTextPrimary)
                         Spacer()
                         Text(recurrence.label)
