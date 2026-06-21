@@ -241,9 +241,10 @@ final class DailiesViewModel {
     /// store is unlocked. Best-effort: a load failure leaves existing alarms intact.
     func refreshRecurringSchedules() {
         guard let all = try? store.allTakes() else { return }
-        for take in all where take.timeReminder?.repeats == true {
-            reminders.reschedule(for: take)
-        }
+        // Global rebuild (owner 2026-06-21): re-arms recurring windows AND keeps the whole
+        // pending set within iOS's 64-alarm cap by favouring the soonest occurrences across
+        // every reminder (one-shot + recurring). Pending snoozes are preserved.
+        reminders.rescheduleAll(takes: all)
     }
 
     /// Roll a repeating reminder to its next occurrence — shared by "Done" (complete

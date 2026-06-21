@@ -250,8 +250,110 @@ final class ReminderSchedulerTests: XCTestCase {
         scheduler.reschedule(for: take)
         XCTAssertEqual(center.added.count, 1, "Only the latest request should be pending")
         XCTAssertEqual(center.added.first?.identifier, id.uuidString)
-        // Reschedule cancels via the full id set (one-shot id + recurring window).
+        // Reschedule cancels via the full id set (one-shot id + recurring window + snooze + catch-up).
         XCTAssertEqual(center.removedIdentifiers.last, ReminderScheduler.allIdentifiers(base: id.uuidString))
+    }
+
+    // MARK: - Identifier namespaces (owner 2026-06-21)
+
+    /// The periodic-rebuild clear scope (base + window) must EXCLUDE the snooze and
+    /// catch-up ids, so a rebuild can never clobber a pending snooze; the full cancel set
+    /// must INCLUDE them, so an explicit edit/delete clears everything.
+    func testIdentifierNamespaces_rebuildScopeExcludesSnoozeAndCatchUp() {
+        let base = "ABC"
+        let windowAndBase = ReminderScheduler.windowAndBaseIdentifiers(base: base)
+        let all = ReminderScheduler.allIdentifiers(base: base)
+        let snooze = ReminderScheduler.snoozeIdentifier(base: base)
+        let catchUp = ReminderScheduler.catchUpIdentifier(base: base)
+
+        XCTAssertFalse(windowAndBase.contains(snooze))
+        XCTAssertFalse(windowAndBase.contains(catchUp))
+        XCTAssertTrue(all.contains(snooze))
+        XCTAssertTrue(all.contains(catchUp))
+        XCTAssertTrue(all.contains(base))
+        XCTAssertEqual(snooze, "ABC#snooze")
+        XCTAssertEqual(catchUp, "ABC#today")
+    }
+
+    // MARK: - Recurring window + global budget (owner 2026-06-21)
+
+    private func recurringTake(_ rec: TimeReminder.Recurrence, at date: Date, body: String = "x") -> Take {
+        let id = UUID()
+        return Take(id: id, blocks: [.textLine(body)],
+                    timeReminder: TimeReminder(scheduledDate: date,
+                                               notificationIdentifier: id.uuidString,
+                                               recurrence: rec))
+    }
+
+    /// A repeating reminder schedules a rolling window of individually-cancellable alarms.
+    func testSchedule_recurring_addsWindowOfOccurrences() {
+        let take = recurringTake(.daily, at: now.addingTimeInterval(3600))
+        scheduler.scheduleReminder(for: take)
+        XCTAssertEqual(center.added.count, ReminderScheduler.recurrenceWindow)
+        let base = take.timeReminder!.notificationIdentifier
+        XCTAssertEqual(center.added.first?.identifier,
+                       ReminderScheduler.windowIdentifier(base: base, index: 0))
+    }
+
+    /// `rescheduleAll` keeps the pending set within the global cap, favouring the soonest
+    /// occurrences across every reminder — so a fleet can't silently overflow iOS's 64.
+    func testRescheduleAll_capsAtGlobalBudget() {
+        // 6 daily reminders × a 12-deep window = 72 planned > the 60 budget.
+        let takes = (0..<6).map { recurringTake(.daily, at: now.addingTimeInterval(Double(3600 + $0 * 60))) }
+        scheduler.rescheduleAll(takes: takes)
+        XCTAssertEqual(center.added.count, ReminderScheduler.maxPendingAlarms,
+                       "the pending set is capped at the global budget")
+    }
+
+    /// `rescheduleAll` clears each reminder's base+window but NOT its snooze id, so a
+    /// pending snooze survives an app-open rebuild (the R3 fix).
+    func testRescheduleAll_preservesPendingSnooze() {
+        let take = recurringTake(.daily, at: now.addingTimeInterval(3600))
+        let base = take.timeReminder!.notificationIdentifier
+        // A snooze is pending under the dedicated namespace.
+        scheduler.scheduleSnooze(title: "t",
+                                 identifier: ReminderScheduler.snoozeIdentifier(base: base),
+                                 fireAt: now.addingTimeInterval(1800),
+                                 dueText: "Today at 3 PM")
+        XCTAssertTrue(center.added.contains { $0.identifier == ReminderScheduler.snoozeIdentifier(base: base) })
+
+        scheduler.rescheduleAll(takes: [take])
+        XCTAssertTrue(center.added.contains { $0.identifier == ReminderScheduler.snoozeIdentifier(base: base) },
+                      "the rebuild must not clobber a pending snooze")
+    }
+
+    // MARK: - All-day same-day catch-up (R5, owner 2026-06-21)
+
+    /// An ALL-DAY reminder for TODAY whose default 9am fire time has already passed fires a
+    /// prompt "catch-up" nudge (under the `#today` id) instead of being silently dropped.
+    func testSchedule_allDayToday_pastDefaultHour_firesCatchUp() throws {
+        // A "now" at 2pm, with the all-day reminder dated the same day → 9am is past.
+        let nineToday = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: now)!
+        let twoPM = nineToday.addingTimeInterval(5 * 3600)
+        let s = ReminderScheduler(center: center, now: { twoPM })
+        let id = UUID()
+        let take = Take(id: id, blocks: [.textLine("all day, set late")],
+                        timeReminder: TimeReminder(scheduledDate: nineToday,   // same day as twoPM
+                                                   notificationIdentifier: id.uuidString,
+                                                   isAllDay: true))
+        s.scheduleReminder(for: take)
+
+        let request = try XCTUnwrap(center.added.first)
+        XCTAssertEqual(request.identifier, ReminderScheduler.catchUpIdentifier(base: id.uuidString))
+        let trigger = try XCTUnwrap(request.trigger as? UNTimeIntervalNotificationTrigger)
+        XCTAssertEqual(trigger.timeInterval, ReminderScheduler.allDayLateLeadSeconds, accuracy: 0.5)
+    }
+
+    /// An all-day reminder dated a PAST day (not today) is still refused — no catch-up.
+    func testSchedule_allDayYesterday_isRefused() {
+        let yesterday = now.addingTimeInterval(-26 * 3600)
+        let id = UUID()
+        let take = Take(id: id, blocks: [.textLine("stale all-day")],
+                        timeReminder: TimeReminder(scheduledDate: yesterday,
+                                                   notificationIdentifier: id.uuidString,
+                                                   isAllDay: true))
+        scheduler.scheduleReminder(for: take)
+        XCTAssertEqual(center.added.count, 0)
     }
 }
 #endif
