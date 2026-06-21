@@ -72,8 +72,17 @@ struct BlockTextEditor: UIViewRepresentable {
         /// The Done (tick) button is enabled only for a task or reminder Take —
         /// a pure note can't be "done"; greyed otherwise.
         var doneEnabled: Bool
+        /// Whether the Take already carries a reminder — drives the reminder button's
+        /// "Edit reminder" vs "Add reminder" affordance (owner 2026-06-21).
+        var hasReminder: Bool = false
         var onToggleImportant: () -> Void
         var onOpenAngle: () -> Void
+        /// Open the reminder picker for THIS Take (owner 2026-06-21). When supplied,
+        /// slot 2 becomes a Reminder button wherever the Angle would be greyed (a note or
+        /// reminder-only Take) — editing the time/cadence in place, no Focus-ring detour.
+        /// nil where the host can't present the picker (e.g. Storyboard), leaving the
+        /// previous greyed-Angle behaviour.
+        var onReminder: (() -> Void)? = nil
         /// Mark the whole Take done / not-done (all checklist items + the reminder).
         var onToggleDone: () -> Void
         /// The keyboard ⌄/× — commit the edit and EXIT (owner 2026-06-19): the host

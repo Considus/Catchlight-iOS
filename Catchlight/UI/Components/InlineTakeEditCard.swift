@@ -27,6 +27,10 @@ struct InlineTakeEditCard: View {
     /// Opens the full-screen Angle (the list button now lives on the keyboard
     /// toolbar, owner 2026-06-18). Shown only when an Angle applies (a checklist Take).
     var onOpenAngle: (() -> Void)? = nil
+    /// Open the reminder picker for this draft (owner 2026-06-21) — slot 2 of the
+    /// keyboard toolbar uses it to edit a reminder's time/cadence (or add one to a note)
+    /// without the Focus-ring detour. nil where the host can't present the picker.
+    var onEditReminder: (() -> Void)? = nil
     /// Commit-and-exit, fired by the keyboard's ⌄/× (owner 2026-06-19) — the host
     /// saves the draft and drops the focused-edit overlay in one step.
     var onCommit: (() -> Void)? = nil
@@ -45,8 +49,10 @@ struct InlineTakeEditCard: View {
             angleEnabled: AngleRegistry.applicable(to: draft).first != nil,
             isDone: draft.isMarkedDone,
             doneEnabled: draft.isTask || draft.timeReminder != nil,
+            hasReminder: draft.timeReminder != nil,
             onToggleImportant: { draft.isImportant.toggle() },
             onOpenAngle: { onOpenAngle?() },
+            onReminder: onEditReminder,
             onToggleDone: { draft.setMarkedDone(!draft.isMarkedDone) },
             onDismiss: { onCommit?() }
         )

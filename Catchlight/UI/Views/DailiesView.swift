@@ -122,6 +122,11 @@ struct DailiesView: View {
     /// on (inline) while another Obie already exists — the same warning the timeline
     /// long-press uses, but targeting the draft (owner 2026-06-17).
     @State private var pendingInlineObieConfirm = false
+    /// Drives the reminder picker opened from the editor keyboard's slot-2 Reminder
+    /// button (owner 2026-06-21) — edits the editing draft's reminder in place. The
+    /// keyboard is dropped before it presents (the established overlay-vs-keyboard
+    /// pattern, [[catchlight-edit-in-place]]).
+    @State private var editingReminder = false
     /// The repeating-reminder Take awaiting a Delete choice (owner 2026-06-21). Swiping
     /// Delete on a recurring reminder asks "this occurrence" vs "the whole series"
     /// rather than deleting outright; nil when no such prompt is up.
@@ -369,6 +374,47 @@ struct DailiesView: View {
         .fullScreenCover(isPresented: $anglePresented) {
             angleCover
         }
+        // Reminder editor from the keyboard's slot-2 button (owner 2026-06-21): edit a
+        // reminder Take's time/cadence, or add one to a note, in place — the same picker
+        // the Focus ring uses, applied straight to the editing draft.
+        .sheet(isPresented: $editingReminder) {
+            reminderEditorSheet
+        }
+    }
+
+    /// The in-editor reminder picker, seeded from the draft's current reminder (or the
+    /// user's default timing when adding one). Save writes the draft's `timeReminder`;
+    /// Cancel leaves it untouched (we only mutate on Save, so both paths are safe).
+    @ViewBuilder
+    private var reminderEditorSheet: some View {
+        let existing = editDraft?.timeReminder
+        ReminderPickerSheet(
+            initialDate: existing?.scheduledDate ?? PetalFanView.defaultReminderDate,
+            initialAlarm: existing?.alarmEnabled ?? true,
+            initialAllDay: existing?.isAllDay ?? false,
+            initialRecurrence: existing?.recurrence ?? .none,
+            onSave: { date, alarm, allDay, recurrence in
+                if var d = editDraft {
+                    d.timeReminder = TimeReminder(
+                        scheduledDate: date,
+                        notificationIdentifier: d.id.uuidString,
+                        alarmEnabled: alarm,
+                        isAllDay: allDay,
+                        recurrence: recurrence)
+                    d.normaliseActivityFloor()
+                    editDraft = d
+                }
+                editingReminder = false
+            },
+            onCancel: { editingReminder = false }
+        )
+    }
+
+    /// Open the reminder editor for the focused draft: drop the keyboard first (the
+    /// proven overlay-vs-keyboard ordering — owner lockup 2026-06-18), then present.
+    private func presentReminderEditor() {
+        editFocusedBlockID = nil
+        editingReminder = true
     }
 
     // MARK: - Heading
@@ -1354,6 +1400,7 @@ struct DailiesView: View {
                         editFocusedBlockID = nil   // drop the keyboard before the cover
                         anglePresented = true
                     },
+                    onEditReminder: { presentReminderEditor() },
                     onCommit: { saveInlineEdit() },
                     onCaretMoved: { caretRect in pinCaret(caretRect) })) }
                 : nil

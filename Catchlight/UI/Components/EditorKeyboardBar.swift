@@ -31,23 +31,36 @@ struct EditorKeyboardBar: View {
             }
             .frame(maxWidth: .infinity)
 
-            // 2 — Angle (Shot List): opens this Take's Shot List. Slot 2 to match the
-            // main dock's Angle position, so it's the SAME button in the same place
-            // (owner 2026-06-19). Greyed when no task applies.
-            slot(enabled: config.angleEnabled, identifier: "angle-button",
-                 label: "Open Shot List", action: config.onOpenAngle) {
-                // A list glyph when a list exists (it WILL open the checklist —
-                // owner 2026-06-19, replacing the shopping bag, which read as
-                // shopping-specific; matches the Angle's registered `checklist`
-                // icon); the neutral ∠ when greyed, so the disabled state doesn't
-                // imply a list that isn't there.
-                dockSymbol(config.angleEnabled ? "checklist" : "angle",
-                           tint: .ckAccent, enabled: config.angleEnabled,
-                           // checklist renders heavier than ∠ at the same point size,
-                           // so size it down to match the dock's optical weight.
-                           size: config.angleEnabled ? 20 : 24)
+            // 2 — Context button at the main dock's Angle position (owner 2026-06-19/21):
+            //   • a TASK → the Angle (Shot List), opening this Take's checklist;
+            //   • otherwise, where the Angle would be greyed, a REMINDER button — edit
+            //     the time on a reminder Take, or add one to a note, without the
+            //     Focus-ring detour (owner 2026-06-21). Falls back to the greyed Angle
+            //     only where the host can't present the picker (`onReminder == nil`).
+            if config.angleEnabled {
+                slot(enabled: true, identifier: "angle-button",
+                     label: "Open Shot List", action: config.onOpenAngle) {
+                    // The checklist glyph (it opens the checklist — owner 2026-06-19,
+                    // matching the Angle's registered icon); sized down as it renders
+                    // heavier than ∠ at the same point size.
+                    dockSymbol("checklist", tint: .ckAccent, enabled: true, size: 20)
+                }
+                .frame(maxWidth: .infinity)
+            } else if let onReminder = config.onReminder {
+                slot(enabled: true, identifier: "reminder-button",
+                     label: config.hasReminder ? "Edit reminder" : "Add reminder",
+                     action: onReminder) {
+                    dockSymbol("bell", tint: .ckAccent, enabled: true, size: 22)
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                // No task and no picker host — keep the neutral, greyed Angle.
+                slot(enabled: false, identifier: "angle-button",
+                     label: "Open Shot List", action: config.onOpenAngle) {
+                    dockSymbol("angle", tint: .ckAccent, enabled: false, size: 24)
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
 
             // 3 — Important: the STANDARD Dailies glyph (the app's Important glyph).
             // Ember when flagged, else Ember accent.
