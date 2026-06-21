@@ -17,8 +17,8 @@ final class TakeAutoCleanupTests: XCTestCase {
     /// `now` two days after `base`, so a Take modified at `base` is "older than a day".
     private var twoDaysLater: Date { base.addingTimeInterval(2 * 24 * 60 * 60) }
 
-    private func reminder(done: Bool) -> TimeReminder {
-        TimeReminder(scheduledDate: base, notificationIdentifier: "r", isDone: done)
+    private func reminder(done: Bool, recurrence: TimeReminder.Recurrence = .none) -> TimeReminder {
+        TimeReminder(scheduledDate: base, notificationIdentifier: "r", isDone: done, recurrence: recurrence)
     }
 
     // MARK: - Eligible
@@ -73,6 +73,15 @@ final class TakeAutoCleanupTests: XCTestCase {
     func testProtected_obie_evenWhenCompletedAndNoteFree() {
         let take = Take(modifiedAt: base, blocks: [.checkItem("milk", isComplete: true)],
                         isObie: true)
+        XCTAssertFalse(take.isAutoCleanupEligible(olderThan: day, now: twoDaysLater))
+    }
+
+    /// A REPEATING reminder is never "finished" — even if a stale `isDone == true` slipped
+    /// through, it must NOT be auto-cleanup-eligible (owner 2026-06-21). Without the guard,
+    /// marking a recurring reminder done in the inline editor made the live series deletable.
+    func testProtected_recurringReminder_evenIfMarkedDone() {
+        let take = Take(modifiedAt: base, blocks: [],
+                        timeReminder: reminder(done: true, recurrence: .daily))
         XCTAssertFalse(take.isAutoCleanupEligible(olderThan: day, now: twoDaysLater))
     }
 

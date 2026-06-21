@@ -352,6 +352,30 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         if timeReminder != nil { timeReminder?.isDone = done }
     }
 
+    /// Roll a repeating reminder to its NEXT occurrence (owner 2026-06-21): advance the
+    /// anchor past the one currently displayed and clear `isDone`, leaving the series — and
+    /// its OS alarm — live. Shared by "mark done" and Delete → "skip this occurrence" so the
+    /// advance maths lives in exactly one place. No-op when there is no repeating reminder.
+    public mutating func advanceRecurringOccurrence(now: Date) {
+        guard let r = timeReminder, r.repeats else { return }
+        timeReminder?.scheduledDate = r.nextOccurrence(after: r.effectiveNextDue(now: now))
+        timeReminder?.isDone = false
+    }
+
+    /// Toggle "done" for the row + inline-editor controls, mirroring
+    /// `DailiesViewModel.toggleDone` (owner 2026-06-21): a REPEATING reminder is advanced
+    /// (never pinned `isDone`), everything else flips `setMarkedDone`. Centralised so the
+    /// editor-draft path can't diverge and pin `isDone` on a recurring series — which
+    /// silently STOPPED its alarms (the scheduler skips a done reminder) AND made the live
+    /// series auto-cleanup-eligible.
+    public mutating func toggleMarkedDoneAdvancingRecurring(now: Date) {
+        if timeReminder?.repeats == true {
+            advanceRecurringOccurrence(now: now)
+        } else {
+            setMarkedDone(!isMarkedDone)
+        }
+    }
+
     // MARK: - Codable (explicit so future fields can carry decoding defaults)
 
     enum CodingKeys: String, CodingKey {
