@@ -42,14 +42,59 @@ public enum MnemonicKeychain {
 
     /// Store (or replace) the 12-word mnemonic. Joined with single spaces — the
     /// canonical BIP-39 representation.
+    ///
+    /// UPDATE-OR-ADD, never delete-then-add (owner 2026-06-21), mirroring
+    /// `MasterKeyKeychain.upsertItem`. The phrase is the ROOT recovery secret, so a
+    /// delete-then-add — where a crash/lock between the delete and the re-add leaves the
+    /// slot empty with no rollback — is the wrong posture for it. On the real call path
+    /// (a single store during onboarding, no prior item) this is a clean add with no
+    /// delete window at all.
     public static func store(_ words: [String]) throws {
         let joined = words.joined(separator: " ")
         let data = Data(joined.utf8)
+        try upsert(data, accessControl: try makeAccessControl())
+    }
 
-        // Replace-then-add with a minimal search query (kSecValueData and
-        // accessibility attributes are not valid search keys).
-        delete()
+    /// The `.userPresence` access control for the phrase slot, or nil when a test seam
+    /// disables user presence (the add path then sets a plain accessibility attribute).
+    private static func makeAccessControl() throws -> SecAccessControl? {
+        guard configuration.requireUserPresence else { return nil }
+        guard let access = SecAccessControlCreateWithFlags(
+            nil,
+            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            [.userPresence],
+            nil
+        ) else { throw KeychainError.accessControlCreationFailed }
+        return access
+    }
 
+    /// `SecItemUpdate` first, falling back to `SecItemAdd` when the item does not exist —
+    /// so a re-store never has a window with no phrase on disk. If the existing item can't
+    /// be updated in place (e.g. `errSecInteractionNotAllowed` on the access-controlled
+    /// slot), replace it outright with a minimal search query, then add.
+    private static func upsert(_ data: Data, accessControl: SecAccessControl?) throws {
+        let searchQuery: [String: Any] = [
+            kSecClass as String:               kSecClassGenericPassword,
+            kSecAttrService as String:         configuration.service,
+            kSecAttrAccount as String:         configuration.account,
+            kSecAttrAccessGroup as String:     configuration.accessGroup,
+            kSecAttrSynchronizable as String:  false,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+        ]
+        var update: [String: Any] = [kSecValueData as String: data]
+        if let accessControl { update[kSecAttrAccessControl as String] = accessControl }
+
+        let updateStatus = SecItemUpdate(searchQuery as CFDictionary, update as CFDictionary)
+        if updateStatus == errSecSuccess { return }
+        guard updateStatus == errSecItemNotFound else {
+            delete()
+            try add(data, accessControl: accessControl)
+            return
+        }
+        try add(data, accessControl: accessControl)
+    }
+
+    private static func add(_ data: Data, accessControl: SecAccessControl?) throws {
         var query: [String: Any] = [
             kSecClass as String:              kSecClassGenericPassword,
             kSecAttrService as String:        configuration.service,
@@ -58,14 +103,8 @@ public enum MnemonicKeychain {
             kSecValueData as String:          data,
             kSecAttrSynchronizable as String: false
         ]
-        if configuration.requireUserPresence {
-            guard let access = SecAccessControlCreateWithFlags(
-                nil,
-                kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-                [.userPresence],
-                nil
-            ) else { throw KeychainError.accessControlCreationFailed }
-            query[kSecAttrAccessControl as String] = access
+        if let accessControl {
+            query[kSecAttrAccessControl as String] = accessControl
         } else {
             query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         }

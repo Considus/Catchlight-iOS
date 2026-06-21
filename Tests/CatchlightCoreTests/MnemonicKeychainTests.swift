@@ -74,6 +74,18 @@ final class MnemonicKeychainTests: XCTestCase {
         XCTAssertEqual(read, Self.alt)
     }
 
+    /// Repeated re-stores exercise the update-or-add path (owner 2026-06-21): each
+    /// re-store after the first goes through `SecItemUpdate` (no delete window), the slot
+    /// stays present throughout, and the final value is the last one written.
+    func testMnemonicKeychain_repeatedStores_updateInPlace_noDataLoss() throws {
+        try MnemonicKeychain.store(Self.phrase)
+        try MnemonicKeychain.store(Self.alt)
+        XCTAssertTrue(MnemonicKeychain.exists())
+        try MnemonicKeychain.store(Self.phrase)
+        XCTAssertTrue(MnemonicKeychain.exists())
+        XCTAssertEqual(try XCTUnwrap(MnemonicKeychain.retrieve()), Self.phrase)
+    }
+
     func testMnemonicKeychain_deleteRemovesPhrase() throws {
         try MnemonicKeychain.store(Self.phrase)
         MnemonicKeychain.delete()
