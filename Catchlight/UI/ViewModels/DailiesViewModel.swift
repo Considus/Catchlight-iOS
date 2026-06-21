@@ -207,8 +207,58 @@ final class DailiesViewModel {
     /// card then reads the done grey. The reminder-done state is otherwise unreachable.
     func toggleDone(_ take: Take) {
         guard take.isTask || take.timeReminder != nil else { return }
+        // A REPEATING reminder is never permanently "done" (owner 2026-06-21): marking
+        // it done completes the current occurrence and rolls the series forward to the
+        // next one — the recurrence (and its OS alarm) stays live. The series only ends
+        // via Delete → "Delete series".
+        if let r = take.timeReminder, r.repeats {
+            advanceRecurring(take)
+            return
+        }
         var updated = take
         updated.setMarkedDone(!take.isMarkedDone)
+        save(updated)
+    }
+
+    /// Take IDs with a pending snoozed re-nudge (owner 2026-06-21) — the timeline reads
+    /// this to show "SNOOZED" instead of "OVERDUE" on those Takes' edges. Snooze is
+    /// notification-only (no store write while locked), so this is refreshed from the OS
+    /// pending queue when the app comes to the foreground; it can lag a lock-screen
+    /// snooze until the next open, which is acceptable.
+    private(set) var snoozedReminderIDs: Set<UUID> = []
+
+    /// Refresh `snoozedReminderIDs` from the OS pending queue. No encryption key needed
+    /// (it reads notifications, not the store), so it's safe even while locked.
+    @MainActor
+    func refreshSnoozedReminders() {
+        Task { @MainActor in
+            self.snoozedReminderIDs = await reminders.pendingSnoozedTakeIDs()
+        }
+    }
+
+    /// Re-arm the rolling notification window for every repeating reminder (owner
+    /// 2026-06-21). A recurring reminder is scheduled as a finite window of individual
+    /// occurrences (so any one can be skipped); the window doesn't auto-extend, so we
+    /// top it up whenever the app opens — keeping the next batch always pending. Reads
+    /// the store directly (authoritative, includes the Obie); safe to call only once the
+    /// store is unlocked. Best-effort: a load failure leaves existing alarms intact.
+    func refreshRecurringSchedules() {
+        guard let all = try? store.allTakes() else { return }
+        for take in all where take.timeReminder?.repeats == true {
+            reminders.reschedule(for: take)
+        }
+    }
+
+    /// Roll a repeating reminder to its next occurrence — shared by "Done" (complete
+    /// this one) and Delete → "Delete this occurrence" (skip this one). The series and
+    /// its OS-repeating alarm are untouched; only the displayed next-due advances.
+    func advanceRecurring(_ take: Take) {
+        guard let r = take.timeReminder, r.repeats else { return }
+        var updated = take
+        // Advance past the occurrence currently shown, so the card visibly jumps to the
+        // following one. `effectiveNextDue` is what the card displays right now.
+        updated.timeReminder?.scheduledDate = r.nextOccurrence(after: r.effectiveNextDue(now: Date()))
+        updated.timeReminder?.isDone = false
         save(updated)
     }
 
@@ -224,6 +274,7 @@ final class DailiesViewModel {
                             reminderDate: Date?,
                             reminderAlarm: Bool = true,
                             reminderAllDay: Bool = false,
+                            reminderRecurrence: TimeReminder.Recurrence = .none,
                             isObie: Bool) {
         var updated = take
         updated.isNote = isNote
@@ -236,7 +287,8 @@ final class DailiesViewModel {
                 scheduledDate: when,
                 notificationIdentifier: updated.id.uuidString,
                 alarmEnabled: reminderAlarm,
-                isAllDay: reminderAllDay
+                isAllDay: reminderAllDay,
+                recurrence: reminderRecurrence
             )
         } else {
             updated.timeReminder = nil
