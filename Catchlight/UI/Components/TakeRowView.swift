@@ -364,11 +364,9 @@ struct TakeCardSurface: View {
         return dynamicSize.isAccessibilitySize ? max(base, 4) : base
     }
 
-    /// The Take body as plain text (placeholder when empty).
-    private var bodyText: String {
-        let raw = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return raw.isEmpty ? "Untitled Take" : raw
-    }
+    /// The Take body as plain text — `blocks` joined by newlines (untrimmed so block
+    /// offsets line up for per-item colouring + link mapping below).
+    private var bodyText: String { take.plainText }
 
     /// Detected links in the body (schemed, `www.`, or bare domains with an assumed
     /// `https://` — see `LinkDetector`).
@@ -379,13 +377,39 @@ struct TakeCardSurface: View {
     /// spacing up; single-link / plain Takes keep their normal density (owner 2026-06-22).
     private var bodyNeedsLinkSpacing: Bool { bodyLinks.count >= 2 }
 
-    /// The full Take body shown on the card — the `lineLimit` (driven by the
-    /// "Preview" setting) decides how much is visible. URLs render as tappable accent
-    /// links; the base colour is the Take's body tone (done greys, etc.), carried on
-    /// the AttributedString so the link runs can override it.
+    /// The full Take body shown on the card — the `lineLimit` (driven by the "Preview"
+    /// setting) decides how much is visible. Colour is PER-ITEM (owner 2026-06-22): a
+    /// completed check item greys on its own (`ckTextComplete`); prose and incomplete
+    /// items keep the base tone (Obie gold / primary) even when the Take reads "done" —
+    /// so one ticked checkbox no longer greys the whole Take. Doneness still shows via
+    /// the grey card border + the reminder label. URLs render as tappable accent links.
     private var displayBody: AttributedString {
+        let baseColor: Color = take.isObie ? .ckTextObie : .ckTextPrimary
+        guard !bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            var placeholder = AttributedString("Untitled Take")
+            placeholder.foregroundColor = baseColor
+            return placeholder
+        }
+
         var attr = AttributedString(bodyText)
-        attr.foregroundColor = style.bodyText
+        attr.foregroundColor = baseColor
+
+        // Grey each completed check item's run. `plainText` is `blocks` joined by "\n",
+        // so walk the blocks tracking the cursor and recolour the completed ones.
+        var cursor = bodyText.startIndex
+        for (i, block) in take.blocks.enumerated() {
+            let end = bodyText.index(cursor, offsetBy: block.text.count)
+            if case .check(let item) = block, item.isComplete,
+               let lo = AttributedString.Index(cursor, within: attr),
+               let hi = AttributedString.Index(end, within: attr) {
+                attr[lo..<hi].foregroundColor = .ckTextComplete
+            }
+            cursor = end
+            if i < take.blocks.count - 1, cursor < bodyText.endIndex {
+                cursor = bodyText.index(after: cursor)   // skip the "\n" joiner
+            }
+        }
+
         for match in bodyLinks {
             guard let lo = AttributedString.Index(match.range.lowerBound, within: attr),
                   let hi = AttributedString.Index(match.range.upperBound, within: attr) else { continue }

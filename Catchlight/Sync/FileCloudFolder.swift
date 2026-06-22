@@ -79,6 +79,15 @@ public final class FileCloudFolder: CloudFolder {
         return try pickedURL.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
     }
 
+    /// Ensure a subfolder exists inside the cloud folder — used to auto-create the
+    /// user-facing `Import/` drop folder on sync so it's there from the start, on new
+    /// AND existing setups (owner 2026-06-22). Idempotent and best-effort: a provider
+    /// hiccup must never fail a sync pass. Security scope is already held by `self`.
+    public func ensureSubfolder(_ name: String) {
+        let dir = folderURL.appendingPathComponent(name, isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    }
+
     public func listFiles() throws -> [String] {
         var result: [String] = []
         var coordError: NSError?

@@ -262,6 +262,10 @@ enum Wiring {
         guard let cloud = makeCloudFolder() else {
             return nil   // local-only mode
         }
+        // Auto-create the user-facing `Import/` drop folder so it's present from the
+        // first sync, on existing setups too (owner 2026-06-22). Idempotent; runs
+        // before the keys guard since folder creation needs no master key.
+        cloud.ensureSubfolder(ImportCoordinator.importFolderName)
         // Sync NEVER authenticates — only the app-entry unlock owns the Face ID prompt
         // (D-042). Reuse the keys the unlock cached; if the app isn't unlocked yet
         // (`sessionKeys` nil), SKIP this sync pass rather than retrieving the master key
