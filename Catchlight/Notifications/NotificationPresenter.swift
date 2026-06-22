@@ -32,6 +32,14 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
     /// (`SettingsViewModel.SnoozeDuration`, a plain preference readable while locked).
     private static let snoozeActionIdentifier = "SNOOZE"
 
+    /// The "Dismiss" pull-down action on a reminder banner (owner 2026-06-22). Stops the
+    /// reminder nagging WITHOUT deleting it: it turns the alarm off (`alarmEnabled = false`)
+    /// so the Take keeps its date on the timeline but never fires again. Like Snooze it's a
+    /// BACKGROUND action (no `.foreground`) — it cancels the pending OS alarms immediately
+    /// (works while locked) and queues the store change for the next unlock (see
+    /// `PendingReminderActions`), so it never opens the app or demands Face ID.
+    private static let dismissActionIdentifier = "DISMISS"
+
     /// Install as the notification-centre delegate AND register the reminder category.
     /// Idempotent — call once, early in launch (before a notification could be delivered
     /// to a foreground app).
@@ -55,9 +63,17 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
             title: "Snooze for \(SettingsViewModel.SnoozeDuration.current.label)",
             options: [],
             icon: UNNotificationActionIcon(systemImageName: "zzz"))
+        // "Dismiss" — bell.slash reads as "stop reminding me". A plain (non-destructive)
+        // background action: it silences the reminder but keeps the Take, so it isn't a
+        // delete. Placed after Snooze, the existing primary action.
+        let dismiss = UNNotificationAction(
+            identifier: dismissActionIdentifier,
+            title: "Dismiss",
+            options: [],
+            icon: UNNotificationActionIcon(systemImageName: "bell.slash"))
         let category = UNNotificationCategory(
             identifier: ReminderScheduler.categoryIdentifier,
-            actions: [snooze],
+            actions: [snooze, dismiss],
             intentIdentifiers: [],
             options: [])
         UNUserNotificationCenter.current().setNotificationCategories([category])
@@ -84,9 +100,39 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         defer { completionHandler() }
-        guard response.actionIdentifier == Self.snoozeActionIdentifier else { return }
-        let fireAt = Date().addingTimeInterval(SettingsViewModel.SnoozeDuration.current.seconds)
         let request = response.notification.request
+        // The reminder's base id (a recurring occurrence fires as `<uuid>#n`; strip the `#n`).
+        let base = request.identifier.split(separator: "#", maxSplits: 1).first.map(String.init) ?? request.identifier
+
+        switch response.actionIdentifier {
+        case Self.snoozeActionIdentifier:
+            handleSnooze(request: request, base: base)
+        case Self.dismissActionIdentifier:
+            handleDismiss(request: request, base: base)
+        default:
+            return
+        }
+    }
+
+    /// "Dismiss": stop the CURRENT instance nagging — without affecting a recurring series'
+    /// future occurrences (owner 2026-06-22). Cancels ONLY the fired instance plus any snooze
+    /// / all-day catch-up for this reminder (works while locked — it's the OS queue, no key);
+    /// the recurring window ids `<uuid>#0…#11` are deliberately left intact, so a daily/weekly
+    /// reminder keeps firing. It then queues the dismiss for the next unlock: the drain
+    /// (`DailiesViewModel.applyPendingReminderActions`) turns the alarm off in the store ONLY
+    /// when the reminder is a ONE-SHOT; a recurring reminder gets no store change at all.
+    private func handleDismiss(request: UNNotificationRequest, base: String) {
+        let ids = [request.identifier,
+                   ReminderScheduler.snoozeIdentifier(base: base),
+                   ReminderScheduler.catchUpIdentifier(base: base)]
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        PendingReminderActions.enqueueDismiss(takeID: base)
+    }
+
+    /// Snooze (background, works while locked): re-nudge the SAME reminder later without
+    /// touching the encrypted store.
+    private func handleSnooze(request: UNNotificationRequest, base: String) {
+        let fireAt = Date().addingTimeInterval(SettingsViewModel.SnoozeDuration.current.seconds)
         // The ORIGINAL "when" text, stamped at first schedule and carried across snoozes,
         // so the re-nudge reads "Originally due …" rather than the (redundant) re-fire
         // time. Fall back to the current subtitle for notifications scheduled before this
@@ -94,12 +140,11 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         let dueText = (request.content.userInfo[ReminderScheduler.dueTextKey] as? String)
             ?? request.content.subtitle
         // Re-nudge under the reminder's DEDICATED snooze id, not the fired request's own id
-        // (owner 2026-06-21). A recurring occurrence fires as `<uuid>#n`; reusing that id
-        // let the next app-open window rebuild overwrite the snooze. Derive the base UUID
-        // (strip any `#n`) and snooze under `<uuid>#snooze`, a namespace the rebuild leaves
-        // untouched — so the snooze survives, and an in-app edit/delete (which cancels every
-        // id including `#snooze`) still clears it.
-        let base = request.identifier.split(separator: "#", maxSplits: 1).first.map(String.init) ?? request.identifier
+        // (owner 2026-06-21). A recurring occurrence fires as `<uuid>#n`; reusing that id let
+        // the next app-open window rebuild overwrite the snooze. The `base` (the `#n` already
+        // stripped) snoozes under `<uuid>#snooze`, a namespace the rebuild leaves untouched —
+        // so the snooze survives, and an in-app edit/delete (which cancels every id including
+        // `#snooze`) still clears it.
         ReminderScheduler().scheduleSnooze(
             title: request.content.title,
             identifier: ReminderScheduler.snoozeIdentifier(base: base),

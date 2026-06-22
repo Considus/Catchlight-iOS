@@ -247,6 +247,10 @@ struct CatchlightApp: App {
             // launch, with no second Face ID prompt (owner 2026-06-20).
             if newState == .unlocked {
                 backgroundSync.syncNow(trigger: .appBecameActive)
+                // Apply any "Dismiss" taps made while locked (owner 2026-06-22) BEFORE the
+                // rebuild below — turning the reminder's alarm off in the store, so the
+                // re-arm doesn't resurrect a reminder the user just dismissed.
+                app.dailiesVM.applyPendingReminderActions()
                 // Top up the rolling windows of any repeating reminders now the store is
                 // readable (keys cached) — they don't auto-extend, so opening the app is
                 // when we re-arm the next batch (owner 2026-06-21).

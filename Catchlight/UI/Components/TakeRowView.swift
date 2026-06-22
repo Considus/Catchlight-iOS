@@ -478,6 +478,11 @@ struct TakeCardSurface: View {
     }
     private var reminderLabel: String? { Self.reminderString(for: take) }
 
+    /// Whether this reminder's alarm will actually fire — drives the bell vs bell.slash
+    /// glyph ahead of the "when". A dated-but-silent Take (or a dismissed one-shot) reads
+    /// `alarmEnabled == false`; absent a reminder there's no label to mark.
+    private var alarmOn: Bool { take.timeReminder?.alarmEnabled ?? false }
+
     /// The reminder subtext colour: ruby when overdue, the done grey when done, else
     /// the quiet secondary scale.
     private var reminderLabelColor: Color {
@@ -521,10 +526,21 @@ struct TakeCardSurface: View {
                 // .tm — 11pt medium. Italic ONLY when overdue (owner 2026-06-18): the
                 // slant + ruby together signal "late"; active & done read upright.
                 // Colour: ruby overdue / done grey / quiet Secondary otherwise.
-                Text(reminderLabel)
-                    .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
-                    .italic(style.isOverdue)
-                    .foregroundStyle(reminderLabelColor)
+                HStack(spacing: 4) {
+                    // Small bell ahead of the "when" (owner 2026-06-22): a quiet at-a-glance
+                    // signal of whether this reminder will actually nag — `bell` when the
+                    // alarm is on, `bell.slash` when it's a silent/dismissed dated item.
+                    // Inherits the label's size + colour so it reads as one unit; never
+                    // italicised (the slant is the text's "late" cue, not the glyph's).
+                    Image(systemName: alarmOn ? "bell" : "bell.slash")
+                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .foregroundStyle(reminderLabelColor)
+                        .accessibilityHidden(true)
+                    Text(reminderLabel)
+                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .italic(style.isOverdue)
+                        .foregroundStyle(reminderLabelColor)
+                }
             }
         }
         // v1.7 .card padding: 24px top (clears the overlapping Iris) / 14 sides /
