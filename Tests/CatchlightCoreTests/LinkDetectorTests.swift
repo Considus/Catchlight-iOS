@@ -55,6 +55,13 @@ final class LinkDetectorTests: XCTestCase {
                        ["https://a.com", "https://b.org"])
     }
 
+    /// Auto-capitalised first letter (common when a URL is typed first) still links,
+    /// even for a newer TLD NSDataDetector doesn't know (.app).
+    func testBareDomain_capitalisedFirstLetter_stillLinks() {
+        XCTAssertEqual(urls("Considus.app is ours"),
+                       ["https://Considus.app"])
+    }
+
     // MARK: - Precision: must NOT link
 
     func testFileLikeTokens_areNotLinked() {

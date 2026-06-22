@@ -27,11 +27,13 @@ public enum LinkDetector {
     private static let dataDetector = try? NSDataDetector(
         types: NSTextCheckingResult.CheckingType.link.rawValue)
 
-    // A bare domain: lowercase labels separated by dots, a 2–24 letter TLD (captured
-    // for the curated-set check), and an optional path. The lookbehind avoids matching
-    // inside an email's domain or a longer token; lowercase-only sidesteps "Mr.Smith".
+    // A bare domain: labels separated by dots, a 2–24 letter TLD (captured for the
+    // curated-set check), and an optional path. Case-insensitive so an auto-capitalised
+    // first letter ("Considus.app", common when a URL is typed first) still links; the
+    // curated-TLD gate below — not the casing — is what keeps "Mr.Smith" inert. The
+    // lookbehind avoids matching inside an email's domain or a longer token.
     private static let bareDomain = try? NSRegularExpression(
-        pattern: #"(?<![@./\w-])((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+([a-z]{2,24}))(/[^\s]*)?"#)
+        pattern: #"(?<![@./\w-])((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+([a-zA-Z]{2,24}))(/[^\s]*)?"#)
 
     /// Curated common TLDs we'll auto-link without a scheme. Generous but bounded —
     /// expand as needed (owner can add niche TLDs). NOT exhaustive by design.
