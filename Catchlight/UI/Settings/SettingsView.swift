@@ -38,6 +38,8 @@ struct SettingsView: View {
     @State private var vm = SettingsViewModel()
     /// Drives the Markdown / Plain Text chooser for Export Takes (owner 2026-06-21).
     @State private var showExportFormatDialog = false
+    /// The Import-result message; non-nil presents the confirmation alert (owner 2026-06-22).
+    @State private var importResultMessage: String?
 
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
@@ -114,6 +116,13 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Choose a format. Both include every Take and stay readable forever.")
+        }
+        // Import result (owner 2026-06-22) — immediate feedback while Settings is open
+        // (the summary Take lands behind the sheet), and stops an accidental re-tap.
+        .alert("Import", isPresented: importAlertPresented) {
+            Button("OK", role: .cancel) { importResultMessage = nil }
+        } message: {
+            Text(importResultMessage ?? "")
         }
         #if DEBUG
         .alert("Reset Catchlight?", isPresented: $showResetConfirm) {
@@ -543,6 +552,14 @@ struct SettingsView: View {
                         action: { showExportFormatDialog = true })
                 .accessibilityIdentifier("settings-export-takes")
                 .accessibilityHint("Export all your Takes as a Markdown or plain-text file.")
+            // Import notes (owner 2026-06-22) — reads .md/.txt from the Import folder
+            // inside the configured sync folder; one file = one Take.
+            SettingsRow(icon: "square.and.arrow.down",
+                        label: "Import notes",
+                        chevron: false,
+                        action: { importNotes() })
+                .accessibilityIdentifier("settings-import-notes")
+                .accessibilityHint("Import .md or .txt files from the Import folder of your sync location as new Takes.")
             SettingsRow(icon: "info.circle",
                         label: "About",
                         chevron: true,
@@ -625,6 +642,40 @@ struct SettingsView: View {
         // exporter re-sorts defensively.
         let takes = (try? app.dailiesVM.store.allTakes()) ?? []
         ExportCoordinator.presentShareSheet(takes: takes, format: format)
+    }
+
+    private var importAlertPresented: Binding<Bool> {
+        Binding(get: { importResultMessage != nil },
+                set: { if !$0 { importResultMessage = nil } })
+    }
+
+    /// Import the Import folder's `.md`/`.txt` files as new Takes (owner 2026-06-22).
+    /// One file = one Take; on success a summary Take is also created. Requires a
+    /// configured sync folder (the Import folder lives inside it).
+    @MainActor
+    private func importNotes() {
+        guard let folder = ImportCoordinator.syncImportFolder() else {
+            importResultMessage = "Set up Cloud Storage first — the Import folder lives inside your sync folder."
+            return
+        }
+        defer { folder.stopAccess() }
+
+        let outcome = (try? ImportCoordinator.parseFolder(folder.url))
+            ?? ImportCoordinator.Outcome(takes: [], filesScanned: 0, skipped: 0)
+        let imported = app.dailiesVM.importTakes(outcome.takes)
+
+        guard imported > 0 else {
+            importResultMessage = "No .md or .txt files found in the Import folder."
+            return
+        }
+        let noun = imported == 1 ? "Take" : "Takes"
+        let message = "Import successful — \(imported) \(noun) added to your timeline."
+        importResultMessage = message
+        // The auto-created summary Take (owner 2026-06-22) — a persistent record in the
+        // timeline, dated now so it lands at the recent end.
+        app.dailiesVM.importTakes([
+            Take(createdAt: Date(), modifiedAt: Date(), blocks: [.textLine(message)], isNote: true)
+        ])
     }
 
     private var aboutString: String {
