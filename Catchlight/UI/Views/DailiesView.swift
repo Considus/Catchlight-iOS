@@ -281,6 +281,15 @@ struct DailiesView: View {
                 timeline
             }
 
+            // New-Take editor, anchored above the keyboard (owner 2026-06-22): it rises
+            // with the keyboard as the veil falls, instead of being chased to a far
+            // (often off-screen) sorted row. Placed under the heading so a tall card
+            // dissolves beneath it like a timeline card. On save it drops into its
+            // sorted place; existing-Take editing is unchanged.
+            if let newTake = inlineNewTake {
+                newTakeFocusCard(newTake)
+            }
+
             // Pinned page heading + top fade (cosmetic baseline 2026-06-11):
             // a plain overlay child, NOT .safeAreaInset — in this full-bleed
             // hierarchy (.ignoresSafeArea(.container) at the app root) a top
@@ -989,6 +998,40 @@ struct DailiesView: View {
         }
     }
 
+    /// The NEW-Take editor, anchored just above the keyboard rather than parked at its
+    /// (often off-screen) sorted row (owner 2026-06-22). A new Take inserts at the far end
+    /// under the user's sort, so chasing it with a timeline scroll was fragile — and a lazy
+    /// row that far off-screen never built, leaving a blank screen. Instead the new Take
+    /// rides up with the keyboard as the veil falls; on save it drops into its sorted place.
+    /// Reuses `rowContent` (with the timeline card's exact insets) so the chrome / Iris /
+    /// toolbar / Focus ring / save all behave identically. The caret-pin is skipped for it
+    /// (see `pinCaret`) — a card growing up from the keyboard keeps its own caret visible.
+    private func newTakeFocusCard(_ take: Take) -> some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            rowContent(for: take)
+                .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
+                .padding(.trailing, 20)
+                .padding(.bottom, 8)   // small breath above the keyboard toolbar
+        }
+        // Sit the card's bottom on the keyboard's top edge (incl. its docked toolbar):
+        // `keyboardTopY` is the keyboard top in screen coords, so the gap from the screen
+        // bottom is its height. As the keyboard rises, this padding grows and the card
+        // rides up with it.
+        .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        // Position manually off `keyboardTopY`; opt out of SwiftUI's own keyboard avoidance
+        // so it isn't pushed up twice.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        // Half-speed rise (owner 2026-06-22): durations doubled so the card glides up more
+        // gently. Both motions are slowed — the keyboard-follow (0.28→0.56) and the entry
+        // slide-in. The transition gets its OWN animation (0.2→0.4) so the shared `fanFade`,
+        // used elsewhere, is left as-is.
+        .animation(.easeOut(duration: 0.56), value: keyboardTopY)
+        .transition(.move(edge: .bottom).combined(with: .opacity)
+            .animation(.easeInOut(duration: 0.4)))
+    }
+
     private func row(for take: Take, isFirst: Bool = false) -> some View {
         // Swipe actions (2026-06-16): swipe LEFT → Delete (all rows), swipe RIGHT →
         // Mark done (Tasks only — `complete` has no meaning on a plain Note). The
@@ -1148,12 +1191,14 @@ struct DailiesView: View {
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editFocusedBlockID = t.blocks.first?.id
-        // Mark this Take to be revealed once its keyboard is fully up (see the
-        // keyboardDidShow handler). Scrolling AFTER the keyboard settles — against the
-        // keyboard-reduced viewport — lands it at the same anchor every time, instead of
-        // racing iOS keyboard avoidance (which made the rest position vary run-to-run:
-        // nice / half-behind the keyboard / sliding up — owner 2026-06-18).
-        scrollToTakeID = take.id
+        // EXPERIMENT (owner 2026-06-22): the new-Take reveal scroll is DISABLED. When the
+        // timeline was scrolled to the far end from where the new Take inserts (e.g. top,
+        // under Oldest-first → new Take lands at the bottom), this long-distance reveal
+        // landed in the blank edit-room and left a blank screen. Disabling it leans purely
+        // on the caret-pin (keyboardDidShow → pinCaret) to bring the focused new Take into
+        // its band — the SAME mechanism that already positions an edited existing Take.
+        // Left in place for existing-Take editing (`beginInlineEdit`), only skipped here.
+        //   scrollToTakeID = take.id   // ← disabled for this experiment
         // Insert the row COLLAPSED (bloom 0.3 → scale 0.92) as the rest masks back, then
         // bloom it in explicitly so the "appear" is visible wherever it lands (owner
         // 2026-06-17 — should feel organic; LazyVStack swallows insertion transitions).
@@ -1195,6 +1240,10 @@ struct DailiesView: View {
     /// Only pulls the caret UP (never forces a high caret down), so a short Take keeps
     /// its natural rest position; clamped so it can't overscroll past the content.
     private func pinCaret(_ caretRect: CGRect) {
+        // The NEW Take rides the keyboard via `newTakeFocusCard`, not the timeline scroll —
+        // so don't pin/scroll the (masked) timeline for it (owner 2026-06-22). Existing-Take
+        // editing is unaffected: `inlineNewTake` is nil then, so this is a no-op for it.
+        guard inlineNewTake == nil else { return }
         // Only act while the keyboard is actually UP — otherwise the focus-time report
         // (keyboard still down) could spuriously scroll.
         guard ui.isEditingInPlace, let sv = caretScrollView,
@@ -1491,8 +1540,10 @@ struct DailiesView: View {
     /// Order-appropriate end — bottom for Oldest-first, top for Newest-first — both at
     /// rest and while editing it.
     private var displayedTakes: [Take] {
-        guard let newTake = inlineNewTake else { return filteredTakes }
-        return takeSort == .oldestFirst ? filteredTakes + [newTake] : [newTake] + filteredTakes
+        // The new Take is NO LONGER injected as a row (owner 2026-06-22) — it renders in the
+        // keyboard-anchored `newTakeFocusCard`, which removes the fragile "scroll to an
+        // off-screen far row" path entirely. It joins the timeline list only once saved.
+        filteredTakes
     }
 
     // MARK: - Month grouping
