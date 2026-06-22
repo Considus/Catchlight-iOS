@@ -118,6 +118,11 @@ struct DailiesView: View {
     /// through the same `vm.save` chokepoint the top-anchored editor uses.
     @State private var editDraft: Take?
     @State private var editFocusedBlockID: UUID?
+    /// Timeline scroll offset captured when an EXISTING-Take edit opens, restored on close
+    /// so finishing an edit never leaves the timeline drifted from whatever the caret-pin
+    /// scrolled in between (owner 2026-06-22). nil when not editing; never set for new Takes
+    /// (they use the keyboard-anchored card, not a timeline scroll).
+    @State private var preEditScrollOffset: CGFloat?
     /// Drives the "Make this your Obie?" confirmation when the Focus ring turns Obie
     /// on (inline) while another Obie already exists — the same warning the timeline
     /// long-press uses, but targeting the draft (owner 2026-06-17).
@@ -307,6 +312,7 @@ struct DailiesView: View {
             // its own solid backing + fade; scrolling Takes pass behind it and dissolve.
             // Drawn after the heading so it owns its hit region (the heading is inert).
             pinnedObie
+
         }
         .background {
             // Capture the layout width (NOT UIScreen) so spineX matches the
@@ -822,7 +828,12 @@ struct DailiesView: View {
                 // owner 2026-06-16). The chosen `gap` minus the 12pt each row already
                 // carries gives the visible card-to-card distance, sized so a lower
                 // card's Iris (straddling its top edge) never overlaps the card above.
-                LazyVStack(alignment: .leading, spacing: interCardSpacing) {
+                // EXPERIMENT (owner 2026-06-22): VStack (eager), not LazyVStack — every row
+                // is always built so the content height is exact and rows never get dropped
+                // mid-edit. This is the suspected cure for the edit-exit blank (lazy rows not
+                // rebuilding at the restored position). Watch scroll performance on a long
+                // timeline; revert to LazyVStack if it lags.
+                VStack(alignment: .leading, spacing: interCardSpacing) {
                     // The Obie is no longer here — it's a STATIC pinned header now
                     // (owner 2026-06-16; see `heading`). The scrolling list below is
                     // the non-Obie Takes only, which scroll up and under the pinned Obie.
@@ -980,6 +991,15 @@ struct DailiesView: View {
             //    order) and could re-drop the card. We only clear the one-shot target.
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
                 scrollToTakeID = nil
+            }
+            // Edit-exit scroll restore (owner 2026-06-22): once the keyboard is FULLY gone —
+            // so iOS is no longer driving the scroll view and can't override us — return the
+            // timeline to exactly where it was when the edit opened, undoing whatever the
+            // caret-pin scrolled. Reliable now the eager VStack gives exact content heights
+            // (it was the LazyVStack's estimate-based heights — rows left un-built — that
+            // caused the intermittent blank). No-ops unless an existing-Take edit truly ended.
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
+                restorePreEditScroll()
             }
             // Track the keyboard's top edge (incl. its docked toolbar) so the
             // caret-follow gate knows when the caret is about to slip behind it.
@@ -1171,6 +1191,9 @@ struct DailiesView: View {
     private func beginInlineEdit(_ take: Take) {
         // Task 6.20: editing is gated for lapsed users — paywall opens instead.
         guard app.ensureEntitled() else { return }
+        // Snapshot where the timeline is RIGHT NOW (before the reveal/caret-pin move it),
+        // so closing this edit returns to exactly here (owner 2026-06-22).
+        preEditScrollOffset = caretScrollView?.contentOffset.y
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editDraft = t
@@ -1280,6 +1303,30 @@ struct DailiesView: View {
         editFocusedBlockID = nil
         editDraft = nil
         ui.endEditingInPlace()
+    }
+
+    /// Return the timeline to the offset captured when this edit opened (owner 2026-06-22),
+    /// undoing whatever the caret-pin scrolled while editing — so finishing an edit never
+    /// leaves the timeline drifted (e.g. a trailing short Take shoved above the heading fade).
+    ///
+    /// Called from `keyboardDidHide`, so the keyboard is gone and the mask/scroll-room collapse
+    /// has settled — and with the eager VStack the content height is exact, so the precise
+    /// contentOffset set sticks. Fires ONLY on a true exit: a Focus-ring / reminder-picker
+    /// excursion also lowers the keyboard mid-edit (editingTakeID stays set), and restoring
+    /// then would yank the timeline out from under the still-open editor — the snapshot is kept
+    /// for the real exit. iOS returns the scroll itself on keyboard hide (Newest-first reads
+    /// perfectly), so we only step in when it left the timeline drifted, and glide there. The
+    /// caret-pin is untouched; this only brackets it.
+    private func restorePreEditScroll() {
+        guard !ui.isEditingInPlace, let y = preEditScrollOffset else { return }
+        preEditScrollOffset = nil
+        guard let sv = caretScrollView else { return }
+        let minOffset = -sv.adjustedContentInset.top
+        let maxOffset = max(minOffset,
+                            sv.contentSize.height - sv.bounds.height + sv.adjustedContentInset.bottom)
+        let target = min(max(y, minOffset), maxOffset)
+        guard abs(sv.contentOffset.y - target) > 20 else { return }
+        sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: target), animated: true)
     }
 
     /// Delete a Take from ANY entry point (swipe, context menu, recurring "Delete series"),
