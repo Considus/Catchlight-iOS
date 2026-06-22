@@ -143,6 +143,29 @@ final class DailiesViewModel {
         }
     }
 
+    /// Bulk-insert imported Takes (owner 2026-06-22). Unlike `save`, this does NOT
+    /// bump `modifiedAt` — the importer set `createdAt`/`modifiedAt` from the file so
+    /// the note slots into the timeline by when it was written — and it reloads ONCE
+    /// for the whole batch. Returns how many were inserted. New ids ⇒ never overwrites
+    /// existing Takes; the next sync pass pushes them out like any local edit.
+    @discardableResult
+    func importTakes(_ takes: [Take]) -> Int {
+        var inserted = 0
+        for take in takes {
+            var t = take
+            t.normaliseActivityFloor()
+            do {
+                try store.upsert(t)
+                spotlight.index(t)
+                inserted += 1
+            } catch {
+                lastError = "Couldn't import one of the notes."
+            }
+        }
+        if inserted > 0 { reload() }
+        return inserted
+    }
+
     func delete(_ take: Take) {
         do {
             try store.delete(id: take.id)
