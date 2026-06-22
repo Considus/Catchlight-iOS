@@ -182,6 +182,9 @@ struct CloudStorageView: View {
                 .accessibilityHint("Run a sync pass now.")
             }
         }
+        // Nudge the Sync selector down one row from the URL section above it
+        // (owner 2026-06-22).
+        .padding(.top, 16)
     }
 
     private var syncMode: SettingsViewModel.SyncMode {
