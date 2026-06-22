@@ -549,7 +549,7 @@ struct SettingsView: View {
     /// reporting, a prefilled mail to support is our only inbound signal.
     private var supportSection: some View {
         Section {
-            SettingsRow(icon: "envelope",
+            SettingsRow(icon: "ladybug",
                         label: "Report an issue",
                         chevron: false,
                         action: { reportAnIssue() })
