@@ -364,11 +364,36 @@ struct TakeCardSurface: View {
         return dynamicSize.isAccessibilitySize ? max(base, 4) : base
     }
 
+    /// The Take body as plain text (placeholder when empty).
+    private var bodyText: String {
+        let raw = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return raw.isEmpty ? "Untitled Take" : raw
+    }
+
+    /// Detected links in the body (schemed, `www.`, or bare domains with an assumed
+    /// `https://` — see `LinkDetector`).
+    private var bodyLinks: [LinkDetector.Match] { LinkDetector.detect(in: bodyText) }
+
+    /// Whether to add breathing room between body lines. With 2+ links, stacked link
+    /// lines sit only a line-height apart and are easy to mis-tap, so we open the
+    /// spacing up; single-link / plain Takes keep their normal density (owner 2026-06-22).
+    private var bodyNeedsLinkSpacing: Bool { bodyLinks.count >= 2 }
+
     /// The full Take body shown on the card — the `lineLimit` (driven by the
-    /// "Preview" setting) decides how much is visible.
-    private var displayBody: String {
-        let text = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return text.isEmpty ? "Untitled Take" : text
+    /// "Preview" setting) decides how much is visible. URLs render as tappable accent
+    /// links; the base colour is the Take's body tone (done greys, etc.), carried on
+    /// the AttributedString so the link runs can override it.
+    private var displayBody: AttributedString {
+        var attr = AttributedString(bodyText)
+        attr.foregroundColor = style.bodyText
+        for match in bodyLinks {
+            guard let lo = AttributedString.Index(match.range.lowerBound, within: attr),
+                  let hi = AttributedString.Index(match.range.upperBound, within: attr) else { continue }
+            attr[lo..<hi].link = match.url
+            attr[lo..<hi].foregroundColor = .ckAccent
+            attr[lo..<hi].underlineStyle = .single
+        }
+        return attr
     }
 
     /// The "0 of 1 / 3 of 5 completed" progress marker, or nil (non-Tasks show
@@ -443,7 +468,12 @@ struct TakeCardSurface: View {
                 // DM Sans 14 (.tt) — Take content is never the display face
                 // (DS §2.2 / D-042). Was Cormorant display 20 italic.
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
-                .foregroundStyle(style.bodyText)
+                // Body + link colours are carried on the AttributedString (`displayBody`)
+                // so detected URLs render accent; `.tint` colours the link's tap state.
+                .tint(.ckAccent)
+                // Open the line spacing up only when stacked links would otherwise be
+                // hard to tap apart (owner 2026-06-22).
+                .lineSpacing(bodyNeedsLinkSpacing ? 8 : 0)
                 // Body length follows the "Preview" setting (Single 1 / Some 3 /
                 // All = unlimited), with a 4-line floor at accessibility text sizes.
                 .lineLimit(bodyLineLimit)
