@@ -911,6 +911,15 @@ struct DailiesView: View {
                             .onTapGesture { ui.exitToResting() }
                             .accessibilityLabel("Clear filters")
                             .accessibilityHint("Double-tap the timeline background to clear all filters.")
+                    } else if ui.dockMode == .searching {
+                        // Tapping empty timeline space exits search entirely (owner
+                        // 2026-06-22). Row taps still open that Take for editing; this
+                        // only catches the gaps, so search is easy to back out of.
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { ui.exitToResting() }
+                            .accessibilityLabel("Close search")
+                            .accessibilityHint("Double-tap the timeline background to close search.")
                     }
                 }
               }   // VStack(spacing: 0)

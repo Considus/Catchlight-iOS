@@ -168,6 +168,34 @@ final class DockFilterStateTests: XCTestCase {
         XCTAssertTrue(ui.activeTimelineFilter.isEmpty)
     }
 
+    /// exitToResting also lowers the search keyboard flag — leaving it raised let the
+    /// KeyboardSearchBar reconcile fight the keyboard (owner 2026-06-22 bug).
+    func testExitToResting_lowersSearchKeyboardFlag() {
+        let ui = UIState()
+        ui.enterSearching()
+        XCTAssertTrue(ui.searchKeyboardUp)
+
+        ui.exitToResting()
+        XCTAssertFalse(ui.searchKeyboardUp)
+    }
+
+    /// Opening a Take to edit while searching exits search first, so the editor's
+    /// keyboard toolbar and the search bar never contend (owner 2026-06-22 bug).
+    func testBeginEditingInPlace_whileSearching_exitsSearch() {
+        let ui = UIState()
+        ui.enterSearching()
+        XCTAssertEqual(ui.dockMode, .searching)
+        XCTAssertTrue(ui.searchKeyboardUp)
+
+        let take = Take(createdAt: Date(), modifiedAt: Date(),
+                        blocks: [.textLine("find me")], isNote: true)
+        ui.beginEditingInPlace(take)
+
+        XCTAssertEqual(ui.dockMode, .resting, "search must be exited before editing")
+        XCTAssertFalse(ui.searchKeyboardUp)
+        XCTAssertEqual(ui.editingTakeID, take.id)
+    }
+
     // MARK: - State → SequenceFilter mapping
 
     func testActiveTimelineFilter_mapsDockStateToSequenceFilter() {
