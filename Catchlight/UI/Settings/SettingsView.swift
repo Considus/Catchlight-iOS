@@ -665,7 +665,7 @@ struct SettingsView: View {
         let imported = app.dailiesVM.importTakes(outcome.takes)
 
         guard imported > 0 else {
-            importResultMessage = "No .md, .txt or .rtf files found in the Import folder."
+            importResultMessage = "No recognised markdown or text files found in the Import folder."
             return
         }
         let noun = imported == 1 ? "Take" : "Takes"
