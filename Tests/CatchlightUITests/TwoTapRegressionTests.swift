@@ -54,10 +54,13 @@ final class TwoTapRegressionTests: XCTestCase {
         XCTAssertTrue(app.buttons["angle-tab"].waitForExistence(timeout: 3))
         // The most-violated invariant historically — Settings keeps trying to
         // grow its own tab, which would push it OFF the two-tap path.
+        // `settings-sheet` is the structural marker — the "Settings" title scrolls
+        // with the list now (owner 2026-06-22), so the nav bar is gone.
         assertReachableInOneInteraction(
             "Settings",
             interaction: { swipeUpWhenReady(app.buttons["angle-tab"]) },
-            expectedElement: app.navigationBars["Settings"]
+            expectedElement: app.descendants(matching: .any)
+                .matching(identifier: "settings-sheet").firstMatch
         )
     }
 
