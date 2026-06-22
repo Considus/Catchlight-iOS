@@ -364,32 +364,23 @@ struct TakeCardSurface: View {
         return dynamicSize.isAccessibilitySize ? max(base, 4) : base
     }
 
-    /// `NSDataDetector` init is one of Foundation's pricier allocations and the body
-    /// re-renders constantly, so cache the link detector once (owner 2026-06-22).
-    private static let linkDetector = try? NSDataDetector(
-        types: NSTextCheckingResult.CheckingType.link.rawValue)
-
     /// The full Take body shown on the card — the `lineLimit` (driven by the
-    /// "Preview" setting) decides how much is visible. URLs are detected and rendered
-    /// as tappable accent links (owner 2026-06-22). The base colour is the Take's body
-    /// tone (done greys, etc.), carried on the AttributedString so the link runs can
-    /// override it; the link runs open in the browser via SwiftUI's `openURL`.
+    /// "Preview" setting) decides how much is visible. URLs are detected (schemed,
+    /// `www.`, or bare domains with an assumed `https://` — see `LinkDetector`) and
+    /// rendered as tappable accent links (owner 2026-06-22). The base colour is the
+    /// Take's body tone (done greys, etc.), carried on the AttributedString so the
+    /// link runs can override it; the link runs open in the browser via `openURL`.
     private var displayBody: AttributedString {
         let raw = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
         let text = raw.isEmpty ? "Untitled Take" : raw
         var attr = AttributedString(text)
         attr.foregroundColor = style.bodyText
-        if let detector = Self.linkDetector {
-            let ns = text as NSString
-            for m in detector.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
-                guard let url = m.url,
-                      let r = Range(m.range, in: text),
-                      let lo = AttributedString.Index(r.lowerBound, within: attr),
-                      let hi = AttributedString.Index(r.upperBound, within: attr) else { continue }
-                attr[lo..<hi].link = url
-                attr[lo..<hi].foregroundColor = .ckAccent
-                attr[lo..<hi].underlineStyle = .single
-            }
+        for match in LinkDetector.detect(in: text) {
+            guard let lo = AttributedString.Index(match.range.lowerBound, within: attr),
+                  let hi = AttributedString.Index(match.range.upperBound, within: attr) else { continue }
+            attr[lo..<hi].link = match.url
+            attr[lo..<hi].foregroundColor = .ckAccent
+            attr[lo..<hi].underlineStyle = .single
         }
         return attr
     }
