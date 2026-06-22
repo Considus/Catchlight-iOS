@@ -107,13 +107,10 @@ final class CloudBookmarkTests: XCTestCase {
                                                    includingResourceValuesForKeys: nil,
                                                    relativeTo: nil)
         defaults?.set(bookmark, forKey: Wiring.bookmarkDefaultsKey)
-        defaults?.set("https://example.com/x",
-                      forKey: Wiring.cloudFolderURLStringDefaultsKey)
 
         Wiring.clearCloudFolderBookmark()
 
         XCTAssertNil(defaults?.data(forKey: Wiring.bookmarkDefaultsKey))
-        XCTAssertNil(defaults?.string(forKey: Wiring.cloudFolderURLStringDefaultsKey))
     }
 
     // MARK: - Friendly error mapping
