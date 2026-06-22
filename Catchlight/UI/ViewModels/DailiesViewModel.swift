@@ -278,6 +278,28 @@ final class DailiesViewModel {
     /// top it up whenever the app opens — keeping the next batch always pending. Reads
     /// the store directly (authoritative, includes the Obie); safe to call only once the
     /// store is unlocked. Best-effort: a load failure leaves existing alarms intact.
+    /// Apply any reminder "Dismiss" taps made while the store was locked (owner 2026-06-22).
+    /// Dismiss stops the CURRENT instance only: for a ONE-SHOT that means turning its alarm
+    /// off (persisted here, now the key is available); for a RECURRING reminder it means
+    /// leaving the series entirely alone, so future occurrences keep firing. The tap already
+    /// cancelled the fired instance's OS alarm; the recurring window was never touched.
+    ///
+    /// MUST run BEFORE `refreshRecurringSchedules()` on unlock so a one-shot turned off here
+    /// isn't re-armed by the rebuild. Saving cancels-and-reconciles the notification (a no-op
+    /// re-schedule, since the alarm is now off) and reloads. No-op when the queue is empty;
+    /// skips ids whose Take/reminder has gone, whose alarm is already off, or that REPEAT.
+    func applyPendingReminderActions() {
+        for id in PendingReminderActions.drainDismissedIDs() {
+            guard let take = try? store.take(id: id),
+                  let reminder = take.timeReminder,
+                  reminder.alarmEnabled,
+                  !reminder.repeats else { continue }
+            var updated = take
+            updated.timeReminder?.alarmEnabled = false
+            save(updated)
+        }
+    }
+
     func refreshRecurringSchedules() {
         guard let all = try? store.allTakes() else { return }
         // Global rebuild (owner 2026-06-21): re-arms recurring windows AND keeps the whole
