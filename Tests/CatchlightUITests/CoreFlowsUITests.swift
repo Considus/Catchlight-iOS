@@ -264,18 +264,21 @@ final class CoreFlowsUITests: XCTestCase {
         let dailiesTab = app.buttons["angle-tab"]
         XCTAssertTrue(dailiesTab.waitForExistence(timeout: 3))
 
+        // The "Settings" title now scrolls with the list (owner 2026-06-22), so the
+        // nav bar is gone — the `settings-sheet` identifier on the List is the
+        // structural marker now. Copy-independent, so a title tweak doesn't churn
+        // this test.
+        let settingsSheet = app.descendants(matching: .any)
+            .matching(identifier: "settings-sheet").firstMatch
         assertReachableInOneInteraction(
             "Flow 6: Settings",
             interaction: { dailiesTab.swipeUp() },
-            expectedElement: app.navigationBars["Settings"]
+            expectedElement: settingsSheet
         )
 
-        // Sanity: the navigation bar's title is the structural marker. We don't
-        // pin to any specific row label here so a copy tweak doesn't churn this
-        // test — presence of the "Settings" nav bar is the assertion.
         XCTAssertTrue(
-            app.navigationBars["Settings"].isHittable,
-            "Settings sheet appeared but is not hittable"
+            settingsSheet.exists,
+            "Settings sheet appeared but is not present"
         )
     }
 }

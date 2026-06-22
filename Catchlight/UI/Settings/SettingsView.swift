@@ -49,6 +49,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                titleRow
                 appearanceSection
                 remindersSection
                 securitySection
@@ -69,15 +70,11 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
             .background(Color.ckBackground)
             .accessibilityIdentifier("settings-sheet")
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Settings")
-                        .font(CatchlightFont.ui(.light, size: 22, relativeTo: .title3))
-                        .foregroundStyle(Color.ckTextPrimary)
-                }
-            }
+            // The "Settings" title scrolls with the list now (owner 2026-06-21) —
+            // it lives in `titleRow` instead of a pinned nav bar, so it gets out of
+            // the way on scroll. Hide the nav bar entirely (no collapsed inline
+            // title left behind).
+            .toolbar(.hidden, for: .navigationBar)
         }
         // The sheet owns its colour scheme directly (owner 2026-06-19): an already-
         // presented sheet doesn't reliably re-follow the app-level preferredColorScheme,
@@ -185,6 +182,21 @@ struct SettingsView: View {
         }
     }
     #endif
+
+    // MARK: - Title (scrolls with the list)
+
+    /// The "Settings" heading as a scrolling list row (owner 2026-06-21) — clear
+    /// background, no section chrome, so it reads as a title and scrolls away.
+    private var titleRow: some View {
+        Text("Settings")
+            .font(CatchlightFont.ui(.light, size: 28, relativeTo: .title))
+            .foregroundStyle(Color.ckTextPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 4, trailing: 20))
+            .listRowSeparator(.hidden)
+            .accessibilityAddTraits(.isHeader)
+    }
 
     // MARK: - Appearance
 
