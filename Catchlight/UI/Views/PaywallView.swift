@@ -64,11 +64,15 @@ struct PaywallView: View {
                         Spacer(minLength: 20)
                         pricingLine
                         primaryCTA
-                        Spacer(minLength: 28)
+                        // Owner 2026-06-21: one row less space below the button, and a
+                        // trailing spacer so the auto-renews note and everything below
+                        // lift up off the bottom a little rather than pinning there.
+                        Spacer(minLength: 14)
                         renewalCopy
                             .padding(.vertical, 6)
                         secondaryActions
                         legalBlock
+                        Spacer(minLength: 14)
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 26)   // standard heading line (HiFi v1.11.3)
@@ -215,14 +219,9 @@ struct PaywallView: View {
         .accessibilityIdentifier("paywall-subscribe")
     }
 
-    private var ctaText: String {
-        // Owner-locked CTA copy (HiFi v1.11.1): "Start your 14-day free trial".
-        // The adjectival variant keeps the duration live from StoreKit.
-        if manager.isEligibleForIntroOffer, let trial = manager.trialDurationAdjectiveCopy {
-            return "Start your \(trial) free trial"
-        }
-        return manager.annual.map { "Subscribe — \($0.displayPrice)/year" } ?? "Subscribe"
-    }
+    // Owner 2026-06-21: the button is just "Subscribe now" — the trial + price
+    // detail already lives in the Cormorant price line directly above it.
+    private var ctaText: String { "Subscribe now" }
 
     private var secondaryActions: some View {
         VStack(spacing: 12) {
