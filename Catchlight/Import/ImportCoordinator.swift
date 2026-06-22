@@ -16,6 +16,7 @@
 //
 
 import Foundation
+import UIKit
 import CatchlightCore
 
 @MainActor
@@ -24,7 +25,9 @@ enum ImportCoordinator {
     /// The fixed subfolder, inside the sync folder, the user drops files into.
     static let importFolderName = "Import"
 
-    private static let importableExtensions: Set<String> = ["md", "markdown", "txt", "text"]
+    // `.rtf` (TextEdit's default) is read as PLAIN TEXT — its formatting is stripped
+    // via NSAttributedString so only the words come through (owner 2026-06-22).
+    private static let importableExtensions: Set<String> = ["md", "markdown", "txt", "text", "rtf"]
 
     struct Outcome {
         /// Parsed Takes, ready for `DailiesViewModel.importTakes`.
@@ -68,8 +71,7 @@ enum ImportCoordinator {
         var takes: [Take] = []
         var skipped = 0
         for url in files {
-            guard let data = try? Data(contentsOf: url),
-                  let content = String(data: data, encoding: .utf8) else {
+            guard let content = plainText(of: url) else {
                 skipped += 1
                 continue
             }
@@ -82,5 +84,20 @@ enum ImportCoordinator {
             }
         }
         return Outcome(takes: takes, filesScanned: files.count, skipped: skipped)
+    }
+
+    /// Read a file as plain text. `.rtf` is decoded through NSAttributedString so the
+    /// RTF control words never reach the Take (just the words); everything else is read
+    /// as UTF-8. Returns nil for unreadable / non-decodable content (the caller skips it).
+    private static func plainText(of url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        if url.pathExtension.lowercased() == "rtf" {
+            let attributed = try? NSAttributedString(
+                data: data,
+                options: [.documentType: NSAttributedString.DocumentType.rtf],
+                documentAttributes: nil)
+            return attributed?.string
+        }
+        return String(data: data, encoding: .utf8)
     }
 }

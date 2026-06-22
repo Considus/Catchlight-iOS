@@ -559,7 +559,7 @@ struct SettingsView: View {
                         chevron: false,
                         action: { importNotes() })
                 .accessibilityIdentifier("settings-import-notes")
-                .accessibilityHint("Import .md or .txt files from the Import folder of your sync location as new Takes.")
+                .accessibilityHint("Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes.")
             SettingsRow(icon: "info.circle",
                         label: "About",
                         chevron: true,
@@ -665,7 +665,7 @@ struct SettingsView: View {
         let imported = app.dailiesVM.importTakes(outcome.takes)
 
         guard imported > 0 else {
-            importResultMessage = "No .md or .txt files found in the Import folder."
+            importResultMessage = "No .md, .txt or .rtf files found in the Import folder."
             return
         }
         let noun = imported == 1 ? "Take" : "Takes"
