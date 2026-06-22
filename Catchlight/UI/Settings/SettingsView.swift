@@ -669,12 +669,12 @@ struct SettingsView: View {
             return
         }
         let noun = imported == 1 ? "Take" : "Takes"
-        let message = "Import successful — \(imported) \(noun) added to your timeline."
-        importResultMessage = message
+        importResultMessage = "Import successful. \(imported) \(noun) added to your timeline."
         // The auto-created summary Take (owner 2026-06-22) — a persistent record in the
-        // timeline, dated now so it lands at the recent end.
+        // timeline, dated now so it lands at the recent end. Terser than the alert.
+        let takeMessage = "Import successful. \(imported) \(noun) added."
         app.dailiesVM.importTakes([
-            Take(createdAt: Date(), modifiedAt: Date(), blocks: [.textLine(message)], isNote: true)
+            Take(createdAt: Date(), modifiedAt: Date(), blocks: [.textLine(takeMessage)], isNote: true)
         ])
     }
 
