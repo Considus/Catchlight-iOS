@@ -24,9 +24,10 @@ enum Wiring {
     /// Internal so Settings → Cloud Storage (Task 3.12) writes to the SAME key
     /// the background sync engine reads from below.
     static let bookmarkDefaultsKey = "catchlight.cloudFolderBookmark"
-    /// Fallback URL-string slot used when the user pastes a folder URL instead
-    /// of picking through `UIDocumentPickerViewController` (Task 3.12).
-    static let cloudFolderURLStringDefaultsKey = "catchlight.cloudFolderURLString"
+    /// Legacy paste-a-URL slot, retired 2026-06-22 (a typed path can never gain
+    /// iOS write access — only iCloud + Dropbox folder-picks work). Kept private
+    /// solely to purge any value an earlier build persisted; nothing reads it.
+    private static let legacyCloudFolderURLStringKey = "catchlight.cloudFolderURLString"
     private static let deviceIdDefaultsKey = "catchlight.deviceId"
 
     /// Task 6.13 — resolve a persisted folder bookmark to a URL while surfacing
@@ -54,7 +55,7 @@ enum Wiring {
     static func clearCloudFolderBookmark() {
         let defaults = UserDefaults(suiteName: AppGroup.identifier)
         defaults?.removeObject(forKey: bookmarkDefaultsKey)
-        defaults?.removeObject(forKey: cloudFolderURLStringDefaultsKey)
+        defaults?.removeObject(forKey: legacyCloudFolderURLStringKey)
     }
 
     /// Structured cloud-bookmark error so the UI layer can map to a user-
@@ -280,49 +281,22 @@ enum Wiring {
         return SyncEngine(store: store, cloud: cloud, keys: keys, deviceId: deviceId())
     }
 
-    /// Resolve the configured cloud folder: the security-scoped bookmark
-    /// (preferred, set via "Choose Folder") or the pasted-URL fallback slot.
-    /// The URL slot previously was written by Settings but NEVER read by
-    /// anything — users who pasted a URL believed sync was configured while the
-    /// app silently ran local-only.
+    /// Resolve the configured cloud folder from the security-scoped bookmark set
+    /// via "Choose folder from Files". (The paste-a-URL fallback was removed
+    /// 2026-06-22 — a typed path can never gain iOS write access, so it only ever
+    /// ran local-only while appearing configured.)
     private static func makeCloudFolder() -> FileCloudFolder? {
         let defaults = UserDefaults(suiteName: AppGroup.identifier)
-        if let bookmark = defaults?.data(forKey: bookmarkDefaultsKey),
-           let cloud = try? FileCloudFolder(bookmark: bookmark) {
-            // The OS flagged the bookmark stale: re-mint and re-persist so
-            // access doesn't silently degrade later.
-            if cloud.bookmarkWasStale,
-               let fresh = try? FileCloudFolder.makeBookmark(for: cloud.folderURL) {
-                defaults?.set(fresh, forKey: bookmarkDefaultsKey)
-            }
-            return cloud
-        }
-        if let raw = defaults?.string(forKey: cloudFolderURLStringDefaultsKey),
-           let url = usableFolderURL(from: raw) {
-            return FileCloudFolder(folderURL: url)
-        }
-        return nil
-    }
-
-    /// Accepts a `file://` URL or a plain path, and requires it to be an
-    /// existing, readable directory from this sandbox. Shared by
-    /// CloudStorageView (validation at save time) and `makeCloudFolder`
-    /// (validation at engine construction).
-    static func usableFolderURL(from raw: String) -> URL? {
-        let url: URL
-        if let parsed = URL(string: raw), parsed.isFileURL {
-            url = parsed
-        } else if raw.hasPrefix("/") {
-            url = URL(fileURLWithPath: raw, isDirectory: true)
-        } else {
+        guard let bookmark = defaults?.data(forKey: bookmarkDefaultsKey),
+              let cloud = try? FileCloudFolder(bookmark: bookmark) else {
             return nil
         }
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
-              isDirectory.boolValue,
-              FileManager.default.isReadableFile(atPath: url.path) else {
-            return nil
+        // The OS flagged the bookmark stale: re-mint and re-persist so access
+        // doesn't silently degrade later.
+        if cloud.bookmarkWasStale,
+           let fresh = try? FileCloudFolder.makeBookmark(for: cloud.folderURL) {
+            defaults?.set(fresh, forKey: bookmarkDefaultsKey)
         }
-        return url
+        return cloud
     }
 }

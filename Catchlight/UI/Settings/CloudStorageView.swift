@@ -5,16 +5,17 @@
 //  Settings → Sync → Cloud Storage.
 //
 //  Lets the user point Catchlight at a folder where encrypted Takes will sync.
-//  Two paths, both always visible:
-//    1. Pick a folder from Files (UIDocumentPickerViewController scoped to
-//       UTType.folder). Persisted as a security-scoped bookmark under the
-//       SAME UserDefaults key (`catchlight.cloudFolderBookmark`) that
-//       `Wiring.makeSyncEngine` and `FileCloudFolder(bookmark:)` already
-//       resolve at sync time.
-//    2. Paste a URL — fallback for NAS / Proton Drive / any provider that
-//       isn't surfaced through Files. Persisted under
-//       `catchlight.cloudFolderURLString` so BackgroundSync can pick it up
-//       once URL-mode sync lands (Task 6.13).
+//  ONE path: pick a folder from Files (UIDocumentPickerViewController scoped to
+//  UTType.folder). Persisted as a security-scoped bookmark under the
+//  `catchlight.cloudFolderBookmark` UserDefaults key that `Wiring.makeSyncEngine`
+//  and `FileCloudFolder(bookmark:)` resolve at sync time.
+//
+//  Supported providers = iCloud Drive + Dropbox only (device-verified
+//  2026-06-22): folder-in-place selection requires NSFileProviderReplicatedExtension,
+//  which only those two implement — every other cloud greys out in the picker.
+//  The paste-a-URL fallback was removed 2026-06-22; a typed path can never gain
+//  iOS write access (the grant must come through the picker), so it only ever
+//  failed. See 03_Engineering/Cloud_Provider_Sync_Compatibility.md.
 //
 //  This view does NOT perform iCloud sync — it only configures the destination.
 //
@@ -30,7 +31,6 @@ struct CloudStorageView: View {
 
     @State private var pickerPresented = false
     @State private var folderDisplayPath: String? = Self.currentFolderDisplayPath()
-    @State private var folderURLString: String = Self.currentFolderURLString()
     @State private var errorText: String?
     /// Transient "Syncing…" feedback after a manual Sync Now (owner 2026-06-21).
     @State private var syncFeedback: String?
@@ -47,13 +47,15 @@ struct CloudStorageView: View {
             // ScrollView. No Done button either; dismiss by swiping down (the drag
             // indicator shows the affordance), matching About.
             VStack(alignment: .leading, spacing: 24) {
-                header
+                hero
+
+                intro
 
                 pickerSection
 
-                divider
+                finePrint
 
-                urlSection
+                divider
 
                 syncModeSection
 
@@ -61,17 +63,19 @@ struct CloudStorageView: View {
                     Text(errorText)
                         .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                         .foregroundStyle(Color.ckRuby)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 22)
             .padding(.top, 16)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
-            .navigationTitle("Cloud Storage")
-            .navigationBarTitleDisplayMode(.inline)
+            // Title moved into the body as a centred hero (owner 2026-06-22),
+            // with the cloud glyph above it — so the nav bar is left clean.
+            .toolbar(.hidden, for: .navigationBar)
         }
         .presentationDragIndicator(.visible)
         .sheet(isPresented: $pickerPresented) {
@@ -84,22 +88,50 @@ struct CloudStorageView: View {
 
     // MARK: - Sections
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Choose where your encrypted Takes are stored.")
+    /// Centred cloud glyph above the screen's "Cloud Storage" title.
+    private var hero: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "icloud")
+                .font(.system(size: 34, weight: .light))
+                .foregroundStyle(Color.ckAccent)
+                .accessibilityHidden(true)
+
+            Text("Cloud Storage")
+                .font(CatchlightFont.ui(.medium, size: 20, relativeTo: .title3))
+                .foregroundStyle(Color.ckTextPrimary)
+                .accessibilityAddTraits(.isHeader)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.top, 4)
+    }
+
+    /// Two-line instruction with deliberate breathing room between each line
+    /// (owner 2026-06-22), plus the privacy reassurance underneath.
+    private var intro: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Choose from iCloud Drive or Dropbox.")
                 .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
                 .foregroundStyle(Color.ckTextPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 18)   // 1 line break after "Choose from…"
+
+            Text("Select an empty folder, or create a new one, and we'll take care of the rest.")
+                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                .foregroundStyle(Color.ckTextPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 18)   // 1 line break after "Select an empty…"
+
             Text("Catchlight never sees your files — only you can read them.")
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(.top, 36)   // 2 extra line breaks below the "Cloud Storage" hero
     }
 
-    // Primary action moved up here, directly above the "or" divider (owner
-    // 2026-06-21): the docked-pill position read as disconnected from the folder
-    // status it controls. Label unchanged ("Choose folder from Files") so the UI
-    // tests' button query still matches; it also serves as the "change" path when
-    // a folder is already set, so the separate "Change folder" action is retired.
+    // Primary action. Label is "Choose folder from Files" (unchanged — the UI
+    // tests' button query matches it); it also serves as the "change" path when a
+    // folder is already set, so a separate "Change folder" action is unnecessary.
     private var pickerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Button { pickerPresented = true } label: {
@@ -123,22 +155,42 @@ struct CloudStorageView: View {
                         .lineLimit(2)
                         .truncationMode(.middle)
                 }
+                .padding(.top, 2)
                 .accessibilityLabel(String(localized: "Current folder: \(folderDisplayPath)"))
 
                 // Remove clears the bookmark and returns the app to local-only mode.
-                Button("Remove") { removeFolder() }
-                    .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
-                    .foregroundStyle(Color.ckRuby)
-                    .accessibilityIdentifier("cloud-remove-folder")
-                    .accessibilityHint("Return to local-only mode.")
+                // Centred under the folder path (owner 2026-06-22).
+                HStack {
+                    Spacer()
+                    Button("Remove") { removeFolder() }
+                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .foregroundStyle(Color.ckRuby)
+                        .accessibilityIdentifier("cloud-remove-folder")
+                        .accessibilityHint("Return to local-only mode.")
+                    Spacer()
+                }
             }
+        }
+    }
+
+    /// Dropbox needs its app present to expose the folder through Files; iCloud is
+    /// always there, so this only matters for the Dropbox path.
+    private var finePrint: some View {
+        HStack(alignment: .top, spacing: 7) {
+            Image(systemName: "info.circle")
+                .font(.system(size: 12))
+                .foregroundStyle(Color.ckTextSecondary)
+                .accessibilityHidden(true)
+            Text("You'll need to have the Dropbox app installed, and signed-in, on your device to access via Catchlight.")
+                .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                .foregroundStyle(Color.ckTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     private func removeFolder() {
         Wiring.clearCloudFolderBookmark()
         folderDisplayPath = nil
-        folderURLString = ""
         errorText = nil
     }
 
@@ -182,9 +234,6 @@ struct CloudStorageView: View {
                 .accessibilityHint("Run a sync pass now.")
             }
         }
-        // Nudge the Sync selector down one row from the URL section above it
-        // (owner 2026-06-22).
-        .padding(.top, 16)
     }
 
     private var syncMode: SettingsViewModel.SyncMode {
@@ -203,10 +252,9 @@ struct CloudStorageView: View {
         }
     }
 
-    /// Whether anything is configured to sync to — a picked folder or a saved URL.
+    /// Whether a sync destination is configured — i.e. a folder has been picked.
     private var hasFolderConfigured: Bool {
         folderDisplayPath != nil
-            || !folderURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// Fire a one-shot manual sync through the shared coordinator. We know it
@@ -221,43 +269,11 @@ struct CloudStorageView: View {
         }
     }
 
+    /// Hairline separator between the destination block and the Sync controls.
     private var divider: some View {
-        HStack {
-            Rectangle().fill(Color.ckTextSecondary.opacity(0.3)).frame(height: 1)
-            Text("or")
-                .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
-                .foregroundStyle(Color.ckTextSecondary)
-                .padding(.horizontal, 10)
-            Rectangle().fill(Color.ckTextSecondary.opacity(0.3)).frame(height: 1)
-        }
-    }
-
-    private var urlSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            TextField("Paste a folder URL…", text: $folderURLString)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .keyboardType(.URL)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.ckSurface)
-                )
-                .onSubmit { commitURLString() }
-
-            Text("Use a URL for NAS, Proton Drive, or any provider not in your Files app.")
-                .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
-                .foregroundStyle(Color.ckTextSecondary)
-
-            HStack {
-                Spacer()
-                Button("Save URL") { commitURLString() }
-                    .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextObie)
-                    .disabled(folderURLString.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-        }
+        Rectangle()
+            .fill(Color.ckTextSecondary.opacity(0.18))
+            .frame(height: 1)
     }
 
     // MARK: - Handlers
@@ -272,24 +288,6 @@ struct CloudStorageView: View {
             errorText = "Couldn't save that folder: \(error.localizedDescription)"
         }
     }
-
-    private func commitURLString() {
-        let trimmed = folderURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        // Validate before persisting (2026-06-10). Previously ANY string was
-        // saved with implicit success while the sync engine never read this key
-        // at all — the user believed sync was configured and the app silently
-        // ran local-only. The engine now consumes this slot (see
-        // Wiring.makeSyncEngine), so reject inputs that can't possibly work:
-        // the URL must point at a folder this app can actually read.
-        guard let url = Wiring.usableFolderURL(from: trimmed) else {
-            errorText = "That location couldn't be opened. For iCloud Drive or other Files-app providers, use \u{201C}Choose Folder\u{201D} instead."
-            return
-        }
-        appGroupDefaults?.set(url.absoluteString, forKey: Wiring.cloudFolderURLStringDefaultsKey)
-        errorText = nil
-    }
-
 
     // MARK: - Display helpers
 
@@ -306,11 +304,6 @@ struct CloudStorageView: View {
             return nil
         }
         return url.path
-    }
-
-    private static func currentFolderURLString() -> String {
-        UserDefaults(suiteName: AppGroup.identifier)?
-            .string(forKey: Wiring.cloudFolderURLStringDefaultsKey) ?? ""
     }
 }
 

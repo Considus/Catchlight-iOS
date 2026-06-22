@@ -2,10 +2,11 @@
 //  CloudStorageSettingsTests.swift
 //  CatchlightCoreTests — Task 3.12
 //
-//  Verifies that Settings → Cloud Storage persists folder bookmarks AND the
-//  URL-string fallback to the same App-Group UserDefaults keys that
-//  Wiring.makeSyncEngine and FileCloudFolder(bookmark:) read at runtime. If
-//  these tests pass, BackgroundSync will pick up the user's choice unchanged.
+//  Verifies that Settings → Cloud Storage persists the folder bookmark to the
+//  same App-Group UserDefaults key that Wiring.makeSyncEngine and
+//  FileCloudFolder(bookmark:) read at runtime. If this passes, BackgroundSync
+//  picks up the user's choice unchanged. (The paste-a-URL fallback and its
+//  defaults key were removed 2026-06-22 — only iCloud + Dropbox folder-picks work.)
 //
 //  Bookmark round-trip is exercised via FileCloudFolder.makeBookmark + the
 //  URL(resolvingBookmarkData:) resolver, mirroring the production path. The
@@ -33,13 +34,6 @@ final class CloudStorageSettingsTests: XCTestCase {
         super.tearDown()
     }
 
-    func test_url_string_round_trips_through_defaults_key() {
-        let url = "smb://nas.local/Catchlight"
-        defaults.set(url, forKey: Wiring.cloudFolderURLStringDefaultsKey)
-        let read = defaults.string(forKey: Wiring.cloudFolderURLStringDefaultsKey)
-        XCTAssertEqual(read, url)
-    }
-
     func test_bookmark_round_trips_via_FileCloudFolder() throws {
         let temp = FileManager.default.temporaryDirectory
             .appendingPathComponent("catchlight-cloudfolder-\(UUID().uuidString)",
@@ -57,12 +51,6 @@ final class CloudStorageSettingsTests: XCTestCase {
                                relativeTo: nil,
                                bookmarkDataIsStale: &stale)
         XCTAssertEqual(resolved.standardizedFileURL, temp.standardizedFileURL)
-    }
-
-    func test_settings_keys_differ() {
-        // Guard against an accidental rename collapsing the two storage slots.
-        XCTAssertNotEqual(Wiring.bookmarkDefaultsKey,
-                          Wiring.cloudFolderURLStringDefaultsKey)
     }
 }
 #endif
