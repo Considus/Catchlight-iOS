@@ -49,34 +49,46 @@ struct PaywallView: View {
         ZStack(alignment: .topTrailing) {
             Color.ckBackground.ignoresSafeArea()
 
-            ScrollView {
-                // Owner 2026-06-21: the CTA moves up into the flow, directly under
-                // the price (its natural conversion spot) — it no longer pins to the
-                // bottom beneath the legal block. Content now flows top-down with even
-                // spacing instead of the old equal-split that marooned the price and
-                // crammed the bottom third.
-                VStack(spacing: 22) {
-                    hero
-                    eyebrow
-                    valueProps
-                    pricingLine
-                        .padding(.top, 8)
-                    primaryCTA
-                    renewalCopy
-                    secondaryActions
-                    legalBlock
+            GeometryReader { geo in
+                ScrollView {
+                    // Owner 2026-06-21: the CTA sits inline under the price (its
+                    // natural conversion spot). Flexible Spacers distribute the
+                    // content down the full height — the price+CTA sit a touch below
+                    // the pitch, the auto-renews note gets breathing room, and the
+                    // renewals / restore / terms block is pushed to the bottom so the
+                    // lower half reads calm rather than clustered or empty.
+                    VStack(spacing: 22) {
+                        hero
+                        eyebrow
+                        valueProps
+                        Spacer(minLength: 20)
+                        pricingLine
+                        primaryCTA
+                        // Owner 2026-06-21: one row less space below the button, and a
+                        // trailing spacer so the auto-renews note and everything below
+                        // lift up off the bottom a little rather than pinning there.
+                        Spacer(minLength: 14)
+                        renewalCopy
+                            .padding(.vertical, 6)
+                        secondaryActions
+                        legalBlock
+                        Spacer(minLength: 14)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 26)   // standard heading line (HiFi v1.11.3)
+                    .padding(.bottom, 24)
+                    .frame(maxWidth: .infinity)
+                    // Fill the viewport so the Spacers distribute; only actually
+                    // scrolls at accessibility text sizes.
+                    .frame(minHeight: geo.size.height)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 26)   // standard heading line (HiFi v1.11.3)
-                .padding(.bottom, 16)
-                .frame(maxWidth: .infinity)
+                // The sheet marker lives on the ScrollView, NOT the container
+                // ZStack (2026-06-10): a container-level accessibilityIdentifier
+                // propagates onto every descendant accessibility element on the
+                // current SwiftUI runtime, which overwrote the dismiss button's
+                // own "paywall-dismiss" identifier and broke the UI tests.
+                .accessibilityIdentifier("paywall-sheet")
             }
-            // The sheet marker lives on the ScrollView, NOT the container
-            // ZStack (2026-06-10): a container-level accessibilityIdentifier
-            // propagates onto every descendant accessibility element on the
-            // current SwiftUI runtime, which overwrote the dismiss button's
-            // own "paywall-dismiss" identifier and broke the UI tests.
-            .accessibilityIdentifier("paywall-sheet")
 
             dismissButton
         }
@@ -131,22 +143,28 @@ struct PaywallView: View {
     /// breaks the page up (owner 2026-06-12, HiFi v1.11.3). It bisects the
     /// values↔auto-renews space via the equal Spacers in `body`.
     private var pricingLine: some View {
-        Group {
-            if manager.isEligibleForIntroOffer, let trial = manager.trialDurationAdjectiveCopy {
-                // Owner copy (2026-06-21): "Start your 14-day trial now, then only
-                // £14.99/year". `trial` ("14-day") and `priceCopy` ("£14.99/year")
-                // stay live from StoreKit so the line is never stale; shown only
-                // when the user is actually eligible for the intro offer (else the
-                // bare price below — claiming a trial they can't get would be false).
-                Text("Start your \(trial) trial now, then only \(priceCopy)")
-            } else {
-                Text(priceCopy)
-            }
+        Text(pricingText)
+            .font(CatchlightFont.display(size: 24, relativeTo: .title3))
+            .foregroundStyle(Color.ckTextPrimary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Owner copy (2026-06-21): "Start your 14-day trial now, then only £14.99/year".
+    /// `trial` ("14-day") and `priceCopy` ("£14.99/year") stay live from StoreKit so
+    /// the line is never stale. Shown only when the user is actually intro-eligible —
+    /// claiming a trial they can't get would be false — so re-subscribers (and dev
+    /// builds with no live offer) see the bare price. DEBUG surfaces the intended
+    /// line regardless, so the copy is reviewable on device without a sandbox offer.
+    private var pricingText: String {
+        if manager.isEligibleForIntroOffer, let trial = manager.trialDurationAdjectiveCopy {
+            return "Start your \(trial) trial now, then only \(priceCopy)"
         }
-        .font(CatchlightFont.display(size: 24, relativeTo: .title3))
-        .foregroundStyle(Color.ckTextPrimary)
-        .multilineTextAlignment(.center)
-        .fixedSize(horizontal: false, vertical: true)
+        #if DEBUG
+        return "Start your 14-day trial now, then only \(priceCopy)"
+        #else
+        return priceCopy
+        #endif
     }
 
     private var renewalCopy: some View {
@@ -181,14 +199,16 @@ struct PaywallView: View {
                         .tint(Color.ckOnAccent)
                 } else {
                     Text(ctaText)
-                        .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
+                        .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
                         .lineLimit(dynamicSize > .large ? 2 : 1)
                         .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)
                         .multilineTextAlignment(.center)
                 }
             }
-            // Grows past 54pt only when the label wraps at large text sizes.
-            .frame(maxWidth: .infinity, minHeight: 54)
+            // Owner 2026-06-21: no taller than the toolbar/dock buttons (44pt) with
+            // the same Capsule radius. Grows past 44pt only when the label wraps at
+            // large text sizes.
+            .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
             .padding(.vertical, dynamicSize > .large ? 8 : 0)
             .foregroundStyle(Color.ckOnAccent)
             .background(Capsule().fill(Color.ckEmber))
@@ -199,14 +219,9 @@ struct PaywallView: View {
         .accessibilityIdentifier("paywall-subscribe")
     }
 
-    private var ctaText: String {
-        // Owner-locked CTA copy (HiFi v1.11.1): "Start your 14-day free trial".
-        // The adjectival variant keeps the duration live from StoreKit.
-        if manager.isEligibleForIntroOffer, let trial = manager.trialDurationAdjectiveCopy {
-            return "Start your \(trial) free trial"
-        }
-        return manager.annual.map { "Subscribe — \($0.displayPrice)/year" } ?? "Subscribe"
-    }
+    // Owner 2026-06-21: the button is just "Subscribe now" — the trial + price
+    // detail already lives in the Cormorant price line directly above it.
+    private var ctaText: String { "Subscribe now" }
 
     private var secondaryActions: some View {
         VStack(spacing: 12) {
