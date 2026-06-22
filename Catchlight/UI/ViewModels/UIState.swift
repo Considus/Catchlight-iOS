@@ -178,6 +178,9 @@ final class UIState {
         filterRemindersExpired = false
         filterImportant = false
         searchQuery = ""
+        // Reset the keyboard flag too (owner 2026-06-22 bug): leaving it true after a
+        // search exit let the KeyboardSearchBar reconcile re-raise / fight the keyboard.
+        searchKeyboardUp = false
     }
 
     // MARK: - Filter toggle mutations (semantics documented in the header)
@@ -298,6 +301,12 @@ final class UIState {
     /// matches the petal fan's, so masking the surrounding timeline reads the same as
     /// the Iris-touch focus.
     func beginEditingInPlace(_ take: Take) {
+        // Editing and searching cannot coexist (owner 2026-06-22 bug): tapping a
+        // search result opened the editor ON TOP of the live search keyboard, so the
+        // editor's keyboard toolbar and the search bar fought — leaving a stray
+        // floating toolbar and a stuck "search bar, no keyboard" state. Opening a Take
+        // to edit now exits search first, handing the keyboard cleanly to the editor.
+        if dockMode == .searching { exitToResting() }
         withAnimation(Self.fanFade) { editingTakeID = take.id }
     }
 
