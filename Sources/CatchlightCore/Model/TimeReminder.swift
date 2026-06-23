@@ -64,6 +64,16 @@ public struct TimeReminder: Codable, Equatable, Sendable {
     /// How often the reminder repeats (owner 2026-06-21). `.none` for a one-shot.
     public var recurrence: Recurrence
 
+    /// The weekdays a WEEKLY reminder fires on (owner 2026-06-23) — Calendar weekday
+    /// numbers (1 = Sunday … 7 = Saturday). Meaningful ONLY when `recurrence == .weekly`;
+    /// ignored for every other cadence. EMPTY is the v1.0 behaviour and the decode default
+    /// for payloads written before this field: a weekly reminder then fires on the single
+    /// weekday of its `scheduledDate` anchor. A non-empty set fires on EACH listed weekday
+    /// at the anchor's time-of-day, so "Every weekday" = {2…6}, "Weekends" = {1,7}, and a
+    /// custom Mon/Wed/Fri = {2,4,6}. The scheduler expands the set into discrete alarms via
+    /// `nextOccurrence`, so each occurrence stays independently cancellable.
+    public var weekdays: Set<Int>
+
     /// Whether the reminder repeats — a one-shot when `.none`.
     public var repeats: Bool { recurrence != .none }
 
@@ -74,7 +84,8 @@ public struct TimeReminder: Codable, Equatable, Sendable {
         alarmEnabled: Bool = true,
         isDone: Bool = false,
         isAllDay: Bool = false,
-        recurrence: Recurrence = .none
+        recurrence: Recurrence = .none,
+        weekdays: Set<Int> = []
     ) {
         self.scheduledDate = scheduledDate
         self.isDelivered = isDelivered
@@ -83,6 +94,7 @@ public struct TimeReminder: Codable, Equatable, Sendable {
         self.isDone = isDone
         self.isAllDay = isAllDay
         self.recurrence = recurrence
+        self.weekdays = weekdays
     }
 
     // Explicit Codable (synthesised offers no decoding defaults): new fields use
@@ -90,7 +102,7 @@ public struct TimeReminder: Codable, Equatable, Sendable {
     // (old reminders always notified); `isDone` / `isAllDay` default false.
     enum CodingKeys: String, CodingKey {
         case scheduledDate, isDelivered, notificationIdentifier
-        case alarmEnabled, isDone, isAllDay, recurrence
+        case alarmEnabled, isDone, isAllDay, recurrence, weekdays
     }
 
     public init(from decoder: Decoder) throws {
@@ -102,6 +114,7 @@ public struct TimeReminder: Codable, Equatable, Sendable {
         self.isDone = try c.decodeIfPresent(Bool.self, forKey: .isDone) ?? false
         self.isAllDay = try c.decodeIfPresent(Bool.self, forKey: .isAllDay) ?? false
         self.recurrence = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence) ?? .none
+        self.weekdays = try c.decodeIfPresent(Set<Int>.self, forKey: .weekdays) ?? []
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -113,6 +126,7 @@ public struct TimeReminder: Codable, Equatable, Sendable {
         try c.encode(isDone, forKey: .isDone)
         try c.encode(isAllDay, forKey: .isAllDay)
         try c.encode(recurrence, forKey: .recurrence)
+        try c.encode(weekdays, forKey: .weekdays)
     }
 }
 
@@ -142,6 +156,13 @@ public extension TimeReminder.Recurrence {
 }
 
 public extension TimeReminder {
+    /// Monday–Friday as Calendar weekday numbers — the "Every weekday" preset (owner
+    /// 2026-06-23). Mirrors Apple Reminders' fixed Mon–Fri set (locale weekend variance is
+    /// out of scope); the custom multi-select covers any other combination.
+    static let weekdaySet: Set<Int> = [2, 3, 4, 5, 6]
+    /// Saturday + Sunday — the "Weekends" preset.
+    static let weekendSet: Set<Int> = [1, 7]
+
     /// The next time this reminder fires strictly after `date`, by its cadence. A
     /// one-shot just returns its scheduled instant. The cadence components are read
     /// from `scheduledDate`, so a "weekly" set on a Tuesday lands on the next Tuesday.
@@ -157,12 +178,17 @@ public extension TimeReminder {
         switch recurrence {
         case .none:
             return scheduledDate
-        case .hourly, .daily, .weekly:
-            // These cadences match only components present in EVERY period (minute, hour,
-            // weekday), so the system policy can never skip an occurrence — no clamp needed.
+        case .hourly, .daily:
+            // These cadences match only components present in EVERY period (minute, hour),
+            // so the system policy can never skip an occurrence — no clamp needed.
             let comps = recurrence.matchingComponents(from: scheduledDate, calendar: calendar)
             return calendar.nextDate(after: date, matching: comps,
                                      matchingPolicy: .nextTimePreservingSmallerComponents) ?? scheduledDate
+        case .weekly:
+            // The soonest fire over the chosen weekday SET (owner 2026-06-23): the earliest
+            // next-match across each listed weekday at the anchor's time-of-day. An empty set
+            // reduces to the single anchor weekday — identical to the pre-set behaviour.
+            return Self.nextWeekly(after: date, anchor: scheduledDate, weekdays: weekdays, calendar: calendar)
         case .monthly:
             return Self.nextClamped(after: date, anchor: scheduledDate, steppingBy: .month, calendar: calendar)
         case .annually:
@@ -186,6 +212,27 @@ public extension TimeReminder {
     func effectiveNextDue(now: Date, calendar: Calendar = .current) -> Date {
         guard repeats else { return scheduledDate }
         return scheduledDate > now ? scheduledDate : nextOccurrence(after: now, calendar: calendar)
+    }
+
+    /// The first weekly occurrence strictly after `date` over a set of weekdays (owner
+    /// 2026-06-23). For each weekday it asks the calendar for the next match at the anchor's
+    /// time-of-day, then takes the EARLIEST — so "Mon/Wed/Fri" lands on whichever of the
+    /// three comes first. An empty set falls back to the anchor's own weekday, reproducing
+    /// the single-weekday behaviour exactly. Calendar weekday numbers (1 = Sun … 7 = Sat) are
+    /// passed straight through; any out-of-range value simply yields no match and is skipped.
+    private static func nextWeekly(after date: Date, anchor: Date,
+                                   weekdays: Set<Int>, calendar: Calendar) -> Date {
+        let targets = weekdays.isEmpty ? [calendar.component(.weekday, from: anchor)] : Array(weekdays)
+        let time = calendar.dateComponents([.hour, .minute], from: anchor)
+        let candidates = targets.compactMap { weekday -> Date? in
+            var comps = DateComponents()
+            comps.weekday = weekday
+            comps.hour = time.hour
+            comps.minute = time.minute
+            return calendar.nextDate(after: date, matching: comps,
+                                     matchingPolicy: .nextTimePreservingSmallerComponents)
+        }
+        return candidates.min() ?? anchor
     }
 
     /// The first occurrence strictly after `date` for a `monthly` (`steppingBy: .month`)
