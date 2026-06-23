@@ -14,7 +14,10 @@ import SwiftUI
 struct CatchlightWidgetsBundle: WidgetBundle {
     var body: some Widget {
         NewTakeLauncherWidget()
+        NewObieLauncherWidget()
         NewTakeCardWidget()
+        NewObieCardWidget()
         NewTakeControl()
+        NewObieControl()
     }
 }

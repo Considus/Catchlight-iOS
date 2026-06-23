@@ -34,6 +34,9 @@ public enum CaptureRouting {
     /// recording engine does, and simply no-op until it ships).
     public enum Mode: String, Sendable, CaseIterable {
         case text
+        /// Create a new Take pre-flagged as the Obie (the store's single-Obie
+        /// upsert demotes the previous Obie on save). "Obie this in Catchlight".
+        case obie
         case audio
     }
 

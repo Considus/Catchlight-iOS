@@ -145,6 +145,18 @@ struct CatchlightApp: App {
                 take.normaliseActivityFloor()
             }
             app.ui.pendingInlineNewTake = take
+        case .obie:
+            // Pre-flag the captured Take as the Obie — the store's single-Obie
+            // upsert demotes the previous Obie when this draft saves, so it becomes
+            // the Obie "in process" with no confirmation (owner 2026-06-23). Opens
+            // in the editor like a Take capture so the text can be reviewed/edited.
+            var take = app.dailiesVM.createTake()
+            take.isObie = true
+            if let text = pending.text, !text.isEmpty {
+                take.blocks = [.textLine(text)]
+            }
+            take.normaliseActivityFloor()
+            app.ui.pendingInlineNewTake = take
         case .audio:
             // Reserved (owner 2026-06-23): the audio-recording capture flow lands
             // here once the recording/transcription engine ships. No-op until then.

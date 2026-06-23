@@ -283,9 +283,10 @@ targets:
     platform: iOS
     sources:
       - path: CatchlightWidgets
-      # Share ONLY the capture intent (for the Control) — not the AppShortcuts
+      # Share ONLY the capture intents (for the Controls) — not the AppShortcuts
       # provider, which must live solely in the app target.
       - path: Catchlight/Intents/NewTakeIntent.swift
+      - path: Catchlight/Intents/NewObieIntent.swift
     info:
       path: CatchlightWidgets/Info.plist
       properties:
