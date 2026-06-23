@@ -135,6 +135,13 @@ targets:
         # `SpotlightConstants.userActivityType` in CatchlightCore.
         NSUserActivityTypes:
           - com.considus.catchlight.viewTake
+        # Capture deep link (2026-06-23) — launcher widgets open the app via
+        # `catchlight://new?mode=…` (widgetURL). The scheme must be declared here
+        # for `onOpenURL` to receive it. Matches `CaptureRouting.urlScheme`.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.considus.catchlight.capture
+            CFBundleURLSchemes:
+              - catchlight
         # Portrait-only — onboarding layout (StepScaffold, Dynamic Island padding,
         # ScrollView safe-area handling) is designed for portrait. UIRequiresFullScreen
         # is needed alongside a restricted orientation set to silence Xcode's
