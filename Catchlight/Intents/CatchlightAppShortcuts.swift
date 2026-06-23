@@ -19,11 +19,17 @@ struct CatchlightAppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
             intent: NewTakeIntent(),
+            // Phrases lead with / prominently feature the app name and avoid
+            // "Add a…", which Siri routes to its built-in Reminders intent
+            // (owner-reported 2026-06-23: "Add a Take, buy milk" created an Apple
+            // Reminder). A free-text Take can't be embedded in the phrase itself —
+            // say the trigger, then Siri prompts "What's the Take?" (the intent's
+            // requestValueDialog) and you dictate it.
             phrases: [
                 "New Take in \(.applicationName)",
-                "Add a Take to \(.applicationName)",
-                "Capture a Take in \(.applicationName)",
-                "New \(.applicationName) Take"
+                "New \(.applicationName) Take",
+                "Start a Take in \(.applicationName)",
+                "Capture a Take in \(.applicationName)"
             ],
             shortTitle: "New Take",
             systemImageName: "plus.circle"

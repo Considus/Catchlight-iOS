@@ -184,6 +184,16 @@ struct BottomDockView: View {
         .simultaneousGesture(
             DragGesture(minimumDistance: 24)
                 .onEnded { value in
+                    // Ignore the system home-indicator swipe. The gesture is attached
+                    // below the dock's bottom inset padding, so a background flick that
+                    // starts in the home-indicator strip would otherwise read as a
+                    // deliberate "swipe up for Settings" and latch it open for the next
+                    // launch (owner-reported 2026-06-23: home-swiping between captures
+                    // left Settings covering the new Take). The iOS home gesture can
+                    // only START at the very bottom edge, so requiring the swipe to
+                    // begin ON the button row (y above the bottom inset) cleanly
+                    // separates a real dock swipe from a backgrounding flick.
+                    guard value.startLocation.y < buttonSize + 10 else { return }
                     guard value.translation.height < -30,
                           abs(value.translation.width) < 60 else { return }
                     if orientation.showSettingsHint {
