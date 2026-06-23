@@ -59,8 +59,9 @@ final class DailiesViewModel {
     /// First-ever schedule requests authorization (§8.3: ask when the user
     /// adds their first reminder, not at launch).
     private func reconcileNotification(for take: Take) {
-        reminders.cancelReminder(identifier: take.id.uuidString)
-        guard take.timeReminder != nil else { return }
+        reminders.cancelReminder(identifier: take.id.uuidString)   // clears time + #loc ids
+        // A Take may carry a "when", a "where", or both — schedule whichever it has.
+        guard take.timeReminder != nil || take.locationReminder != nil else { return }
         if !didRequestNotificationAuth {
             didRequestNotificationAuth = true
             let reminders = self.reminders
@@ -68,9 +69,11 @@ final class DailiesViewModel {
             Task {
                 _ = await reminders.requestAuthorization()
                 reminders.scheduleReminder(for: snapshot)
+                reminders.scheduleLocationReminder(for: snapshot)
             }
         } else {
             reminders.scheduleReminder(for: take)
+            reminders.scheduleLocationReminder(for: take)
         }
     }
 
