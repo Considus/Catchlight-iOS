@@ -224,6 +224,8 @@ targets:
     dependencies:
       - package: CatchlightCore
         product: CatchlightCore
+      # WidgetKit extension — embedded automatically (app-extension dependency).
+      - target: CatchlightWidgets
 
   CatchlightTests:
     type: bundle.unit-test
@@ -270,6 +272,42 @@ targets:
     dependencies:
       - target: Catchlight
 
+  # WidgetKit extension (2026-06-23) — the home/lock launcher widgets, the medium
+  # "blank Take card" widget, and the iOS-18 Control. All are LAUNCHERS: they open
+  # the app to capture (widgetURL deep link, or NewTakeIntent for the Control); they
+  # render NO Take content, so the encrypted-store keychain wall does not apply.
+  # Only needs the App Group (to write CaptureRouting's pending hand-off) — no
+  # keychain access, since it never touches the store.
+  CatchlightWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: CatchlightWidgets
+      # Share ONLY the capture intent (for the Control) — not the AppShortcuts
+      # provider, which must live solely in the app target.
+      - path: Catchlight/Intents/NewTakeIntent.swift
+    info:
+      path: CatchlightWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Catchlight
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: CatchlightWidgets/CatchlightWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.considus.catchlight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.widgets
+        CODE_SIGN_ENTITLEMENTS: CatchlightWidgets/CatchlightWidgets.entitlements
+        CODE_SIGN_STYLE: Automatic
+        # The extension has no UIKit app delegate / launch storyboard.
+        GENERATE_INFOPLIST_FILE: NO
+    dependencies:
+      - package: CatchlightCore
+        product: CatchlightCore
+
 # XcodeGen auto-discovery puts `CatchlightTests` into the Catchlight scheme's
 # test action but does NOT add the `bundle.ui-testing` target. We declare the
 # scheme so a single `xcodebuild test -scheme Catchlight` invocation runs both
@@ -295,7 +333,8 @@ schemes:
         - CatchlightTests
         - CatchlightUITests
 
-# v1.1 extension targets (Share Extension, WidgetKit, App Intents) are NOT defined
-# here — they are out of scope for v1.0 (brief §14). Their PREREQUISITES (App Group
-# + shared Keychain access group) are already configured in the entitlements above,
-# so adding them later requires no migration (brief §10.1).
+# WidgetKit + App Intents landed 2026-06-23 (the New Take capture surfaces) — see the
+# CatchlightWidgets target above and Catchlight/Intents. The remaining v1.1 extension
+# (a branded Share Extension) is still out of scope here; its prerequisites (App Group
+# + shared Keychain access group) remain configured in the app entitlements, so adding
+# it later requires no migration (brief §10.1).
