@@ -643,6 +643,9 @@ struct ReminderPickerSheet: View {
     /// The weekdays a WEEKLY reminder fires on (owner 2026-06-23) — only surfaced/edited
     /// while the cadence is Weekly; cleared otherwise. See `weekdaySection`.
     @State private var weekdays: Set<Int>
+    /// The last Quick-set preset chosen, shown in that selector (owner 2026-06-23). Nil
+    /// reads as "Select"; picking one jumps `date` to the preset's instant.
+    @State private var quickSet: Preset?
     @Environment(\.dismiss) private var dismiss
 
     init(initialDate: Date,
@@ -706,9 +709,10 @@ struct ReminderPickerSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    presetsSection
-                    optionsSection
-                    calendarSection
+                    quickSetSection     // 1 — jump the date to a preset
+                    timeSection         // 2 — time of day (hidden when all-day)
+                    optionsSection      // 3·4·5 — All-day · Notify · Repeat ▸ Interval
+                    calendarSection     // 6 — the date
                 }
                 .padding()
             }
@@ -742,26 +746,50 @@ struct ReminderPickerSheet: View {
 
     // MARK: - Sections
 
-    private var presetsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionLabel("Quick set")
-            // Two columns at this width — chips wrap rather than scroll, so all four
-            // presets are visible at once.
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+    /// Quick-set, now a Menu selector mirroring the Interval row (owner 2026-06-23):
+    /// "Select" by default; choosing a preset jumps `date` to its instant.
+    private var quickSetSection: some View {
+        Menu {
+            Picker("Quick set", selection: $quickSet) {
                 ForEach(Preset.allCases) { preset in
-                    Button { date = preset.date(now: Date(), calendar: .current) } label: {
-                        Text(preset.rawValue)
-                            .font(.subheadline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color.ckSurface, in: Capsule())
-                            .overlay(Capsule().strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.ckTextPrimary)
-                    .accessibilityIdentifier("reminder-preset-\(preset.rawValue)")
+                    Text(preset.rawValue).tag(Optional(preset))
                 }
             }
+        } label: {
+            menuRow(title: "Quick set", icon: "wand.and.stars", value: quickSet?.rawValue ?? "Select")
+        }
+        .accessibilityIdentifier("reminder-quickset")
+        .onChange(of: quickSet) { _, preset in
+            if let preset { date = preset.date(now: Date(), calendar: .current) }
+        }
+        .cardSurface()
+    }
+
+    /// Time of day, split out of the calendar into its own row (owner 2026-06-23). Hidden
+    /// for an all-day "when" — a date-only placement has no meaningful time.
+    @ViewBuilder
+    private var timeSection: some View {
+        if !allDay {
+            DatePicker(selection: $date, displayedComponents: [.hourAndMinute]) {
+                Label("Time", systemImage: "clock")
+                    .foregroundStyle(Color.ckTextPrimary)
+            }
+            .accessibilityIdentifier("reminder-time")
+            .cardSurface()
+        }
+    }
+
+    /// The shared "Label · value · chevron" row used by the Quick-set and Interval menus.
+    private func menuRow(title: String, icon: String, value: String) -> some View {
+        HStack {
+            Label(title, systemImage: icon)
+                .foregroundStyle(Color.ckTextPrimary)
+            Spacer()
+            Text(value)
+                .foregroundStyle(Color.ckTextSecondary)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption2)
+                .foregroundStyle(Color.ckTextSecondary)
         }
     }
 
@@ -842,24 +870,21 @@ struct ReminderPickerSheet: View {
     }
 
     /// Weekly-cadence day chooser (owner 2026-06-23): two quick presets ("Every weekday" /
-    /// "Weekends") that set the whole set at once, plus a seven-day strip to toggle any
-    /// combination. The displayed letters + order follow the user's locale (the calendar's
-    /// localised symbols, week-start respected); each maps back to a Calendar weekday number
-    /// (1 = Sun … 7 = Sat) for the model. An empty set means "the anchor's weekday" — but the
-    /// cadence onChange seeds that day on entry, so the strip is never blank here.
+    /// "Every Weekend"), styled like the Quick-set pills, that set the whole set at once,
+    /// plus a seven-day strip to toggle any combination. The day strip starts on SUNDAY
+    /// (owner 2026-06-23); each letter maps to a Calendar weekday number (1 = Sun … 7 = Sat).
+    /// An empty set means "the anchor's weekday" — but the cadence onChange seeds that day on
+    /// entry, so the strip is never blank here.
     private var weekdaySection: some View {
-        // Locale order: rotate Sun…Sat so the user's first weekday leads (Mon in en-GB).
         let symbols = Calendar.current.veryShortWeekdaySymbols          // index 0 = Sunday
-        let first = Calendar.current.firstWeekday                       // 1 = Sun … 7 = Sat
-        let order = (0..<7).map { (first - 1 + $0) % 7 }                // weekday-index order
 
         return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                presetChip("Every weekday", set: TimeReminder.weekdaySet)
-                presetChip("Weekends", set: TimeReminder.weekendSet)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                presetPill("Every weekday", set: TimeReminder.weekdaySet)
+                presetPill("Every Weekend", set: TimeReminder.weekendSet)
             }
             HStack(spacing: 6) {
-                ForEach(order, id: \.self) { idx in
+                ForEach(0..<7, id: \.self) { idx in                     // 0 = Sun … 6 = Sat
                     let weekday = idx + 1                               // Calendar weekday number
                     let isOn = weekdays.contains(weekday)
                     Button {
@@ -881,39 +906,47 @@ struct ReminderPickerSheet: View {
         }
     }
 
-    /// A pill that sets the whole weekday set at once; filled while it exactly matches.
-    private func presetChip(_ title: String, set: Set<Int>) -> some View {
-        let isOn = weekdays == set
-        return Button { weekdays = set } label: {
+    /// A preset pill matching the Quick-set buttons' style (owner 2026-06-23): full-width
+    /// capsule on `ckSurface`, Ember hairline. Sets the whole weekday set at once.
+    private func presetPill(_ title: String, set: Set<Int>) -> some View {
+        Button { weekdays = set } label: {
             Text(title)
-                .font(.caption.weight(.medium))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(isOn ? Color.ckEmber.opacity(0.85) : Color.ckBackground, in: Capsule())
+                .font(.subheadline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.ckSurface, in: Capsule())
                 .overlay(Capsule().strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1))
-                .foregroundStyle(isOn ? Color.ckBackground : Color.ckTextPrimary)
         }
         .buttonStyle(.plain)
+        .foregroundStyle(Color.ckTextPrimary)
         .accessibilityIdentifier("reminder-weekday-preset-\(title)")
     }
 
     private var calendarSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // All-day collapses the time row: a date-only "when" has no meaningful time.
+            // The DATE only — time of day is the separate `timeSection` row above (owner
+            // 2026-06-23), so this graphical calendar is purely the day.
             DatePicker("When",
                        selection: $date,
-                       displayedComponents: allDay ? [.date] : [.date, .hourAndMinute])
+                       displayedComponents: [.date])
                 .datePickerStyle(.graphical)
                 .labelsHidden()
                 .tint(Color.ckEmber)
         }
     }
 
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text.uppercased())
-            .font(.caption2)
-            .tracking(0.6)
-            .foregroundStyle(Color.ckTextSecondary)
+}
+
+/// The shared rounded-surface "card" wrapper for a single picker row (owner 2026-06-23) —
+/// the Quick-set and Time rows match the All-day/Notify/Repeat card's padding, fill, and
+/// Ember accent so every row in the sheet reads as one family.
+private extension View {
+    func cardSurface() -> some View {
+        self
+            .tint(Color.ckEmber)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
