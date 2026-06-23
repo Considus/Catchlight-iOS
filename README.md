@@ -1,5 +1,12 @@
 # Catchlight — App Codebase
 
+> **⚠️ Proprietary — source-available for review only.** This repository is public for
+> transparency and independent review. It is **not** open source. You may read and review
+> the code (and build it locally only as needed to conduct that review). All other use —
+> running it for any practical purpose, copying, modifying, redistributing, forking, or
+> reusing any part of it — is **not permitted**. See [`LICENSE`](LICENSE) and
+> [`NOTICE`](NOTICE). Contributions are not accepted (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
+
 Privacy-first iOS productivity app. Zero-knowledge, end-to-end encrypted, offline-first.
 This directory began as the **Phase 5** deliverable (project setup, data model,
 encryption layer, local storage, sync engine, notifications, search, background tasks)
@@ -52,6 +59,10 @@ structural fact rather than a promise: the iOS app depends on the core, never th
 reverse, and the future Web/Android/Mac clients re-implement only the thin app layer.
 
 ## Building & testing
+
+> These instructions are provided so reviewers and auditors can build and verify the
+> code. Building or running the app for any purpose beyond that review is not permitted
+> under the [`LICENSE`](LICENSE).
 
 ### Build artifacts — keep them out of the source tree
 
@@ -106,3 +117,12 @@ open Catchlight.xcodeproj  # set DEVELOPMENT_TEAM, then build/run on a device
 - Encryption always on — never optional, never toggleable.
 - Offline-first — full functionality with no network; sync is additive (local-only mode).
 - Cloud folder holds only platform-agnostic JSON envelopes + one plaintext metadata file.
+
+## License
+
+Copyright © 2026 Mark Stradling (trading as Considus). All rights reserved.
+
+This is proprietary software published for review only under the **Catchlight
+Source-Available License (View / Review Only)** — see [`LICENSE`](LICENSE). It is not
+open source, and no rights are granted beyond viewing and reviewing the code. For any
+use, licensing, or commercial enquiry, contact **legal@considus.com**.

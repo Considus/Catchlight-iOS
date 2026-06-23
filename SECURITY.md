@@ -5,11 +5,18 @@ with standard cryptography (AES-256-GCM, HKDF, HMAC-SHA-256 via Apple CryptoKit)
 derived from the user's Privacy Phrase and never leaves the device. There is no backend and
 no analytics.
 
+The source is published publicly for **independent review only**; it is proprietary and not
+open source (see [`LICENSE`](LICENSE)). Reviewing the code for vulnerabilities is exactly the
+kind of scrutiny we welcome.
+
 ## Reporting a vulnerability
 
-Please report security issues **privately** — do not open a public issue or pull request.
+Please report security issues **privately** — do not open a public report, and note that
+pull requests are not accepted (issues are disabled on this repository).
 
 - **Email:** security@considus.com
+- **GitHub:** use the repository's private **“Report a vulnerability”** advisory form
+  (Security tab) if you prefer.
 - **Include:** a description, steps to reproduce, the affected version or commit, and impact.
 
 We aim to acknowledge within **3 business days** and to keep you updated as we investigate.

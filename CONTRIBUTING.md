@@ -1,40 +1,24 @@
-# Contributing to Catchlight
+# Contributions
 
-Thank you for your interest in contributing.
+**Catchlight is not open to external contributions.**
 
-## Before you contribute
+This repository is published publicly for **transparency and independent review only**.
+It is proprietary software, not an open-source project (see [`LICENSE`](LICENSE) and
+[`NOTICE`](NOTICE)).
 
-- Read the non-negotiables in `README.md` — particularly the zero-knowledge and
-  encryption-always-on constraints. Any contribution that weakens these will not
-  be accepted regardless of other merits.
-- The encryption architecture received specialist sign-off (2026-06-05) and was
-  revised to v1.1 on 2026-06-10. The domain-separation strings and derivation
-  parameters in `Sources/CatchlightCore/Crypto/` are frozen cross-platform
-  contract bytes — do not propose changes to them.
+- We do **not** accept pull requests, patches, or code contributions.
+- Issues are disabled; please do not expect feature requests or bug reports to be
+  actioned through this repository.
+- Forking and reuse are not permitted by the licence. You may read and review the
+  source, and compile it locally only to the extent needed to conduct that review.
 
-## Development setup
+## Security
 
-```bash
-# Requires full Xcode (not just Command Line Tools) for the iOS app target.
-# Keep build artifacts OUTSIDE the source tree (see README "Build artifacts"):
-BUILD_DIR="$HOME/CatchlightBuild"
-swift build  --scratch-path "$BUILD_DIR/spm"
-swift run coreverify   # 52 runtime checks — must pass before any PR (52/52 green)
-swift test   --scratch-path "$BUILD_DIR/spm"
+Security reports are the one thing we always want to hear about. Please report
+vulnerabilities **privately** — see [`SECURITY.md`](SECURITY.md). Do not open a public
+report.
 
-brew install xcodegen
-xcodegen generate      # produces Catchlight.xcodeproj
-# Build with: xcodebuild … -derivedDataPath "$BUILD_DIR/DerivedData"
-```
+## Other enquiries
 
-## Pull requests
-
-- All PRs must pass `swift test` with no regressions.
-- No analytics, no telemetry, no off-device data transmission — ever.
-- `kSecAttrSynchronizable: false` on every Keychain item — this is not negotiable.
-- Follow the existing code style. No third-party dependencies without discussion.
-
-## Security issues
-
-Please do not open public issues for security vulnerabilities.
-See [`SECURITY.md`](SECURITY.md) for how to report privately.
+For licensing, commercial, or any other permission requests, contact
+**legal@considus.com**.
