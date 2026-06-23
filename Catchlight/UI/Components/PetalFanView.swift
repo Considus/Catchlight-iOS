@@ -879,10 +879,17 @@ struct ReminderPickerSheet: View {
         let symbols = Calendar.current.veryShortWeekdaySymbols          // index 0 = Sunday
 
         return VStack(alignment: .leading, spacing: 10) {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                presetPill("Every weekday", set: TimeReminder.weekdaySet)
-                presetPill("Every Weekend", set: TimeReminder.weekendSet)
+            // Preset selector mirroring the Interval row: "Every weekday" / "Every Weekend",
+            // with the value reading "Custom" when the strip holds any other combination.
+            Menu {
+                Picker("Days", selection: weekdayPresetBinding) {
+                    ForEach(WeekdayPreset.selectableCases) { Text($0.rawValue).tag($0) }
+                }
+            } label: {
+                menuRow(title: "Days", icon: "calendar",
+                        value: weekdayPresetBinding.wrappedValue.rawValue)
             }
+            .accessibilityIdentifier("reminder-weekday-preset")
             HStack(spacing: 6) {
                 ForEach(0..<7, id: \.self) { idx in                     // 0 = Sun … 6 = Sat
                     let weekday = idx + 1                               // Calendar weekday number
@@ -906,34 +913,61 @@ struct ReminderPickerSheet: View {
         }
     }
 
-    /// A preset pill matching the Quick-set buttons' style (owner 2026-06-23): full-width
-    /// capsule on `ckSurface`, Ember hairline. Sets the whole weekday set at once.
-    private func presetPill(_ title: String, set: Set<Int>) -> some View {
-        Button { weekdays = set } label: {
-            Text(title)
-                .font(.subheadline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Color.ckSurface, in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color.ckTextPrimary)
-        .accessibilityIdentifier("reminder-weekday-preset-\(title)")
+    /// The weekly-day presets surfaced in the "Days" selector (owner 2026-06-23). `.custom`
+    /// is the read-out for any hand-picked combination — it's a label, not a menu option, so
+    /// it's excluded from `selectableCases`.
+    private enum WeekdayPreset: String, CaseIterable, Identifiable {
+        case weekday = "Every weekday"
+        case weekend = "Every Weekend"
+        case custom  = "Custom"
+        var id: String { rawValue }
+        static var selectableCases: [WeekdayPreset] { [.weekday, .weekend] }
+    }
+
+    /// Maps the `weekdays` set to/from the preset selector: read the matching preset (or
+    /// `.custom`), and writing a preset replaces the whole set. Selecting `.custom` can't
+    /// happen (it isn't offered) — the day strip drives custom combinations.
+    private var weekdayPresetBinding: Binding<WeekdayPreset> {
+        Binding(
+            get: {
+                if weekdays == TimeReminder.weekdaySet { return .weekday }
+                if weekdays == TimeReminder.weekendSet { return .weekend }
+                return .custom
+            },
+            set: { newValue in
+                switch newValue {
+                case .weekday: weekdays = TimeReminder.weekdaySet
+                case .weekend: weekdays = TimeReminder.weekendSet
+                case .custom:  break
+                }
+            }
+        )
     }
 
     private var calendarSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             // The DATE only — time of day is the separate `timeSection` row above (owner
-            // 2026-06-23), so this graphical calendar is purely the day.
+            // 2026-06-23), so this graphical calendar is purely the day. The Sunday-first
+            // calendar in the environment makes the grid start on Sunday to match the
+            // weekly day strip (owner 2026-06-23) — display only, the model maths is
+            // unaffected.
             DatePicker("When",
                        selection: $date,
                        displayedComponents: [.date])
                 .datePickerStyle(.graphical)
                 .labelsHidden()
+                .environment(\.calendar, Self.weekStartsSunday)
                 .tint(Color.ckEmber)
         }
     }
+
+    /// A copy of the user's calendar pinned to a Sunday week-start, for the graphical
+    /// calendar + (already) the weekly day strip. Display only — never used for scheduling.
+    static let weekStartsSunday: Calendar = {
+        var c = Calendar.current
+        c.firstWeekday = 1   // Sunday
+        return c
+    }()
 
 }
 
