@@ -46,6 +46,14 @@ struct RootView: View {
     private static let splashHoldOnboarding: TimeInterval = 2.5
     private static let splashHoldOnboarded: TimeInterval = 1.0
 
+    /// Suppress the auto-presented Face ID while a capture is pending — zero-Face-ID
+    /// capture lands in the locked editor instead (owner 2026-06-23). Covers the
+    /// window BEFORE `drainPendingCapture` consumes the App-Group hand-off
+    /// (`CaptureRouting.pending()`) AND after, when `app.lockedCapture` is set.
+    private var capturePending: Bool {
+        app.lockedCapture != nil || CaptureRouting.pending() != nil
+    }
+
     var body: some View {
         // ZStack with a full-bleed background guarantees children receive a full-screen
         // size proposal. A bare Group inherits the parent's bounded proposal, which left
@@ -60,12 +68,30 @@ struct RootView: View {
                         .transition(.opacity)
                 }
             } else if app.lockState != .unlocked {
-                // D-042: an onboarded-but-locked user sees the branded LockView
-                // INSTEAD of the timeline — so `mainApp`'s side effects (paywall
-                // .task, sync) don't run against the locked placeholder store, and
-                // the (empty) timeline is never visible or interactive.
-                LockView()
-                    .transition(.opacity)
+                if let seed = app.lockedCapture {
+                    // Zero-Face-ID capture (owner 2026-06-23): a widget/intent that
+                    // arrived while locked lands HERE — the blank editor only, no
+                    // timeline. The store is still the empty placeholder, so no
+                    // decrypted content is on screen; the single Face ID is deferred
+                    // to save. `.id` so a fresh capture replaces the editor cleanly.
+                    LockedCaptureView()
+                        .id(seed.id)
+                        .transition(.opacity)
+                } else if capturePending {
+                    // A capture is incoming but not yet built (the App-Group hand-off
+                    // is set; drainPendingCapture hasn't run). Hold the brand
+                    // background — same as LockedCaptureView's — instead of flashing
+                    // LockView for a sub-second before the editor appears (owner
+                    // 2026-06-23). The editor's content then simply appears on it.
+                    Color.ckBackground.ignoresSafeArea()
+                } else {
+                    // D-042: an onboarded-but-locked user sees the branded LockView
+                    // INSTEAD of the timeline — so `mainApp`'s side effects (paywall
+                    // .task, sync) don't run against the locked placeholder store, and
+                    // the (empty) timeline is never visible or interactive.
+                    LockView()
+                        .transition(.opacity)
+                }
             } else {
                 mainApp
                     .transition(.opacity)
@@ -89,7 +115,7 @@ struct RootView: View {
             // Splash suppressed (UI testing): still drive the unlock if we somehow
             // launched locked, but skip the 2.5s branding hold entirely.
             guard showSplash else {
-                if app.lockState == .locked { await app.attemptUnlock() }
+                if app.lockState == .locked && !capturePending { await app.attemptUnlock() }
                 return
             }
             // Hold the launch-screen branding, independently per destination (owner
@@ -102,7 +128,7 @@ struct RootView: View {
             // it → crossfade straight to the timeline on success. The lock screen is
             // revealed only if the user cancels (lockState becomes `.failed` behind
             // the splash, so the crossfade lands on LockView's "Try Again").
-            if app.lockState == .locked { await app.attemptUnlock() }
+            if app.lockState == .locked && !capturePending { await app.attemptUnlock() }
             withAnimation(.easeInOut(duration: 0.5)) { showSplash = false }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -118,7 +144,7 @@ struct RootView: View {
                 guard !showSplash else { return }
                 Task {
                     app.relockIfAwayTooLong()
-                    if app.lockState == .locked { await app.attemptUnlock() }
+                    if app.lockState == .locked && !capturePending { await app.attemptUnlock() }
                 }
             default:
                 break
