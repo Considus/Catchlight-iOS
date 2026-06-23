@@ -117,6 +117,53 @@ struct CatchlightApp: App {
         app.ui.spotlightTargetTakeID = uuid
     }
 
+    /// Drain a capture request queued by a widget / the New Take intent / the
+    /// Control / a Shortcut (2026-06-23). Every "open Catchlight and capture"
+    /// surface funnels through `CaptureRouting`'s App-Group hand-off and lands
+    /// here.
+    ///
+    /// LOCK (D-042): capture needs the unlocked store + master key, so if the
+    /// app is still locked we leave the request queued and return — the
+    /// `lockState → .unlocked` hook re-invokes this once the unlock completes.
+    /// This is the robust "held until unlock" path (worst case = the user's
+    /// normal app-entry unlock, then the editor; it can't regress). The
+    /// zero-Face-ID-to-type refinement is a separate, device-verified step.
+    @MainActor
+    private func drainPendingCapture() {
+        guard app.lockState == .unlocked else { return }
+        guard let pending = CaptureRouting.pending() else { return }
+        CaptureRouting.clearPending()
+        // Owner 2026-06-23: a lapsed user hits the paywall instead of capturing,
+        // consistent with the dock + and RootView.newTake ("open app, then paywall").
+        guard app.ensureEntitled() else { return }
+        app.ui.exitToResting()
+        switch pending.mode {
+        case .text:
+            var take = app.dailiesVM.createTake()
+            if let text = pending.text, !text.isEmpty {
+                take.blocks = [.textLine(text)]
+                take.normaliseActivityFloor()
+            }
+            app.ui.pendingInlineNewTake = take
+        case .obie:
+            // Pre-flag the captured Take as the Obie — the store's single-Obie
+            // upsert demotes the previous Obie when this draft saves, so it becomes
+            // the Obie "in process" with no confirmation (owner 2026-06-23). Opens
+            // in the editor like a Take capture so the text can be reviewed/edited.
+            var take = app.dailiesVM.createTake()
+            take.isObie = true
+            if let text = pending.text, !text.isEmpty {
+                take.blocks = [.textLine(text)]
+            }
+            take.normaliseActivityFloor()
+            app.ui.pendingInlineNewTake = take
+        case .audio:
+            // Reserved (owner 2026-06-23): the audio-recording capture flow lands
+            // here once the recording/transcription engine ships. No-op until then.
+            break
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             // Root GeometryReader: the ONE place the real window safe-area
@@ -196,6 +243,14 @@ struct CatchlightApp: App {
             .onContinueUserActivity(SpotlightConstants.userActivityType) { activity in
                 handleSpotlight(activity)
             }
+            // Capture deep link (2026-06-23) — launcher widgets open the app via
+            // `catchlight://new?mode=…` (widgetURL). Queue the request and drain;
+            // if still locked, the lockState hook drains it post-unlock.
+            .onOpenURL { url in
+                guard let mode = CaptureRouting.mode(from: url) else { return }
+                CaptureRouting.setPending(.init(mode: mode))
+                drainPendingCapture()
+            }
             // D-042 — re-lock when the DEVICE locks (auto-lock or manual), not on
             // mere app-switching. `protectedDataWillBecomeUnavailable` fires on
             // device lock only; the app drops its keys + encrypted store and the
@@ -237,6 +292,9 @@ struct CatchlightApp: App {
                 if let bookmarkError = Wiring.checkCloudBookmarkHealth() {
                     app.reportBookmarkError(bookmarkError)
                 }
+                // An intent/Control/Shortcut foregrounds the app via this path;
+                // drain any queued capture (no-op if still locked — see below).
+                drainPendingCapture()
             }
         }
         .onChange(of: app.lockState) { _, newState in
@@ -255,6 +313,9 @@ struct CatchlightApp: App {
                 // readable (keys cached) — they don't auto-extend, so opening the app is
                 // when we re-arm the next batch (owner 2026-06-21).
                 app.dailiesVM.refreshRecurringSchedules()
+                // A capture queued by a widget/intent before unlock now drains into
+                // the blank (or pre-filled) editor (2026-06-23).
+                drainPendingCapture()
             }
         }
     }

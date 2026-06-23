@@ -348,10 +348,23 @@ public final class EncryptedTakeStore: TakeStore {
             // in-memory store (no index) silently accepted it, so the two
             // implementations diverged on the same input.
             if take.isObie {
-                let demote = try prepare("UPDATE takes SET is_obie = 0 WHERE is_obie = 1 AND id != ?1;")
-                defer { sqlite3_finalize(demote) }
-                bindText(demote, 1, take.id.uuidString)
-                guard sqlite3_step(demote) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
+                // Demote any existing Obie. The is_obie COLUMN is only an index — a
+                // Take's isObie ALSO lives inside its encrypted PAYLOAD, which
+                // allTakes() decrypts as the source of truth. A column-only UPDATE (the
+                // previous approach) left the demoted Take's payload still isObie=true,
+                // so the timeline read TWO Obies and the newly-set one was invisible
+                // (owner-reported 2026-06-23; pinned by the upsert-demote contract
+                // test, which the column-only path failed). Re-seal each existing Obie
+                // with isObie=false so column AND payload agree. Decoding by PAYLOAD
+                // (not the column) also REPAIRS a store already holding a stray Obie on
+                // the next Obie set. Mirrors InMemoryTakeStore.upsert.
+                let sel = try prepare("SELECT id, payload FROM takes WHERE id != ?1;")
+                defer { sqlite3_finalize(sel) }
+                bindText(sel, 1, take.id.uuidString)
+                for var existing in try collectTakes(sel) where existing.isObie {
+                    existing.isObie = false
+                    try insertOrReplace(existing)
+                }
             }
             try insertOrReplace(take)
             // Re-creating an item supersedes any pending tombstone for it.
