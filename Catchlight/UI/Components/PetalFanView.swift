@@ -65,7 +65,7 @@ struct PetalFanView: View {
     /// `reminderDate` carries the time chosen in the picker (nil when no Reminder).
     /// `reminderAlarm` / `reminderAllDay` carry the model-C picker choices (owner
     /// 2026-06-18) — undefined/ignored when `hasReminder` is false.
-    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ isObie: Bool) -> Void
+    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ reminderWeekdays: Set<Int>, _ isObie: Bool) -> Void
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -94,6 +94,9 @@ struct PetalFanView: View {
     /// How often the reminder repeats (owner 2026-06-21). Seeded from any existing
     /// reminder; `.none` for a one-shot.
     @State private var reminderRecurrence: TimeReminder.Recurrence
+    /// The weekdays a WEEKLY reminder repeats on (owner 2026-06-23) — empty for every other
+    /// cadence. Seeded from any existing reminder; edited by the picker's day strip.
+    @State private var reminderWeekdays: Set<Int>
     /// Drives the date/time picker sheet the Reminder Mark pops.
     @State private var showingReminderPicker = false
 
@@ -118,7 +121,7 @@ struct PetalFanView: View {
          hubCentre: CGPoint,
          containerWidth: CGFloat = 0,
          showsFocusCard: Bool = false,
-         onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, TimeReminder.Recurrence, Bool) -> Void,
+         onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, TimeReminder.Recurrence, Set<Int>, Bool) -> Void,
          onDismiss: @escaping () -> Void) {
         self.take = take
         self.hubCentre = hubCentre
@@ -134,6 +137,7 @@ struct PetalFanView: View {
         _reminderAlarm = State(initialValue: take.timeReminder?.alarmEnabled ?? true)
         _reminderAllDay = State(initialValue: take.timeReminder?.isAllDay ?? false)
         _reminderRecurrence = State(initialValue: take.timeReminder?.recurrence ?? .none)
+        _reminderWeekdays = State(initialValue: take.timeReminder?.weekdays ?? [])
         _phase = State(initialValue: .opening(start: .now))
     }
 
@@ -395,11 +399,13 @@ struct PetalFanView: View {
             initialAlarm: reminderAlarm,
             initialAllDay: reminderAllDay,
             initialRecurrence: reminderRecurrence,
-            onSave: { date, alarm, allDay, recurrence in
+            initialWeekdays: reminderWeekdays,
+            onSave: { date, alarm, allDay, recurrence, weekdays in
                 reminderDate = date
                 reminderAlarm = alarm
                 reminderAllDay = allDay
                 reminderRecurrence = recurrence
+                reminderWeekdays = weekdays
                 hasReminder = true
                 showingReminderPicker = false
             },
@@ -497,7 +503,8 @@ struct PetalFanView: View {
                                           notificationIdentifier: t.id.uuidString,
                                           alarmEnabled: reminderAlarm,
                                           isAllDay: reminderAllDay,
-                                          recurrence: reminderRecurrence)
+                                          recurrence: reminderRecurrence,
+                                          weekdays: reminderRecurrence == .weekly ? reminderWeekdays : [])
         } else {
             t.timeReminder = nil
         }
@@ -603,7 +610,7 @@ struct PetalFanView: View {
         // close animation's end frame, so there's no flash.
         phase = .dismissed
         if commit {
-            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, reminderAlarm, reminderAllDay, reminderRecurrence, isObie)
+            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, reminderAlarm, reminderAllDay, reminderRecurrence, reminderRecurrence == .weekly ? reminderWeekdays : [], isObie)
         } else {
             onDismiss()
         }
@@ -624,7 +631,7 @@ struct PetalFanView: View {
 /// picker follows the user's Region (DD/MM vs MM/DD) and 12/24-hour preference.
 struct ReminderPickerSheet: View {
     let initialDate: Date
-    let onSave: (_ date: Date, _ alarm: Bool, _ allDay: Bool, _ recurrence: TimeReminder.Recurrence) -> Void
+    let onSave: (_ date: Date, _ alarm: Bool, _ allDay: Bool, _ recurrence: TimeReminder.Recurrence, _ weekdays: Set<Int>) -> Void
     /// Optional — the Focus-ring uses Cancel to REMOVE a just-added reminder; the
     /// editor leaves it nil (Cancel keeps the existing time untouched).
     var onCancel: () -> Void = {}
@@ -633,13 +640,17 @@ struct ReminderPickerSheet: View {
     @State private var alarm: Bool
     @State private var allDay: Bool
     @State private var recurrence: TimeReminder.Recurrence
+    /// The weekdays a WEEKLY reminder fires on (owner 2026-06-23) — only surfaced/edited
+    /// while the cadence is Weekly; cleared otherwise. See `weekdaySection`.
+    @State private var weekdays: Set<Int>
     @Environment(\.dismiss) private var dismiss
 
     init(initialDate: Date,
          initialAlarm: Bool = true,
          initialAllDay: Bool = false,
          initialRecurrence: TimeReminder.Recurrence = .none,
-         onSave: @escaping (Date, Bool, Bool, TimeReminder.Recurrence) -> Void,
+         initialWeekdays: Set<Int> = [],
+         onSave: @escaping (Date, Bool, Bool, TimeReminder.Recurrence, Set<Int>) -> Void,
          onCancel: @escaping () -> Void = {}) {
         self.initialDate = initialDate
         self.onSave = onSave
@@ -648,6 +659,7 @@ struct ReminderPickerSheet: View {
         _alarm = State(initialValue: initialAlarm)
         _allDay = State(initialValue: initialAllDay)
         _recurrence = State(initialValue: initialRecurrence)
+        _weekdays = State(initialValue: initialWeekdays)
     }
 
     /// Quick "when" presets — one tap fills the calendar below. All computed from
@@ -707,7 +719,20 @@ struct ReminderPickerSheet: View {
                     Button("Cancel") { onCancel(); dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { onSave(date, alarm, allDay, recurrence); dismiss() }
+                    // Weekdays only travel with a WEEKLY cadence — empty for every other,
+                    // so a stale set can't linger if the user switches away then saves.
+                    Button("Done") { onSave(date, alarm, allDay, recurrence,
+                                            recurrence == .weekly ? weekdays : []); dismiss() }
+                }
+            }
+            // Keep the weekday set coherent with the cadence: entering Weekly seeds the
+            // anchor's own weekday (so the strip reflects the real fire day); leaving Weekly
+            // clears it. A custom set already chosen is preserved while staying on Weekly.
+            .onChange(of: recurrence) { _, newValue in
+                if newValue == .weekly {
+                    if weekdays.isEmpty { weekdays = [Calendar.current.component(.weekday, from: date)] }
+                } else {
+                    weekdays = []
                 }
             }
         }
@@ -799,13 +824,77 @@ struct ReminderPickerSheet: View {
                 }
                 .accessibilityIdentifier("reminder-repeat-cadence")
                 .padding(.vertical, 6)
+
+                // Weekly only: choose which days repeat. Quick presets + a day strip.
+                if recurrence == .weekly {
+                    Divider()
+                    weekdaySection
+                        .padding(.vertical, 6)
+                }
             }
         }
         .animation(.snappy(duration: 0.2), value: recurrence != .none)
+        .animation(.snappy(duration: 0.2), value: recurrence == .weekly)
         .tint(Color.ckEmber)
         .padding(.horizontal, 14)
         .padding(.vertical, 4)
         .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    /// Weekly-cadence day chooser (owner 2026-06-23): two quick presets ("Every weekday" /
+    /// "Weekends") that set the whole set at once, plus a seven-day strip to toggle any
+    /// combination. The displayed letters + order follow the user's locale (the calendar's
+    /// localised symbols, week-start respected); each maps back to a Calendar weekday number
+    /// (1 = Sun … 7 = Sat) for the model. An empty set means "the anchor's weekday" — but the
+    /// cadence onChange seeds that day on entry, so the strip is never blank here.
+    private var weekdaySection: some View {
+        // Locale order: rotate Sun…Sat so the user's first weekday leads (Mon in en-GB).
+        let symbols = Calendar.current.veryShortWeekdaySymbols          // index 0 = Sunday
+        let first = Calendar.current.firstWeekday                       // 1 = Sun … 7 = Sat
+        let order = (0..<7).map { (first - 1 + $0) % 7 }                // weekday-index order
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                presetChip("Every weekday", set: TimeReminder.weekdaySet)
+                presetChip("Weekends", set: TimeReminder.weekendSet)
+            }
+            HStack(spacing: 6) {
+                ForEach(order, id: \.self) { idx in
+                    let weekday = idx + 1                               // Calendar weekday number
+                    let isOn = weekdays.contains(weekday)
+                    Button {
+                        if isOn { weekdays.remove(weekday) } else { weekdays.insert(weekday) }
+                    } label: {
+                        Text(symbols[idx])
+                            .font(.subheadline.weight(.medium))
+                            .frame(maxWidth: .infinity, minHeight: 38)
+                            .background(isOn ? Color.ckEmber.opacity(0.85) : Color.ckBackground,
+                                        in: Circle())
+                            .overlay(Circle().strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1))
+                            .foregroundStyle(isOn ? Color.ckBackground : Color.ckTextPrimary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("reminder-weekday-\(weekday)")
+                    .accessibilityAddTraits(isOn ? [.isSelected] : [])
+                }
+            }
+        }
+    }
+
+    /// A pill that sets the whole weekday set at once; filled while it exactly matches.
+    private func presetChip(_ title: String, set: Set<Int>) -> some View {
+        let isOn = weekdays == set
+        return Button { weekdays = set } label: {
+            Text(title)
+                .font(.caption.weight(.medium))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(isOn ? Color.ckEmber.opacity(0.85) : Color.ckBackground, in: Capsule())
+                .overlay(Capsule().strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1))
+                .foregroundStyle(isOn ? Color.ckBackground : Color.ckTextPrimary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("reminder-weekday-preset-\(title)")
     }
 
     private var calendarSection: some View {
@@ -833,7 +922,7 @@ struct ReminderPickerSheet: View {
         PetalFanView(
             take: Take(blocks: [.checkItem("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _, _, _, _, _ in },
+            onCommit: { _, _, _, _, _, _, _, _, _ in },
             onDismiss: {}
         )
     }
@@ -846,7 +935,7 @@ struct ReminderPickerSheet: View {
         PetalFanView(
             take: Take(blocks: [.textLine("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _, _, _, _, _ in },
+            onCommit: { _, _, _, _, _, _, _, _, _ in },
             onDismiss: {}
         )
     }

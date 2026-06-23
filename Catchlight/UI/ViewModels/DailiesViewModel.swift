@@ -333,6 +333,7 @@ final class DailiesViewModel {
                             reminderAlarm: Bool = true,
                             reminderAllDay: Bool = false,
                             reminderRecurrence: TimeReminder.Recurrence = .none,
+                            reminderWeekdays: Set<Int> = [],
                             isObie: Bool) {
         var updated = take
         updated.isNote = isNote
@@ -346,7 +347,8 @@ final class DailiesViewModel {
                 notificationIdentifier: updated.id.uuidString,
                 alarmEnabled: reminderAlarm,
                 isAllDay: reminderAllDay,
-                recurrence: reminderRecurrence
+                recurrence: reminderRecurrence,
+                weekdays: reminderRecurrence == .weekly ? reminderWeekdays : []
             )
         } else {
             updated.timeReminder = nil

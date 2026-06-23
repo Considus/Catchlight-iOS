@@ -417,14 +417,16 @@ struct DailiesView: View {
             initialAlarm: existing?.alarmEnabled ?? true,
             initialAllDay: existing?.isAllDay ?? false,
             initialRecurrence: existing?.recurrence ?? .none,
-            onSave: { date, alarm, allDay, recurrence in
+            initialWeekdays: existing?.weekdays ?? [],
+            onSave: { date, alarm, allDay, recurrence, weekdays in
                 if var d = editDraft {
                     d.timeReminder = TimeReminder(
                         scheduledDate: date,
                         notificationIdentifier: d.id.uuidString,
                         alarmEnabled: alarm,
                         isAllDay: allDay,
-                        recurrence: recurrence)
+                        recurrence: recurrence,
+                        weekdays: recurrence == .weekly ? weekdays : [])
                     d.normaliseActivityFloor()
                     editDraft = d
                 }
@@ -1374,7 +1376,8 @@ struct DailiesView: View {
                                           notificationIdentifier: d.id.uuidString,
                                           alarmEnabled: command.reminderAlarm,
                                           isAllDay: command.reminderAllDay,
-                                          recurrence: command.reminderRecurrence)
+                                          recurrence: command.reminderRecurrence,
+                                          weekdays: command.reminderRecurrence == .weekly ? command.reminderWeekdays : [])
         } else {
             d.timeReminder = nil
         }
