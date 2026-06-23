@@ -236,6 +236,30 @@ class TakeStoreContractTests: XCTestCase {
         XCTAssertEqual(try store.allTakes().filter(\.isObie).count, 1)
     }
 
+    /// The inline editor (Iris / Focus-ring) and "Obie this" capture persist an
+    /// Obie by UPSERTING a Take with isObie = true (vm.save → store.upsert), NOT via
+    /// setObie. Both implementations claim upsert enforces the single-Obie invariant.
+    /// Repro for owner-reported 2026-06-23: a second Obie set via the Iris persisted
+    /// ALONGSIDE the first (two Obies — the new one invisible, excluded from the
+    /// timeline rows and not the pinned Obie).
+    func testContract_obie_upsertSecondObie_demotesFirst_exactlyOneObie() throws {
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        let a = Take(id: UUID(), createdAt: t0, modifiedAt: t0,
+                     blocks: [.textLine("a")], isObie: true)
+        let b = Take(id: UUID(), createdAt: t0.addingTimeInterval(1),
+                     modifiedAt: t0.addingTimeInterval(1),
+                     blocks: [.textLine("b")], isObie: true)
+        try store.upsert(a)
+        try store.upsert(b)
+
+        XCTAssertEqual(try store.allTakes().filter(\.isObie).count, 1,
+                       "Upserting a second Obie must demote the first — exactly one Obie")
+        XCTAssertEqual(try store.currentObie()?.id, b.id,
+                       "The most recently upserted Obie must be the current one")
+        XCTAssertFalse(try XCTUnwrap(try store.take(id: a.id)).isObie,
+                       "The first Obie must be demoted")
+    }
+
     func testContract_obie_unknownId_throwsNotFound() {
         XCTAssertThrowsError(try store.setObie(id: UUID(), replaceExisting: true)) { error in
             guard case StorageError.notFound = error else {
