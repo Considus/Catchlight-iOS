@@ -119,49 +119,52 @@ struct CatchlightApp: App {
 
     /// Drain a capture request queued by a widget / the New Take intent / the
     /// Control / a Shortcut (2026-06-23). Every "open Catchlight and capture"
-    /// surface funnels through `CaptureRouting`'s App-Group hand-off and lands
-    /// here.
+    /// surface funnels through `CaptureRouting`'s App-Group hand-off and lands here.
     ///
-    /// LOCK (D-042): capture needs the unlocked store + master key, so if the
-    /// app is still locked we leave the request queued and return — the
-    /// `lockState → .unlocked` hook re-invokes this once the unlock completes.
-    /// This is the robust "held until unlock" path (worst case = the user's
-    /// normal app-entry unlock, then the editor; it can't regress). The
-    /// zero-Face-ID-to-type refinement is a separate, device-verified step.
+    /// LOCK (D-042 / zero-Face-ID, owner 2026-06-23): if the app is UNLOCKED the
+    /// capture opens the normal inline editor. If LOCKED, it lands in a blank
+    /// in-memory editor IMMEDIATELY (`app.lockedCapture`) — no app-lock prompt
+    /// before typing — and the single Face ID is deferred to save
+    /// (`AppModel.saveLockedCapture`). The timeline/existing Takes stay gated: the
+    /// store is still the empty placeholder, so nothing decrypted is on screen.
     @MainActor
     private func drainPendingCapture() {
-        guard app.lockState == .unlocked else { return }
         guard let pending = CaptureRouting.pending() else { return }
-        CaptureRouting.clearPending()
-        // Owner 2026-06-23: a lapsed user hits the paywall instead of capturing,
-        // consistent with the dock + and RootView.newTake ("open app, then paywall").
-        guard app.ensureEntitled() else { return }
-        app.ui.exitToResting()
-        switch pending.mode {
-        case .text:
-            var take = app.dailiesVM.createTake()
-            if let text = pending.text, !text.isEmpty {
-                take.blocks = [.textLine(text)]
-                take.normaliseActivityFloor()
-            }
-            app.ui.pendingInlineNewTake = take
-        case .obie:
-            // Pre-flag the captured Take as the Obie — the store's single-Obie
-            // upsert demotes the previous Obie when this draft saves, so it becomes
-            // the Obie "in process" with no confirmation (owner 2026-06-23). Opens
-            // in the editor like a Take capture so the text can be reviewed/edited.
-            var take = app.dailiesVM.createTake()
-            take.isObie = true
-            if let text = pending.text, !text.isEmpty {
-                take.blocks = [.textLine(text)]
-            }
-            take.normaliseActivityFloor()
-            app.ui.pendingInlineNewTake = take
-        case .audio:
-            // Reserved (owner 2026-06-23): the audio-recording capture flow lands
-            // here once the recording/transcription engine ships. No-op until then.
-            break
+        guard let draft = makeCaptureDraft(pending) else {
+            CaptureRouting.clearPending()   // .audio reserved — no-op until it ships
+            return
         }
+        CaptureRouting.clearPending()
+        if app.lockState == .unlocked {
+            // Owner 2026-06-23: a lapsed user hits the paywall instead of capturing,
+            // consistent with the dock + and RootView.newTake ("open app, then paywall").
+            guard app.ensureEntitled() else { return }
+            app.ui.exitToResting()
+            app.ui.pendingInlineNewTake = draft
+        } else {
+            // Zero-Face-ID capture: type now, unlock at save. Entitlement is checked
+            // post-unlock in saveLockedCapture (ensureEntitled needs the unlocked state).
+            app.lockedCapture = draft
+        }
+    }
+
+    /// Build the in-memory draft for a capture, shared by the unlocked (inline) and
+    /// locked (zero-Face-ID) paths so they can't drift. nil for `.audio` (reserved
+    /// until the recording engine ships). An Obie draft is pre-flagged; the store's
+    /// single-Obie upsert demotes the previous Obie when it saves.
+    @MainActor
+    private func makeCaptureDraft(_ pending: CaptureRouting.Pending) -> Take? {
+        guard pending.mode != .audio else { return nil }
+        var take = app.dailiesVM.createTake()
+        if pending.mode == .obie { take.isObie = true }
+        if let text = pending.text, !text.isEmpty {
+            take.blocks = [.textLine(text)]
+        }
+        // A fresh Take has no blocks; the inline editor needs a focusable block for the
+        // caret/keyboard (mirrors the timeline's beginNewInlineEdit).
+        if take.blocks.isEmpty { take.blocks = [.textLine("")] }
+        take.normaliseActivityFloor()
+        return take
     }
 
     var body: some Scene {
