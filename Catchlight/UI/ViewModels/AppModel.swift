@@ -72,6 +72,15 @@ final class AppModel {
     enum LockState: Equatable { case unlocked, locked, unlocking, failed(String) }
     private(set) var lockState: LockState
 
+    /// A capture (widget / intent / Control) that arrived while the app was LOCKED,
+    /// held as an in-memory draft so the user can type IMMEDIATELY — the master key
+    /// (Face ID) is deferred to save ("one glance → type", owner 2026-06-23). While
+    /// this is non-nil and the app is locked, `RootView` shows `LockedCaptureView`
+    /// (the blank editor only — no timeline, no decrypted content) instead of
+    /// `LockView`. Nil = the normal lock screen. The single Face ID fires in
+    /// `saveLockedCapture`, the first moment the encrypted store is actually needed.
+    var lockedCapture: Take?
+
     /// Set when onboarding completes but the store hasn't opened yet (the user
     /// cancelled the post-onboarding prompt). The first successful `attemptUnlock`
     /// seeds the starter Takes, so seeding survives a cancel-then-retry without the
@@ -216,6 +225,36 @@ final class AppModel {
         session.clearObscured()  // drop the privacy curtain so it can't flash post-Face ID
         lockState = .unlocked
     }
+
+    // MARK: - Zero-Face-ID capture (owner 2026-06-23, "one glance → type")
+
+    /// Commit a Take captured while LOCKED. This is where the ONE Face ID fires —
+    /// the first moment the encrypted store is actually needed. Flow:
+    ///   • a blank draft is discarded WITHOUT prompting (no key needed to throw away
+    ///     nothing) — so a tap-and-back-out never shows Face ID;
+    ///   • otherwise unlock (Face ID), which binds the real store, then persist;
+    ///   • a cancelled/failed unlock leaves `lockedCapture` set so the editor stays
+    ///     up with the typed text intact for a retry (owner: "keep it, let me retry");
+    ///   • a lapsed user hits the paywall instead of saving (consistent with the dock).
+    func saveLockedCapture() async {
+        // Read the live draft from the observed property the editor mutates directly —
+        // no view-local @State copy that could lag behind the typed text.
+        guard let draft = lockedCapture else { return }
+        let isBlank = draft.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !draft.isTask && draft.timeReminder == nil
+        guard !isBlank else { lockedCapture = nil; return }
+
+        await attemptUnlock()
+        // Cancelled / failed: stay in the capture editor (text preserved) for a retry.
+        guard lockState == .unlocked else { return }
+        guard ensureEntitled() else { lockedCapture = nil; return }
+
+        dailiesVM.save(draft)   // real store is bound by attemptUnlock's rebind
+        lockedCapture = nil
+    }
+
+    /// Abandon a locked capture without saving — back to the normal lock screen.
+    func discardLockedCapture() { lockedCapture = nil }
 
     /// When the app last entered the background, for the time-away re-lock. iOS
     /// can't reliably tell a SUSPENDED app that the device locked, so we re-lock on
