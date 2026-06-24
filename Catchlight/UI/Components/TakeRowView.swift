@@ -540,9 +540,7 @@ struct TakeCardSurface: View {
                 // Location reminder (owner 2026-06-24): a place pin ahead of the place + "On
                 // arrival/leaving". Mutually exclusive with the time line below.
                 HStack(spacing: 4) {
-                    Image(systemName: "mappin.and.ellipse")
-                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
-                        .foregroundStyle(Color.ckTextSecondary)
+                    LocationPinGlyph(color: Color.ckTextSecondary, size: 13)
                         .accessibilityHidden(true)
                     Text(locationLabel)
                         .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
