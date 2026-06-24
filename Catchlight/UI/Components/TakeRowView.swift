@@ -101,7 +101,12 @@ struct TakeRowView: View {
             }
         }
         if take.timeReminder != nil { parts.append("Reminder set") }
-        if take.isNote && !take.isTask && take.timeReminder == nil { parts.append("Note") }
+        if let loc = take.locationReminder {
+            parts.append(loc.triggerOnArrival ? "Reminds on arrival" : "Reminds on leaving")
+        }
+        if take.isNote && !take.isTask && take.timeReminder == nil && take.locationReminder == nil {
+            parts.append("Note")
+        }
         return parts.joined(separator: ". ")
     }
 
@@ -478,6 +483,15 @@ struct TakeCardSurface: View {
     }
     private var reminderLabel: String? { Self.reminderString(for: take) }
 
+    /// The location reminder's one-line label — place name + arrive/leave — or nil. A
+    /// reminder is either time- or location-based (owner 2026-06-24), so this and
+    /// `reminderLabel` are mutually exclusive on a given Take.
+    private var locationLabel: String? {
+        guard let loc = take.locationReminder else { return nil }
+        let place = (loc.locationName?.isEmpty == false) ? loc.locationName! : "Location"
+        return "\(place) · \(loc.triggerOnArrival ? "On arrival" : "On leaving")"
+    }
+
     /// Whether this reminder's alarm will actually fire — drives the bell vs bell.slash
     /// glyph ahead of the "when". A dated-but-silent Take (or a dismissed one-shot) reads
     /// `alarmEnabled == false`; absent a reminder there's no label to mark.
@@ -522,11 +536,30 @@ struct TakeCardSurface: View {
                     .accessibilityHidden(true)   // already spoken in the row label
             }
 
-            if let reminderLabel {
+            if let locationLabel {
+                // Location reminder (owner 2026-06-24): a place pin ahead of the place + "On
+                // arrival/leaving". Mutually exclusive with the time line below.
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .accessibilityHidden(true)
+                    Text(locationLabel)
+                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .foregroundStyle(Color.ckTextSecondary)
+                }
+            } else if let reminderLabel {
                 // .tm — 11pt medium. Italic ONLY when overdue (owner 2026-06-18): the
                 // slant + ruby together signal "late"; active & done read upright.
                 // Colour: ruby overdue / done grey / quiet Secondary otherwise.
                 HStack(spacing: 4) {
+                    // Type glyph (owner 2026-06-24): a clock marks this as a time reminder,
+                    // sitting LEFT of the alarm bell — so the two read as "scheduled" + "will
+                    // it nag". Same size/colour as the label so they form one unit.
+                    Image(systemName: "clock")
+                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .foregroundStyle(reminderLabelColor)
+                        .accessibilityHidden(true)
                     // Small bell ahead of the "when" (owner 2026-06-22): a quiet at-a-glance
                     // signal of whether this reminder will actually nag — `bell` when the
                     // alarm is on, `bell.slash` when it's a silent/dismissed dated item.

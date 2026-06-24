@@ -691,7 +691,7 @@ struct ReminderPickerSheet: View {
     }
 
     /// Quick "when" presets — one tap fills the calendar below. All computed from
-    /// `Calendar.current` (no hardcoded formats), evening at 18:00, the rest at the
+    /// `Calendar.current` (no hardcoded formats), evening at 20:00, the rest at the
     /// scheduler's all-day fire hour so an alarm lands at a sensible time of day.
     private enum Preset: String, CaseIterable, Identifiable {
         case thisEvening = "This evening"
@@ -704,10 +704,10 @@ struct ReminderPickerSheet: View {
             let morning = ReminderScheduler.allDayFireHour
             switch self {
             case .thisEvening:
-                // 18:00 today, or tomorrow evening if it's already past.
-                let today6 = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: now) ?? now
-                return today6 > now ? today6
-                    : (calendar.date(byAdding: .day, value: 1, to: today6) ?? today6)
+                // 20:00 today, or tomorrow evening if it's already past.
+                let today8 = calendar.date(bySettingHour: 20, minute: 0, second: 0, of: now) ?? now
+                return today8 > now ? today8
+                    : (calendar.date(byAdding: .day, value: 1, to: today8) ?? today8)
             case .tomorrow:
                 let next = calendar.date(byAdding: .day, value: 1, to: now) ?? now
                 return calendar.date(bySettingHour: morning, minute: 0, second: 0, of: next) ?? next
