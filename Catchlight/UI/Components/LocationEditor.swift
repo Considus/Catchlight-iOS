@@ -1,14 +1,17 @@
 //
-//  LocationPickerSheet.swift
+//  LocationEditor.swift
 //  Catchlight (iOS app target)
 //
-//  The "Where" picker for a location reminder (owner 2026-06-23, Phase-1 chunk 2). Lets
-//  the user choose a place — by search-as-you-type or one-tap current location — see the
-//  geofence on a map, pick arrive vs leave, and name it. Returns a `LocationTrigger`
-//  (radius fixed at the scheduler's default; see ReminderScheduler.defaultGeofenceRadius)
-//  or nil to remove. Owns its own `LocationService` for the "While Using" prompt + a
-//  one-shot current location; the actual geofence is armed by ReminderScheduler once the
-//  Take saves.
+//  The inline "Place" controls for a location reminder (owner 2026-06-23, Phase-1). Shown
+//  under the reminder picker's Time/Place switch when Place is selected. Lets the user
+//  choose a place — by search-as-you-type or one-tap current location — see the geofence on
+//  a map, pick arrive vs leave, and name it. Writes the result to a bound `LocationTrigger?`
+//  (radius fixed at ReminderScheduler.defaultGeofenceRadius). Owns its own `LocationService`
+//  for the "While Using" prompt + a one-shot current location; the geofence itself is armed
+//  by ReminderScheduler once the Take saves.
+//
+//  A reminder is EITHER time-based OR location-based (owner 2026-06-24) — never both — so
+//  this editor stands alone in the Place tab; there is no time UI here.
 //
 
 import SwiftUI
@@ -16,15 +19,13 @@ import MapKit
 import CoreLocation
 import CatchlightCore
 
-struct LocationPickerSheet: View {
-    let initialTrigger: LocationTrigger?
-    let onSave: (LocationTrigger?) -> Void
+struct LocationEditor: View {
+    /// The composed result, kept in sync with the controls. Nil until a place is chosen.
+    @Binding var trigger: LocationTrigger?
 
     @StateObject private var location = LocationService()
     @StateObject private var search = PlaceSearchCompleter()
-    @Environment(\.dismiss) private var dismiss
 
-    /// The geofence centre. Nil until a place is chosen (search / current location / map drag).
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var name: String
     @State private var arriveOnEntry: Bool
@@ -33,59 +34,39 @@ struct LocationPickerSheet: View {
 
     private let radius = ReminderScheduler.defaultGeofenceRadius
 
-    init(initialTrigger: LocationTrigger?, onSave: @escaping (LocationTrigger?) -> Void) {
-        self.initialTrigger = initialTrigger
-        self.onSave = onSave
-        let coord = initialTrigger.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+    init(trigger: Binding<LocationTrigger?>) {
+        _trigger = trigger
+        let t = trigger.wrappedValue
+        let coord = t.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
         _coordinate = State(initialValue: coord)
-        _name = State(initialValue: initialTrigger?.locationName ?? "")
-        _arriveOnEntry = State(initialValue: initialTrigger?.triggerOnArrival ?? true)
+        _name = State(initialValue: t?.locationName ?? "")
+        _arriveOnEntry = State(initialValue: t?.triggerOnArrival ?? true)
         _cameraPosition = State(initialValue: coord.map { .region(Self.region(for: $0)) } ?? .automatic)
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    searchField
-                    if !search.results.isEmpty && !query.isEmpty {
-                        resultsList
-                    } else {
-                        currentLocationButton
-                        if let coordinate { mapPreview(coordinate) }
-                        if coordinate != nil { detailControls }
-                        if location.authorizationStatus == .denied || location.authorizationStatus == .restricted {
-                            permissionHint
-                        }
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle("Where")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { saveAndDismiss() }
-                        .disabled(coordinate == nil)
-                }
-                if initialTrigger != nil {
-                    ToolbarItem(placement: .destructiveAction) {
-                        Button("Remove", role: .destructive) { onSave(nil); dismiss() }
-                    }
+        VStack(alignment: .leading, spacing: 16) {
+            searchField
+            if !search.results.isEmpty && !query.isEmpty {
+                resultsList
+            } else {
+                currentLocationButton
+                if let coordinate { mapPreview(coordinate) }
+                if coordinate != nil { detailControls }
+                if location.authorizationStatus == .denied || location.authorizationStatus == .restricted {
+                    permissionHint
                 }
             }
         }
-        .presentationDetents([.large])
         .onAppear { location.requestAuthorization() }
         // A fresh one-shot fix drops the pin on the user's spot + names it.
         .onChange(of: location.currentLocation) { _, loc in
             guard let loc else { return }
             apply(coordinate: loc.coordinate, name: name.isEmpty ? "Current location" : name)
-            Task { if let resolved = await search.reverseGeocodedName(for: loc) { name = resolved } }
+            Task { if let resolved = await search.reverseGeocodedName(for: loc) { name = resolved; writeBack() } }
         }
+        .onChange(of: name) { _, _ in writeBack() }
+        .onChange(of: arriveOnEntry) { _, _ in writeBack() }
     }
 
     // MARK: - Sections
@@ -151,10 +132,11 @@ struct LocationPickerSheet: View {
         .mapStyle(.standard)
         // A fixed centre pin + "move the map under the pin" — drag to fine-tune the fence.
         .overlay { Image(systemName: "mappin").font(.title2).foregroundStyle(Color.ckEmber) }
-        .frame(height: 240)
+        .frame(height: 220)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onMapCameraChange(frequency: .onEnd) { context in
             self.coordinate = context.region.center
+            writeBack()
         }
     }
 
@@ -205,18 +187,18 @@ struct LocationPickerSheet: View {
         self.coordinate = coordinate
         if self.name.isEmpty { self.name = name }
         cameraPosition = .region(Self.region(for: coordinate))
+        writeBack()
     }
 
-    private func saveAndDismiss() {
-        guard let coordinate else { return }
-        let trigger = LocationTrigger(
+    /// Compose the current selection into the bound trigger (nil while no place is chosen).
+    private func writeBack() {
+        guard let coordinate else { trigger = nil; return }
+        trigger = LocationTrigger(
             latitude: coordinate.latitude,
             longitude: coordinate.longitude,
             radiusMetres: radius,
             triggerOnArrival: arriveOnEntry,
             locationName: name.isEmpty ? nil : name)
-        onSave(trigger)
-        dismiss()
     }
 
     /// A region framing the geofence comfortably (~the circle plus margin).

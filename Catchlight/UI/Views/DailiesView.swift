@@ -421,14 +421,21 @@ struct DailiesView: View {
             initialLocation: editDraft?.locationReminder,
             onSave: { date, alarm, allDay, recurrence, weekdays, location in
                 if var d = editDraft {
-                    d.timeReminder = TimeReminder(
-                        scheduledDate: date,
-                        notificationIdentifier: d.id.uuidString,
-                        alarmEnabled: alarm,
-                        isAllDay: allDay,
-                        recurrence: recurrence,
-                        weekdays: recurrence == .weekly ? weekdays : [])
-                    d.locationReminder = location   // "where" — independent of the time "when"
+                    // Either/or (owner 2026-06-24): location takes precedence and clears the
+                    // time; otherwise the time "when" applies.
+                    if let location {
+                        d.locationReminder = location
+                        d.timeReminder = nil
+                    } else {
+                        d.locationReminder = nil
+                        d.timeReminder = TimeReminder(
+                            scheduledDate: date,
+                            notificationIdentifier: d.id.uuidString,
+                            alarmEnabled: alarm,
+                            isAllDay: allDay,
+                            recurrence: recurrence,
+                            weekdays: recurrence == .weekly ? weekdays : [])
+                    }
                     d.normaliseActivityFloor()
                     editDraft = d
                 }
@@ -1370,20 +1377,27 @@ struct DailiesView: View {
             d.convertToProse()
         }
 
-        if command.hasReminder {
-            let when = command.reminderDate
-                ?? d.timeReminder?.scheduledDate
-                ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-            d.timeReminder = TimeReminder(scheduledDate: when,
-                                          notificationIdentifier: d.id.uuidString,
-                                          alarmEnabled: command.reminderAlarm,
-                                          isAllDay: command.reminderAllDay,
-                                          recurrence: command.reminderRecurrence,
-                                          weekdays: command.reminderRecurrence == .weekly ? command.reminderWeekdays : [])
-        } else {
+        // Either/or (owner 2026-06-24): a location reminder takes precedence and clears the
+        // time; otherwise the time "when" applies (when present).
+        if let location = command.reminderLocation {
+            d.locationReminder = location
             d.timeReminder = nil
+        } else {
+            d.locationReminder = nil
+            if command.hasReminder {
+                let when = command.reminderDate
+                    ?? d.timeReminder?.scheduledDate
+                    ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+                d.timeReminder = TimeReminder(scheduledDate: when,
+                                              notificationIdentifier: d.id.uuidString,
+                                              alarmEnabled: command.reminderAlarm,
+                                              isAllDay: command.reminderAllDay,
+                                              recurrence: command.reminderRecurrence,
+                                              weekdays: command.reminderRecurrence == .weekly ? command.reminderWeekdays : [])
+            } else {
+                d.timeReminder = nil
+            }
         }
-        d.locationReminder = command.reminderLocation   // "where" — independent of the time "when"
 
         // Obie ON while another Obie exists → confirm first (the existing Obie is
         // demoted by the store's single-Obie upsert when this draft saves). Leave it

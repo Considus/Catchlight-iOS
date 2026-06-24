@@ -342,21 +342,28 @@ final class DailiesViewModel {
         var updated = take
         updated.isNote = isNote
         updated.setTask(isTask)
-        updated.locationReminder = reminderLocation   // "where" — independent of the time "when"
-        if hasReminder {
-            let when = reminderDate
-                ?? updated.timeReminder?.scheduledDate
-                ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-            updated.timeReminder = TimeReminder(
-                scheduledDate: when,
-                notificationIdentifier: updated.id.uuidString,
-                alarmEnabled: reminderAlarm,
-                isAllDay: reminderAllDay,
-                recurrence: reminderRecurrence,
-                weekdays: reminderRecurrence == .weekly ? reminderWeekdays : []
-            )
-        } else {
+        // Either/or (owner 2026-06-24): a location reminder takes precedence and clears the
+        // time; otherwise the time "when" applies (when present).
+        if let reminderLocation {
+            updated.locationReminder = reminderLocation
             updated.timeReminder = nil
+        } else {
+            updated.locationReminder = nil
+            if hasReminder {
+                let when = reminderDate
+                    ?? updated.timeReminder?.scheduledDate
+                    ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+                updated.timeReminder = TimeReminder(
+                    scheduledDate: when,
+                    notificationIdentifier: updated.id.uuidString,
+                    alarmEnabled: reminderAlarm,
+                    isAllDay: reminderAllDay,
+                    recurrence: reminderRecurrence,
+                    weekdays: reminderRecurrence == .weekly ? reminderWeekdays : []
+                )
+            } else {
+                updated.timeReminder = nil
+            }
         }
         updated.normaliseActivityFloor()
 

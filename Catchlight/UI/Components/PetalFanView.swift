@@ -503,17 +503,22 @@ struct PetalFanView: View {
         t.isNote = isNote
         t.setTask(isTask)
         t.isObie = isObie
-        if hasReminder {
-            t.timeReminder = TimeReminder(scheduledDate: reminderDate,
-                                          notificationIdentifier: t.id.uuidString,
-                                          alarmEnabled: reminderAlarm,
-                                          isAllDay: reminderAllDay,
-                                          recurrence: reminderRecurrence,
-                                          weekdays: reminderRecurrence == .weekly ? reminderWeekdays : [])
-        } else {
+        // Either/or (owner 2026-06-24): a location reminder takes precedence and clears the
+        // time; otherwise the time "when" applies (when present).
+        if let reminderLocation {
+            t.locationReminder = reminderLocation
             t.timeReminder = nil
+        } else {
+            t.locationReminder = nil
+            t.timeReminder = hasReminder
+                ? TimeReminder(scheduledDate: reminderDate,
+                               notificationIdentifier: t.id.uuidString,
+                               alarmEnabled: reminderAlarm,
+                               isAllDay: reminderAllDay,
+                               recurrence: reminderRecurrence,
+                               weekdays: reminderRecurrence == .weekly ? reminderWeekdays : [])
+                : nil
         }
-        t.locationReminder = reminderLocation   // independent of the time "when"
         return t
     }
 
@@ -653,10 +658,17 @@ struct ReminderPickerSheet: View {
     /// reads as "Select"; picking one jumps `date` to the preset's instant.
     @State private var quickSet: Preset?
     /// The location ("where") for this reminder (owner 2026-06-23) — nil for a time-only
-    /// reminder. Edited via the `LocationPickerSheet` the "Where" row presents.
+    /// reminder. Edited inline by `LocationEditor` in the Place tab.
     @State private var location: LocationTrigger?
-    @State private var showingLocationPicker = false
+    /// A reminder is EITHER time-based OR location-based (owner 2026-06-24) — the switch
+    /// at the top picks which. Seeded to Place when the Take already has a location.
+    @State private var mode: ReminderMode
     @Environment(\.dismiss) private var dismiss
+
+    enum ReminderMode: String, CaseIterable, Identifiable {
+        case time = "Time", place = "Place"
+        var id: String { rawValue }
+    }
 
     init(initialDate: Date,
          initialAlarm: Bool = true,
@@ -675,6 +687,7 @@ struct ReminderPickerSheet: View {
         _recurrence = State(initialValue: initialRecurrence)
         _weekdays = State(initialValue: initialWeekdays)
         _location = State(initialValue: initialLocation)
+        _mode = State(initialValue: initialLocation != nil ? .place : .time)
     }
 
     /// Quick "when" presets — one tap fills the calendar below. All computed from
@@ -721,25 +734,35 @@ struct ReminderPickerSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    quickSetSection     // 1 — jump the date to a preset
-                    timeSection         // 2 — time of day (hidden when all-day)
-                    optionsSection      // 3·4·5 — All-day · Notify · Repeat ▸ Interval
-                    calendarSection     // 6 — the date
-                    whereSection        // 7 — the place (location reminder)
+                    modeSwitch                  // Time | Place — either/or
+                    if mode == .time {
+                        quickSetSection         // 1 — jump the date to a preset
+                        timeSection             // 2 — time of day (hidden when all-day)
+                        optionsSection          // 3·4·5 — All-day · Notify · Repeat ▸ Interval
+                        calendarSection         // 6 — the date
+                    } else {
+                        LocationEditor(trigger: $location)
+                    }
                 }
                 .padding()
             }
-            .navigationTitle("When")
+            .navigationTitle("Reminder")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { onCancel(); dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    // Weekdays only travel with a WEEKLY cadence — empty for every other,
-                    // so a stale set can't linger if the user switches away then saves.
-                    Button("Done") { onSave(date, alarm, allDay, recurrence,
-                                            recurrence == .weekly ? weekdays : [], location); dismiss() }
+                    // Either/or: Place mode saves the location (time cleared downstream); Time
+                    // mode saves the time and passes nil location (clearing any prior place).
+                    // Weekdays only travel with a WEEKLY cadence — empty otherwise.
+                    Button("Done") {
+                        onSave(date, alarm, allDay, recurrence,
+                               recurrence == .weekly ? weekdays : [],
+                               mode == .place ? location : nil)
+                        dismiss()
+                    }
+                    .disabled(mode == .place && location == nil)   // no place chosen yet
                 }
             }
             // Keep the weekday set coherent with the cadence: entering Weekly seeds the
@@ -792,36 +815,16 @@ struct ReminderPickerSheet: View {
         }
     }
 
-    /// The "Where" row (owner 2026-06-23): opens the location picker; the value summarises
-    /// the chosen place + arrive/leave, or "Add place" when none. A reminder may have a
-    /// when, a where, or both.
-    private var whereSection: some View {
-        Button { showingLocationPicker = true } label: {
-            HStack {
-                Label("Where", systemImage: "mappin.and.ellipse")
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
-                Text(locationSummary)
-                    .foregroundStyle(Color.ckTextSecondary)
-                    .lineLimit(1)
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(Color.ckTextSecondary)
-            }
+    /// The Time | Place switch (owner 2026-06-24): a reminder is either time-based or
+    /// location-based, never both. Switching to Time on save clears any place; switching to
+    /// Place clears the time — enforced at the commit ("location wins when present").
+    private var modeSwitch: some View {
+        Picker("Reminder type", selection: $mode) {
+            ForEach(ReminderMode.allCases) { Text($0.rawValue).tag($0) }
         }
-        .buttonStyle(.plain)
-        .cardSurface()
-        .accessibilityIdentifier("reminder-where")
-        .sheet(isPresented: $showingLocationPicker) {
-            LocationPickerSheet(initialTrigger: location) { location = $0 }
-        }
-    }
-
-    /// One-line summary of the chosen location for the Where row.
-    private var locationSummary: String {
-        guard let location else { return "Add place" }
-        let place = (location.locationName?.isEmpty == false) ? location.locationName! : "Place"
-        return "\(place) · \(location.triggerOnArrival ? "Arriving" : "Leaving")"
+        .pickerStyle(.segmented)
+        .tint(Color.ckEmber)
+        .accessibilityIdentifier("reminder-mode")
     }
 
     /// The shared "Label · value · chevron" row used by the Quick-set and Interval menus.
