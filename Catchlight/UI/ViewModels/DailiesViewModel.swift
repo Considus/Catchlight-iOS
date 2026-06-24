@@ -337,10 +337,12 @@ final class DailiesViewModel {
                             reminderAllDay: Bool = false,
                             reminderRecurrence: TimeReminder.Recurrence = .none,
                             reminderWeekdays: Set<Int> = [],
+                            reminderLocation: LocationTrigger? = nil,
                             isObie: Bool) {
         var updated = take
         updated.isNote = isNote
         updated.setTask(isTask)
+        updated.locationReminder = reminderLocation   // "where" — independent of the time "when"
         if hasReminder {
             let when = reminderDate
                 ?? updated.timeReminder?.scheduledDate

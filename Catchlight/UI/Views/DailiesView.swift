@@ -418,7 +418,8 @@ struct DailiesView: View {
             initialAllDay: existing?.isAllDay ?? false,
             initialRecurrence: existing?.recurrence ?? .none,
             initialWeekdays: existing?.weekdays ?? [],
-            onSave: { date, alarm, allDay, recurrence, weekdays in
+            initialLocation: editDraft?.locationReminder,
+            onSave: { date, alarm, allDay, recurrence, weekdays, location in
                 if var d = editDraft {
                     d.timeReminder = TimeReminder(
                         scheduledDate: date,
@@ -427,6 +428,7 @@ struct DailiesView: View {
                         isAllDay: allDay,
                         recurrence: recurrence,
                         weekdays: recurrence == .weekly ? weekdays : [])
+                    d.locationReminder = location   // "where" — independent of the time "when"
                     d.normaliseActivityFloor()
                     editDraft = d
                 }
@@ -1381,6 +1383,7 @@ struct DailiesView: View {
         } else {
             d.timeReminder = nil
         }
+        d.locationReminder = command.reminderLocation   // "where" — independent of the time "when"
 
         // Obie ON while another Obie exists → confirm first (the existing Obie is
         // demoted by the store's single-Obie upsert when this draft saves). Leave it

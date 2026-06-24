@@ -65,7 +65,7 @@ struct PetalFanView: View {
     /// `reminderDate` carries the time chosen in the picker (nil when no Reminder).
     /// `reminderAlarm` / `reminderAllDay` carry the model-C picker choices (owner
     /// 2026-06-18) — undefined/ignored when `hasReminder` is false.
-    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ reminderWeekdays: Set<Int>, _ isObie: Bool) -> Void
+    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ reminderWeekdays: Set<Int>, _ reminderLocation: LocationTrigger?, _ isObie: Bool) -> Void
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -97,6 +97,8 @@ struct PetalFanView: View {
     /// The weekdays a WEEKLY reminder repeats on (owner 2026-06-23) — empty for every other
     /// cadence. Seeded from any existing reminder; edited by the picker's day strip.
     @State private var reminderWeekdays: Set<Int>
+    /// The location ("where") for this reminder (owner 2026-06-23) — nil for time-only.
+    @State private var reminderLocation: LocationTrigger?
     /// Drives the date/time picker sheet the Reminder Mark pops.
     @State private var showingReminderPicker = false
 
@@ -121,7 +123,7 @@ struct PetalFanView: View {
          hubCentre: CGPoint,
          containerWidth: CGFloat = 0,
          showsFocusCard: Bool = false,
-         onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, TimeReminder.Recurrence, Set<Int>, Bool) -> Void,
+         onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, TimeReminder.Recurrence, Set<Int>, LocationTrigger?, Bool) -> Void,
          onDismiss: @escaping () -> Void) {
         self.take = take
         self.hubCentre = hubCentre
@@ -138,6 +140,7 @@ struct PetalFanView: View {
         _reminderAllDay = State(initialValue: take.timeReminder?.isAllDay ?? false)
         _reminderRecurrence = State(initialValue: take.timeReminder?.recurrence ?? .none)
         _reminderWeekdays = State(initialValue: take.timeReminder?.weekdays ?? [])
+        _reminderLocation = State(initialValue: take.locationReminder)
         _phase = State(initialValue: .opening(start: .now))
     }
 
@@ -400,12 +403,14 @@ struct PetalFanView: View {
             initialAllDay: reminderAllDay,
             initialRecurrence: reminderRecurrence,
             initialWeekdays: reminderWeekdays,
-            onSave: { date, alarm, allDay, recurrence, weekdays in
+            initialLocation: reminderLocation,
+            onSave: { date, alarm, allDay, recurrence, weekdays, location in
                 reminderDate = date
                 reminderAlarm = alarm
                 reminderAllDay = allDay
                 reminderRecurrence = recurrence
                 reminderWeekdays = weekdays
+                reminderLocation = location
                 hasReminder = true
                 showingReminderPicker = false
             },
@@ -508,6 +513,7 @@ struct PetalFanView: View {
         } else {
             t.timeReminder = nil
         }
+        t.locationReminder = reminderLocation   // independent of the time "when"
         return t
     }
 
@@ -610,7 +616,7 @@ struct PetalFanView: View {
         // close animation's end frame, so there's no flash.
         phase = .dismissed
         if commit {
-            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, reminderAlarm, reminderAllDay, reminderRecurrence, reminderRecurrence == .weekly ? reminderWeekdays : [], isObie)
+            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, reminderAlarm, reminderAllDay, reminderRecurrence, reminderRecurrence == .weekly ? reminderWeekdays : [], reminderLocation, isObie)
         } else {
             onDismiss()
         }
@@ -631,7 +637,7 @@ struct PetalFanView: View {
 /// picker follows the user's Region (DD/MM vs MM/DD) and 12/24-hour preference.
 struct ReminderPickerSheet: View {
     let initialDate: Date
-    let onSave: (_ date: Date, _ alarm: Bool, _ allDay: Bool, _ recurrence: TimeReminder.Recurrence, _ weekdays: Set<Int>) -> Void
+    let onSave: (_ date: Date, _ alarm: Bool, _ allDay: Bool, _ recurrence: TimeReminder.Recurrence, _ weekdays: Set<Int>, _ location: LocationTrigger?) -> Void
     /// Optional — the Focus-ring uses Cancel to REMOVE a just-added reminder; the
     /// editor leaves it nil (Cancel keeps the existing time untouched).
     var onCancel: () -> Void = {}
@@ -646,6 +652,10 @@ struct ReminderPickerSheet: View {
     /// The last Quick-set preset chosen, shown in that selector (owner 2026-06-23). Nil
     /// reads as "Select"; picking one jumps `date` to the preset's instant.
     @State private var quickSet: Preset?
+    /// The location ("where") for this reminder (owner 2026-06-23) — nil for a time-only
+    /// reminder. Edited via the `LocationPickerSheet` the "Where" row presents.
+    @State private var location: LocationTrigger?
+    @State private var showingLocationPicker = false
     @Environment(\.dismiss) private var dismiss
 
     init(initialDate: Date,
@@ -653,7 +663,8 @@ struct ReminderPickerSheet: View {
          initialAllDay: Bool = false,
          initialRecurrence: TimeReminder.Recurrence = .none,
          initialWeekdays: Set<Int> = [],
-         onSave: @escaping (Date, Bool, Bool, TimeReminder.Recurrence, Set<Int>) -> Void,
+         initialLocation: LocationTrigger? = nil,
+         onSave: @escaping (Date, Bool, Bool, TimeReminder.Recurrence, Set<Int>, LocationTrigger?) -> Void,
          onCancel: @escaping () -> Void = {}) {
         self.initialDate = initialDate
         self.onSave = onSave
@@ -663,6 +674,7 @@ struct ReminderPickerSheet: View {
         _allDay = State(initialValue: initialAllDay)
         _recurrence = State(initialValue: initialRecurrence)
         _weekdays = State(initialValue: initialWeekdays)
+        _location = State(initialValue: initialLocation)
     }
 
     /// Quick "when" presets — one tap fills the calendar below. All computed from
@@ -713,6 +725,7 @@ struct ReminderPickerSheet: View {
                     timeSection         // 2 — time of day (hidden when all-day)
                     optionsSection      // 3·4·5 — All-day · Notify · Repeat ▸ Interval
                     calendarSection     // 6 — the date
+                    whereSection        // 7 — the place (location reminder)
                 }
                 .padding()
             }
@@ -726,7 +739,7 @@ struct ReminderPickerSheet: View {
                     // Weekdays only travel with a WEEKLY cadence — empty for every other,
                     // so a stale set can't linger if the user switches away then saves.
                     Button("Done") { onSave(date, alarm, allDay, recurrence,
-                                            recurrence == .weekly ? weekdays : []); dismiss() }
+                                            recurrence == .weekly ? weekdays : [], location); dismiss() }
                 }
             }
             // Keep the weekday set coherent with the cadence: entering Weekly seeds the
@@ -777,6 +790,38 @@ struct ReminderPickerSheet: View {
             .accessibilityIdentifier("reminder-time")
             .cardSurface()
         }
+    }
+
+    /// The "Where" row (owner 2026-06-23): opens the location picker; the value summarises
+    /// the chosen place + arrive/leave, or "Add place" when none. A reminder may have a
+    /// when, a where, or both.
+    private var whereSection: some View {
+        Button { showingLocationPicker = true } label: {
+            HStack {
+                Label("Where", systemImage: "mappin.and.ellipse")
+                    .foregroundStyle(Color.ckTextPrimary)
+                Spacer()
+                Text(locationSummary)
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundStyle(Color.ckTextSecondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .cardSurface()
+        .accessibilityIdentifier("reminder-where")
+        .sheet(isPresented: $showingLocationPicker) {
+            LocationPickerSheet(initialTrigger: location) { location = $0 }
+        }
+    }
+
+    /// One-line summary of the chosen location for the Where row.
+    private var locationSummary: String {
+        guard let location else { return "Add place" }
+        let place = (location.locationName?.isEmpty == false) ? location.locationName! : "Place"
+        return "\(place) · \(location.triggerOnArrival ? "Arriving" : "Leaving")"
     }
 
     /// The shared "Label · value · chevron" row used by the Quick-set and Interval menus.
@@ -989,7 +1034,7 @@ private extension View {
         PetalFanView(
             take: Take(blocks: [.checkItem("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _, _, _, _, _, _ in },
+            onCommit: { _, _, _, _, _, _, _, _, _, _ in },
             onDismiss: {}
         )
     }
@@ -1002,7 +1047,7 @@ private extension View {
         PetalFanView(
             take: Take(blocks: [.textLine("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
-            onCommit: { _, _, _, _, _, _, _, _, _ in },
+            onCommit: { _, _, _, _, _, _, _, _, _, _ in },
             onDismiss: {}
         )
     }
