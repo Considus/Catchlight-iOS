@@ -19,6 +19,7 @@
 #if canImport(Catchlight)
 import XCTest
 import UserNotifications
+import CoreLocation
 @testable import Catchlight
 @testable import CatchlightCore
 
@@ -354,6 +355,59 @@ final class ReminderSchedulerTests: XCTestCase {
                                                    isAllDay: true))
         scheduler.scheduleReminder(for: take)
         XCTAssertEqual(center.added.count, 0)
+    }
+
+    // MARK: - Location reminders (owner 2026-06-23)
+
+    private func takeWithLocation(arrival: Bool, radius: Double = 150, name: String? = "Home",
+                                  lat: Double = 51.5, lon: Double = -0.12) -> Take {
+        let loc = LocationTrigger(latitude: lat, longitude: lon, radiusMetres: radius,
+                                  triggerOnArrival: arrival, locationName: name)
+        return Take(id: UUID(), blocks: [.textLine("water the plants")], locationReminder: loc)
+    }
+
+    func testScheduleLocation_arrival_addsEntryGeofenceWithLocId() throws {
+        let take = takeWithLocation(arrival: true)
+        scheduler.scheduleLocationReminder(for: take)
+
+        let request = try XCTUnwrap(center.added.first)
+        XCTAssertEqual(request.identifier, ReminderScheduler.locationIdentifier(base: take.id.uuidString))
+        let trigger = try XCTUnwrap(request.trigger as? UNLocationNotificationTrigger)
+        let region = try XCTUnwrap(trigger.region as? CLCircularRegion)
+        XCTAssertTrue(region.notifyOnEntry)
+        XCTAssertFalse(region.notifyOnExit)
+        XCTAssertEqual(region.center.latitude, 51.5, accuracy: 0.0001)
+        XCTAssertEqual(region.radius, 150, accuracy: 0.5)
+        XCTAssertEqual(request.content.title, "water the plants")
+    }
+
+    func testScheduleLocation_departure_setsExitOnly() throws {
+        scheduler.scheduleLocationReminder(for: takeWithLocation(arrival: false))
+        let trigger = try XCTUnwrap(center.added.first?.trigger as? UNLocationNotificationTrigger)
+        let region = try XCTUnwrap(trigger.region as? CLCircularRegion)
+        XCTAssertFalse(region.notifyOnEntry)
+        XCTAssertTrue(region.notifyOnExit)
+    }
+
+    func testScheduleLocation_radiusBelowFloor_isClamped() throws {
+        scheduler.scheduleLocationReminder(for: takeWithLocation(arrival: true, radius: 20))
+        let trigger = try XCTUnwrap(center.added.first?.trigger as? UNLocationNotificationTrigger)
+        let region = try XCTUnwrap(trigger.region as? CLCircularRegion)
+        XCTAssertEqual(region.radius, ReminderScheduler.minGeofenceRadius, accuracy: 0.5)
+    }
+
+    func testScheduleLocation_noLocationReminder_addsNothing() {
+        scheduler.scheduleLocationReminder(for: Take(blocks: [.textLine("plain")]))
+        XCTAssertEqual(center.added.count, 0)
+    }
+
+    func testCancel_clearsLocationId() {
+        let take = takeWithLocation(arrival: true)
+        scheduler.scheduleLocationReminder(for: take)
+        scheduler.cancelReminder(for: take)
+        XCTAssertEqual(center.added.count, 0)
+        XCTAssertTrue(center.removedIdentifiers.flatMap { $0 }
+            .contains(ReminderScheduler.locationIdentifier(base: take.id.uuidString)))
     }
 }
 #endif
