@@ -38,6 +38,11 @@ private final class FakeNotificationCenter: NotificationScheduling {
         added.removeAll { identifiers.contains($0.identifier) }
     }
 
+    private(set) var removedDeliveredIdentifiers: [[String]] = []
+    func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
+        removedDeliveredIdentifiers.append(identifiers)
+    }
+
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
         authorizationRequests.append(options)
         return try authorizationResult.get()
@@ -355,6 +360,54 @@ final class ReminderSchedulerTests: XCTestCase {
                                                    isAllDay: true))
         scheduler.scheduleReminder(for: take)
         XCTAssertEqual(center.added.count, 0)
+    }
+
+    // MARK: - Notification copy + grouping (owner 2026-06-27)
+
+    /// A notification subtitle is baked at SCHEDULE time and iOS cannot re-evaluate it on
+    /// delivery, so it must be ABSOLUTE — never "Today"/"Tomorrow". A daily occurrence
+    /// scheduled yesterday-for-today otherwise fired still reading "Tomorrow at 09:00".
+    func testSubtitle_isAbsolute_notRelative() {
+        // A date that IS "tomorrow" relative to the real current date — the case that
+        // previously produced the "Tomorrow" wording.
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+        let s = ReminderScheduler.subtitle(for: tomorrow, isAllDay: false)
+        XCTAssertFalse(s.localizedCaseInsensitiveContains("tomorrow"),
+                       "scheduled notification subtitles must be absolute, not relative")
+        XCTAssertFalse(s.localizedCaseInsensitiveContains("today"),
+                       "scheduled notification subtitles must be absolute, not relative")
+    }
+
+    /// Every notification a single recurring reminder schedules shares one
+    /// `threadIdentifier` (the Take id), so iOS stacks its delivered occurrences instead
+    /// of showing each as a separate banner that reads as a duplicate.
+    func testRecurring_occurrencesShareThreadIdentifier() {
+        let take = recurringTake(.daily, at: now.addingTimeInterval(3600))
+        scheduler.scheduleReminder(for: take)
+        XCTAssertGreaterThan(center.added.count, 1, "a recurring reminder schedules a window")
+        let threads = Set(center.added.map(\.content.threadIdentifier))
+        XCTAssertEqual(threads, [take.id.uuidString],
+                       "all of a reminder's notifications must group under the Take id")
+    }
+
+    /// An explicit cancel (edit / delete / remove-reminder) must ALSO clear delivered
+    /// banners, so a renamed reminder's old banner doesn't linger in Notification Centre
+    /// and read as a duplicate next to the new one.
+    func testCancel_clearsDeliveredToo() {
+        let base = UUID().uuidString
+        scheduler.cancelReminder(identifier: base)
+        let cleared = center.removedDeliveredIdentifiers.flatMap { $0 }
+        XCTAssertEqual(Set(cleared), Set(ReminderScheduler.allIdentifiers(base: base)),
+                       "cancel must remove delivered notifications for the whole id set")
+    }
+
+    /// The app-open rebuild must NOT clear delivered notifications — a legitimately-fired
+    /// reminder the user hasn't acted on yet should survive an app launch.
+    func testRescheduleAll_doesNotClearDelivered() {
+        let take = recurringTake(.daily, at: now.addingTimeInterval(3600))
+        scheduler.rescheduleAll(takes: [take])
+        XCTAssertTrue(center.removedDeliveredIdentifiers.isEmpty,
+                      "the rebuild clears only PENDING; delivered firings are preserved")
     }
 
     // MARK: - Location reminders (owner 2026-06-23)

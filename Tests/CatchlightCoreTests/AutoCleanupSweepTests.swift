@@ -28,6 +28,7 @@ private final class SpotlightSpy: SpotlightIndexing, @unchecked Sendable {
 private final class SilentCenter: NotificationScheduling {
     func add(_ request: UNNotificationRequest) {}
     func removePendingNotificationRequests(withIdentifiers identifiers: [String]) {}
+    func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {}
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool { true }
 }
 
