@@ -37,7 +37,17 @@ public struct TimeReminder: Codable, Equatable, Sendable {
     /// component is display-ignored; the scheduler substitutes a default fire time.
     /// For a repeating reminder this is the ANCHOR — the recurrence is derived from its
     /// components (its time-of-day, weekday, day-of-month, etc.).
-    public var scheduledDate: Date
+    ///
+    /// Normalised to milliseconds — the wire format's resolution (`ISO8601`, `…SSS'Z'`).
+    /// Without this a sub-millisecond `scheduledDate` (e.g. the default reminder time is
+    /// `Date() + N hours`, which carries full precision) compares UNEQUAL to its own
+    /// serialised-and-reloaded copy, so sync's `ConflictResolver` saw "remote differs"
+    /// while `modifiedAt` was unchanged and surfaced a PHANTOM CONFLICT — even on one
+    /// device (owner-reported 2026-06-27). `createdAt`/`modifiedAt` are normalised for
+    /// exactly this reason; this matches them.
+    public var scheduledDate: Date {
+        didSet { scheduledDate = ISO8601.truncateToMilliseconds(scheduledDate) }
+    }
     public var isDelivered: Bool
 
     /// Matches the `UNNotificationRequest` identifier so the scheduled local
@@ -76,7 +86,8 @@ public struct TimeReminder: Codable, Equatable, Sendable {
         isAllDay: Bool = false,
         recurrence: Recurrence = .none
     ) {
-        self.scheduledDate = scheduledDate
+        // `didSet` does not fire from an initialiser, so normalise here too.
+        self.scheduledDate = ISO8601.truncateToMilliseconds(scheduledDate)
         self.isDelivered = isDelivered
         self.notificationIdentifier = notificationIdentifier
         self.alarmEnabled = alarmEnabled
@@ -95,7 +106,10 @@ public struct TimeReminder: Codable, Equatable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.scheduledDate = try c.decode(Date.self, forKey: .scheduledDate)
+        // Normalise on decode so a Take reloaded from disk/cloud equals its in-memory
+        // original (the `didSet` does not fire during `init`). This is what makes a
+        // no-op sync resolve to `.noChange` instead of a phantom conflict.
+        self.scheduledDate = ISO8601.truncateToMilliseconds(try c.decode(Date.self, forKey: .scheduledDate))
         self.isDelivered = try c.decodeIfPresent(Bool.self, forKey: .isDelivered) ?? false
         self.notificationIdentifier = try c.decode(String.self, forKey: .notificationIdentifier)
         self.alarmEnabled = try c.decodeIfPresent(Bool.self, forKey: .alarmEnabled) ?? true
