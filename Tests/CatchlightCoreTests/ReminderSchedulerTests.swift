@@ -360,9 +360,11 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - Location reminders (owner 2026-06-23)
 
     private func takeWithLocation(arrival: Bool, radius: Double = 150, name: String? = "Home",
-                                  lat: Double = 51.5, lon: Double = -0.12) -> Take {
+                                  lat: Double = 51.5, lon: Double = -0.12,
+                                  alarmEnabled: Bool = true) -> Take {
         let loc = LocationTrigger(latitude: lat, longitude: lon, radiusMetres: radius,
-                                  triggerOnArrival: arrival, locationName: name)
+                                  triggerOnArrival: arrival, locationName: name,
+                                  alarmEnabled: alarmEnabled)
         return Take(id: UUID(), blocks: [.textLine("water the plants")], locationReminder: loc)
     }
 
@@ -399,6 +401,25 @@ final class ReminderSchedulerTests: XCTestCase {
     func testScheduleLocation_noLocationReminder_addsNothing() {
         scheduler.scheduleLocationReminder(for: Take(blocks: [.textLine("plain")]))
         XCTAssertEqual(center.added.count, 0)
+    }
+
+    /// Model-C parity (owner 2026-06-27): a location reminder with its alarm OFF is a silent
+    /// place tag — it registers NO geofence.
+    func testScheduleLocation_alarmDisabled_addsNothing() {
+        scheduler.scheduleLocationReminder(for: takeWithLocation(arrival: true, alarmEnabled: false))
+        XCTAssertEqual(center.added.count, 0,
+                       "a silent location reminder must not register a geofence")
+    }
+
+    /// The app-open rebuild also skips silent location reminders, so they don't eat the
+    /// iOS 20-region budget.
+    func testRescheduleAll_skipsSilentLocation() {
+        let silent = takeWithLocation(arrival: true, alarmEnabled: false)
+        let firing = takeWithLocation(arrival: true, alarmEnabled: true)
+        scheduler.rescheduleAll(takes: [silent, firing])
+        let added = center.added.map(\.identifier)
+        XCTAssertFalse(added.contains(ReminderScheduler.locationIdentifier(base: silent.id.uuidString)))
+        XCTAssertTrue(added.contains(ReminderScheduler.locationIdentifier(base: firing.id.uuidString)))
     }
 
     func testCancel_clearsLocationId() {

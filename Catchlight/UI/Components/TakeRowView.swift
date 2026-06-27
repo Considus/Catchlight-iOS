@@ -111,7 +111,12 @@ struct TakeRowView: View {
         }
         if take.timeReminder != nil { parts.append("Reminder set") }
         if let loc = take.locationReminder {
-            parts.append(loc.triggerOnArrival ? "Reminds on arrival" : "Reminds on leaving")
+            // A silent place tag (alarm off) doesn't remind — say so for VoiceOver.
+            if loc.alarmEnabled {
+                parts.append(loc.triggerOnArrival ? "Reminds on arrival" : "Reminds on leaving")
+            } else {
+                parts.append(loc.triggerOnArrival ? "Place set, arrival, silent" : "Place set, leaving, silent")
+            }
         }
         if take.isNote && !take.isTask && take.timeReminder == nil && take.locationReminder == nil {
             parts.append("Note")
@@ -525,6 +530,10 @@ struct TakeCardSurface: View {
     /// `alarmEnabled == false`; absent a reminder there's no label to mark.
     private var alarmOn: Bool { take.timeReminder?.alarmEnabled ?? false }
 
+    /// Whether a LOCATION reminder will fire — drives its bell vs bell.slash (owner
+    /// 2026-06-27). A silent place tag reads `alarmEnabled == false`.
+    private var locationAlarmOn: Bool { take.locationReminder?.alarmEnabled ?? false }
+
     /// The reminder subtext colour: ruby when overdue, the done grey when done, else
     /// the quiet secondary scale.
     private var reminderLabelColor: Color {
@@ -569,6 +578,12 @@ struct TakeCardSurface: View {
                 // arrival/leaving". Mutually exclusive with the time line below.
                 HStack(spacing: 4) {
                     LocationPinGlyph(color: Color.ckTextSecondary, size: 13)
+                        .accessibilityHidden(true)
+                    // Bell vs bell.slash — same "will it nag" cue as the time line (owner
+                    // 2026-06-27): a silent place tag (alarm off) shows bell.slash.
+                    Image(systemName: locationAlarmOn ? "bell" : "bell.slash")
+                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .foregroundStyle(Color.ckTextSecondary)
                         .accessibilityHidden(true)
                     Text(locationLabel)
                         .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))

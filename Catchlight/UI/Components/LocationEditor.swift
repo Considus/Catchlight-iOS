@@ -29,6 +29,7 @@ struct LocationEditor: View {
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var name: String
     @State private var arriveOnEntry: Bool
+    @State private var alarmEnabled: Bool
     @State private var cameraPosition: MapCameraPosition
     @State private var query: String = ""
 
@@ -41,6 +42,7 @@ struct LocationEditor: View {
         _coordinate = State(initialValue: coord)
         _name = State(initialValue: t?.locationName ?? "")
         _arriveOnEntry = State(initialValue: t?.triggerOnArrival ?? true)
+        _alarmEnabled = State(initialValue: t?.alarmEnabled ?? true)
         _cameraPosition = State(initialValue: coord.map { .region(Self.region(for: $0)) } ?? .automatic)
     }
 
@@ -67,6 +69,7 @@ struct LocationEditor: View {
         }
         .onChange(of: name) { _, _ in writeBack() }
         .onChange(of: arriveOnEntry) { _, _ in writeBack() }
+        .onChange(of: alarmEnabled) { _, _ in writeBack() }
     }
 
     // MARK: - Sections
@@ -152,6 +155,26 @@ struct LocationEditor: View {
 
             Divider()
 
+            // Notify on/off (owner 2026-06-27) — model-C parity with time reminders. Off =
+            // a silent place tag (no geofence registered); on = fire on arrive/leave.
+            HStack {
+                Label("Notify", systemImage: alarmEnabled ? "bell" : "bell.slash")
+                Spacer()
+                Toggle("", isOn: $alarmEnabled).labelsHidden().tint(Color.ckEmber)
+            }
+            .padding(.vertical, 8)
+            .accessibilityIdentifier("location-notify-toggle")
+
+            if !alarmEnabled {
+                Text("Silent — keeps the place on the Take, with no alert when you arrive or leave.")
+                    .font(.caption)
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 6)
+            }
+
+            Divider()
+
             HStack {
                 Label("Name", systemImage: "tag")
                 TextField("e.g. Home", text: $name)
@@ -198,7 +221,8 @@ struct LocationEditor: View {
             longitude: coordinate.longitude,
             radiusMetres: radius,
             triggerOnArrival: arriveOnEntry,
-            locationName: name.isEmpty ? nil : name)
+            locationName: name.isEmpty ? nil : name,
+            alarmEnabled: alarmEnabled)
     }
 
     /// A region framing the geofence comfortably (~the circle plus margin).
