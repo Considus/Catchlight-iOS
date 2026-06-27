@@ -45,7 +45,15 @@ final class ConflictQueue {
     func resolve(id: UUID, keepLocal: Bool, store: TakeStore) throws {
         guard let idx = pending.firstIndex(where: { $0.local.id == id }) else { return }
         let pair = pending[idx]
-        let winner = keepLocal ? pair.local : pair.remote
+        var winner = keepLocal ? pair.local : pair.remote
+        // Stamp the resolution as a FRESH edit so the chosen version wins at the cloud
+        // (owner-reported 2026-06-27). Without this the winner keeps its old `modifiedAt`,
+        // which is ≤ the last-sync watermark — so `pushOutbound` never re-uploads it, the
+        // divergent remote copy survives, and the next `pullInbound` re-detects the SAME
+        // conflict via the `(localChanged:false, remoteChanged:false)` branch. Resolving
+        // then never sticks: the conflict re-surfaces on every sync. Bumping `modifiedAt`
+        // makes the next sync push the winner over the remote and the pull see `keepLocal`.
+        winner.modifiedAt = Date()
         try store.upsert(winner)
         pending.remove(at: idx)
     }

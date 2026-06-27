@@ -105,6 +105,26 @@ final class ConflictQueueTests: XCTestCase {
         XCTAssertEqual(saved.primaryText, "THEIRS")
     }
 
+    /// Resolving must STAMP the winner as a fresh edit (bumped `modifiedAt`), so the next
+    /// sync pushes it over the divergent remote. Without the bump the winner stays ≤ the
+    /// last-sync watermark, is never re-uploaded, and the same conflict re-surfaces every
+    /// sync — exactly the "resolve doesn't stick" report (owner 2026-06-27).
+    func testResolve_bumpsModifiedAtSoItPropagates() throws {
+        let store = InMemoryTakeStore()
+        let queue = ConflictQueue()
+        let id = UUID()
+        let old = Date(timeIntervalSince1970: 1_000_000)   // long in the past
+        let local = Take(id: id, modifiedAt: old, blocks: [.textLine("MINE")])
+        let remote = Take(id: id, modifiedAt: old, blocks: [.textLine("THEIRS")])
+        queue.enqueue([(local: local, remote: remote)])
+
+        try queue.resolve(id: id, keepLocal: true, store: store)
+
+        let saved = try XCTUnwrap(try store.allTakes().first { $0.id == id })
+        XCTAssertGreaterThan(saved.modifiedAt, old,
+            "the resolved winner must be re-timestamped so the next sync pushes it and the conflict clears")
+    }
+
     func testSkip_removesFromQueueWithoutWriting() throws {
         let store = InMemoryTakeStore()
         let queue = ConflictQueue()
