@@ -28,6 +28,11 @@ import os
 public protocol NotificationScheduling: AnyObject {
     func add(_ request: UNNotificationRequest)
     func removePendingNotificationRequests(withIdentifiers identifiers: [String])
+    /// Remove ALREADY-DELIVERED notifications still sitting in Notification Centre. Distinct
+    /// from `removePendingNotificationRequests`, which only drops not-yet-fired alarms — a
+    /// delivered banner survives an edit/delete otherwise (owner 2026-06-27). `UNUserNotificationCenter`
+    /// satisfies this natively.
+    func removeDeliveredNotifications(withIdentifiers identifiers: [String])
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
 }
 
@@ -318,7 +323,15 @@ public final class ReminderScheduler {
     /// Take's UUID string as the identifier. Clears BOTH the one-shot id and the whole
     /// recurring window (`<id>#0…`), so it doesn't matter which kind the Take was.
     public func cancelReminder(identifier: String) {
-        center.removePendingNotificationRequests(withIdentifiers: Self.allIdentifiers(base: identifier))
+        let ids = Self.allIdentifiers(base: identifier)
+        center.removePendingNotificationRequests(withIdentifiers: ids)
+        // ALSO drop any already-delivered banner for this reminder (owner 2026-06-27). On an
+        // edit/delete the old notification's title/time is now stale — e.g. a renamed reminder
+        // left its previous-name banner stuck in Notification Centre, which then sat alongside
+        // the new one and read as a duplicate. This is the EXPLICIT-cancel path only (edit,
+        // delete, remove-reminder); the app-open `rescheduleAll` rebuild deliberately clears
+        // only PENDING, so a legitimately-fired reminder the user hasn't acted on is preserved.
+        center.removeDeliveredNotifications(withIdentifiers: ids)
     }
 
     /// Reschedule on edit: cancel the prior request and add the current one.

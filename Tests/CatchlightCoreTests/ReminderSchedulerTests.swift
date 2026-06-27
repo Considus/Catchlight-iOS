@@ -37,6 +37,11 @@ private final class FakeNotificationCenter: NotificationScheduling {
         added.removeAll { identifiers.contains($0.identifier) }
     }
 
+    private(set) var removedDeliveredIdentifiers: [[String]] = []
+    func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
+        removedDeliveredIdentifiers.append(identifiers)
+    }
+
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
         authorizationRequests.append(options)
         return try authorizationResult.get()
@@ -382,6 +387,26 @@ final class ReminderSchedulerTests: XCTestCase {
         let threads = Set(center.added.map(\.content.threadIdentifier))
         XCTAssertEqual(threads, [take.id.uuidString],
                        "all of a reminder's notifications must group under the Take id")
+    }
+
+    /// An explicit cancel (edit / delete / remove-reminder) must ALSO clear delivered
+    /// banners, so a renamed reminder's old banner doesn't linger in Notification Centre
+    /// and read as a duplicate next to the new one.
+    func testCancel_clearsDeliveredToo() {
+        let base = UUID().uuidString
+        scheduler.cancelReminder(identifier: base)
+        let cleared = center.removedDeliveredIdentifiers.flatMap { $0 }
+        XCTAssertEqual(Set(cleared), Set(ReminderScheduler.allIdentifiers(base: base)),
+                       "cancel must remove delivered notifications for the whole id set")
+    }
+
+    /// The app-open rebuild must NOT clear delivered notifications — a legitimately-fired
+    /// reminder the user hasn't acted on yet should survive an app launch.
+    func testRescheduleAll_doesNotClearDelivered() {
+        let take = recurringTake(.daily, at: now.addingTimeInterval(3600))
+        scheduler.rescheduleAll(takes: [take])
+        XCTAssertTrue(center.removedDeliveredIdentifiers.isEmpty,
+                      "the rebuild clears only PENDING; delivered firings are preserved")
     }
 }
 #endif
