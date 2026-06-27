@@ -19,6 +19,7 @@
 
 import Foundation
 import UserNotifications
+import CoreLocation
 import CatchlightCore
 import os
 
@@ -97,16 +98,33 @@ public final class ReminderScheduler {
     /// as snooze: dedicated namespace so a rebuild neither drops nor repeats it.
     static func catchUpIdentifier(base: String) -> String { "\(base)#today" }
 
+    /// Identifier for a LOCATION reminder's geofence notification (owner 2026-06-23). A
+    /// dedicated namespace so it lives independently of the time-reminder ids on the same
+    /// Take — a Take may carry BOTH a "when" and a "where".
+    static func locationIdentifier(base: String) -> String { "\(base)#loc" }
+
+    /// Default geofence radius in metres (owner 2026-06-23). 150m sits above iOS's ~100m
+    /// reliability floor (a tighter fence is missed when the location fix is itself uncertain)
+    /// without firing a whole street early. The picker may set its own; the scheduler clamps.
+    public static let defaultGeofenceRadius: CLLocationDistance = 150
+    /// The smallest radius we'll register — below ~100m iOS geofencing is unreliable.
+    public static let minGeofenceRadius: CLLocationDistance = 100
+    /// iOS hard-caps an app at 20 monitored regions; location reminders share that budget
+    /// (time reminders are calendar triggers, not regions, so they don't count).
+    public static let maxLocationRegions = 20
+
     /// The base one-shot id plus the full recurring window — the scope a periodic REBUILD
     /// clears. Deliberately EXCLUDES the snooze + catch-up ids so those survive a rebuild.
     static func windowAndBaseIdentifiers(base: String) -> [String] {
         [base] + (0..<recurrenceWindow).map { windowIdentifier(base: base, index: $0) }
     }
 
-    /// EVERY identifier a reminder might own — base, window, snooze, and catch-up — so a
-    /// single explicit cancel (reminder removed, Take deleted/edited) clears all of them.
+    /// EVERY identifier a reminder might own — base, window, snooze, catch-up, AND the
+    /// location geofence — so a single explicit cancel (reminder removed, Take deleted/edited)
+    /// clears all of them regardless of whether the Take had a "when", a "where", or both.
     static func allIdentifiers(base: String) -> [String] {
-        windowAndBaseIdentifiers(base: base) + [snoozeIdentifier(base: base), catchUpIdentifier(base: base)]
+        windowAndBaseIdentifiers(base: base)
+            + [snoozeIdentifier(base: base), catchUpIdentifier(base: base), locationIdentifier(base: base)]
     }
 
     private let center: NotificationScheduling
@@ -187,6 +205,42 @@ public final class ReminderScheduler {
         Self.logger.warning("Refusing to schedule a past-dated reminder (id \(reminder.notificationIdentifier, privacy: .public))")
     }
 
+    /// Schedule the geofence notification for a Take's LOCATION reminder (owner 2026-06-23).
+    /// A `UNLocationNotificationTrigger` — iOS's own notification daemon monitors the region,
+    /// so the app needs only "When In Use" location authorisation and never has to wake in the
+    /// background (the same path Apple Reminders uses). Fires once on the chosen transition
+    /// (arrive = region entry, leave = region exit); the radius is clamped to the reliability
+    /// floor. A nil/absent location reminder schedules nothing.
+    public func scheduleLocationReminder(for take: Take) {
+        guard let loc = take.locationReminder else { return }
+        let identifier = Self.locationIdentifier(base: take.id.uuidString)
+        let radius = max(Self.minGeofenceRadius, loc.radiusMetres)
+        let coordinate = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
+        // CLCircularRegion is the only region type UNLocationNotificationTrigger accepts; it is
+        // soft-deprecated in iOS 17 but has no replacement for notification triggers.
+        let region = CLCircularRegion(center: coordinate, radius: radius, identifier: identifier)
+        region.notifyOnEntry = loc.triggerOnArrival
+        region.notifyOnExit = !loc.triggerOnArrival
+        let trigger = UNLocationNotificationTrigger(region: region, repeats: false)
+        let request = UNNotificationRequest(identifier: identifier,
+                                            content: locationContent(for: take, loc: loc),
+                                            trigger: trigger)
+        center.add(request)
+    }
+
+    /// Notification content for a location reminder — the Take's text as title (the same
+    /// single boundary-crossing as time reminders), with a "When you arrive/leave …" subtitle.
+    private func locationContent(for take: Take, loc: LocationTrigger) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        content.title = String(take.plainText.prefix(100))
+        let place = (loc.locationName?.isEmpty == false) ? loc.locationName! : "your location"
+        content.subtitle = loc.triggerOnArrival ? "When you arrive at \(place)" : "When you leave \(place)"
+        content.sound = .default
+        content.categoryIdentifier = Self.categoryIdentifier
+        content.interruptionLevel = .timeSensitive
+        return content
+    }
+
     /// Rebuild the ENTIRE pending-alarm set from the authoritative Take list, capped at the
     /// global iOS budget and favouring the soonest occurrences (owner 2026-06-21). Called on
     /// every app open via `DailiesViewModel`. Clears each reminder's base+window (so stale
@@ -196,9 +250,13 @@ public final class ReminderScheduler {
     /// large fleet can never silently overflow iOS's 64-pending cap.
     public func rescheduleAll(takes: [Take]) {
         let n = now()
+        // Clear by the Take UUID (== every reminder's notification identifier) so a
+        // location-ONLY Take is covered too; include the `#loc` id. Snooze / catch-up ids
+        // stay EXCLUDED (windowAndBaseIdentifiers omits them) so a pending snooze survives.
         let toClear = takes
-            .compactMap { $0.timeReminder?.notificationIdentifier }
-            .flatMap { Self.windowAndBaseIdentifiers(base: $0) }
+            .filter { $0.timeReminder != nil || $0.locationReminder != nil }
+            .map { $0.id.uuidString }
+            .flatMap { Self.windowAndBaseIdentifiers(base: $0) + [Self.locationIdentifier(base: $0)] }
         if !toClear.isEmpty {
             center.removePendingNotificationRequests(withIdentifiers: toClear)
         }
@@ -207,6 +265,12 @@ public final class ReminderScheduler {
             .sorted { $0.fireDate < $1.fireDate }
             .prefix(Self.maxPendingAlarms)
         chosen.forEach { center.add($0.request) }
+        // Re-arm location geofences (they persist across launches, but rebuilding keeps them
+        // consistent after edits and restores any lost on reinstall). Capped at iOS's
+        // 20-region budget — beyond that the OS would silently drop them.
+        takes.filter { $0.locationReminder != nil }
+            .prefix(Self.maxLocationRegions)
+            .forEach { scheduleLocationReminder(for: $0) }
     }
 
     /// A planned alarm + the instant it fires, so the global rebuild can sort by soonest.
@@ -296,8 +360,11 @@ public final class ReminderScheduler {
     }
 
     public func cancelReminder(for take: Take) {
-        guard let reminder = take.timeReminder else { return }
-        cancelReminder(identifier: reminder.notificationIdentifier)
+        // No-op when the Take carries neither a "when" nor a "where" — nothing to cancel.
+        guard take.timeReminder != nil || take.locationReminder != nil else { return }
+        // Fall back to the Take's UUID so a LOCATION-only Take (no `timeReminder` to read an
+        // identifier from) still clears its geofence — `allIdentifiers` covers the `#loc` id.
+        cancelReminder(identifier: take.timeReminder?.notificationIdentifier ?? take.id.uuidString)
     }
 
     /// Cancel by raw identifier — used when the Take no longer carries its
@@ -309,10 +376,12 @@ public final class ReminderScheduler {
         center.removePendingNotificationRequests(withIdentifiers: Self.allIdentifiers(base: identifier))
     }
 
-    /// Reschedule on edit: cancel the prior request and add the current one.
+    /// Reschedule on edit: cancel the prior requests and add the current ones — both the
+    /// time alarm(s) and the location geofence, so an edit to either is reflected.
     public func reschedule(for take: Take) {
         cancelReminder(for: take)
         scheduleReminder(for: take)
+        scheduleLocationReminder(for: take)
     }
 
     /// The Take IDs that currently have a PENDING snoozed re-nudge (owner 2026-06-21) —

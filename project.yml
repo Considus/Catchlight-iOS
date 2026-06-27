@@ -110,6 +110,10 @@ targets:
         # silently falls back to the device passcode (D-042 — this was the cause of
         # "passcode prompt, not Face ID").
         NSFaceIDUsageDescription: "Catchlight uses Face ID to unlock your encrypted Takes."
+        # Location reminders (owner 2026-06-23): "When In Use" is sufficient — the system's
+        # notification daemon monitors the geofence for UNLocationNotificationTrigger, so the
+        # app never needs background location (the Apple Reminders posture). No "Always" key.
+        NSLocationWhenInUseUsageDescription: "Catchlight uses your location to remind you about a Take when you arrive at or leave a place."
         # App encrypts user content with AES-256-GCM (CryptoKit) + HKDF/HMAC-SHA-256
         # for confidentiality — i.e. it DOES use non-exempt encryption (beyond OS
         # HTTPS). Algorithms are standard (no proprietary crypto). Export basis:

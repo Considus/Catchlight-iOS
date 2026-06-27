@@ -37,6 +37,8 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Catchlight uses Face ID to unlock your encrypted Takes.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Catchlight uses your location to remind you about a Take when you arrive at or leave a place.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.considus.catchlight.viewTake</string>
