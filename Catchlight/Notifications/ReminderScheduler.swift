@@ -137,9 +137,15 @@ public final class ReminderScheduler {
 
     /// Subtitle for a specific occurrence instant — used per-occurrence when a recurring
     /// reminder is scheduled as a window of individual alarms (owner 2026-06-21).
+    ///
+    /// ABSOLUTE, never relative (owner 2026-06-27). A notification's subtitle is baked at
+    /// SCHEDULE time and iOS can't re-evaluate it on delivery, so relative wording froze:
+    /// a daily occurrence scheduled yesterday-for-today still read "Tomorrow at 09:00"
+    /// when it actually fired today — which looked like a stray "notification for the next
+    /// instance" stacked next to the real one. An absolute date is correct whenever it is
+    /// delivered. (The in-app card still formats relatively — it re-evaluates live.)
     static func subtitle(for date: Date, isAllDay: Bool) -> String {
         let formatter = DateFormatter()
-        formatter.doesRelativeDateFormatting = true   // "Today"/"Tomorrow" where apt
         formatter.dateStyle = .medium
         formatter.timeStyle = isAllDay ? .none : .short
         return formatter.string(from: date)
@@ -269,6 +275,12 @@ public final class ReminderScheduler {
         content.subtitle = Self.subtitle(for: occurrence, isAllDay: isAllDay)
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier
+        // Group every notification for THIS reminder (all recurring-window occurrences,
+        // its snooze, its catch-up) under one thread keyed on the Take, so iOS STACKS
+        // them in Notification Centre instead of showing each delivered occurrence as a
+        // separate banner that reads as a duplicate (owner 2026-06-27). The Take id is
+        // opaque — no content crosses the boundary here.
+        content.threadIdentifier = take.id.uuidString
         // Stamp the original "when" text so a later Snooze can show "Originally due …".
         content.userInfo[Self.dueTextKey] = content.subtitle
         content.interruptionLevel = .timeSensitive
@@ -351,6 +363,9 @@ public final class ReminderScheduler {
         content.subtitle = dueText.isEmpty ? "Snoozed" : "Snoozed — Originally due \(dueText)"
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier   // snoozed nudge is snoozable again
+        // Same thread as the reminder's other notifications so the snooze stacks with
+        // them (the id is `<uuid>#snooze`; take the base before the `#`).
+        content.threadIdentifier = identifier.split(separator: "#", maxSplits: 1).first.map(String.init) ?? identifier
         content.interruptionLevel = .timeSensitive
         content.userInfo[Self.dueTextKey] = dueText             // carry the original "when" across re-snoozes
         content.userInfo[Self.snoozedFlagKey] = true           // mark as snoozed so the edge can read "SNOOZED"

@@ -355,5 +355,33 @@ final class ReminderSchedulerTests: XCTestCase {
         scheduler.scheduleReminder(for: take)
         XCTAssertEqual(center.added.count, 0)
     }
+
+    // MARK: - Notification copy + grouping (owner 2026-06-27)
+
+    /// A notification subtitle is baked at SCHEDULE time and iOS cannot re-evaluate it on
+    /// delivery, so it must be ABSOLUTE — never "Today"/"Tomorrow". A daily occurrence
+    /// scheduled yesterday-for-today otherwise fired still reading "Tomorrow at 09:00".
+    func testSubtitle_isAbsolute_notRelative() {
+        // A date that IS "tomorrow" relative to the real current date — the case that
+        // previously produced the "Tomorrow" wording.
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+        let s = ReminderScheduler.subtitle(for: tomorrow, isAllDay: false)
+        XCTAssertFalse(s.localizedCaseInsensitiveContains("tomorrow"),
+                       "scheduled notification subtitles must be absolute, not relative")
+        XCTAssertFalse(s.localizedCaseInsensitiveContains("today"),
+                       "scheduled notification subtitles must be absolute, not relative")
+    }
+
+    /// Every notification a single recurring reminder schedules shares one
+    /// `threadIdentifier` (the Take id), so iOS stacks its delivered occurrences instead
+    /// of showing each as a separate banner that reads as a duplicate.
+    func testRecurring_occurrencesShareThreadIdentifier() {
+        let take = recurringTake(.daily, at: now.addingTimeInterval(3600))
+        scheduler.scheduleReminder(for: take)
+        XCTAssertGreaterThan(center.added.count, 1, "a recurring reminder schedules a window")
+        let threads = Set(center.added.map(\.content.threadIdentifier))
+        XCTAssertEqual(threads, [take.id.uuidString],
+                       "all of a reminder's notifications must group under the Take id")
+    }
 }
 #endif
