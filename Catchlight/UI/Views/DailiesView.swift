@@ -602,6 +602,26 @@ struct DailiesView: View {
             syncErrorStrip
             quarantineNoticeStrip
         }
+        // Dodge the status bar / Dynamic Island (owner 2026-06-27). The app root is
+        // full-bleed (`.ignoresSafeArea(.container)`), so this `.safeAreaInset(.top)`
+        // has no top safe area to sit below and lands the strips UNDER the island, where
+        // a sync/conflict/error notice is clipped and unreadable. Pad down by the same
+        // `deviceTopInset` the heading uses to clear the bar — but ONLY when a strip is
+        // actually showing, so an empty stack reserves no height and the timeline isn't
+        // pushed down at rest.
+        .padding(.top, hasTopStrip ? deviceTopInset : 0)
+    }
+
+    /// Whether ANY top notice strip is currently visible — gates the status-bar dodge
+    /// above so the inset reserves space only when there's something to show. Mirrors the
+    /// individual strips' own visibility conditions (conflict / lapse / storage / sync /
+    /// quarantine); keep in sync if a strip's trigger changes.
+    private var hasTopStrip: Bool {
+        conflicts.pending.count > 0
+            || app.subscriptionStatus == .lapsed
+            || vm.lastError != nil
+            || app.lastSyncError != nil
+            || app.quarantinedCount > 0
     }
 
     /// Read-only banner shown while the user is `.lapsed` (Tasks 6.20 / 6.22).
