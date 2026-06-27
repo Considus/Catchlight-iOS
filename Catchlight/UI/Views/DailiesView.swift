@@ -1520,12 +1520,21 @@ struct DailiesView: View {
                 guard app.ensureEntitled() else { return }
                 deleteTake(take)
             },
+            // Export this one Take (owner 2026-06-27). Exports what's on screen — the live
+            // draft while editing, otherwise the stored Take — through the share sheet.
+            // Subscription-independent, like the bulk export ("your data is yours, always").
+            onExport: {
+                ExportCoordinator.presentShareSheet(takes: [isEditingThis ? (editDraft ?? take) : take])
+            },
             onDiscard: isEditingThis ? { discardInlineEdit() } : nil,
             // The editing row's Iris is the shape control (tap = Focus ring), so it
             // carries the retired editor's "editor-shape" id for tests + semantics.
             irisIdentifier: isEditingThis ? "editor-shape" : "take-iris",
             cardSwipeOffset: cardSwipeOffset,
             isSnoozed: vm.snoozedReminderIDs.contains(take.id),
+            // Dimmed background rows during edit-in-place make their URLs inert, so a
+            // save/discard tap can't open a link under the mask (owner 2026-06-27).
+            linksInteractive: !(editingActive && !isEditingThis),
             editingCard: isEditingThis
                 ? { AnyView(InlineTakeEditCard(
                     draft: editDraftBinding,
