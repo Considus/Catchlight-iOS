@@ -29,19 +29,32 @@ struct LocationEditor: View {
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var name: String
     @State private var arriveOnEntry: Bool
+    @State private var alarmEnabled: Bool
     @State private var cameraPosition: MapCameraPosition
     @State private var query: String = ""
+    @State private var radiusMetres: Double
 
-    private let radius = ReminderScheduler.defaultGeofenceRadius
+    /// Selectable geofence radii (owner 2026-06-27). 100 m is iOS's reliability floor
+    /// (`ReminderScheduler.minGeofenceRadius`) — below it the fence is missed or fires late;
+    /// 150 m is the reliable default; 250 / 500 m give an earlier, wider heads-up.
+    static let radiusOptions: [Double] = [100, 150, 250, 500]
+
+    /// Snap an arbitrary stored radius to the nearest option (older Takes stored a fixed 150).
+    private static func nearestOption(to value: Double) -> Double {
+        radiusOptions.min(by: { abs($0 - value) < abs($1 - value) }) ?? ReminderScheduler.defaultGeofenceRadius
+    }
 
     init(trigger: Binding<LocationTrigger?>) {
         _trigger = trigger
         let t = trigger.wrappedValue
         let coord = t.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        let r = Self.nearestOption(to: t?.radiusMetres ?? ReminderScheduler.defaultGeofenceRadius)
         _coordinate = State(initialValue: coord)
         _name = State(initialValue: t?.locationName ?? "")
         _arriveOnEntry = State(initialValue: t?.triggerOnArrival ?? true)
-        _cameraPosition = State(initialValue: coord.map { .region(Self.region(for: $0)) } ?? .automatic)
+        _alarmEnabled = State(initialValue: t?.alarmEnabled ?? true)
+        _radiusMetres = State(initialValue: r)
+        _cameraPosition = State(initialValue: coord.map { .region(Self.region(for: $0, radius: r)) } ?? .automatic)
     }
 
     var body: some View {
@@ -67,6 +80,12 @@ struct LocationEditor: View {
         }
         .onChange(of: name) { _, _ in writeBack() }
         .onChange(of: arriveOnEntry) { _, _ in writeBack() }
+        .onChange(of: alarmEnabled) { _, _ in writeBack() }
+        .onChange(of: radiusMetres) { _, r in
+            // Refit the map so the resized fence stays comfortably framed.
+            if let coordinate { cameraPosition = .region(Self.region(for: coordinate, radius: r)) }
+            writeBack()
+        }
     }
 
     // MARK: - Sections
@@ -125,7 +144,7 @@ struct LocationEditor: View {
 
     private func mapPreview(_ coordinate: CLLocationCoordinate2D) -> some View {
         Map(position: $cameraPosition) {
-            MapCircle(center: coordinate, radius: radius)
+            MapCircle(center: coordinate, radius: radiusMetres)
                 .foregroundStyle(Color.ckEmber.opacity(0.18))
                 .stroke(Color.ckEmber, lineWidth: 2)
         }
@@ -149,6 +168,53 @@ struct LocationEditor: View {
             .pickerStyle(.segmented)
             .padding(.vertical, 8)
             .accessibilityIdentifier("location-arrive-leave")
+
+            Divider()
+
+            // Geofence radius (owner 2026-06-27). 100 m is the reliable floor; a tighter
+            // fence is more precise but iOS may trigger it late or miss it.
+            HStack {
+                Label("Radius", systemImage: "circle.dashed")
+                Spacer()
+                Picker("Radius", selection: $radiusMetres) {
+                    ForEach(Self.radiusOptions, id: \.self) { m in
+                        Text("\(Int(m)) m").tag(m)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .tint(Color.ckEmber)
+            }
+            .padding(.vertical, 8)
+            .accessibilityIdentifier("location-radius-picker")
+
+            if radiusMetres <= ReminderScheduler.minGeofenceRadius {
+                Text("A tighter radius is more precise, but iOS may trigger it late or miss it — 100 m is the reliable minimum.")
+                    .font(.caption)
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 6)
+            }
+
+            Divider()
+
+            // Notify on/off (owner 2026-06-27) — model-C parity with time reminders. Off =
+            // a silent place tag (no geofence registered); on = fire on arrive/leave.
+            HStack {
+                Label("Notify", systemImage: alarmEnabled ? "bell" : "bell.slash")
+                Spacer()
+                Toggle("", isOn: $alarmEnabled).labelsHidden().tint(Color.ckEmber)
+            }
+            .padding(.vertical, 8)
+            .accessibilityIdentifier("location-notify-toggle")
+
+            if !alarmEnabled {
+                Text("Silent — keeps the place on the Take, with no alert when you arrive or leave.")
+                    .font(.caption)
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 6)
+            }
 
             Divider()
 
@@ -186,7 +252,7 @@ struct LocationEditor: View {
     private func apply(coordinate: CLLocationCoordinate2D, name: String) {
         self.coordinate = coordinate
         if self.name.isEmpty { self.name = name }
-        cameraPosition = .region(Self.region(for: coordinate))
+        cameraPosition = .region(Self.region(for: coordinate, radius: radiusMetres))
         writeBack()
     }
 
@@ -196,14 +262,17 @@ struct LocationEditor: View {
         trigger = LocationTrigger(
             latitude: coordinate.latitude,
             longitude: coordinate.longitude,
-            radiusMetres: radius,
+            radiusMetres: radiusMetres,
             triggerOnArrival: arriveOnEntry,
-            locationName: name.isEmpty ? nil : name)
+            locationName: name.isEmpty ? nil : name,
+            alarmEnabled: alarmEnabled)
     }
 
-    /// A region framing the geofence comfortably (~the circle plus margin).
-    private static func region(for coordinate: CLLocationCoordinate2D) -> MKCoordinateRegion {
-        MKCoordinateRegion(center: coordinate, latitudinalMeters: 800, longitudinalMeters: 800)
+    /// A region framing the geofence comfortably — scales with the radius so the circle
+    /// stays well inside the frame at every option (≈3× the radius, with a sensible floor).
+    private static func region(for coordinate: CLLocationCoordinate2D, radius: Double) -> MKCoordinateRegion {
+        let span = max(600, radius * 3)
+        return MKCoordinateRegion(center: coordinate, latitudinalMeters: span, longitudinalMeters: span)
     }
 }
 
