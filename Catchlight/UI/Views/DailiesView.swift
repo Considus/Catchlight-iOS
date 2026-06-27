@@ -417,14 +417,25 @@ struct DailiesView: View {
             initialAlarm: existing?.alarmEnabled ?? true,
             initialAllDay: existing?.isAllDay ?? false,
             initialRecurrence: existing?.recurrence ?? .none,
-            onSave: { date, alarm, allDay, recurrence in
+            initialWeekdays: existing?.weekdays ?? [],
+            initialLocation: editDraft?.locationReminder,
+            onSave: { date, alarm, allDay, recurrence, weekdays, location in
                 if var d = editDraft {
-                    d.timeReminder = TimeReminder(
-                        scheduledDate: date,
-                        notificationIdentifier: d.id.uuidString,
-                        alarmEnabled: alarm,
-                        isAllDay: allDay,
-                        recurrence: recurrence)
+                    // Either/or (owner 2026-06-24): location takes precedence and clears the
+                    // time; otherwise the time "when" applies.
+                    if let location {
+                        d.locationReminder = location
+                        d.timeReminder = nil
+                    } else {
+                        d.locationReminder = nil
+                        d.timeReminder = TimeReminder(
+                            scheduledDate: date,
+                            notificationIdentifier: d.id.uuidString,
+                            alarmEnabled: alarm,
+                            isAllDay: allDay,
+                            recurrence: recurrence,
+                            weekdays: recurrence == .weekly ? weekdays : [])
+                    }
                     d.normaliseActivityFloor()
                     editDraft = d
                 }
@@ -602,6 +613,26 @@ struct DailiesView: View {
             syncErrorStrip
             quarantineNoticeStrip
         }
+        // Dodge the status bar / Dynamic Island (owner 2026-06-27). The app root is
+        // full-bleed (`.ignoresSafeArea(.container)`), so this `.safeAreaInset(.top)`
+        // has no top safe area to sit below and lands the strips UNDER the island, where
+        // a sync/conflict/error notice is clipped and unreadable. Pad down by the same
+        // `deviceTopInset` the heading uses to clear the bar — but ONLY when a strip is
+        // actually showing, so an empty stack reserves no height and the timeline isn't
+        // pushed down at rest.
+        .padding(.top, hasTopStrip ? deviceTopInset : 0)
+    }
+
+    /// Whether ANY top notice strip is currently visible — gates the status-bar dodge
+    /// above so the inset reserves space only when there's something to show. Mirrors the
+    /// individual strips' own visibility conditions (conflict / lapse / storage / sync /
+    /// quarantine); keep in sync if a strip's trigger changes.
+    private var hasTopStrip: Bool {
+        conflicts.pending.count > 0
+            || app.subscriptionStatus == .lapsed
+            || vm.lastError != nil
+            || app.lastSyncError != nil
+            || app.quarantinedCount > 0
     }
 
     /// Read-only banner shown while the user is `.lapsed` (Tasks 6.20 / 6.22).
@@ -1366,17 +1397,26 @@ struct DailiesView: View {
             d.convertToProse()
         }
 
-        if command.hasReminder {
-            let when = command.reminderDate
-                ?? d.timeReminder?.scheduledDate
-                ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-            d.timeReminder = TimeReminder(scheduledDate: when,
-                                          notificationIdentifier: d.id.uuidString,
-                                          alarmEnabled: command.reminderAlarm,
-                                          isAllDay: command.reminderAllDay,
-                                          recurrence: command.reminderRecurrence)
-        } else {
+        // Either/or (owner 2026-06-24): a location reminder takes precedence and clears the
+        // time; otherwise the time "when" applies (when present).
+        if let location = command.reminderLocation {
+            d.locationReminder = location
             d.timeReminder = nil
+        } else {
+            d.locationReminder = nil
+            if command.hasReminder {
+                let when = command.reminderDate
+                    ?? d.timeReminder?.scheduledDate
+                    ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+                d.timeReminder = TimeReminder(scheduledDate: when,
+                                              notificationIdentifier: d.id.uuidString,
+                                              alarmEnabled: command.reminderAlarm,
+                                              isAllDay: command.reminderAllDay,
+                                              recurrence: command.reminderRecurrence,
+                                              weekdays: command.reminderRecurrence == .weekly ? command.reminderWeekdays : [])
+            } else {
+                d.timeReminder = nil
+            }
         }
 
         // Obie ON while another Obie exists → confirm first (the existing Obie is
@@ -1520,12 +1560,21 @@ struct DailiesView: View {
                 guard app.ensureEntitled() else { return }
                 deleteTake(take)
             },
+            // Export this one Take (owner 2026-06-27). Exports what's on screen — the live
+            // draft while editing, otherwise the stored Take — through the share sheet.
+            // Subscription-independent, like the bulk export ("your data is yours, always").
+            onExport: {
+                ExportCoordinator.presentShareSheet(takes: [isEditingThis ? (editDraft ?? take) : take])
+            },
             onDiscard: isEditingThis ? { discardInlineEdit() } : nil,
             // The editing row's Iris is the shape control (tap = Focus ring), so it
             // carries the retired editor's "editor-shape" id for tests + semantics.
             irisIdentifier: isEditingThis ? "editor-shape" : "take-iris",
             cardSwipeOffset: cardSwipeOffset,
             isSnoozed: vm.snoozedReminderIDs.contains(take.id),
+            // Dimmed background rows during edit-in-place make their URLs inert, so a
+            // save/discard tap can't open a link under the mask (owner 2026-06-27).
+            linksInteractive: !(editingActive && !isEditingThis),
             editingCard: isEditingThis
                 ? { AnyView(InlineTakeEditCard(
                     draft: editDraftBinding,

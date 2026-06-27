@@ -100,6 +100,10 @@ final class UIState {
         let reminderAllDay: Bool
         /// Repeat cadence (owner 2026-06-21) — `.none` for a one-shot.
         let reminderRecurrence: TimeReminder.Recurrence
+        /// Weekdays a WEEKLY reminder repeats on (owner 2026-06-23) — empty unless weekly.
+        let reminderWeekdays: Set<Int>
+        /// The location ("where") for this reminder (owner 2026-06-23) — nil for time-only.
+        let reminderLocation: LocationTrigger?
         let isObie: Bool
     }
 

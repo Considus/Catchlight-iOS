@@ -44,6 +44,10 @@ struct TakeRowView: View {
     /// when the Take isn't already the Obie.
     var onMakeObie: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
+    /// Export THIS single Take from the long-press menu (owner 2026-06-27). Routes the one
+    /// Take through the system share sheet (`ExportCoordinator`), mirroring Settings' bulk
+    /// export. Offered on every Take; the caller supplies the share-sheet plumbing.
+    var onExport: (() -> Void)? = nil
     /// Revert the in-progress edit (owner 2026-06-17). Supplied only while this row
     /// is being edited in place, so "Discard changes" appears in the long-press menu
     /// (and as a VoiceOver action) exactly when there are edits to discard.
@@ -67,6 +71,11 @@ struct TakeRowView: View {
     /// and card geometry are untouched (owner point 6). nil everywhere a row is at
     /// rest. The editor owns its own gestures + accessibility, so the row's tap /
     /// combined-element wrapping is dropped while editing.
+    /// Whether detected URLs in this row's resting card are tappable (owner 2026-06-27).
+    /// Forwarded to `TakeCardSurface`; the dimmed background rows during edit-in-place pass
+    /// false so a save/discard tap can't land on a URL under the mask (only affects the
+    /// resting card — the editing row renders the live editor, not `TakeCardSurface`).
+    var linksInteractive: Bool = true
     var editingCard: (() -> AnyView)? = nil
 
     private var firstLine: String {
@@ -101,7 +110,12 @@ struct TakeRowView: View {
             }
         }
         if take.timeReminder != nil { parts.append("Reminder set") }
-        if take.isNote && !take.isTask && take.timeReminder == nil { parts.append("Note") }
+        if let loc = take.locationReminder {
+            parts.append(loc.triggerOnArrival ? "Reminds on arrival" : "Reminds on leaving")
+        }
+        if take.isNote && !take.isTask && take.timeReminder == nil && take.locationReminder == nil {
+            parts.append("Note")
+        }
         return parts.joined(separator: ". ")
     }
 
@@ -251,7 +265,7 @@ struct TakeRowView: View {
             editingCard()
                 .contextMenu { rowMenuItems }
         } else {
-            TakeCardSurface(take: take, isSnoozed: isSnoozed)
+            TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: linksInteractive)
                 .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .onTapGesture { onTapText() }
                 // iOS's standard long-press lift: the card rises cleanly (its own
@@ -294,6 +308,15 @@ struct TakeRowView: View {
                 Label("Make Obie", systemImage: "pin")
             }
         }
+        if let onExport {
+            // Export just this one Take to the share sheet (owner 2026-06-27) — the
+            // single-Take counterpart to Settings' bulk export.
+            Button {
+                onExport()
+            } label: {
+                Label("Export Take", systemImage: "square.and.arrow.up")
+            }
+        }
         if let onDiscard {
             // Edit-in-place: revert the unsaved edits (owner 2026-06-17). Reverts —
             // never deletes — so it's not destructive-styled.
@@ -323,6 +346,9 @@ struct TakeRowView: View {
         if let onMakeObie, !take.isObie {
             Button("Make Obie") { onMakeObie() }
         }
+        if let onExport {
+            Button("Export Take") { onExport() }
+        }
         if let onDiscard {
             Button("Discard changes") { onDiscard() }
         }
@@ -346,6 +372,13 @@ struct TakeCardSurface: View {
     /// This Take's reminder has a pending snoozed re-nudge — the edge reads "SNOOZED"
     /// instead of "OVERDUE" (owner 2026-06-21). Defaults false (e.g. previews).
     var isSnoozed: Bool = false
+    /// Whether detected URLs are TAPPABLE (owner 2026-06-27). The visual treatment
+    /// (accent + underline) is unchanged either way; when false the `.link` attribute is
+    /// simply omitted so the text can't open Safari. The dimmed background rows during
+    /// edit-in-place pass false — otherwise a tap meant to save/discard the edit lands on
+    /// a URL under the mask and navigates away instead of dismissing (owner-reported
+    /// 2026-06-27): a SwiftUI `Text` link beats the card's own `onTapGesture`.
+    var linksInteractive: Bool = true
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var dynamicSize
@@ -413,7 +446,7 @@ struct TakeCardSurface: View {
         for match in bodyLinks {
             guard let lo = AttributedString.Index(match.range.lowerBound, within: attr),
                   let hi = AttributedString.Index(match.range.upperBound, within: attr) else { continue }
-            attr[lo..<hi].link = match.url
+            if linksInteractive { attr[lo..<hi].link = match.url }
             attr[lo..<hi].foregroundColor = .ckAccent
             attr[lo..<hi].underlineStyle = .single
         }
@@ -478,6 +511,15 @@ struct TakeCardSurface: View {
     }
     private var reminderLabel: String? { Self.reminderString(for: take) }
 
+    /// The location reminder's one-line label — place name + arrive/leave — or nil. A
+    /// reminder is either time- or location-based (owner 2026-06-24), so this and
+    /// `reminderLabel` are mutually exclusive on a given Take.
+    private var locationLabel: String? {
+        guard let loc = take.locationReminder else { return nil }
+        let place = (loc.locationName?.isEmpty == false) ? loc.locationName! : "Location"
+        return "\(place) · \(loc.triggerOnArrival ? "On arrival" : "On leaving")"
+    }
+
     /// Whether this reminder's alarm will actually fire — drives the bell vs bell.slash
     /// glyph ahead of the "when". A dated-but-silent Take (or a dismissed one-shot) reads
     /// `alarmEnabled == false`; absent a reminder there's no label to mark.
@@ -522,11 +564,28 @@ struct TakeCardSurface: View {
                     .accessibilityHidden(true)   // already spoken in the row label
             }
 
-            if let reminderLabel {
+            if let locationLabel {
+                // Location reminder (owner 2026-06-24): a place pin ahead of the place + "On
+                // arrival/leaving". Mutually exclusive with the time line below.
+                HStack(spacing: 4) {
+                    LocationPinGlyph(color: Color.ckTextSecondary, size: 13)
+                        .accessibilityHidden(true)
+                    Text(locationLabel)
+                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .foregroundStyle(Color.ckTextSecondary)
+                }
+            } else if let reminderLabel {
                 // .tm — 11pt medium. Italic ONLY when overdue (owner 2026-06-18): the
                 // slant + ruby together signal "late"; active & done read upright.
                 // Colour: ruby overdue / done grey / quiet Secondary otherwise.
                 HStack(spacing: 4) {
+                    // Type glyph (owner 2026-06-24): a clock marks this as a time reminder,
+                    // sitting LEFT of the alarm bell — so the two read as "scheduled" + "will
+                    // it nag". Same size/colour as the label so they form one unit.
+                    Image(systemName: "clock")
+                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .foregroundStyle(reminderLabelColor)
+                        .accessibilityHidden(true)
                     // Small bell ahead of the "when" (owner 2026-06-22): a quiet at-a-glance
                     // signal of whether this reminder will actually nag — `bell` when the
                     // alarm is on, `bell.slash` when it's a silent/dismissed dated item.

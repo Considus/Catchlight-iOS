@@ -59,8 +59,9 @@ final class DailiesViewModel {
     /// First-ever schedule requests authorization (§8.3: ask when the user
     /// adds their first reminder, not at launch).
     private func reconcileNotification(for take: Take) {
-        reminders.cancelReminder(identifier: take.id.uuidString)
-        guard take.timeReminder != nil else { return }
+        reminders.cancelReminder(identifier: take.id.uuidString)   // clears time + #loc ids
+        // A Take may carry a "when", a "where", or both — schedule whichever it has.
+        guard take.timeReminder != nil || take.locationReminder != nil else { return }
         if !didRequestNotificationAuth {
             didRequestNotificationAuth = true
             let reminders = self.reminders
@@ -68,9 +69,11 @@ final class DailiesViewModel {
             Task {
                 _ = await reminders.requestAuthorization()
                 reminders.scheduleReminder(for: snapshot)
+                reminders.scheduleLocationReminder(for: snapshot)
             }
         } else {
             reminders.scheduleReminder(for: take)
+            reminders.scheduleLocationReminder(for: take)
         }
     }
 
@@ -333,23 +336,34 @@ final class DailiesViewModel {
                             reminderAlarm: Bool = true,
                             reminderAllDay: Bool = false,
                             reminderRecurrence: TimeReminder.Recurrence = .none,
+                            reminderWeekdays: Set<Int> = [],
+                            reminderLocation: LocationTrigger? = nil,
                             isObie: Bool) {
         var updated = take
         updated.isNote = isNote
         updated.setTask(isTask)
-        if hasReminder {
-            let when = reminderDate
-                ?? updated.timeReminder?.scheduledDate
-                ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-            updated.timeReminder = TimeReminder(
-                scheduledDate: when,
-                notificationIdentifier: updated.id.uuidString,
-                alarmEnabled: reminderAlarm,
-                isAllDay: reminderAllDay,
-                recurrence: reminderRecurrence
-            )
-        } else {
+        // Either/or (owner 2026-06-24): a location reminder takes precedence and clears the
+        // time; otherwise the time "when" applies (when present).
+        if let reminderLocation {
+            updated.locationReminder = reminderLocation
             updated.timeReminder = nil
+        } else {
+            updated.locationReminder = nil
+            if hasReminder {
+                let when = reminderDate
+                    ?? updated.timeReminder?.scheduledDate
+                    ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+                updated.timeReminder = TimeReminder(
+                    scheduledDate: when,
+                    notificationIdentifier: updated.id.uuidString,
+                    alarmEnabled: reminderAlarm,
+                    isAllDay: reminderAllDay,
+                    recurrence: reminderRecurrence,
+                    weekdays: reminderRecurrence == .weekly ? reminderWeekdays : []
+                )
+            } else {
+                updated.timeReminder = nil
+            }
         }
         updated.normaliseActivityFloor()
 
