@@ -105,6 +105,31 @@ final class DataModelTests: XCTestCase {
         XCTAssertFalse(r.isAllDay)
     }
 
+    // Location alarm on/off (owner 2026-06-27): LocationTrigger gained alarmEnabled.
+    func testLocationTrigger_roundTripsAlarmEnabled() throws {
+        let on = LocationTrigger(latitude: 51.5, longitude: -0.12, radiusMetres: 150,
+                                 triggerOnArrival: false, locationName: "Home", alarmEnabled: true)
+        let off = LocationTrigger(latitude: 51.5, longitude: -0.12, radiusMetres: 150,
+                                  triggerOnArrival: true, locationName: nil, alarmEnabled: false)
+        XCTAssertEqual(try PlatformJSON.decode(LocationTrigger.self, from: try PlatformJSON.encode(on)), on)
+        XCTAssertEqual(try PlatformJSON.decode(LocationTrigger.self, from: try PlatformJSON.encode(off)), off)
+    }
+
+    /// An OLD location payload (written before `alarmEnabled` existed — e.g. a Take created
+    /// by the PR #76 build) must decode with `alarmEnabled == true`, so existing location
+    /// reminders keep firing after the upgrade.
+    func testLocationTrigger_legacyPayload_defaultsAlarmOn() throws {
+        let current = LocationTrigger(latitude: 51.5, longitude: -0.12, radiusMetres: 150,
+                                      triggerOnArrival: true, locationName: "Home")
+        var dict = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try JSONEncoder().encode(current)) as? [String: Any]
+        )
+        dict.removeValue(forKey: "alarmEnabled")
+        let legacyData = try JSONSerialization.data(withJSONObject: dict)
+        let t = try JSONDecoder().decode(LocationTrigger.self, from: legacyData)
+        XCTAssertTrue(t.alarmEnabled, "a pre-field location reminder must keep firing")
+    }
+
     // "Note is the floor" (UX §6): removing all activity types re-asserts Note,
     // and completion (derived) falls away once there are no check items.
     func testNoteFloor() {

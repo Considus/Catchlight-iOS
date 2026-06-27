@@ -224,6 +224,10 @@ public final class ReminderScheduler {
     /// floor. A nil/absent location reminder schedules nothing.
     public func scheduleLocationReminder(for take: Take) {
         guard let loc = take.locationReminder else { return }
+        // Model C parity with time reminders (owner 2026-06-27): a "where" only registers a
+        // geofence when its alarm is enabled. A silent location reminder (alarm off) is a
+        // place TAG — the Take keeps the location and shows it on the card, but nothing nags.
+        guard loc.alarmEnabled else { return }
         let identifier = Self.locationIdentifier(base: take.id.uuidString)
         let radius = max(Self.minGeofenceRadius, loc.radiusMetres)
         let coordinate = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
@@ -277,9 +281,10 @@ public final class ReminderScheduler {
             .prefix(Self.maxPendingAlarms)
         chosen.forEach { center.add($0.request) }
         // Re-arm location geofences (they persist across launches, but rebuilding keeps them
-        // consistent after edits and restores any lost on reinstall). Capped at iOS's
-        // 20-region budget — beyond that the OS would silently drop them.
-        takes.filter { $0.locationReminder != nil }
+        // consistent after edits and restores any lost on reinstall). Only ALARM-ON ones are
+        // registered, so silent place tags don't eat the iOS 20-region budget (capped here —
+        // beyond 20 the OS would silently drop them); `scheduleLocationReminder` re-checks.
+        takes.filter { $0.locationReminder?.alarmEnabled == true }
             .prefix(Self.maxLocationRegions)
             .forEach { scheduleLocationReminder(for: $0) }
     }
