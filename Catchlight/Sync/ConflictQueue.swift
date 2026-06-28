@@ -30,12 +30,20 @@ final class ConflictQueue {
     /// keep-the-old-pair behaviour could upsert a stale winner over a newer row.
     /// Safe to call repeatedly with the same SyncReport (idempotent).
     func enqueue(_ conflicts: [(local: Take, remote: Take)]) {
+        var added = 0
         for pair in conflicts {
             if let idx = pending.firstIndex(where: { $0.local.id == pair.local.id }) {
                 pending[idx] = pair
             } else {
                 pending.append(pair)
+                added += 1
             }
+        }
+        // Record newly-surfaced conflicts to the content-free diagnostics log (D-085) — a
+        // count only, no Take content (the banner shows the same count).
+        if added > 0 {
+            DiagnosticsLog.shared.record(.conflict,
+                "\(added) Take\(added == 1 ? "" : "s") changed on another device.")
         }
     }
 
