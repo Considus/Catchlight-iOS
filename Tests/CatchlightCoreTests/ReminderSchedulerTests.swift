@@ -59,11 +59,15 @@ final class ReminderSchedulerTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        // Follow-ups OFF by default in tests so the occurrence-COUNT assertions below aren't
+        // perturbed by the extra nudges; the follow-up tests opt in explicitly.
+        UserDefaults.standard.set(false, forKey: SettingsViewModel.FollowUpReminders.defaultsKey)
         center = FakeNotificationCenter()
         scheduler = ReminderScheduler(center: center, now: { [now] in now })
     }
 
     override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: SettingsViewModel.FollowUpReminders.defaultsKey)
         scheduler = nil
         center = nil
         super.tearDown()
@@ -482,6 +486,60 @@ final class ReminderSchedulerTests: XCTestCase {
         XCTAssertEqual(center.added.count, 0)
         XCTAssertTrue(center.removedIdentifiers.flatMap { $0 }
             .contains(ReminderScheduler.locationIdentifier(base: take.id.uuidString)))
+    }
+
+    // MARK: - Follow-up nudges (owner 2026-06-28)
+
+    /// An enabled reminder (the default) arms a full follow-up chain: `followUpCount` extra
+    /// nudges, each one snooze-interval after the last, computed off the FUTURE fire.
+    func testSchedule_armsFollowUpChain() throws {
+        UserDefaults.standard.set(true, forKey: SettingsViewModel.FollowUpReminders.defaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: SettingsViewModel.FollowUpReminders.defaultsKey) }
+        let interval = SettingsViewModel.SnoozeDuration.current.seconds
+        let take = takeWithReminder(at: now.addingTimeInterval(3600))   // fires 1h out
+        scheduler.scheduleReminder(for: take)
+
+        let base = take.id.uuidString
+        for index in 1...ReminderScheduler.followUpCount {
+            let id = ReminderScheduler.followUpIdentifier(base: base, index: index)
+            let req = try XCTUnwrap(center.added.first { $0.identifier == id },
+                                    "follow-up \(index) should be scheduled")
+            let trigger = try XCTUnwrap(req.trigger as? UNTimeIntervalNotificationTrigger)
+            XCTAssertEqual(trigger.timeInterval, 3600 + interval * Double(index), accuracy: 1,
+                           "follow-up \(index) fires one interval after the previous")
+            XCTAssertEqual(req.content.threadIdentifier, base, "grouped with the reminder")
+        }
+    }
+
+    /// With follow-ups OFF, scheduling a reminder arms NO follow-up nudges.
+    func testSchedule_followUpsDisabled_armsNone() {
+        UserDefaults.standard.set(false, forKey: SettingsViewModel.FollowUpReminders.defaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: SettingsViewModel.FollowUpReminders.defaultsKey) }
+        let take = takeWithReminder(at: now.addingTimeInterval(3600))
+        scheduler.scheduleReminder(for: take)
+        XCTAssertFalse(center.added.contains { $0.identifier.contains("#followup") },
+                       "follow-ups off ⇒ no follow-up chain")
+    }
+
+    /// An explicit cancel (edit / delete / done) clears the whole follow-up chain.
+    func testCancel_clearsFollowUps() {
+        let base = UUID().uuidString
+        scheduler.cancelReminder(identifier: base)
+        let cleared = Set(center.removedIdentifiers.flatMap { $0 })
+        for index in 1...ReminderScheduler.followUpCount {
+            XCTAssertTrue(cleared.contains(ReminderScheduler.followUpIdentifier(base: base, index: index)),
+                          "cancel clears follow-up \(index)")
+        }
+    }
+
+    /// The app-open rebuild must NOT clear a pending follow-up chain (dedicated namespace,
+    /// like snooze), so an in-flight chain survives an app open and only the user stops it.
+    func testRescheduleAll_preservesFollowUps() {
+        let take = takeWithReminder(at: now.addingTimeInterval(3600))
+        scheduler.rescheduleAll(takes: [take])
+        let cleared = center.removedIdentifiers.flatMap { $0 }
+        XCTAssertFalse(cleared.contains { $0.contains("#followup") },
+                       "the rebuild clears base+window only, never the follow-up chain")
     }
 }
 #endif

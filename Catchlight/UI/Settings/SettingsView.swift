@@ -34,6 +34,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.AutoCleanup.defaultsKey) private var autoCleanupRaw: String = SettingsViewModel.AutoCleanup.default.rawValue
     @AppStorage(SettingsViewModel.DefaultReminderHours.defaultsKey) private var defaultReminderHoursRaw: String = SettingsViewModel.DefaultReminderHours.default.rawValue
     @AppStorage(SettingsViewModel.SnoozeDuration.defaultsKey) private var snoozeDurationRaw: String = SettingsViewModel.SnoozeDuration.default.rawValue
+    @AppStorage(SettingsViewModel.FollowUpReminders.defaultsKey) private var followUpRemindersOn: Bool = SettingsViewModel.FollowUpReminders.default
 
     @State private var vm = SettingsViewModel()
     /// Drives the Markdown / Plain Text chooser for Export Takes (owner 2026-06-21).
@@ -386,6 +387,31 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            // Follow-up reminders (owner 2026-06-28): when on, a fired reminder you don't
+            // act on re-nudges at the Snooze interval until you mark it done. Default on.
+            Toggle(isOn: $followUpRemindersOn) {
+                HStack(spacing: 14) {
+                    Image(systemName: "bell.badge")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(Color.ckAccent)
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Follow-up reminders")
+                            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                            .foregroundStyle(Color.ckTextPrimary)
+                        Text("Re-nudge until you mark it done")
+                            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                            .foregroundStyle(Color.ckTextSecondary)
+                    }
+                }
+            }
+            .tint(Color.ckEmber)
+            .frame(minHeight: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityIdentifier("follow-up-reminders-toggle")
+            .accessibilityHint("When on, a reminder you don't act on nudges again until you mark it done.")
         } header: {
             sectionHeader("Reminders")
         }

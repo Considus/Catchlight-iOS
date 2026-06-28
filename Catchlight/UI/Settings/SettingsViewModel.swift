@@ -175,6 +175,20 @@ final class SettingsViewModel {
         }
     }
 
+    /// Follow-up reminders (owner 2026-06-28): whether a fired reminder that isn't acted on
+    /// auto re-nudges at the Snooze-duration interval, up to `ReminderScheduler.followUpCount`
+    /// times, until the user marks it done / dismisses / snoozes. Default ON, but
+    /// user-disableable — the nudges are intrusive, so this honours the "user decides"
+    /// principle. A plain bool preference, readable by `ReminderScheduler` while scheduling.
+    enum FollowUpReminders {
+        static let defaultsKey = "catchlight.followUpReminders"
+        static let `default` = true
+        static var isEnabled: Bool {
+            // `object(forKey:)` so an unset key reads the default (true), not false.
+            UserDefaults.standard.object(forKey: defaultsKey) as? Bool ?? `default`
+        }
+    }
+
     /// Timeline density — how much clear space sits between consecutive Takes on
     /// Dailies (owner 2026-06-16). Changes ONLY the inter-card gap; the cards, Iris,
     /// and spine are untouched. `gap` is the clear distance from one card's bottom to

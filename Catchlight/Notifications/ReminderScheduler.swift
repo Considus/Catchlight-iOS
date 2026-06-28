@@ -108,6 +108,23 @@ public final class ReminderScheduler {
     /// Take — a Take may carry BOTH a "when" and a "where".
     static func locationIdentifier(base: String) -> String { "\(base)#loc" }
 
+    /// How many automatic FOLLOW-UP nudges a fired-but-unhandled reminder gets (owner
+    /// 2026-06-28). Each fires one snooze-default interval after the last, so an ignored
+    /// reminder re-nudges up to this many times before going quiet — capped so it can never
+    /// nag forever.
+    static let followUpCount = 3
+
+    /// Identifier for the `index`-th FOLLOW-UP nudge (owner 2026-06-28). A dedicated
+    /// namespace — like snooze/catch-up — so the app-open window rebuild (which clears only
+    /// base+window) leaves an in-flight follow-up chain intact, while an explicit
+    /// edit/delete/done (via `allIdentifiers`) still clears it.
+    static func followUpIdentifier(base: String, index: Int) -> String { "\(base)#followup\(index)" }
+
+    /// All follow-up ids for a reminder (1…`followUpCount`).
+    static func followUpIdentifiers(base: String) -> [String] {
+        (1...followUpCount).map { followUpIdentifier(base: base, index: $0) }
+    }
+
     /// Default geofence radius in metres (owner 2026-06-23). 150m sits above iOS's ~100m
     /// reliability floor (a tighter fence is missed when the location fix is itself uncertain)
     /// without firing a whole street early. The picker may set its own; the scheduler clamps.
@@ -130,6 +147,7 @@ public final class ReminderScheduler {
     static func allIdentifiers(base: String) -> [String] {
         windowAndBaseIdentifiers(base: base)
             + [snoozeIdentifier(base: base), catchUpIdentifier(base: base), locationIdentifier(base: base)]
+            + followUpIdentifiers(base: base)
     }
 
     private let center: NotificationScheduling
@@ -198,6 +216,14 @@ public final class ReminderScheduler {
         let alarms = plannedAlarms(for: take, now: now())
         if !alarms.isEmpty {
             alarms.forEach { center.add($0.request) }
+            // Follow-ups (owner 2026-06-28): an ignored reminder re-nudges up to
+            // `followUpCount` times at the snooze-default interval, until the user marks it
+            // done / dismisses / snoozes. Armed for the SOONEST occurrence only (a one-shot's
+            // fire, or a recurring reminder's next due) — NOT every window slot — so the iOS
+            // 64-alarm budget stays clear. Armed here on save (not in the app-open rebuild),
+            // in a dedicated `#followup` namespace the rebuild leaves alone, so the chain
+            // survives an app open: it stops only when the user acts.
+            armFollowUps(for: take, afterFire: alarms.map(\.fireDate).min())
             return
         }
 
@@ -356,6 +382,42 @@ public final class ReminderScheduler {
         // opaque — no content crosses the boundary here.
         content.threadIdentifier = take.id.uuidString
         // Stamp the original "when" text so a later Snooze can show "Originally due …".
+        content.userInfo[Self.dueTextKey] = content.subtitle
+        content.interruptionLevel = .timeSensitive
+        return content
+    }
+
+    /// Arm the automatic FOLLOW-UP chain for a reminder whose soonest occurrence fires at
+    /// `afterFire` (owner 2026-06-28). Each of the `followUpCount` nudges fires one
+    /// snooze-default interval after the last (interval triggers, computed off the FUTURE
+    /// fire), so an ignored reminder re-nudges a few times then goes quiet. They carry the
+    /// reminder category, so the user can Snooze/Dismiss a follow-up to stop the rest. No-op
+    /// when the feature is off (Settings, default ON) or there's no future fire to follow.
+    private func armFollowUps(for take: Take, afterFire: Date?) {
+        guard SettingsViewModel.FollowUpReminders.isEnabled, let afterFire else { return }
+        let interval = SettingsViewModel.SnoozeDuration.current.seconds
+        let n = now()
+        for index in 1...Self.followUpCount {
+            let delay = afterFire.addingTimeInterval(interval * Double(index)).timeIntervalSince(n)
+            guard delay > 0 else { continue }   // never schedule a past trigger
+            let request = UNNotificationRequest(
+                identifier: Self.followUpIdentifier(base: take.id.uuidString, index: index),
+                content: followUpContent(for: take),
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false))
+            center.add(request)
+        }
+    }
+
+    /// Content for a follow-up nudge — the Take's text as title (the same single
+    /// boundary-crossing as the reminder), a "still not done" subtitle, grouped under the
+    /// reminder's thread and snoozable/dismissable like the original.
+    private func followUpContent(for take: Take) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        content.title = String(take.plainText.prefix(100))
+        content.subtitle = "Reminder — still not done"
+        content.sound = .default
+        content.categoryIdentifier = Self.categoryIdentifier
+        content.threadIdentifier = take.id.uuidString
         content.userInfo[Self.dueTextKey] = content.subtitle
         content.interruptionLevel = .timeSensitive
         return content
