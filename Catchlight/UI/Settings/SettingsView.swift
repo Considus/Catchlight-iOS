@@ -45,6 +45,7 @@ struct SettingsView: View {
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
     @State private var showResetConfirm = false
+    @State private var showNoticeHistory = false
     /// Settings-backed toggle for the section 2b on-device inset readout overlay.
     @AppStorage(DebugInsetReadoutSettings.defaultsKey) private var showInsetReadout = false
     #endif
@@ -100,6 +101,9 @@ struct SettingsView: View {
         // never compete with one another and each can be drag-dismissed.
         .sheet(isPresented: $vm.isPhraseSheetPresented) {
             PrivacyPhraseView()
+        }
+        .sheet(isPresented: $showNoticeHistory) {
+            NoticeHistoryView()
         }
         .sheet(isPresented: $vm.isCloudStorageSheetPresented) {
             CloudStorageView()
@@ -610,6 +614,23 @@ struct SettingsView: View {
                         action: { reportAnIssue() })
                 .accessibilityIdentifier("settings-report-issue")
                 .accessibilityHint("Opens a prefilled email to Catchlight support.")
+
+            // Notice History (D-085): the recent sync / storage / conflict / quarantine
+            // notices, so an auto-dismissed banner isn't lost.
+            SettingsRow(icon: "list.bullet.rectangle",
+                        label: "Notice History",
+                        chevron: true,
+                        action: { showNoticeHistory = true })
+                .accessibilityIdentifier("settings-notice-history")
+                .accessibilityHint("Recent sync, storage and conflict notices.")
+
+            // Export diagnostics (D-085): a content-free plain-text log to attach to a report.
+            SettingsRow(icon: "square.and.arrow.up",
+                        label: "Export diagnostics",
+                        chevron: false,
+                        action: { ExportCoordinator.presentDiagnostics(DiagnosticsLog.shared.exportText()) })
+                .accessibilityIdentifier("settings-export-diagnostics")
+                .accessibilityHint("Shares a plain-text diagnostics log to attach to a report.")
         } header: {
             sectionHeader("Support")
         }

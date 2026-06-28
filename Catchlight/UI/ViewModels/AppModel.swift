@@ -44,14 +44,25 @@ final class AppModel {
     /// User-readable summary of the most recent sync failure (Task 3.9). Drives
     /// the non-blocking ruby error strip in `DailiesView`. nil = no current error.
     /// Set by BackgroundSync via `reportSyncError(_:)`; cleared by the strip's
-    /// Dismiss button or its 8-second auto-dismiss timer.
-    var lastSyncError: String?
+    /// Dismiss button or its 8-second auto-dismiss timer. Each non-nil value is recorded to
+    /// the content-free diagnostics log (D-085) for Notice History + export.
+    var lastSyncError: String? {
+        didSet { if let lastSyncError { DiagnosticsLog.shared.record(.sync, lastSyncError) } }
+    }
 
     /// Number of Takes the last sync pass refused to decrypt because their
     /// per-blob HMAC didn't verify (Task 3.9). UUIDs are deliberately NOT exposed
     /// to the UI — privacy. Drives a second non-blocking strip when > 0; tapping
-    /// Dismiss in the view resets to zero.
-    var quarantinedCount: Int = 0
+    /// Dismiss in the view resets to zero. A new non-zero count is recorded to the
+    /// diagnostics log (count only — no UUIDs).
+    var quarantinedCount: Int = 0 {
+        didSet {
+            if quarantinedCount > 0, quarantinedCount != oldValue {
+                DiagnosticsLog.shared.record(.quarantine,
+                    "\(quarantinedCount) Take\(quarantinedCount == 1 ? "" : "s") couldn't be verified and \(quarantinedCount == 1 ? "was" : "were") skipped.")
+            }
+        }
+    }
 
     /// Fire a manual "Sync Now" pass (owner 2026-06-21). Wired by `CatchlightApp`
     /// to the shared `BackgroundSyncCoordinator` so a tap reuses the same

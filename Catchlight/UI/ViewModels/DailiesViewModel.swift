@@ -21,8 +21,12 @@ final class DailiesViewModel {
     private(set) var takes: [Take] = []
     /// The single current Obie, pinned at the top of the list (nil if none).
     private(set) var obie: Take?
-    /// Surfaced to the UI when a store operation fails; views may show a quiet note.
-    private(set) var lastError: String?
+    /// Surfaced to the UI when a store operation fails; views may show a quiet note. Each
+    /// non-nil value is also recorded to the content-free diagnostics log (D-085) so it shows
+    /// in Notice History and the export. These messages are static/generic — no Take content.
+    private(set) var lastError: String? {
+        didSet { if let lastError { DiagnosticsLog.shared.record(.storage, lastError) } }
+    }
 
     /// The underlying store. Exposed so conflict resolution (Task 6.15) can write
     /// the winning version through the same backend the timeline reads from.

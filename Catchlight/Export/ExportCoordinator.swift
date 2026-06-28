@@ -61,6 +61,27 @@ enum ExportCoordinator {
         presenter.present(activityVC, animated: true)
     }
 
+    /// Share the content-free diagnostics text (D-085) as a `.txt` via the system share sheet.
+    /// A user-initiated export — the placeholder for the future web Report-an-issue form, which
+    /// will reuse this producer. The log holds no Take content, so no special protection class.
+    static func presentDiagnostics(_ text: String) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("Catchlight-diagnostics.txt")
+        guard (try? Data(text.utf8).write(to: url, options: [.atomic])) != nil else { return }
+
+        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        activityVC.completionWithItemsHandler = { _, _, _, _ in
+            try? FileManager.default.removeItem(at: url)
+        }
+        guard let presenter = topViewController() else { return }
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = presenter.view
+            popover.sourceRect = CGRect(x: presenter.view.bounds.midX,
+                                        y: presenter.view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        presenter.present(activityVC, animated: true)
+    }
+
     // MARK: - File staging
 
     private static func writeTempFile(text: String, format: TakeExporter.Format) -> URL? {
