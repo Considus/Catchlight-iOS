@@ -122,9 +122,12 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
     /// (`DailiesViewModel.applyPendingReminderActions`) turns the alarm off in the store ONLY
     /// when the reminder is a ONE-SHOT; a recurring reminder gets no store change at all.
     private func handleDismiss(request: UNNotificationRequest, base: String) {
+        // Also clear the follow-up chain (owner 2026-06-28): dismissing means "I've handled
+        // it / stop", so the auto re-nudges must not keep firing.
         let ids = [request.identifier,
                    ReminderScheduler.snoozeIdentifier(base: base),
                    ReminderScheduler.catchUpIdentifier(base: base)]
+            + ReminderScheduler.followUpIdentifiers(base: base)
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
         PendingReminderActions.enqueueDismiss(takeID: base)
     }
@@ -139,6 +142,10 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         // existed (only true for ones already pending at upgrade).
         let dueText = (request.content.userInfo[ReminderScheduler.dueTextKey] as? String)
             ?? request.content.subtitle
+        // Snoozing replaces the automatic follow-up chain with the user's chosen re-nudge —
+        // clear the pending follow-ups so they don't double up (owner 2026-06-28).
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: ReminderScheduler.followUpIdentifiers(base: base))
         // Re-nudge under the reminder's DEDICATED snooze id, not the fired request's own id
         // (owner 2026-06-21). A recurring occurrence fires as `<uuid>#n`; reusing that id let
         // the next app-open window rebuild overwrite the snooze. The `base` (the `#n` already
