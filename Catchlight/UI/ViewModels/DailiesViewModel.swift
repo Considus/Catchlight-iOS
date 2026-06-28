@@ -146,6 +146,33 @@ final class DailiesViewModel {
         }
     }
 
+    /// Like `save`, but reflects the edit IN PLACE (no full `reload()`), so a swipe action
+    /// re-renders just that one row instead of rebuilding + re-sorting the whole timeline —
+    /// the source of the swipe "jank" (owner 2026-06-27). Safe ONLY when the edit doesn't
+    /// change the Take's sort position or Obie membership (true for mark-done: `createdAt`
+    /// is untouched and `isObie` isn't changed). Falls back to `reload()` if the Take isn't
+    /// already on screen.
+    private func saveInPlace(_ take: Take) {
+        var updated = take
+        updated.modifiedAt = Date()
+        if updated.isSeeded { updated.isSeeded = false }
+        updated.normaliseActivityFloor()
+        do {
+            try store.upsert(updated)
+            spotlight.index(updated)
+            reconcileNotification(for: updated)
+            if obie?.id == updated.id {
+                obie = updated
+            } else if let i = takes.firstIndex(where: { $0.id == updated.id }) {
+                takes[i] = updated
+            } else {
+                reload()
+            }
+        } catch {
+            lastError = "Couldn't save that Take."
+        }
+    }
+
     /// Bulk-insert imported Takes (owner 2026-06-22). Unlike `save`, this does NOT
     /// bump `modifiedAt` — the importer set `createdAt`/`modifiedAt` from the file so
     /// the note slots into the timeline by when it was written — and it reloads ONCE
@@ -176,7 +203,14 @@ final class DailiesViewModel {
             // deleted Take can't be discovered via search.
             spotlight.deindex(takeID: take.id)
             reminders.cancelReminder(identifier: take.id.uuidString)
-            reload()
+            // In-place removal (owner 2026-06-27): drop just this row instead of a full
+            // `reload()` re-fetch + re-sort of every Take. The store write is already the
+            // authoritative outcome; removing the single element lets the timeline collapse
+            // smoothly under the caller's swipe/delete animation rather than rebuilding the
+            // whole VStack — the source of the swipe "jank" (the pinned Obie wasn't in the
+            // VStack, which is why deleting IT always looked smooth).
+            if obie?.id == take.id { obie = nil }
+            else { takes.removeAll { $0.id == take.id } }
         } catch {
             lastError = "Couldn't delete that Take."
         }
@@ -256,7 +290,10 @@ final class DailiesViewModel {
         // inline-editor / row-while-editing toggle paths apply the same rule.
         var updated = take
         updated.toggleMarkedDoneAdvancingRecurring(now: Date())
-        save(updated)
+        // In-place (owner 2026-06-27): mark-done greys just this row; a full reload+re-sort
+        // is what made the swipe feel choppy. Done-ness doesn't change sort order (by
+        // `createdAt`) or Obie membership, so an in-place update is faithful.
+        saveInPlace(updated)
     }
 
     /// Take IDs with a pending snoozed re-nudge (owner 2026-06-21) — the timeline reads

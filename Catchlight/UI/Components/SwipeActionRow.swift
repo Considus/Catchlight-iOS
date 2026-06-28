@@ -246,16 +246,19 @@ struct SwipeActionRow<Content: View>: View {
     private func commit(_ action: SwipeAction) {
         switch action.style {
         case .destructive:
-            // Slide the card off the leaving edge, then perform (which removes the
-            // row); animate the perform so the list collapses smoothly behind it.
+            // ONE continuous motion (owner 2026-06-28): slide the card off the leaving edge
+            // AND remove the row in the SAME animation, so the gap collapses *while* the card
+            // leaves — not in a separate second phase. The old version slid the card off, then
+            // in a completion block removed the row AND reset `offset = 0`; that reset snapped
+            // the card back to centre for a frame before the collapse, which read as the
+            // "jump as the Take disappears". An eased curve (not a spring) keeps the rows
+            // below from overshooting on the collapse. No `offset`/`restOffset` reset — the
+            // row is being torn down, so there is nothing to settle.
+            if openRowID == id { openRowID = nil }
             let target = (offset <= 0 ? -1 : 1) * (rowWidth + 200)
-            withAnimation(.snappy(duration: 0.22)) {
+            withAnimation(.easeInOut(duration: 0.28)) {
                 offset = target
-            } completion: {
-                withAnimation(.snappy(duration: 0.2)) { action.perform() }
-                offset = 0
-                restOffset = 0
-                if openRowID == id { openRowID = nil }
+                action.perform()
             }
         case .standard:
             // Non-destructive (toggle done) — the row stays; perform and close.
