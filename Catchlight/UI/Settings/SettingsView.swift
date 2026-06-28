@@ -605,7 +605,8 @@ struct SettingsView: View {
     // MARK: - Support
 
     /// Its own section below System (owner 2026-06-21). With no analytics or crash
-    /// reporting, a prefilled mail to support is our only inbound signal.
+    /// reporting, the prefilled web report form + the diagnostics export are our
+    /// only inbound signal (D-091).
     private var supportSection: some View {
         Section {
             SettingsRow(icon: "ladybug",
@@ -613,7 +614,7 @@ struct SettingsView: View {
                         chevron: false,
                         action: { reportAnIssue() })
                 .accessibilityIdentifier("settings-report-issue")
-                .accessibilityHint("Opens a prefilled email to Catchlight support.")
+                .accessibilityHint("Opens the Catchlight report form, prefilled with your app and iOS version.")
 
             // Notice History (D-085): the recent sync / storage / conflict / quarantine
             // notices, so an auto-dismissed banner isn't lost.
@@ -636,49 +637,27 @@ struct SettingsView: View {
         }
     }
 
-    /// Open a prefilled support email (owner 2026-06-21). We collect no analytics
-    /// or crash reports, so a `mailto:` with the app/OS/device stamped into the
-    /// body is the entire bug-report channel — the diagnostics line saves a
-    /// round-trip asking the reporter what they're running. No Take content is
-    /// ever included (it's encrypted and none of our business). If no mail
-    /// account is configured iOS simply no-ops the open.
+    /// Open the web Report-an-issue form (`catchlight.app/support`), pre-filled
+    /// with the platform, app version (+build) and iOS version via query params
+    /// so the report carries the basics without the user retyping them (D-091).
+    /// Replaces the old `mailto:` — one web form is the single cross-platform
+    /// intake. The form lets the user optionally attach the content-free
+    /// diagnostics export (the "Export diagnostics" row below, which the form
+    /// also points to). No Take content is ever sent. If the URL can't be built
+    /// (it always can) we simply no-op.
     @MainActor
     private func reportAnIssue() {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
-        let subject = "Catchlight issue — v\(version) (\(build))"
-        let body = """
-        Describe the issue or feedback here:
-
-
-        ———
-        The details below help us investigate (we collect no analytics):
-        App: Catchlight \(version) (\(build))
-        iOS: \(UIDevice.current.systemVersion)
-        Device: \(deviceModelIdentifier())
-        """
-        var components = URLComponents()
-        components.scheme = "mailto"
-        components.path = "support@catchlight.app"
-        components.queryItems = [
-            URLQueryItem(name: "subject", value: subject),
-            URLQueryItem(name: "body", value: body),
+        let appValue = build.isEmpty ? version : "\(version) (\(build))"
+        var components = URLComponents(string: "https://catchlight.app/support/")
+        components?.queryItems = [
+            URLQueryItem(name: "platform", value: "iOS"),
+            URLQueryItem(name: "app", value: appValue),
+            URLQueryItem(name: "os", value: UIDevice.current.systemVersion),
         ]
-        guard let url = components.url else { return }
+        guard let url = components?.url else { return }
         UIApplication.shared.open(url)
-    }
-
-    /// Hardware identifier (e.g. `iPhone17,1`) for the support-mail diagnostics
-    /// line — `UIDevice.model` only ever returns the generic "iPhone".
-    private func deviceModelIdentifier() -> String {
-        var info = utsname()
-        uname(&info)
-        let mirror = Mirror(reflecting: info.machine)
-        let identifier = mirror.children.reduce(into: "") { partial, element in
-            guard let value = element.value as? Int8, value != 0 else { return }
-            partial.append(Character(UnicodeScalar(UInt8(value))))
-        }
-        return identifier.isEmpty ? UIDevice.current.model : identifier
     }
 
     @MainActor
