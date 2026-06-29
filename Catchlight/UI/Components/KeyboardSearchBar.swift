@@ -267,7 +267,7 @@ final class SearchBarAccessory: UIView {
     private func configureCircleButton(_ button: UIButton, systemName: String) {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setImage(UIImage(systemName: systemName,
-                                withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .light)),
+                                withConfiguration: UIImage.SymbolConfiguration(pointSize: 24, weight: .light)),
                         for: .normal)
         button.tintColor = Self.ember
         button.layer.cornerRadius = Self.circle / 2

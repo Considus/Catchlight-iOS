@@ -575,11 +575,11 @@ struct PetalFanView: View {
                 Group {
                     if let symbol = kind.systemImage {
                         Image(systemName: symbol)
-                            .font(.system(size: 20, weight: .light))   // scaled with the 36→44 Mark
+                            .font(.system(size: 22, weight: .light))   // dense glyph → 22 (owner 2026-06-29, glyph-size pass; matches the dock toggles)
                             // Off glyph = ckAccent, matching the dock/editor/search off icons.
                             .foregroundStyle(active ? Color.ckBackground : Color.ckAccent)
                     } else {
-                        ObiePetalGlyph(size: 20)   // scaled with the 36→44 Mark, keeping the petal's tuned ratio (D-042)
+                        ObiePetalGlyph(size: 24)   // custom open glyph → 24 (owner 2026-06-29, glyph-size pass)
                             .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
                     }
                 }

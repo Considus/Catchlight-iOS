@@ -446,7 +446,7 @@ struct BottomDockView: View {
                 } else {
                     dockRing()
                 }
-                DailiesGlyph(size: 22)
+                DailiesGlyph(size: 24)   // custom open glyph → 24 (matches the editor-bar Important)
                     .foregroundStyle(ui.filterImportant ? Color.ckBackground : Color.ckAccent)
             }
             .frame(width: buttonSize, height: buttonSize)
@@ -545,7 +545,7 @@ struct BottomDockView: View {
                     .frame(width: dockCircle, height: dockCircle)
                 dockRing()   // .db — Ember border @35%
                 Image(systemName: "xmark")
-                    .font(.system(size: 20, weight: .light))   // scaled with the 36→44 circle
+                    .font(.system(size: 24, weight: .light))   // open glyph → 24 (owner 2026-06-29, glyph-size pass)
                     .foregroundStyle(Color.ckAccent)
             }
             .frame(width: buttonSize, height: buttonSize)
