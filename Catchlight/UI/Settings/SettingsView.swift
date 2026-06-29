@@ -531,7 +531,7 @@ struct SettingsView: View {
 
     private var subscriptionSection: some View {
         Section {
-            SettingsRow(icon: "sparkle",
+            SettingsRow(icon: "calendar",
                         label: "Manage Subscription",
                         chevron: true,
                         action: {
@@ -728,7 +728,9 @@ struct SettingsView: View {
     }
 
     private var notificationsRowAuthorised: some View {
-        SettingsRow(icon: "bell", label: "Notifications") {
+        // `bell.badge` (not plain `bell`) so this matches the Follow-up reminders row's
+        // dotted bell — one bell language across the two reminder rows (owner 2026-06-29).
+        SettingsRow(icon: "bell.badge", label: "Notifications") {
             HStack(spacing: 6) {
                 Circle()
                     .fill(Color.green)

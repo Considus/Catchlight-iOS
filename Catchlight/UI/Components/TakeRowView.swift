@@ -294,7 +294,7 @@ struct TakeRowView: View {
             Button {
                 onToggleComplete()
             } label: {
-                Label(take.isMarkedDone ? "Mark as not done" : "Mark as done",
+                Label(take.isMarkedDone ? "Mark Not Done" : "Mark Done",
                       systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
             }
         }
@@ -302,15 +302,20 @@ struct TakeRowView: View {
             Button {
                 onSetImportant()
             } label: {
-                Label(take.isImportant ? "Remove Important" : "Set as Important",
-                      systemImage: take.isImportant ? "star.slash" : "star")
+                // The standard Important mark (`DailiesGlyph`), baked for the menu;
+                // crossed-out when already Important (owner 2026-06-29).
+                if take.isImportant {
+                    Label { Text("Remove Important") } icon: { MenuGlyph.removeImportant }
+                } else {
+                    Label { Text("Make Important") } icon: { MenuGlyph.makeImportant }
+                }
             }
         }
         if let onMakeObie, !take.isObie {
             Button {
                 onMakeObie()
             } label: {
-                Label("Make Obie", systemImage: "pin")
+                Label { Text("Make Obie") } icon: { MenuGlyph.obie }
             }
         }
         if let onExport {
@@ -343,10 +348,10 @@ struct TakeRowView: View {
     @ViewBuilder
     private var rowAccessibilityActions: some View {
         if (take.isTask || take.timeReminder != nil), let onToggleComplete {
-            Button(take.isMarkedDone ? "Mark as not done" : "Mark as done") { onToggleComplete() }
+            Button(take.isMarkedDone ? "Mark Not Done" : "Mark Done") { onToggleComplete() }
         }
         if let onSetImportant {
-            Button(take.isImportant ? "Remove Important" : "Set as Important") { onSetImportant() }
+            Button(take.isImportant ? "Remove Important" : "Make Important") { onSetImportant() }
         }
         if let onMakeObie, !take.isObie {
             Button("Make Obie") { onMakeObie() }

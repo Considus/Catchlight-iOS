@@ -295,7 +295,7 @@ struct StoryboardView: View {
             guard app.ensureEntitled() else { return }
             vm.toggleDone(take)
         } label: {
-            Label(take.isMarkedDone ? "Mark as not done" : "Mark as done",
+            Label(take.isMarkedDone ? "Mark Not Done" : "Mark Done",
                   systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
         }
         Button {
@@ -304,8 +304,12 @@ struct StoryboardView: View {
             t.isImportant.toggle()
             vm.save(t)
         } label: {
-            Label(take.isImportant ? "Remove Important" : "Set as Important",
-                  systemImage: take.isImportant ? "star.slash" : "star")
+            // Standard Important mark, matching the Dailies long-press menu (owner 2026-06-29).
+            if take.isImportant {
+                Label { Text("Remove Important") } icon: { MenuGlyph.removeImportant }
+            } else {
+                Label { Text("Make Important") } icon: { MenuGlyph.makeImportant }
+            }
         }
         Button(role: .destructive) {
             guard app.ensureEntitled() else { return }
