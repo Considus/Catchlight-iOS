@@ -21,7 +21,7 @@ struct NoticeHistoryView: View {
                 if entries.isEmpty {
                     // Custom empty state (owner 2026-06-29) so the hero line can take
                     // the onboarding hero face; mirrors the Privacy Phrase layout.
-                    VStack(spacing: 12) {
+                    VStack(spacing: 16) {
                         Image(systemName: "bell.slash")
                             .font(.system(size: 40, weight: .regular))
                             .foregroundStyle(Color.ckTextSecondary)
@@ -35,7 +35,11 @@ struct NoticeHistoryView: View {
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
+                        Spacer()
                     }
+                    // Pinned near the top (padding 60 + bottom Spacer) to match the
+                    // Privacy Phrase explainer, rather than vertically centred.
+                    .padding(.top, 60)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .accessibilityElement(children: .combine)
                 } else {

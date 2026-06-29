@@ -816,13 +816,19 @@ struct ReminderPickerSheet: View {
                 }
             }
         } label: {
-            menuRow(title: "Quick set", icon: "wand.and.stars", value: quickSet?.rawValue ?? "Select")
+            // Shared selector look + 44pt height, matching the Settings pickers
+            // (owner 2026-06-29). The card supplies horizontal inset + fill only —
+            // SelectorRow owns the height, so it lands at the standard 44pt.
+            SelectorRow(icon: "wand.and.stars", label: "Quick set",
+                        value: quickSet?.rawValue ?? "Select")
+                .padding(.horizontal, 14)
+                .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
+        .tint(Color.ckEmber)
         .accessibilityIdentifier("reminder-quickset")
         .onChange(of: quickSet) { _, preset in
             if let preset { date = preset.date(now: Date(), calendar: .current) }
         }
-        .cardSurface()
     }
 
     /// Time of day, split out of the calendar into its own row (owner 2026-06-23). Hidden
