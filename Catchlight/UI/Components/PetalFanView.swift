@@ -549,7 +549,11 @@ struct PetalFanView: View {
                 Circle().fill(active ? Color.ckEmber : Color.ckBackground)
                     .zIndex(0)
                 Circle().strokeBorder(
-                    active ? Color.ckEmber : Color.ckEmber.opacity(0.35),
+                    // Off ring matches the dock / editor bar / search exactly:
+                    // ckAccent @ 0.55 (owner 2026-06-29; was ckEmber @ 0.35 — read
+                    // too faint, and ckEmber stayed the low-contrast #C9A96E in
+                    // Daylight where ckAccent resolves to the WCAG-safe #856539).
+                    active ? Color.ckEmber : Color.ckAccent.opacity(0.55),
                     lineWidth: 1.5
                 )
                 .zIndex(1)
@@ -557,7 +561,8 @@ struct PetalFanView: View {
                     if let symbol = kind.systemImage {
                         Image(systemName: symbol)
                             .font(.system(size: 20, weight: .light))   // scaled with the 36→44 Mark
-                            .foregroundStyle(active ? Color.ckBackground : Color.ckEmber)
+                            // Off glyph = ckAccent, matching the dock/editor/search off icons.
+                            .foregroundStyle(active ? Color.ckBackground : Color.ckAccent)
                     } else {
                         ObiePetalGlyph(size: 20)   // scaled with the 36→44 Mark, keeping the petal's tuned ratio (D-042)
                             .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
