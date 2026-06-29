@@ -59,14 +59,6 @@ struct ListAngleView: View {
     private let rowLeadingInset: CGFloat = 16
     private let rowTrailingInset: CGFloat = 16
 
-    /// Leading inset for the LIST ANGLE heading — aligned with the checklist ITEM
-    /// text column (owner 2026-06-19), not the abstract DAILIES column: the row's
-    /// leading pad + the checkbox (minTouchTarget) + the row HStack's 12pt spacing,
-    /// so the heading sits directly above the item text below it.
-    private var headingLeading: CGFloat {
-        rowLeadingInset + CatchlightLayout.minTouchTarget + 12
-    }
-
     var body: some View {
         // The chrome is a `.safeAreaInset` top band — an OPAQUE X-row + a 12pt fade —
         // exactly like the Dailies heading (owner 2026-06-18). Content scrolls UNDER
@@ -85,29 +77,33 @@ struct ListAngleView: View {
 
     private var topChrome: some View {
         VStack(spacing: 0) {
-            HStack {
+            ZStack {
                 // Explicit view heading, DAILIES house style (Cormorant Roman, kerned
                 // caps) — owner 2026-06-19: named as an Angle, sibling to PLANNER ANGLE.
+                // CENTRED at 24pt (owner 2026-06-29) to match the timeline page heading;
+                // full-width frame centres it on screen, × floated at the right edge.
                 Text("SHOT LIST")
-                    .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
+                    .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
                     .kerning(1.6)
                     .foregroundStyle(Color.ckTextPrimary)
                     .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .frame(width: CatchlightLayout.minTouchTarget,
-                               height: CatchlightLayout.minTouchTarget)
-                        .contentShape(Rectangle())
+                    .frame(maxWidth: .infinity, alignment: .center)
+                HStack {
+                    Spacer()
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .frame(width: CatchlightLayout.minTouchTarget,
+                                   height: CatchlightLayout.minTouchTarget)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("angle-close")
+                    .accessibilityLabel("Close Shot List")
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("angle-close")
-                .accessibilityLabel("Close Shot List")
+                .padding(.trailing, 12)
             }
-            .padding(.leading, headingLeading)
-            .padding(.trailing, 12)
             .padding(.top, 4)
             .background(surface)   // OPAQUE — content scrolls under and is hidden
             // The soft dissolve edge (matches the Dailies no-Obie heading fade).

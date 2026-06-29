@@ -60,11 +60,6 @@ struct StoryboardView: View {
         max(0, takeSpacing.gap - CatchlightLayout.circleDiameter / 2)
     }
 
-    /// Leading inset for the heading — the card's TEXT column (card left + the
-    /// card's internal leading pad), identical to the DAILIES/SEQUENCE heading, so
-    /// STORYBOARD lines up exactly with the Take text below it.
-    private var headingLeading: CGFloat { cardLeading + CatchlightLayout.cardTextLeadingPad }
-
     // MARK: - Edit-in-place state (LOCAL to the Storyboard)
 
     @State private var editDraft: Take?
@@ -127,30 +122,34 @@ struct StoryboardView: View {
 
     private var topChrome: some View {
         VStack(spacing: 0) {
-            HStack {
+            ZStack {
                 // Explicit view heading, in the DAILIES house style (Cormorant Roman,
                 // kerned caps) — owner 2026-06-19: name it as an Angle so the ∠ glyph,
-                // the heading, and the concept all read the same.
+                // the heading, and the concept all read the same. CENTRED at 24pt
+                // (owner 2026-06-29) to match the timeline page heading; spans full
+                // width so it centres on screen, with the × floated at the right edge.
                 Text("STORYBOARD")
-                    .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
+                    .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
                     .kerning(1.6)
                     .foregroundStyle(Color.ckTextPrimary)
                     .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button(action: closeStoryboard) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .frame(width: CatchlightLayout.minTouchTarget,
-                               height: CatchlightLayout.minTouchTarget)
-                        .contentShape(Rectangle())
+                    .frame(maxWidth: .infinity, alignment: .center)
+                HStack {
+                    Spacer()
+                    Button(action: closeStoryboard) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .frame(width: CatchlightLayout.minTouchTarget,
+                                   height: CatchlightLayout.minTouchTarget)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("storyboard-close")
+                    .accessibilityLabel("Close Storyboard")
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("storyboard-close")
-                .accessibilityLabel("Close Storyboard")
+                .padding(.trailing, 12)
             }
-            .padding(.leading, headingLeading)
-            .padding(.trailing, 12)
             .padding(.top, 4)
             .background(Color.ckBackground)
             LinearGradient(
