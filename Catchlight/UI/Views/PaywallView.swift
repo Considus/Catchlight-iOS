@@ -297,7 +297,8 @@ struct PaywallView: View {
             dismiss()
         } label: {
             Image(systemName: "xmark")
-                .font(.system(size: 16, weight: .medium))
+                // Matches the Storyboard / Shot List modal-close × (owner 2026-06-29).
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Color.ckTextSecondary)
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
