@@ -438,7 +438,10 @@ struct BottomDockView: View {
         } label: {
             ZStack {
                 if ui.filterImportant {
-                    Circle().fill(Color.ckEmber)
+                    // Fill with the Iris IMPORTANT colour, not Ember (owner 2026-06-29):
+                    // every other Sequence toggle uses its Quadrant colour, so Important
+                    // must too — Stone (Night) / Shadow (Daylight), matching the Iris N wedge.
+                    Circle().fill(Quadrant.important(scheme))
                         .frame(width: dockCircle, height: dockCircle)
                 } else {
                     dockRing()

@@ -69,6 +69,7 @@ struct PetalFanView: View {
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
 
     /// Default "when" a freshly-added reminder opens to — now a user preference
     /// (Settings → Reminders → Default timing (hrs); owner 2026-06-18). Read at call
@@ -191,6 +192,17 @@ struct PetalFanView: View {
             case .task: return "task"
             case .remind: return "remind"
             case .obie: return "obie"
+            }
+        }
+        /// ON-state fill = the SAME colour the Iris uses for this type, matching the
+        /// Sequence filter toggles (owner 2026-06-29). Obie uses the Iris's Obie-ring
+        /// gold (Glow Night / Ember Daylight); Note/Task/Remind use their quadrant fills.
+        func activeFill(_ scheme: ColorScheme) -> Color {
+            switch self {
+            case .note:   return Quadrant.note(scheme)
+            case .task:   return Quadrant.task(scheme)
+            case .remind: return Quadrant.reminder(scheme)
+            case .obie:   return Quadrant.obieRing(scheme)
             }
         }
     }
@@ -546,14 +558,17 @@ struct PetalFanView: View {
                 // order SwiftUI could momentarily paint the fresh fill over the ring
                 // (the same repaint reshuffle fixed in TakeRowView — D-044,
                 // [[catchlight-take-colour-system]]).
-                Circle().fill(active ? Color.ckEmber : Color.ckBackground)
+                Circle().fill(active ? kind.activeFill(scheme) : Color.ckBackground)
                     .zIndex(0)
                 Circle().strokeBorder(
-                    // Off ring matches the dock / editor bar / search exactly:
-                    // ckAccent @ 0.55 (owner 2026-06-29; was ckEmber @ 0.35 — read
-                    // too faint, and ckEmber stayed the low-contrast #C9A96E in
-                    // Daylight where ckAccent resolves to the WCAG-safe #856539).
-                    active ? Color.ckEmber : Color.ckAccent.opacity(0.55),
+                    // ON: ring = the per-type fill colour, so the active Mark is a
+                    // solid filled circle (fill edge IS the border) exactly like the
+                    // Sequence toggles — no separate rim.
+                    // OFF: ckAccent @ 0.55, matching the dock / editor bar / search
+                    // (owner 2026-06-29; was ckEmber @ 0.35 — too faint, and ckEmber
+                    // stayed the low-contrast #C9A96E in Daylight where ckAccent
+                    // resolves to the WCAG-safe #856539).
+                    active ? kind.activeFill(scheme) : Color.ckAccent.opacity(0.55),
                     lineWidth: 1.5
                 )
                 .zIndex(1)
