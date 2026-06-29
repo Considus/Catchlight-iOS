@@ -227,9 +227,10 @@ struct StoryboardView: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Text("Nothing to plan yet")
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+            Text("Nothing planned yet")
+                .font(CatchlightFont.displayFixed(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
+                .multilineTextAlignment(.center)
             Text("Takes with a task appear here.")
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .callout))
                 .foregroundStyle(Color.ckTextSecondary)

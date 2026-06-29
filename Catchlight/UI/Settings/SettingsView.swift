@@ -201,14 +201,18 @@ struct SettingsView: View {
 
     /// The "Settings" heading as a scrolling list row (owner 2026-06-21) — clear
     /// background, no section chrome, so it reads as a title and scrolls away.
+    /// Styled as the Dailies page heading (owner 2026-06-29): Cormorant Garamond
+    /// ROMAN 24pt, kerned, CENTRED and upper-cased to match DAILIES/SEQUENCE/etc.
     private var titleRow: some View {
-        Text("Settings")
-            .font(CatchlightFont.ui(.light, size: 28, relativeTo: .title))
+        Text("SETTINGS")
+            .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
+            .kerning(1.6)
             .foregroundStyle(Color.ckTextPrimary)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .center)
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 4, trailing: 20))
             .listRowSeparator(.hidden)
+            .accessibilityLabel("Settings")
             .accessibilityAddTraits(.isHeader)
     }
 

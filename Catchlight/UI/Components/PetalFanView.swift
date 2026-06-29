@@ -431,7 +431,7 @@ struct PetalFanView: View {
                 showingReminderPicker = false
             }
         )
-        .background(Color.ckBackground.ignoresSafeArea())
+        // Background now lives inside ReminderPickerSheet itself (owner 2026-06-29).
     }
 
     private var fanContent: some View {
@@ -766,6 +766,10 @@ struct ReminderPickerSheet: View {
                 }
                 .padding()
             }
+            // Single-sourced here (owner 2026-06-29) so EVERY presentation path —
+            // the in-place editor layer AND the Dailies `.sheet` — gets the app's
+            // Ink/Paper background instead of the default system sheet colour.
+            .background(Color.ckBackground.ignoresSafeArea())
             .navigationTitle("Reminder")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
