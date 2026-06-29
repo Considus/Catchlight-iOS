@@ -547,4 +547,9 @@ enum CatchlightLayout {
     /// The dock's own resting bottom padding above the home indicator, added on
     /// top of `deviceBottomInset` (BottomDockView / DockPillRow).
     static let dockBottomPadding: CGFloat = 8
+    /// Gap between the brand mark (`IntroBrandMark`) and the hero line on the
+    /// intro surfaces — onboarding steps AND the app-entry LockView reference this
+    /// one value so the mark→hero rhythm is identical and can't drift (owner
+    /// 2026-06-16 "set position"; shared 2026-06-29).
+    static let introHeroTopGap: CGFloat = 112
 }

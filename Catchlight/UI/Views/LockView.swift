@@ -26,7 +26,8 @@ struct LockView: View {
 
             VStack(spacing: 0) {
                 IntroBrandMark()
-                Spacer().frame(height: 96)
+                // Match the onboarding mark→hero rhythm exactly (owner 2026-06-29).
+                Spacer().frame(height: CatchlightLayout.introHeroTopGap)
                 Text("Catchlight is locked")
                     .font(CatchlightFont.displayFixed(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
@@ -35,7 +36,9 @@ struct LockView: View {
                     .accessibilityAddTraits(.isHeader)
                 Text(message)
                     .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                    .foregroundStyle(isError ? Color.ckTextObie : Color.ckTextSecondary)
+                    // Always grey, matching the onboarding subtext (owner 2026-06-29) —
+                    // the error is carried by the message text + the "Try Again" button.
+                    .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 14)
@@ -56,11 +59,6 @@ struct LockView: View {
         // The auto-unlock is driven by RootView (after the splash has been seen, and
         // on a post-splash re-lock) rather than here — so the prompt never fires over
         // the splash. The Unlock / Try Again button below is the manual path.
-    }
-
-    private var isError: Bool {
-        if case .failed = app.lockState { return true }
-        return false
     }
 
     private var message: String {

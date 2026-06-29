@@ -18,7 +18,7 @@ import CatchlightCore
 /// Local warning · Reveal · Confirm · Complete (owner 2026-06-16). Without this the
 /// flexible spacers pushed each heading down by an amount that depended on the
 /// content below it, so they drifted apart.
-private let introHeroTopGap: CGFloat = 112
+private let introHeroTopGap: CGFloat = CatchlightLayout.introHeroTopGap
 
 struct OnboardingView: View {
     @Environment(OnboardingViewModel.self) private var vm
