@@ -579,7 +579,7 @@ struct PetalFanView: View {
                             // Off glyph = ckAccent, matching the dock/editor/search off icons.
                             .foregroundStyle(active ? Color.ckBackground : Color.ckAccent)
                     } else {
-                        ObiePetalGlyph(size: 24)   // custom open glyph → 24 (owner 2026-06-29, glyph-size pass)
+                        ObiePetalGlyph(size: 26)   // slightly larger than the 24 open-glyph base (owner 2026-06-29) — the ring+dot reads small at 24
                             .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
                     }
                 }

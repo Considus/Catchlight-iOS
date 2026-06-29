@@ -181,16 +181,22 @@ final class SearchBarAccessory: UIView {
     private static let topPad: CGFloat = 10
 
     private func buildLayout() {
-        // × cancel — circular Ember ring (slot 1).
-        configureCircleButton(cancelButton, systemName: "xmark")
+        // × cancel — circular Ember ring (slot 1). The × is a `plus` rotated 45°,
+        // identical to the editor-bar dismiss (owner 2026-06-29): the app's close
+        // affordance is the Add "+" turned to ×. The real `xmark` glyph read larger
+        // than the rotated plus at the same 24pt, so they're unified to one glyph.
+        configureCircleButton(cancelButton, systemName: "plus")
+        cancelButton.transform = CGAffineTransform(rotationAngle: .pi / 4)
         cancelButton.accessibilityIdentifier = "search-cancel"
         cancelButton.accessibilityLabel = "Cancel search"
         cancelButton.addTarget(controller?.coordinator,
                                action: #selector(KeyboardSearchBar.Coordinator.cancelTapped),
                                for: .touchUpInside)
 
-        // Magnifier dismiss / Return — circular Ember ring (slot 4).
-        configureCircleButton(dismissButton, systemName: "magnifyingglass")
+        // Magnifier dismiss / Return — circular Ember ring (slot 4). Kept at its
+        // original 18pt (owner 2026-06-29): the real `magnifyingglass` reads larger
+        // than the rotated-plus cancel at 24, so it's sized down to match optically.
+        configureCircleButton(dismissButton, systemName: "magnifyingglass", pointSize: 18)
         dismissButton.accessibilityIdentifier = "search-tab"
         dismissButton.accessibilityLabel = "Search"
         dismissButton.addTarget(controller?.coordinator,
@@ -264,10 +270,10 @@ final class SearchBarAccessory: UIView {
         NSLayoutConstraint.activate(cons)
     }
 
-    private func configureCircleButton(_ button: UIButton, systemName: String) {
+    private func configureCircleButton(_ button: UIButton, systemName: String, pointSize: CGFloat = 24) {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setImage(UIImage(systemName: systemName,
-                                withConfiguration: UIImage.SymbolConfiguration(pointSize: 24, weight: .light)),
+                                withConfiguration: UIImage.SymbolConfiguration(pointSize: pointSize, weight: .light)),
                         for: .normal)
         button.tintColor = Self.ember
         button.layer.cornerRadius = Self.circle / 2

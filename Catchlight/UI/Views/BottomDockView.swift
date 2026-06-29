@@ -544,8 +544,9 @@ struct BottomDockView: View {
                 Circle().fill(Color.ckSurface)
                     .frame(width: dockCircle, height: dockCircle)
                 dockRing()   // .db — Ember border @35%
-                Image(systemName: "xmark")
+                Image(systemName: "plus")   // + rotated 45° → × — one close glyph app-wide (owner 2026-06-29)
                     .font(.system(size: 24, weight: .light))   // open glyph → 24 (owner 2026-06-29, glyph-size pass)
+                    .rotationEffect(.degrees(45))
                     .foregroundStyle(Color.ckAccent)
             }
             .frame(width: buttonSize, height: buttonSize)
