@@ -17,7 +17,7 @@
 //        done               → grey   (`ckCardDoneBorder` == `ckTextComplete` grey)
 //        active task        → Task-quadrant colour   (same source as the Iris)
 //        active reminder    → Remind-quadrant colour  (same source as the Iris)
-//        else (plain note)  → none   (the surface colour — invisible, but the 1.5pt
+//        else (plain note)  → none   (the surface colour — invisible, but the 0.75pt
 //                                      stroke is still drawn so every card is one size)
 //
 //  The active borders read straight from `Quadrant`, so the card edge is the SAME
@@ -39,7 +39,8 @@ struct TakeCardStyle {
 
     /// Card background fill.
     let surface: Color
-    /// 1.5pt stroke colour (equals `surface` when the card has no visible border).
+    /// Stroke colour (drawn at `borderWidth`; equals `surface` when the card has no
+    /// visible border).
     let border: Color
     /// First-line / body text colour.
     let bodyText: Color

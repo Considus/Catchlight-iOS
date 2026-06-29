@@ -69,6 +69,7 @@ struct PetalFanView: View {
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
 
     /// Default "when" a freshly-added reminder opens to — now a user preference
     /// (Settings → Reminders → Default timing (hrs); owner 2026-06-18). Read at call
@@ -191,6 +192,17 @@ struct PetalFanView: View {
             case .task: return "task"
             case .remind: return "remind"
             case .obie: return "obie"
+            }
+        }
+        /// ON-state fill = the SAME colour the Iris uses for this type, matching the
+        /// Sequence filter toggles (owner 2026-06-29). Obie uses the Iris's Obie-ring
+        /// gold (Glow Night / Ember Daylight); Note/Task/Remind use their quadrant fills.
+        func activeFill(_ scheme: ColorScheme) -> Color {
+            switch self {
+            case .note:   return Quadrant.note(scheme)
+            case .task:   return Quadrant.task(scheme)
+            case .remind: return Quadrant.reminder(scheme)
+            case .obie:   return Quadrant.obieRing(scheme)
             }
         }
     }
@@ -419,7 +431,7 @@ struct PetalFanView: View {
                 showingReminderPicker = false
             }
         )
-        .background(Color.ckBackground.ignoresSafeArea())
+        // Background now lives inside ReminderPickerSheet itself (owner 2026-06-29).
     }
 
     private var fanContent: some View {
@@ -546,20 +558,28 @@ struct PetalFanView: View {
                 // order SwiftUI could momentarily paint the fresh fill over the ring
                 // (the same repaint reshuffle fixed in TakeRowView — D-044,
                 // [[catchlight-take-colour-system]]).
-                Circle().fill(active ? Color.ckEmber : Color.ckBackground)
+                Circle().fill(active ? kind.activeFill(scheme) : Color.ckBackground)
                     .zIndex(0)
                 Circle().strokeBorder(
-                    active ? Color.ckEmber : Color.ckEmber.opacity(0.35),
+                    // ON: ring = the per-type fill colour, so the active Mark is a
+                    // solid filled circle (fill edge IS the border) exactly like the
+                    // Sequence toggles — no separate rim.
+                    // OFF: ckAccent @ 0.55, matching the dock / editor bar / search
+                    // (owner 2026-06-29; was ckEmber @ 0.35 — too faint, and ckEmber
+                    // stayed the low-contrast #C9A96E in Daylight where ckAccent
+                    // resolves to the WCAG-safe #856539).
+                    active ? kind.activeFill(scheme) : Color.ckAccent.opacity(0.55),
                     lineWidth: 1.5
                 )
                 .zIndex(1)
                 Group {
                     if let symbol = kind.systemImage {
                         Image(systemName: symbol)
-                            .font(.system(size: 20, weight: .light))   // scaled with the 36→44 Mark
-                            .foregroundStyle(active ? Color.ckBackground : Color.ckEmber)
+                            .font(.system(size: 22, weight: .light))   // dense glyph → 22 (owner 2026-06-29, glyph-size pass; matches the dock toggles)
+                            // Off glyph = ckAccent, matching the dock/editor/search off icons.
+                            .foregroundStyle(active ? Color.ckBackground : Color.ckAccent)
                     } else {
-                        ObiePetalGlyph(size: 20)   // scaled with the 36→44 Mark, keeping the petal's tuned ratio (D-042)
+                        ObiePetalGlyph(size: 26)   // slightly larger than the 24 open-glyph base (owner 2026-06-29) — the ring+dot reads small at 24
                             .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
                     }
                 }
@@ -746,6 +766,10 @@ struct ReminderPickerSheet: View {
                 }
                 .padding()
             }
+            // Single-sourced here (owner 2026-06-29) so EVERY presentation path —
+            // the in-place editor layer AND the Dailies `.sheet` — gets the app's
+            // Ink/Paper background instead of the default system sheet colour.
+            .background(Color.ckBackground.ignoresSafeArea())
             .navigationTitle("Reminder")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -792,13 +816,19 @@ struct ReminderPickerSheet: View {
                 }
             }
         } label: {
-            menuRow(title: "Quick set", icon: "wand.and.stars", value: quickSet?.rawValue ?? "Select")
+            // Shared selector look + 44pt height, matching the Settings pickers
+            // (owner 2026-06-29). The card supplies horizontal inset + fill only —
+            // SelectorRow owns the height, so it lands at the standard 44pt.
+            SelectorRow(icon: "wand.and.stars", label: "Quick set",
+                        value: quickSet?.rawValue ?? "Select")
+                .padding(.horizontal, 14)
+                .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
+        .tint(Color.ckEmber)
         .accessibilityIdentifier("reminder-quickset")
         .onChange(of: quickSet) { _, preset in
             if let preset { date = preset.date(now: Date(), calendar: .current) }
         }
-        .cardSurface()
     }
 
     /// Time of day, split out of the calendar into its own row (owner 2026-06-23). Hidden
@@ -827,19 +857,6 @@ struct ReminderPickerSheet: View {
         .accessibilityIdentifier("reminder-mode")
     }
 
-    /// The shared "Label · value · chevron" row used by the Quick-set and Interval menus.
-    private func menuRow(title: String, icon: String, value: String) -> some View {
-        HStack {
-            Label(title, systemImage: icon)
-                .foregroundStyle(Color.ckTextPrimary)
-            Spacer()
-            Text(value)
-                .foregroundStyle(Color.ckTextSecondary)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.caption2)
-                .foregroundStyle(Color.ckTextSecondary)
-        }
-    }
 
     private var optionsSection: some View {
         VStack(spacing: 0) {
@@ -855,7 +872,7 @@ struct ReminderPickerSheet: View {
                 // "Notify" (owner 2026-06-21) — more accurate than "Alarm" to what the
                 // toggle does (fire a local notification). The model field stays
                 // `alarmEnabled`; only the user-facing label changes.
-                Label("Notify", systemImage: alarm ? "bell.fill" : "bell")
+                Label("Notify", systemImage: alarm ? "bell.fill" : "bell.slash")
             }
             .accessibilityIdentifier("reminder-alarm-toggle")
             .padding(.vertical, 6)
@@ -885,21 +902,9 @@ struct ReminderPickerSheet: View {
                         }
                     }
                 } label: {
-                    HStack {
-                        // Leading icon so the row matches the toggle rows above it
-                        // (All-day/Notify/Repeat all carry one) — owner 2026-06-21.
-                        Label("Interval", systemImage: "clock")
-                            .foregroundStyle(Color.ckTextPrimary)
-                        Spacer()
-                        Text(recurrence.label)
-                            .foregroundStyle(Color.ckTextSecondary)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2)
-                            .foregroundStyle(Color.ckTextSecondary)
-                    }
+                    MenuFieldRow(title: "Interval", icon: "clock", value: recurrence.label)
                 }
                 .accessibilityIdentifier("reminder-repeat-cadence")
-                .padding(.vertical, 6)
 
                 // Weekly only: choose which days repeat. Quick presets + a day strip.
                 if recurrence == .weekly {
@@ -934,8 +939,8 @@ struct ReminderPickerSheet: View {
                     ForEach(WeekdayPreset.selectableCases) { Text($0.rawValue).tag($0) }
                 }
             } label: {
-                menuRow(title: "Days", icon: "calendar",
-                        value: weekdayPresetBinding.wrappedValue.rawValue)
+                MenuFieldRow(title: "Days", icon: "calendar",
+                             value: weekdayPresetBinding.wrappedValue.rawValue)
             }
             .accessibilityIdentifier("reminder-weekday-preset")
             HStack(spacing: 6) {

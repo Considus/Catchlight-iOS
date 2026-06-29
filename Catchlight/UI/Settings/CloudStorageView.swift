@@ -47,8 +47,6 @@ struct CloudStorageView: View {
             // ScrollView. No Done button either; dismiss by swiping down (the drag
             // indicator shows the affordance), matching About.
             VStack(alignment: .leading, spacing: 24) {
-                hero
-
                 intro
 
                 pickerSection
@@ -73,9 +71,11 @@ struct CloudStorageView: View {
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
-            // Title moved into the body as a centred hero (owner 2026-06-22),
-            // with the cloud glyph above it — so the nav bar is left clean.
-            .toolbar(.hidden, for: .navigationBar)
+            // System inline nav title, matching the other Settings sub-pages
+            // (About / Notice History / Privacy Phrase) — owner 2026-06-29; the
+            // bespoke cloud-glyph hero was the only sub-page that differed.
+            .navigationTitle("Cloud Storage")
+            .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDragIndicator(.visible)
         .sheet(isPresented: $pickerPresented) {
@@ -88,31 +88,16 @@ struct CloudStorageView: View {
 
     // MARK: - Sections
 
-    /// Centred cloud glyph above the screen's "Cloud Storage" title.
-    private var hero: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "icloud")
-                .font(.system(size: 34, weight: .light))
-                .foregroundStyle(Color.ckAccent)
-                .accessibilityHidden(true)
-
-            Text("Cloud Storage")
-                .font(CatchlightFont.ui(.medium, size: 20, relativeTo: .title3))
-                .foregroundStyle(Color.ckTextPrimary)
-                .accessibilityAddTraits(.isHeader)
-        }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.top, 4)
-    }
-
     /// Two-line instruction with deliberate breathing room between each line
     /// (owner 2026-06-22), plus the privacy reassurance underneath.
     private var intro: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Choose from iCloud Drive or Dropbox.")
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+            Text("Choose from iCloud Drive or Dropbox")
+                .font(CatchlightFont.displayFixed(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.bottom, 18)   // 1 line break after "Choose from…"
 
             Text("Select an empty folder, or create a new one, and we'll take care of the rest.")
@@ -126,7 +111,6 @@ struct CloudStorageView: View {
                 .foregroundStyle(Color.ckTextSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.top, 36)   // 2 extra line breaks below the "Cloud Storage" hero
     }
 
     // Primary action. Label is "Choose folder from Files" (unchanged — the UI
@@ -202,20 +186,18 @@ struct CloudStorageView: View {
     /// choice governs whether edits leave the device.
     private var syncModeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 14) {
-                Text("Sync")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
+            // Shared selector look (grey value + up/down chevron, 44pt) via MenuFieldRow
+            // — no leading icon here, matching this borderless section (owner 2026-06-29).
+            Menu {
                 Picker("Sync", selection: syncModeBinding) {
                     ForEach(SettingsViewModel.SyncMode.allCases) { mode in
                         Text(mode.label).tag(mode)
                     }
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .tint(Color.ckTextSecondary)
+            } label: {
+                MenuFieldRow(title: "Sync", value: syncMode.label)
             }
+            .tint(Color.ckTextSecondary)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Sync \(syncMode.label)")
 

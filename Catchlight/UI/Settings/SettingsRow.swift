@@ -41,10 +41,10 @@ struct SettingsRow<Accessory: View>: View {
             }
         }
         // minHeight (not fixed) so the row grows at accessibility text sizes
-        // instead of clipping the label or its trailing accessory. 40pt is the
-        // compact baseline (owner 2026-06-21 density pass); the row still hits a
-        // ≥44pt tap region via the List's row insets + contentShape.
-        .frame(minHeight: 40)
+        // instead of clipping the label or its trailing accessory. 44pt matches the
+        // shared `SelectorRow` (owner 2026-06-29) so menu-picker rows and plain rows
+        // stay the same height within a section.
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
         .opacity(disabled ? 0.38 : 1)
 

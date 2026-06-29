@@ -201,14 +201,15 @@ struct SettingsView: View {
 
     /// The "Settings" heading as a scrolling list row (owner 2026-06-21) — clear
     /// background, no section chrome, so it reads as a title and scrolls away.
+    /// Styled as the Dailies page heading (owner 2026-06-29): Cormorant Garamond
+    /// ROMAN 24pt, kerned, CENTRED and upper-cased to match DAILIES/SEQUENCE/etc.
     private var titleRow: some View {
-        Text("Settings")
-            .font(CatchlightFont.ui(.light, size: 28, relativeTo: .title))
-            .foregroundStyle(Color.ckTextPrimary)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        Text("SETTINGS")
+            .pageHeadingStyle()
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 4, trailing: 20))
             .listRowSeparator(.hidden)
+            .accessibilityLabel("Settings")
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -279,33 +280,21 @@ struct SettingsView: View {
         }
     }
 
-    /// Shared row for an inline menu-style `Picker` — one consistent control
-    /// language across the whole sheet (owner 2026-06-21: ditch the segmented
-    /// controls in favour of the Snooze / Lock after dropdown). Leading icon +
-    /// label, the picker's current value as a tappable trailing menu. Compact
-    /// 40pt height (owner 2026-06-21 density pass); the picker keeps its own
-    /// ≥44pt tap region via the menu chevron's hit area.
+    /// Shared row for a menu-style `Picker`. Uses the app-wide `SelectorRow` as the
+    /// menu's label (owner 2026-06-29 standardisation) so the Settings pickers and the
+    /// reminder Quick Set share ONE selector look + 44pt height. The chooser is the
+    /// passed `picker()`, presented inside a `Menu`; the value shows in the row.
     private func menuPickerRow<P: View>(icon: String,
                                         label: String,
                                         accessibilityLabel: String,
                                         selectionLabel: String,
                                         @ViewBuilder picker: () -> P) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .regular))
-                .foregroundStyle(Color.ckAccent)
-                .frame(width: 26)
-                .accessibilityHidden(true)
-            Text(label)
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                .foregroundStyle(Color.ckTextPrimary)
-            Spacer()
-            picker()
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .tint(Color.ckTextSecondary)
+        Menu {
+            picker().labelsHidden()
+        } label: {
+            SelectorRow(icon: icon, label: label, value: selectionLabel)
         }
-        .frame(height: 40)
+        .tint(Color.ckTextSecondary)
         .listRowBackground(Color.ckSurface)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(accessibilityLabel) \(selectionLabel)")
@@ -531,7 +520,7 @@ struct SettingsView: View {
 
     private var subscriptionSection: some View {
         Section {
-            SettingsRow(icon: "sparkle",
+            SettingsRow(icon: "calendar",
                         label: "Manage Subscription",
                         chevron: true,
                         action: {
@@ -728,7 +717,9 @@ struct SettingsView: View {
     }
 
     private var notificationsRowAuthorised: some View {
-        SettingsRow(icon: "bell", label: "Notifications") {
+        // `bell.badge` (not plain `bell`) so this matches the Follow-up reminders row's
+        // dotted bell — one bell language across the two reminder rows (owner 2026-06-29).
+        SettingsRow(icon: "bell.badge", label: "Notifications") {
             HStack(spacing: 6) {
                 Circle()
                     .fill(Color.green)

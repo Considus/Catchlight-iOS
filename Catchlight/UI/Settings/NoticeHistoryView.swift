@@ -19,9 +19,29 @@ struct NoticeHistoryView: View {
         NavigationStack {
             Group {
                 if entries.isEmpty {
-                    ContentUnavailableView("No notices yet",
-                                           systemImage: "bell.slash",
-                                           description: Text("Sync, storage and conflict notices will appear here."))
+                    // Custom empty state (owner 2026-06-29) so the hero line can take
+                    // the onboarding hero face; mirrors the Privacy Phrase layout.
+                    VStack(spacing: 16) {
+                        Image(systemName: "bell.slash")
+                            .font(.system(size: 40, weight: .regular))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .accessibilityHidden(true)
+                        Text("No notices yet")
+                            .font(CatchlightFont.displayFixed(size: 28))
+                            .foregroundStyle(Color.ckTextPrimary)
+                            .multilineTextAlignment(.center)
+                        Text("Sync, storage and conflict notices will appear here.")
+                            .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                        Spacer()
+                    }
+                    // Pinned near the top (padding 60 + bottom Spacer) to match the
+                    // Privacy Phrase explainer, rather than vertically centred.
+                    .padding(.top, 60)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityElement(children: .combine)
                 } else {
                     List {
                         ForEach(entries) { entry in
@@ -53,7 +73,7 @@ struct NoticeHistoryView: View {
             .navigationTitle("Notice History")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
+                // No Done button — dismiss by swiping down (owner 2026-06-29).
                 if !entries.isEmpty {
                     ToolbarItem(placement: .primaryAction) {
                         Button("Clear") {
@@ -65,6 +85,7 @@ struct NoticeHistoryView: View {
                 }
             }
         }
+        .presentationDragIndicator(.visible)
         .onAppear { entries = DiagnosticsLog.shared.userFacingEntries() }
     }
 

@@ -495,26 +495,18 @@ struct DailiesView: View {
     /// tight so the pinned Obie's circle is clear of it at rest).
     private var heading: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(headingTitle)
-                    // ROMAN (upright) display face — section 3. The page heading
-                    // is Cormorant Garamond Light ROMAN, not the italic display
-                    // cut. Take body text stays italic via `display(size:)`.
-                    .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
-                    .kerning(1.6)
-                    .foregroundStyle(Color.ckTextPrimary)
-                    // Recede the title while editing in place; the mask below stays
-                    // opaque so scrolled-up content still dissolves under the top.
-                    .opacity(ui.isEditingInPlace ? 0.12 : 1)
-                    .id(headingTitle)
-                    .transition(.opacity)
-                Spacer()
-            }
-            .padding(.leading, textColumnLeading)
-            .padding(.top, deviceTopInset + 14)
-            .padding(.bottom, 2)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(Color.ckBackground)
+            Text(headingTitle)
+                // Shared page-heading style (Cormorant ROMAN 24, kerned, centred —
+                // §catalogue, includes the kerning-centring fix).
+                .pageHeadingStyle()
+                // Recede the title while editing in place; the mask below stays
+                // opaque so scrolled-up content still dissolves under the top.
+                .opacity(ui.isEditingInPlace ? 0.12 : 1)
+                .id(headingTitle)
+                .transition(.opacity)
+                .padding(.top, deviceTopInset + 14)
+                .padding(.bottom, 2)
+                .background(Color.ckBackground)
             if vm.obie != nil && !ui.isEditingInPlace {
                 // With a pinned Obie: SOLID right down to the Obie's card top (no fade
                 // — the gradient is semi-transparent and lets a scrolling Take peek).

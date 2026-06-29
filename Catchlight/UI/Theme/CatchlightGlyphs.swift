@@ -108,6 +108,60 @@ struct TaskCheckbox: View {
     }
 }
 
+/// `DailiesGlyph` with a diagonal strike — the "Remove Important" counterpart, drawn
+/// at the same stroke weight as the base glyph so it reads as the standard Important
+/// mark crossed out (mirrors SF Symbol `.slash` variants).
+struct DailiesGlyphSlashed: View {
+    var size: CGFloat = 20
+    var body: some View {
+        let lw = size * 1.2 / 16
+        DailiesGlyph(size: size)
+            .overlay {
+                Path { p in
+                    // bottom-left → top-right, matching the SF `.slash` direction
+                    p.move(to: CGPoint(x: size * 0.12, y: size * 0.88))
+                    p.addLine(to: CGPoint(x: size * 0.88, y: size * 0.12))
+                }
+                .stroke(style: StrokeStyle(lineWidth: lw, lineCap: .round))
+            }
+            .frame(width: size, height: size)
+    }
+}
+
+// MARK: - Baked menu glyphs
+
+/// System context menus (`UIMenu`) render only `Image`s, never SwiftUI `Shape`s, so
+/// our custom glyphs are baked ONCE into template `UIImage`s that the menu tints like
+/// any SF Symbol. Lets the Take long-press menu show the *standard* Important / Obie
+/// marks instead of stand-in symbols (`star` / `pin`) — owner 2026-06-29.
+/// `@MainActor` (ImageRenderer is main-actor) + cached (the glyphs never change).
+@MainActor
+enum MenuGlyph {
+    static let makeImportant = bake(DailiesGlyph(size: glyphSize))
+    static let removeImportant = bake(DailiesGlyphSlashed(size: glyphSize))
+    static let obie = bake(ObiePetalGlyph(size: glyphSize))
+
+    /// Rendered a touch larger than the dock glyphs — menu icons read small.
+    private static let glyphSize: CGFloat = 22
+
+    private static func bake<V: View>(_ glyph: V) -> Image {
+        // Foreground black + template rendering: the menu ignores RGB and tints by
+        // alpha, exactly as it does for SF Symbols, so the glyph picks up the menu's
+        // own label colour (and red for destructive rows).
+        let renderer = ImageRenderer(
+            content: glyph
+                .foregroundStyle(.black)
+                .frame(width: glyphSize, height: glyphSize)
+                .padding(2)
+        )
+        renderer.scale = 3
+        if let ui = renderer.uiImage?.withRenderingMode(.alwaysTemplate) {
+            return Image(uiImage: ui)
+        }
+        return Image(systemName: "star")   // defensive fallback; should never hit
+    }
+}
+
 // MARK: - Device metrics environment
 
 /// The window's top safe-area inset, captured ONCE at the window root in

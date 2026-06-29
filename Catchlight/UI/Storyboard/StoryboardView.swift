@@ -60,11 +60,6 @@ struct StoryboardView: View {
         max(0, takeSpacing.gap - CatchlightLayout.circleDiameter / 2)
     }
 
-    /// Leading inset for the heading — the card's TEXT column (card left + the
-    /// card's internal leading pad), identical to the DAILIES/SEQUENCE heading, so
-    /// STORYBOARD lines up exactly with the Take text below it.
-    private var headingLeading: CGFloat { cardLeading + CatchlightLayout.cardTextLeadingPad }
-
     // MARK: - Edit-in-place state (LOCAL to the Storyboard)
 
     @State private var editDraft: Take?
@@ -127,30 +122,31 @@ struct StoryboardView: View {
 
     private var topChrome: some View {
         VStack(spacing: 0) {
-            HStack {
+            ZStack {
                 // Explicit view heading, in the DAILIES house style (Cormorant Roman,
                 // kerned caps) — owner 2026-06-19: name it as an Angle so the ∠ glyph,
-                // the heading, and the concept all read the same.
+                // the heading, and the concept all read the same. CENTRED at 24pt
+                // (owner 2026-06-29) to match the timeline page heading; spans full
+                // width so it centres on screen, with the × floated at the right edge.
                 Text("STORYBOARD")
-                    .font(CatchlightFont.displayRoman(size: 20, relativeTo: .title3))
-                    .kerning(1.6)
-                    .foregroundStyle(Color.ckTextPrimary)
+                    .pageHeadingStyle()
                     .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button(action: closeStoryboard) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .frame(width: CatchlightLayout.minTouchTarget,
-                               height: CatchlightLayout.minTouchTarget)
-                        .contentShape(Rectangle())
+                HStack {
+                    Spacer()
+                    Button(action: closeStoryboard) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Color.ckTextSecondary)
+                            .frame(width: CatchlightLayout.minTouchTarget,
+                                   height: CatchlightLayout.minTouchTarget)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("storyboard-close")
+                    .accessibilityLabel("Close Storyboard")
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("storyboard-close")
-                .accessibilityLabel("Close Storyboard")
+                .padding(.trailing, 12)
             }
-            .padding(.leading, headingLeading)
-            .padding(.trailing, 12)
             .padding(.top, 4)
             .background(Color.ckBackground)
             LinearGradient(
@@ -228,9 +224,10 @@ struct StoryboardView: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Text("Nothing to plan yet")
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+            Text("Nothing planned yet")
+                .font(CatchlightFont.displayFixed(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
+                .multilineTextAlignment(.center)
             Text("Takes with a task appear here.")
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .callout))
                 .foregroundStyle(Color.ckTextSecondary)
@@ -296,7 +293,7 @@ struct StoryboardView: View {
             guard app.ensureEntitled() else { return }
             vm.toggleDone(take)
         } label: {
-            Label(take.isMarkedDone ? "Mark as not done" : "Mark as done",
+            Label(take.isMarkedDone ? "Mark Not Done" : "Mark Done",
                   systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
         }
         Button {
@@ -305,8 +302,12 @@ struct StoryboardView: View {
             t.isImportant.toggle()
             vm.save(t)
         } label: {
-            Label(take.isImportant ? "Remove Important" : "Set as Important",
-                  systemImage: take.isImportant ? "star.slash" : "star")
+            // Standard Important mark, matching the Dailies long-press menu (owner 2026-06-29).
+            if take.isImportant {
+                Label { Text("Remove Important") } icon: { MenuGlyph.removeImportant }
+            } else {
+                Label { Text("Make Important") } icon: { MenuGlyph.makeImportant }
+            }
         }
         Button(role: .destructive) {
             guard app.ensureEntitled() else { return }

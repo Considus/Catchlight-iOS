@@ -173,19 +173,17 @@ struct LocationEditor: View {
 
             // Geofence radius (owner 2026-06-27). 100 m is the reliable floor; a tighter
             // fence is more precise but iOS may trigger it late or miss it.
-            HStack {
-                Label("Radius", systemImage: "circle.dashed")
-                Spacer()
+            // Nested menu selector — matches the reminder Interval/Days rows (grey
+            // value + up/down chevron) rather than a tinted inline Picker (owner 2026-06-29).
+            Menu {
                 Picker("Radius", selection: $radiusMetres) {
                     ForEach(Self.radiusOptions, id: \.self) { m in
                         Text("\(Int(m)) m").tag(m)
                     }
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .tint(Color.ckEmber)
+            } label: {
+                MenuFieldRow(title: "Radius", icon: "circle.dashed", value: "\(Int(radiusMetres)) m")
             }
-            .padding(.vertical, 8)
             .accessibilityIdentifier("location-radius-picker")
 
             if radiusMetres <= ReminderScheduler.minGeofenceRadius {
@@ -201,7 +199,9 @@ struct LocationEditor: View {
             // Notify on/off (owner 2026-06-27) — model-C parity with time reminders. Off =
             // a silent place tag (no geofence registered); on = fire on arrive/leave.
             HStack {
-                Label("Notify", systemImage: alarmEnabled ? "bell" : "bell.slash")
+                // Filled bell when on, matching the time-reminder Notify toggle
+                // (owner 2026-06-29); slash stays for the silent/off place tag.
+                Label("Notify", systemImage: alarmEnabled ? "bell.fill" : "bell.slash")
                 Spacer()
                 Toggle("", isOn: $alarmEnabled).labelsHidden().tint(Color.ckEmber)
             }
@@ -219,7 +219,21 @@ struct LocationEditor: View {
             Divider()
 
             HStack {
-                Label("Name", systemImage: "tag")
+                // The same teardrop marker that identifies a location reminder on the
+                // Dailies card (owner 2026-06-29), instead of the generic tag.
+                Label {
+                    Text("Place")
+                } icon: {
+                    // Size the pin's icon column to a standard SF-symbol box (a hidden
+                    // reference symbol) so "Place" left-aligns with the Radius/Notify
+                    // rows above — the narrow teardrop alone sat a char-space left
+                    // (owner 2026-06-29). The marker is drawn centred over it.
+                    Image(systemName: "circle.dashed")
+                        .opacity(0)
+                        .overlay {
+                            LocationPinGlyph(color: Color.ckTextPrimary, size: 18, lineWidth: 1.2)
+                        }
+                }
                 TextField("e.g. Home", text: $name)
                     .multilineTextAlignment(.trailing)
                     .accessibilityIdentifier("location-name-field")

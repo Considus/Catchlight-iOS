@@ -125,10 +125,6 @@ struct ConflictResolutionView: View {
             actionRow(for: pair, chosenLocal: chosenLocal)
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.ckBackground)
-        )
     }
 
     private func shouldStack(pair: (local: Take, remote: Take)) -> Bool {
@@ -176,7 +172,10 @@ struct ConflictResolutionView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(selected ? Color.ckEmber : Color.ckSpine,
+                    // Adaptive accent (ember Night / #856539 Daylight) so the 2pt
+                    // selection border clears 3:1 contrast on the near-white Daylight
+                    // panel — raw ckEmber failed it (owner 2026-06-29, D-027).
+                    .strokeBorder(selected ? Color.ckAccent : Color.ckSpine,
                                   lineWidth: selected ? 2 : 1)
             )
             .scaleEffect(selected ? 1.02 : 1.0)

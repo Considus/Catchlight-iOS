@@ -47,12 +47,8 @@ struct PrivacyPhraseView: View {
             content
                 .navigationTitle("Privacy Phrase")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Done") { dismiss() }
-                            .foregroundStyle(Color.ckTextObie)
-                    }
-                }
+                // No Done button — dismiss by swiping down (owner 2026-06-29),
+                // matching About / Cloud Storage. The drag indicator shows it.
                 .background(Color.ckBackground.ignoresSafeArea())
         }
         .presentationDragIndicator(.visible)
@@ -85,8 +81,9 @@ struct PrivacyPhraseView: View {
                 .font(.system(size: 40, weight: .regular))
                 .foregroundStyle(Color.ckAccent)
             Text("Reveal your privacy phrase")
-                .font(CatchlightFont.ui(.regular, size: 20, relativeTo: .title3))
+                .font(CatchlightFont.displayFixed(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
+                .multilineTextAlignment(.center)
             Text("Authenticate with Face ID or your device passcode to view the 12 words — they're the only way to recover your account, so reveal them somewhere private.")
                 .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)
@@ -136,8 +133,9 @@ struct PrivacyPhraseView: View {
                 .font(.system(size: 40, weight: .regular))
                 .foregroundStyle(Color.ckAccent)
             Text(title)
-                .font(CatchlightFont.ui(.regular, size: 20, relativeTo: .title3))
+                .font(CatchlightFont.displayFixed(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
+                .multilineTextAlignment(.center)
             Text(body)
                 .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)

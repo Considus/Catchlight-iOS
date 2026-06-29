@@ -438,12 +438,15 @@ struct BottomDockView: View {
         } label: {
             ZStack {
                 if ui.filterImportant {
-                    Circle().fill(Color.ckEmber)
+                    // Fill with the Iris IMPORTANT colour, not Ember (owner 2026-06-29):
+                    // every other Sequence toggle uses its Quadrant colour, so Important
+                    // must too — Stone (Night) / Shadow (Daylight), matching the Iris N wedge.
+                    Circle().fill(Quadrant.important(scheme))
                         .frame(width: dockCircle, height: dockCircle)
                 } else {
                     dockRing()
                 }
-                DailiesGlyph(size: 22)
+                DailiesGlyph(size: 24)   // custom open glyph → 24 (matches the editor-bar Important)
                     .foregroundStyle(ui.filterImportant ? Color.ckBackground : Color.ckAccent)
             }
             .frame(width: buttonSize, height: buttonSize)
@@ -541,8 +544,9 @@ struct BottomDockView: View {
                 Circle().fill(Color.ckSurface)
                     .frame(width: dockCircle, height: dockCircle)
                 dockRing()   // .db — Ember border @35%
-                Image(systemName: "xmark")
-                    .font(.system(size: 20, weight: .light))   // scaled with the 36→44 circle
+                Image(systemName: "plus")   // + rotated 45° → × — one close glyph app-wide (owner 2026-06-29)
+                    .font(.system(size: 24, weight: .light))   // open glyph → 24 (owner 2026-06-29, glyph-size pass)
+                    .rotationEffect(.degrees(45))
                     .foregroundStyle(Color.ckAccent)
             }
             .frame(width: buttonSize, height: buttonSize)
