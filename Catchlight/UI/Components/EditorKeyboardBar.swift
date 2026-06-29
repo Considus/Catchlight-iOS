@@ -43,7 +43,7 @@ struct EditorKeyboardBar: View {
                     // The checklist glyph (it opens the checklist — owner 2026-06-19,
                     // matching the Angle's registered icon); sized down as it renders
                     // heavier than ∠ at the same point size.
-                    dockSymbol("checklist", tint: .ckAccent, enabled: true, size: 20)
+                    dockSymbol("checklist", tint: .ckAccent, enabled: true, size: 22)
                 }
                 .frame(maxWidth: .infinity)
             } else if let onReminder = config.onReminder {
@@ -81,7 +81,7 @@ struct EditorKeyboardBar: View {
                 dockSymbol("checkmark",
                            tint: config.isDone ? .ckEmber : .ckAccent,
                            enabled: config.doneEnabled,
-                           size: 22)
+                           size: 24)
             }
             .frame(maxWidth: .infinity)
         }

@@ -539,7 +539,7 @@ enum CatchlightLayout {
     /// the first row always clears the heading and the fade on large-inset
     /// devices (iPhone 17 / iOS 26.5.1 — section 4 / D-041). The previous fixed
     /// `52` ignored the inset, tucking the first Take under the fade.
-    static let headingClearance: CGFloat = 66   // 52 → 58 → 66: drop the topmost Take/Obie lower so it clears the fade (owner 2026-06-16; +8 with the pinned-Obie header)
+    static let headingClearance: CGFloat = 68   // 52 → 58 → 66 → 68: drop the topmost Take/Obie lower so it clears the fade (owner 2026-06-16; +8 with the pinned-Obie header; +2 on 2026-06-29 when the heading grew 20 → 24, pushing the fade lower)
     /// Resting clearance the dock occupies above the timeline's bottom, BEFORE
     /// the device bottom inset is added. Last-row bottom padding is
     /// `dockClearance + deviceBottomInset` so the final Take clears the raised dock.
@@ -547,4 +547,34 @@ enum CatchlightLayout {
     /// The dock's own resting bottom padding above the home indicator, added on
     /// top of `deviceBottomInset` (BottomDockView / DockPillRow).
     static let dockBottomPadding: CGFloat = 8
+    /// Gap between the brand mark (`IntroBrandMark`) and the hero line on the
+    /// intro surfaces — onboarding steps AND the app-entry LockView reference this
+    /// one value so the mark→hero rhythm is identical and can't drift (owner
+    /// 2026-06-16 "set position"; shared 2026-06-29).
+    static let introHeroTopGap: CGFloat = 112
+    /// Letter-spacing for the page heading (DAILIES / SEQUENCE / STORYBOARD / SHOT
+    /// LIST / SETTINGS).
+    static let pageHeadingKerning: CGFloat = 1.6
+    /// Leading inset `pageHeadingStyle` adds to optically centre the kerned title.
+    /// `.kerning` adds trailing space after the last glyph (~half a glyph more than
+    /// the kern value itself), pulling a plainly-centred title left; 3.0 lands the
+    /// ink dead-centre — measured on DAILIES, 601→603px (owner 2026-06-29).
+    static let pageHeadingKerningComp: CGFloat = 3.0
+}
+
+extension View {
+    /// The one page-heading style — Cormorant Garamond ROMAN 24, kerned, centred,
+    /// `ckTextPrimary`. Shared by every screen's heading so they can't drift (the
+    /// catalogue documents this once). `.kerning` adds its spacing AFTER the last
+    /// glyph too, so a plainly-centred kerned title sits ~half a kern left of true
+    /// centre; the matching `.padding(.leading)` cancels that trailing space so the
+    /// letters read dead-centre (owner 2026-06-29).
+    func pageHeadingStyle() -> some View {
+        self
+            .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
+            .kerning(CatchlightLayout.pageHeadingKerning)
+            .foregroundStyle(Color.ckTextPrimary)
+            .padding(.leading, CatchlightLayout.pageHeadingKerningComp)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
 }

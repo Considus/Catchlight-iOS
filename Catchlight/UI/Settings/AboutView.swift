@@ -72,8 +72,8 @@ struct AboutView: View {
     /// mark (owner 2026-06-16 — revised from left-justified).
     private var taglineBlock: some View {
         VStack(spacing: 6) {
-            Text("Privacy-first notes and reminders.")
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+            Text("Privacy-first notes and reminders")
+                .font(CatchlightFont.displayFixed(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
             Text(Self.versionString)
