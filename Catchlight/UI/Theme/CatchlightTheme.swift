@@ -552,4 +552,29 @@ enum CatchlightLayout {
     /// one value so the mark→hero rhythm is identical and can't drift (owner
     /// 2026-06-16 "set position"; shared 2026-06-29).
     static let introHeroTopGap: CGFloat = 112
+    /// Letter-spacing for the page heading (DAILIES / SEQUENCE / STORYBOARD / SHOT
+    /// LIST / SETTINGS).
+    static let pageHeadingKerning: CGFloat = 1.6
+    /// Leading inset `pageHeadingStyle` adds to optically centre the kerned title.
+    /// `.kerning` adds trailing space after the last glyph (~half a glyph more than
+    /// the kern value itself), pulling a plainly-centred title left; 3.0 lands the
+    /// ink dead-centre — measured on DAILIES, 601→603px (owner 2026-06-29).
+    static let pageHeadingKerningComp: CGFloat = 3.0
+}
+
+extension View {
+    /// The one page-heading style — Cormorant Garamond ROMAN 24, kerned, centred,
+    /// `ckTextPrimary`. Shared by every screen's heading so they can't drift (the
+    /// catalogue documents this once). `.kerning` adds its spacing AFTER the last
+    /// glyph too, so a plainly-centred kerned title sits ~half a kern left of true
+    /// centre; the matching `.padding(.leading)` cancels that trailing space so the
+    /// letters read dead-centre (owner 2026-06-29).
+    func pageHeadingStyle() -> some View {
+        self
+            .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
+            .kerning(CatchlightLayout.pageHeadingKerning)
+            .foregroundStyle(Color.ckTextPrimary)
+            .padding(.leading, CatchlightLayout.pageHeadingKerningComp)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
 }

@@ -857,19 +857,6 @@ struct ReminderPickerSheet: View {
         .accessibilityIdentifier("reminder-mode")
     }
 
-    /// The shared "Label · value · chevron" row used by the Quick-set and Interval menus.
-    private func menuRow(title: String, icon: String, value: String) -> some View {
-        HStack {
-            Label(title, systemImage: icon)
-                .foregroundStyle(Color.ckTextPrimary)
-            Spacer()
-            Text(value)
-                .foregroundStyle(Color.ckTextSecondary)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.caption2)
-                .foregroundStyle(Color.ckTextSecondary)
-        }
-    }
 
     private var optionsSection: some View {
         VStack(spacing: 0) {
@@ -885,7 +872,7 @@ struct ReminderPickerSheet: View {
                 // "Notify" (owner 2026-06-21) — more accurate than "Alarm" to what the
                 // toggle does (fire a local notification). The model field stays
                 // `alarmEnabled`; only the user-facing label changes.
-                Label("Notify", systemImage: alarm ? "bell.fill" : "bell")
+                Label("Notify", systemImage: alarm ? "bell.fill" : "bell.slash")
             }
             .accessibilityIdentifier("reminder-alarm-toggle")
             .padding(.vertical, 6)
@@ -915,21 +902,9 @@ struct ReminderPickerSheet: View {
                         }
                     }
                 } label: {
-                    HStack {
-                        // Leading icon so the row matches the toggle rows above it
-                        // (All-day/Notify/Repeat all carry one) — owner 2026-06-21.
-                        Label("Interval", systemImage: "clock")
-                            .foregroundStyle(Color.ckTextPrimary)
-                        Spacer()
-                        Text(recurrence.label)
-                            .foregroundStyle(Color.ckTextSecondary)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2)
-                            .foregroundStyle(Color.ckTextSecondary)
-                    }
+                    MenuFieldRow(title: "Interval", icon: "clock", value: recurrence.label)
                 }
                 .accessibilityIdentifier("reminder-repeat-cadence")
-                .padding(.vertical, 6)
 
                 // Weekly only: choose which days repeat. Quick presets + a day strip.
                 if recurrence == .weekly {
@@ -964,8 +939,8 @@ struct ReminderPickerSheet: View {
                     ForEach(WeekdayPreset.selectableCases) { Text($0.rawValue).tag($0) }
                 }
             } label: {
-                menuRow(title: "Days", icon: "calendar",
-                        value: weekdayPresetBinding.wrappedValue.rawValue)
+                MenuFieldRow(title: "Days", icon: "calendar",
+                             value: weekdayPresetBinding.wrappedValue.rawValue)
             }
             .accessibilityIdentifier("reminder-weekday-preset")
             HStack(spacing: 6) {

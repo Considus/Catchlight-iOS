@@ -496,21 +496,14 @@ struct DailiesView: View {
     private var heading: some View {
         VStack(spacing: 0) {
             Text(headingTitle)
-                // ROMAN (upright) display face — section 3. The page heading
-                // is Cormorant Garamond Light ROMAN, not the italic display
-                // cut. Take body text stays italic via `display(size:)`.
-                .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
-                .kerning(1.6)
-                .foregroundStyle(Color.ckTextPrimary)
+                // Shared page-heading style (Cormorant ROMAN 24, kerned, centred —
+                // §catalogue, includes the kerning-centring fix).
+                .pageHeadingStyle()
                 // Recede the title while editing in place; the mask below stays
                 // opaque so scrolled-up content still dissolves under the top.
                 .opacity(ui.isEditingInPlace ? 0.12 : 1)
                 .id(headingTitle)
                 .transition(.opacity)
-                // CENTRED (owner 2026-06-29); was leading-aligned to the card text
-                // column. 20 → 24 the same day. The full-width frame keeps the solid
-                // ckBackground bar spanning edge-to-edge behind the centred title.
-                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.top, deviceTopInset + 14)
                 .padding(.bottom, 2)
                 .background(Color.ckBackground)

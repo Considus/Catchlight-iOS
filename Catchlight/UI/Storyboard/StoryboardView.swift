@@ -129,11 +129,8 @@ struct StoryboardView: View {
                 // (owner 2026-06-29) to match the timeline page heading; spans full
                 // width so it centres on screen, with the × floated at the right edge.
                 Text("STORYBOARD")
-                    .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
-                    .kerning(1.6)
-                    .foregroundStyle(Color.ckTextPrimary)
+                    .pageHeadingStyle()
                     .accessibilityAddTraits(.isHeader)
-                    .frame(maxWidth: .infinity, alignment: .center)
                 HStack {
                     Spacer()
                     Button(action: closeStoryboard) {

@@ -186,20 +186,18 @@ struct CloudStorageView: View {
     /// choice governs whether edits leave the device.
     private var syncModeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 14) {
-                Text("Sync")
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
+            // Shared selector look (grey value + up/down chevron, 44pt) via MenuFieldRow
+            // — no leading icon here, matching this borderless section (owner 2026-06-29).
+            Menu {
                 Picker("Sync", selection: syncModeBinding) {
                     ForEach(SettingsViewModel.SyncMode.allCases) { mode in
                         Text(mode.label).tag(mode)
                     }
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .tint(Color.ckTextSecondary)
+            } label: {
+                MenuFieldRow(title: "Sync", value: syncMode.label)
             }
+            .tint(Color.ckTextSecondary)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Sync \(syncMode.label)")
 

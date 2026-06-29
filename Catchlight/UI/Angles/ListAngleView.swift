@@ -83,11 +83,8 @@ struct ListAngleView: View {
                 // CENTRED at 24pt (owner 2026-06-29) to match the timeline page heading;
                 // full-width frame centres it on screen, × floated at the right edge.
                 Text("SHOT LIST")
-                    .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
-                    .kerning(1.6)
-                    .foregroundStyle(Color.ckTextPrimary)
+                    .pageHeadingStyle()
                     .accessibilityAddTraits(.isHeader)
-                    .frame(maxWidth: .infinity, alignment: .center)
                 HStack {
                     Spacer()
                     Button(action: onClose) {

@@ -205,10 +205,7 @@ struct SettingsView: View {
     /// ROMAN 24pt, kerned, CENTRED and upper-cased to match DAILIES/SEQUENCE/etc.
     private var titleRow: some View {
         Text("SETTINGS")
-            .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
-            .kerning(1.6)
-            .foregroundStyle(Color.ckTextPrimary)
-            .frame(maxWidth: .infinity, alignment: .center)
+            .pageHeadingStyle()
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 4, trailing: 20))
             .listRowSeparator(.hidden)

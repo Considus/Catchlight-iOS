@@ -45,3 +45,37 @@ struct SelectorRow: View {
         .contentShape(Rectangle())
     }
 }
+
+/// The NESTED-card menu selector — an SF-symbol label, current value, and up/down
+/// chevron at the same 44pt height. The in-card sibling of `SelectorRow` (which is the
+/// standalone / list-row selector). Used as a `Menu` label for the reminder Interval /
+/// Days and the location Radius so every nested selector shares ONE look + height; the
+/// 44 lives here once, so it can't drift (owner 2026-06-29).
+struct MenuFieldRow: View {
+    let title: String
+    /// Optional leading SF Symbol. Omitted for borderless rows with no icon column
+    /// (e.g. Cloud Storage's Sync).
+    var icon: String? = nil
+    /// The current selection, shown trailing.
+    let value: String
+
+    var body: some View {
+        HStack {
+            if let icon {
+                Label(title, systemImage: icon)
+                    .foregroundStyle(Color.ckTextPrimary)
+            } else {
+                Text(title)
+                    .foregroundStyle(Color.ckTextPrimary)
+            }
+            Spacer()
+            Text(value)
+                .foregroundStyle(Color.ckTextSecondary)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption2)
+                .foregroundStyle(Color.ckTextSecondary)
+        }
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+    }
+}
