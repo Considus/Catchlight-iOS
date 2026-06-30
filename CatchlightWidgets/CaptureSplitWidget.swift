@@ -36,6 +36,9 @@ struct CaptureSplitWidget: Widget {
 /// Two tappable halves (Take | Obie), parameterised per family.
 struct SplitView: View {
     @Environment(\.widgetFamily) private var family
+    /// The system's widget content margin — reused as the gap between the two cards
+    /// so the border BETWEEN them equals the border AROUND them (owner 2026-06-30).
+    @Environment(\.widgetContentMargins) private var margins
 
     var body: some View {
         switch family {
@@ -47,15 +50,11 @@ struct SplitView: View {
                 captureButton(.obie) { accessoryHalf(.obie) }
             }
         default:
-            // Home medium — one card surface split by a hairline divider.
-            HStack(spacing: 0) {
-                captureButton(.take) { mediumHalf(.take) }
-                Rectangle()
-                    .fill(WidgetPalette.accent.opacity(0.18))
-                    .frame(width: 0.75)
-                captureButton(.obie) { mediumHalf(.obie) }
+            // Home medium — TWO individual cards with an even gap == the surround.
+            HStack(spacing: margins.leading) {
+                captureButton(.take) { mediumHalf(.take).widgetCardSurface() }
+                captureButton(.obie) { mediumHalf(.obie).widgetCardSurface() }
             }
-            .widgetCardSurface()
         }
     }
 
