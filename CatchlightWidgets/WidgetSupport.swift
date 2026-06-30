@@ -96,20 +96,6 @@ enum WidgetFont {
         }
         return .system(size: size, weight: weight)
     }
-
-    // Display face — Cormorant Garamond Italic (mirrors `CatchlightFont.displayFixed`).
-    // Used for the lock-screen Obie mark: a capital italic "O" instead of crown.fill.
-    private static let displayItalicCandidates = [
-        "CormorantGaramond-LightItalic", "CormorantGaramond-Italic",
-        "CormorantGaramond-Light", "CormorantGaramond"
-    ]
-
-    static func display(_ size: CGFloat) -> Font {
-        if let name = firstAvailable(displayItalicCandidates) {
-            return .custom(name, fixedSize: size)
-        }
-        return .system(size: size, weight: .regular, design: .serif).italic()
-    }
 }
 
 // MARK: - Capture surface (Take vs Obie presentation)
@@ -141,32 +127,30 @@ struct CaptureSurface {
     )
 }
 
-// MARK: - Obie petal glyph (mirrored from ObiePetalGlyph)
+// MARK: - Obie brand glyph (the logo mark — `Assets.xcassets/ObieGlyph`)
 //
-// The in-app Obie identity: a ring + specular dot with a background-coloured
-// "catch". Mirrored here so the home widget reads as the same Obie as the app
-// (owner 2026-06-30). The catch is punched with the widget's own (adaptive)
-// background so it reads on Night or Daylight.
+// The Catchlight Obie logo: a SOLID filled italic "O" + filled dot (from
+// 01_Brand/Logo/Custom Glyphs/Obie_Glyph.svg), imported as a vector template
+// asset. Used on EVERY widget surface (owner 2026-06-30) — home widgets, the
+// lock-screen accessories, AND the Controls. A solid silhouette survives the
+// lock-screen / Control monochrome (vibrant) flattening, where the in-app petal
+// (a thin ring + background-punched catch) could not. Home tints it `ckTextObie`;
+// lock-screen + Controls let the system tint it.
+//
+// The asset name shared with the Controls.
+enum WidgetAsset { static let obieGlyph = "ObieGlyph" }
 
-struct WidgetObieGlyph: View {
-    var size: CGFloat = 16
+/// The Obie brand mark, scaled to a target height and gold-tinted (home widgets).
+struct WidgetObieMark: View {
+    var height: CGFloat
+    var tinted: Bool = true
     var body: some View {
-        let u = size / 16
-        ZStack {
-            Circle()
-                .strokeBorder(lineWidth: 1.3 * u)
-                .frame(width: 10.8 * u, height: 10.8 * u)
-            Circle()
-                .frame(width: 3.4 * u, height: 3.4 * u)
-                .overlay(
-                    Circle()
-                        .fill(WidgetPalette.background)
-                        .frame(width: 1.4 * u, height: 1.4 * u)
-                )
-                .offset(x: 3.9 * u, y: -3.9 * u)
-        }
-        .frame(width: size, height: size)
-        .foregroundStyle(WidgetPalette.textObie)
+        Image(WidgetAsset.obieGlyph)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(height: height)
+            .foregroundStyle(tinted ? WidgetPalette.textObie : Color.primary)
     }
 }
 
@@ -218,13 +202,12 @@ struct LauncherView: View {
         switch family {
         case .accessoryCircular:
             // Lock-screen accessory — system vibrant/monochrome; colour is ignored.
-            // Take = plus.circle.fill (SF Symbol); Obie = a capital italic "O" in the
-            // brand display face (owner 2026-06-30 — the crown gives way to the
-            // wordmark's letter; accessories CAN host Text, unlike Controls).
+            // Take = plus.circle.fill (SF Symbol); Obie = the brand glyph (solid
+            // silhouette, survives the monochrome flattening — owner 2026-06-30).
             ZStack {
                 AccessoryWidgetBackground()
                 if surface.isObie {
-                    Text("O").font(WidgetFont.display(34))
+                    WidgetObieMark(height: 30, tinted: false)
                 } else {
                     Image(systemName: surface.accessoryGlyph)
                         .font(.system(size: 24, weight: .semibold))
@@ -233,7 +216,7 @@ struct LauncherView: View {
         case .accessoryRectangular:
             HStack(spacing: 8) {
                 if surface.isObie {
-                    Text("O").font(WidgetFont.display(30)).frame(width: 22)
+                    WidgetObieMark(height: 24, tinted: false).frame(width: 22)
                 } else {
                     Image(systemName: surface.accessoryGlyph)
                         .font(.system(size: 22, weight: .semibold))
@@ -249,7 +232,7 @@ struct LauncherView: View {
             VStack(spacing: 12) {
                 if surface.isObie {
                     // Match the Add mark's footprint so the Take/Obie widgets balance.
-                    WidgetObieGlyph(size: 56)
+                    WidgetObieMark(height: 52)
                 } else {
                     WidgetAddMark(diameter: 56)
                 }
@@ -269,7 +252,7 @@ struct CardView: View {
     var body: some View {
         HStack(spacing: 14) {
             if surface.isObie {
-                WidgetObieGlyph(size: 40)
+                WidgetObieMark(height: 36)
                     .frame(width: 40, height: 40)
             } else {
                 WidgetAddMark(diameter: 40)
