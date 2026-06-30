@@ -134,6 +134,12 @@ struct CaptureSurface {
     /// "C" only 82% — the dot floats well above the letter), so framed at equal height
     /// the C looks ~21% smaller. Scale the C up by 0.99/0.82 ≈ 1.21 (owner 2026-06-30).
     var glyphOpticalScale: CGFloat { isObie ? 1.0 : 1.21 }
+    /// Vertical INK-centre correction (fraction of rendered height to raise the glyph).
+    /// The "O" body is centred in its box, but the "C" body sits low — its centre is
+    /// 8.9% of the box below the box centre (the dot pulls the box up). Raising the C
+    /// by that much centres the *letter* on the line, so it aligns with the text /
+    /// matches the O's level rather than sitting low (owner 2026-06-30).
+    var glyphInkOffsetFraction: CGFloat { isObie ? 0.0 : 0.089 }
 
     static let take = CaptureSurface(
         url: CaptureRouting.captureURL(.text),
@@ -187,16 +193,23 @@ enum WidgetAsset {
 /// accessories, where the system colours it); set it for the full-colour home widgets.
 struct WidgetGlyphMark: View {
     let asset: String
+    /// The LAYOUT slot height — identical across glyphs so neighbouring labels align.
     var height: CGFloat
     var tint: Color? = nil
     /// Per-glyph optical-size correction (see `CaptureSurface.glyphOpticalScale`).
+    /// Applied to the *render* size only (crisp), not the layout slot.
     var opticalScale: CGFloat = 1.0
+    /// Per-glyph vertical ink-centre correction (see `glyphInkOffsetFraction`).
+    var inkOffsetFraction: CGFloat = 0.0
     var body: some View {
+        let renderHeight = height * opticalScale
         Image(asset)
             .renderingMode(.template)
             .resizable()
             .scaledToFit()
-            .frame(height: height * opticalScale)
+            .frame(height: renderHeight)        // crisp render at the letter-matched size
+            .frame(height: height)              // FIXED layout slot (uniform across glyphs)
+            .offset(y: -inkOffsetFraction * renderHeight)   // raise the C so its letter centres
             .foregroundStyle(tint ?? Color.primary)
     }
 }
@@ -234,11 +247,11 @@ struct LauncherView: View {
             // Both marks are solid silhouettes that survive the flattening.
             ZStack {
                 AccessoryWidgetBackground()
-                WidgetGlyphMark(asset: surface.glyphAsset, height: 30, opticalScale: surface.glyphOpticalScale)
+                WidgetGlyphMark(asset: surface.glyphAsset, height: 30, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction)
             }
         case .accessoryRectangular:
             HStack(spacing: 8) {
-                WidgetGlyphMark(asset: surface.glyphAsset, height: 24, opticalScale: surface.glyphOpticalScale).frame(width: 22)
+                WidgetGlyphMark(asset: surface.glyphAsset, height: 24, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction).frame(width: 22)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(surface.title).font(.headline)
                     Text("Catchlight").font(.caption2).foregroundStyle(.secondary)
@@ -248,7 +261,7 @@ struct LauncherView: View {
         default:
             // Home-screen small — full brand chrome on the shared Take-card surface.
             VStack(spacing: 12) {
-                WidgetGlyphMark(asset: surface.glyphAsset, height: 52, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale)
+                WidgetGlyphMark(asset: surface.glyphAsset, height: 52, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction)
                 Text(surface.title)
                     .font(WidgetFont.ui(15, weight: .medium))
                     .foregroundStyle(WidgetPalette.textPrimary)
@@ -265,7 +278,7 @@ struct CardView: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            WidgetGlyphMark(asset: surface.glyphAsset, height: 36, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale)
+            WidgetGlyphMark(asset: surface.glyphAsset, height: 36, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction)
                 .frame(width: 40, height: 40)
 
             // The onboarding-hero voice + style (Cormorant italic, primary colour).
