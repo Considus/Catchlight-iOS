@@ -182,7 +182,7 @@ struct PetalFanView: View {
             case .note:   return "note.text"
             case .task:   return "checkmark.square"
             case .remind: return "bell"
-            case .obie:   return nil   // ObiePetalGlyph
+            case .obie:   return nil   // ObieGlyph (brand mark)
             }
         }
         /// Stable suffix for the XCUITest accessibilityIdentifier ("dial-petal-task" etc.).
@@ -579,7 +579,7 @@ struct PetalFanView: View {
                             // Off glyph = ckAccent, matching the dock/editor/search off icons.
                             .foregroundStyle(active ? Color.ckBackground : Color.ckAccent)
                     } else {
-                        ObiePetalGlyph(size: 26)   // slightly larger than the 24 open-glyph base (owner 2026-06-29) — the ring+dot reads small at 24
+                        ObieGlyph(size: 26)   // the Obie brand glyph (owner 2026-06-30); slightly larger than the 24 open-glyph base so the letter-mark reads
                             .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
                     }
                 }
