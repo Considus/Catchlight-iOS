@@ -96,6 +96,20 @@ enum WidgetFont {
         }
         return .system(size: size, weight: weight)
     }
+
+    // Display face — Cormorant Garamond Italic (mirrors `CatchlightFont.displayFixed`).
+    // Used for the lock-screen Obie mark: a capital italic "O" instead of crown.fill.
+    private static let displayItalicCandidates = [
+        "CormorantGaramond-LightItalic", "CormorantGaramond-Italic",
+        "CormorantGaramond-Light", "CormorantGaramond"
+    ]
+
+    static func display(_ size: CGFloat) -> Font {
+        if let name = firstAvailable(displayItalicCandidates) {
+            return .custom(name, fixedSize: size)
+        }
+        return .system(size: size, weight: .regular, design: .serif).italic()
+    }
 }
 
 // MARK: - Capture surface (Take vs Obie presentation)
@@ -203,17 +217,27 @@ struct LauncherView: View {
     var body: some View {
         switch family {
         case .accessoryCircular:
-            // Lock-screen accessory — system vibrant/monochrome; colour is ignored,
-            // so this stays an SF Symbol (crown.fill / plus.circle.fill).
+            // Lock-screen accessory — system vibrant/monochrome; colour is ignored.
+            // Take = plus.circle.fill (SF Symbol); Obie = a capital italic "O" in the
+            // brand display face (owner 2026-06-30 — the crown gives way to the
+            // wordmark's letter; accessories CAN host Text, unlike Controls).
             ZStack {
                 AccessoryWidgetBackground()
-                Image(systemName: surface.accessoryGlyph)
-                    .font(.system(size: surface.isObie ? 20 : 24, weight: .semibold))
+                if surface.isObie {
+                    Text("O").font(WidgetFont.display(34))
+                } else {
+                    Image(systemName: surface.accessoryGlyph)
+                        .font(.system(size: 24, weight: .semibold))
+                }
             }
         case .accessoryRectangular:
             HStack(spacing: 8) {
-                Image(systemName: surface.accessoryGlyph)
-                    .font(.system(size: 22, weight: .semibold))
+                if surface.isObie {
+                    Text("O").font(WidgetFont.display(30)).frame(width: 22)
+                } else {
+                    Image(systemName: surface.accessoryGlyph)
+                        .font(.system(size: 22, weight: .semibold))
+                }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(surface.title).font(.headline)
                     Text("Catchlight").font(.caption2).foregroundStyle(.secondary)
