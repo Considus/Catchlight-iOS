@@ -115,6 +115,11 @@ struct CaptureSurface {
     /// Home-widget tint — each mark in its own brand colour (Obie gold / Catchlight
     /// primary). Lock-screen + Controls ignore this (system vibrant / tint).
     var glyphTint: Color { isObie ? WidgetPalette.textObie : WidgetPalette.textPrimary }
+    /// Optical-size correction so the two letter-marks read at the same size. The
+    /// glyphs fill their artwork boxes differently (the "O" fills 99% of its box, the
+    /// "C" only 82% — the dot floats well above the letter), so framed at equal height
+    /// the C looks ~21% smaller. Scale the C up by 0.99/0.82 ≈ 1.21 (owner 2026-06-30).
+    var glyphOpticalScale: CGFloat { isObie ? 1.0 : 1.21 }
 
     static let take = CaptureSurface(
         url: CaptureRouting.captureURL(.text),
@@ -152,12 +157,14 @@ struct WidgetGlyphMark: View {
     let asset: String
     var height: CGFloat
     var tint: Color? = nil
+    /// Per-glyph optical-size correction (see `CaptureSurface.glyphOpticalScale`).
+    var opticalScale: CGFloat = 1.0
     var body: some View {
         Image(asset)
             .renderingMode(.template)
             .resizable()
             .scaledToFit()
-            .frame(height: height)
+            .frame(height: height * opticalScale)
             .foregroundStyle(tint ?? Color.primary)
     }
 }
@@ -195,11 +202,11 @@ struct LauncherView: View {
             // Both marks are solid silhouettes that survive the flattening.
             ZStack {
                 AccessoryWidgetBackground()
-                WidgetGlyphMark(asset: surface.glyphAsset, height: 30)
+                WidgetGlyphMark(asset: surface.glyphAsset, height: 30, opticalScale: surface.glyphOpticalScale)
             }
         case .accessoryRectangular:
             HStack(spacing: 8) {
-                WidgetGlyphMark(asset: surface.glyphAsset, height: 24).frame(width: 22)
+                WidgetGlyphMark(asset: surface.glyphAsset, height: 24, opticalScale: surface.glyphOpticalScale).frame(width: 22)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(surface.title).font(.headline)
                     Text("Catchlight").font(.caption2).foregroundStyle(.secondary)
@@ -209,7 +216,7 @@ struct LauncherView: View {
         default:
             // Home-screen small — full brand chrome, adaptive background.
             VStack(spacing: 12) {
-                WidgetGlyphMark(asset: surface.glyphAsset, height: 52, tint: surface.glyphTint)
+                WidgetGlyphMark(asset: surface.glyphAsset, height: 52, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale)
                 Text(surface.title)
                     .font(WidgetFont.ui(15, weight: .medium))
                     .foregroundStyle(WidgetPalette.textPrimary)
@@ -225,7 +232,7 @@ struct CardView: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            WidgetGlyphMark(asset: surface.glyphAsset, height: 36, tint: surface.glyphTint)
+            WidgetGlyphMark(asset: surface.glyphAsset, height: 36, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale)
                 .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 4) {
