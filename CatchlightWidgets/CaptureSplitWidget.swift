@@ -52,8 +52,8 @@ struct SplitView: View {
         default:
             // Home medium — TWO individual cards with an even gap == the surround.
             HStack(spacing: margins.leading) {
-                captureButton(.take) { mediumHalf(.take).widgetCardSurface() }
-                captureButton(.obie) { mediumHalf(.obie).widgetCardSurface() }
+                captureButton(.take) { mediumHalf(.take).widgetCardSurface(isObie: false) }
+                captureButton(.obie) { mediumHalf(.obie).widgetCardSurface(isObie: true) }
             }
         }
     }

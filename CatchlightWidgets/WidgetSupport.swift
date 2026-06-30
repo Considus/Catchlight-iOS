@@ -63,8 +63,25 @@ enum WidgetPalette {
     /// Amber accent for FOREGROUND glyphs/labels — Ember (Night) / Ember Text
     /// #856539 (Daylight, WCAG AA on Paper). `ckAccent`. Use for the "+" and ring.
     static let accent = adaptive(dark: 0xC9A96E, light: 0x856539)
-    /// Brand gold as a FIXED fill (Control tint, card hairline) — Ember in both. `ckEmber`.
+    /// Brand gold as a FIXED fill (Control tint) — Ember in both. `ckEmber`.
     static let ember = Color(uiColor: UIColor(rgbHex: 0xC9A96E))
+
+    // Take-card tokens (mirrored from TakeCardStyle / CatchlightTheme) — see widgetCardSurface.
+    /// Obie card BACKGROUND — warm tint: Night #2D2921 / Daylight #FBF8F3. `ckCardObieSurface`.
+    static let cardObieSurface = adaptive(dark: 0x2D2921, light: 0xFBF8F3)
+    /// Obie card BORDER — gold: Glow @65% (Night) / Ember @65% (Daylight). `ckCardObieBorder`.
+    static let cardObieBorder = Color(uiColor: UIColor { t in
+        t.userInterfaceStyle == .dark ? UIColor(rgbHex: 0xEDD9A3).withAlphaComponent(0.65)
+                                      : UIColor(rgbHex: 0xC9A96E).withAlphaComponent(0.65)
+    })
+    /// Daylight card shadow (Night = none — elevation is the lighter surface). Mirrors
+    /// `DaylightCardShadow` (non-strong): ambient ink @9% + contact ink @5%.
+    static let cardShadowAmbient = Color(uiColor: UIColor { t in
+        t.userInterfaceStyle == .dark ? .clear : UIColor(rgbHex: 0x0F0E0C).withAlphaComponent(0.09)
+    })
+    static let cardShadowContact = Color(uiColor: UIColor { t in
+        t.userInterfaceStyle == .dark ? .clear : UIColor(rgbHex: 0x0F0E0C).withAlphaComponent(0.05)
+    })
 }
 
 // MARK: - Brand fonts (DM Sans, mirrored probe of CatchlightFont)
@@ -159,18 +176,25 @@ struct CaptureSurface {
 // MARK: - Shared card surface (Take-card look)
 
 extension View {
-    /// The Take-card background — surface fill + hairline (matches the medium card).
-    /// Shared by the medium card and the small launchers so the "card" look is
-    /// single-sourced (owner 2026-06-30).
-    func widgetCardSurface() -> some View {
-        background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(WidgetPalette.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(WidgetPalette.accent.opacity(0.18), lineWidth: 0.75)
-                )
-        )
+    /// The in-app Take-card treatment, mirrored for the widget (owner 2026-06-30):
+    /// `RoundedRectangle(12)` surface fill + the Daylight card shadow + a 0.75pt
+    /// border. A plain Take's border is INVISIBLE (== surface), exactly like in-app;
+    /// the **Obie** card differs — warm/dark surface + gold border. Single-sourced
+    /// so every widget card (small, medium, split halves) reads as a real Take card.
+    func widgetCardSurface(isObie: Bool = false) -> some View {
+        let fill = isObie ? WidgetPalette.cardObieSurface : WidgetPalette.surface
+        let border = isObie ? WidgetPalette.cardObieBorder : fill   // Take border == surface (invisible)
+        return self
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(fill)
+                    .shadow(color: WidgetPalette.cardShadowAmbient, radius: 4, y: 2)
+                    .shadow(color: WidgetPalette.cardShadowContact, radius: 1, y: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(border, lineWidth: 0.75)   // == TakeCardStyle.borderWidth
+            )
     }
 }
 
@@ -267,7 +291,7 @@ struct LauncherView: View {
                     .foregroundStyle(WidgetPalette.textPrimary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .widgetCardSurface()
+            .widgetCardSurface(isObie: surface.isObie)
         }
     }
 }
@@ -293,6 +317,6 @@ struct CardView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .widgetCardSurface()
+        .widgetCardSurface(isObie: surface.isObie)
     }
 }
