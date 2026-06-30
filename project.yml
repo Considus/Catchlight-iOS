@@ -291,10 +291,18 @@ targets:
       # provider, which must live solely in the app target.
       - path: Catchlight/Intents/NewTakeIntent.swift
       - path: Catchlight/Intents/NewObieIntent.swift
+      # Bundle the brand fonts into the extension so widget chrome can use DM Sans
+      # (the same TTFs as the app; registered via UIAppFonts below). Resources only.
+      - path: Catchlight/Resources/Fonts
+        buildPhase: resources
     info:
       path: CatchlightWidgets/Info.plist
       properties:
         CFBundleDisplayName: Catchlight
+        UIAppFonts:
+          - "CormorantGaramond[wght].ttf"
+          - "CormorantGaramond-Italic[wght].ttf"
+          - "DMSans[opsz,wght].ttf"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:

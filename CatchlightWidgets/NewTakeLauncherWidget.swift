@@ -18,7 +18,7 @@ struct NewTakeLauncherWidget: Widget {
         StaticConfiguration(kind: kind, provider: LauncherProvider()) { _ in
             LauncherView(surface: .take)
                 .widgetURL(CaptureSurface.take.url)
-                .containerBackground(WidgetPalette.paper, for: .widget)
+                .containerBackground(WidgetPalette.background, for: .widget)
         }
         .configurationDisplayName("New Take")
         .description("Open Catchlight straight to a new Take.")
@@ -33,7 +33,7 @@ struct NewObieLauncherWidget: Widget {
         StaticConfiguration(kind: kind, provider: LauncherProvider()) { _ in
             LauncherView(surface: .obie)
                 .widgetURL(CaptureSurface.obie.url)
-                .containerBackground(WidgetPalette.paper, for: .widget)
+                .containerBackground(WidgetPalette.background, for: .widget)
         }
         .configurationDisplayName("New Obie")
         .description("Open Catchlight and capture your Obie.")
