@@ -3,7 +3,8 @@
 //  Catchlight (iOS app target) — Phase 6 UI
 //
 //  The Take "circle": the quadrant-filled disc that encodes a Take's active
-//  activity types at a glance, and the Obie ring + specular dot. Used on every
+//  activity types at a glance, and the Obie ring (gold outline; the specular dot
+//  was removed 2026-06-30). Used on every
 //  timeline row, in search/sequence results, and in the edit footer. Pure
 //  rendering — no gestures here; callers attach taps/long-presses.
 //
@@ -131,24 +132,15 @@ struct TakeCircleView: View {
     }
 
     /// The Obie's outer ring (2pt, sitting ~3pt OUTSIDE the disc edge — DS §5.1
-    /// obieRingWidth 2 / obieRingGap 3) plus the 3-layer specular catch (DS §5.4 /
-    /// HiFi §2: ground halo, warm core, bright pip at ~0.305·D upper-right). Drawn in
-    /// the body's overlay so the larger ring frame can't enlarge the disc (see body).
+    /// obieRingWidth 2 / obieRingGap 3). Drawn in the body's overlay so the larger
+    /// ring frame can't enlarge the disc (see body). The 3-layer specular catch
+    /// (ground halo + warm core + bright pip) was REMOVED (owner 2026-06-30): the
+    /// Obie Iris is now the gold ring only. (The Obie brand "O" glyph keeps its own
+    /// catch-dot — that's the logo, a separate mark.)
     private var obieDecorations: some View {
-        ZStack {
-            Circle()
-                .stroke(Quadrant.obieRing(scheme), lineWidth: 2)
-                .frame(width: diameter + 6, height: diameter + 6)
-            ZStack {
-                Circle().fill(scheme == .dark ? Color.black.opacity(0.35) : Color.ckInk.opacity(0.08))
-                    .frame(width: diameter * 0.31, height: diameter * 0.31)
-                Circle().fill(Quadrant.obieRing(scheme))   // Ember (Daylight) / Glow (Night)
-                    .frame(width: diameter * 0.19, height: diameter * 0.19)
-                Circle().fill(Color(hex: 0xFEFCF5))
-                    .frame(width: diameter * 0.10, height: diameter * 0.10)
-            }
-            .offset(x: diameter * 0.305, y: -diameter * 0.305)
-        }
+        Circle()
+            .stroke(Quadrant.obieRing(scheme), lineWidth: 2)
+            .frame(width: diameter + 6, height: diameter + 6)
     }
 
     /// A spoken description of the active types, for callers that DO want the circle
