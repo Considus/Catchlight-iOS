@@ -17,6 +17,7 @@ struct CatchlightWidgetsBundle: WidgetBundle {
         NewObieLauncherWidget()
         NewTakeCardWidget()
         NewObieCardWidget()
+        CaptureSplitWidget()
         NewTakeControl()
         NewObieControl()
     }

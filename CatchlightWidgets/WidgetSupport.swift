@@ -282,12 +282,13 @@ struct CardView: View {
                 .frame(width: 40, height: 40)
 
             // The onboarding-hero voice + style (Cormorant italic, primary colour).
+            // 24pt (owner 2026-06-30, −4 from the hero's 28); single line, never wraps
+            // (minimumScaleFactor shrinks it if a longer prompt would overflow).
             Text(surface.heroPrompt)
-                .font(WidgetFont.display(28))
+                .font(WidgetFont.display(24))
                 .foregroundStyle(WidgetPalette.textPrimary)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
             Spacer(minLength: 0)
         }
         .padding(16)
