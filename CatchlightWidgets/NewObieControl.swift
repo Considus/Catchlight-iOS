@@ -17,10 +17,11 @@ struct NewObieControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: kind) {
             ControlWidgetButton(action: NewObieIntent()) {
-                // The Obie brand glyph as a template image asset — a Control's label
-                // takes an Image (not a live custom view), and a solid silhouette
-                // survives the Control's monochrome rendering (owner 2026-06-30).
-                Label("New Obie", image: "ObieGlyph")
+                // Controls render SF Symbols, not image assets (a plain imageset shows
+                // the "?" placeholder). So the Obie brand glyph is provided as a CUSTOM
+                // SF SYMBOL (`Assets.xcassets/ObieSymbol.symbolset`) — same artwork, but
+                // a symbolset the Control accepts and tints (owner 2026-06-30).
+                Label("New Obie", image: "ObieSymbol")
             }
             // Brand gold instead of the system default tint (blue). Ember = #C9A96E.
             .tint(Color(.sRGB, red: 0.788, green: 0.663, blue: 0.431, opacity: 1.0))
