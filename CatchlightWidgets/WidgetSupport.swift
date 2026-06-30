@@ -100,21 +100,26 @@ enum WidgetFont {
 
 // MARK: - Capture surface (Take vs Obie presentation)
 
-/// Describes what one launcher/card renders and where it routes. Take uses the
-/// ember-outline "+" ring (the in-app Add button); Obie uses the petal identity
-/// mark on the home widget, `crown.fill` on the SF-Symbol-only surfaces.
+/// Describes what one launcher/card renders and where it routes. Both surfaces use
+/// a Catchlight brand letter-mark (same italic-letter + catch-dot family): Take = the
+/// Catchlight "C" icon, Obie = the Obie "O" glyph (owner 2026-06-30).
 struct CaptureSurface {
     let url: URL
     let title: String        // "New Take" / "New Obie"
     let cardPrompt: String    // medium-card placeholder
-    let accessoryGlyph: String // SF Symbol for the lock-screen / accessory mark
     let isObie: Bool
+
+    /// The brand letter-mark asset for this surface (`Assets.xcassets`). Used as a
+    /// vector template image on the home + lock-screen surfaces.
+    var glyphAsset: String { isObie ? WidgetAsset.obieGlyph : WidgetAsset.catchlightGlyph }
+    /// Home-widget tint — each mark in its own brand colour (Obie gold / Catchlight
+    /// primary). Lock-screen + Controls ignore this (system vibrant / tint).
+    var glyphTint: Color { isObie ? WidgetPalette.textObie : WidgetPalette.textPrimary }
 
     static let take = CaptureSurface(
         url: CaptureRouting.captureURL(.text),
         title: "New Take",
         cardPrompt: "Tap to write a Take…",
-        accessoryGlyph: "plus.circle.fill",
         isObie: false
     )
 
@@ -122,53 +127,38 @@ struct CaptureSurface {
         url: CaptureRouting.captureURL(.obie),
         title: "New Obie",
         cardPrompt: "Tap to set your Obie…",
-        accessoryGlyph: "crown.fill",
         isObie: true
     )
 }
 
-// MARK: - Obie brand glyph (the logo mark — `Assets.xcassets/ObieGlyph`)
+// MARK: - Brand letter-marks (the logo glyphs — `Assets.xcassets`)
 //
-// The Catchlight Obie logo: a SOLID filled italic "O" + filled dot (from
-// 01_Brand/Logo/Custom Glyphs/Obie_Glyph.svg), imported as a vector template
-// asset. Used on EVERY widget surface (owner 2026-06-30) — home widgets, the
-// lock-screen accessories, AND the Controls. A solid silhouette survives the
-// lock-screen / Control monochrome (vibrant) flattening, where the in-app petal
-// (a thin ring + background-punched catch) could not. Home tints it `ckTextObie`;
-// lock-screen + Controls let the system tint it.
-//
-// The asset name shared with the Controls.
-enum WidgetAsset { static let obieGlyph = "ObieGlyph" }
+// The Catchlight "C" and Obie "O" logos (italic letter + catch-dot), from
+// 01_Brand/Logo/Custom Glyphs/{Catchlight,Obie}_Glyph.svg. Each is imported TWICE:
+//   • a vector TEMPLATE IMAGE (`*Glyph`) for the home widgets + lock-screen
+//     accessories (full SwiftUI — a solid silhouette survives the lock-screen
+//     monochrome flattening, where the in-app petal could not);
+//   • a custom SF SYMBOL (`*Symbol`) for the Controls — a Control's label takes an
+//     SF Symbol, not a plain image asset (a plain image shows the "?" placeholder).
+// (owner 2026-06-30 — Take + Obie read as a matched brand pair.)
+enum WidgetAsset {
+    static let obieGlyph = "ObieGlyph"
+    static let catchlightGlyph = "CatchlightGlyph"
+}
 
-/// The Obie brand mark, scaled to a target height and gold-tinted (home widgets).
-struct WidgetObieMark: View {
+/// A brand letter-mark scaled to a target height. `tint` nil = no tint (lock-screen
+/// accessories, where the system colours it); set it for the full-colour home widgets.
+struct WidgetGlyphMark: View {
+    let asset: String
     var height: CGFloat
-    var tinted: Bool = true
+    var tint: Color? = nil
     var body: some View {
-        Image(WidgetAsset.obieGlyph)
+        Image(asset)
             .renderingMode(.template)
             .resizable()
             .scaledToFit()
             .frame(height: height)
-            .foregroundStyle(tinted ? WidgetPalette.textObie : Color.primary)
-    }
-}
-
-/// The Take "+" mark — the in-app Add button (dock-button spec: accent ring @0.55,
-/// `plus` at `.regular`, accent glyph). `diameter` lets the small widget and the
-/// medium card share one definition at two sizes.
-struct WidgetAddMark: View {
-    var diameter: CGFloat = 52
-    var body: some View {
-        ZStack {
-            Circle()
-                .strokeBorder(WidgetPalette.accent.opacity(0.55), lineWidth: diameter * 1.5 / 44)
-                .frame(width: diameter, height: diameter)
-            Image(systemName: "plus")
-                .font(.system(size: diameter * 24 / 44, weight: .regular))
-                .foregroundStyle(WidgetPalette.accent)
-        }
-        .frame(width: diameter, height: diameter)
+            .foregroundStyle(tint ?? Color.primary)
     }
 }
 
@@ -202,25 +192,14 @@ struct LauncherView: View {
         switch family {
         case .accessoryCircular:
             // Lock-screen accessory — system vibrant/monochrome; colour is ignored.
-            // Take = plus.circle.fill (SF Symbol); Obie = the brand glyph (solid
-            // silhouette, survives the monochrome flattening — owner 2026-06-30).
+            // Both marks are solid silhouettes that survive the flattening.
             ZStack {
                 AccessoryWidgetBackground()
-                if surface.isObie {
-                    WidgetObieMark(height: 30, tinted: false)
-                } else {
-                    Image(systemName: surface.accessoryGlyph)
-                        .font(.system(size: 24, weight: .semibold))
-                }
+                WidgetGlyphMark(asset: surface.glyphAsset, height: 30)
             }
         case .accessoryRectangular:
             HStack(spacing: 8) {
-                if surface.isObie {
-                    WidgetObieMark(height: 24, tinted: false).frame(width: 22)
-                } else {
-                    Image(systemName: surface.accessoryGlyph)
-                        .font(.system(size: 22, weight: .semibold))
-                }
+                WidgetGlyphMark(asset: surface.glyphAsset, height: 24).frame(width: 22)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(surface.title).font(.headline)
                     Text("Catchlight").font(.caption2).foregroundStyle(.secondary)
@@ -230,12 +209,7 @@ struct LauncherView: View {
         default:
             // Home-screen small — full brand chrome, adaptive background.
             VStack(spacing: 12) {
-                if surface.isObie {
-                    // Match the Add mark's footprint so the Take/Obie widgets balance.
-                    WidgetObieMark(height: 52)
-                } else {
-                    WidgetAddMark(diameter: 56)
-                }
+                WidgetGlyphMark(asset: surface.glyphAsset, height: 52, tint: surface.glyphTint)
                 Text(surface.title)
                     .font(WidgetFont.ui(15, weight: .medium))
                     .foregroundStyle(WidgetPalette.textPrimary)
@@ -251,12 +225,8 @@ struct CardView: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            if surface.isObie {
-                WidgetObieMark(height: 36)
-                    .frame(width: 40, height: 40)
-            } else {
-                WidgetAddMark(diameter: 40)
-            }
+            WidgetGlyphMark(asset: surface.glyphAsset, height: 36, tint: surface.glyphTint)
+                .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(surface.cardPrompt)
