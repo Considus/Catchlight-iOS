@@ -96,6 +96,20 @@ enum WidgetFont {
         }
         return .system(size: size, weight: weight)
     }
+
+    // Display face — Cormorant Garamond Italic (mirrors `CatchlightFont.displayFixed`).
+    // The onboarding hero face; used for the medium widgets' hero prompt.
+    private static let displayItalicCandidates = [
+        "CormorantGaramond-LightItalic", "CormorantGaramond-Italic",
+        "CormorantGaramond-Light", "CormorantGaramond"
+    ]
+
+    static func display(_ size: CGFloat) -> Font {
+        if let name = firstAvailable(displayItalicCandidates) {
+            return .custom(name, fixedSize: size)
+        }
+        return .system(size: size, weight: .regular, design: .serif).italic()
+    }
 }
 
 // MARK: - Capture surface (Take vs Obie presentation)
@@ -106,7 +120,7 @@ enum WidgetFont {
 struct CaptureSurface {
     let url: URL
     let title: String        // "New Take" / "New Obie"
-    let cardPrompt: String    // medium-card placeholder
+    let heroPrompt: String    // medium-card hero line (onboarding-hero voice/style)
     let isObie: Bool
 
     /// The brand letter-mark asset for this surface (`Assets.xcassets`). Used as a
@@ -124,16 +138,34 @@ struct CaptureSurface {
     static let take = CaptureSurface(
         url: CaptureRouting.captureURL(.text),
         title: "New Take",
-        cardPrompt: "Tap to write a Take…",
+        heroPrompt: "What's your Take?",
         isObie: false
     )
 
     static let obie = CaptureSurface(
         url: CaptureRouting.captureURL(.obie),
         title: "New Obie",
-        cardPrompt: "Tap to set your Obie…",
+        heroPrompt: "What's most important?",
         isObie: true
     )
+}
+
+// MARK: - Shared card surface (Take-card look)
+
+extension View {
+    /// The Take-card background — surface fill + hairline (matches the medium card).
+    /// Shared by the medium card and the small launchers so the "card" look is
+    /// single-sourced (owner 2026-06-30).
+    func widgetCardSurface() -> some View {
+        background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(WidgetPalette.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(WidgetPalette.accent.opacity(0.18), lineWidth: 0.75)
+                )
+        )
+    }
 }
 
 // MARK: - Brand letter-marks (the logo glyphs — `Assets.xcassets`)
@@ -214,7 +246,7 @@ struct LauncherView: View {
                 Spacer()
             }
         default:
-            // Home-screen small — full brand chrome, adaptive background.
+            // Home-screen small — full brand chrome on the shared Take-card surface.
             VStack(spacing: 12) {
                 WidgetGlyphMark(asset: surface.glyphAsset, height: 52, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale)
                 Text(surface.title)
@@ -222,6 +254,7 @@ struct LauncherView: View {
                     .foregroundStyle(WidgetPalette.textPrimary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .widgetCardSurface()
         }
     }
 }
@@ -231,30 +264,21 @@ struct CardView: View {
     let surface: CaptureSurface
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 16) {
             WidgetGlyphMark(asset: surface.glyphAsset, height: 36, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale)
                 .frame(width: 40, height: 40)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(surface.cardPrompt)
-                    .font(WidgetFont.ui(16))
-                    .foregroundStyle(WidgetPalette.textSecondary)
-                Text(surface.title)
-                    .font(WidgetFont.ui(11, weight: .medium))
-                    .foregroundStyle(WidgetPalette.accent)
-                    .textCase(.uppercase)
-            }
+            // The onboarding-hero voice + style (Cormorant italic, primary colour).
+            Text(surface.heroPrompt)
+                .font(WidgetFont.display(28))
+                .foregroundStyle(WidgetPalette.textPrimary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .minimumScaleFactor(0.7)
             Spacer(minLength: 0)
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(WidgetPalette.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(WidgetPalette.accent.opacity(0.18), lineWidth: 0.75)
-                )
-        )
+        .widgetCardSurface()
     }
 }
