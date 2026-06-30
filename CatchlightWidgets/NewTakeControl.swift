@@ -20,6 +20,10 @@ struct NewTakeControl: ControlWidget {
             ControlWidgetButton(action: NewTakeIntent()) {
                 Label("New Take", systemImage: "plus.circle.fill")
             }
+            // Brand gold instead of the system default tint (green). iOS Controls
+            // only tint within their fixed style, but this carries the Catchlight
+            // accent through (owner 2026-06-30 widget pass). Ember = #C9A96E.
+            .tint(Color(.sRGB, red: 0.788, green: 0.663, blue: 0.431, opacity: 1.0))
         }
         .displayName("New Take")
         .description("Open Catchlight to a new Take.")
