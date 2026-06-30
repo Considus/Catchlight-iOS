@@ -25,5 +25,11 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>CormorantGaramond[wght].ttf</string>
+		<string>CormorantGaramond-Italic[wght].ttf</string>
+		<string>DMSans[opsz,wght].ttf</string>
+	</array>
 </dict>
 </plist>

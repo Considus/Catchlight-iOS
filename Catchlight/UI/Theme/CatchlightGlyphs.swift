@@ -6,8 +6,8 @@
 //    • DailiesGlyph   — two Irises joined by the spine: the timeline itself.
 //    • SequenceGlyph  — three smaller beads chained on the spine: a SEQUENCE
 //                       of Takes (sibling concept to Dailies).
-//    • ObiePetalGlyph — compact ring + specular dot, the Obie identity at the
-//                       same optical size as the other petal icons.
+//    • ObieGlyph      — the Obie brand logo (solid italic "O" + catch-dot), the
+//                       Obie identity mark (matches the widget/brand glyph).
 //  All drawn on the prototype's 16-unit grid with light ~1.2-unit strokes so
 //  they sit beside SF Symbols rendered at .light weight.
 //
@@ -62,26 +62,20 @@ struct SequenceGlyph: View {
     }
 }
 
-/// The Obie petal glyph — ring + specular dot with a background-coloured catch.
-/// Drawn in `ckTextObie` by the petal (readable warm identity, not raw Ember).
-struct ObiePetalGlyph: View {
+/// The Obie identity glyph — the Catchlight Obie brand logo (solid italic "O" +
+/// catch-dot, `obie-glyph` asset from 01_Brand/Logo/Custom Glyphs/Obie_Glyph.svg).
+/// Replaced the earlier ring-and-dot "petal" mark app-wide (owner 2026-06-30), so
+/// the in-app Obie matches the widget/brand mark. Template image: tint via
+/// `.foregroundStyle` (callers use `ckTextObie`). The glyph is taller than wide;
+/// `scaledToFit` centres it in the `size` box.
+struct ObieGlyph: View {
     var size: CGFloat = 16
     var body: some View {
-        let u = size / 16
-        ZStack {
-            Circle()
-                .strokeBorder(lineWidth: 1.3 * u)
-                .frame(width: 10.8 * u, height: 10.8 * u)
-            Circle()
-                .frame(width: 3.4 * u, height: 3.4 * u)
-                .overlay(
-                    Circle()
-                        .fill(Color.ckBackground)
-                        .frame(width: 1.4 * u, height: 1.4 * u)
-                )
-                .offset(x: 3.9 * u, y: -3.9 * u)
-        }
-        .frame(width: size, height: size)
+        Image("obie-glyph")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
     }
 }
 
@@ -139,7 +133,7 @@ struct DailiesGlyphSlashed: View {
 enum MenuGlyph {
     static let makeImportant = bake(DailiesGlyph(size: glyphSize))
     static let removeImportant = bake(DailiesGlyphSlashed(size: glyphSize))
-    static let obie = bake(ObiePetalGlyph(size: glyphSize))
+    static let obie = bake(ObieGlyph(size: glyphSize))
 
     /// Rendered a touch larger than the dock glyphs — menu icons read small.
     private static let glyphSize: CGFloat = 22
@@ -203,7 +197,7 @@ extension EnvironmentValues {
     HStack(spacing: 24) {
         DailiesGlyph().foregroundStyle(Color.ckEmber)
         SequenceGlyph().foregroundStyle(Color.ckEmber)
-        ObiePetalGlyph().foregroundStyle(Color.ckTextObie)
+        ObieGlyph().foregroundStyle(Color.ckTextObie)
     }
     .padding()
     .background(Color.ckBackground)

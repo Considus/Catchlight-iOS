@@ -17,7 +17,7 @@ struct NewTakeCardWidget: Widget {
         StaticConfiguration(kind: kind, provider: LauncherProvider()) { _ in
             CardView(surface: .take)
                 .widgetURL(CaptureSurface.take.url)
-                .containerBackground(WidgetPalette.paper, for: .widget)
+                .containerBackground(WidgetPalette.background, for: .widget)
         }
         .configurationDisplayName("New Take card")
         .description("A blank Take to tap and write into.")
@@ -32,7 +32,7 @@ struct NewObieCardWidget: Widget {
         StaticConfiguration(kind: kind, provider: LauncherProvider()) { _ in
             CardView(surface: .obie)
                 .widgetURL(CaptureSurface.obie.url)
-                .containerBackground(WidgetPalette.paper, for: .widget)
+                .containerBackground(WidgetPalette.background, for: .widget)
         }
         .configurationDisplayName("New Obie card")
         .description("A blank Obie to tap and write into.")
