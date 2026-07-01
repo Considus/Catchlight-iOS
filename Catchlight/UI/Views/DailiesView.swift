@@ -887,7 +887,9 @@ struct DailiesView: View {
                                 .kerning(0.5)
                                 .foregroundStyle(Color.ckTextSecondary)
                                 .padding(.leading, textColumnLeading)
-                                .padding(.vertical, 6)
+                                // No fixed vertical padding (owner 2026-07-01): the divider
+                                // takes ONLY the timeline's density gap (the "View" setting)
+                                // above and below, like a card.
                                 .accessibilityLabel(group.month)
                         }
 
