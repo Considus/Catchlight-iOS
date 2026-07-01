@@ -50,6 +50,18 @@ final class UIState {
     /// with the type toggles and clears nothing (an Important Take can be any type).
     var filterImportant = false
 
+    /// Month filter — a "yyyy-MM" key set by tapping a month divider (owner 2026-07-01),
+    /// nil when off. Independent of the dock modes: it composes (AND) into
+    /// `activeTimelineFilter` in resting, filtering, or searching. Cleared by tapping the
+    /// active divider again or by `exitToResting`.
+    var filterMonth: String?
+
+    /// Toggle the month filter for a "yyyy-MM" key — set it, or clear it if it's already
+    /// the active month (tapping the lit divider again turns it off).
+    func toggleMonthFilter(_ key: String) {
+        filterMonth = (filterMonth == key) ? nil : key
+    }
+
     // SEARCHING-state live query. Every keystroke narrows the timeline.
     var searchQuery = ""
 
@@ -181,6 +193,7 @@ final class UIState {
         filterReminders = false
         filterRemindersExpired = false
         filterImportant = false
+        filterMonth = nil
         searchQuery = ""
         // Reset the keyboard flag too (owner 2026-06-22 bug): leaving it true after a
         // search exit let the KeyboardSearchBar reconcile re-raise / fight the keyboard.
@@ -267,9 +280,11 @@ final class UIState {
     /// toggles in FILTERING, and from the typed query in SEARCHING. Matching
     /// is the pure `SequenceFilter.matches` with AND semantics.
     var activeTimelineFilter: SequenceFilter {
+        // The month filter (if any) composes with every dock mode.
+        let months = filterMonth.map { [$0] } ?? []
         switch dockMode {
         case .resting:
-            return SequenceFilter()
+            return SequenceFilter(months: months)
         case .filtering:
             return SequenceFilter(
                 requireTask: filterTasks,
@@ -277,10 +292,11 @@ final class UIState {
                 requireNoteOnly: filterNotes,
                 requireCompleted: filterTasksDone,
                 requireExpiredReminder: filterRemindersExpired,
-                requireImportant: filterImportant
+                requireImportant: filterImportant,
+                months: months
             )
         case .searching:
-            return SequenceFilter(text: searchQuery)
+            return SequenceFilter(text: searchQuery, months: months)
         }
     }
 
