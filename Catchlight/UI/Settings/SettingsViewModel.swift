@@ -272,7 +272,7 @@ final class SettingsViewModel {
         var label: String {
             switch self {
             case .off:    return "Off"
-            case .editor: return "In the editor"
+            case .editor: return "Editor only"
             case .always: return "Always"
             }
         }
