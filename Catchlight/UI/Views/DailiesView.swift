@@ -877,23 +877,18 @@ struct DailiesView: View {
                         // (the previous invisible-but-space-reserving marker looked like
                         // a stray gap after a mid-timeline delete).
                         if groupIndex > 0 {
-                            HStack(spacing: 10) {
-                                Text(group.month)
-                                    // .month — 11pt medium, 0.08em tracking (matches the
-                                    // DAILIES heading kerning; D-042, was 12pt untracked).
-                                    .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
-                                    .kerning(0.88)
-                                    .foregroundStyle(Color.ckTextSecondary)
-                                    .fixedSize()
-                                Rectangle()
-                                    .fill(Color.ckSpineWire)
-                                    .frame(height: 1)
-                            }
-                            .padding(.leading, textColumnLeading)
-                            .padding(.trailing, CatchlightLayout.cardSpineInset)
-                            .padding(.vertical, 6)
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityLabel(group.month)
+                            // Uppercased "JULY 2026" at the Take-body size (14pt regular),
+                            // no rule — a quiet section label (owner 2026-07-01). Colour:
+                            // ckTextSecondary (the accessible muted grey), NOT ckTextComplete
+                            // ("Done") — the Done treatment is Fog@82%/58%, ~1.7:1 on Paper /
+                            // ~3.7:1 on Ink, below the 4.5:1 AA minimum for this text size.
+                            Text(group.month.uppercased())
+                                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
+                                .kerning(0.5)
+                                .foregroundStyle(Color.ckTextSecondary)
+                                .padding(.leading, textColumnLeading)
+                                .padding(.vertical, 6)
+                                .accessibilityLabel(group.month)
                         }
 
                         ForEach(Array(group.takes.enumerated()), id: \.element.id) { takeIndex, take in
