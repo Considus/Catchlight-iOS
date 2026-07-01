@@ -46,8 +46,18 @@ public enum ISO8601 {
     /// round-tripped through serialisation compares unequal to its in-memory
     /// original unless both are normalised. `Take` normalises its timestamps with
     /// this at creation and on mutation.
+    ///
+    /// Round-to-NEAREST, deliberately not floor (2026-07-01). `floor(x*1000)/1000`
+    /// yields a Double that can sit just below the exact millisecond, so
+    /// re-normalising an already-normalised Date walked it back 1 ms in some
+    /// floating-point binades — empirically ~20% of timestamps in 2038–2039 and
+    /// most pre-1970 dates (contemporary dates happened to be safe). That broke
+    /// the idempotency this function exists to provide and re-opened the
+    /// phantom-conflict class (a value comparing unequal to its own reloaded
+    /// copy). `.rounded()` is a verified fixed point of the wire codec across
+    /// every tested range and leaves previously floor-stored values unchanged.
     public static func truncateToMilliseconds(_ date: Date) -> Date {
-        Date(timeIntervalSince1970: (date.timeIntervalSince1970 * 1000).rounded(.down) / 1000)
+        Date(timeIntervalSince1970: (date.timeIntervalSince1970 * 1000).rounded() / 1000)
     }
 
     /// Seconds-only fallback formatter (no fractional part), e.g. the literal

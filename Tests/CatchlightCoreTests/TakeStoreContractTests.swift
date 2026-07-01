@@ -260,6 +260,32 @@ class TakeStoreContractTests: XCTestCase {
                        "The first Obie must be demoted")
     }
 
+    /// The upsert-path demotion must BUMP the demoted Take's `modifiedAt`
+    /// (2026-07-01): `pushOutbound` selects by `modifiedAt > watermark`, so an
+    /// un-bumped demotion never re-uploaded — the cloud kept a second
+    /// isObie=true blob and every later pull surfaced a phantom conflict via
+    /// ConflictResolver's (false, false) branch. Matches `setObie`, which has
+    /// always bumped both sides. The bump must also be ms-truncated (the known
+    /// sub-millisecond phantom-conflict class, PR #79).
+    func testContract_obie_upsertDemotion_bumpsDemotedModifiedAt() throws {
+        let t0 = ISO8601.date(from: "2026-05-01T09:00:00.000Z")!
+        let a = Take(id: UUID(), createdAt: t0, modifiedAt: t0,
+                     blocks: [.textLine("a")], isObie: true)
+        let b = Take(id: UUID(), createdAt: t0.addingTimeInterval(1),
+                     modifiedAt: t0.addingTimeInterval(1),
+                     blocks: [.textLine("b")], isObie: true)
+        try store.upsert(a)
+        try store.upsert(b)
+
+        let demoted = try XCTUnwrap(try store.take(id: a.id))
+        XCTAssertFalse(demoted.isObie)
+        XCTAssertGreaterThan(demoted.modifiedAt, t0,
+                             "demotion must bump modifiedAt so the demotion syncs")
+        XCTAssertEqual(demoted.modifiedAt,
+                       ISO8601.truncateToMilliseconds(demoted.modifiedAt),
+                       "the bumped timestamp must be ms-normalised")
+    }
+
     func testContract_obie_unknownId_throwsNotFound() {
         XCTAssertThrowsError(try store.setObie(id: UUID(), replaceExisting: true)) { error in
             guard case StorageError.notFound = error else {
