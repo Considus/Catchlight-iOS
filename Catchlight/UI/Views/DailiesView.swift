@@ -5,9 +5,9 @@
 //  The homepage timeline — the ONE surface (dock redesign 2026-06-10). A vertical
 //  scroll of TakeRowViews threaded by a 2px spine aligned to each circle's centre.
 //  The Obie (if any) is pinned at the top with a small gap before the regular
-//  list — ALWAYS, even when it doesn't match the active filter. Month markers
-//  ghost in only while scrolling (they are never static). First-launch empty
-//  state is a single Fog line.
+//  list — ALWAYS, even when it doesn't match the active filter. A persistent
+//  month divider (label + hairline) separates Takes by creation month. First-launch
+//  empty state is a single Fog line.
 //
 //  Live filtering (2026-06-10): the dock's FILTERING toggles and SEARCHING query
 //  produce `ui.activeTimelineFilter`; the non-Obie rows are narrowed through
@@ -83,8 +83,6 @@ struct DailiesView: View {
         SettingsViewModel.TakeSort(rawValue: takeSortRaw) ?? .default
     }
 
-    @State private var scrolling = false
-    @State private var scrollHideWork: DispatchWorkItem?
     /// "Rings on a wire" texture (owner idea 2026-06-16): a STATIC dotted line laid
     /// over the solid spine. As the rings scroll past the fixed dots, the eye reads
     /// them sliding over a marked wire (relative motion at the true 1× scroll speed) —
@@ -831,21 +829,16 @@ struct DailiesView: View {
               // below the pinned Obie (owner 2026-06-16 — the visible "jump" on
               // designating an Obie). This makes them flush so positions match.
               VStack(spacing: 0) {
-                // Track scroll offset to ghost month markers in/out. Also hosts the
-                // ScrollViewFinder — placed INSIDE the scroll content so its superview
-                // chain reaches the timeline's UIScrollView (a .background on the reader
-                // would sit beside it, not within). Feeds `caretScrollView` for the pin.
-                GeometryReader { geo in
-                    Color.clear
-                        .preference(
-                            key: ScrollOffsetKey.self,
-                            value: geo.frame(in: .named("dailies")).minY
-                        )
-                        .background(ScrollViewFinder { sv in
-                            if caretScrollView !== sv { caretScrollView = sv }
-                        })
-                }
-                .frame(height: 0)
+                // Hosts the ScrollViewFinder — placed INSIDE the scroll content so its
+                // superview chain reaches the timeline's UIScrollView (a .background on
+                // the reader would sit beside it, not within). Feeds `caretScrollView`
+                // for the caret pin. (Scroll-offset tracking was removed with the ghost
+                // month markers — the month labels are now persistent, owner 2026-07-01.)
+                Color.clear
+                    .frame(height: 0)
+                    .background(ScrollViewFinder { sv in
+                        if caretScrollView !== sv { caretScrollView = sv }
+                    })
 
                 // Inter-card spacing is user-configurable (Compact/Standard/Comfort —
                 // owner 2026-06-16). The chosen `gap` minus the 12pt each row already
@@ -874,24 +867,30 @@ struct DailiesView: View {
                     }
 
                     ForEach(Array(monthGroups.enumerated()), id: \.element.month) { groupIndex, group in
-                        // Ghosted month marker — appears only while scrolling. The
-                        // FIRST group's marker is suppressed (owner 2026-06-16): it
-                        // reserved ~25pt of always-on height between the pinned Obie
-                        // and the first row, inflating that gap well past the chosen
-                        // Take spacing. Later groups keep their markers as section
-                        // breaks; the topmost month reads from the DAILIES heading.
+                        // PERSISTENT month divider (owner 2026-07-01, replaces the
+                        // scroll-only ghost marker — no ghost markers under any
+                        // circumstance). The FIRST group's label is still suppressed:
+                        // the topmost month reads from the DAILIES heading, and a label
+                        // there would reserve ~25pt between the pinned Obie and the first
+                        // row. Later groups show an always-visible label + a hairline so
+                        // the space between two calendar months has an obvious reason
+                        // (the previous invisible-but-space-reserving marker looked like
+                        // a stray gap after a mid-timeline delete).
                         if groupIndex > 0 {
-                            Text(group.month)
-                                // .month — 11pt medium, 0.08em tracking (matches the
-                                // DAILIES heading kerning; D-042, was 12pt untracked).
-                                .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
-                                .kerning(0.88)
+                            // Uppercased "JULY 2026" at the Take-body size (14pt regular),
+                            // no rule — a quiet section label (owner 2026-07-01). Colour:
+                            // ckTextSecondary (the accessible muted grey), NOT ckTextComplete
+                            // ("Done") — the Done treatment is Fog@82%/58%, ~1.7:1 on Paper /
+                            // ~3.7:1 on Ink, below the 4.5:1 AA minimum for this text size.
+                            Text(group.month.uppercased())
+                                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
+                                .kerning(0.5)
                                 .foregroundStyle(Color.ckTextSecondary)
                                 .padding(.leading, textColumnLeading)
-                                .padding(.vertical, 6)
-                                .opacity(scrolling ? 0.8 : 0)
-                                .animation(.easeInOut(duration: 0.25), value: scrolling)
-                                .accessibilityHidden(!scrolling)
+                                // No fixed vertical padding (owner 2026-07-01): the divider
+                                // takes ONLY the timeline's density gap (the "View" setting)
+                                // above and below, like a card.
+                                .accessibilityLabel(group.month)
                         }
 
                         ForEach(Array(group.takes.enumerated()), id: \.element.id) { takeIndex, take in
@@ -973,7 +972,6 @@ struct DailiesView: View {
             // suppressed it). The keyboard is dismissed via the grabber bar on top of
             // the keyboard instead (BlockTextEditor.showsKeyboardGrabber, owner 2026-06-17).
             .coordinateSpace(name: "dailies")
-            .onPreferenceChange(ScrollOffsetKey.self) { _ in markScrolling() }
             .onPreferenceChange(FirstRowTopKey.self) { firstRowTop = $0.isFinite ? $0 : nil }
             // `initial: true` (2026-06-10): when the Spotlight tap arrives from
             // another tab, this view is created with the target ALREADY set, so
@@ -1639,8 +1637,7 @@ struct DailiesView: View {
     private struct MonthGroup { let month: String; let takes: [Take] }
 
     /// Cached formatter — `DateFormatter` construction is expensive and this
-    /// property is evaluated on every body pass (including the scroll-driven
-    /// `scrolling` state toggles).
+    /// property is evaluated on every body pass.
     private static let monthFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "LLLL yyyy"
@@ -1658,21 +1655,6 @@ struct DailiesView: View {
         return order.map { MonthGroup(month: $0, takes: map[$0] ?? []) }
     }
 
-    // MARK: - Scroll ghosting
-
-    private func markScrolling() {
-        if !scrolling { scrolling = true }
-        scrollHideWork?.cancel()
-        let work = DispatchWorkItem { scrolling = false }
-        scrollHideWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9, execute: work)
-    }
-
-}
-
-private struct ScrollOffsetKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 /// The first timeline row's top Y (in the "dailies" space) — drives where the spine
