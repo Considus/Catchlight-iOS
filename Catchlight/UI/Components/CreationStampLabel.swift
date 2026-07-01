@@ -2,7 +2,7 @@
 //  CreationStampLabel.swift
 //  Catchlight (iOS app target)
 //
-//  A quiet "Created at HH:MM on DD/MM/YYYY" line pinned at the bottom of a Take
+//  A quiet "Created on DD/MM/YYYY at HH:MM" line pinned at the bottom of a Take
 //  (owner 2026-07-01). Where it shows is chosen in Settings → Off / In the editor /
 //  Always (`SettingsViewModel.CreationStamp`).
 //
@@ -37,9 +37,10 @@ enum CreationTimestamp {
         return f
     }()
 
-    /// "Created at 14:39 on 01/07/2026" — locale-formatted per the notes above.
+    /// "Created on 01/07/2026 at 14:39" — date then time (matches the reminder
+    /// label's "… at <time>" shape), locale-formatted per the notes above.
     static func text(for date: Date) -> String {
-        "Created at \(timeFmt.string(from: date)) on \(dateFmt.string(from: date))"
+        "Created on \(dateFmt.string(from: date)) at \(timeFmt.string(from: date))"
     }
 }
 
