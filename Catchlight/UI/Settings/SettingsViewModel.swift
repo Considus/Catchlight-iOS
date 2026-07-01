@@ -256,6 +256,34 @@ final class SettingsViewModel {
         }
     }
 
+    /// Where the "Created at …" stamp shows (owner 2026-07-01). Default `.off` — the
+    /// timeline stays clean unless the user opts in. `.editor` shows it only while a
+    /// Take is open in the inline editor; `.always` also shows it on every resting
+    /// timeline card. Read by `TakeCardSurface` (always) and `InlineTakeEditCard`
+    /// (editor + always). See `CreationStampLabel`.
+    enum CreationStamp: String, CaseIterable, Identifiable {
+        case off, editor, always
+
+        static let defaultsKey = "catchlight.creationStamp"
+        static let `default`: CreationStamp = .off
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .off:    return "Off"
+            case .editor: return "Editor only"
+            case .always: return "Always"
+            }
+        }
+
+        static var current: CreationStamp {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = CreationStamp(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     /// How much of a collapsed Take's body shows on the timeline (owner 2026-06-16:
     /// "Preview" — deliberately INDEPENDENT of `TakeSpacing`/"View" density). The
     /// reminder date/time label is unaffected (it's a separate line below the body).

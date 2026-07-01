@@ -400,6 +400,13 @@ struct TakeCardSurface: View {
     private var takePreview: SettingsViewModel.TakePreview {
         SettingsViewModel.TakePreview(rawValue: takePreviewRaw) ?? .default
     }
+    /// The "Creation date" setting — the resting card shows the stamp only in `.always`
+    /// (the editor handles `.editor`). See `CreationStampLabel`.
+    @AppStorage(SettingsViewModel.CreationStamp.defaultsKey)
+    private var creationStampRaw: String = SettingsViewModel.CreationStamp.default.rawValue
+    private var creationStamp: SettingsViewModel.CreationStamp {
+        SettingsViewModel.CreationStamp(rawValue: creationStampRaw) ?? .default
+    }
     /// Body line cap: the Preview choice, but never below 4 at accessibility text
     /// sizes so a sentence is not cut mid-word (`nil` = unlimited / "All").
     private var bodyLineLimit: Int? {
@@ -620,6 +627,13 @@ struct TakeCardSurface: View {
                         .italic(style.isOverdue)
                         .foregroundStyle(reminderLabelColor)
                 }
+            }
+
+            // Created-at stamp pinned at the very bottom of the card, shown when the
+            // "Creation date" setting is Always (owner 2026-07-01).
+            if creationStamp == .always {
+                CreationStampLabel(date: take.createdAt)
+                    .padding(.top, 2)
             }
         }
         // v1.7 .card padding: 24px top (clears the overlapping Iris) / 14 sides /

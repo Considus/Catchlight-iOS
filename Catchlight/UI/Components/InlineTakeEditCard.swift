@@ -89,6 +89,14 @@ struct InlineTakeEditCard: View {
     /// consistent target — steadier to position above the keyboard. Tunable.
     private let focusMinHeight: CGFloat = 96
 
+    /// The "Creation date" setting — the editor shows the stamp for both `.editor`
+    /// and `.always` (both include the editing surface). See `CreationStampLabel`.
+    @AppStorage(SettingsViewModel.CreationStamp.defaultsKey)
+    private var creationStampRaw: String = SettingsViewModel.CreationStamp.default.rawValue
+    private var creationStamp: SettingsViewModel.CreationStamp {
+        SettingsViewModel.CreationStamp(rawValue: creationStampRaw) ?? .default
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(draft.blocks) { block in
@@ -106,6 +114,13 @@ struct InlineTakeEditCard: View {
                     // neighbours while the order reflows underneath.
                     .offset(y: dragVisualOffset(for: block.id))
                     .zIndex(draggingID == block.id ? 1 : 0)
+            }
+
+            // Created-at stamp at the bottom of the editing card, shown when the
+            // "Creation date" setting is In-the-editor or Always (owner 2026-07-01).
+            if creationStamp != .off {
+                CreationStampLabel(date: draft.createdAt)
+                    .padding(.top, 6)
             }
         }
         .onPreferenceChange(RowHeightKey.self) { rowHeights = $0 }

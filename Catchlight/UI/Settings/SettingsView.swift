@@ -31,6 +31,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey) private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
     @AppStorage(SettingsViewModel.TakeSort.defaultsKey) private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
     @AppStorage(SettingsViewModel.TakePreview.defaultsKey) private var takePreviewRaw: String = SettingsViewModel.TakePreview.default.rawValue
+    @AppStorage(SettingsViewModel.CreationStamp.defaultsKey) private var creationStampRaw: String = SettingsViewModel.CreationStamp.default.rawValue
     @AppStorage(SettingsViewModel.AutoCleanup.defaultsKey) private var autoCleanupRaw: String = SettingsViewModel.AutoCleanup.default.rawValue
     @AppStorage(SettingsViewModel.DefaultReminderHours.defaultsKey) private var defaultReminderHoursRaw: String = SettingsViewModel.DefaultReminderHours.default.rawValue
     @AppStorage(SettingsViewModel.SnoozeDuration.defaultsKey) private var snoozeDurationRaw: String = SettingsViewModel.SnoozeDuration.default.rawValue
@@ -269,6 +270,18 @@ struct SettingsView: View {
                 }
             }
 
+            // Created-at stamp — Off / In the editor / Always (owner 2026-07-01).
+            menuPickerRow(icon: "calendar",
+                          label: "Creation date",
+                          accessibilityLabel: "Show creation date",
+                          selectionLabel: creationStampBinding.wrappedValue.label) {
+                Picker("Creation date", selection: creationStampBinding) {
+                    ForEach(SettingsViewModel.CreationStamp.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+            }
+
             SettingsRow(icon: "paintpalette",
                         label: "Scenes",
                         disabled: true) {
@@ -338,6 +351,13 @@ struct SettingsView: View {
         Binding(
             get: { SettingsViewModel.TakeSort(rawValue: takeSortRaw) ?? .default },
             set: { takeSortRaw = $0.rawValue }
+        )
+    }
+
+    private var creationStampBinding: Binding<SettingsViewModel.CreationStamp> {
+        Binding(
+            get: { SettingsViewModel.CreationStamp(rawValue: creationStampRaw) ?? .default },
+            set: { creationStampRaw = $0.rawValue }
         )
     }
 
