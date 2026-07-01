@@ -789,16 +789,6 @@ struct ReminderPickerSheet: View {
                     .disabled(mode == .place && location == nil)   // no place chosen yet
                 }
             }
-            // Keep the weekday set coherent with the cadence: entering Weekly seeds the
-            // anchor's own weekday (so the strip reflects the real fire day); leaving Weekly
-            // clears it. A custom set already chosen is preserved while staying on Weekly.
-            .onChange(of: recurrence) { _, newValue in
-                if newValue == .weekly {
-                    if weekdays.isEmpty { weekdays = [Calendar.current.component(.weekday, from: date)] }
-                } else {
-                    weekdays = []
-                }
-            }
         }
         // Open at full height so the controls + as much calendar as fits are visible.
         .presentationDetents([.large])
@@ -885,7 +875,14 @@ struct ReminderPickerSheet: View {
             // anchor date below supplies the cadence's time-of-day / weekday / day.
             Toggle(isOn: Binding(
                 get: { recurrence != .none },
-                set: { recurrence = $0 ? (recurrence == .none ? .daily : recurrence) : .none }
+                set: { on in
+                    if on {
+                        recurrence = (recurrence == .none ? .daily : recurrence)
+                    } else {
+                        recurrence = .none
+                        weekdays = []   // drop any day set so it can't linger for the next cadence
+                    }
+                }
             )) {
                 Label("Repeat", systemImage: "repeat")
             }
@@ -895,19 +892,20 @@ struct ReminderPickerSheet: View {
             if recurrence != .none {
                 Divider()
                 Menu {
-                    Picker("Repeat", selection: $recurrence) {
-                        // Every cadence EXCEPT `.none` — the toggle owns on/off.
-                        ForEach(TimeReminder.Recurrence.allCases.filter { $0 != .none }, id: \.self) { option in
-                            Text(option.label).tag(option)
-                        }
+                    // Weekday presets ("Every weekday"/"Every weekend"/"Custom") are surfaced
+                    // as first-class interval choices for discoverability (owner 2026-06-30);
+                    // `cadenceBinding` maps them to `.weekly` + a weekday set.
+                    Picker("Repeat", selection: cadenceBinding) {
+                        ForEach(CadenceChoice.allCases) { Text($0.rawValue).tag($0) }
                     }
                 } label: {
-                    MenuFieldRow(title: "Interval", icon: "clock", value: recurrence.label)
+                    MenuFieldRow(title: "Interval", icon: "clock", value: cadenceBinding.wrappedValue.rawValue)
                 }
                 .accessibilityIdentifier("reminder-repeat-cadence")
 
-                // Weekly only: choose which days repeat. Quick presets + a day strip.
-                if recurrence == .weekly {
+                // The day strip appears for the day-set weekly cadences (Every weekday / Every
+                // weekend / Custom); plain "Weekly" (same weekday each week) shows no strip.
+                if recurrence == .weekly && !weekdays.isEmpty {
                     Divider()
                     weekdaySection
                         .padding(.vertical, 6)
@@ -915,83 +913,90 @@ struct ReminderPickerSheet: View {
             }
         }
         .animation(.snappy(duration: 0.2), value: recurrence != .none)
-        .animation(.snappy(duration: 0.2), value: recurrence == .weekly)
+        .animation(.snappy(duration: 0.2), value: recurrence == .weekly && !weekdays.isEmpty)
         .tint(Color.ckEmber)
         .padding(.horizontal, 14)
         .padding(.vertical, 4)
         .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    /// Weekly-cadence day chooser (owner 2026-06-23): two quick presets ("Every weekday" /
-    /// "Every Weekend"), styled like the Quick-set pills, that set the whole set at once,
-    /// plus a seven-day strip to toggle any combination. The day strip starts on SUNDAY
-    /// (owner 2026-06-23); each letter maps to a Calendar weekday number (1 = Sun … 7 = Sat).
-    /// An empty set means "the anchor's weekday" — but the cadence onChange seeds that day on
-    /// entry, so the strip is never blank here.
+    /// The seven-day toggle strip for the day-set weekly cadences (owner 2026-06-23; simplified
+    /// 2026-06-30 now that Every weekday / Every weekend / Custom are chosen in the Interval
+    /// menu). Starts on SUNDAY; each letter maps to a Calendar weekday number (1 = Sun … 7 = Sat).
+    /// Shown only when `weekdays` is non-empty (i.e. not plain "Weekly").
     private var weekdaySection: some View {
         let symbols = Calendar.current.veryShortWeekdaySymbols          // index 0 = Sunday
-
-        return VStack(alignment: .leading, spacing: 10) {
-            // Preset selector mirroring the Interval row: "Every weekday" / "Every Weekend",
-            // with the value reading "Custom" when the strip holds any other combination.
-            Menu {
-                Picker("Days", selection: weekdayPresetBinding) {
-                    ForEach(WeekdayPreset.selectableCases) { Text($0.rawValue).tag($0) }
+        return HStack(spacing: 6) {
+            ForEach(0..<7, id: \.self) { idx in                        // 0 = Sun … 6 = Sat
+                let weekday = idx + 1                                   // Calendar weekday number
+                let isOn = weekdays.contains(weekday)
+                Button {
+                    if isOn { weekdays.remove(weekday) } else { weekdays.insert(weekday) }
+                } label: {
+                    Text(symbols[idx])
+                        .font(.subheadline.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 38)
+                        .background(isOn ? Color.ckEmber.opacity(0.85) : Color.ckBackground, in: Circle())
+                        .overlay(Circle().strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1))
+                        .foregroundStyle(isOn ? Color.ckBackground : Color.ckTextPrimary)
                 }
-            } label: {
-                MenuFieldRow(title: "Days", icon: "calendar",
-                             value: weekdayPresetBinding.wrappedValue.rawValue)
-            }
-            .accessibilityIdentifier("reminder-weekday-preset")
-            HStack(spacing: 6) {
-                ForEach(0..<7, id: \.self) { idx in                     // 0 = Sun … 6 = Sat
-                    let weekday = idx + 1                               // Calendar weekday number
-                    let isOn = weekdays.contains(weekday)
-                    Button {
-                        if isOn { weekdays.remove(weekday) } else { weekdays.insert(weekday) }
-                    } label: {
-                        Text(symbols[idx])
-                            .font(.subheadline.weight(.medium))
-                            .frame(maxWidth: .infinity, minHeight: 38)
-                            .background(isOn ? Color.ckEmber.opacity(0.85) : Color.ckBackground,
-                                        in: Circle())
-                            .overlay(Circle().strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1))
-                            .foregroundStyle(isOn ? Color.ckBackground : Color.ckTextPrimary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("reminder-weekday-\(weekday)")
-                    .accessibilityAddTraits(isOn ? [.isSelected] : [])
-                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("reminder-weekday-\(weekday)")
+                .accessibilityAddTraits(isOn ? [.isSelected] : [])
             }
         }
     }
 
-    /// The weekly-day presets surfaced in the "Days" selector (owner 2026-06-23). `.custom`
-    /// is the read-out for any hand-picked combination — it's a label, not a menu option, so
-    /// it's excluded from `selectableCases`.
-    private enum WeekdayPreset: String, CaseIterable, Identifiable {
-        case weekday = "Every weekday"
-        case weekend = "Every Weekend"
-        case custom  = "Custom"
+    /// The cadence choices shown in the Interval menu (owner 2026-06-30). The weekly family —
+    /// Weekly (same weekday each week), Every weekday, Every weekend, Custom — all map to
+    /// `.weekly`, differing only by the `weekdays` set; the rest map straight to `Recurrence`.
+    private enum CadenceChoice: String, CaseIterable, Identifiable {
+        case hourly = "Hourly"
+        case daily = "Daily"
+        case weekly = "Weekly"
+        case everyWeekday = "Every weekday"
+        case everyWeekend = "Every weekend"
+        case custom = "Custom"
+        case monthly = "Monthly"
+        case annually = "Annually"
         var id: String { rawValue }
-        static var selectableCases: [WeekdayPreset] { [.weekday, .weekend] }
     }
 
-    /// Maps the `weekdays` set to/from the preset selector: read the matching preset (or
-    /// `.custom`), and writing a preset replaces the whole set. Selecting `.custom` can't
-    /// happen (it isn't offered) — the day strip drives custom combinations.
-    private var weekdayPresetBinding: Binding<WeekdayPreset> {
+    /// Maps `recurrence` + `weekdays` to/from the Interval selection. Reading derives the
+    /// weekly-family label from the day set (empty = Weekly, the two presets, else Custom);
+    /// writing sets the cadence AND the day set together, seeding Custom with the reminder's
+    /// own weekday so its strip opens non-empty.
+    private var cadenceBinding: Binding<CadenceChoice> {
         Binding(
             get: {
-                if weekdays == TimeReminder.weekdaySet { return .weekday }
-                if weekdays == TimeReminder.weekendSet { return .weekend }
-                return .custom
+                switch recurrence {
+                case .hourly:   return .hourly
+                case .daily:    return .daily
+                case .monthly:  return .monthly
+                case .annually: return .annually
+                case .none:     return .daily   // not shown — the Repeat toggle owns on/off
+                case .weekly:
+                    if weekdays.isEmpty { return .weekly }
+                    if weekdays == TimeReminder.weekdaySet { return .everyWeekday }
+                    if weekdays == TimeReminder.weekendSet { return .everyWeekend }
+                    return .custom
+                }
             },
-            set: { newValue in
-                switch newValue {
-                case .weekday: weekdays = TimeReminder.weekdaySet
-                case .weekend: weekdays = TimeReminder.weekendSet
-                case .custom:  break
+            set: { choice in
+                switch choice {
+                case .hourly:       recurrence = .hourly;   weekdays = []
+                case .daily:        recurrence = .daily;    weekdays = []
+                case .weekly:       recurrence = .weekly;   weekdays = []
+                case .everyWeekday: recurrence = .weekly;   weekdays = TimeReminder.weekdaySet
+                case .everyWeekend: recurrence = .weekly;   weekdays = TimeReminder.weekendSet
+                case .custom:
+                    recurrence = .weekly
+                    // Seed a single day (the anchor's weekday) unless a bespoke set already exists.
+                    if weekdays.isEmpty || weekdays == TimeReminder.weekdaySet || weekdays == TimeReminder.weekendSet {
+                        weekdays = [Calendar.current.component(.weekday, from: date)]
+                    }
+                case .monthly:      recurrence = .monthly;  weekdays = []
+                case .annually:     recurrence = .annually; weekdays = []
                 }
             }
         )
