@@ -42,11 +42,14 @@ struct SettingsView: View {
     @State private var showExportFormatDialog = false
     /// The Import-result message; non-nil presents the confirmation alert (owner 2026-06-22).
     @State private var importResultMessage: String?
+    /// Presents the Notice History sheet (D-085) — a SHIPPING feature, so this
+    /// must live outside the `#if DEBUG` block (it was declared inside it, which
+    /// compiled in Debug but broke every Release/Archive build — 2026-07-01).
+    @State private var showNoticeHistory = false
 
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
     @State private var showResetConfirm = false
-    @State private var showNoticeHistory = false
     /// Settings-backed toggle for the section 2b on-device inset readout overlay.
     @AppStorage(DebugInsetReadoutSettings.defaultsKey) private var showInsetReadout = false
     #endif
