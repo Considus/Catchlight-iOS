@@ -133,7 +133,10 @@ struct DailiesGlyphSlashed: View {
 enum MenuGlyph {
     static let makeImportant = bake(DailiesGlyph(size: glyphSize))
     static let removeImportant = bake(DailiesGlyphSlashed(size: glyphSize))
-    static let obie = bake(ObieGlyph(size: glyphSize))
+    // The solid brand "O" reads heavier than the line glyphs, so it's rendered a
+    // touch smaller *within* the shared `glyphSize` slot (so it still aligns) — the
+    // SAME 26→22 (≈0.85×) reduction applied to the petal-fan Obie Mark (owner 2026-07-01).
+    static let obie = bake(ObieGlyph(size: glyphSize * 22 / 26))
 
     /// Rendered a touch larger than the dock glyphs — menu icons read small.
     private static let glyphSize: CGFloat = 22
