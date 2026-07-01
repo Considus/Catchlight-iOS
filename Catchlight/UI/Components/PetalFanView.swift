@@ -579,7 +579,7 @@ struct PetalFanView: View {
                             // Off glyph = ckAccent, matching the dock/editor/search off icons.
                             .foregroundStyle(active ? Color.ckBackground : Color.ckAccent)
                     } else {
-                        ObieGlyph(size: 26)   // the Obie brand glyph (owner 2026-06-30); slightly larger than the 24 open-glyph base so the letter-mark reads
+                        ObieGlyph(size: 22)   // the Obie brand glyph. 26→22 (owner 2026-07-01): the SOLID brand "O" reads heavier than the old ring+dot did, so it matched the control/lock size better at 22 (== the sibling glyphs' base)
                             .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
                     }
                 }
