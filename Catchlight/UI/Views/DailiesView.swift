@@ -866,31 +866,44 @@ struct DailiesView: View {
                             .accessibilityLabel("Nothing here yet.")
                     }
 
-                    ForEach(Array(monthGroups.enumerated()), id: \.element.month) { groupIndex, group in
-                        // PERSISTENT month divider (owner 2026-07-01, replaces the
-                        // scroll-only ghost marker — no ghost markers under any
-                        // circumstance). The FIRST group's label is still suppressed:
-                        // the topmost month reads from the DAILIES heading, and a label
-                        // there would reserve ~25pt between the pinned Obie and the first
-                        // row. Later groups show an always-visible label + a hairline so
-                        // the space between two calendar months has an obvious reason
-                        // (the previous invisible-but-space-reserving marker looked like
-                        // a stray gap after a mid-timeline delete).
-                        if groupIndex > 0 {
-                            // Uppercased "JULY 2026" at the Take-body size (14pt regular),
-                            // no rule — a quiet section label (owner 2026-07-01). Colour:
-                            // ckTextSecondary (the accessible muted grey), NOT ckTextComplete
-                            // ("Done") — the Done treatment is Fog@82%/58%, ~1.7:1 on Paper /
-                            // ~3.7:1 on Ink, below the 4.5:1 AA minimum for this text size.
-                            Text(group.month.uppercased())
-                                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
-                                .kerning(0.5)
-                                .foregroundStyle(Color.ckTextSecondary)
-                                .padding(.leading, textColumnLeading)
-                                // No fixed vertical padding (owner 2026-07-01): the divider
-                                // takes ONLY the timeline's density gap (the "View" setting)
-                                // above and below, like a card.
-                                .accessibilityLabel(group.month)
+                    ForEach(Array(monthGroups.enumerated()), id: \.element.key) { groupIndex, group in
+                        // PERSISTENT, TAPPABLE month divider (owner 2026-07-01). No ghost
+                        // markers under any circumstance: uppercased "JULY 2026" at the
+                        // Take-body size (14pt regular), no rule, ckTextSecondary (the
+                        // accessible muted grey — Done/ckTextComplete was too faint, ~1.7:1
+                        // on Paper). Takes ONLY the timeline's density gap (the "View"
+                        // setting), no fixed padding.
+                        //
+                        // TAP it to filter the timeline to that creation month (via the
+                        // existing SequenceFilter.months); tap the lit (amber) divider again
+                        // to clear. The first group's label is normally suppressed (the
+                        // DAILIES heading is its context) — but the ACTIVE filter month
+                        // always shows, so the amber "× MONTH" stays as the clear affordance
+                        // even when it's the only group left after filtering.
+                        let isActiveMonth = ui.filterMonth == group.key
+                        if groupIndex > 0 || isActiveMonth {
+                            HStack(spacing: 6) {
+                                Text(group.month.uppercased())
+                                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
+                                    .kerning(0.5)
+                                    .foregroundStyle(isActiveMonth ? Color.ckTextObie : Color.ckTextSecondary)
+                                if isActiveMonth {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                                        .foregroundStyle(Color.ckTextObie)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                            .padding(.leading, textColumnLeading)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.2)) { ui.toggleMonthFilter(group.key) }
+                            }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityLabel(isActiveMonth
+                                ? "\(group.month), filtering. Double-tap to clear."
+                                : "\(group.month). Double-tap to show only Takes created this month.")
                         }
 
                         ForEach(Array(group.takes.enumerated()), id: \.element.id) { takeIndex, take in
@@ -1634,7 +1647,7 @@ struct DailiesView: View {
 
     // MARK: - Month grouping
 
-    private struct MonthGroup { let month: String; let takes: [Take] }
+    private struct MonthGroup { let key: String; let month: String; let takes: [Take] }
 
     /// Cached formatter — `DateFormatter` construction is expensive and this
     /// property is evaluated on every body pass.
@@ -1645,14 +1658,19 @@ struct DailiesView: View {
     }()
 
     private var monthGroups: [MonthGroup] {
+        // Key by the stable "yyyy-MM" bucket (the same key the month FILTER uses), in
+        // first-seen order; the display string ("July 2026") is derived per group.
         var order: [String] = []
         var map: [String: [Take]] = [:]
         for take in displayedTakes {
-            let key = Self.monthFormatter.string(from: take.createdAt)
+            let key = SequenceFilter.monthKey(for: take.createdAt)
             if map[key] == nil { order.append(key); map[key] = [] }
             map[key]?.append(take)
         }
-        return order.map { MonthGroup(month: $0, takes: map[$0] ?? []) }
+        return order.map { key in
+            let display = Self.monthFormatter.string(from: (map[key]?.first?.createdAt) ?? Date())
+            return MonthGroup(key: key, month: display, takes: map[key] ?? [])
+        }
     }
 
 }
