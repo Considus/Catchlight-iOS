@@ -118,7 +118,8 @@ final class TakeExporterTests: XCTestCase {
                         isNote: true)
         take.timeReminder = TimeReminder(scheduledDate: scheduledAt,
                                          notificationIdentifier: take.id.uuidString)
-        let out = TakeExporter.export([take], exportedAt: exportedAt)
+        let out = TakeExporter.export([take], exportedAt: exportedAt,
+                                      timeZone: TimeZone(secondsFromGMT: 0)!)
         XCTAssertTrue(out.contains("## Reminder — 2026-05-16 · 🔔 2026-05-20 09:00"),
                       "Got: \(out)")
         XCTAssertTrue(out.contains("Pick up prints"))
@@ -233,8 +234,27 @@ final class TakeExporterTests: XCTestCase {
                         blocks: [.checkItem("x", isComplete: true)], isNote: true)
         take.timeReminder = TimeReminder(scheduledDate: scheduledAt,
                                          notificationIdentifier: take.id.uuidString)
-        XCTAssertEqual(TakeExporter.heading(for: take),
+        XCTAssertEqual(TakeExporter.heading(for: take, timeZone: TimeZone(secondsFromGMT: 0)!),
                        "Reminder — 2026-05-14 · 🔔 2026-05-20 09:00")
+    }
+
+    /// Owner decision 2026-07-01: Take-level stamps render in LOCAL time. A
+    /// 09:00-UTC reminder exported in UTC+3 must read 12:00 — the previous
+    /// all-UTC rendering made exports read as simply wrong to the user. The
+    /// `exported:` header stays ISO-UTC (file metadata, not a Take timestamp).
+    func testExport_takeStamps_followInjectedZone_headerStaysUTC() {
+        let createdAt = Self.makeUTC(year: 2026, month: 5, day: 16)
+        let scheduledAt = Self.makeUTC(year: 2026, month: 5, day: 20, hour: 9, minute: 0)
+        var take = Take(createdAt: createdAt, modifiedAt: createdAt,
+                        blocks: [.textLine("Pick up prints")], isNote: true)
+        take.timeReminder = TimeReminder(scheduledDate: scheduledAt,
+                                         notificationIdentifier: take.id.uuidString)
+        let out = TakeExporter.export([take], exportedAt: exportedAt,
+                                      timeZone: TimeZone(secondsFromGMT: 3 * 3600)!)
+        XCTAssertTrue(out.contains("🔔 2026-05-20 12:00"),
+                      "the bell stamp must follow the injected zone — got: \(out)")
+        XCTAssertTrue(out.contains("exported: 2026-06-09T"),
+                      "the header keeps its UTC ISO date")
     }
 
     // MARK: - Filename
@@ -317,7 +337,8 @@ final class TakeExporterTests: XCTestCase {
                         blocks: [.textLine("Pick up prints")], isNote: true)
         take.timeReminder = TimeReminder(scheduledDate: scheduledAt,
                                          notificationIdentifier: take.id.uuidString)
-        let out = TakeExporter.export([take], format: .plainText, exportedAt: exportedAt)
+        let out = TakeExporter.export([take], format: .plainText, exportedAt: exportedAt,
+                                      timeZone: TimeZone(secondsFromGMT: 0)!)
         XCTAssertTrue(out.contains("Reminder — 2026-05-16 · 🔔 2026-05-20 09:00"))
         XCTAssertFalse(out.contains("## Reminder"))
     }
