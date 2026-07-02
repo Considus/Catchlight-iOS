@@ -512,7 +512,7 @@ private struct RevealStep: View {
         case .local:
             return "Write these 12 words down and keep them somewhere safe. They encrypt your Takes and enable a second device."
         case .cloud:
-            return "Write these 12 words down and keep them somewhere safe. Together with your cloud folder, they're how you restore your Takes on any device."
+            return "Write these 12 words down and keep them somewhere safe. They're needed in order to decrypt your Takes on a new device."
         }
     }
 
