@@ -89,6 +89,19 @@ enum ImportCoordinator {
         return Outcome(takes: takes, filesScanned: files.count, skipped: skipped)
     }
 
+    /// Read and parse a SINGLE picked file — the offline "Import from a file" path
+    /// (D-088), which needs NO configured cloud folder. Handles its own security scope.
+    /// Returns many Takes for a Catchlight export, one for a foreign note, or [] if the
+    /// file is unreadable or empty.
+    static func parseSingleFile(_ url: URL) -> [Take] {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        guard let content = plainText(of: url) else { return [] }
+        let modDate = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+            .contentModificationDate ?? Date()
+        return TakeImporter.parseDocument(content, fileDate: modDate)
+    }
+
     /// Read a file as plain text. `.rtf` is decoded through NSAttributedString so the
     /// RTF control words never reach the Take (just the words); everything else tries
     /// UTF-8 first, then falls back through the common non-UTF-8 text encodings

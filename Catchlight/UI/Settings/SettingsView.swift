@@ -18,6 +18,7 @@
 
 import SwiftUI
 import UserNotifications
+import UniformTypeIdentifiers
 import CatchlightCore
 
 struct SettingsView: View {
@@ -51,6 +52,8 @@ struct SettingsView: View {
     /// independently.
     @State private var showSecondDeviceWarning = false
     @State private var showSecondDeviceEntry = false
+    /// Presents the Files document picker for the offline "Import from a file" path (D-088).
+    @State private var showFileImporter = false
 
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
@@ -132,6 +135,12 @@ struct SettingsView: View {
             Button("Continue", role: .destructive) { showSecondDeviceEntry = true }
         } message: {
             Text("Enter your privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed. To keep a copy first, cancel and use Export Takes (Markdown), or make sure they're already in your cloud folder.")
+        }
+        // Offline "Import from a file" (D-088): pick any exported file from Files.
+        .fileImporter(isPresented: $showFileImporter,
+                      allowedContentTypes: Self.importableFileTypes,
+                      allowsMultipleSelection: false) { result in
+            importFromFile(result)
         }
         // Export format chooser (owner 2026-06-21) — tap Export Takes, pick a
         // format, then the share sheet presents. No persisted preference.
@@ -623,6 +632,15 @@ struct SettingsView: View {
                         action: { importNotes() })
                 .accessibilityIdentifier("settings-import-notes")
                 .accessibilityHint("Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes.")
+            // Import from a file (D-088) — the offline route: pick an exported file from
+            // anywhere in Files (On My iPhone, AirDrop, etc.), no cloud folder needed. A
+            // Catchlight export splits back into its Takes; a foreign note imports as one.
+            SettingsRow(icon: "doc.badge.plus",
+                        label: "Import from a file",
+                        chevron: false,
+                        action: { showFileImporter = true })
+                .accessibilityIdentifier("settings-import-file")
+                .accessibilityHint("Pick a .md, .txt or .rtf file from Files to import as Takes — no cloud folder needed.")
             SettingsRow(icon: "info.circle",
                         label: "About",
                         chevron: true,
@@ -740,13 +758,46 @@ struct SettingsView: View {
             importResultMessage = "No recognised markdown or text files found in the Import folder."
             return
         }
+        announceImport(imported)
+    }
+
+    /// File types the offline picker accepts — Markdown, plain text, and RTF.
+    private static let importableFileTypes: [UTType] = {
+        var types: [UTType] = [.plainText, .text, .rtf]
+        if let md = UTType(filenameExtension: "md") { types.append(md) }
+        if let markdown = UTType(filenameExtension: "markdown") { types.append(markdown) }
+        return types
+    }()
+
+    /// Import a single file picked from Files (offline path, D-088). No cloud folder
+    /// needed — a Catchlight export splits into its Takes; a foreign note imports as one.
+    @MainActor
+    private func importFromFile(_ result: Result<[URL], Error>) {
+        guard app.ensureEntitled() else { return }
+        guard case .success(let urls) = result, let url = urls.first else {
+            if case .failure = result {
+                importResultMessage = "Couldn't open that file. Please try again."
+            }
+            return
+        }
+        let imported = app.dailiesVM.importTakes(ImportCoordinator.parseSingleFile(url))
+        guard imported > 0 else {
+            importResultMessage = "That file had no notes to import."
+            return
+        }
+        announceImport(imported)
+    }
+
+    /// Success feedback shared by both import paths: the alert while Settings is open,
+    /// plus a terse summary Take dated now so a record lands at the recent end of the
+    /// timeline (owner 2026-06-22).
+    @MainActor
+    private func announceImport(_ imported: Int) {
         let noun = imported == 1 ? "Take" : "Takes"
         importResultMessage = "Import successful. \(imported) \(noun) added to your timeline."
-        // The auto-created summary Take (owner 2026-06-22) — a persistent record in the
-        // timeline, dated now so it lands at the recent end. Terser than the alert.
-        let takeMessage = "Import successful. \(imported) \(noun) added."
         app.dailiesVM.importTakes([
-            Take(createdAt: Date(), modifiedAt: Date(), blocks: [.textLine(takeMessage)], isNote: true)
+            Take(createdAt: Date(), modifiedAt: Date(),
+                 blocks: [.textLine("Import successful. \(imported) \(noun) added.")], isNote: true)
         ])
     }
 
