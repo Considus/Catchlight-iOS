@@ -232,40 +232,8 @@ final class BlockEditorUITests: XCTestCase {
         XCTAssertEqual(firstValueAfter, "bravo", "The dragged item should now be first")
     }
 
-    // MARK: - List Angle (D-033) — opens from a checklist Take and ticks an item
-
-    /// A checklist Take shows the top-right Angle affordance; tapping it opens the
-    /// full-screen list Angle, where tapping an item ticks it on the real Take.
-    func testAngle_opensFromChecklist_andTicksItem() throws {
-        // Edit-in-place Phase 2 (2026-06-17) retired the top-anchored editor that
-        // hosted the Angle affordance (`angle-button`); the in-place editor doesn't
-        // carry it yet. The Angle button is being redefined in the in-place editor in
-        // Phase 4 (with the "Important" marker rolled in) — re-enable this then.
-        try XCTSkipIf(true, "Angle affordance moves into the in-place editor in Phase 4 (edit-in-place redesign).")
-
-        let app = launchAppForUITesting()
-        let body = openNewEditor(app)
-        body.tap()
-        body.typeText("milk")
-
-        try toggleTaskOnViaFocusRing(app)
-        try requireChecklistRendered(app)
-
-        // The affordance appears only for a Take with check items.
-        let angleButton = app.buttons["angle-button"]
-        XCTAssertTrue(angleButton.waitForExistence(timeout: 4),
-                      "Angle affordance should appear for a checklist Take")
-        angleButton.tap()
-
-        let box = app.buttons.matching(identifier: "angle-checkbox").firstMatch
-        XCTAssertTrue(box.waitForExistence(timeout: 4), "List Angle item did not present")
-        XCTAssertEqual(box.value as? String, "unchecked")
-        box.tap()
-        XCTAssertEqual(box.value as? String, "checked", "Tapping in the Angle ticks the item")
-
-        // Exit the ephemeral Angle back to the editor.
-        tapWhenReady(app.buttons["angle-close"])
-        XCTAssertTrue(anyElement(in: app, id: "editor-shape").waitForExistence(timeout: 3),
-                      "Closing the Angle returns to the editor")
-    }
+    // NOTE (2026-07-01): the permanently-skipped `XCTSkipIf(true)` Angle test
+    // (parked when edit-in-place Phase 2 retired the top-anchored editor's
+    // `angle-button`) was DELETED (owner-approved). The Angle now opens from the
+    // keyboard toolbar's bag button — a future test should target that path.
 }

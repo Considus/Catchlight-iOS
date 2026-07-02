@@ -65,10 +65,10 @@ extension Color {
     static let ckEmberText = Color(hex: 0x856539)
     /// Accessible warm-grey for secondary text on Paper — WCAG AA. Replaces Fog in Daylight.
     static let ckSlate = Color(hex: 0x5C5650)
-    // "Stone" is the Daylight petal fill. The brief names it without a hex, so this
-    // is a deliberate, documented choice: a warm light stone that reads as a filled
-    // chip against Paper. TODO: confirm exact Stone hex with design before release.
-    static let ckStone = Color(hex: 0xE7E1D5)
+    // "Stone" is the Daylight petal fill — and the Important quadrant / dock-toggle
+    // swatch. #E0D9CE is the owner-confirmed design value (2026-07-01; replaces the
+    // provisional #E7E1D5 this shipped with while the hex was unconfirmed).
+    static let ckStone = Color(hex: 0xE0D9CE)
 }
 
 // MARK: - Raw UIColors (for dynamic providers)

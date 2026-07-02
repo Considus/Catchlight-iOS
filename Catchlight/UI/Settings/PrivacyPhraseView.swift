@@ -9,10 +9,9 @@
 //  `.userPresence` auth (Face ID / passcode), which `MnemonicKeychain.retrieve()`
 //  forces on every read — so an unlocked app is NEVER enough to reveal the phrase
 //  (D-042):
-//    1. If an in-app PIN is set, it is required FIRST as an optional extra factor.
-//       With no PIN (the default) the fresh iOS auth alone gates the reveal — we
-//       no longer block users who never created a PIN.
-//    2. Either way the phrase only loads after MnemonicKeychain's iOS prompt.
+//    1. The fresh iOS auth alone gates the reveal (the in-app PIN was REMOVED
+//       by D-042; this comment previously described it — corrected 2026-07-01).
+//    2. The phrase only loads after MnemonicKeychain's iOS prompt.
 //    3. Words appear in a numbered 3-column grid, blurred by default.
 //       "Press and hold to reveal" — the `LongPressGesture(minimumDuration: 0)`
 //       with `.updating(_:body:)` fires on press, releases on lift, so it is

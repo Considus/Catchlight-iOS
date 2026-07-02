@@ -48,7 +48,10 @@ public protocol TakeStore: AnyObject {
     /// brief §9.
     func search(_ query: String) throws -> [Take]
 
-    // Sequences (saved searches — filter-based, 2026-06-10)
+    // Sequences (saved searches — filter-based, 2026-06-10).
+    // FUTURE scaffolding (owner 2026-07-01: keep) — the store layer is complete
+    // (model, these four methods, the SQL table, tests) with no UI consumer yet;
+    // it is the base for the saved-searches/Recipes feature. Not dead code.
     func upsert(_ sequence: CatchlightSequence) throws
     func sequence(id: UUID) throws -> CatchlightSequence?
     func allSequences() throws -> [CatchlightSequence]

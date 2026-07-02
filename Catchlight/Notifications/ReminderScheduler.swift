@@ -6,9 +6,11 @@
 //  notification body is the ONLY place Take content appears outside the encrypted
 //  app boundary — an accepted, user-chosen risk documented in the threat model.
 //
-//  LOCATION-BASED REMINDERS ARE NOT IMPLEMENTED (v1.0). No Core Location import, no
-//  UNLocationNotificationTrigger. The `LocationTrigger` type exists in the data
-//  model for v1.1 only (brief §8.4).
+//  LOCATION-BASED REMINDERS ARE IMPLEMENTED (D-081, 2026-06-23; this header
+//  previously denied it — corrected 2026-07-01): `scheduleLocationReminder`
+//  registers a `UNLocationNotificationTrigger` geofence for a Take's
+//  `locationReminder`. The security claim above covers BOTH kinds — a location
+//  notification's title is the same single boundary-crossing as a time one.
 //
 //  TESTABILITY (Task 7.2): the dependency on `UNUserNotificationCenter` is hidden
 //  behind the `NotificationScheduling` protocol so unit tests can inject a fake

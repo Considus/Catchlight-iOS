@@ -113,20 +113,10 @@ enum Wiring {
     /// read racing the clear would be a torn read, not just staleness.
     nonisolated(unsafe) private static var sessionKeys: KeyHierarchy?
 
-    /// Open the production SQLite store, deriving its key from the Keychain master
-    /// key. Returns nil before onboarding (no master key yet) or if the store can't
-    /// be opened. The UI falls back to an in-memory store in that window so the app
-    /// is always interactive.
-    static func makeStore() -> TakeStore? {
-        guard MasterKeyKeychain.exists(),
-              let masterKey = try? MasterKeyKeychain.retrieve(reason: "Unlock your Takes") else {
-            return nil
-        }
-        let keys = KeyHierarchy(masterKey: masterKey)
-        guard let store = try? EncryptedTakeStore(keys: keys) else { return nil }
-        sessionKeys = keys
-        return store
-    }
+    // NOTE (2026-07-01): the no-arg `makeStore()` variant — which retrieved the
+    // master key itself and would have re-prompted Face ID — was DELETED (owner-
+    // approved). It had zero callers, and reviving it would reintroduce the
+    // double-prompt D-042 eliminated. `makeStore(keys:)` below is the only path.
 
     /// Open the production store from an ALREADY-unlocked key hierarchy — no
     /// Keychain access, so no Face ID/passcode prompt (D-042). The app-entry

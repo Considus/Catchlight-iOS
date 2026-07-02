@@ -3,9 +3,9 @@
 //  Catchlight (iOS app target) — Phase 6 UI
 //
 //  Horizontal swipe actions for a timeline row. The Dailies timeline is a
-//  `LazyVStack` inside a `ScrollView` (NOT a `List`), so SwiftUI's `.swipeActions`
-//  modifier is unavailable; this rebuilds the iOS "swipe to reveal, full-swipe to
-//  commit" interaction by hand.
+//  stack inside a `ScrollView` (NOT a `List` — eager VStack since 2026-06-22),
+//  so SwiftUI's `.swipeActions` modifier is unavailable; this rebuilds the iOS
+//  "swipe to reveal, full-swipe to commit" interaction by hand.
 //
 //    • swipe LEFT  → reveals the TRAILING action (Delete). Full swipe commits.
 //    • swipe RIGHT → reveals the LEADING  action (Mark done). Full swipe commits.

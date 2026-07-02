@@ -108,8 +108,9 @@ final class FirstRunOrientationState {
         step = 5
     }
 
-    /// Developer-only reset (Settings hook). Clears the persisted step so the tour
-    /// runs again on next launch.
+    /// Developer-only reset. Clears the persisted step so the tour runs again on
+    /// next launch. FUTURE scaffolding (owner 2026-07-01: keep) — no caller yet;
+    /// the Settings hook it anticipates hasn't been built.
     func resetForDeveloper() {
         step = 0
     }
