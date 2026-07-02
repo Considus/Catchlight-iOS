@@ -312,6 +312,8 @@ struct WelcomeContent: View {
 
 private struct RestoreEntryStep: View {
     @Environment(OnboardingViewModel.self) private var vm
+    /// Status-bar / Dynamic Island inset (set at the app root) — drives the top fade.
+    @Environment(\.deviceTopInset) private var deviceTopInset
     /// Twelve discrete word fields (owner 2026-07-02, option B): explicit positions, sturdy
     /// for a once-a-year action, and no per-word validity signal (correctness is a whole-
     /// phrase check on Restore — matching onboarding's "reveal nothing granular" posture).
@@ -332,57 +334,81 @@ private struct RestoreEntryStep: View {
 
     var body: some View {
         StepScaffold {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Unlike the other steps, this screen draws its OWN brand mark INSIDE
-                    // the scroll (not the hoisted fixed one — `showsBrandMark` excludes
-                    // `.restoreEntry`) so it scrolls UP with the hero when the keyboard
-                    // rises instead of hovering over the fields (owner 2026-07-02).
-                    IntroBrandMark()
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Unlike the other steps, this screen draws its OWN brand mark INSIDE
+                        // the scroll (not the hoisted fixed one — `showsBrandMark` excludes
+                        // `.restoreEntry`) so it scrolls UP with the hero when the keyboard
+                        // rises instead of hovering over the fields (owner 2026-07-02).
+                        IntroBrandMark()
 
-                    Spacer().frame(height: introHeroTopGap)
+                        Spacer().frame(height: introHeroTopGap)
 
-                    VStack(spacing: 20) {
-                        Text("Enter your privacy phrase")
-                            .font(CatchlightFont.displayFixed(size: 28))
-                            .foregroundStyle(Color.ckTextPrimary)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityAddTraits(.isHeader)
-
-                        // Grid leads directly under the hero — same start position as the
-                        // Reveal/Confirm word grids (owner 2026-07-02).
-                        PhraseEntryGrid(fields: $fields,
-                                        onEdit: { vm.clearRestoreError() },
-                                        accessory: bridge.accessory)
-                            .padding(.top, 4)
-
-                        VStack(spacing: 8) {
-                            Text("The 12 words from your other device, in order.")
-                                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                                .foregroundStyle(Color.ckTextSecondary)
+                        VStack(spacing: 20) {
+                            Text("Enter your privacy phrase")
+                                .font(CatchlightFont.displayFixed(size: 28))
+                                .foregroundStyle(Color.ckTextPrimary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
-                            statusLine
+                                .accessibilityAddTraits(.isHeader)
+
+                            // Grid leads directly under the hero — same start position as the
+                            // Reveal/Confirm word grids (owner 2026-07-02).
+                            PhraseEntryGrid(fields: $fields,
+                                            onEdit: { vm.clearRestoreError() },
+                                            accessory: bridge.accessory)
+                                .padding(.top, 4)
+
+                            VStack(spacing: 8) {
+                                Text("The 12 words from your other device, in order.")
+                                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                                    .foregroundStyle(Color.ckTextSecondary)
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                statusLine
+                            }
+                            .id("restore-bottom")
                         }
                     }
                 }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                    keyboardUp = true
+                    // Pull the subtext / "N of 12" line up above the accessory bar (owner
+                    // 2026-07-02) once the keyboard's frame has settled.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            proxy.scrollTo("restore-bottom", anchor: .bottom)
+                        }
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                    keyboardUp = false
+                }
+                .onAppear { wireAccessory() }
+                .onChange(of: fields) { _, _ in wireAccessory() }
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollIndicators(.hidden)
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                keyboardUp = true
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-                keyboardUp = false
-            }
-            .onAppear { wireAccessory() }
-            .onChange(of: fields) { _, _ in wireAccessory() }
         } bottom: {
             // Keyboard DOWN → the pills sit in the bottom dock. Keyboard UP → the fields'
             // accessory bar carries them, so hide the bottom copy to avoid two rows.
             if !keyboardUp { pillButtons }
         }
+        // A top mask so content scrolled up dissolves before the status bar / Dynamic
+        // Island instead of running behind it — mirrors the Dailies heading fade.
+        .overlay(alignment: .top) { topFade }
+    }
+
+    private var topFade: some View {
+        VStack(spacing: 0) {
+            Color.ckBackground.frame(height: deviceTopInset)
+            LinearGradient(colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 16)
+        }
+        .ignoresSafeArea(edges: .top)
+        .allowsHitTesting(false)
     }
 
     /// Keep the keyboard accessory's actions bound to the CURRENT words and its Restore
