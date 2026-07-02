@@ -78,15 +78,10 @@ enum DebugReset {
     // MARK: - Store
 
     /// Remove the entire encrypted store directory from the app-group container.
-    /// Deleting the files (rather than issuing `delete` per Take through an
-    /// unlocked store) makes this work even when the store can't be opened, and
-    /// clears the SQLite WAL/SHM sidecars and any sequences in one move.
+    /// Delegates to the production `LocalStoreReset` primitive (shared with the
+    /// Settings → Second device wipe) so there is one deletion path.
     private static func wipeStore() {
-        let dbDir = AppGroup.containerURL().appendingPathComponent("Database", isDirectory: true)
-        try? FileManager.default.removeItem(at: dbDir)
-        // Also remove a legacy root-level db file if one was ever migrated from.
-        let legacy = AppGroup.containerURL().appendingPathComponent("catchlight.db")
-        try? FileManager.default.removeItem(at: legacy)
+        LocalStoreReset.wipeDatabaseFiles()
     }
 }
 #endif
