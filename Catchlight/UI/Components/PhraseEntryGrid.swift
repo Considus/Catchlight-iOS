@@ -19,8 +19,13 @@ struct PhraseEntryGrid: View {
     @Binding var fields: [String]
     /// Called on every field change — the parent clears its inline error as the user edits.
     var onEdit: () -> Void = {}
+    /// The shared keyboard-docked accessory (Restore/Back) each field vends so the pills
+    /// ride the keyboard (D-103). Supplied by the parent's `RestoreBarBridge`.
+    var accessory: UIView? = nil
 
-    @FocusState private var focusedIndex: Int?
+    /// Focus is driven by a plain index (the UIKit fields become/resign first responder
+    /// from it) — not `@FocusState`, which only binds SwiftUI `TextField`s.
+    @State private var focusedIndex: Int?
 
     /// 3×4 to mirror the onboarding Reveal/Confirm word grid exactly (owner 2026-07-02):
     /// three columns pack the 12 fields into four rows, and each cell reuses the Reveal
@@ -35,18 +40,13 @@ struct PhraseEntryGrid: View {
                     Text("\(index + 1)")
                         .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
                         .foregroundStyle(Color.ckTextSecondary)
-                    TextField("", text: $fields[index])
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                        .keyboardType(.asciiCapable)
-                        .submitLabel(index == 11 ? .done : .next)
-                        .focused($focusedIndex, equals: index)
-                        .onSubmit { focusedIndex = index < 11 ? index + 1 : nil }
-                        .onChange(of: fields[index]) { _, newValue in handleChange(index, newValue) }
-                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityIdentifier("restore-word-\(index + 1)")
+                    PhraseTextField(text: $fields[index],
+                                    index: index,
+                                    focusedIndex: $focusedIndex,
+                                    isLast: index == 11,
+                                    accessory: accessory,
+                                    onTextChange: { handleChange(index, $0) })
+                        .frame(maxWidth: .infinity, minHeight: 22)
                 }
                 .padding(.vertical, 10)
                 .padding(.horizontal, 8)
