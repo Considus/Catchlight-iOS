@@ -70,10 +70,13 @@ final class OnboardingViewModel {
     private let bip39: BIP39
     /// Carries the just-derived 32-byte master key so the app can open the store
     /// directly (no Keychain read, hence no Face ID/passcode prompt right after
-    /// onboarding). D-042.
-    private let onComplete: (Data) -> Void
+    /// onboarding). D-042. The `isRestore` flag distinguishes a fresh generate
+    /// (seed the starter Takes) from a cross-device restore (skip seeding — the
+    /// real Takes arrive from the cloud folder, and seeding here would push five
+    /// example Takes UP into the user's real data on first sync). D-087.
+    private let onComplete: (Data, _ isRestore: Bool) -> Void
 
-    init(onComplete: @escaping (Data) -> Void) {
+    init(onComplete: @escaping (Data, _ isRestore: Bool) -> Void) {
         self.onComplete = onComplete
         do {
             self.bip39 = BIP39(wordlist: try EnglishWordlist.load())
@@ -226,7 +229,7 @@ final class OnboardingViewModel {
         do {
             try MasterKeyKeychain.store(masterKeyData)
             try MnemonicKeychain.store(cleaned)
-            onComplete(masterKeyData)
+            onComplete(masterKeyData, /* isRestore: */ true)
         } catch let error as KeychainError {
             failure = "Couldn't secure your account on this device."
             failureDetail = describe(error)
@@ -251,7 +254,7 @@ final class OnboardingViewModel {
             // Argon2 metadata salt is no longer written — HKDF derivation uses a
             // fixed domain salt.)
             try MnemonicKeychain.store(mnemonic)
-            onComplete(masterKeyData)
+            onComplete(masterKeyData, /* isRestore: */ false)
         } catch let error as KeychainError {
             failure = "Couldn't secure your account on this device."
             failureDetail = describe(error)
