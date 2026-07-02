@@ -70,6 +70,15 @@ final class AppModel {
     /// (previews / tests) — the Cloud Storage button is a no-op in that case.
     var performManualSync: (() -> Void)?
 
+    /// Set true when a cross-device RESTORE completes with no cloud folder yet
+    /// configured (chunk 3c, D-087). A restore lands on an empty timeline — the real
+    /// Takes live in the cloud folder — so the empty state shows a guidance card that
+    /// walks the user to connect that folder rather than the generic "first Take is
+    /// waiting" line. Cleared once a folder is connected or the user dismisses.
+    /// In-memory only: the phrase is already stored, so Settings → Cloud Storage
+    /// remains a reliable fallback if the app is quit before connecting.
+    var restoreAwaitingFolder: Bool = false
+
     private(set) var needsOnboarding: Bool
     private(set) var onboardingVM: OnboardingViewModel?
 
@@ -194,12 +203,42 @@ final class AppModel {
             if !isRestore { seedIfEmpty(store) }
             rebind(to: store)
             lockState = .unlocked
+            // A restore lands empty and needs the cloud folder connected to pull the
+            // user's Takes — surface the guidance card unless a folder is already set.
+            if isRestore { restoreAwaitingFolder = !cloudFolderConfigured }
         } else {
             // The store genuinely couldn't open (corrupt / I/O) — fall back to the
             // lock screen so a relaunch/retry can recover; seed on that first unlock
             // (never for a restore).
             seedOnNextUnlock = !isRestore
             lockState = .locked
+        }
+    }
+
+    /// Whether a cloud-folder bookmark is already persisted (App Group defaults).
+    private var cloudFolderConfigured: Bool {
+        UserDefaults(suiteName: AppGroup.identifier)?
+            .data(forKey: Wiring.bookmarkDefaultsKey) != nil
+    }
+
+    /// Persist a picked cloud folder and immediately sync — the single connect path
+    /// shared by Settings → Cloud Storage and the post-restore guidance card. Saving
+    /// the bookmark alone isn't enough: the sync coordinator otherwise only fires on
+    /// app-active / background / the Sync Now button, so a freshly-connected folder
+    /// would sit idle. Firing here is also what PULLS a restored user's Takes down
+    /// (`pullInbound`'s manifest-HMAC check is the right-phrase-for-this-folder gate).
+    /// Returns a user-readable error string on failure, nil on success. D-087.
+    @discardableResult
+    func connectCloudFolder(_ url: URL) -> String? {
+        do {
+            let bookmark = try FileCloudFolder.makeBookmark(for: url)
+            UserDefaults(suiteName: AppGroup.identifier)?
+                .set(bookmark, forKey: Wiring.bookmarkDefaultsKey)
+            restoreAwaitingFolder = false   // guidance served its purpose
+            performManualSync?()
+            return nil
+        } catch {
+            return "Couldn't save that folder: \(error.localizedDescription)"
         }
     }
 

@@ -40,6 +40,9 @@ struct DailiesView: View {
     /// ZStack; drives `spineX`.
     @State private var containerWidth: CGFloat = 0
 
+    /// Presents the cloud-folder picker from the post-restore guidance card (3c).
+    @State private var restorePickerPresented = false
+
 
     /// Horizontal centre of the circles == x of the spine == the dock's Add
     /// button centre. Both derive from `CatchlightLayout.spineX(containerWidth:)`
@@ -279,7 +282,13 @@ struct DailiesView: View {
             // filter is active the timeline (with its own filter-empty line)
             // always wins, so the background-tap exit remains available.
             if vm.isEmpty && activeFilter.isEmpty && inlineNewTake == nil {
-                emptyState
+                // A restore lands empty with the real Takes still in the cloud folder —
+                // guide the user to connect it rather than show the generic Fog line (3c).
+                if app.restoreAwaitingFolder {
+                    restoreFolderGuidance
+                } else {
+                    emptyState
+                }
             } else {
                 timeline
             }
@@ -588,6 +597,41 @@ struct DailiesView: View {
             .foregroundStyle(Color.ckTextSecondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityLabel("Your first Take is waiting.")
+    }
+
+    /// Post-restore empty state (3c, D-087): the account is restored on this device
+    /// but the Takes live in the cloud folder. Connecting that folder is what pulls
+    /// them down, so the empty timeline hands the user straight to the folder picker
+    /// (via the shared `AppModel.connectCloudFolder`, which saves the bookmark AND
+    /// fires the first sync). "Not now" dismisses to the ordinary empty state — the
+    /// phrase is stored, so Settings → Cloud Storage still works later.
+    private var restoreFolderGuidance: some View {
+        VStack(spacing: 22) {
+            Text("Welcome back")
+                .font(CatchlightFont.displayFixed(size: 28))
+                .foregroundStyle(Color.ckTextPrimary)
+                .multilineTextAlignment(.center)
+
+            Text("Your account is restored on this device. Connect the cloud folder where your Takes are saved and they'll appear here.")
+                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                .foregroundStyle(Color.ckTextSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            DockPill(title: "Connect cloud folder") { restorePickerPresented = true }
+                .frame(maxWidth: 260)
+                .accessibilityIdentifier("restore-connect-folder")
+
+            Button("Not now") { app.restoreAwaitingFolder = false }
+                .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
+                .foregroundStyle(Color.ckTextSecondary)
+                .accessibilityIdentifier("restore-connect-later")
+        }
+        .padding(.horizontal, 40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(isPresented: $restorePickerPresented) {
+            FolderPicker { url in _ = app.connectCloudFolder(url) }
+        }
     }
 
     // MARK: - Timeline
