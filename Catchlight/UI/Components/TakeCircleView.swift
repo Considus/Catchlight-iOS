@@ -72,7 +72,10 @@ struct TakeCircleView: View {
 
     @Environment(\.colorScheme) private var scheme
 
-    private var hasReminder: Bool { take.timeReminder != nil }
+    /// A "where" lights the Remind wedge exactly like a "when" (2026-07-01,
+    /// place/time parity — previously a place reminder showed no wedge, so the
+    /// Iris and the card subtext disagreed about whether the Take had a reminder).
+    private var hasReminder: Bool { take.timeReminder != nil || take.locationReminder != nil }
 
     var body: some View {
         ZStack {
