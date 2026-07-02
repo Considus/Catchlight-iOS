@@ -258,7 +258,14 @@ final class AppModel {
         await attemptUnlock()
         // Cancelled / failed: stay in the capture editor (text preserved) for a retry.
         guard lockState == .unlocked else { return }
-        guard ensureEntitled() else { lockedCapture = nil; return }
+        guard ensureEntitled() else {
+            // Paywall interrupted the save (owner 2026-07-01): HOLD the typed
+            // draft for the paywall's outcome — saved if they subscribe, dropped
+            // if the paywall closes unsubscribed — instead of destroying it here.
+            holdDraftForPaywall(draft)
+            lockedCapture = nil
+            return
+        }
 
         dailiesVM.save(draft)   // real store is bound by attemptUnlock's rebind
         lockedCapture = nil
@@ -373,6 +380,35 @@ final class AppModel {
     func clearQuarantineNotice() { quarantinedCount = 0 }
 
     // MARK: - Task 6.20 / 6.21 — subscription gating
+
+    // MARK: - Draft preservation at the paywall (owner decision 2026-07-01)
+
+    /// A typed draft whose save was interrupted by the paywall. Held until the
+    /// paywall resolves: SAVED if the user subscribes, DROPPED if the paywall
+    /// closes without an active subscription. Previously all three interrupted
+    /// save paths (locked capture, timeline inline edit, Storyboard edit)
+    /// silently destroyed the typed text the moment the paywall appeared —
+    /// inconsistent with the auth-retry branch and the relock auto-save, both
+    /// of which preserve in-progress work. One slot: the paywall is modal, so
+    /// at most one interrupted save can be pending.
+    private(set) var pendingEntitledSave: Take?
+
+    /// Hold a draft whose `ensureEntitled()` just returned false (the paywall is
+    /// presenting) for the paywall's outcome, instead of discarding typed text.
+    func holdDraftForPaywall(_ draft: Take) {
+        pendingEntitledSave = draft
+    }
+
+    /// Resolve the held draft when the paywall dismisses: save it if the user is
+    /// now entitled, otherwise drop it (the agreed policy — no subscription, no
+    /// write). Idempotent; safe to call on every paywall dismissal.
+    func resolvePendingEntitledSave() {
+        defer { pendingEntitledSave = nil }
+        guard let draft = pendingEntitledSave,
+              lockState == .unlocked,
+              subscriptionStatus.isEntitled else { return }
+        dailiesVM.save(draft)
+    }
 
     /// Returns true if the caller may proceed with a create/edit action.
     /// When false, opens the paywall as a side-effect so the call-site can

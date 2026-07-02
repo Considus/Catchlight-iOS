@@ -270,8 +270,14 @@ struct StoryboardView: View {
         editFocusedBlockID = nil
         guard var t = editDraft else { return }
         withAnimation(reduceMotion ? nil : UIState.fanFade) { editDraft = nil }
-        guard app.ensureEntitled() else { return }
         t.removeEmptyTextBlocks()
+        guard app.ensureEntitled() else {
+            // Paywall interrupted the save (owner 2026-07-01): hold the typed
+            // draft for the paywall's outcome — saved on subscribe, dropped on
+            // unsubscribed dismiss — instead of clearing it above and returning.
+            app.holdDraftForPaywall(t)
+            return
+        }
         vm.save(t)
     }
 

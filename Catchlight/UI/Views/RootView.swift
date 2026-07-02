@@ -194,7 +194,14 @@ struct RootView: View {
             ConflictResolutionView()
                 .environment(app.dailiesVM)
         }
-        .sheet(isPresented: $ui.isPaywallPresented) {
+        .sheet(isPresented: $ui.isPaywallPresented,
+               onDismiss: {
+                   // Resolve a paywall-interrupted save (owner 2026-07-01): the
+                   // held draft is written if the user subscribed while the
+                   // paywall was up, dropped otherwise. Idempotent no-op when
+                   // nothing is held.
+                   app.resolvePendingEntitledSave()
+               }) {
             PaywallView()
                 .environment(app)
         }

@@ -1273,7 +1273,6 @@ struct DailiesView: View {
         editFocusedBlockID = nil            // release the keyboard first
         defer { editDraft = nil; ui.endEditingInPlace() }
         guard var t = editDraft else { return }
-        guard app.ensureEntitled() else { return }
         t.removeEmptyTextBlocks()
         let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !t.isTask && t.timeReminder == nil && !t.isObie
@@ -1281,9 +1280,15 @@ struct DailiesView: View {
         let storedCopy = try? vm.store.take(id: t.id)
         let storedHadContent = (storedCopy?.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
         if isBlank && !storedHadContent {
-            vm.discardIfPresent(t)
-        } else {
+            vm.discardIfPresent(t)          // nothing typed — no entitlement needed to discard
+        } else if app.ensureEntitled() {
             vm.save(t)
+        } else {
+            // Paywall interrupted the save (owner 2026-07-01): hold the typed
+            // draft for the paywall's outcome — saved on subscribe, dropped on
+            // unsubscribed dismiss — never silently destroyed here. (Previously
+            // the defer cleared the draft while the entitlement guard returned.)
+            app.holdDraftForPaywall(t)
         }
     }
 

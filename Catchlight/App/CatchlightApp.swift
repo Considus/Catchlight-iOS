@@ -144,6 +144,11 @@ struct CatchlightApp: App {
         } else {
             // Zero-Face-ID capture: type now, unlock at save. Entitlement is checked
             // post-unlock in saveLockedCapture (ensureEntitled needs the unlocked state).
+            // Never clobber an IN-PROGRESS locked draft (2026-07-01): a second
+            // widget/Control tap while the user is mid-typing would replace their
+            // text with a fresh blank. Keep the live draft; the new request was
+            // cleared above, so it's a deliberate drop, not a deferred re-fire.
+            guard app.lockedCapture == nil else { return }
             app.lockedCapture = draft
         }
     }
