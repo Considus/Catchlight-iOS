@@ -27,6 +27,7 @@ final class OnboardingViewModel {
 
     enum Step {
         case welcome
+        case restoreEntry     // "I already use Catchlight" — enter an existing phrase
         case storageChoice
         case localWarning
         case reveal
@@ -182,6 +183,66 @@ final class OnboardingViewModel {
                 self.usedBankIndices = []
                 self.flashError = false
             }
+        }
+    }
+
+    // MARK: - Restore (existing phrase — cross-device recovery, D-087)
+
+    /// Inline error under the restore field ("that phrase isn't valid …"); nil when clean.
+    private(set) var restoreError: String?
+
+    /// Welcome secondary action — "I already use Catchlight".
+    func beginRestore() {
+        restoreError = nil
+        step = .restoreEntry
+    }
+
+    /// Restore-screen back action → Welcome.
+    func cancelRestore() {
+        restoreError = nil
+        step = .welcome
+    }
+
+    /// Clear the inline restore error as the user edits the field.
+    func clearRestoreError() {
+        if restoreError != nil { restoreError = nil }
+    }
+
+    /// Whether a single word is in the BIP-39 wordlist — drives the per-word ruby highlight
+    /// as the user types, so a mistyped word is caught before they submit.
+    func isKnownWord(_ word: String) -> Bool {
+        let w = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return !w.isEmpty && wordSet.contains(w)
+    }
+    @ObservationIgnored private lazy var wordSet = Set(bip39.wordlist.words)
+
+    /// Validate the entered phrase, derive + store the master key, and hand off exactly like
+    /// `finishOnboarding` (same storage calls, same `onComplete`). `PhraseRecovery` throws on
+    /// a bad checksum / wrong count / unknown word → an inline message, not the failure screen;
+    /// a Keychain fault is a real device problem → the failure escape-hatch.
+    func submitRestore(_ words: [String]) {
+        let cleaned = words
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+        let masterKeyData: Data
+        do {
+            masterKeyData = try PhraseRecovery.recoverMasterKey(from: cleaned, bip39: bip39)
+        } catch {
+            restoreError = "That phrase isn't valid. Check the words and try again."
+            return
+        }
+        do {
+            try MasterKeyKeychain.store(masterKeyData)
+            try MnemonicKeychain.store(cleaned)
+            onComplete(masterKeyData)
+        } catch let error as KeychainError {
+            failure = "Couldn't secure your account on this device."
+            failureDetail = describe(error)
+            step = .failure
+        } catch {
+            failure = "Couldn't secure your account on this device."
+            failureDetail = "\(error)"
+            step = .failure
         }
     }
 
