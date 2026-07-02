@@ -111,16 +111,18 @@ struct AboutView: View {
 
     /// External links, grouped in one card (matches the licences card). Privacy +
     /// Terms reuse the paywall's URLs; Website is the marketing/guides hub; Support
-    /// opens Mail. ⚠️ Support address is a placeholder pending owner confirmation.
+    /// opens the `/support/` web form — the single cross-platform intake
+    /// (D-091/D-092; the old placeholder `mailto:` contradicted that decision
+    /// and pointed at an unconfirmed address — 2026-07-01).
     private var links: some View {
         VStack(spacing: 0) {
-            linkRow("Privacy Policy", url: "https://catchlight.app/privacy", opensMail: false)
+            linkRow("Privacy Policy", url: "https://catchlight.app/privacy")
             linkDivider
-            linkRow("Terms of Service", url: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/", opensMail: false)
+            linkRow("Terms of Service", url: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")
             linkDivider
-            linkRow("Support", url: "mailto:support@catchlight.app", opensMail: true)
+            linkRow("Support", url: "https://catchlight.app/support/?platform=iOS")
             linkDivider
-            linkRow("Website", url: "https://catchlight.app", opensMail: false)
+            linkRow("Website", url: "https://catchlight.app")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
@@ -130,24 +132,29 @@ struct AboutView: View {
         )
     }
 
-    private func linkRow(_ title: String, url: String, opensMail: Bool) -> some View {
-        Link(destination: URL(string: url)!) {
-            HStack(spacing: 12) {
-                Text(title)
-                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
-                    .foregroundStyle(Color.ckTextPrimary)
-                Spacer()
-                Image(systemName: opensMail ? "envelope" : "arrow.up.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.ckAccent)
-                    .accessibilityHidden(true)
+    @ViewBuilder
+    private func linkRow(_ title: String, url: String) -> some View {
+        // Safe construction (2026-07-01): the strings are constants, but a typo in
+        // a future edit becomes a hidden row rather than a crash.
+        if let destination = URL(string: url) {
+            Link(destination: destination) {
+                HStack(spacing: 12) {
+                    Text(title)
+                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                        .foregroundStyle(Color.ckTextPrimary)
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.ckAccent)
+                        .accessibilityHidden(true)
+                }
+                .padding(.vertical, 13)
+                .padding(.horizontal, 16)
+                .contentShape(Rectangle())
             }
-            .padding(.vertical, 13)
-            .padding(.horizontal, 16)
-            .contentShape(Rectangle())
+            .accessibilityLabel(title)
+            .accessibilityHint("Opens in your browser.")
         }
-        .accessibilityLabel(title)
-        .accessibilityHint(opensMail ? "Opens your mail app." : "Opens in your browser.")
     }
 
     private var linkDivider: some View {

@@ -78,4 +78,20 @@ final class DiagnosticsLogTests: XCTestCase {
         log.clear()
         XCTAssertTrue(log.entries().isEmpty)
     }
+
+    /// Notice History's Clear removes only what it SHOWS (2026-07-01): the
+    /// lifecycle breadcrumbs survive so "Export diagnostics" still has content
+    /// for a bug report after the user tidies their notices.
+    func testClearUserFacing_keepsLifecycleBreadcrumbs() {
+        let log = DiagnosticsLog(fileURL: fileURL)
+        log.record(.sync, "Sync paused.")
+        log.record(.lifecycle, "app became active")
+        log.record(.conflict, "1 Take changed on another device.")
+
+        log.clearUserFacing()
+
+        XCTAssertTrue(log.userFacingEntries().isEmpty, "the notices list must empty")
+        XCTAssertEqual(log.entries().map(\.category), [.lifecycle],
+                       "breadcrumbs must survive for the diagnostics export")
+    }
 }

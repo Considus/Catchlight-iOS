@@ -216,7 +216,10 @@ final class SearchBarAccessory: UIView {
         field.layer.borderWidth = 1.5
         field.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
         field.textColor = Self.textPrimary
-        field.tintColor = UIColor(red: 0xC9/255, green: 0xA9/255, blue: 0x6E/255, alpha: 1) // Ember caret
+        // Adaptive accent caret (2026-07-01): the fixed #C9A96E was the raw Night
+        // Ember — the exact low-contrast-on-Paper case ckAccent exists to avoid;
+        // `Self.ember` already carries the Daylight-accessible pair.
+        field.tintColor = Self.ember
         field.font = .systemFont(ofSize: 14)
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
