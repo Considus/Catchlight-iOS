@@ -77,10 +77,13 @@ enum ImportCoordinator {
             }
             let modDate = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
                 .contentModificationDate ?? Date()
-            if let take = TakeImporter.parse(content, fileDate: modDate) {
-                takes.append(take)
-            } else {
+            // `parseDocument` splits a Catchlight export back into its individual Takes
+            // (D-088); a foreign note still yields a single Take.
+            let parsed = TakeImporter.parseDocument(content, fileDate: modDate)
+            if parsed.isEmpty {
                 skipped += 1   // empty / no content
+            } else {
+                takes.append(contentsOf: parsed)
             }
         }
         return Outcome(takes: takes, filesScanned: files.count, skipped: skipped)

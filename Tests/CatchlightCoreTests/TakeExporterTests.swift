@@ -57,7 +57,9 @@ final class TakeExporterTests: XCTestCase {
                         blocks: [.textLine("Buy film for the weekend shoot")],
                         isNote: true)
         let out = TakeExporter.export([take], exportedAt: exportedAt)
-        let expected = """
+        // The VISIBLE Markdown is byte-exact and unchanged; the lossless data block
+        // (D-088) follows it, so assert the human portion as a prefix.
+        let expectedVisible = """
         ---
         exported: 2026-06-09T14:32:00Z
         takes: 1
@@ -67,7 +69,9 @@ final class TakeExporterTests: XCTestCase {
         Buy film for the weekend shoot
 
         """
-        XCTAssertEqual(out, expected)
+        XCTAssertTrue(out.hasPrefix(expectedVisible), "Got: \(out)")
+        XCTAssertTrue(out.contains("<!-- catchlight:data"), "Markdown export carries the data block")
+        XCTAssertTrue(out.hasSuffix("-->\n"))
     }
 
     func testExport_completedTask_rendersCheckMarkerAndHeading() {
