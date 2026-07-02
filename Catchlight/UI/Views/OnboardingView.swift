@@ -10,6 +10,7 @@
 //
 
 import SwiftUI
+import UIKit
 import CatchlightCore
 
 /// The fixed gap below the brand mark at which EVERY onboarding hero line (the
@@ -322,6 +323,12 @@ private struct RestoreEntryStep: View {
     private var filledCount: Int { words.filter { !$0.isEmpty }.count }
     private var ready: Bool { filledCount == 12 }
 
+    /// The keyboard is the only thing that rises on this screen, so we track it to move
+    /// the Restore/Back pills from the bottom dock (keyboard down) INTO the keyboard's
+    /// accessory bar (keyboard up), so they ride the keyboard like the in-app editor
+    /// toolbar instead of hovering over the fields (owner 2026-07-02).
+    @State private var keyboardUp = false
+
     var body: some View {
         StepScaffold {
             ScrollView {
@@ -360,15 +367,34 @@ private struct RestoreEntryStep: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .scrollIndicators(.hidden)
+            // Ride the keyboard: when it's up the pills live in its accessory bar (docked
+            // flush on top of the keyboard, like the editor toolbar).
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    pillButtons
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                keyboardUp = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                keyboardUp = false
+            }
         } bottom: {
-            DockPillRow(primary: {
-                DockPill(title: "Restore") { vm.submitRestore(words) }
-                    .disabled(!ready)
-                    .opacity(ready ? 1 : 0.5)
-            }, trailing: {
-                DockPill(title: "Back", secondary: true) { vm.cancelRestore() }
-            })
+            // Keyboard DOWN → the pills sit in the bottom dock. Keyboard UP → they move to
+            // the accessory bar above, so hide the bottom copy to avoid two rows.
+            if !keyboardUp { pillButtons }
         }
+    }
+
+    private var pillButtons: some View {
+        DockPillRow(primary: {
+            DockPill(title: "Restore") { vm.submitRestore(words) }
+                .disabled(!ready)
+                .opacity(ready ? 1 : 0.5)
+        }, trailing: {
+            DockPill(title: "Back", secondary: true) { vm.cancelRestore() }
+        })
     }
 
     private var statusLine: some View {
