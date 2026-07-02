@@ -261,23 +261,16 @@ struct CloudStorageView: View {
     // MARK: - Handlers
 
     private func handlePickedFolder(_ url: URL) {
-        do {
-            let bookmark = try FileCloudFolder.makeBookmark(for: url)
-            appGroupDefaults?.set(bookmark, forKey: Wiring.bookmarkDefaultsKey)
+        // Save the bookmark AND fire the first sync via the shared AppModel path
+        // (also used by the post-restore guidance card) so connect-then-sync behaves
+        // identically from both entry points. D-087.
+        if let error = app.connectCloudFolder(url) {
+            errorText = error
+        } else {
             folderDisplayPath = url.path
             errorText = nil
-            // Sync the moment the folder is connected. Connecting a folder is an
-            // explicit "start syncing here" action, but the coordinator otherwise
-            // only fires on app-active / background / the Sync Now button — so
-            // without this, a freshly-connected folder sat idle until one of those.
-            // This is also the step that makes a cross-device RESTORE work: entering
-            // the phrase stored the key; connecting the same folder is what actually
-            // PULLS the user's Takes down (the manifest-HMAC check inside pullInbound
-            // doubles as the "is this the right phrase for this folder?" gate). The
-            // `.disabled` kill-switch is still honoured inside makeSyncEngine. D-087.
-            fireManualSync()
-        } catch {
-            errorText = "Couldn't save that folder: \(error.localizedDescription)"
+            syncFeedback = "Syncing…"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { syncFeedback = nil }
         }
     }
 
