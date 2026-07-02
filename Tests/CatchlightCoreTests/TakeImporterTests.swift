@@ -84,4 +84,37 @@ final class TakeImporterTests: XCTestCase {
         XCTAssertEqual(take?.blocks.first?.text, "a")
         XCTAssertEqual(take?.checkItems.map(\.text), ["b"])
     }
+
+    // MARK: - Export → import round trip (pin of the PRESERVED subset)
+
+    /// Full round-trip fidelity is a documented NON-goal (one file = one Take;
+    /// no heading re-split, no reminder/date reconstruction — see this file's
+    /// header). This pins what IS guaranteed to survive an export→import cycle
+    /// (2026-07-01 review follow-up): every prose line and every check item
+    /// with its done state. If the exporter's format ever changes in a way that
+    /// breaks even this floor, this test is the alarm.
+    func testExportThenImport_preservesProseAndCheckStates() throws {
+        var take = Take(createdAt: date, modifiedAt: date,
+                        blocks: [
+                            .textLine("Packing list"),
+                            .checkItem("passport", isComplete: true),
+                            .checkItem("charger", isComplete: false),
+                            .textLine("buy water at the airport")
+                        ],
+                        isNote: true)
+        take.normaliseActivityFloor()
+
+        let exported = TakeExporter.export([take], format: .markdown,
+                                           exportedAt: date,
+                                           timeZone: TimeZone(secondsFromGMT: 0)!)
+        let reimported = try XCTUnwrap(TakeImporter.parse(exported, fileDate: date))
+
+        XCTAssertTrue(reimported.plainText.contains("Packing list"))
+        XCTAssertTrue(reimported.plainText.contains("buy water at the airport"))
+        XCTAssertEqual(reimported.checkItems.map(\.text), ["passport", "charger"],
+                       "check items survive in order")
+        XCTAssertEqual(reimported.checkItems.map(\.isComplete), [true, false],
+                       "done states survive")
+        XCTAssertTrue(reimported.isTask, "check items make the re-import a Task")
+    }
 }

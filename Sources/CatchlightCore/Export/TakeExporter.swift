@@ -42,7 +42,7 @@ public enum TakeExporter {
     }
 
     /// Build the payload for sharing. Pure: deterministic for a given
-    /// `(takes, format, exportedAt)` so tests can pin the timestamp.
+    /// `(takes, format, exportedAt, timeZone)` so tests can pin both.
     ///
     /// - Parameters:
     ///   - takes: Takes to export. Re-sorted by `createdAt` ascending so the
@@ -50,14 +50,22 @@ public enum TakeExporter {
     ///   - format: Markdown (default — unchanged byte layout) or plain text.
     ///   - exportedAt: The export timestamp; injected so tests are deterministic.
     ///                 Defaults to `Date()` in production callers.
-    public static func export(_ takes: [Take], format: Format = .markdown, exportedAt: Date = Date()) -> String {
+    ///   - timeZone: The zone Take-level dates render in (owner decision
+    ///               2026-07-01: LOCAL time — a 09:00 reminder must read 09:00
+    ///               in the export, not its UTC instant). Injected so the
+    ///               byte-exact format tests stay deterministic; defaults to
+    ///               the device zone. The file-level `exported:` header stays
+    ///               ISO-UTC — it is file metadata, not a Take timestamp.
+    public static func export(_ takes: [Take], format: Format = .markdown,
+                              exportedAt: Date = Date(),
+                              timeZone: TimeZone = .current) -> String {
         let sorted = takes.sorted { $0.createdAt < $1.createdAt }
 
         var out = preamble(format: format, count: sorted.count, exportedAt: exportedAt)
 
         for take in sorted {
             out += "\n"
-            let h = heading(for: take)
+            let h = heading(for: take, timeZone: timeZone)
             out += (format == .markdown ? "## \(h)" : h) + "\n"
             out += "\(body(for: take, format: format))\n"
         }
@@ -96,9 +104,10 @@ public enum TakeExporter {
     /// Suggested filename for the share sheet, e.g. `catchlight-2026-06-09.md`
     /// (Markdown) or `…-.txt` (plain text). Single timestamp granularity (day) —
     /// multiple same-day exports are disambiguated by the OS's "Save As" dialog.
-    public static func suggestedFilename(format: Format = .markdown, exportedAt: Date = Date()) -> String {
+    public static func suggestedFilename(format: Format = .markdown, exportedAt: Date = Date(),
+                                         timeZone: TimeZone = .current) -> String {
         let ext = format == .markdown ? "md" : "txt"
-        return "catchlight-\(ymdFormatter.string(from: exportedAt)).\(ext)"
+        return "catchlight-\(makeFormatter("yyyy-MM-dd", timeZone: timeZone).string(from: exportedAt)).\(ext)"
     }
 
     /// Whether a filename matches the export naming pattern. Used by the app
@@ -116,10 +125,12 @@ public enum TakeExporter {
     /// — Reminder is the most specific qualifier so it owns the heading when
     /// present; the body text and any future per-Take view still show all the
     /// activity types via the petal fan.
-    static func heading(for take: Take) -> String {
-        let date = ymd(take.createdAt)
+    static func heading(for take: Take, timeZone: TimeZone = .current) -> String {
+        let ymd = makeFormatter("yyyy-MM-dd", timeZone: timeZone)
+        let ymdHm = makeFormatter("yyyy-MM-dd HH:mm", timeZone: timeZone)
+        let date = ymd.string(from: take.createdAt)
         if let reminder = take.timeReminder {
-            return "Reminder — \(date) · 🔔 \(ymdHm(reminder.scheduledDate))"
+            return "Reminder — \(date) · 🔔 \(ymdHm.string(from: reminder.scheduledDate))"
         }
         if take.isTask {
             let suffix = take.isComplete ? " · ✓ Complete" : ""
@@ -130,33 +141,31 @@ public enum TakeExporter {
 
     // MARK: - Date helpers
     //
-    // Formatters are CACHED as statics (2026-06-10): `DateFormatter` init is one
-    // of Foundation's most expensive allocations, and `ymd` previously built a
-    // fresh one per Take per export. `DateFormatter` is thread-safe on modern
-    // OS releases, matching the pattern already used by `ISO8601.formatter`.
+    // Take-level dates (creation dates, reminder bell stamps, the filename date)
+    // render in LOCAL time (owner decision 2026-07-01) — the previous all-UTC
+    // rendering made a 09:00 reminder export as its UTC instant, which read as
+    // simply wrong to the user. The formatters are built per export call (two
+    // allocations per export, not per Take — the 2026-06-10 perf concern was the
+    // per-Take rebuild) so the zone stays injectable for byte-exact tests.
+    // The file-level `exported:` header keeps the cached ISO-UTC formatter: it
+    // is machine-ish file metadata, not a Take timestamp.
 
-    private static func makeUTCFormatter(_ format: String) -> DateFormatter {
+    private static func makeFormatter(_ format: String, timeZone: TimeZone) -> DateFormatter {
         let fmt = DateFormatter()
         fmt.calendar = Calendar(identifier: .gregorian)
         fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
+        fmt.timeZone = timeZone
         fmt.dateFormat = format
         return fmt
     }
 
-    private static let isoUTCFormatter = makeUTCFormatter("yyyy-MM-dd'T'HH:mm:ss'Z'")
-    private static let ymdFormatter = makeUTCFormatter("yyyy-MM-dd")
-    private static let ymdHmFormatter = makeUTCFormatter("yyyy-MM-dd HH:mm")
+    private static let isoUTCFormatter: DateFormatter = {
+        let fmt = makeFormatter("yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone: TimeZone(secondsFromGMT: 0)!)
+        return fmt
+    }()
 
     /// `yyyy-MM-ddTHH:mm:ssZ` — ISO 8601 in UTC, no fractional seconds.
     /// POSIX locale + Gregorian calendar so the output is stable regardless of
-    /// the device's region / calendar settings.
+    /// the device's region / calendar settings. Header metadata only.
     static func isoUTC(_ date: Date) -> String { isoUTCFormatter.string(from: date) }
-
-    /// `yyyy-MM-dd` in UTC. Creation dates in the heading are always rendered
-    /// in UTC so an export looks identical regardless of where the device is.
-    static func ymd(_ date: Date) -> String { ymdFormatter.string(from: date) }
-
-    /// `yyyy-MM-dd HH:mm` in UTC. Used for the reminder bell stamp.
-    static func ymdHm(_ date: Date) -> String { ymdHmFormatter.string(from: date) }
 }
