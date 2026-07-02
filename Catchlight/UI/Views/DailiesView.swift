@@ -1210,7 +1210,15 @@ struct DailiesView: View {
                 saveInlineEdit()
             }
         } else {
-            Color.ckBackground.ignoresSafeArea().onAppear { anglePresented = false }
+            // The draft stopped being a task mid-Angle (last check item deleted),
+            // so no Angle applies. Route through the normal COMMIT (2026-07-01)
+            // instead of just dropping the cover — the raw flag flip stranded the
+            // user on a masked, keyboard-less editor, bypassing the blank check
+            // until a mask tap later saved the emptied draft as a blank Note.
+            Color.ckBackground.ignoresSafeArea().onAppear {
+                anglePresented = false
+                saveInlineEdit()
+            }
         }
     }
 
