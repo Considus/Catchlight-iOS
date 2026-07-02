@@ -1107,7 +1107,7 @@ struct DailiesView: View {
             // long-press menu uses), so a reminder's `isDone` flips: the card greys and
             // an overdue reminder clears its ruby. `isMarkedDone` (not `isComplete`)
             // drives the label so a reminder reads correctly.
-            leading: (take.isTask || take.timeReminder != nil)
+            leading: take.canBeMarkedDone
                 ? SwipeAction(
                     title: take.isMarkedDone ? "Not done" : "Done",
                     systemImage: take.isMarkedDone ? "arrow.uturn.left" : "checkmark",

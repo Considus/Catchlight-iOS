@@ -99,8 +99,13 @@ public struct SequenceFilter: Codable, Equatable, Sendable {
     /// - Parameter now: reference instant for the expired-reminder constraint.
     public func matches(_ take: Take, calendar: Calendar = .current, now: Date = Date()) -> Bool {
         if requireTask && !take.isTask { return false }
-        if requireReminder && take.timeReminder == nil { return false }
-        if requireNoteOnly && (take.isTask || take.timeReminder != nil) { return false }
+        // A "where" counts as a reminder like a "when" (2026-07-01, place/time
+        // parity): the Reminders toggle matches place reminders too, and a place
+        // Take is no longer "note only". Expired stays TIME-only below — a
+        // geofence has no due instant to be past.
+        let hasAnyReminder = take.timeReminder != nil || take.locationReminder != nil
+        if requireReminder && !hasAnyReminder { return false }
+        if requireNoteOnly && (take.isTask || hasAnyReminder) { return false }
         if requireCompleted && !(take.isTask && take.isComplete) { return false }
         if requireExpiredReminder {
             // "Expired" == the timeline's ruby OVERDUE state, single-sourced on

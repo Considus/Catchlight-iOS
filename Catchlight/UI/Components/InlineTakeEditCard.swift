@@ -48,7 +48,7 @@ struct InlineTakeEditCard: View {
             isImportant: draft.isImportant,
             angleEnabled: AngleRegistry.applicable(to: draft).first != nil,
             isDone: draft.isMarkedDone,
-            doneEnabled: draft.isTask || draft.timeReminder != nil,
+            doneEnabled: draft.canBeMarkedDone,
             hasReminder: draft.timeReminder != nil,
             onToggleImportant: { draft.isImportant.toggle() },
             onOpenAngle: { onOpenAngle?() },

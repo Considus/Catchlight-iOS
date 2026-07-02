@@ -268,7 +268,9 @@ public final class ReminderScheduler {
         // Model C parity with time reminders (owner 2026-06-27): a "where" only registers a
         // geofence when its alarm is enabled. A silent location reminder (alarm off) is a
         // place TAG — the Take keeps the location and shows it on the card, but nothing nags.
-        guard loc.alarmEnabled else { return }
+        // A place marked DONE schedules nothing either (2026-07-01, mirrors the time
+        // reminder's `!isDone` guard — a settled "where" must not re-arm on rebuild).
+        guard loc.alarmEnabled, !loc.isDone else { return }
         let identifier = Self.locationIdentifier(base: take.id.uuidString)
         let radius = max(Self.minGeofenceRadius, loc.radiusMetres)
         let coordinate = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
@@ -320,7 +322,7 @@ public final class ReminderScheduler {
         // same 64-request budget as the calendar alarms — count them FIRST and size
         // the alarm budget around them (2026-07-01).
         let locationTakes = takes
-            .filter { $0.locationReminder?.alarmEnabled == true }
+            .filter { $0.locationReminder?.alarmEnabled == true && $0.locationReminder?.isDone != true }
             .prefix(Self.maxLocationRegions)
         let chosen = takes
             .flatMap { plannedAlarms(for: $0, now: n) }
