@@ -170,4 +170,24 @@ final class TakeImporterTests: XCTestCase {
         XCTAssertEqual(takes.count, 1)
         XCTAssertTrue(takes[0].isTask)
     }
+
+    /// A REPEATING reminder — cadence and weekdays — round-trips via the data block, even
+    /// though the visible heading only shows the next fire time (owner asked 2026-07-02).
+    func testExportThenImport_recurringReminder_cadenceAndWeekdaysSurvive() throws {
+        let created = Date(timeIntervalSince1970: 1_700_000_000)
+        var take = Take(createdAt: created, modifiedAt: created,
+                        blocks: [.textLine("water the plants")], isNote: true)
+        take.timeReminder = TimeReminder(scheduledDate: created.addingTimeInterval(3600),
+                                         notificationIdentifier: take.id.uuidString,
+                                         recurrence: .weekly,
+                                         weekdays: [2, 4, 6])   // Mon / Wed / Fri
+
+        let exported = TakeExporter.export([take], exportedAt: created)
+        let reimported = TakeImporter.parseDocument(exported, fileDate: created)
+
+        XCTAssertEqual(reimported.count, 1)
+        let r = try XCTUnwrap(reimported.first?.timeReminder, "reminder survives")
+        XCTAssertEqual(r.recurrence, .weekly, "recurrence cadence round-trips")
+        XCTAssertEqual(r.weekdays, [2, 4, 6], "recurring weekdays round-trip")
+    }
 }
