@@ -191,6 +191,9 @@ final class AppModel {
     private func completeOnboarding(with masterKeyData: Data, isRestore: Bool) {
         onboardingVM = nil
         needsOnboarding = false
+        // A restoring user already knows the app — skip the first-run orientation tour
+        // (owner 2026-07-02). step 5 = complete, so no hint ever arms.
+        if isRestore { orientation.step = 5 }
         // Open the store directly from the key we JUST derived — no Keychain read,
         // so NO Face ID/passcode prompt right after setup (the user lands straight in
         // the seeded timeline). The `.userPresence` prompt first appears on the next
@@ -296,6 +299,7 @@ final class AppModel {
         }
         rebind(to: store)        // fresh empty store under the new account
         lockState = .unlocked
+        orientation.step = 5     // returning user — skip the first-run tour (owner 2026-07-02)
 
         // 5. The new account needs its OWN cloud folder — the previous bookmark (if any)
         //    belonged to the old account. Clear it and show the connect-folder guidance,
