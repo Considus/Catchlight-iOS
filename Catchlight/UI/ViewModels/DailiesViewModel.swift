@@ -56,12 +56,22 @@ final class DailiesViewModel {
     /// Fire the local-change hook (nil-safe).
     private func notifyLocalChange() { onLocalChange?() }
 
+    /// - Parameter notificationAuthPreflighted: TEST SEAM ONLY. When true the VM
+    ///   starts as if the one-time notification-auth request has already run, so
+    ///   `reconcileNotification` takes its deterministic SYNCHRONOUS scheduling
+    ///   branch instead of spawning the first-reminder `Task { await
+    ///   requestAuthorization() }`. Defaults to false — production is unchanged
+    ///   (the app still asks for auth on the user's first reminder). Tests set it
+    ///   true so scheduling is observable in-line and no deferred Task outlives the
+    ///   test (the async branch wedged the 18.5 sim's runner — 2026-07-02).
     init(store: TakeStore,
          spotlight: SpotlightIndexing = NoopSpotlightIndexer(),
-         reminders: ReminderScheduler = ReminderScheduler()) {
+         reminders: ReminderScheduler = ReminderScheduler(),
+         notificationAuthPreflighted: Bool = false) {
         self.store = store
         self.spotlight = spotlight
         self.reminders = reminders
+        self.didRequestNotificationAuth = notificationAuthPreflighted
         reload()
     }
 
