@@ -428,13 +428,19 @@ struct TakeCardSurface: View {
     private var bodyNeedsLinkSpacing: Bool { bodyLinks.count >= 2 }
 
     /// The full Take body shown on the card — the `lineLimit` (driven by the "Preview"
-    /// setting) decides how much is visible. Colour is PER-ITEM (owner 2026-06-22): a
-    /// completed check item greys on its own (`ckTextComplete`); prose and incomplete
-    /// items keep the base tone (Obie gold / primary) even when the Take reads "done" —
-    /// so one ticked checkbox no longer greys the whole Take. Doneness still shows via
-    /// the grey card border + the reminder label. URLs render as tappable accent links.
+    /// setting) decides how much is visible. Colour rule (owner 2026-06-22, refined
+    /// 2026-07-02):
+    ///   • **Whole Take marked done** (all items ticked, or a swipe/long-press marks the
+    ///     reminder/task done → `isMarkedDone`) → the ENTIRE body greys, via
+    ///     `style.bodyText` = `ckTextComplete`. Single-sourced with `TakeCardStyle` so the
+    ///     timeline and the inline editor recede by the same amount, in BOTH schemes
+    ///     (`ckTextComplete` is adaptive: Fog @82% Daylight / @58% Night).
+    ///   • **One item of several ticked** (NOT `isMarkedDone`) → base stays primary/Obie
+    ///     and only that completed check item greys on its own (loop below) — so a single
+    ///     tick never greys the whole Take.
+    /// URLs render as tappable accent links.
     private var displayBody: AttributedString {
-        let baseColor: Color = take.isObie ? .ckTextObie : .ckTextPrimary
+        let baseColor: Color = style.bodyText
         guard !bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             var placeholder = AttributedString("Untitled Take")
             placeholder.foregroundColor = baseColor
