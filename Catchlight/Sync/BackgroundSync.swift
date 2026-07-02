@@ -267,12 +267,11 @@ public final class BackgroundSyncCoordinator {
         }
         scheduleNext()   // always reschedule (auto-only, guarded above)
 
-        guard let engine = makeEngine() else { task.setTaskCompleted(success: true); return }
-
         let onConflicts = self.onConflicts
         let onSyncError = self.onSyncError
         let onQuarantined = self.onQuarantined
         let onRemoteChanges = self.onRemoteChanges
+        let makeEngine = self.makeEngine
         let completion = TaskCompletion()
         let cancel = CancelFlag()
 
@@ -283,24 +282,36 @@ public final class BackgroundSyncCoordinator {
             completion.complete(task, success: false)
         }
 
-        DispatchQueue.global(qos: .background).async {
-            do {
-                // pull + push; idempotent. Checks `cancel` between items so an
-                // expiring task lets go of cloud-file access promptly instead of
-                // running on past expiry (a 0xdead10cc termination risk).
-                let report = try engine.sync(isCancelled: { cancel.isCancelled })
-                Self.deliver(report,
-                             onConflicts: onConflicts,
-                             onQuarantined: onQuarantined,
-                             onRemoteChanges: onRemoteChanges)
+        // Engine construction hops to MAIN (2026-07-01): `makeEngine` reads
+        // Wiring's main-confined `sessionKeys` — a struct, so reading it from
+        // BGTaskScheduler's background queue concurrently with `relock()`
+        // clearing it on main (which fires on `protectedDataWillBecomeUnavailable`,
+        // exactly when a background refresh may be in flight) was a torn-read
+        // race, not mere staleness. The sync itself still runs off-main.
+        DispatchQueue.main.async {
+            guard let engine = makeEngine() else {
                 completion.complete(task, success: true)
-            } catch is CancellationError {
-                // Expiration already completed the task.
-            } catch {
-                if let onSyncError {
-                    Task { @MainActor in onSyncError(error) }
+                return
+            }
+            DispatchQueue.global(qos: .background).async {
+                do {
+                    // pull + push; idempotent. Checks `cancel` between items so an
+                    // expiring task lets go of cloud-file access promptly instead of
+                    // running on past expiry (a 0xdead10cc termination risk).
+                    let report = try engine.sync(isCancelled: { cancel.isCancelled })
+                    Self.deliver(report,
+                                 onConflicts: onConflicts,
+                                 onQuarantined: onQuarantined,
+                                 onRemoteChanges: onRemoteChanges)
+                    completion.complete(task, success: true)
+                } catch is CancellationError {
+                    // Expiration already completed the task.
+                } catch {
+                    if let onSyncError {
+                        Task { @MainActor in onSyncError(error) }
+                    }
+                    completion.complete(task, success: false)
                 }
-                completion.complete(task, success: false)
             }
         }
     }

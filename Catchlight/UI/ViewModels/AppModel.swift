@@ -149,6 +149,16 @@ final class AppModel {
         // Hand the indexer to the subscription manager so the lapse transition
         // triggers a deindex-all without AppModel needing to observe status.
         subscription.attachSpotlightIndexer(spotlight)
+        // Bulk re-index on RECOVERY from a lapse (2026-07-01): the lapse wipes
+        // the Spotlight index, and per-save re-indexing alone left every
+        // un-resaved Take invisible to system search forever after a transient
+        // false lapse. AppModel holds both the store and the indexer, so the
+        // rebuild lives here. No-op while locked (placeholder store is empty).
+        subscription.onRecoveredFromLapse = { [weak self] in
+            guard let self, self.lockState == .unlocked,
+                  let takes = try? self.dailiesVM.store.allTakes() else { return }
+            takes.forEach { self.spotlight.index($0) }
+        }
 
         if needsOnboarding {
             self.onboardingVM = nil

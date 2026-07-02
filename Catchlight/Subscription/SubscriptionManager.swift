@@ -139,14 +139,24 @@ final class SubscriptionManager {
         let previous = status
         status = derived
         // Task 6.19 — belt and braces: on entering `.lapsed` (from any other
-        // state), wipe the OS Spotlight index of every Take. Re-indexing on
-        // resubscribe happens organically on the next save; we deliberately
-        // don't try to re-index in bulk here since the manager doesn't hold
-        // the store.
+        // state), wipe the OS Spotlight index of every Take.
         if derived == .lapsed && previous != .lapsed {
             spotlight?.deindexAll()
         }
+        // On RECOVERING from a lapse (2026-07-01) — including a transient FALSE
+        // lapse from a StoreKit hiccup — re-index in bulk via the injected hook.
+        // Previously re-indexing happened only "organically on the next save",
+        // so every un-resaved Take stayed invisible to system search
+        // indefinitely after a momentary bad entitlement read. `.unknown` is
+        // permissive but proves nothing, so it doesn't trigger the rebuild.
+        if previous == .lapsed && (derived == .subscribed || derived == .trial) {
+            onRecoveredFromLapse?()
+        }
     }
+
+    /// Injected by AppModel (which holds the store + the Spotlight indexer):
+    /// bulk re-index every Take after the entitlement recovers from `.lapsed`.
+    var onRecoveredFromLapse: (() -> Void)?
 
     /// Initiate the in-app purchase flow against the bound scene. Returns true
     /// when the user successfully subscribed (the paywall dismisses on true).

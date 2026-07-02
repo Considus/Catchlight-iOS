@@ -692,6 +692,11 @@ struct SettingsView: View {
     /// configured sync folder (the Import folder lives inside it).
     @MainActor
     private func importNotes() {
+        // Import CREATES Takes, so it sits behind the subscription like every
+        // other create/edit surface (owner decision 2026-07-01 — Export stays
+        // free by design: users can always get their data OUT, but a lapsed
+        // read-only user must not mint unlimited new Takes via the Import folder).
+        guard app.ensureEntitled() else { return }
         guard let folder = ImportCoordinator.syncImportFolder() else {
             importResultMessage = "Set up Cloud Storage first — the Import folder lives inside your sync folder."
             return

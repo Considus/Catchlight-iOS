@@ -73,24 +73,40 @@ public enum MnemonicKeychain {
     /// be updated in place (e.g. `errSecInteractionNotAllowed` on the access-controlled
     /// slot), replace it outright with a minimal search query, then add.
     private static func upsert(_ data: Data, accessControl: SecAccessControl?) throws {
+        // NOTE (2026-07-01): `kSecUseAuthenticationUISkip` is valid ONLY for
+        // SecItemCopyMatching — in a SecItemUpdate query it returns errSecParam,
+        // so the update path here NEVER succeeded and the delete-then-add
+        // fallback was silently doing every re-store (exactly the crash-window
+        // posture this file's header says is wrong for the phrase). Dropping the
+        // flag makes update-in-place actually work; interaction-required states
+        // surface as errSecInteractionNotAllowed, handled below.
         let searchQuery: [String: Any] = [
             kSecClass as String:               kSecClassGenericPassword,
             kSecAttrService as String:         configuration.service,
             kSecAttrAccount as String:         configuration.account,
             kSecAttrAccessGroup as String:     configuration.accessGroup,
-            kSecAttrSynchronizable as String:  false,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+            kSecAttrSynchronizable as String:  false
         ]
         var update: [String: Any] = [kSecValueData as String: data]
         if let accessControl { update[kSecAttrAccessControl as String] = accessControl }
 
         let updateStatus = SecItemUpdate(searchQuery as CFDictionary, update as CFDictionary)
         if updateStatus == errSecSuccess { return }
-        guard updateStatus == errSecItemNotFound else {
-            delete()
+        if updateStatus == errSecItemNotFound {
             try add(data, accessControl: accessControl)
             return
         }
+        // Delete-then-add is a LAST resort for this item (2026-07-01): the phrase
+        // is the one secret not recoverable from anything else, and a kill between
+        // the delete and the add leaves NO phrase on disk. Narrow the fallback to
+        // the single case it existed for — `errSecInteractionNotAllowed` (the item
+        // exists but can't be updated in the current protection state). Any OTHER
+        // update failure now throws so the caller sees it, instead of a blind
+        // delete opening a data-loss window on an unknown error.
+        guard updateStatus == errSecInteractionNotAllowed else {
+            throw KeychainError.storeFailed(updateStatus)
+        }
+        delete()
         try add(data, accessControl: accessControl)
     }
 
