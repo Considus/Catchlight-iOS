@@ -198,6 +198,11 @@ struct InlineTakeEditCard: View {
                     toolbar: toolbarConfig,
                     onCaretMoved: onCaretMoved
                 )
+                // Nudge just the item TEXT down ~2pt (owner 2026-07-02): the checkbox and
+                // drag handle centre correctly, but a line's optical centre rides above
+                // its line-box centre, so the words read a touch high next to the boxes.
+                // Visual only (`.offset`), so it doesn't change the row height.
+                .offset(y: 2)
 
                 // Drag handle to reorder. UIKit-bridged (owner 2026-06-17, "do it
                 // right"): an IMMEDIATE pan on the handle (`VerticalReorderGesture`)
