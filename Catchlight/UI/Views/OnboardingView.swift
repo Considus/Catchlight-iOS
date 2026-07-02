@@ -59,6 +59,7 @@ struct OnboardingView: View {
     private var stepView: some View {
         switch vm.step {
         case .welcome:        WelcomeStep()
+        case .restoreEntry:   RestoreEntryStep()
         case .storageChoice:  StorageChoiceStep()
         case .localWarning:   LocalWarningStep()
         case .reveal:         RevealStep()
@@ -189,7 +190,8 @@ private struct WelcomeStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
     var body: some View {
-        WelcomeContent(mode: .welcome) { vm.beginStorageChoice() }
+        WelcomeContent(mode: .welcome, onPrimary: { vm.beginStorageChoice() },
+                       onSecondary: { vm.beginRestore() })
     }
 }
 
@@ -205,6 +207,8 @@ struct WelcomeContent: View {
     enum Mode { case splash, welcome }
     let mode: Mode
     var onPrimary: () -> Void = {}
+    /// Welcome only — "I already use Catchlight" (restore an existing phrase). D-087.
+    var onSecondary: () -> Void = {}
 
     private var isWelcome: Bool { mode == .welcome }
 
@@ -234,8 +238,18 @@ struct WelcomeContent: View {
             // non-interactive © footer styled as a subtle outline pill (owner
             // 2026-06-16) — keeps the splash's bottom edge anchored like the others.
             if isWelcome {
-                DockPillRow {
-                    DockPill(title: "Create my privacy phrase", action: onPrimary)
+                VStack(spacing: 12) {
+                    // Secondary path (owner 2026-07-02, D-087): adopt an existing identity by
+                    // entering its phrase — styled as a link in ckTextObie (the Restore token).
+                    Button(action: onSecondary) {
+                        Text("I already use Catchlight")
+                            .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                            .foregroundStyle(Color.ckTextObie)
+                    }
+                    .accessibilityIdentifier("onboarding-restore-link")
+                    DockPillRow {
+                        DockPill(title: "Create my privacy phrase", action: onPrimary)
+                    }
                 }
             } else {
                 DockPillRow {
@@ -284,6 +298,123 @@ struct WelcomeContent: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+// MARK: - Restore: "I already use Catchlight" — enter an existing phrase (D-087)
+
+private struct RestoreEntryStep: View {
+    @Environment(OnboardingViewModel.self) private var vm
+    @State private var entryText = ""
+    @FocusState private var focused: Bool
+
+    /// Lower-cased words parsed from the field (split on any whitespace — type or paste).
+    private var words: [String] {
+        entryText.split(whereSeparator: { $0.isWhitespace }).map { $0.lowercased() }
+    }
+    private var allKnown: Bool { !words.isEmpty && words.allSatisfy { vm.isKnownWord($0) } }
+    private var ready: Bool { words.count == 12 && allKnown }
+
+    var body: some View {
+        StepScaffold {
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Reserve the hoisted brand mark's space (it's drawn once, above the
+                    // per-step crossfade, so this copy is hidden) — same as Reveal/Confirm.
+                    IntroBrandMark().opacity(0)
+
+                    Spacer().frame(height: introHeroTopGap)
+                    Text("Enter your privacy phrase")
+                        .font(CatchlightFont.displayFixed(size: 28))
+                        .foregroundStyle(Color.ckTextPrimary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+
+                    Spacer().frame(height: 16)
+                    Text("The 12 words from your other device. Type or paste them, separated by spaces.")
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer().frame(height: 24)
+                    entryField
+                    if !words.isEmpty {
+                        Spacer().frame(height: 16)
+                        chipsGrid
+                    }
+                    Spacer().frame(height: 14)
+                    statusLine
+                    Spacer(minLength: 24)
+                }
+            }
+        } bottom: {
+            DockPillRow(primary: {
+                DockPill(title: "Restore") { vm.submitRestore(words) }
+                    .disabled(!ready)
+                    .opacity(ready ? 1 : 0.5)
+            }, trailing: {
+                DockPill(title: "Back", secondary: true) { vm.cancelRestore() }
+            })
+        }
+    }
+
+    private var entryField: some View {
+        TextField("word one  word two  word three …", text: $entryText, axis: .vertical)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled(true)
+            .keyboardType(.asciiCapable)
+            .focused($focused)
+            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+            .foregroundStyle(Color.ckTextPrimary)
+            .frame(minHeight: 70, alignment: .topLeading)
+            .padding(14)
+            .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .accessibilityIdentifier("restore-phrase-field")
+            .onAppear { focused = true }
+            .onChange(of: entryText) { _, _ in vm.clearRestoreError() }
+    }
+
+    private var chipsGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+            ForEach(Array(words.enumerated()), id: \.offset) { index, word in
+                let known = vm.isKnownWord(word)
+                HStack(spacing: 5) {
+                    Text("\(index + 1)")
+                        .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption))
+                        .foregroundStyle(Color.ckTextSecondary)
+                    Text(word)
+                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .foregroundStyle(known ? Color.ckTextPrimary : Color.ckRuby)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Color.ckSurface, in: Capsule())
+                .overlay(Capsule().strokeBorder(
+                    (known ? Color.ckAccent : Color.ckRuby).opacity(known ? 0.35 : 0.7), lineWidth: 1))
+            }
+        }
+    }
+
+    /// (message, isError) for the status line beneath the field.
+    private var status: (String, Bool) {
+        if let err = vm.restoreError { return (err, true) }
+        if words.count > 12 { return ("That's more than 12 words.", true) }
+        if !words.isEmpty && !allKnown { return ("Some words aren't recognised.", true) }
+        if ready { return ("Ready to restore.", false) }
+        return ("\(words.count) of 12 words", false)
+    }
+
+    private var statusLine: some View {
+        let (message, isError) = status
+        return Text(message)
+            .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .caption))
+            .foregroundStyle(isError ? Color.ckRuby : Color.ckTextSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
