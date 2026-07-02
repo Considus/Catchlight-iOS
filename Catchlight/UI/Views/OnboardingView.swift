@@ -308,6 +308,54 @@ struct WelcomeContent: View {
     }
 }
 
+// MARK: - Post-restore: connect the cloud folder (3c, D-103)
+
+/// Shown AFTER a restore completes (the account is keyed on this device but the Takes
+/// live in the cloud folder). A full onboarding-style screen — brand mark, hero + subtext
+/// at the shared positions, and the primary action in the bottom dock with a quiet "Not
+/// now" above it — rather than an overlay on the empty Dailies timeline (owner 2026-07-02).
+/// Rendered by `RootView` while `AppModel.restoreAwaitingFolder` is set.
+struct RestoreFolderView: View {
+    @Environment(AppModel.self) private var app
+    @State private var pickerPresented = false
+
+    var body: some View {
+        IntroChapterScaffold(drawsBrandMark: true) {
+            VStack(spacing: 0) {
+                Spacer().frame(height: introHeroTopGap)
+                Text("Welcome back")
+                    .font(CatchlightFont.displayFixed(size: 28))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+
+                Spacer(minLength: 24)
+                Text("Your account is restored on this device. Connect the cloud folder where your Takes are saved and they'll appear here.")
+                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer().frame(height: 24)
+            }
+        } bottom: {
+            VStack(spacing: 12) {
+                Button("Not now") { app.restoreAwaitingFolder = false }
+                    .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextObie)
+                    .accessibilityIdentifier("restore-connect-later")
+                DockPillRow {
+                    DockPill(title: "Connect cloud folder") { pickerPresented = true }
+                }
+            }
+        }
+        .sheet(isPresented: $pickerPresented) {
+            FolderPicker { url in _ = app.connectCloudFolder(url) }
+                .ignoresSafeArea()
+        }
+    }
+}
+
 // MARK: - Restore: "I already use Catchlight" — enter an existing phrase (D-087)
 
 private struct RestoreEntryStep: View {
