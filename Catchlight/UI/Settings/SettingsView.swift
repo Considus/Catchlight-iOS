@@ -131,7 +131,7 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
             Button("Continue", role: .destructive) { showSecondDeviceEntry = true }
         } message: {
-            Text("Enter your privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed — make sure they're already in your cloud folder first.")
+            Text("Enter your privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed. To keep a copy first, cancel and use Export Takes (Markdown), or make sure they're already in your cloud folder.")
         }
         // Export format chooser (owner 2026-06-21) — tap Export Takes, pick a
         // format, then the share sheet presents. No persisted preference.
