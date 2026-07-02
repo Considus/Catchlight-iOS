@@ -703,8 +703,16 @@ struct SettingsView: View {
         }
         defer { folder.stopAccess() }
 
-        let outcome = (try? ImportCoordinator.parseFolder(folder.url))
-            ?? ImportCoordinator.Outcome(takes: [], filesScanned: 0, skipped: 0)
+        // Distinguish "couldn't read the folder" from "read it, found nothing"
+        // (2026-07-01) — the old `try?` flattened an unreadable folder into the
+        // misleading "no files found" message.
+        let outcome: ImportCoordinator.Outcome
+        do {
+            outcome = try ImportCoordinator.parseFolder(folder.url)
+        } catch {
+            importResultMessage = "The Import folder couldn't be read. Check your cloud folder in Settings → Cloud Storage and try again."
+            return
+        }
         let imported = app.dailiesVM.importTakes(outcome.takes)
 
         guard imported > 0 else {

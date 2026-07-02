@@ -77,7 +77,10 @@ struct NoticeHistoryView: View {
                 if !entries.isEmpty {
                     ToolbarItem(placement: .primaryAction) {
                         Button("Clear") {
-                            DiagnosticsLog.shared.clear()
+                            // Scoped to the notices this view SHOWS (2026-07-01):
+                            // the full clear() also erased the lifecycle
+                            // breadcrumbs, silently emptying Export diagnostics.
+                            DiagnosticsLog.shared.clearUserFacing()
                             entries = []
                         }
                         .accessibilityIdentifier("notice-history-clear")
