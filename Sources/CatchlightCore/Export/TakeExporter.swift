@@ -70,7 +70,28 @@ public enum TakeExporter {
             out += "\(body(for: take, format: format))\n"
         }
 
+        // Lossless round-trip (D-088): Markdown exports append ONE hidden data block
+        // carrying each Take's exact timestamps / Obie / reminders, so import can
+        // rebuild the individual Takes rather than collapse the file into one. It is an
+        // HTML comment (invisible in any rendered Markdown) and is omitted entirely for
+        // an empty export and for plain text (human-only). Metadata order matches the
+        // visible sections (createdAt ascending).
+        if format == .markdown, !sorted.isEmpty {
+            out += dataBlock(for: sorted)
+        }
+
         return out
+    }
+
+    /// The trailing `<!-- catchlight:data … -->` block: a JSON array of per-Take
+    /// metadata, one entry per visible section in the same order.
+    private static func dataBlock(for sorted: [Take]) -> String {
+        let metas = sorted.map { TakeTransferMetadata(from: $0) }
+        guard let data = try? TakeTransfer.encoder().encode(metas),
+              let json = String(data: data, encoding: .utf8) else {
+            return ""   // metadata is additive; never fail an export over it
+        }
+        return "\n\(TakeTransfer.dataBlockOpen)\n\(json)\n\(TakeTransfer.dataBlockClose)\n"
     }
 
     /// File header. Markdown keeps the pinned YAML frontmatter; plain text uses a
