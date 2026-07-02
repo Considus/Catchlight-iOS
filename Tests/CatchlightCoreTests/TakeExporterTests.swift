@@ -280,6 +280,14 @@ final class TakeExporterTests: XCTestCase {
         XCTAssertFalse(TakeExporter.isExportFilename("catchlight.db"))
         XCTAssertFalse(TakeExporter.isExportFilename("catchlight-2026-01-01.pdf"))
         XCTAssertFalse(TakeExporter.isExportFilename(""))
+
+        // The diagnostics export must also be sweep-collectable (2026-07-02): its
+        // tmp file was renamed capital-`C` → lowercase `catchlight-diagnostics.txt`
+        // precisely so this matcher collects a crash-stranded copy. Guards the
+        // naming contract between ExportCoordinator and the sweep.
+        XCTAssertTrue(TakeExporter.isExportFilename("catchlight-diagnostics.txt"))
+        XCTAssertFalse(TakeExporter.isExportFilename("Catchlight-diagnostics.txt"),
+                       "the old capital-C name escaped the sweep — must not come back")
     }
 
     // MARK: - Plain text
