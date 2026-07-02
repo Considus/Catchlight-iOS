@@ -279,6 +279,9 @@ struct DailiesView: View {
             // filter is active the timeline (with its own filter-empty line)
             // always wins, so the background-tap exit remains available.
             if vm.isEmpty && activeFilter.isEmpty && inlineNewTake == nil {
+                // A restore lands empty with the real Takes still in the cloud folder,
+                // but that guidance is a full screen (RestoreFolderView, shown by RootView
+                // while `restoreAwaitingFolder`), not an overlay here (owner 2026-07-02).
                 emptyState
             } else {
                 timeline

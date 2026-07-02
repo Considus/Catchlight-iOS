@@ -793,6 +793,7 @@ struct ReminderPickerSheet: View {
                 }
                 .padding()
             }
+            .scrollIndicators(.hidden)
             // Single-sourced here (owner 2026-06-29) so EVERY presentation path —
             // the in-place editor layer AND the Dailies `.sheet` — gets the app's
             // Ink/Paper background instead of the default system sheet colour.

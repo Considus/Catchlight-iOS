@@ -77,13 +77,29 @@ enum ImportCoordinator {
             }
             let modDate = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
                 .contentModificationDate ?? Date()
-            if let take = TakeImporter.parse(content, fileDate: modDate) {
-                takes.append(take)
-            } else {
+            // `parseDocument` splits a Catchlight export back into its individual Takes
+            // (D-088); a foreign note still yields a single Take.
+            let parsed = TakeImporter.parseDocument(content, fileDate: modDate)
+            if parsed.isEmpty {
                 skipped += 1   // empty / no content
+            } else {
+                takes.append(contentsOf: parsed)
             }
         }
         return Outcome(takes: takes, filesScanned: files.count, skipped: skipped)
+    }
+
+    /// Read and parse a SINGLE picked file — the offline "Import from a file" path
+    /// (D-088), which needs NO configured cloud folder. Handles its own security scope.
+    /// Returns many Takes for a Catchlight export, one for a foreign note, or [] if the
+    /// file is unreadable or empty.
+    static func parseSingleFile(_ url: URL) -> [Take] {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        guard let content = plainText(of: url) else { return [] }
+        let modDate = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+            .contentModificationDate ?? Date()
+        return TakeImporter.parseDocument(content, fileDate: modDate)
     }
 
     /// Read a file as plain text. `.rtf` is decoded through NSAttributedString so the

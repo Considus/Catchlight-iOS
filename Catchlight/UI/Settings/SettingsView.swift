@@ -18,6 +18,7 @@
 
 import SwiftUI
 import UserNotifications
+import UniformTypeIdentifiers
 import CatchlightCore
 
 struct SettingsView: View {
@@ -38,14 +39,19 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.FollowUpReminders.defaultsKey) private var followUpRemindersOn: Bool = SettingsViewModel.FollowUpReminders.default
 
     @State private var vm = SettingsViewModel()
-    /// Drives the Markdown / Plain Text chooser for Export Takes (owner 2026-06-21).
-    @State private var showExportFormatDialog = false
     /// The Import-result message; non-nil presents the confirmation alert (owner 2026-06-22).
     @State private var importResultMessage: String?
     /// Presents the Notice History sheet (D-085) — a SHIPPING feature, so this
     /// must live outside the `#if DEBUG` block (it was declared inside it, which
     /// compiled in Debug but broke every Release/Archive build — 2026-07-01).
     @State private var showNoticeHistory = false
+    /// Second-device restore (D-087): the destructive warning gate, then the phrase-
+    /// entry sheet. Two bools so the warning always precedes entry and each dismisses
+    /// independently.
+    @State private var showSecondDeviceWarning = false
+    @State private var showSecondDeviceEntry = false
+    /// Presents the Files document picker for the offline "Import from a file" path (D-088).
+    @State private var showFileImporter = false
 
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
@@ -115,16 +121,24 @@ struct SettingsView: View {
         .sheet(isPresented: $vm.isAboutSheetPresented) {
             AboutView()
         }
-        // Export format chooser (owner 2026-06-21) — tap Export Takes, pick a
-        // format, then the share sheet presents. No persisted preference.
-        .confirmationDialog("Export Takes",
-                            isPresented: $showExportFormatDialog,
-                            titleVisibility: .visible) {
-            Button("Markdown") { exportTakes(format: .markdown) }
-            Button("Plain Text") { exportTakes(format: .plainText) }
+        .sheet(isPresented: $showSecondDeviceEntry) {
+            SecondDeviceRestoreView()
+        }
+        // Second-device warning (D-087): the re-key is destructive because an onboarded
+        // device already holds Takes under its current key — a new phrase can't decrypt
+        // them, so they're removed. Continue only leads to phrase entry; the wipe/re-key
+        // happens on Restore there (a bad phrase destroys nothing).
+        .alert("Add this device to your account?", isPresented: $showSecondDeviceWarning) {
             Button("Cancel", role: .cancel) {}
+            Button("Continue", role: .destructive) { showSecondDeviceEntry = true }
         } message: {
-            Text("Choose a format. Both include every Take and stay readable forever.")
+            Text("Enter your privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed. To keep a copy first, cancel and use Export Takes (Markdown), or make sure they're already in your cloud folder.")
+        }
+        // Offline "Import from a file" (D-088): pick any exported file from Files.
+        .fileImporter(isPresented: $showFileImporter,
+                      allowedContentTypes: Self.importableFileTypes,
+                      allowsMultipleSelection: true) { result in
+            importFromFile(result)
         }
         // Import result (owner 2026-06-22) — immediate feedback while Settings is open
         // (the summary Take lands behind the sheet), and stops an accidental re-tap.
@@ -488,14 +502,15 @@ struct SettingsView: View {
                         action: { vm.isPhraseSheetPresented = true })
                 .accessibilityHint("Double-tap to view your phrase. Face ID or passcode required.")
 
-            // 6.12 — Blocked on Phase 2. Stub stays visible so the layout is complete.
+            // Second device (D-087) — re-key this device to another account's phrase
+            // to pull its Takes from the shared cloud folder. Destructive (it replaces
+            // this device's account), so a warning gates entry.
             SettingsRow(icon: "iphone.and.arrow.forward",
                         label: "Second device",
                         chevron: true,
-                        disabled: true) {
-                SettingsDetailLabel(text: "Coming soon")
-            }
-            .accessibilityHint("Coming soon.")
+                        action: { showSecondDeviceWarning = true })
+                .accessibilityIdentifier("settings-second-device")
+                .accessibilityHint("Restore your Takes onto this device from your privacy phrase.")
         } header: {
             sectionHeader("Security")
         }
@@ -522,6 +537,14 @@ struct SettingsView: View {
         .accessibilityIdentifier("settings-cloud-storage")
         .accessibilityHint("Choose where encrypted Takes are stored.")
         .accessibilityValue(cloudStorageDetail)
+    }
+
+    /// Whether a cloud sync folder is configured. Gates the folder-based "Import notes"
+    /// row (its source folder lives inside the sync folder). Re-reads on re-render, like
+    /// `cloudStorageDetail`, so configuring cloud in the sub-sheet reveals the row on
+    /// return. `try?` flattens the throwing optional, so this is nil-safe.
+    private var hasCloudFolder: Bool {
+        (try? Wiring.resolveCloudFolderURL()?.url) != nil
     }
 
     /// Task 6.13 — Detail label for the Cloud Storage row. Shows the picked
@@ -593,17 +616,31 @@ struct SettingsView: View {
             SettingsRow(icon: "square.and.arrow.up",
                         label: "Export Takes",
                         chevron: false,
-                        action: { showExportFormatDialog = true })
+                        action: { exportTakes() })
                 .accessibilityIdentifier("settings-export-takes")
-                .accessibilityHint("Export all your Takes as a Markdown or plain-text file.")
+                .accessibilityHint("Export all your Takes as a Markdown file.")
             // Import notes (owner 2026-06-22) — reads .md/.txt from the Import folder
-            // inside the configured sync folder; one file = one Take.
-            SettingsRow(icon: "square.and.arrow.down",
-                        label: "Import notes",
+            // inside the configured sync folder; one file = one Take. Shown ONLY when a
+            // cloud folder is configured (owner 2026-07-02): the Import folder lives
+            // inside the sync folder, so without cloud this row could only ever error —
+            // the "Import from a file" picker below is the no-cloud route.
+            if hasCloudFolder {
+                SettingsRow(icon: "square.and.arrow.down",
+                            label: "Import notes",
+                            chevron: false,
+                            action: { importNotes() })
+                    .accessibilityIdentifier("settings-import-notes")
+                    .accessibilityHint("Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes.")
+            }
+            // Import from a file (D-088) — the offline route: pick an exported file from
+            // anywhere in Files (On My iPhone, AirDrop, etc.), no cloud folder needed. A
+            // Catchlight export splits back into its Takes; a foreign note imports as one.
+            SettingsRow(icon: "doc.badge.plus",
+                        label: "Import from a file",
                         chevron: false,
-                        action: { importNotes() })
-                .accessibilityIdentifier("settings-import-notes")
-                .accessibilityHint("Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes.")
+                        action: { showFileImporter = true })
+                .accessibilityIdentifier("settings-import-file")
+                .accessibilityHint("Pick a .md, .txt or .rtf file from Files to import as Takes — no cloud folder needed.")
             SettingsRow(icon: "info.circle",
                         label: "About",
                         chevron: true,
@@ -675,13 +712,13 @@ struct SettingsView: View {
     }
 
     @MainActor
-    private func exportTakes(format: TakeExporter.Format) {
+    private func exportTakes() {
         // Reads through the live DailiesViewModel's store so the export reflects
         // whatever the user can see in the timeline (one store, one source of
         // truth). `allTakes()` already returns `createdAt` ascending; the
-        // exporter re-sorts defensively.
+        // exporter re-sorts defensively. Markdown only (owner 2026-07-02).
         let takes = (try? app.dailiesVM.store.allTakes()) ?? []
-        ExportCoordinator.presentShareSheet(takes: takes, format: format)
+        ExportCoordinator.presentShareSheet(takes: takes)
     }
 
     private var importAlertPresented: Binding<Bool> {
@@ -721,13 +758,48 @@ struct SettingsView: View {
             importResultMessage = "No recognised markdown or text files found in the Import folder."
             return
         }
+        announceImport(imported)
+    }
+
+    /// File types the offline picker accepts — Markdown, plain text, and RTF.
+    private static let importableFileTypes: [UTType] = {
+        var types: [UTType] = [.plainText, .text, .rtf]
+        if let md = UTType(filenameExtension: "md") { types.append(md) }
+        if let markdown = UTType(filenameExtension: "markdown") { types.append(markdown) }
+        return types
+    }()
+
+    /// Import one or more files picked from Files (offline path, D-088). No cloud folder
+    /// needed — a Catchlight export splits into its Takes; each foreign note imports as
+    /// one, so picking several separate note files yields one Take per file.
+    @MainActor
+    private func importFromFile(_ result: Result<[URL], Error>) {
+        guard app.ensureEntitled() else { return }
+        guard case .success(let urls) = result, !urls.isEmpty else {
+            if case .failure = result {
+                importResultMessage = "Couldn't open those files. Please try again."
+            }
+            return
+        }
+        let takes = urls.flatMap { ImportCoordinator.parseSingleFile($0) }
+        let imported = app.dailiesVM.importTakes(takes)
+        guard imported > 0 else {
+            importResultMessage = "No notes to import from your selection."
+            return
+        }
+        announceImport(imported)
+    }
+
+    /// Success feedback shared by both import paths: the alert while Settings is open,
+    /// plus a terse summary Take dated now so a record lands at the recent end of the
+    /// timeline (owner 2026-06-22).
+    @MainActor
+    private func announceImport(_ imported: Int) {
         let noun = imported == 1 ? "Take" : "Takes"
         importResultMessage = "Import successful. \(imported) \(noun) added to your timeline."
-        // The auto-created summary Take (owner 2026-06-22) — a persistent record in the
-        // timeline, dated now so it lands at the recent end. Terser than the alert.
-        let takeMessage = "Import successful. \(imported) \(noun) added."
         app.dailiesVM.importTakes([
-            Take(createdAt: Date(), modifiedAt: Date(), blocks: [.textLine(takeMessage)], isNote: true)
+            Take(createdAt: Date(), modifiedAt: Date(),
+                 blocks: [.textLine("Import successful. \(imported) \(noun) added.")], isNote: true)
         ])
     }
 

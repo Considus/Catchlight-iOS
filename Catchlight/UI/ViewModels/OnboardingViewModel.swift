@@ -27,6 +27,7 @@ final class OnboardingViewModel {
 
     enum Step {
         case welcome
+        case restoreEntry     // "I already use Catchlight" — enter an existing phrase
         case storageChoice
         case localWarning
         case reveal
@@ -69,10 +70,13 @@ final class OnboardingViewModel {
     private let bip39: BIP39
     /// Carries the just-derived 32-byte master key so the app can open the store
     /// directly (no Keychain read, hence no Face ID/passcode prompt right after
-    /// onboarding). D-042.
-    private let onComplete: (Data) -> Void
+    /// onboarding). D-042. The `isRestore` flag distinguishes a fresh generate
+    /// (seed the starter Takes) from a cross-device restore (skip seeding — the
+    /// real Takes arrive from the cloud folder, and seeding here would push five
+    /// example Takes UP into the user's real data on first sync). D-087.
+    private let onComplete: (Data, _ isRestore: Bool) -> Void
 
-    init(onComplete: @escaping (Data) -> Void) {
+    init(onComplete: @escaping (Data, _ isRestore: Bool) -> Void) {
         self.onComplete = onComplete
         do {
             self.bip39 = BIP39(wordlist: try EnglishWordlist.load())
@@ -185,6 +189,58 @@ final class OnboardingViewModel {
         }
     }
 
+    // MARK: - Restore (existing phrase — cross-device recovery, D-087)
+
+    /// Inline error under the restore field ("that phrase isn't valid …"); nil when clean.
+    private(set) var restoreError: String?
+
+    /// Welcome secondary action — "I already use Catchlight".
+    func beginRestore() {
+        restoreError = nil
+        step = .restoreEntry
+    }
+
+    /// Restore-screen back action → Welcome.
+    func cancelRestore() {
+        restoreError = nil
+        step = .welcome
+    }
+
+    /// Clear the inline restore error as the user edits the field.
+    func clearRestoreError() {
+        if restoreError != nil { restoreError = nil }
+    }
+
+    /// Validate the entered phrase, derive + store the master key, and hand off exactly like
+    /// `finishOnboarding` (same storage calls, same `onComplete`). `PhraseRecovery` throws on
+    /// a bad checksum / wrong count / unknown word → an inline message, not the failure screen;
+    /// a Keychain fault is a real device problem → the failure escape-hatch.
+    func submitRestore(_ words: [String]) {
+        let cleaned = words
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+        let masterKeyData: Data
+        do {
+            masterKeyData = try PhraseRecovery.recoverMasterKey(from: cleaned, bip39: bip39)
+        } catch {
+            restoreError = "That doesn't look right. Check the words and try again."
+            return
+        }
+        do {
+            try MasterKeyKeychain.store(masterKeyData)
+            try MnemonicKeychain.store(cleaned)
+            onComplete(masterKeyData, /* isRestore: */ true)
+        } catch let error as KeychainError {
+            failure = "Couldn't secure your account on this device."
+            failureDetail = describe(error)
+            step = .failure
+        } catch {
+            failure = "Couldn't secure your account on this device."
+            failureDetail = "\(error)"
+            step = .failure
+        }
+    }
+
     // MARK: - Completion
 
     /// Screen 6 "Start using Catchlight" — derive + store master key.
@@ -198,7 +254,7 @@ final class OnboardingViewModel {
             // Argon2 metadata salt is no longer written — HKDF derivation uses a
             // fixed domain salt.)
             try MnemonicKeychain.store(mnemonic)
-            onComplete(masterKeyData)
+            onComplete(masterKeyData, /* isRestore: */ false)
         } catch let error as KeychainError {
             failure = "Couldn't secure your account on this device."
             failureDetail = describe(error)
