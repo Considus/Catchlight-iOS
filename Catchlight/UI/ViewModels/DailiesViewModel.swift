@@ -333,15 +333,43 @@ final class DailiesViewModel {
     /// re-schedule, since the alarm is now off) and reloads. No-op when the queue is empty;
     /// skips ids whose Take/reminder has gone, whose alarm is already off, or that REPEAT.
     func applyPendingReminderActions() {
-        for id in PendingReminderActions.drainDismissedIDs() {
-            guard let take = try? store.take(id: id),
-                  let reminder = take.timeReminder,
-                  reminder.alarmEnabled,
-                  !reminder.repeats else { continue }
-            var updated = take
-            updated.timeReminder?.alarmEnabled = false
+        for action in PendingReminderActions.drainDismissed() {
+            guard var updated = try? store.take(id: action.id) else { continue }
+            if action.isLocation {
+                // Dismiss on a PLACE reminder (2026-07-01): turn the geofence alarm
+                // off — a geofence re-fires on every matching arrival/leave, so
+                // "stop nagging" for a "where" means disabling it. Previously the
+                // drain skipped location-only Takes entirely, so the unlock rebuild
+                // re-armed the region and the reminder fired forever.
+                guard updated.locationReminder?.alarmEnabled == true else { continue }
+                updated.locationReminder?.alarmEnabled = false
+            } else {
+                guard let reminder = updated.timeReminder,
+                      reminder.alarmEnabled,
+                      !reminder.repeats else { continue }
+                updated.timeReminder?.alarmEnabled = false
+            }
             save(updated)
         }
+    }
+
+    /// Reconcile local notifications with a sync pass that changed local state
+    /// (2026-07-01). Previously the remote-changes hook only reloaded the UI, so:
+    /// a Take DELETED on another device kept its pending alarms here — at fire
+    /// time the banner showed the deleted Take's decrypted title (a stale alarm
+    /// AND a privacy leak for content the user deliberately removed) — and a
+    /// reminder REMOVED remotely stayed armed. Cancels every id a deleted Take
+    /// might own (incl. its delivered banners), reconciles applied edits, then
+    /// reloads the snapshot.
+    func applyRemoteChanges(_ report: SyncReport) {
+        for id in report.deletedLocally {
+            reminders.cancelReminder(identifier: id.uuidString)
+        }
+        for id in report.applied {
+            guard let take = try? store.take(id: id) else { continue }
+            reconcileNotification(for: take)
+        }
+        reload()
     }
 
     func refreshRecurringSchedules() {

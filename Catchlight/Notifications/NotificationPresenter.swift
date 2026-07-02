@@ -129,7 +129,11 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
                    ReminderScheduler.catchUpIdentifier(base: base)]
             + ReminderScheduler.followUpIdentifiers(base: base)
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
-        PendingReminderActions.enqueueDismiss(takeID: base)
+        // Record WHICH notification was dismissed (2026-07-01): the geofence fires
+        // as `<uuid>#loc`, and a Take can carry both a "when" and a "where" — the
+        // drain must silence only the dismissed one.
+        let isLocation = request.identifier == ReminderScheduler.locationIdentifier(base: base)
+        PendingReminderActions.enqueueDismiss(takeID: base, isLocation: isLocation)
     }
 
     /// Snooze (background, works while locked): re-nudge the SAME reminder later without
