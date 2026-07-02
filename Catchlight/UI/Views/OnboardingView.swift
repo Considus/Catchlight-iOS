@@ -305,22 +305,23 @@ struct WelcomeContent: View {
 
 private struct RestoreEntryStep: View {
     @Environment(OnboardingViewModel.self) private var vm
-    @State private var entryText = ""
-    @FocusState private var focused: Bool
+    /// Twelve discrete word fields (owner 2026-07-02, option B): explicit positions, sturdy
+    /// for a once-a-year action, and no per-word validity signal (correctness is a whole-
+    /// phrase check on Restore — matching onboarding's "reveal nothing granular" posture).
+    @State private var fields: [String] = Array(repeating: "", count: 12)
+    @FocusState private var focusedIndex: Int?
 
-    /// Lower-cased words parsed from the field (split on any whitespace — type or paste).
     private var words: [String] {
-        entryText.split(whereSeparator: { $0.isWhitespace }).map { $0.lowercased() }
+        fields.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
     }
-    private var allKnown: Bool { !words.isEmpty && words.allSatisfy { vm.isKnownWord($0) } }
-    private var ready: Bool { words.count == 12 && allKnown }
+    private var filledCount: Int { words.filter { !$0.isEmpty }.count }
+    private var ready: Bool { filledCount == 12 }
 
     var body: some View {
         StepScaffold {
             ScrollView {
                 VStack(spacing: 0) {
-                    // Reserve the hoisted brand mark's space (it's drawn once, above the
-                    // per-step crossfade, so this copy is hidden) — same as Reveal/Confirm.
+                    // Reserve the hoisted brand mark's space (hidden copy) — as Reveal/Confirm.
                     IntroBrandMark().opacity(0)
 
                     Spacer().frame(height: introHeroTopGap)
@@ -332,18 +333,14 @@ private struct RestoreEntryStep: View {
                         .accessibilityAddTraits(.isHeader)
 
                     Spacer().frame(height: 16)
-                    Text("The 12 words from your other device. Type or paste them, separated by spaces.")
+                    Text("The 12 words from your other device, in order.")
                         .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                         .foregroundStyle(Color.ckTextSecondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Spacer().frame(height: 24)
-                    entryField
-                    if !words.isEmpty {
-                        Spacer().frame(height: 16)
-                        chipsGrid
-                    }
+                    fieldsGrid
                     Spacer().frame(height: 14)
                     statusLine
                     Spacer(minLength: 24)
@@ -360,56 +357,61 @@ private struct RestoreEntryStep: View {
         }
     }
 
-    private var entryField: some View {
-        TextField("word one  word two  word three …", text: $entryText, axis: .vertical)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled(true)
-            .keyboardType(.asciiCapable)
-            .focused($focused)
-            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-            .foregroundStyle(Color.ckTextPrimary)
-            .frame(minHeight: 70, alignment: .topLeading)
-            .padding(14)
-            .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .accessibilityIdentifier("restore-phrase-field")
-            .onAppear { focused = true }
-            .onChange(of: entryText) { _, _ in vm.clearRestoreError() }
-    }
-
-    private var chipsGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-            ForEach(Array(words.enumerated()), id: \.offset) { index, word in
-                let known = vm.isKnownWord(word)
-                HStack(spacing: 5) {
+    /// Two columns of six numbered fields.
+    private var fieldsGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                  spacing: 10) {
+            ForEach(0..<12, id: \.self) { index in
+                HStack(spacing: 8) {
                     Text("\(index + 1)")
-                        .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption))
+                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
                         .foregroundStyle(Color.ckTextSecondary)
-                    Text(word)
-                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .foregroundStyle(known ? Color.ckTextPrimary : Color.ckRuby)
+                        .frame(width: 18, alignment: .trailing)
+                    TextField("", text: $fields[index])
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .keyboardType(.asciiCapable)
+                        .submitLabel(index == 11 ? .done : .next)
+                        .focused($focusedIndex, equals: index)
+                        .onSubmit { focusedIndex = index < 11 ? index + 1 : nil }
+                        .onChange(of: fields[index]) { _, newValue in handleChange(index, newValue) }
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextPrimary)
+                        .padding(.horizontal, 10).padding(.vertical, 9)
+                        .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .accessibilityIdentifier("restore-word-\(index + 1)")
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Color.ckSurface, in: Capsule())
-                .overlay(Capsule().strokeBorder(
-                    (known ? Color.ckAccent : Color.ckRuby).opacity(known ? 0.35 : 0.7), lineWidth: 1))
             }
         }
     }
 
-    /// (message, isError) for the status line beneath the field.
-    private var status: (String, Bool) {
-        if let err = vm.restoreError { return (err, true) }
-        if words.count > 12 { return ("That's more than 12 words.", true) }
-        if !words.isEmpty && !allKnown { return ("Some words aren't recognised.", true) }
-        if ready { return ("Ready to restore.", false) }
-        return ("\(words.count) of 12 words", false)
+    /// Type-and-space advances to the next field; pasting a whole phrase into one field
+    /// spreads it across the following fields. Words are parsed as letter-runs, so numbering
+    /// / punctuation in a paste ("1. anchor 2. blossom …") is ignored.
+    private func handleChange(_ index: Int, _ newValue: String) {
+        vm.clearRestoreError()
+        guard newValue.contains(where: { $0.isWhitespace || !$0.isLetter }) else { return }
+        let tokens = newValue.split(whereSeparator: { !$0.isLetter }).map { $0.lowercased() }
+        if tokens.count <= 1 {
+            fields[index] = tokens.first ?? ""
+            if !newValue.isEmpty, index < 11, tokens.count == 1,
+               newValue.last.map({ $0.isWhitespace }) == true {
+                focusedIndex = index + 1        // trailing space after one word → next field
+            }
+        } else {
+            for (offset, token) in tokens.prefix(12 - index).enumerated() {
+                fields[index + offset] = token   // a pasted phrase spreads across the fields
+            }
+            focusedIndex = min(index + tokens.count, 11)
+        }
     }
 
     private var statusLine: some View {
-        let (message, isError) = status
+        let message: String
+        let isError: Bool
+        if let err = vm.restoreError { message = err; isError = true }
+        else if ready { message = "Ready to restore."; isError = false }
+        else { message = "\(filledCount) of 12 words"; isError = false }
         return Text(message)
             .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .caption))
             .foregroundStyle(isError ? Color.ckRuby : Color.ckTextSecondary)

@@ -208,14 +208,6 @@ final class OnboardingViewModel {
         if restoreError != nil { restoreError = nil }
     }
 
-    /// Whether a single word is in the BIP-39 wordlist — drives the per-word ruby highlight
-    /// as the user types, so a mistyped word is caught before they submit.
-    func isKnownWord(_ word: String) -> Bool {
-        let w = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return !w.isEmpty && wordSet.contains(w)
-    }
-    @ObservationIgnored private lazy var wordSet = Set(bip39.wordlist.words)
-
     /// Validate the entered phrase, derive + store the master key, and hand off exactly like
     /// `finishOnboarding` (same storage calls, same `onComplete`). `PhraseRecovery` throws on
     /// a bad checksum / wrong count / unknown word → an inline message, not the failure screen;
@@ -228,7 +220,7 @@ final class OnboardingViewModel {
         do {
             masterKeyData = try PhraseRecovery.recoverMasterKey(from: cleaned, bip39: bip39)
         } catch {
-            restoreError = "That phrase isn't valid. Check the words and try again."
+            restoreError = "That doesn't look right. Check the words and try again."
             return
         }
         do {
