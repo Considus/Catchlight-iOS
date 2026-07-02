@@ -539,6 +539,14 @@ struct SettingsView: View {
         .accessibilityValue(cloudStorageDetail)
     }
 
+    /// Whether a cloud sync folder is configured. Gates the folder-based "Import notes"
+    /// row (its source folder lives inside the sync folder). Re-reads on re-render, like
+    /// `cloudStorageDetail`, so configuring cloud in the sub-sheet reveals the row on
+    /// return. `try?` flattens the throwing optional, so this is nil-safe.
+    private var hasCloudFolder: Bool {
+        (try? Wiring.resolveCloudFolderURL()?.url) != nil
+    }
+
     /// Task 6.13 — Detail label for the Cloud Storage row. Shows the picked
     /// folder's last path component when configured, or "Not configured" when
     /// running in local-only mode. Re-reads on re-render — the sub-sheet's
@@ -612,13 +620,18 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings-export-takes")
                 .accessibilityHint("Export all your Takes as a Markdown file.")
             // Import notes (owner 2026-06-22) — reads .md/.txt from the Import folder
-            // inside the configured sync folder; one file = one Take.
-            SettingsRow(icon: "square.and.arrow.down",
-                        label: "Import notes",
-                        chevron: false,
-                        action: { importNotes() })
-                .accessibilityIdentifier("settings-import-notes")
-                .accessibilityHint("Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes.")
+            // inside the configured sync folder; one file = one Take. Shown ONLY when a
+            // cloud folder is configured (owner 2026-07-02): the Import folder lives
+            // inside the sync folder, so without cloud this row could only ever error —
+            // the "Import from a file" picker below is the no-cloud route.
+            if hasCloudFolder {
+                SettingsRow(icon: "square.and.arrow.down",
+                            label: "Import notes",
+                            chevron: false,
+                            action: { importNotes() })
+                    .accessibilityIdentifier("settings-import-notes")
+                    .accessibilityHint("Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes.")
+            }
             // Import from a file (D-088) — the offline route: pick an exported file from
             // anywhere in Files (On My iPhone, AirDrop, etc.), no cloud folder needed. A
             // Catchlight export splits back into its Takes; a foreign note imports as one.
