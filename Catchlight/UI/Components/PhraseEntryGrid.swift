@@ -22,15 +22,19 @@ struct PhraseEntryGrid: View {
 
     @FocusState private var focusedIndex: Int?
 
+    /// 3×4 to mirror the onboarding Reveal/Confirm word grid exactly (owner 2026-07-02):
+    /// three columns pack the 12 fields into four rows, and each cell reuses the Reveal
+    /// chip's look — a `ckSurface` rounded rectangle with the daylight card shadow and a
+    /// small leading number — so entry lines up with how the phrase was shown.
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+
     var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
-                  spacing: 10) {
+        LazyVGrid(columns: columns, spacing: 10) {
             ForEach(0..<12, id: \.self) { index in
-                HStack(spacing: 8) {
+                HStack(spacing: 5) {
                     Text("\(index + 1)")
-                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
                         .foregroundStyle(Color.ckTextSecondary)
-                        .frame(width: 18, alignment: .trailing)
                     TextField("", text: $fields[index])
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled(true)
@@ -39,12 +43,18 @@ struct PhraseEntryGrid: View {
                         .focused($focusedIndex, equals: index)
                         .onSubmit { focusedIndex = index < 11 ? index + 1 : nil }
                         .onChange(of: fields[index]) { _, newValue in handleChange(index, newValue) }
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                         .foregroundStyle(Color.ckTextPrimary)
-                        .padding(.horizontal, 10).padding(.vertical, 9)
-                        .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("restore-word-\(index + 1)")
                 }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.ckSurface)
+                        .daylightCardShadow()
+                )
             }
         }
     }

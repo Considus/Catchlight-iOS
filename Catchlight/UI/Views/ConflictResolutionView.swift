@@ -88,6 +88,7 @@ struct ConflictResolutionView: View {
             }
             .padding(.bottom, 24)
         }
+        .scrollIndicators(.hidden)
     }
 
     private var caption: some View {
