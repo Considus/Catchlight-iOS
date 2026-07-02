@@ -290,7 +290,7 @@ struct TakeRowView: View {
 
     @ViewBuilder
     private var rowMenuItems: some View {
-        if (take.isTask || take.timeReminder != nil), let onToggleComplete {
+        if take.canBeMarkedDone, let onToggleComplete {
             Button {
                 onToggleComplete()
             } label: {
@@ -347,7 +347,7 @@ struct TakeRowView: View {
 
     @ViewBuilder
     private var rowAccessibilityActions: some View {
-        if (take.isTask || take.timeReminder != nil), let onToggleComplete {
+        if take.canBeMarkedDone, let onToggleComplete {
             Button(take.isMarkedDone ? "Mark Not Done" : "Mark Done") { onToggleComplete() }
         }
         if let onSetImportant {

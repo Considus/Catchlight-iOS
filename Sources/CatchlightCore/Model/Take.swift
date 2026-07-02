@@ -332,24 +332,34 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         }
     }
 
+    /// Whether the Take carries anything that CAN be settled — a Task, a time
+    /// reminder, or a place reminder (2026-07-01, place/time parity). Single
+    /// source for every "offer a Done control?" gate (swipe, long-press menu,
+    /// keyboard bar), so a new settleable kind can never miss one of them.
+    public var canBeMarkedDone: Bool {
+        isTask || timeReminder != nil || locationReminder != nil
+    }
+
     /// Whether the Take reads as "done" — drives the card's grey border + grey text
     /// (D-044, [[catchlight-take-colour-system]]) and the long-press "Mark as done"
     /// toggle. A Take is done when every actionable marker it carries is settled: a
-    /// Task with all items ticked AND/OR a reminder marked `isDone`. Only meaningful
-    /// for a Take that IS a Task or has a reminder (a plain Note is never "done").
+    /// Task with all items ticked AND/OR a reminder ("when" or "where") marked
+    /// `isDone`. Only meaningful for a settleable Take (a plain Note is never "done").
     public var isMarkedDone: Bool {
-        guard isTask || timeReminder != nil else { return false }
+        guard canBeMarkedDone else { return false }
         let taskDone = !isTask || isComplete
         let reminderDone = timeReminder?.isDone ?? true
-        return taskDone && reminderDone
+        let placeDone = locationReminder?.isDone ?? true
+        return taskDone && reminderDone && placeDone
     }
 
     /// Mark the WHOLE Take done / not-done in one move (owner 2026-06-18): ticks or
-    /// unticks every check item and flips any reminder's `isDone`, so a single
-    /// "Mark as done" settles a Take that is both a Task and a reminder.
+    /// unticks every check item and flips any reminder's `isDone` — the "when" AND
+    /// the "where" — so a single "Mark as done" settles a Take that carries several.
     public mutating func setMarkedDone(_ done: Bool) {
         if isTask { setAllItemsComplete(done) }
         if timeReminder != nil { timeReminder?.isDone = done }
+        if locationReminder != nil { locationReminder?.isDone = done }
     }
 
     /// Roll a repeating reminder to its NEXT occurrence (owner 2026-06-21): advance the

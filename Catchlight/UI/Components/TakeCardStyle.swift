@@ -70,7 +70,10 @@ struct TakeCardStyle {
             self.border = .ckCardDoneBorder
         } else if take.isTask {
             self.border = Quadrant.task(scheme)
-        } else if take.timeReminder != nil {
+        } else if take.timeReminder != nil || take.locationReminder != nil {
+            // A "where" gets the Remind border exactly like a "when" (2026-07-01,
+            // place/time parity). Places never go OVERDUE — a geofence has no due
+            // instant to be past — so the ruby branch above stays time-only.
             self.border = Quadrant.reminder(scheme)
         } else {
             self.border = surfaceColor

@@ -286,7 +286,7 @@ final class DailiesViewModel {
     /// flips any reminder's `isDone`, so a Take that is both settles in one move; the
     /// card then reads the done grey. The reminder-done state is otherwise unreachable.
     func toggleDone(_ take: Take) {
-        guard take.isTask || take.timeReminder != nil else { return }
+        guard take.canBeMarkedDone else { return }
         // A REPEATING reminder is never permanently "done" (owner 2026-06-21): marking it
         // done completes the current occurrence and rolls the series forward to the next —
         // the recurrence (and its OS alarm) stays live. The series only ends via Delete →

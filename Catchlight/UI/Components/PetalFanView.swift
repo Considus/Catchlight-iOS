@@ -427,7 +427,12 @@ struct PetalFanView: View {
                 showingReminderPicker = false
             },
             onCancel: {
+                // Cancel = remove the JUST-ADDED reminder (the picker only opens on
+                // an inactive→active petal tap, so there's no pre-existing state to
+                // preserve). Clear the place too (2026-07-01) — leaving it made the
+                // cancelled selection silently re-commit as a location reminder.
                 hasReminder = false
+                reminderLocation = nil
                 showingReminderPicker = false
             }
         )
@@ -538,7 +543,10 @@ struct PetalFanView: View {
         switch kind {
         case .note: return isNote
         case .obie: return isObie
-        case .remind: return hasReminder
+        // A "where" reads as an active Remind exactly like a "when" (2026-07-01,
+        // place/time parity — previously a place-reminder Take showed an inactive
+        // Remind petal, contradicting the card's place subtext).
+        case .remind: return hasReminder || reminderLocation != nil
         case .task: return isTask
         }
     }
@@ -605,14 +613,24 @@ struct PetalFanView: View {
             switch kind {
             case .note:   isNote.toggle()
             case .task:   isTask.toggle()
-            case .remind: hasReminder.toggle()
+            case .remind:
+                // Either/or means "active" can be a "when" OR a "where" — toggling
+                // OFF must clear BOTH (2026-07-01: previously only `hasReminder`
+                // flipped, so the petal could never remove a place reminder).
+                if isActive(.remind) {
+                    hasReminder = false
+                    reminderLocation = nil
+                } else {
+                    hasReminder = true
+                }
             case .obie:   isObie.toggle()
             }
             // Note is the floor: if nothing else is active, Note re-asserts.
-            if !isTask && !hasReminder && !isObie { isNote = true }
+            if !isTask && !isActive(.remind) && !isObie { isNote = true }
         }
         // Turning the Reminder Mark ON pops the date/time picker so the user sets
-        // the time there and then (owner 2026-06-17). Turning it off just clears it.
+        // the time (or place) there and then (owner 2026-06-17). Turning it off
+        // just clears it.
         if kind == .remind && hasReminder { showingReminderPicker = true }
     }
 

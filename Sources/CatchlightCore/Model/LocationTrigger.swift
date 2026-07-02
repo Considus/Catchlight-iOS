@@ -34,13 +34,21 @@ public struct LocationTrigger: Codable, Equatable, Sendable {
     /// keep firing — no behaviour change on migration.
     public var alarmEnabled: Bool
 
+    /// The user marked this place reminder DONE (2026-07-01, place/time parity —
+    /// mirrors `TimeReminder.isDone`). Done disables the geofence (the scheduler
+    /// skips a done "where") and drives the grey done card treatment via
+    /// `Take.isMarkedDone`. Additive: `decodeIfPresent` defaults false so older
+    /// payloads keep decoding with no behaviour change.
+    public var isDone: Bool
+
     public init(
         latitude: Double,
         longitude: Double,
         radiusMetres: Double,
         triggerOnArrival: Bool,
         locationName: String? = nil,
-        alarmEnabled: Bool = true
+        alarmEnabled: Bool = true,
+        isDone: Bool = false
     ) {
         self.latitude = latitude
         self.longitude = longitude
@@ -48,12 +56,14 @@ public struct LocationTrigger: Codable, Equatable, Sendable {
         self.triggerOnArrival = triggerOnArrival
         self.locationName = locationName
         self.alarmEnabled = alarmEnabled
+        self.isDone = isDone
     }
 
-    // Explicit Codable so the additive `alarmEnabled` can default TRUE for older payloads
-    // (synthesised decoding would reject a payload missing the key).
+    // Explicit Codable so the additive `alarmEnabled` / `isDone` can carry decoding
+    // defaults for older payloads (synthesised decoding would reject a payload
+    // missing the keys).
     enum CodingKeys: String, CodingKey {
-        case latitude, longitude, radiusMetres, triggerOnArrival, locationName, alarmEnabled
+        case latitude, longitude, radiusMetres, triggerOnArrival, locationName, alarmEnabled, isDone
     }
 
     public init(from decoder: Decoder) throws {
@@ -64,6 +74,7 @@ public struct LocationTrigger: Codable, Equatable, Sendable {
         self.triggerOnArrival = try c.decode(Bool.self, forKey: .triggerOnArrival)
         self.locationName = try c.decodeIfPresent(String.self, forKey: .locationName)
         self.alarmEnabled = try c.decodeIfPresent(Bool.self, forKey: .alarmEnabled) ?? true
+        self.isDone = try c.decodeIfPresent(Bool.self, forKey: .isDone) ?? false
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -74,5 +85,6 @@ public struct LocationTrigger: Codable, Equatable, Sendable {
         try c.encode(triggerOnArrival, forKey: .triggerOnArrival)
         try c.encodeIfPresent(locationName, forKey: .locationName)
         try c.encode(alarmEnabled, forKey: .alarmEnabled)
+        try c.encode(isDone, forKey: .isDone)
     }
 }
