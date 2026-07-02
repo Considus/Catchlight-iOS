@@ -263,7 +263,7 @@ struct CloudStorageView: View {
     private func handlePickedFolder(_ url: URL) {
         // Save the bookmark AND fire the first sync via the shared AppModel path
         // (also used by the post-restore guidance card) so connect-then-sync behaves
-        // identically from both entry points. D-087.
+        // identically from both entry points. D-103.
         if let error = app.connectCloudFolder(url) {
             errorText = error
         } else {

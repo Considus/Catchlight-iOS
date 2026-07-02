@@ -3,7 +3,7 @@
 //  Catchlight (iOS app target)
 //
 //  The 12-field privacy-phrase entry grid, shared by the onboarding restore branch
-//  ("I already use Catchlight") and the Settings "Second device" flow (D-087). Owner
+//  ("I already use Catchlight") and the Settings "Second device" flow (D-103). Owner
 //  2026-07-02 (option B): twelve discrete numbered fields — explicit positions, sturdy
 //  for a once-a-year action — with NO per-word validity signal (correctness is a
 //  whole-phrase check on submit, matching onboarding's "reveal nothing granular"

@@ -4,7 +4,7 @@
 //
 //  Destroys the local encrypted store on disk — the production primitive behind
 //  two destructive flows:
-//    • Settings → Second device (D-087): re-keying to another account leaves the
+//    • Settings → Second device (D-103): re-keying to another account leaves the
 //      existing rows sealed under the OLD per-item keys, which the store's read
 //      path THROWS on rather than hides. So the local Takes must be removed before
 //      re-binding under the new key, or the timeline would break on undecryptable

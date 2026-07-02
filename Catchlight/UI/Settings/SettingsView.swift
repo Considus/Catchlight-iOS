@@ -45,12 +45,12 @@ struct SettingsView: View {
     /// must live outside the `#if DEBUG` block (it was declared inside it, which
     /// compiled in Debug but broke every Release/Archive build — 2026-07-01).
     @State private var showNoticeHistory = false
-    /// Second-device restore (D-087): the destructive warning gate, then the phrase-
+    /// Second-device restore (D-103): the destructive warning gate, then the phrase-
     /// entry sheet. Two bools so the warning always precedes entry and each dismisses
     /// independently.
     @State private var showSecondDeviceWarning = false
     @State private var showSecondDeviceEntry = false
-    /// Presents the Files document picker for the offline "Import from a file" path (D-088).
+    /// Presents the Files document picker for the offline "Import from a file" path (D-104).
     @State private var showFileImporter = false
 
     #if DEBUG
@@ -124,7 +124,7 @@ struct SettingsView: View {
         .sheet(isPresented: $showSecondDeviceEntry) {
             SecondDeviceRestoreView()
         }
-        // Second-device warning (D-087): the re-key is destructive because an onboarded
+        // Second-device warning (D-103): the re-key is destructive because an onboarded
         // device already holds Takes under its current key — a new phrase can't decrypt
         // them, so they're removed. Continue only leads to phrase entry; the wipe/re-key
         // happens on Restore there (a bad phrase destroys nothing).
@@ -134,7 +134,7 @@ struct SettingsView: View {
         } message: {
             Text("Enter your privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed. To keep a copy first, cancel and use Export Takes (Markdown), or make sure they're already in your cloud folder.")
         }
-        // Offline "Import from a file" (D-088): pick any exported file from Files.
+        // Offline "Import from a file" (D-104): pick any exported file from Files.
         .fileImporter(isPresented: $showFileImporter,
                       allowedContentTypes: Self.importableFileTypes,
                       allowsMultipleSelection: true) { result in
@@ -502,7 +502,7 @@ struct SettingsView: View {
                         action: { vm.isPhraseSheetPresented = true })
                 .accessibilityHint("Double-tap to view your phrase. Face ID or passcode required.")
 
-            // Second device (D-087) — re-key this device to another account's phrase
+            // Second device (D-103) — re-key this device to another account's phrase
             // to pull its Takes from the shared cloud folder. Destructive (it replaces
             // this device's account), so a warning gates entry.
             SettingsRow(icon: "iphone.and.arrow.forward",
@@ -632,7 +632,7 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings-import-notes")
                     .accessibilityHint("Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes.")
             }
-            // Import from a file (D-088) — the offline route: pick an exported file from
+            // Import from a file (D-104) — the offline route: pick an exported file from
             // anywhere in Files (On My iPhone, AirDrop, etc.), no cloud folder needed. A
             // Catchlight export splits back into its Takes; a foreign note imports as one.
             SettingsRow(icon: "doc.badge.plus",
@@ -769,7 +769,7 @@ struct SettingsView: View {
         return types
     }()
 
-    /// Import one or more files picked from Files (offline path, D-088). No cloud folder
+    /// Import one or more files picked from Files (offline path, D-104). No cloud folder
     /// needed — a Catchlight export splits into its Takes; each foreign note imports as
     /// one, so picking several separate note files yields one Take per file.
     @MainActor

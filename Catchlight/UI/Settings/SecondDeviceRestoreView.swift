@@ -1,6 +1,6 @@
 //
 //  SecondDeviceRestoreView.swift
-//  Catchlight (iOS app target) — Settings → Second device (D-087)
+//  Catchlight (iOS app target) — Settings → Second device (D-103)
 //
 //  The Settings entry point for cross-device restore: re-key THIS device to the
 //  account behind a privacy phrase. Reached only after the user confirms the
