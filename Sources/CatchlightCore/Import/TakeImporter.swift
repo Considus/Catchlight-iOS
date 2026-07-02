@@ -1,6 +1,6 @@
 //
 //  TakeImporter.swift
-//  CatchlightCore — import notes as Takes (owner 2026-06-22; multi-Take D-088)
+//  CatchlightCore — import notes as Takes (owner 2026-06-22; multi-Take D-104)
 //
 //  Pure, testable parsing of a markdown/plain-text file into Takes.
 //
@@ -10,7 +10,7 @@
 //      lines imports as a Task and plain prose as a Note. This is what a note written
 //      ELSEWHERE and dropped in should do.
 //    • `parseDocument` — recognises Catchlight's OWN Markdown export and SPLITS it back
-//      into the individual Takes (D-088). When the export carries the trailing
+//      into the individual Takes (D-104). When the export carries the trailing
 //      `<!-- catchlight:data -->` block (enriched exports), every field round-trips
 //      losslessly — exact timestamps, Obie, and full reminders. An older export
 //      without that block still splits on its `## …` headings, recovering body, type,

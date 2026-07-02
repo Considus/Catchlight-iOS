@@ -1,6 +1,6 @@
 //
 //  TakeTransferMetadata.swift
-//  CatchlightCore — lossless Markdown round-trip (D-088)
+//  CatchlightCore — lossless Markdown round-trip (D-104)
 //
 //  The machine-readable per-Take metadata embedded in a Markdown export's trailing
 //  data block, so an export round-trips losslessly on import. The visible Markdown
