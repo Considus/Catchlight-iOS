@@ -750,6 +750,15 @@ struct ReminderPickerSheet: View {
                 let next = calendar.date(byAdding: .day, value: 1, to: now) ?? now
                 return calendar.date(bySettingHour: morning, minute: 0, second: 0, of: next) ?? next
             case .thisWeekend:
+                // "THIS weekend" includes the one the user is in (2026-07-01):
+                // strictly-after matching on a Saturday/Sunday skipped to NEXT
+                // Saturday. On a weekend day, use today (at the morning hour if
+                // still ahead, else fall through to the strict next Saturday).
+                let weekday = calendar.component(.weekday, from: now)
+                if weekday == 7 || weekday == 1 {
+                    let today = calendar.date(bySettingHour: morning, minute: 0, second: 0, of: now) ?? now
+                    if today > now { return today }
+                }
                 let sat = Self.nextWeekday(7, after: now, calendar: calendar)   // Saturday
                 return calendar.date(bySettingHour: morning, minute: 0, second: 0, of: sat) ?? sat
             case .nextWeek:
@@ -836,6 +845,15 @@ struct ReminderPickerSheet: View {
         .accessibilityIdentifier("reminder-quickset")
         .onChange(of: quickSet) { _, preset in
             if let preset { date = preset.date(now: Date(), calendar: .current) }
+        }
+        // A hand-edited date invalidates the preset LABEL (2026-07-01): the row
+        // otherwise kept reading e.g. "Tomorrow" against a date picked weeks out.
+        // Guarded so the preset's own date-jump above doesn't immediately clear it.
+        .onChange(of: date) { _, newDate in
+            if let preset = quickSet,
+               newDate != preset.date(now: Date(), calendar: .current) {
+                quickSet = nil
+            }
         }
     }
 

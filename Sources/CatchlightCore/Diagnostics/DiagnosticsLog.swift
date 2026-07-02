@@ -90,6 +90,16 @@ public final class DiagnosticsLog: @unchecked Sendable {
         writeLocked([])
     }
 
+    /// Remove only the USER-FACING notices (the Notice History rows), keeping the
+    /// lifecycle breadcrumbs (2026-07-01). Notice History's Clear previously wiped
+    /// the whole file — a user tidying stale banners unknowingly destroyed the
+    /// "Export diagnostics" content they'd attach to a bug report (the D-085
+    /// one-backbone design cuts both ways).
+    public func clearUserFacing() {
+        lock.lock(); defer { lock.unlock() }
+        writeLocked(loadLocked().filter { !$0.category.isUserFacing })
+    }
+
     // MARK: - Read
 
     /// All entries, oldest-first (chronological).

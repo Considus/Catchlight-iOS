@@ -75,7 +75,14 @@ struct LocationEditor: View {
         // A fresh one-shot fix drops the pin on the user's spot + names it.
         .onChange(of: location.currentLocation) { _, loc in
             guard let loc else { return }
+            // Only auto-name when the user hasn't named the place (2026-07-01):
+            // the slow reverse geocode previously overwrote a chosen name — e.g.
+            // re-pinning "Home" renamed it to the street address — and writeBack
+            // persisted the clobber. "Current location" is the placeholder this
+            // handler itself set, so it counts as unnamed.
+            let hadUserName = !name.isEmpty && name != "Current location"
             apply(coordinate: loc.coordinate, name: name.isEmpty ? "Current location" : name)
+            guard !hadUserName else { return }
             Task { if let resolved = await search.reverseGeocodedName(for: loc) { name = resolved; writeBack() } }
         }
         .onChange(of: name) { _, _ in writeBack() }

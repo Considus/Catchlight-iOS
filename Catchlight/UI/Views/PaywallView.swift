@@ -277,13 +277,17 @@ struct PaywallView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // Justified like Restore/Redeem: Privacy leading · ToS trailing
-            // (owner 2026-06-12, HiFi v1.11.3).
+            // (owner 2026-06-12, HiFi v1.11.3). Safe URL construction
+            // (2026-07-01): constants today, but a typo in a future edit becomes
+            // a missing link rather than a crash.
             HStack {
-                Link("Privacy Policy",
-                     destination: URL(string: "https://catchlight.app/privacy")!)
+                if let privacy = URL(string: "https://catchlight.app/privacy") {
+                    Link("Privacy Policy", destination: privacy)
+                }
                 Spacer()
-                Link("Terms of Service",
-                     destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
+                if let terms = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                    Link("Terms of Service", destination: terms)
+                }
             }
             .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .footnote))
             .foregroundStyle(Color.ckTextObie)

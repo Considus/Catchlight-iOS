@@ -702,12 +702,17 @@ private struct CompleteStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
     /// The encryption-fact line that follows the voice gem — storage-specific.
+    /// The cloud line is a POINTER, not a claim (2026-07-01): nothing in
+    /// onboarding configures a cloud folder, so the previous "backed up to your
+    /// cloud folder" copy was factually wrong at the moment it was shown —
+    /// backup starts only after the user picks a folder in Settings. Sync mode
+    /// already defaults to Automatic, so the folder pick is the only step left.
     private var bodyText: String {
         switch vm.storagePath {
         case .local:
             return "Encrypted on this device, readable only by you."
         case .cloud:
-            return "Encrypted on this device and backed up to your cloud folder — readable only by you."
+            return "Encrypted on this device, readable only by you. To finish setting up cloud backup, choose your folder in Settings → System → Cloud Storage."
         }
     }
 

@@ -36,6 +36,23 @@ final class LinkDetectorTests: XCTestCase {
         XCTAssertNotNil(result.first?.url.scheme)
     }
 
+    // MARK: - Emails (mailto preserved — 2026-07-01)
+
+    func testEmail_keepsMailtoScheme() {
+        let result = LinkDetector.detect(in: "email me at bob@example.com please")
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.url.scheme, "mailto",
+                       "an email must compose mail, not open a browser at the domain")
+        XCTAssertEqual(result.first?.url.absoluteString, "mailto:bob@example.com")
+    }
+
+    func testEmail_alongsideBareDomain_bothResolveCorrectly() {
+        let text = "bob@example.com or catchlight.app"
+        let result = LinkDetector.detect(in: text)
+        let schemes = result.map { $0.url.scheme ?? "" }.sorted()
+        XCTAssertEqual(schemes, ["https", "mailto"])
+    }
+
     // MARK: - Bare domains (assumed https://)
 
     func testBareDomain_commonTLD_assumesHTTPS() {

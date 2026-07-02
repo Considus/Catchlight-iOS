@@ -62,8 +62,18 @@ public enum LinkDetector {
                 // `http://`. When the user typed no scheme, assume `https://` so every
                 // schemeless domain links consistently (owner 2026-06-22); an explicitly
                 // typed scheme (http:// or anything else) is preserved as-is.
+                //
+                // EMAILS (2026-07-01): the detector also matches bare addresses and
+                // returns `mailto:` URLs. Their matched TEXT has no "://", so the
+                // schemeless branch rewrote `bob@example.com` into
+                // `https://bob@example.com` — a userinfo-form WEB link that opened
+                // a browser at example.com instead of composing mail. Preserve the
+                // detector's mailto URL. (The second-pass regex already guards
+                // against emails; this first pass forgot them.)
                 let resolved: URL
-                if matched.contains("://") {
+                if url.scheme == "mailto" {
+                    resolved = url
+                } else if matched.contains("://") {
                     guard url.scheme != nil else { continue }
                     resolved = url
                 } else {

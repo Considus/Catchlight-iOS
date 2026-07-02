@@ -87,8 +87,13 @@ enum ImportCoordinator {
     }
 
     /// Read a file as plain text. `.rtf` is decoded through NSAttributedString so the
-    /// RTF control words never reach the Take (just the words); everything else is read
-    /// as UTF-8. Returns nil for unreadable / non-decodable content (the caller skips it).
+    /// RTF control words never reach the Take (just the words); everything else tries
+    /// UTF-8 first, then falls back through the common non-UTF-8 text encodings
+    /// (2026-07-01 — a UTF-16 file from Windows Notepad or a Latin-1 export was
+    /// previously counted "skipped" with no explanation). `NSString`'s encoding
+    /// detection handles the BOM cases; Latin-1 is the last resort because it can
+    /// decode ANY byte stream (possibly as mojibake), so it must never pre-empt
+    /// the Unicode attempts. Returns nil only for genuinely unreadable content.
     private static func plainText(of url: URL) -> String? {
         guard let data = try? Data(contentsOf: url) else { return nil }
         if url.pathExtension.lowercased() == "rtf" {
@@ -98,6 +103,11 @@ enum ImportCoordinator {
                 documentAttributes: nil)
             return attributed?.string
         }
-        return String(data: data, encoding: .utf8)
+        if let utf8 = String(data: data, encoding: .utf8) { return utf8 }
+        var converted: NSString?
+        let detected = NSString.stringEncoding(for: data, encodingOptions: nil,
+                                               convertedString: &converted, usedLossyConversion: nil)
+        if detected != 0, let converted { return converted as String }
+        return String(data: data, encoding: .isoLatin1)
     }
 }
