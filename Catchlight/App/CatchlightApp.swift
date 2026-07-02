@@ -58,12 +58,12 @@ struct CatchlightApp: App {
                 app.reportQuarantined(ids)
             },
             // Foreground sync (2026-06-10) — when a pass applied remote
-            // changes, refresh the timeline snapshot so they show immediately.
-            // (Dock redesign: the timeline is the ONE surface; its live filter
-            // re-derives from the same snapshot, so this reload covers all
-            // dock states.)
-            onRemoteChanges: { _ in
-                app.dailiesVM.reload()
+            // changes, reconcile notifications AND refresh the timeline
+            // snapshot (2026-07-01: previously reload-only, so a Take deleted
+            // on another device kept its pending alarm here and fired a banner
+            // with the deleted Take's decrypted title).
+            onRemoteChanges: { report in
+                app.dailiesVM.applyRemoteChanges(report)
             }
         )
         self.backgroundSync = backgroundSync

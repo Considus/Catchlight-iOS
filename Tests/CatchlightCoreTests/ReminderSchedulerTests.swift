@@ -308,11 +308,37 @@ final class ReminderSchedulerTests: XCTestCase {
     /// `rescheduleAll` keeps the pending set within the global cap, favouring the soonest
     /// occurrences across every reminder — so a fleet can't silently overflow iOS's 64.
     func testRescheduleAll_capsAtGlobalBudget() {
-        // 6 daily reminders × a 12-deep window = 72 planned > the 60 budget.
+        // 6 daily reminders × a 12-deep window = 72 planned > the budget.
         let takes = (0..<6).map { recurringTake(.daily, at: now.addingTimeInterval(Double(3600 + $0 * 60))) }
         scheduler.rescheduleAll(takes: takes)
-        XCTAssertEqual(center.added.count, ReminderScheduler.maxPendingAlarms,
+        XCTAssertEqual(center.added.count, ReminderScheduler.maxPendingAlarms(reservingFor: 0),
                        "the pending set is capped at the global budget")
+    }
+
+    /// Geofence requests come out of the SAME 64-request budget as calendar alarms
+    /// (2026-07-01) — the previous fixed cap of 60 ignored them, so 60 alarms + a
+    /// few geofences + a follow-up chain exceeded 64 and iOS silently dropped the
+    /// overflow. The alarm budget must shrink by the geofence count, keeping the
+    /// TOTAL under the system cap with the reserved headroom intact.
+    func testRescheduleAll_budgetAccountsForGeofences() {
+        let alarmTakes = (0..<6).map { recurringTake(.daily, at: now.addingTimeInterval(Double(3600 + $0 * 60))) }
+        let placeTakes = (0..<5).map { i -> Take in
+            Take(blocks: [.textLine("place \(i)")],
+                 locationReminder: LocationTrigger(latitude: 51.5, longitude: -0.1,
+                                                   radiusMetres: 150,
+                                                   triggerOnArrival: true,
+                                                   locationName: "p\(i)"))
+        }
+        scheduler.rescheduleAll(takes: alarmTakes + placeTakes)
+
+        let geofences = center.added.filter { $0.trigger is UNLocationNotificationTrigger }
+        let alarms = center.added.count - geofences.count
+        XCTAssertEqual(geofences.count, 5)
+        XCTAssertEqual(alarms, ReminderScheduler.maxPendingAlarms(reservingFor: 5),
+                       "the alarm budget must shrink by the geofence count")
+        XCTAssertLessThanOrEqual(center.added.count,
+                                 ReminderScheduler.systemPendingCap - ReminderScheduler.reservedHeadroom,
+                                 "total pending requests must stay within the capped budget")
     }
 
     /// `rescheduleAll` clears each reminder's base+window but NOT its snooze id, so a

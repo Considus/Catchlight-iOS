@@ -78,13 +78,28 @@ public final class ReminderScheduler {
     /// between app opens (weeks/months for the coarser cadences).
     static let recurrenceWindow = 12
 
-    /// Global ceiling on pending alarms the app keeps registered at once (owner
-    /// 2026-06-21). iOS hard-caps the system at 64 across the WHOLE app and silently
-    /// drops the rest, so a fleet of recurring reminders (each wanting a window) could
-    /// starve a coarse-cadence series out entirely. `rescheduleAll` plans every alarm,
-    /// then keeps only the soonest `maxPendingAlarms`, leaving headroom under 64 for the
-    /// snooze/catch-up ids and any single-edit scheduled between rebuilds.
-    static let maxPendingAlarms = 60
+    /// iOS's hard cap on pending notification requests across the WHOLE app —
+    /// calendar alarms, geofence requests, snoozes, follow-ups, everything.
+    /// Requests beyond it are silently dropped.
+    static let systemPendingCap = 64
+
+    /// Requests held in reserve under the system cap for ids the rebuild never
+    /// touches: pending snoozes, all-day catch-ups, and in-flight follow-up
+    /// chains scheduled between rebuilds (2026-07-01).
+    static let reservedHeadroom = 8
+
+    /// Global ceiling on planned calendar alarms the app keeps registered at once
+    /// (owner 2026-06-21). iOS silently drops requests past `systemPendingCap`, so
+    /// a fleet of recurring reminders (each wanting a window) could starve a
+    /// coarse-cadence series out entirely. `rescheduleAll` plans every alarm, then
+    /// keeps only the soonest `maxPendingAlarms(reservingFor:)`. The budget
+    /// arithmetic accounts for GEOFENCE requests too (2026-07-01) — they are also
+    /// pending `UNNotificationRequest`s, which the previous fixed cap of 60
+    /// ignored: 60 alarms + a few geofences + a follow-up chain exceeded 64 and
+    /// iOS silently discarded the overflow.
+    static func maxPendingAlarms(reservingFor locationRequests: Int) -> Int {
+        max(0, systemPendingCap - reservedHeadroom - locationRequests)
+    }
 
     /// How long after the app notices a missed all-day fire time it nudges anyway (owner
     /// 2026-06-21). See `scheduleReminder`'s all-day catch-up.
@@ -301,18 +316,22 @@ public final class ReminderScheduler {
         if !toClear.isEmpty {
             center.removePendingNotificationRequests(withIdentifiers: toClear)
         }
+        // Geofences are pending UNNotificationRequests too, so they come out of the
+        // same 64-request budget as the calendar alarms — count them FIRST and size
+        // the alarm budget around them (2026-07-01).
+        let locationTakes = takes
+            .filter { $0.locationReminder?.alarmEnabled == true }
+            .prefix(Self.maxLocationRegions)
         let chosen = takes
             .flatMap { plannedAlarms(for: $0, now: n) }
             .sorted { $0.fireDate < $1.fireDate }
-            .prefix(Self.maxPendingAlarms)
+            .prefix(Self.maxPendingAlarms(reservingFor: locationTakes.count))
         chosen.forEach { center.add($0.request) }
         // Re-arm location geofences (they persist across launches, but rebuilding keeps them
         // consistent after edits and restores any lost on reinstall). Only ALARM-ON ones are
         // registered, so silent place tags don't eat the iOS 20-region budget (capped here —
         // beyond 20 the OS would silently drop them); `scheduleLocationReminder` re-checks.
-        takes.filter { $0.locationReminder?.alarmEnabled == true }
-            .prefix(Self.maxLocationRegions)
-            .forEach { scheduleLocationReminder(for: $0) }
+        locationTakes.forEach { scheduleLocationReminder(for: $0) }
     }
 
     /// A planned alarm + the instant it fires, so the global rebuild can sort by soonest.
