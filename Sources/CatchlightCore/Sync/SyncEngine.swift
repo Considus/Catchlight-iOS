@@ -45,6 +45,14 @@ public struct SyncReport: Equatable, Sendable {
     public var skipped: [UUID] = []
     public var deletedLocally: [UUID] = []   // remote tombstones applied locally
     public var uploaded: [UUID] = []         // local versions written to cloud
+    /// Live local Takes push's self-heal step did NOT re-upload because this
+    /// device was offline longer than the tombstone-retention window (2026-07-01):
+    /// an unmatched old Take on such a device is indistinguishable from one the
+    /// fleet deleted after we last synced, and auto-uploading it would resurrect
+    /// the deletion everywhere. The user re-asserts a held-back Take by editing
+    /// it (the bump re-uploads it via the normal changed-Takes path); the app
+    /// surfaces the count as a notice.
+    public var heldBack: [UUID] = []
     /// True when the push half was skipped because another device holds the sync
     /// lock. A routine, designed-for outcome — NOT a failure.
     public var pushDeferred: Bool = false
@@ -55,6 +63,7 @@ public struct SyncReport: Equatable, Sendable {
         a.skipped == b.skipped &&
         a.deletedLocally == b.deletedLocally &&
         a.uploaded == b.uploaded &&
+        a.heldBack == b.heldBack &&
         a.pushDeferred == b.pushDeferred &&
         a.conflicts.map(\.local.id) == b.conflicts.map(\.local.id) &&
         a.conflicts.map(\.remote.id) == b.conflicts.map(\.remote.id)
@@ -183,6 +192,15 @@ public final class SyncEngine {
             if now().timeIntervalSince(deletedAt) > Manifest.tombstoneRetention {
                 continue   // every device has had ample time to observe it
             }
+            // If the manifest still listed a live entry for this id (a MERGED
+            // remote tombstone beating a blob we or another device uploaded),
+            // delete the blob too (2026-07-01) — step 2 only deletes blobs for
+            // LOCAL tombstones, so this case left an orphaned .clk in the folder
+            // forever. Guarded on the entry so it runs once, not on every push
+            // for the tombstone's whole retention life.
+            if entries[id] != nil {
+                try? cloud.delete("\(id.uuidString).clk")
+            }
             entries[id] = nil
             finalTombstones.append(t)
         }
@@ -190,8 +208,25 @@ public final class SyncEngine {
 
         // 4. Self-heal: any live local Take with no manifest entry (e.g. an
         //    upload missed by an earlier watermark race) is uploaded now.
+        //
+        //    LONG-OFFLINE GUARD (2026-07-01): if this device hasn't synced within
+        //    the tombstone-retention window, an unmatched OLD Take (not modified
+        //    since our last sync) is ambiguous — a missed upload, or a Take the
+        //    fleet deleted whose tombstone has since been pruned. Auto-uploading
+        //    it would resurrect the deletion fleet-wide, which is exactly what
+        //    the tombstone model exists to prevent. Such Takes are HELD BACK and
+        //    reported (`report.heldBack`); the user re-asserts one by editing it
+        //    (the modifiedAt bump re-uploads it via step 1 next pass). A Take
+        //    edited since last sync is never held back — edit-wins.
+        let offlineTooLong = lastSync.map {
+            now().timeIntervalSince($0) > Manifest.tombstoneRetention
+        } ?? false
         for take in localTakes where entries[take.id] == nil && !tombstonedIds.contains(take.id) {
             if isCancelled() { throw CancellationError() }
+            if offlineTooLong, let lastSync, take.modifiedAt <= lastSync {
+                report.heldBack.append(take.id)
+                continue
+            }
             try upload(take, to: cloud, entries: &entries, report: &report)
         }
 
@@ -321,6 +356,13 @@ public final class SyncEngine {
             let remoteTake: Take
             do {
                 blob = try CloudBlob.parse(blobBytes)
+                // Forward-compat guard (2026-07-01): a future-version envelope may
+                // have changed semantics — quarantine it (retried once this client
+                // is updated) rather than silently misreading it as v1. The
+                // manifest has had this guard both directions from the start.
+                guard CloudBlob.supportedVersions.contains(blob.version) else {
+                    throw SyncError.malformedEnvelope(entry.uuid)
+                }
                 guard let ct = blob.ciphertext else { throw SyncError.malformedEnvelope(entry.uuid) }
                 remoteTake = try crypto.open(ct, takeUUID: entry.uuid)
             } catch {
@@ -367,6 +409,7 @@ public final class SyncEngine {
         do {
             let out = try pushOutbound(isCancelled: isCancelled)
             report.uploaded = out.uploaded
+            report.heldBack = out.heldBack
         } catch is SyncLockError {
             report.pushDeferred = true
         }

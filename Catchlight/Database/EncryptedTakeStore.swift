@@ -363,6 +363,15 @@ public final class EncryptedTakeStore: TakeStore {
                 bindText(sel, 1, take.id.uuidString)
                 for var existing in try collectTakes(sel) where existing.isObie {
                     existing.isObie = false
+                    // Bump modifiedAt so the demotion SYNCS (2026-07-01). pushOutbound
+                    // selects by `modifiedAt > watermark`; without the bump the demoted
+                    // Take was never re-uploaded, the cloud kept a second isObie=true
+                    // blob, and every later pull hit ConflictResolver's (false,false)
+                    // branch — a phantom "changed on another device" conflict. Matches
+                    // setObie. When SYNC applies a remote Obie this can bump a Take the
+                    // fleet already demoted — one redundant, converging re-upload;
+                    // accepted trade-off for never losing the demotion.
+                    existing.modifiedAt = Date()
                     try insertOrReplace(existing)
                 }
             }

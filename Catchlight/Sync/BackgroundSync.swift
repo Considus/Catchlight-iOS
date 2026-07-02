@@ -242,6 +242,17 @@ public final class BackgroundSyncCoordinator {
             let quarantined = report.quarantined
             Task { @MainActor in onQuarantined(quarantined) }
         }
+        // Long-offline hold-back (2026-07-01): push declined to self-heal-upload
+        // Takes this device hasn't touched since before the tombstone-retention
+        // window (they may have been deleted fleet-wide in the interim). Surface
+        // a content-free count in Notice History — the user re-asserts a Take by
+        // editing it. DiagnosticsLog is thread-safe; no main-actor hop needed.
+        if !report.heldBack.isEmpty {
+            let n = report.heldBack.count
+            DiagnosticsLog.shared.record(.sync,
+                "\(n) Take\(n == 1 ? "" : "s") not re-uploaded — this device was away too long "
+                + "to rule out deletion elsewhere. Edit a Take to sync it again.")
+        }
         if let onRemoteChanges, !report.applied.isEmpty || !report.deletedLocally.isEmpty {
             Task { @MainActor in onRemoteChanges(report) }
         }

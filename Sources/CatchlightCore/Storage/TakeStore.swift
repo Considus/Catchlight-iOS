@@ -88,6 +88,11 @@ public final class InMemoryTakeStore: TakeStore {
         if take.isObie {
             for (id, var other) in takes where other.isObie && id != take.id {
                 other.isObie = false
+                // Bump modifiedAt so the demotion syncs (2026-07-01): push selects
+                // by `modifiedAt > watermark`, so an un-bumped demotion never
+                // re-uploaded and the cloud kept a stale isObie=true blob →
+                // phantom conflicts. Mirrors EncryptedTakeStore.upsert / setObie.
+                other.modifiedAt = Date()
                 takes[id] = other
             }
         }

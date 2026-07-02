@@ -23,6 +23,11 @@ import Foundation
 
 public struct CloudBlob: Codable, Equatable, Sendable {
     public static let currentVersion = 1
+    /// Versions this client can process. A blob with a HIGHER version than we
+    /// understand is quarantined rather than misread as v1 (2026-07-01) —
+    /// mirrors `Manifest.supportedVersions`, which had this guard from the
+    /// start while the per-Take envelope had none.
+    public static let supportedVersions = 1...1
 
     public let version: Int
     public let uuid: UUID

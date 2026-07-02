@@ -55,9 +55,14 @@ public struct Manifest: Codable, Equatable, Sendable {
     /// Versions this client can process. A manifest with a HIGHER version than
     /// we understand is rejected rather than misread as v1.
     public static let supportedVersions = 1...2
-    /// Tombstones older than this are pruned from the manifest on push. 30 days
-    /// is ample for every device of a single user to sync at least once.
-    public static let tombstoneRetention: TimeInterval = 30 * 24 * 3600
+    /// Tombstones older than this are pruned from the manifest on push.
+    /// Raised 30 → 180 days (2026-07-01): a device offline past the retention
+    /// window still holds its deleted Takes live, and push's self-heal step
+    /// would re-upload them — resurrecting a month of deletions fleet-wide.
+    /// Tombstones are ~90 bytes each, so six months of retention is near-free;
+    /// the self-heal hold-back guard in `pushOutbound` covers devices absent
+    /// even longer than this.
+    public static let tombstoneRetention: TimeInterval = 180 * 24 * 3600
 
     public var version: Int
     public var updated: String         // ISO-8601
