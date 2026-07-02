@@ -124,9 +124,20 @@ enum Wiring {
     /// `.userPresence` prompt belongs to `unlock()` alone (no double-prompt).
     /// Primes `sessionKeys` so foreground sync reuses the same keys.
     static func makeStore(keys: KeyHierarchy) -> TakeStore? {
-        guard let store = try? EncryptedTakeStore(keys: keys) else { return nil }
-        sessionKeys = keys
-        return store
+        do {
+            let store = try EncryptedTakeStore(keys: keys)
+            sessionKeys = keys
+            return store
+        } catch {
+            // The lock screen shows a generic "library couldn't be opened"
+            // message; the REASON (schema-too-new vs corruption vs a failed
+            // legacy migration) was previously swallowed by `try?` and
+            // undiagnosable from a bug report (2026-07-02). Leave a content-free
+            // breadcrumb — StorageError carries no Take content by design.
+            DiagnosticsLog.shared.record(.storage,
+                "Encrypted library failed to open: \(String(describing: error))")
+            return nil
+        }
     }
 
     /// Drop the cached session keys (D-042 re-lock). Called by `AppModel.relock()`

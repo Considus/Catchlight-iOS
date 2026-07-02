@@ -24,6 +24,15 @@ private func testUnlockKeys() throws -> KeyHierarchy {
     KeyHierarchy(masterKeyBytes: Data(repeating: 7, count: 32))
 }
 
+/// Tiny lock-guarded flag: the injected `unlockKeys` closure runs OFF the main
+/// actor, so the "was Face ID prompted?" signal needs explicit synchronisation.
+private final class LockedFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    func set() { lock.lock(); value = true; lock.unlock() }
+    func get() -> Bool { lock.lock(); defer { lock.unlock() }; return value }
+}
+
 @MainActor
 final class PaywallDraftPreservationTests: XCTestCase {
 
@@ -79,6 +88,76 @@ final class PaywallDraftPreservationTests: XCTestCase {
         let (app, store) = await makeUnlocked(status: .subscribed)
         app.resolvePendingEntitledSave()
         XCTAssertTrue(try store.allTakes().isEmpty)
+    }
+
+    // MARK: - saveLockedCapture (direct coverage — 2026-07-02 audit follow-up)
+
+    /// A locked AppModel with a pending locked-capture draft and injectable
+    /// unlock, tracking whether the unlock (≈ the Face ID prompt) was invoked.
+    private func makeLockedWithCapture(_ draft: Take, status: SubscriptionStatus)
+        -> (app: AppModel, store: InMemoryTakeStore, unlockInvoked: () -> Bool) {
+        let store = InMemoryTakeStore()
+        let subscription = SubscriptionManager()
+        subscription.forceStatusForTesting(status)
+        // The flag is read back on the main actor AFTER the async save completes,
+        // so the cross-actor write is sequenced (the closure runs off-main).
+        let box = LockedFlag()
+        let app = AppModel(
+            needsOnboarding: false,
+            initialStore: InMemoryTakeStore(),
+            session: SessionController(),
+            makeStoreFromKeys: { _ in store },
+            unlockKeys: { box.set(); return try testUnlockKeys() },
+            lockState: .locked,
+            subscription: subscription
+        )
+        app.lockedCapture = draft
+        return (app, store, { box.get() })
+    }
+
+    /// A blank locked capture is discarded WITHOUT ever prompting Face ID —
+    /// the "tap-and-back-out never shows Face ID" contract.
+    func testSaveLockedCapture_blankDraft_discardsWithoutUnlock() async throws {
+        let blank = Take(blocks: [.text(TextBlock(text: ""))])
+        let (app, store, unlockInvoked) = makeLockedWithCapture(blank, status: .subscribed)
+
+        await app.saveLockedCapture()
+
+        XCTAssertNil(app.lockedCapture)
+        XCTAssertFalse(unlockInvoked(), "a blank discard must never prompt Face ID")
+        XCTAssertEqual(app.lockState, .locked)
+        XCTAssertTrue(try store.allTakes().isEmpty)
+    }
+
+    /// The happy path: typed draft → one unlock → saved to the real store.
+    func testSaveLockedCapture_entitled_unlocksAndSaves() async throws {
+        let draft = Take(blocks: [.textLine("typed while locked")])
+        let (app, store, unlockInvoked) = makeLockedWithCapture(draft, status: .subscribed)
+
+        await app.saveLockedCapture()
+
+        XCTAssertTrue(unlockInvoked())
+        XCTAssertEqual(app.lockState, .unlocked)
+        XCTAssertNil(app.lockedCapture)
+        XCTAssertEqual(try store.allTakes().map(\.id), [draft.id])
+    }
+
+    /// Lapsed: the draft is HELD for the paywall (owner 2026-07-01 policy),
+    /// not silently destroyed — then saved once the user subscribes.
+    func testSaveLockedCapture_lapsed_holdsDraftForPaywall() async throws {
+        let draft = Take(blocks: [.textLine("typed while locked")])
+        let (app, store, _) = makeLockedWithCapture(draft, status: .lapsed)
+
+        await app.saveLockedCapture()
+
+        XCTAssertNil(app.lockedCapture)
+        XCTAssertEqual(app.pendingEntitledSave?.id, draft.id,
+                       "the typed draft must be held, not destroyed")
+        XCTAssertTrue(try store.allTakes().isEmpty)
+
+        app.subscription.forceStatusForTesting(.subscribed)
+        app.resolvePendingEntitledSave()
+        XCTAssertEqual(try store.allTakes().map(\.id), [draft.id])
     }
 
     // MARK: - CaptureRouting hand-off (first coverage)
