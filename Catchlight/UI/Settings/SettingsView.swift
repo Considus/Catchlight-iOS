@@ -139,7 +139,7 @@ struct SettingsView: View {
         // Offline "Import from a file" (D-088): pick any exported file from Files.
         .fileImporter(isPresented: $showFileImporter,
                       allowedContentTypes: Self.importableFileTypes,
-                      allowsMultipleSelection: false) { result in
+                      allowsMultipleSelection: true) { result in
             importFromFile(result)
         }
         // Export format chooser (owner 2026-06-21) — tap Export Takes, pick a
@@ -769,20 +769,22 @@ struct SettingsView: View {
         return types
     }()
 
-    /// Import a single file picked from Files (offline path, D-088). No cloud folder
-    /// needed — a Catchlight export splits into its Takes; a foreign note imports as one.
+    /// Import one or more files picked from Files (offline path, D-088). No cloud folder
+    /// needed — a Catchlight export splits into its Takes; each foreign note imports as
+    /// one, so picking several separate note files yields one Take per file.
     @MainActor
     private func importFromFile(_ result: Result<[URL], Error>) {
         guard app.ensureEntitled() else { return }
-        guard case .success(let urls) = result, let url = urls.first else {
+        guard case .success(let urls) = result, !urls.isEmpty else {
             if case .failure = result {
-                importResultMessage = "Couldn't open that file. Please try again."
+                importResultMessage = "Couldn't open those files. Please try again."
             }
             return
         }
-        let imported = app.dailiesVM.importTakes(ImportCoordinator.parseSingleFile(url))
+        let takes = urls.flatMap { ImportCoordinator.parseSingleFile($0) }
+        let imported = app.dailiesVM.importTakes(takes)
         guard imported > 0 else {
-            importResultMessage = "That file had no notes to import."
+            importResultMessage = "No notes to import from your selection."
             return
         }
         announceImport(imported)
