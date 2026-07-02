@@ -180,12 +180,21 @@ public final class BackgroundSyncCoordinator {
         }
         guard !isSyncing else { stateLock.unlock(); return }
         isSyncing = true
-        if trigger == .appBecameActive { lastActivationSync = now }
         stateLock.unlock()
 
         guard let engine = makeEngine() else {
             stateLock.lock(); isSyncing = false; stateLock.unlock()
             return   // local-only mode, locked, or pre-onboarding — nothing to do
+        }
+
+        // Stamp the activation throttle ONLY now that a sync is actually proceeding
+        // (the engine built) — NOT before the `makeEngine` guard (2026-07-02). On a
+        // cold launch the first `.appBecameActive` fires while still LOCKED, so it
+        // bails at `makeEngine` (keys not cached); stamping beforehand made the
+        // post-unlock `.appBecameActive` (fired seconds later) throttle out, so a cold
+        // launch never synced until a manual tap or a >60s-later foreground.
+        if trigger == .appBecameActive {
+            stateLock.lock(); lastActivationSync = now; stateLock.unlock()
         }
 
         // Background-task assertion: the entering-background trigger must be
