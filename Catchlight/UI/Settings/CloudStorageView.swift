@@ -266,6 +266,16 @@ struct CloudStorageView: View {
             appGroupDefaults?.set(bookmark, forKey: Wiring.bookmarkDefaultsKey)
             folderDisplayPath = url.path
             errorText = nil
+            // Sync the moment the folder is connected. Connecting a folder is an
+            // explicit "start syncing here" action, but the coordinator otherwise
+            // only fires on app-active / background / the Sync Now button — so
+            // without this, a freshly-connected folder sat idle until one of those.
+            // This is also the step that makes a cross-device RESTORE work: entering
+            // the phrase stored the key; connecting the same folder is what actually
+            // PULLS the user's Takes down (the manifest-HMAC check inside pullInbound
+            // doubles as the "is this the right phrase for this folder?" gate). The
+            // `.disabled` kill-switch is still honoured inside makeSyncEngine. D-087.
+            fireManualSync()
         } catch {
             errorText = "Couldn't save that folder: \(error.localizedDescription)"
         }

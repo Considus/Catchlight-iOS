@@ -936,14 +936,14 @@ private struct FailureStep: View {
 // MARK: - Previews
 
 #Preview("Onboarding — welcome (Night)") {
-    let vm = OnboardingViewModel(onComplete: { _ in })
+    let vm = OnboardingViewModel(onComplete: { _, _ in })
     return OnboardingView()
         .environment(vm)
         .preferredColorScheme(.dark)
 }
 
 #Preview("Onboarding — reveal (Night)") {
-    let vm = OnboardingViewModel(onComplete: { _ in })
+    let vm = OnboardingViewModel(onComplete: { _, _ in })
     vm.beginStorageChoice()
     vm.chooseStorage(.cloud)
     return OnboardingView()
@@ -952,7 +952,7 @@ private struct FailureStep: View {
 }
 
 #Preview("Onboarding — confirm (Daylight)") {
-    let vm = OnboardingViewModel(onComplete: { _ in })
+    let vm = OnboardingViewModel(onComplete: { _, _ in })
     vm.beginStorageChoice()
     vm.chooseStorage(.cloud)
     vm.proceedToConfirm()

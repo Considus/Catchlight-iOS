@@ -162,16 +162,24 @@ final class AppModel {
 
         if needsOnboarding {
             self.onboardingVM = nil
-            self.onboardingVM = OnboardingViewModel { [weak self] masterKeyData in
-                self?.completeOnboarding(with: masterKeyData)
+            self.onboardingVM = OnboardingViewModel { [weak self] masterKeyData, isRestore in
+                self?.completeOnboarding(with: masterKeyData, isRestore: isRestore)
             }
         }
     }
 
     /// Called by OnboardingViewModel after the master key is stored. Rebinds the
-    /// feature view model to the now-openable production store and seeds the first
-    /// Takes, then flips to the main app.
-    private func completeOnboarding(with masterKeyData: Data) {
+    /// feature view model to the now-openable production store and (for a fresh
+    /// generate) seeds the first Takes, then flips to the main app.
+    ///
+    /// `isRestore` — a cross-device restore MUST NOT seed. The restored user's real
+    /// Takes arrive from the cloud folder on the first sync; seeding five example
+    /// Takes locally would (a) show examples the user never wanted and (b) push those
+    /// examples UP into their real data the moment the folder is connected. So a
+    /// restore lands on an empty timeline that fills in once the folder is connected
+    /// (chunk 3, D-087). Applies to BOTH the immediate open and the seed-on-next-unlock
+    /// fallback below.
+    private func completeOnboarding(with masterKeyData: Data, isRestore: Bool) {
         onboardingVM = nil
         needsOnboarding = false
         // Open the store directly from the key we JUST derived — no Keychain read,
@@ -183,13 +191,14 @@ final class AppModel {
         let keys = KeyHierarchy(masterKeyBytes: masterKeyData)
         session.adopt(keys)
         if let store = makeStoreFromKeys(keys) {
-            seedIfEmpty(store)
+            if !isRestore { seedIfEmpty(store) }
             rebind(to: store)
             lockState = .unlocked
         } else {
             // The store genuinely couldn't open (corrupt / I/O) — fall back to the
-            // lock screen so a relaunch/retry can recover; seed on that first unlock.
-            seedOnNextUnlock = true
+            // lock screen so a relaunch/retry can recover; seed on that first unlock
+            // (never for a restore).
+            seedOnNextUnlock = !isRestore
             lockState = .locked
         }
     }
