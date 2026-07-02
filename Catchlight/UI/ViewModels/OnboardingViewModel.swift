@@ -73,7 +73,7 @@ final class OnboardingViewModel {
     /// onboarding). D-042. The `isRestore` flag distinguishes a fresh generate
     /// (seed the starter Takes) from a cross-device restore (skip seeding — the
     /// real Takes arrive from the cloud folder, and seeding here would push five
-    /// example Takes UP into the user's real data on first sync). D-087.
+    /// example Takes UP into the user's real data on first sync). D-103.
     private let onComplete: (Data, _ isRestore: Bool) -> Void
 
     init(onComplete: @escaping (Data, _ isRestore: Bool) -> Void) {
@@ -189,7 +189,7 @@ final class OnboardingViewModel {
         }
     }
 
-    // MARK: - Restore (existing phrase — cross-device recovery, D-087)
+    // MARK: - Restore (existing phrase — cross-device recovery, D-103)
 
     /// Inline error under the restore field ("that phrase isn't valid …"); nil when clean.
     private(set) var restoreError: String?

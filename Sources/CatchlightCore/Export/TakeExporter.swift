@@ -63,7 +63,7 @@ public enum TakeExporter {
             out += "\(body(for: take))\n"
         }
 
-        // Lossless round-trip (D-088): a non-empty export appends ONE hidden data block
+        // Lossless round-trip (D-104): a non-empty export appends ONE hidden data block
         // carrying each Take's exact timestamps / Obie / reminders, so import can
         // rebuild the individual Takes rather than collapse the file into one. It is an
         // HTML comment (invisible in any rendered Markdown). Metadata order matches the
