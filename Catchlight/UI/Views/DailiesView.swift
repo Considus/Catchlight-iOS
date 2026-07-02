@@ -618,9 +618,19 @@ struct DailiesView: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            DockPill(title: "Connect cloud folder") { restorePickerPresented = true }
-                .frame(maxWidth: 260)
-                .accessibilityIdentifier("restore-connect-folder")
+            // Fixed-height capsule (the app's non-dock primary button, as in Cloud
+            // Storage) — NOT a DockPill, which is `maxHeight: .infinity` and, outside
+            // DockPillRow's height clamp, ballooned to fill the empty state.
+            Button { restorePickerPresented = true } label: {
+                Text("Connect cloud folder")
+                    .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                    .foregroundStyle(Color.ckOnAccent)
+                    .frame(maxWidth: 260, minHeight: 50)
+                    .background(Capsule().fill(Color.ckEmber))
+                    .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("restore-connect-folder")
 
             Button("Not now") { app.restoreAwaitingFolder = false }
                 .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
