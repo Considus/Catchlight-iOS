@@ -78,10 +78,20 @@ public final class EncryptedTakeStore: TakeStore {
         self.dbURL = dbDir.appendingPathComponent("catchlight.db")
 
         // Migrate a legacy root-level database file into the protected directory.
+        // A FAILED move must THROW (2026-07-01), not fall through: proceeding
+        // created a fresh empty database at the new path, and every later launch
+        // then took the file-exists branch — the user's data sat invisible at the
+        // legacy path forever, presenting as "all my Takes vanished". Throwing
+        // surfaces the failure on the lock screen instead; the next launch
+        // retries the move (transient I/O failures self-heal).
         let legacyURL = baseDir.appendingPathComponent("catchlight.db")
         if FileManager.default.fileExists(atPath: legacyURL.path),
            !FileManager.default.fileExists(atPath: dbURL.path) {
-            try? FileManager.default.moveItem(at: legacyURL, to: dbURL)
+            do {
+                try FileManager.default.moveItem(at: legacyURL, to: dbURL)
+            } catch {
+                throw StorageError.openFailed("legacy database migration failed: \(error.localizedDescription)")
+            }
         }
 
         try Self.applyFileProtection(to: dbURL)
@@ -580,10 +590,18 @@ public final class EncryptedTakeStore: TakeStore {
 
     public func setLastSyncDate(_ date: Date) {
         queue.sync {
-            guard let stmt = try? prepare("INSERT OR REPLACE INTO sync_state (key, value) VALUES ('last_sync', ?1);") else { return }
+            guard let stmt = try? prepare("INSERT OR REPLACE INTO sync_state (key, value) VALUES ('last_sync', ?1);") else {
+                // A persistently failing watermark write makes every sync re-scan
+                // from the epoch with no visible symptom — leave a content-free
+                // breadcrumb (2026-07-01) so a bug-report export can show it.
+                DiagnosticsLog.shared.record(.storage, "Sync watermark write failed (prepare).")
+                return
+            }
             defer { sqlite3_finalize(stmt) }
             bindText(stmt, 1, ISO8601.string(from: date))
-            _ = sqlite3_step(stmt)
+            if sqlite3_step(stmt) != SQLITE_DONE {
+                DiagnosticsLog.shared.record(.storage, "Sync watermark write failed (step).")
+            }
         }
     }
 

@@ -106,8 +106,11 @@ enum Wiring {
     /// prompt — and is impossible in a background task. Foreground sync
     /// triggers reuse the keys already unlocked for the session instead of
     /// prompting again. Process-lifetime only; never persisted. Main-thread
-    /// confined (set in makeStore / read in makeSyncEngine, both main-actor
-    /// call paths).
+    /// confined: set in makeStore, cleared in clearSessionKeys (relock, main),
+    /// read in makeSyncEngine — and the BGTask path hops to MAIN before calling
+    /// `makeEngine()` (BackgroundSyncCoordinator.handle, 2026-07-01) precisely
+    /// to keep this confinement true; KeyHierarchy is a struct, so an off-main
+    /// read racing the clear would be a torn read, not just staleness.
     nonisolated(unsafe) private static var sessionKeys: KeyHierarchy?
 
     /// Open the production SQLite store, deriving its key from the Keychain master
