@@ -193,9 +193,10 @@ final class OnboardingViewModel {
             let masterKeyData = MasterKeyDerivation.deriveRaw(from: mnemonic)
             try MasterKeyKeychain.store(masterKeyData)
             // Persist the mnemonic so Settings → Privacy phrase can re-display it
-            // (Task 3.12). Carries `.userPresence` access control plus the in-app
-            // PIN gate at the call site. (The Argon2 metadata salt is no longer
-            // written — HKDF derivation uses a fixed domain salt.)
+            // (Task 3.12). Carries `.userPresence` access control — the fresh iOS
+            // auth is the whole gate (the in-app PIN was removed by D-042). (The
+            // Argon2 metadata salt is no longer written — HKDF derivation uses a
+            // fixed domain salt.)
             try MnemonicKeychain.store(mnemonic)
             onComplete(masterKeyData)
         } catch let error as KeychainError {

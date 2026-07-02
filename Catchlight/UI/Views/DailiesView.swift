@@ -62,7 +62,7 @@ struct DailiesView: View {
         spineX - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad
     }
 
-    /// Reads the user's timeline-density choice live. The inter-card LazyVStack
+    /// Reads the user's timeline-density choice live. The inter-card stack
     /// spacing is the chosen clear gap MINUS the two 6pt row paddings each card
     /// already carries (`.padding(.vertical, 6)`), so the visible card-to-card gap
     /// equals `TakeSpacing.gap`.
@@ -71,7 +71,7 @@ struct DailiesView: View {
     private var takeSpacing: SettingsViewModel.TakeSpacing {
         SettingsViewModel.TakeSpacing(rawValue: takeSpacingRaw) ?? .default
     }
-    /// LazyVStack spacing + the Obie gap. `gap − 12` because each row adds 6pt top
+    /// Stack spacing + the Obie gap. `gap − 12` because each row adds 6pt top
     /// and 6pt bottom of its own; the result is the extra space between cards.
     private var interCardSpacing: CGFloat { max(0, takeSpacing.gap - 12) }
 
@@ -915,7 +915,7 @@ struct DailiesView: View {
                                 .id(take.id)
                                 // The in-place NEW Take blooms in — scale+fade from its
                                 // Iris corner, driven by `newTakeBloom` (explicit, so it
-                                // animates inside the LazyVStack and after the scroll).
+                                // animates inside the timeline stack and after the scroll).
                                 // Existing rows are pinned at full (owner 2026-06-17).
                                 // NB: the fade is FLOORED at 0.3, never 0 — SwiftUI maps
                                 // opacity 0 to isHidden, and UIKit refuses
@@ -1005,7 +1005,9 @@ struct DailiesView: View {
                 }
             }
             // 1) INITIAL reveal: a new Take is created off-screen (bottom, under
-            //    Oldest-first), so the LazyVStack hasn't built its row yet — it can't
+            //    Oldest-first); before the 2026-06-22 eager-VStack swap the lazy
+            //    container hadn't built its row yet, and realising it early is
+            //    still what guarantees focus + keyboard work first time — it can't
             //    take focus or raise the keyboard until it's scrolled into view. A
             //    MINIMAL, instant `scrollTo` (no anchor) just realises it — no-op if
             //    it's already visible (so an on-screen Take doesn't jump pre-keyboard).

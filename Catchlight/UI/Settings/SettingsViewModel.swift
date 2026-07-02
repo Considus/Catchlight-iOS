@@ -17,10 +17,11 @@ import Security
 @MainActor
 final class SettingsViewModel {
 
-    /// Persisted appearance preference. Mirrors `@AppStorage("appearanceMode")` in
-    /// the View — we keep the source of truth on the view model so `RootView` /
-    /// `CatchlightApp` can derive `preferredColorScheme` without re-reading the
-    /// SwiftUI property wrapper from non-View code.
+    /// The appearance preference's defaults KEY (+ the `AppearanceMode` enum
+    /// below). The persisted value itself lives in UserDefaults, read via
+    /// `@AppStorage(appearanceDefaultsKey)` at the view layer — this type holds
+    /// no appearance state (comment previously claimed it was the source of
+    /// truth — corrected 2026-07-01).
     static let appearanceDefaultsKey = "appearanceMode"
 
     enum AppearanceMode: String, CaseIterable, Identifiable {
@@ -435,6 +436,7 @@ final class SettingsViewModel {
 
     /// True if the system considers the app authorised to deliver any kind of
     /// reminder notification (authorised, provisional, or ephemeral).
+    /// FUTURE scaffolding (owner 2026-07-01: keep) — no consumer yet.
     var notificationsEffectivelyEnabled: Bool {
         switch notificationStatus {
         case .authorized, .provisional, .ephemeral: return true

@@ -149,8 +149,9 @@ final class UIState {
     var isPaywallPresented = false
 
     /// The Storyboard — a full-screen list of every task-bearing Take (owner 2026-06-19).
-    /// Presented over the timeline; the entry point is still being decided, so for now
-    /// it is opened from a DEBUG-only Settings row and closed by its own X.
+    /// Presented over the timeline; opened from the dock's Angle button (∠, slot 2 —
+    /// the dock IA, PR #44) and closed by its own X. (An earlier draft used a
+    /// DEBUG-only Settings row; comment corrected 2026-07-01.)
     var isStoryboardPresented = false
 
     /// Task 6.19 — Spotlight deep-link target. Set by the app's
