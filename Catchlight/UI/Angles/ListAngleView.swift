@@ -283,6 +283,12 @@ struct ListAngleView: View {
     private func updateReorder(_ id: UUID, translationY: CGFloat) {
         dragOffsetY = translationY
         guard let start = dragStartIndex else { return }
+        // FUTURE (flagged in the 2026-07-01 review): this assumes uniform
+        // `rowHeight` rows, but prose rows render at natural height, so a drag
+        // across interleaved prose lands slightly off the finger.
+        // InlineTakeEditCard already solves this with measured heights
+        // (RowHeightKey + pure rowCenters/reorderTarget statics) — port that
+        // approach here alongside a device walk-test of the drag feel.
         let proposed = start + Int((translationY / rowHeight).rounded())
         let target = min(max(proposed, 0), take.blocks.count - 1)
         guard let cur = take.blocks.firstIndex(where: { $0.id == id }), cur != target else { return }
