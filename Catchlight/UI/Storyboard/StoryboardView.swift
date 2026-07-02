@@ -31,6 +31,7 @@ import CatchlightCore
 struct StoryboardView: View {
     @Environment(DailiesViewModel.self) private var vm
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Dismiss the Storyboard (the X).
@@ -161,7 +162,12 @@ struct StoryboardView: View {
 
     private var list: some View {
         ScrollView {
-            LazyVStack(spacing: storyboardGap) {
+            // EAGER VStack, deliberately not LazyVStack (2026-07-01) — the same
+            // editor + variable-height-card + keyboard combination whose lazy
+            // estimate-heights dropped rows to blank on the timeline (the
+            // 2026-06-22 interim fix). The Storyboard shows a task-only subset,
+            // so the eager cost is small; revisit with the UIKit timeline rewrite.
+            VStack(spacing: storyboardGap) {
                 if storyboardTakes.isEmpty {
                     emptyState
                 } else {
@@ -208,7 +214,11 @@ struct StoryboardView: View {
         } else {
             // A read-only card. Tapping it begins editing; tapping it while ANOTHER
             // Take is focused commits that edit (matches the timeline).
-            TakeCardSurface(take: take)
+            // Links go INERT while another Take is edited (2026-07-01) — a
+            // SwiftUI Text .link beats the card's own tap gesture, so a commit
+            // tap on a dimmed card could open Safari instead of saving (the
+            // exact bug fixed on the timeline 2026-06-27; this view missed it).
+            TakeCardSurface(take: take, linksInteractive: !isEditing)
                 .opacity(isEditing ? 0.12 : 1)
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -249,7 +259,15 @@ struct StoryboardView: View {
                 commitEdit()
             }
         } else {
-            Color.ckBackground.ignoresSafeArea().onAppear { anglePresented = false }
+            // The draft stopped being a task mid-Angle (last check item deleted),
+            // so no Angle applies. Route through the normal COMMIT (2026-07-01)
+            // instead of just dropping the cover — the raw flag flip stranded the
+            // user on a masked, keyboard-less editor whose blank draft could
+            // later save as an empty Note.
+            Color.ckBackground.ignoresSafeArea().onAppear {
+                anglePresented = false
+                commitEdit()
+            }
         }
     }
 
@@ -261,16 +279,38 @@ struct StoryboardView: View {
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editFocusedBlockID = t.blocks.last?.id
         withAnimation(reduceMotion ? nil : UIState.fanFade) { editDraft = t }
+        // Participate in the relock auto-save (2026-07-01): AppModel.relock()
+        // commits via ui.commitInlineEdit before tearing the store down, but
+        // DailiesView's registration cleared on its onDisappear when this cover
+        // presented — so backgrounding past the lock grace mid-edit DESTROYED a
+        // Storyboard draft, violating "locking preserves in-progress work"
+        // (owner 2026-06-17). Registered per-edit, cleared in commitEdit.
+        ui.commitInlineEdit = { commitEdit() }
     }
 
     /// Commit the focused edit through the same `vm.save` chokepoint the timeline
     /// uses, then clear focus. Every Storyboard Take already has content (it carries a
     /// task), so there is no blank-discard case to handle.
     private func commitEdit() {
+        ui.commitInlineEdit = nil           // this edit is over — deregister from relock
         editFocusedBlockID = nil
         guard var t = editDraft else { return }
         withAnimation(reduceMotion ? nil : UIState.fanFade) { editDraft = nil }
         t.removeEmptyTextBlocks()
+        // The Shot List can empty a Take (delete the last check item → one blank
+        // text row), so the "every Storyboard Take has content" assumption no
+        // longer holds at commit (2026-07-01). Same rule as the timeline:
+        // a blank draft over a stored copy that also had no content is
+        // discarded, never saved as an empty Note.
+        let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !t.isTask && t.timeReminder == nil && !t.isObie
+            && t.attachments.isEmpty && t.locationReminder == nil
+        let storedCopy = try? vm.store.take(id: t.id)
+        let storedHadContent = (storedCopy?.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+        if isBlank && !storedHadContent {
+            vm.discardIfPresent(t)
+            return
+        }
         guard app.ensureEntitled() else {
             // Paywall interrupted the save (owner 2026-07-01): hold the typed
             // draft for the paywall's outcome — saved on subscribe, dropped on
