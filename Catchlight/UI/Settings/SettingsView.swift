@@ -39,8 +39,6 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.FollowUpReminders.defaultsKey) private var followUpRemindersOn: Bool = SettingsViewModel.FollowUpReminders.default
 
     @State private var vm = SettingsViewModel()
-    /// Drives the Markdown / Plain Text chooser for Export Takes (owner 2026-06-21).
-    @State private var showExportFormatDialog = false
     /// The Import-result message; non-nil presents the confirmation alert (owner 2026-06-22).
     @State private var importResultMessage: String?
     /// Presents the Notice History sheet (D-085) — a SHIPPING feature, so this
@@ -141,17 +139,6 @@ struct SettingsView: View {
                       allowedContentTypes: Self.importableFileTypes,
                       allowsMultipleSelection: true) { result in
             importFromFile(result)
-        }
-        // Export format chooser (owner 2026-06-21) — tap Export Takes, pick a
-        // format, then the share sheet presents. No persisted preference.
-        .confirmationDialog("Export Takes",
-                            isPresented: $showExportFormatDialog,
-                            titleVisibility: .visible) {
-            Button("Markdown") { exportTakes(format: .markdown) }
-            Button("Plain Text") { exportTakes(format: .plainText) }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Choose a format. Both include every Take and stay readable forever.")
         }
         // Import result (owner 2026-06-22) — immediate feedback while Settings is open
         // (the summary Take lands behind the sheet), and stops an accidental re-tap.
@@ -621,9 +608,9 @@ struct SettingsView: View {
             SettingsRow(icon: "square.and.arrow.up",
                         label: "Export Takes",
                         chevron: false,
-                        action: { showExportFormatDialog = true })
+                        action: { exportTakes() })
                 .accessibilityIdentifier("settings-export-takes")
-                .accessibilityHint("Export all your Takes as a Markdown or plain-text file.")
+                .accessibilityHint("Export all your Takes as a Markdown file.")
             // Import notes (owner 2026-06-22) — reads .md/.txt from the Import folder
             // inside the configured sync folder; one file = one Take.
             SettingsRow(icon: "square.and.arrow.down",
@@ -712,13 +699,13 @@ struct SettingsView: View {
     }
 
     @MainActor
-    private func exportTakes(format: TakeExporter.Format) {
+    private func exportTakes() {
         // Reads through the live DailiesViewModel's store so the export reflects
         // whatever the user can see in the timeline (one store, one source of
         // truth). `allTakes()` already returns `createdAt` ascending; the
-        // exporter re-sorts defensively.
+        // exporter re-sorts defensively. Markdown only (owner 2026-07-02).
         let takes = (try? app.dailiesVM.store.allTakes()) ?? []
-        ExportCoordinator.presentShareSheet(takes: takes, format: format)
+        ExportCoordinator.presentShareSheet(takes: takes)
     }
 
     private var importAlertPresented: Binding<Bool> {
