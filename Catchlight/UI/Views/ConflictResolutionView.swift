@@ -3,7 +3,7 @@
 //  Catchlight (iOS app target) — Phase 6 UI, Task 6.15
 //
 //  Sheet for resolving sync conflicts surfaced by `BackgroundSync`. The list comes
-//  from `ConflictQueue.pending`; for each pair the user picks "Mine" or "Theirs"
+//  from `ConflictQueue.pending`; for each pair the user picks "Local" or "Cloud"
 //  and confirms with "Keep this version", or sidesteps it with "Skip for now".
 //
 //  Selection is two-step on purpose: a single tap could resolve the wrong side
@@ -22,7 +22,7 @@ struct ConflictResolutionView: View {
     @Environment(\.horizontalSizeClass) private var hSize
 
     /// Local-vs-remote selection per conflict (keyed by the pair's local.id).
-    /// `true` = keep local ("Mine"); `false` = keep remote ("Theirs"); missing = no choice yet.
+    /// `true` = keep local ("Local"); `false` = keep remote ("Cloud"); missing = no choice yet.
     @State private var selection: [UUID: Bool] = [:]
 
     /// When the queue empties, the empty state auto-dismisses after this delay so
@@ -30,25 +30,14 @@ struct ConflictResolutionView: View {
     private let autoDismissDelay: TimeInterval = 0.6
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if queue.pending.isEmpty {
-                    emptyState
-                } else {
-                    list
-                }
-            }
-            .background(Color.ckBackground)
-            .navigationTitle("Sync Conflicts")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Sync Conflicts")
-                        .font(CatchlightFont.ui(.light, size: 22, relativeTo: .title3))
-                        .foregroundStyle(Color.ckTextPrimary)
-                }
+        Group {
+            if queue.pending.isEmpty {
+                emptyState
+            } else {
+                list
             }
         }
+        .background(Color.ckBackground)
         .presentationDragIndicator(.visible)
         .onChange(of: queue.pending.isEmpty) { _, isEmpty in
             if isEmpty {
@@ -78,9 +67,7 @@ struct ConflictResolutionView: View {
     private var list: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                caption
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
+                header
                 ForEach(queue.pending, id: \.local.id) { pair in
                     conflictCard(pair)
                         .padding(.horizontal, 20)
@@ -91,12 +78,24 @@ struct ConflictResolutionView: View {
         .scrollIndicators(.hidden)
     }
 
-    private var caption: some View {
-        Text("Both devices edited these Takes. Choose which version to keep.")
-            .font(CatchlightFont.ui(.light, size: 14, relativeTo: .subheadline))
-            .foregroundStyle(Color.ckTextSecondary)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
+    /// Brand heading + guidance: the shared page-heading treatment (upright
+    /// Cormorant Roman, kerned, UPPER-CASE — §2.3, matching DAILIES/SETTINGS) over
+    /// DM Sans Light subtext — owner 2026-07-02.
+    private var header: some View {
+        VStack(spacing: 16) {
+            Text("SYNC CONFLICTS")
+                .pageHeadingStyle()
+                .accessibilityAddTraits(.isHeader)
+            Text("These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed.")
+                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                .foregroundStyle(Color.ckTextSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, 4)
     }
 
     @ViewBuilder
@@ -136,7 +135,7 @@ struct ConflictResolutionView: View {
     // MARK: - Version panel
 
     private enum Side { case mine, theirs
-        var label: String { self == .mine ? "Mine" : "Theirs" }
+        var label: String { self == .mine ? "Local" : "Cloud" }
     }
 
     private func versionPanel(_ side: Side,
@@ -179,6 +178,7 @@ struct ConflictResolutionView: View {
                     .strokeBorder(selected ? Color.ckAccent : Color.ckSpine,
                                   lineWidth: selected ? 2 : 1)
             )
+            .daylightCardShadow()   // DS §4.1 — same lift as Take cards (owner 2026-07-02)
             .scaleEffect(selected ? 1.02 : 1.0)
             .animation(.spring(response: 0.25, dampingFraction: 0.85), value: selected)
         }
@@ -192,8 +192,11 @@ struct ConflictResolutionView: View {
 
     private func actionRow(for pair: (local: Take, remote: Take),
                            chosenLocal: Bool?) -> some View {
+        // The onboarding pill pair (owner 2026-07-02): primary Ember capsule +
+        // secondary outline capsule, same slot as before. "Keep this version"
+        // stays disabled until the user taps a card.
         HStack(spacing: 12) {
-            Button {
+            DockPill(title: "Keep this version") {
                 guard let keepLocal = chosenLocal else { return }
                 do {
                     try queue.resolve(id: pair.local.id, keepLocal: keepLocal, store: dailies.store)
@@ -201,39 +204,22 @@ struct ConflictResolutionView: View {
                     dailies.reload()
                 } catch {
                     // ConflictQueue writes through the store directly, bypassing
-                    // DailiesViewModel — so nothing surfaced this failure before
-                    // (the old comment claimed otherwise). Route it through the
-                    // timeline's storage-error strip; the pair stays in the
-                    // queue so the user can retry.
+                    // DailiesViewModel — route the failure through the timeline's
+                    // storage-error strip; the pair stays queued so the user can retry.
                     dailies.reportStorageError("Couldn't save that resolution. Please try again.")
                 }
-            } label: {
-                Text("Keep this version")
-                    .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
-                    .foregroundStyle(Color.ckOnAccent)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: CatchlightLayout.minTouchTarget)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color.ckAdd)
-                    )
             }
-            .buttonStyle(.plain)
             .disabled(chosenLocal == nil)
             .opacity(chosenLocal == nil ? 0.38 : 1)
 
-            Button {
+            DockPill(title: "Skip for now", secondary: true) {
                 queue.skip(id: pair.local.id)
                 selection.removeValue(forKey: pair.local.id)
-            } label: {
-                Text("Skip for now")
-                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
-                    .foregroundStyle(Color.ckTextSecondary)
-                    .frame(minHeight: CatchlightLayout.minTouchTarget)
-                    .padding(.horizontal, 12)
             }
-            .buttonStyle(.plain)
         }
+        // Match the onboarding pill size/shape (44pt capsules) — the pills fill
+        // this height; kept inline, NOT docked at the toolbar (owner 2026-07-02).
+        .frame(height: CatchlightLayout.minTouchTarget)
     }
 
     // MARK: - Formatting
@@ -254,12 +240,12 @@ struct ConflictResolutionView: View {
 #Preview("Resolution — 2 conflicts (Night)") {
     let queue = ConflictQueue()
     let pair1 = (
-        local: Take(blocks: [.textLine("Local edit: pick up groceries on the way home.")]),
-        remote: Take(blocks: [.textLine("Remote edit: pick up groceries AND dry cleaning.")])
+        local: Take(blocks: [.textLine("Pick up groceries on the way home.")]),
+        remote: Take(blocks: [.textLine("Pick up groceries and dry cleaning.")])
     )
     let pair2 = (
-        local: Take(blocks: [.checkItem("Local: ship the Catchlight TestFlight build by Friday so the first cohort can start kicking the tyres before the long weekend.")]),
-        remote: Take(blocks: [.checkItem("Remote: ship TestFlight to first cohort by Friday, then schedule the retro for the following Tuesday.")])
+        local: Take(blocks: [.checkItem("Ship the Catchlight TestFlight build by Friday so the first cohort can start kicking the tyres before the long weekend.")]),
+        remote: Take(blocks: [.checkItem("Ship TestFlight to the first cohort by Friday, then schedule the retro for the following Tuesday.")])
     )
     queue.enqueue([pair1, pair2])
     let store = InMemoryTakeStore()
