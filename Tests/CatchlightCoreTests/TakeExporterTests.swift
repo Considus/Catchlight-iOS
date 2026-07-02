@@ -273,11 +273,9 @@ final class TakeExporterTests: XCTestCase {
     func testIsExportFilename_matchesExportsOnly() {
         XCTAssertTrue(TakeExporter.isExportFilename(
             TakeExporter.suggestedFilename(exportedAt: exportedAt)))
-        XCTAssertTrue(TakeExporter.isExportFilename(
-            TakeExporter.suggestedFilename(format: .plainText, exportedAt: exportedAt)))
         XCTAssertTrue(TakeExporter.isExportFilename("catchlight-2026-01-01.md"))
-        // Plain-text exports must also sweep, or the decrypted corpus lingers in
-        // tmp (owner 2026-06-21).
+        // A plain-text export from an earlier build must STILL sweep, or its decrypted
+        // corpus lingers in tmp (owner 2026-06-21) — the matcher keeps covering `.txt`.
         XCTAssertTrue(TakeExporter.isExportFilename("catchlight-2026-01-01.txt"))
 
         XCTAssertFalse(TakeExporter.isExportFilename("notes-2026-01-01.md"))
@@ -294,64 +292,4 @@ final class TakeExporterTests: XCTestCase {
                        "the old capital-C name escaped the sweep — must not come back")
     }
 
-    // MARK: - Plain text
-
-    func testSuggestedFilename_plainText_isCatchlightDateTxt() {
-        XCTAssertEqual(TakeExporter.suggestedFilename(format: .plainText, exportedAt: exportedAt),
-                       "catchlight-2026-06-09.txt")
-    }
-
-    func testExportPlainText_emptyArray_writesPlainHeaderNoFrontmatter() {
-        let out = TakeExporter.export([], format: .plainText, exportedAt: exportedAt)
-        let expected = """
-        Catchlight export — 2026-06-09T14:32:00Z
-        0 Takes
-
-        """
-        XCTAssertEqual(out, expected)
-    }
-
-    func testExportPlainText_singleNote_noHashHeadingNoFences() {
-        let createdAt = Self.makeUTC(year: 2026, month: 5, day: 14)
-        let take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        blocks: [.textLine("Buy film for the weekend shoot")],
-                        isNote: true)
-        let out = TakeExporter.export([take], format: .plainText, exportedAt: exportedAt)
-        let expected = """
-        Catchlight export — 2026-06-09T14:32:00Z
-        1 Take
-
-        Note — 2026-05-14
-        Buy film for the weekend shoot
-
-        """
-        XCTAssertEqual(out, expected)
-        XCTAssertFalse(out.contains("## "), "Plain text must not carry Markdown headings.")
-        XCTAssertFalse(out.contains("---"), "Plain text must not carry frontmatter fences.")
-    }
-
-    func testExportPlainText_checkItems_useBracketsWithoutDash() {
-        let createdAt = Self.makeUTC(year: 2026, month: 5, day: 15)
-        let take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        blocks: [.checkItem("passport", isComplete: true),
-                                 .checkItem("charger")],
-                        isNote: true)
-        let out = TakeExporter.export([take], format: .plainText, exportedAt: exportedAt)
-        XCTAssertTrue(out.contains("[x] passport"))
-        XCTAssertTrue(out.contains("[ ] charger"))
-        XCTAssertFalse(out.contains("- [x]"), "Plain text drops the Markdown list dash.")
-    }
-
-    func testExportPlainText_reminderKeepsBellStampMinusHash() {
-        let createdAt = Self.makeUTC(year: 2026, month: 5, day: 16)
-        let scheduledAt = Self.makeUTC(year: 2026, month: 5, day: 20, hour: 9, minute: 0)
-        var take = Take(createdAt: createdAt, modifiedAt: createdAt,
-                        blocks: [.textLine("Pick up prints")], isNote: true)
-        take.timeReminder = TimeReminder(scheduledDate: scheduledAt,
-                                         notificationIdentifier: take.id.uuidString)
-        let out = TakeExporter.export([take], format: .plainText, exportedAt: exportedAt,
-                                      timeZone: TimeZone(secondsFromGMT: 0)!)
-        XCTAssertTrue(out.contains("Reminder — 2026-05-16 · 🔔 2026-05-20 09:00"))
-        XCTAssertFalse(out.contains("## Reminder"))
-    }
 }

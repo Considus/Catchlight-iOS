@@ -27,9 +27,9 @@ enum ExportCoordinator {
     ///
     /// Returns immediately; presentation is asynchronous. Logging is intentionally
     /// absent — Take content is sensitive and must never reach the system log.
-    static func presentShareSheet(takes: [Take], format: TakeExporter.Format = .markdown) {
-        let payload = TakeExporter.export(takes, format: format)
-        guard let fileURL = writeTempFile(text: payload, format: format) else { return }
+    static func presentShareSheet(takes: [Take]) {
+        let payload = TakeExporter.export(takes)
+        guard let fileURL = writeTempFile(text: payload) else { return }
 
         let activityVC = UIActivityViewController(
             activityItems: [fileURL],
@@ -89,8 +89,8 @@ enum ExportCoordinator {
 
     // MARK: - File staging
 
-    private static func writeTempFile(text: String, format: TakeExporter.Format) -> URL? {
-        let filename = TakeExporter.suggestedFilename(format: format)
+    private static func writeTempFile(text: String) -> URL? {
+        let filename = TakeExporter.suggestedFilename()
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         do {
             // `.completeFileProtectionUnlessOpen`: the file holds the user's

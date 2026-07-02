@@ -101,7 +101,7 @@ final class TakeImporterTests: XCTestCase {
                         isNote: true)
         take.normaliseActivityFloor()
 
-        let exported = TakeExporter.export([take], format: .markdown, exportedAt: date)
+        let exported = TakeExporter.export([take], exportedAt: date)
         let reimported = TakeImporter.parseDocument(exported, fileDate: date)
 
         XCTAssertEqual(reimported.count, 1)
@@ -129,7 +129,7 @@ final class TakeImporterTests: XCTestCase {
         reminderTake.timeReminder = TimeReminder(scheduledDate: d3.addingTimeInterval(86_400),
                                                  notificationIdentifier: reminderTake.id.uuidString)
 
-        let exported = TakeExporter.export([note, obie, reminderTake], format: .markdown, exportedAt: d1)
+        let exported = TakeExporter.export([note, obie, reminderTake], exportedAt: d1)
         let takes = TakeImporter.parseDocument(exported, fileDate: d1)
 
         XCTAssertEqual(takes.count, 3, "one Take per section")
