@@ -55,7 +55,13 @@ final class DailiesViewModelReminderReconcileTests: XCTestCase {
         try super.setUpWithError()
         center = RecordingCenter()
         store = InMemoryTakeStore()
-        vm = DailiesViewModel(store: store, reminders: ReminderScheduler(center: center))
+        // `notificationAuthPreflighted: true` skips the one-time first-reminder
+        // `Task { await requestAuthorization() }` branch so every reconcile schedules
+        // SYNCHRONOUSLY on this actor — deterministic, and no deferred Task outlives
+        // the test. (That async branch wedged the iOS 18.5 test runner — 2026-07-02.)
+        vm = DailiesViewModel(store: store,
+                              reminders: ReminderScheduler(center: center),
+                              notificationAuthPreflighted: true)
         // Start each test from an empty deferred-Dismiss queue (app-group defaults).
         _ = PendingReminderActions.drainDismissed()
     }
@@ -154,18 +160,8 @@ final class DailiesViewModelReminderReconcileTests: XCTestCase {
     /// An APPLIED remote edit that carries a reminder re-registers its alarm
     /// (reconcile-then-reload), so a reminder added on another device rings here.
     func testApplyRemoteChanges_appliedReminder_isScheduled() throws {
-        // The VM's FIRST-EVER reminder reconcile takes an async notification-auth
-        // branch (`requestAuthorization` then schedule) — it flips
-        // `didRequestNotificationAuth` synchronously but schedules on a detached
-        // Task. Prime past it with one applied reminder so the assertion below
-        // targets the deterministic SYNCHRONOUS scheduling path.
-        let primer = UUID()
-        try store.upsert(Take(id: primer, blocks: [.textLine("primer")],
-                              timeReminder: TimeReminder(scheduledDate: Date().addingTimeInterval(3600),
-                                                         notificationIdentifier: primer.uuidString)))
-        var prime = SyncReport(); prime.applied = [primer]
-        vm.applyRemoteChanges(prime)
-
+        // Auth is preflighted in setUp, so reconcile schedules synchronously — no
+        // primer needed and no deferred Task to race the assertion.
         let id = UUID()
         try store.upsert(Take(id: id, blocks: [.textLine("remote reminder")],
                               timeReminder: TimeReminder(scheduledDate: Date().addingTimeInterval(3600),
