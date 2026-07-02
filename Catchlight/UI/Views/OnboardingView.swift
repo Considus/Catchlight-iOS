@@ -402,7 +402,8 @@ private struct RestoreEntryStep: View {
 
     private var topFade: some View {
         VStack(spacing: 0) {
-            Color.ckBackground.frame(height: deviceTopInset)
+            // +10 (owner 2026-07-02) drops the whole fade zone down a touch.
+            Color.ckBackground.frame(height: deviceTopInset + 10)
             LinearGradient(colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
                            startPoint: .top, endPoint: .bottom)
                 .frame(height: 16)
