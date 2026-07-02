@@ -46,6 +46,11 @@ struct SettingsView: View {
     /// must live outside the `#if DEBUG` block (it was declared inside it, which
     /// compiled in Debug but broke every Release/Archive build — 2026-07-01).
     @State private var showNoticeHistory = false
+    /// Second-device restore (D-087): the destructive warning gate, then the phrase-
+    /// entry sheet. Two bools so the warning always precedes entry and each dismisses
+    /// independently.
+    @State private var showSecondDeviceWarning = false
+    @State private var showSecondDeviceEntry = false
 
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
@@ -114,6 +119,19 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $vm.isAboutSheetPresented) {
             AboutView()
+        }
+        .sheet(isPresented: $showSecondDeviceEntry) {
+            SecondDeviceRestoreView()
+        }
+        // Second-device warning (D-087): the re-key is destructive because an onboarded
+        // device already holds Takes under its current key — a new phrase can't decrypt
+        // them, so they're removed. Continue only leads to phrase entry; the wipe/re-key
+        // happens on Restore there (a bad phrase destroys nothing).
+        .alert("Add this device to your account?", isPresented: $showSecondDeviceWarning) {
+            Button("Cancel", role: .cancel) {}
+            Button("Continue", role: .destructive) { showSecondDeviceEntry = true }
+        } message: {
+            Text("Enter your privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed — make sure they're already in your cloud folder first.")
         }
         // Export format chooser (owner 2026-06-21) — tap Export Takes, pick a
         // format, then the share sheet presents. No persisted preference.
@@ -488,14 +506,15 @@ struct SettingsView: View {
                         action: { vm.isPhraseSheetPresented = true })
                 .accessibilityHint("Double-tap to view your phrase. Face ID or passcode required.")
 
-            // 6.12 — Blocked on Phase 2. Stub stays visible so the layout is complete.
+            // Second device (D-087) — re-key this device to another account's phrase
+            // to pull its Takes from the shared cloud folder. Destructive (it replaces
+            // this device's account), so a warning gates entry.
             SettingsRow(icon: "iphone.and.arrow.forward",
                         label: "Second device",
                         chevron: true,
-                        disabled: true) {
-                SettingsDetailLabel(text: "Coming soon")
-            }
-            .accessibilityHint("Coming soon.")
+                        action: { showSecondDeviceWarning = true })
+                .accessibilityIdentifier("settings-second-device")
+                .accessibilityHint("Restore your Takes onto this device from your privacy phrase.")
         } header: {
             sectionHeader("Security")
         }

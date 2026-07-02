@@ -242,6 +242,69 @@ final class AppModel {
         }
     }
 
+    // MARK: - Second device (Settings re-key, D-087)
+
+    /// Re-key THIS device to the account behind `words`, in process. Destructive by
+    /// necessity: to be in Settings the device is already onboarded, so its local
+    /// Takes are sealed under the CURRENT master key. Installing a new key would leave
+    /// those rows undecryptable — and the store's read path THROWS on an undecryptable
+    /// row rather than hiding it, which breaks the whole timeline. So we wipe the local
+    /// store before re-binding under the new key (the user has already confirmed the
+    /// warning). The restored account's real Takes then arrive from its cloud folder,
+    /// via the same post-restore guidance a fresh-install restore uses.
+    ///
+    /// Returns a user-readable error string on failure (nil on success):
+    ///   • a bad phrase → inline message, NOTHING destroyed (validation is first);
+    ///   • a Keychain / store-open fault → message, and the app is left locked so a
+    ///     relaunch retries the unlock (the new key is already stored by then).
+    @discardableResult
+    func replaceAccountForSecondDevice(_ words: [String]) -> String? {
+        let cleaned = words
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+
+        // 1. Validate + derive FIRST — a bad phrase must destroy nothing.
+        let bip39: BIP39
+        do { bip39 = BIP39(wordlist: try EnglishWordlist.load()) }
+        catch { return "Couldn't check your phrase on this device." }
+        let masterKeyData: Data
+        do { masterKeyData = try PhraseRecovery.recoverMasterKey(from: cleaned, bip39: bip39) }
+        catch { return "That doesn't look right. Check the words and try again." }
+
+        // 2. Install the new secrets (overwrites the current account's key + mnemonic).
+        do {
+            try MasterKeyKeychain.store(masterKeyData)
+            try MnemonicKeychain.store(cleaned)
+        } catch {
+            return "Couldn't secure your account on this device."
+        }
+
+        // 3. Drop the old encrypted store (release its SQLite handle), purge the old
+        //    account's Takes from the system Spotlight index, and delete the local DB
+        //    files so the store re-opens EMPTY under the new key.
+        dailiesVM = DailiesViewModel(store: InMemoryTakeStore(), spotlight: spotlight)
+        spotlight.deindexAll()
+        LocalStoreReset.wipeDatabaseFiles()
+
+        // 4. Re-bind under the new keys — mirrors completeOnboarding's open path
+        //    (makeStoreFromKeys primes Wiring.sessionKeys, so no Face ID prompt).
+        let keys = KeyHierarchy(masterKeyBytes: masterKeyData)
+        session.adopt(keys)
+        guard let store = makeStoreFromKeys(keys) else {
+            lockState = .locked   // relaunch will retry the unlock with the stored key
+            return "Couldn't open your library on this device. Please restart Catchlight."
+        }
+        rebind(to: store)        // fresh empty store under the new account
+        lockState = .unlocked
+
+        // 5. The new account needs its OWN cloud folder — the previous bookmark (if any)
+        //    belonged to the old account. Clear it and show the connect-folder guidance,
+        //    the same path a fresh-install restore lands on.
+        Wiring.clearCloudFolderBookmark()
+        restoreAwaitingFolder = true
+        return nil
+    }
+
     private func seedIfEmpty(_ store: TakeStore) {
         if (try? store.allTakes())?.isEmpty ?? true {
             for take in SeedTakes.make() { try? store.upsert(take) }

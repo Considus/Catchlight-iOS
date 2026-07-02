@@ -309,7 +309,6 @@ private struct RestoreEntryStep: View {
     /// for a once-a-year action, and no per-word validity signal (correctness is a whole-
     /// phrase check on Restore — matching onboarding's "reveal nothing granular" posture).
     @State private var fields: [String] = Array(repeating: "", count: 12)
-    @FocusState private var focusedIndex: Int?
 
     private var words: [String] {
         fields.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
@@ -340,7 +339,7 @@ private struct RestoreEntryStep: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     Spacer().frame(height: 24)
-                    fieldsGrid
+                    PhraseEntryGrid(fields: $fields, onEdit: { vm.clearRestoreError() })
                     Spacer().frame(height: 14)
                     statusLine
                     Spacer(minLength: 24)
@@ -354,55 +353,6 @@ private struct RestoreEntryStep: View {
             }, trailing: {
                 DockPill(title: "Back", secondary: true) { vm.cancelRestore() }
             })
-        }
-    }
-
-    /// Two columns of six numbered fields.
-    private var fieldsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
-                  spacing: 10) {
-            ForEach(0..<12, id: \.self) { index in
-                HStack(spacing: 8) {
-                    Text("\(index + 1)")
-                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .frame(width: 18, alignment: .trailing)
-                    TextField("", text: $fields[index])
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                        .keyboardType(.asciiCapable)
-                        .submitLabel(index == 11 ? .done : .next)
-                        .focused($focusedIndex, equals: index)
-                        .onSubmit { focusedIndex = index < 11 ? index + 1 : nil }
-                        .onChange(of: fields[index]) { _, newValue in handleChange(index, newValue) }
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .padding(.horizontal, 10).padding(.vertical, 9)
-                        .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .accessibilityIdentifier("restore-word-\(index + 1)")
-                }
-            }
-        }
-    }
-
-    /// Type-and-space advances to the next field; pasting a whole phrase into one field
-    /// spreads it across the following fields. Words are parsed as letter-runs, so numbering
-    /// / punctuation in a paste ("1. anchor 2. blossom …") is ignored.
-    private func handleChange(_ index: Int, _ newValue: String) {
-        vm.clearRestoreError()
-        guard newValue.contains(where: { $0.isWhitespace || !$0.isLetter }) else { return }
-        let tokens = newValue.split(whereSeparator: { !$0.isLetter }).map { $0.lowercased() }
-        if tokens.count <= 1 {
-            fields[index] = tokens.first ?? ""
-            if !newValue.isEmpty, index < 11, tokens.count == 1,
-               newValue.last.map({ $0.isWhitespace }) == true {
-                focusedIndex = index + 1        // trailing space after one word → next field
-            }
-        } else {
-            for (offset, token) in tokens.prefix(12 - index).enumerated() {
-                fields[index + offset] = token   // a pasted phrase spreads across the fields
-            }
-            focusedIndex = min(index + tokens.count, 11)
         }
     }
 
