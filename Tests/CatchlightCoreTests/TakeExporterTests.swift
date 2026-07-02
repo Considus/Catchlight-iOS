@@ -129,6 +129,34 @@ final class TakeExporterTests: XCTestCase {
         XCTAssertTrue(out.contains("Pick up prints"))
     }
 
+    func testExport_recurringReminder_headingShowsRepeatAndWeekdays() {
+        let createdAt = Self.makeUTC(year: 2026, month: 5, day: 16)
+        let scheduledAt = Self.makeUTC(year: 2026, month: 5, day: 20, hour: 9, minute: 0)
+        var take = Take(createdAt: createdAt, modifiedAt: createdAt,
+                        blocks: [.textLine("Water the plants")], isNote: true)
+        take.timeReminder = TimeReminder(scheduledDate: scheduledAt,
+                                         notificationIdentifier: take.id.uuidString,
+                                         recurrence: .weekly, weekdays: [2, 4, 6])
+        let out = TakeExporter.export([take], exportedAt: exportedAt,
+                                      timeZone: TimeZone(secondsFromGMT: 0)!)
+        XCTAssertTrue(out.contains("## Reminder — 2026-05-16 · 🔔 2026-05-20 09:00 · repeats weekly (Mon, Wed, Fri)"),
+                      "Got: \(out)")
+    }
+
+    func testExport_dailyReminder_headingShowsRepeatNoWeekdays() {
+        let createdAt = Self.makeUTC(year: 2026, month: 5, day: 16)
+        let scheduledAt = Self.makeUTC(year: 2026, month: 5, day: 20, hour: 9, minute: 0)
+        var take = Take(createdAt: createdAt, modifiedAt: createdAt,
+                        blocks: [.textLine("Vitamins")], isNote: true)
+        take.timeReminder = TimeReminder(scheduledDate: scheduledAt,
+                                         notificationIdentifier: take.id.uuidString,
+                                         recurrence: .daily)
+        let out = TakeExporter.export([take], exportedAt: exportedAt,
+                                      timeZone: TimeZone(secondsFromGMT: 0)!)
+        XCTAssertTrue(out.contains("· 🔔 2026-05-20 09:00 · repeats daily"), "Got: \(out)")
+        XCTAssertFalse(out.contains("("), "no weekday list for a non-weekly cadence")
+    }
+
     func testExport_takeWithoutReminder_neverEmitsBellGlyph() {
         let createdAt = Self.makeUTC(year: 2026, month: 5, day: 14)
         let take = Take(createdAt: createdAt, modifiedAt: createdAt,

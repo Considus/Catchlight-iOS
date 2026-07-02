@@ -133,13 +133,32 @@ public enum TakeExporter {
         let ymdHm = makeFormatter("yyyy-MM-dd HH:mm", timeZone: timeZone)
         let date = ymd.string(from: take.createdAt)
         if let reminder = take.timeReminder {
-            return "Reminder — \(date) · 🔔 \(ymdHm.string(from: reminder.scheduledDate))"
+            return "Reminder — \(date) · 🔔 \(ymdHm.string(from: reminder.scheduledDate))\(recurrenceSuffix(for: reminder))"
         }
         if take.isTask {
             let suffix = take.isComplete ? " · ✓ Complete" : ""
             return "Task — \(date)\(suffix)"
         }
         return "Note — \(date)"
+    }
+
+    /// Human-readable repeat suffix for a REPEATING reminder — e.g.
+    /// " · repeats weekly (Mon, Wed, Fri)" or " · repeats daily" (owner 2026-07-02: the
+    /// recurrence already round-trips via the hidden data block, but wasn't visible in
+    /// the heading). Empty for a one-shot. Weekday numbers are Gregorian (1 = Sun … 7 = Sat).
+    private static func recurrenceSuffix(for reminder: TimeReminder) -> String {
+        guard reminder.recurrence != .none else { return "" }
+        var suffix = " · repeats \(reminder.recurrence.label.lowercased())"
+        if reminder.recurrence == .weekly, !reminder.weekdays.isEmpty {
+            let names = reminder.weekdays.sorted().compactMap(weekdayShortName)
+            if !names.isEmpty { suffix += " (\(names.joined(separator: ", ")))" }
+        }
+        return suffix
+    }
+
+    private static let weekdayShortNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    private static func weekdayShortName(_ n: Int) -> String? {
+        (1...7).contains(n) ? weekdayShortNames[n - 1] : nil
     }
 
     // MARK: - Date helpers
