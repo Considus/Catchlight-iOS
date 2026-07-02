@@ -48,6 +48,14 @@ final class DailiesViewModel {
     private let reminders: ReminderScheduler
     private var didRequestNotificationAuth = false
 
+    /// Called after a USER-initiated local mutation (save / delete / import / Obie) so
+    /// the app can push it promptly (owner 2026-07-02). NOT fired by sync-applied writes
+    /// or `reload()`, so it can't loop with an inbound sync. Wired by `AppModel.rebind`.
+    var onLocalChange: (() -> Void)?
+
+    /// Fire the local-change hook (nil-safe).
+    private func notifyLocalChange() { onLocalChange?() }
+
     init(store: TakeStore,
          spotlight: SpotlightIndexing = NoopSpotlightIndexer(),
          reminders: ReminderScheduler = ReminderScheduler()) {
@@ -145,6 +153,7 @@ final class DailiesViewModel {
             spotlight.index(updated)
             reconcileNotification(for: updated)
             reload()
+            notifyLocalChange()
         } catch {
             lastError = "Couldn't save that Take."
         }
@@ -172,6 +181,7 @@ final class DailiesViewModel {
             } else {
                 reload()
             }
+            notifyLocalChange()
         } catch {
             lastError = "Couldn't save that Take."
         }
@@ -196,7 +206,7 @@ final class DailiesViewModel {
                 lastError = "Couldn't import one of the notes."
             }
         }
-        if inserted > 0 { reload() }
+        if inserted > 0 { reload(); notifyLocalChange() }
         return inserted
     }
 
@@ -215,6 +225,7 @@ final class DailiesViewModel {
             // VStack, which is why deleting IT always looked smooth).
             if obie?.id == take.id { obie = nil }
             else { takes.removeAll { $0.id == take.id } }
+            notifyLocalChange()
         } catch {
             lastError = "Couldn't delete that Take."
         }
@@ -458,6 +469,7 @@ final class DailiesViewModel {
         do {
             try store.setObie(id: take.id, replaceExisting: replaceExisting)
             reload()
+            notifyLocalChange()
         } catch StorageError.obieConflict(let existing) {
             pendingObieConflict = (newTake: take.id, existing: existing)
         } catch {
@@ -475,6 +487,7 @@ final class DailiesViewModel {
         do {
             try store.setObie(id: pending.newTake, replaceExisting: true)
             reload()
+            notifyLocalChange()
         } catch {
             lastError = "Couldn't set Obie."
         }

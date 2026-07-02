@@ -70,6 +70,8 @@ struct CatchlightApp: App {
         // Manual "Sync Now" hook (owner 2026-06-21) — reuses the same coordinator
         // (and so the same conflict / remote-change callbacks) as automatic passes.
         app.performManualSync = { backgroundSync.syncNow(trigger: .manualButton) }
+        // Sync-on-save hook (owner 2026-07-02) — debounced + SyncMode-gated in the coordinator.
+        app.syncAfterSave = { backgroundSync.syncAfterSave() }
         // Must register before the app finishes launching.
         backgroundSync.registerLaunchHandler()
         // Present reminders in the foreground too (owner-reported 2026-06-18: a

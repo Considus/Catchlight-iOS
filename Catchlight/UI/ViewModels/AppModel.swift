@@ -70,6 +70,10 @@ final class AppModel {
     /// (previews / tests) — the Cloud Storage button is a no-op in that case.
     var performManualSync: (() -> Void)?
 
+    /// Debounced push after a local Take edit (owner 2026-07-02). Wired by `CatchlightApp`
+    /// to the coordinator's `syncAfterSave`; nil in previews/tests (no-op).
+    var syncAfterSave: (() -> Void)?
+
     /// Set true when a cross-device RESTORE completes with no cloud folder yet
     /// configured (chunk 3c, D-087). A restore lands on an empty timeline — the real
     /// Takes live in the cloud folder — so the empty state shows a guidance card that
@@ -320,6 +324,10 @@ final class AppModel {
         // onboarding completion — without this, post-onboarding Takes wouldn't
         // be indexed until the next app launch.
         dailiesVM = DailiesViewModel(store: store, spotlight: spotlight)
+        // Push local edits shortly after they're saved (owner 2026-07-02). Set on the
+        // REBOUND (real, unlocked) store only — the locked placeholder never takes user
+        // edits. `syncAfterSave` is debounced + SyncMode-gated by the coordinator.
+        dailiesVM.onLocalChange = { [weak self] in self?.syncAfterSave?() }
     }
 
     // MARK: - D-042 — app-entry lock screen
