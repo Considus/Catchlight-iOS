@@ -58,7 +58,7 @@ final class TakeExporterTests: XCTestCase {
                         isNote: true)
         let out = TakeExporter.export([take], exportedAt: exportedAt)
         // The VISIBLE Markdown is byte-exact and unchanged; the lossless data block
-        // (D-088) follows it, so assert the human portion as a prefix.
+        // (D-104) follows it, so assert the human portion as a prefix.
         let expectedVisible = """
         ---
         exported: 2026-06-09T14:32:00Z

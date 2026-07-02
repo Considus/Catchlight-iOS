@@ -75,7 +75,7 @@ final class AppModel {
     var syncAfterSave: (() -> Void)?
 
     /// Set true when a cross-device RESTORE completes with no cloud folder yet
-    /// configured (chunk 3c, D-087). A restore lands on an empty timeline — the real
+    /// configured (chunk 3c, D-103). A restore lands on an empty timeline — the real
     /// Takes live in the cloud folder — so the empty state shows a guidance card that
     /// walks the user to connect that folder rather than the generic "first Take is
     /// waiting" line. Cleared once a folder is connected or the user dismisses.
@@ -190,7 +190,7 @@ final class AppModel {
     /// Takes locally would (a) show examples the user never wanted and (b) push those
     /// examples UP into their real data the moment the folder is connected. So a
     /// restore lands on an empty timeline that fills in once the folder is connected
-    /// (chunk 3, D-087). Applies to BOTH the immediate open and the seed-on-next-unlock
+    /// (chunk 3, D-103). Applies to BOTH the immediate open and the seed-on-next-unlock
     /// fallback below.
     private func completeOnboarding(with masterKeyData: Data, isRestore: Bool) {
         onboardingVM = nil
@@ -234,7 +234,7 @@ final class AppModel {
     /// app-active / background / the Sync Now button, so a freshly-connected folder
     /// would sit idle. Firing here is also what PULLS a restored user's Takes down
     /// (`pullInbound`'s manifest-HMAC check is the right-phrase-for-this-folder gate).
-    /// Returns a user-readable error string on failure, nil on success. D-087.
+    /// Returns a user-readable error string on failure, nil on success. D-103.
     @discardableResult
     func connectCloudFolder(_ url: URL) -> String? {
         do {
@@ -249,7 +249,7 @@ final class AppModel {
         }
     }
 
-    // MARK: - Second device (Settings re-key, D-087)
+    // MARK: - Second device (Settings re-key, D-103)
 
     /// Re-key THIS device to the account behind `words`, in process. Destructive by
     /// necessity: to be in Settings the device is already onboarded, so its local

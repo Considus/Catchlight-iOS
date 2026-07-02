@@ -214,7 +214,7 @@ struct WelcomeContent: View {
     enum Mode { case splash, welcome }
     let mode: Mode
     var onPrimary: () -> Void = {}
-    /// Welcome only — "I already use Catchlight" (restore an existing phrase). D-087.
+    /// Welcome only — "I already use Catchlight" (restore an existing phrase). D-103.
     var onSecondary: () -> Void = {}
 
     private var isWelcome: Bool { mode == .welcome }
@@ -246,7 +246,7 @@ struct WelcomeContent: View {
             // 2026-06-16) — keeps the splash's bottom edge anchored like the others.
             if isWelcome {
                 VStack(spacing: 12) {
-                    // Secondary path (owner 2026-07-02, D-087): adopt an existing identity by
+                    // Secondary path (owner 2026-07-02, D-103): adopt an existing identity by
                     // entering its phrase — styled as a link in ckTextObie (the Restore token).
                     Button(action: onSecondary) {
                         Text("I already use Catchlight")
@@ -356,7 +356,7 @@ struct RestoreFolderView: View {
     }
 }
 
-// MARK: - Restore: "I already use Catchlight" — enter an existing phrase (D-087)
+// MARK: - Restore: "I already use Catchlight" — enter an existing phrase (D-103)
 
 private struct RestoreEntryStep: View {
     @Environment(OnboardingViewModel.self) private var vm

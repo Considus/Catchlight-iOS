@@ -85,7 +85,7 @@ final class TakeImporterTests: XCTestCase {
         XCTAssertEqual(take?.checkItems.map(\.text), ["b"])
     }
 
-    // MARK: - Export → import round trip (D-088: split back into individual Takes)
+    // MARK: - Export → import round trip (D-104: split back into individual Takes)
 
     /// A single-Take export re-imports as exactly ONE reconstructed Take (not the whole
     /// file collapsed into one, and not the frontmatter/heading as stray prose): body
