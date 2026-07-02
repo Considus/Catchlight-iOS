@@ -105,7 +105,16 @@ public struct TimeReminder: Codable, Equatable, Sendable {
         self.isDone = isDone
         self.isAllDay = isAllDay
         self.recurrence = recurrence
-        self.weekdays = weekdays
+        self.weekdays = Self.validated(weekdays)
+    }
+
+    /// Drop out-of-range weekday numbers (2026-07-01). A corrupt or foreign-client
+    /// payload containing e.g. `{0}` made `nextWeekly` yield no candidates and fall
+    /// back to the PAST anchor — so `advanceRecurringOccurrence` never advanced and
+    /// "mark done" could never complete the reminder. Applied in both inits so an
+    /// in-memory value always equals its serialised-and-reloaded copy.
+    static func validated(_ weekdays: Set<Int>) -> Set<Int> {
+        weekdays.filter { (1...7).contains($0) }
     }
 
     // Explicit Codable (synthesised offers no decoding defaults): new fields use
@@ -128,7 +137,7 @@ public struct TimeReminder: Codable, Equatable, Sendable {
         self.isDone = try c.decodeIfPresent(Bool.self, forKey: .isDone) ?? false
         self.isAllDay = try c.decodeIfPresent(Bool.self, forKey: .isAllDay) ?? false
         self.recurrence = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence) ?? .none
-        self.weekdays = try c.decodeIfPresent(Set<Int>.self, forKey: .weekdays) ?? []
+        self.weekdays = Self.validated(try c.decodeIfPresent(Set<Int>.self, forKey: .weekdays) ?? [])
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -237,12 +246,16 @@ public extension TimeReminder {
     private static func nextWeekly(after date: Date, anchor: Date,
                                    weekdays: Set<Int>, calendar: Calendar) -> Date {
         let targets = weekdays.isEmpty ? [calendar.component(.weekday, from: anchor)] : Array(weekdays)
-        let time = calendar.dateComponents([.hour, .minute], from: anchor)
+        // Match seconds too (2026-07-01) — previously hour+minute only, which
+        // silently zeroed the anchor's seconds while monthly/annual (nextClamped)
+        // preserved them, so the cadences disagreed about the fire instant.
+        let time = calendar.dateComponents([.hour, .minute, .second], from: anchor)
         let candidates = targets.compactMap { weekday -> Date? in
             var comps = DateComponents()
             comps.weekday = weekday
             comps.hour = time.hour
             comps.minute = time.minute
+            comps.second = time.second
             return calendar.nextDate(after: date, matching: comps,
                                      matchingPolicy: .nextTimePreservingSmallerComponents)
         }
