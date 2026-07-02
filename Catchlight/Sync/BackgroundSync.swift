@@ -138,14 +138,34 @@ public final class BackgroundSyncCoordinator {
         /// Explicit "Sync Now" tap from Cloud Storage (owner 2026-06-21). The ONLY
         /// trigger that still fires when SyncMode is `.manual`.
         case manualButton
+        /// A local Take edit was committed (owner 2026-07-02). Debounced via
+        /// `syncAfterSave()`; an automatic trigger, so `.manual` mode still blocks it.
+        case saveCommitted
     }
 
     /// Minimum spacing between consecutive `appBecameActive` syncs.
     public static let autoSyncMinimumInterval: TimeInterval = 60
+    /// Coalescing delay for sync-on-save: rapid edits within this window fold into one
+    /// push (owner 2026-07-02).
+    public static let saveDebounceInterval: TimeInterval = 2
 
     private let stateLock = NSLock()
     private var isSyncing = false
     private var lastActivationSync: Date?
+    /// Pending debounced save-sync, cancelled + rescheduled on each new save.
+    private var saveDebounce: DispatchWorkItem?
+
+    /// Push local edits shortly after they're saved (owner 2026-07-02): a change is
+    /// safest once it's on the cloud, and it makes multi-device feel live. Debounced so
+    /// a burst of edits coalesces into one push; a no-op outside `.auto` (also gated in
+    /// `syncNow`). Call from the main thread.
+    public func syncAfterSave() {
+        guard SettingsViewModel.SyncMode.current == .auto else { return }
+        saveDebounce?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.syncNow(trigger: .saveCommitted) }
+        saveDebounce = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.saveDebounceInterval, execute: work)
+    }
 
     /// Pure throttle decision — extracted for unit testing.
     static func shouldRunActivationSync(lastRun: Date?, now: Date,
