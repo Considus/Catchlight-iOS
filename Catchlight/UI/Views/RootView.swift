@@ -92,6 +92,11 @@ struct RootView: View {
                     LockView()
                         .transition(.opacity)
                 }
+            } else if app.restoreAwaitingFolder {
+                // Post-restore: a full onboarding-style screen to connect the cloud folder
+                // (owner 2026-07-02), replacing the main app until connected / dismissed.
+                RestoreFolderView()
+                    .transition(.opacity)
             } else {
                 mainApp
                     .transition(.opacity)
@@ -111,6 +116,7 @@ struct RootView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.4), value: app.needsOnboarding)
         .animation(.easeInOut(duration: 0.4), value: app.lockState)
+        .animation(.easeInOut(duration: 0.4), value: app.restoreAwaitingFolder)
         .task {
             // Splash suppressed (UI testing): still drive the unlock if we somehow
             // launched locked, but skip the 2.5s branding hold entirely.
