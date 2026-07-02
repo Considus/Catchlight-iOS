@@ -65,7 +65,12 @@ enum ExportCoordinator {
     /// A user-initiated export — the placeholder for the future web Report-an-issue form, which
     /// will reuse this producer. The log holds no Take content, so no special protection class.
     static func presentDiagnostics(_ text: String) {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("Catchlight-diagnostics.txt")
+        // Lowercase "catchlight-" prefix (2026-07-02) so `sweepStaleExports`
+        // (which matches TakeExporter.isExportFilename) collects this file too
+        // if a crash strands it — the previous capital-C name escaped the sweep
+        // forever. Content-free log, so the exposure was cosmetic, but tmp
+        // hygiene should not depend on luck.
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("catchlight-diagnostics.txt")
         guard (try? Data(text.utf8).write(to: url, options: [.atomic])) != nil else { return }
 
         let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)

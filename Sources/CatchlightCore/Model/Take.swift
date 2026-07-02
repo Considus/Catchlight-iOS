@@ -102,8 +102,11 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
     /// Time-based reminder. `nil` in v1.0 if not set.
     public var timeReminder: TimeReminder?
 
-    /// Location-based reminder. **Always `nil` in v1.0.** The field must exist
-    /// (Roadmap §4) but must not be wired up before v1.1 (Phase 5 brief §8.4).
+    /// Location-based reminder — the Take's "where" (WIRED since D-081,
+    /// 2026-06-23; this doc previously said "always nil in v1.0" — corrected
+    /// 2026-07-02). Either/or with `timeReminder` at the fan (owner 2026-06-24),
+    /// and a full state-system peer since the place/time parity pass
+    /// (2026-07-01): wedge, card border, Done, and `isDone` on the trigger.
     public var locationReminder: LocationTrigger?
 
     // MARK: - Attachments (v1.0: empty array — v1.1 document scanning / images)
