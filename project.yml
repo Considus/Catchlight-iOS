@@ -205,6 +205,15 @@ targets:
       - name: "Stamp build number with git short SHA"
         basedOnDependencyAnalysis: false
         script: |
+          # ARCHIVES keep the numeric CFBundleVersion (2026-07-01): App Store
+          # validation rejects a non-numeric build number like "f24f792", and the
+          # widget's stays "1" — a second mismatch. The SHA stamp is a dogfood
+          # aid; `ACTION` is "install" for Product > Archive and xcodebuild
+          # archive, "build" otherwise.
+          if [ "${ACTION}" = "install" ]; then
+            echo "note: archive build — keeping numeric CFBundleVersion"
+            exit 0
+          fi
           GIT=$(command -v git || true)
           if [ -z "$GIT" ]; then
             echo "note: git not found — leaving CFBundleVersion as-is"
@@ -299,6 +308,12 @@ targets:
       path: CatchlightWidgets/Info.plist
       properties:
         CFBundleDisplayName: Catchlight
+        # App Store validation requires an extension's CFBundleShortVersionString
+        # to MATCH the app's. XcodeGen's default emitted "1.0" here while the app
+        # carries $(MARKETING_VERSION) = "1.0.0" — an archive-rejection mismatch
+        # (2026-07-01 review). CFBundleVersion is pinned the same way.
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UIAppFonts:
           - "CormorantGaramond[wght].ttf"
           - "CormorantGaramond-Italic[wght].ttf"
