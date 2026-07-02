@@ -323,11 +323,12 @@ private struct RestoreEntryStep: View {
     private var filledCount: Int { words.filter { !$0.isEmpty }.count }
     private var ready: Bool { filledCount == 12 }
 
-    /// The keyboard is the only thing that rises on this screen, so we track it to move
-    /// the Restore/Back pills from the bottom dock (keyboard down) INTO the keyboard's
-    /// accessory bar (keyboard up), so they ride the keyboard like the in-app editor
-    /// toolbar instead of hovering over the fields (owner 2026-07-02).
+    /// When a field is focused the Restore/Back pills live in the keyboard's UIKit
+    /// accessory bar (docked flush on the keyboard); when it's down they sit in the
+    /// bottom dock. `keyboardUp` hides the bottom copy so there's never two rows.
     @State private var keyboardUp = false
+    /// Owns the shared keyboard accessory each phrase field vends (D-103).
+    @State private var bridge = RestoreBarBridge()
 
     var body: some View {
         StepScaffold {
@@ -351,7 +352,9 @@ private struct RestoreEntryStep: View {
 
                         // Grid leads directly under the hero — same start position as the
                         // Reveal/Confirm word grids (owner 2026-07-02).
-                        PhraseEntryGrid(fields: $fields, onEdit: { vm.clearRestoreError() })
+                        PhraseEntryGrid(fields: $fields,
+                                        onEdit: { vm.clearRestoreError() },
+                                        accessory: bridge.accessory)
                             .padding(.top, 4)
 
                         VStack(spacing: 8) {
@@ -367,24 +370,28 @@ private struct RestoreEntryStep: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .scrollIndicators(.hidden)
-            // Ride the keyboard: when it's up the pills live in its accessory bar (docked
-            // flush on top of the keyboard, like the editor toolbar).
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    pillButtons
-                }
-            }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
                 keyboardUp = true
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
                 keyboardUp = false
             }
+            .onAppear { wireAccessory() }
+            .onChange(of: fields) { _, _ in wireAccessory() }
         } bottom: {
-            // Keyboard DOWN → the pills sit in the bottom dock. Keyboard UP → they move to
-            // the accessory bar above, so hide the bottom copy to avoid two rows.
+            // Keyboard DOWN → the pills sit in the bottom dock. Keyboard UP → the fields'
+            // accessory bar carries them, so hide the bottom copy to avoid two rows.
             if !keyboardUp { pillButtons }
         }
+    }
+
+    /// Keep the keyboard accessory's actions bound to the CURRENT words and its Restore
+    /// button enabled only when all 12 fields are filled. Re-bound on every edit so a tap
+    /// submits the latest entry.
+    private func wireAccessory() {
+        bridge.onRestore = { vm.submitRestore(words) }
+        bridge.onBack = { vm.cancelRestore() }
+        bridge.setReady(ready)
     }
 
     private var pillButtons: some View {
