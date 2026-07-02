@@ -56,6 +56,7 @@ struct SecondDeviceRestoreView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 24)
             }
+            .scrollIndicators(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
             .navigationTitle("Second device")

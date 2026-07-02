@@ -49,10 +49,15 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// Every onboarding step carries the brand mark except the Failure escape-hatch.
+    /// Every onboarding step carries the hoisted (fixed) brand mark EXCEPT the Failure
+    /// escape-hatch and Restore. Restore draws its own mark inside its ScrollView so the
+    /// mark scrolls away as the keyboard rises (owner 2026-07-02); a fixed mark there
+    /// would hover over the entry fields.
     private var showsBrandMark: Bool {
-        if case .failure = vm.step { return false }
-        return true
+        switch vm.step {
+        case .failure, .restoreEntry: return false
+        default: return true
+        }
     }
 
     @ViewBuilder
@@ -95,6 +100,7 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
                         .padding(.horizontal, 24)
                         .padding(.vertical, 16)
                 }
+                .scrollIndicators(.hidden)   // app-wide: no scrollbars (Style Reference)
             } else {
                 ZStack {
                     content()
@@ -320,31 +326,40 @@ private struct RestoreEntryStep: View {
         StepScaffold {
             ScrollView {
                 VStack(spacing: 0) {
-                    // Reserve the hoisted brand mark's space (hidden copy) — as Reveal/Confirm.
-                    IntroBrandMark().opacity(0)
+                    // Unlike the other steps, this screen draws its OWN brand mark INSIDE
+                    // the scroll (not the hoisted fixed one — `showsBrandMark` excludes
+                    // `.restoreEntry`) so it scrolls UP with the hero when the keyboard
+                    // rises instead of hovering over the fields (owner 2026-07-02).
+                    IntroBrandMark()
 
                     Spacer().frame(height: introHeroTopGap)
-                    Text("Enter your privacy phrase")
-                        .font(CatchlightFont.displayFixed(size: 28))
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
 
-                    Spacer().frame(height: 16)
-                    Text("The 12 words from your other device, in order.")
-                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(spacing: 20) {
+                        Text("Enter your privacy phrase")
+                            .font(CatchlightFont.displayFixed(size: 28))
+                            .foregroundStyle(Color.ckTextPrimary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
 
-                    Spacer().frame(height: 24)
-                    PhraseEntryGrid(fields: $fields, onEdit: { vm.clearRestoreError() })
-                    Spacer().frame(height: 14)
-                    statusLine
-                    Spacer(minLength: 24)
+                        // Grid leads directly under the hero — same start position as the
+                        // Reveal/Confirm word grids (owner 2026-07-02).
+                        PhraseEntryGrid(fields: $fields, onEdit: { vm.clearRestoreError() })
+                            .padding(.top, 4)
+
+                        VStack(spacing: 8) {
+                            Text("The 12 words from your other device, in order.")
+                                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                                .foregroundStyle(Color.ckTextSecondary)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                            statusLine
+                        }
+                    }
                 }
             }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
         } bottom: {
             DockPillRow(primary: {
                 DockPill(title: "Restore") { vm.submitRestore(words) }
@@ -549,6 +564,7 @@ private struct RevealStep: View {
             // exceeds the viewport (e.g. accessibility text sizes), so at default
             // sizes the screen sits truly static.
             .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
         } bottom: {
             DockPillRow {
                 DockPill(title: "I've written them down") { vm.proceedToConfirm() }
@@ -676,6 +692,7 @@ private struct ConfirmStep: View {
             }
             // As Reveal: bounce only when content actually overflows.
             .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
         } bottom: {
             // Reveal-return (owner 2026-06-12, HiFi v1.11.5): a user who blanks
             // on a word must never be stuck guessing — the gate proves a usable

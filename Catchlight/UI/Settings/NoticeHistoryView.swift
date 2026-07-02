@@ -67,6 +67,7 @@ struct NoticeHistoryView: View {
                         }
                     }
                     .scrollContentBackground(.hidden)
+                    .scrollIndicators(.hidden)
                 }
             }
             .background(Color.ckBackground)
