@@ -48,6 +48,8 @@ public struct TimeReminder: Codable, Equatable, Sendable {
     public var scheduledDate: Date {
         didSet { scheduledDate = ISO8601.truncateToMilliseconds(scheduledDate) }
     }
+    /// FUTURE scaffolding (owner 2026-07-01: keep) — encoded/decoded but not yet
+    /// set or read anywhere; reserved for delivery tracking. Not dead code.
     public var isDelivered: Bool
 
     /// Matches the `UNNotificationRequest` identifier so the scheduled local

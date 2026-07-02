@@ -19,7 +19,9 @@ public enum CryptoError: Error, Equatable, Sendable {
     case authenticationFailed
     /// Ciphertext was malformed (e.g. too short to contain nonce + tag).
     case malformedCiphertext
-    /// A key derivation failed (e.g. PIN PBKDF2 reported an error, policy rejection).
+    /// RESERVED — currently never thrown (2026-07-01). Kept for future key-
+    /// derivation failure paths; the PIN PBKDF2 it originally described was
+    /// removed with the in-app PIN (D-042).
     case kdfFailed(String)
     /// A BIP-39 mnemonic failed checksum/wordlist validation.
     case invalidMnemonic(String)
@@ -30,10 +32,11 @@ public enum SyncError: Error, Equatable, Sendable {
     /// The manifest's own HMAC did not verify. The entire inbound batch is
     /// quarantined; the local database is left untouched.
     case manifestSignatureInvalid
-    /// A specific Take blob's HMAC did not verify. That one Take is quarantined;
-    /// the rest of the sync continues.
+    /// RESERVED — currently never thrown (2026-07-01): the pull path reports a
+    /// failed per-blob HMAC via `SyncReport.quarantined` instead of throwing.
     case takeIntegrityFailed(UUID)
-    /// A blob declared in the manifest could not be read from the cloud folder.
+    /// RESERVED — currently never thrown (2026-07-01): an unreadable declared
+    /// blob is reported via `SyncReport.skipped` (provider lag, retried).
     case blobMissing(UUID)
     /// The cloud envelope was structurally invalid (bad version, bad Base64, …).
     case malformedEnvelope(UUID)

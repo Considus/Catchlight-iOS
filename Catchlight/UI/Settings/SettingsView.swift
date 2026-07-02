@@ -526,8 +526,10 @@ struct SettingsView: View {
 
     /// Task 6.13 — Detail label for the Cloud Storage row. Shows the picked
     /// folder's last path component when configured, or "Not configured" when
-    /// running in local-only mode. Refreshed via `scenePhase` so a folder
-    /// picked or removed in the sub-sheet reflects when the sheet dismisses.
+    /// running in local-only mode. Re-reads on re-render — the sub-sheet's
+    /// dismissal re-renders this row, which is what picks up a folder change
+    /// (the `scenePhase` handler only refreshes notification status; comment
+    /// corrected 2026-07-01).
     private var cloudStorageDetail: String {
         if let url = try? Wiring.resolveCloudFolderURL()?.url, !url.path.isEmpty {
             // Last path component reads better than a deep iCloud path; the
