@@ -53,7 +53,6 @@ final class RestoreKeyboardAccessory: UIView {
     private static let pad: CGFloat = 12       // dockHorizontalPadding
     private static let circle: CGFloat = 44    // minTouchTarget
     private static let topPad: CGFloat = 10
-    private static let gap: CGFloat = 10
     private static let barHeight: CGFloat = 62 // 10 + 44 + 8, matches the editor bar
 
     init(onRestore: @escaping () -> Void, onBack: @escaping () -> Void) {
@@ -74,7 +73,22 @@ final class RestoreKeyboardAccessory: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: Self.barHeight) }
-    override func layoutSubviews() { super.layoutSubviews(); fade.frame = bounds }
+
+    /// Position the two pills on the EXACT dock grid `DockPillRow` uses (owner
+    /// 2026-07-02): four equal slots inside the 12pt horizontal padding, the leading
+    /// pill covering slots 1+2 and the trailing pill slots 3+4 — so if the bottom dock
+    /// were slid up under this bar, the pills would obscure it precisely.
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        fade.frame = bounds
+        let slotW = (bounds.width - 2 * Self.pad) / 4
+        let d = Self.circle                       // 44 — the dock button diameter
+        let pillW = slotW + d                     // a pill spans two slots
+        let gap = slotW - d                       // the dock's inter-button gap
+        let restoreX = Self.pad + (slotW / 2 - d / 2)
+        restoreButton.frame = CGRect(x: restoreX, y: Self.topPad, width: pillW, height: d)
+        backButton.frame = CGRect(x: restoreX + pillW + gap, y: Self.topPad, width: pillW, height: d)
+    }
 
     func setReady(_ ready: Bool) {
         restoreButton.isEnabled = ready
@@ -98,23 +112,10 @@ final class RestoreKeyboardAccessory: UIView {
         backButton.accessibilityIdentifier = "restore-back"
         backButton.addAction(UIAction { [weak self] _ in self?.onBack() }, for: .touchUpInside)
 
-        [restoreButton, backButton].forEach(addSubview)
-        NSLayoutConstraint.activate([
-            restoreButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.pad),
-            restoreButton.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
-            restoreButton.heightAnchor.constraint(equalToConstant: Self.circle),
-
-            backButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.pad),
-            backButton.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
-            backButton.heightAnchor.constraint(equalToConstant: Self.circle),
-
-            restoreButton.trailingAnchor.constraint(equalTo: backButton.leadingAnchor, constant: -Self.gap),
-            restoreButton.widthAnchor.constraint(equalTo: backButton.widthAnchor),
-        ])
+        [restoreButton, backButton].forEach(addSubview)   // positioned in layoutSubviews
     }
 
     private func configurePill(_ button: UIButton, title: String, filled: Bool) {
-        button.translatesAutoresizingMaskIntoConstraints = false
         button.setTitle(title, for: .normal)
         button.titleLabel?.font = CatchlightFont.uiBody(size: 15, weight: .medium)
         button.layer.cornerRadius = Self.circle / 2
