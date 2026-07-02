@@ -85,15 +85,12 @@ final class TakeImporterTests: XCTestCase {
         XCTAssertEqual(take?.checkItems.map(\.text), ["b"])
     }
 
-    // MARK: - Export → import round trip (pin of the PRESERVED subset)
+    // MARK: - Export → import round trip (D-088: split back into individual Takes)
 
-    /// Full round-trip fidelity is a documented NON-goal (one file = one Take;
-    /// no heading re-split, no reminder/date reconstruction — see this file's
-    /// header). This pins what IS guaranteed to survive an export→import cycle
-    /// (2026-07-01 review follow-up): every prose line and every check item
-    /// with its done state. If the exporter's format ever changes in a way that
-    /// breaks even this floor, this test is the alarm.
-    func testExportThenImport_preservesProseAndCheckStates() throws {
+    /// A single-Take export re-imports as exactly ONE reconstructed Take (not the whole
+    /// file collapsed into one, and not the frontmatter/heading as stray prose): body
+    /// and check states survive, and the exact createdAt round-trips via the data block.
+    func testExportThenImport_singleTake_reconstructsCleanly() throws {
         var take = Take(createdAt: date, modifiedAt: date,
                         blocks: [
                             .textLine("Packing list"),
@@ -104,17 +101,93 @@ final class TakeImporterTests: XCTestCase {
                         isNote: true)
         take.normaliseActivityFloor()
 
-        let exported = TakeExporter.export([take], format: .markdown,
-                                           exportedAt: date,
-                                           timeZone: TimeZone(secondsFromGMT: 0)!)
-        let reimported = try XCTUnwrap(TakeImporter.parse(exported, fileDate: date))
+        let exported = TakeExporter.export([take], exportedAt: date)
+        let reimported = TakeImporter.parseDocument(exported, fileDate: date)
 
-        XCTAssertTrue(reimported.plainText.contains("Packing list"))
-        XCTAssertTrue(reimported.plainText.contains("buy water at the airport"))
-        XCTAssertEqual(reimported.checkItems.map(\.text), ["passport", "charger"],
-                       "check items survive in order")
-        XCTAssertEqual(reimported.checkItems.map(\.isComplete), [true, false],
-                       "done states survive")
-        XCTAssertTrue(reimported.isTask, "check items make the re-import a Task")
+        XCTAssertEqual(reimported.count, 1)
+        let r = try XCTUnwrap(reimported.first)
+        XCTAssertEqual(r.plainText, "Packing list\npassport\ncharger\nbuy water at the airport",
+                       "no frontmatter or heading leaked into the body")
+        XCTAssertEqual(r.checkItems.map(\.text), ["passport", "charger"])
+        XCTAssertEqual(r.checkItems.map(\.isComplete), [true, false])
+        XCTAssertTrue(r.isTask)
+        XCTAssertEqual(r.createdAt.timeIntervalSince1970, date.timeIntervalSince1970, accuracy: 0.01,
+                       "exact createdAt round-trips via the data block")
+    }
+
+    /// A multi-Take export splits back into the SAME number of Takes, in order, with
+    /// each Take's type, Obie flag, and reminder preserved losslessly.
+    func testExportThenImport_multipleTakes_splitWithFidelity() throws {
+        let d1 = Date(timeIntervalSince1970: 1_700_000_000)
+        let d2 = d1.addingTimeInterval(60)
+        let d3 = d2.addingTimeInterval(60)
+
+        let note = Take(createdAt: d1, modifiedAt: d1, blocks: [.textLine("a plain note")], isNote: true)
+        var obie = Take(createdAt: d2, modifiedAt: d2, blocks: [.textLine("the one Obie")], isObie: true)
+        obie.normaliseActivityFloor()
+        var reminderTake = Take(createdAt: d3, modifiedAt: d3, blocks: [.textLine("pick up prints")], isNote: true)
+        reminderTake.timeReminder = TimeReminder(scheduledDate: d3.addingTimeInterval(86_400),
+                                                 notificationIdentifier: reminderTake.id.uuidString)
+
+        let exported = TakeExporter.export([note, obie, reminderTake], exportedAt: d1)
+        let takes = TakeImporter.parseDocument(exported, fileDate: d1)
+
+        XCTAssertEqual(takes.count, 3, "one Take per section")
+        XCTAssertEqual(takes.map(\.plainText), ["a plain note", "the one Obie", "pick up prints"])
+        XCTAssertTrue(takes[1].isObie, "Obie flag survives (not in the visible heading)")
+        let reminder = try XCTUnwrap(takes[2].timeReminder, "reminder survives")
+        XCTAssertEqual(reminder.scheduledDate.timeIntervalSince1970,
+                       d3.addingTimeInterval(86_400).timeIntervalSince1970, accuracy: 0.01)
+        XCTAssertEqual(takes[2].timeReminder?.notificationIdentifier, takes[2].id.uuidString,
+                       "reminder re-targets the freshly-imported Take id")
+    }
+
+    /// An OLDER export with no data block still splits on its `## …` headings and
+    /// recovers body, type, created date, and the reminder time from the heading alone.
+    func testLegacyExportWithoutDataBlock_splitsOnHeadings() {
+        let legacy = """
+        ---
+        exported: 2026-06-09T14:32:00Z
+        takes: 2
+        ---
+
+        ## Note — 2026-05-14
+        first note
+
+        ## Reminder — 2026-05-16 · 🔔 2026-05-20 09:00
+        pick up prints
+
+        """
+        let takes = TakeImporter.parseDocument(legacy, fileDate: date)
+        XCTAssertEqual(takes.count, 2)
+        XCTAssertEqual(takes.map(\.plainText), ["first note", "pick up prints"])
+        XCTAssertNotNil(takes[1].timeReminder, "the bell time is recovered from the heading")
+    }
+
+    /// A foreign note (no Catchlight frontmatter) still imports as a single Take.
+    func testForeignNote_viaParseDocument_isOneTake() {
+        let takes = TakeImporter.parseDocument("just some notes\n- [ ] and a todo", fileDate: date)
+        XCTAssertEqual(takes.count, 1)
+        XCTAssertTrue(takes[0].isTask)
+    }
+
+    /// A REPEATING reminder — cadence and weekdays — round-trips via the data block, even
+    /// though the visible heading only shows the next fire time (owner asked 2026-07-02).
+    func testExportThenImport_recurringReminder_cadenceAndWeekdaysSurvive() throws {
+        let created = Date(timeIntervalSince1970: 1_700_000_000)
+        var take = Take(createdAt: created, modifiedAt: created,
+                        blocks: [.textLine("water the plants")], isNote: true)
+        take.timeReminder = TimeReminder(scheduledDate: created.addingTimeInterval(3600),
+                                         notificationIdentifier: take.id.uuidString,
+                                         recurrence: .weekly,
+                                         weekdays: [2, 4, 6])   // Mon / Wed / Fri
+
+        let exported = TakeExporter.export([take], exportedAt: created)
+        let reimported = TakeImporter.parseDocument(exported, fileDate: created)
+
+        XCTAssertEqual(reimported.count, 1)
+        let r = try XCTUnwrap(reimported.first?.timeReminder, "reminder survives")
+        XCTAssertEqual(r.recurrence, .weekly, "recurrence cadence round-trips")
+        XCTAssertEqual(r.weekdays, [2, 4, 6], "recurring weekdays round-trip")
     }
 }

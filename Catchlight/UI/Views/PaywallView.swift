@@ -88,6 +88,7 @@ struct PaywallView: View {
                 // current SwiftUI runtime, which overwrote the dismiss button's
                 // own "paywall-dismiss" identifier and broke the UI tests.
                 .accessibilityIdentifier("paywall-sheet")
+                .scrollIndicators(.hidden)
             }
 
             dismissButton

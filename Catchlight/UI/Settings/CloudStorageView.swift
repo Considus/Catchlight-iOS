@@ -261,13 +261,16 @@ struct CloudStorageView: View {
     // MARK: - Handlers
 
     private func handlePickedFolder(_ url: URL) {
-        do {
-            let bookmark = try FileCloudFolder.makeBookmark(for: url)
-            appGroupDefaults?.set(bookmark, forKey: Wiring.bookmarkDefaultsKey)
+        // Save the bookmark AND fire the first sync via the shared AppModel path
+        // (also used by the post-restore guidance card) so connect-then-sync behaves
+        // identically from both entry points. D-087.
+        if let error = app.connectCloudFolder(url) {
+            errorText = error
+        } else {
             folderDisplayPath = url.path
             errorText = nil
-        } catch {
-            errorText = "Couldn't save that folder: \(error.localizedDescription)"
+            syncFeedback = "Syncing…"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { syncFeedback = nil }
         }
     }
 

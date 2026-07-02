@@ -138,14 +138,34 @@ public final class BackgroundSyncCoordinator {
         /// Explicit "Sync Now" tap from Cloud Storage (owner 2026-06-21). The ONLY
         /// trigger that still fires when SyncMode is `.manual`.
         case manualButton
+        /// A local Take edit was committed (owner 2026-07-02). Debounced via
+        /// `syncAfterSave()`; an automatic trigger, so `.manual` mode still blocks it.
+        case saveCommitted
     }
 
     /// Minimum spacing between consecutive `appBecameActive` syncs.
     public static let autoSyncMinimumInterval: TimeInterval = 60
+    /// Coalescing delay for sync-on-save: rapid edits within this window fold into one
+    /// push (owner 2026-07-02).
+    public static let saveDebounceInterval: TimeInterval = 2
 
     private let stateLock = NSLock()
     private var isSyncing = false
     private var lastActivationSync: Date?
+    /// Pending debounced save-sync, cancelled + rescheduled on each new save.
+    private var saveDebounce: DispatchWorkItem?
+
+    /// Push local edits shortly after they're saved (owner 2026-07-02): a change is
+    /// safest once it's on the cloud, and it makes multi-device feel live. Debounced so
+    /// a burst of edits coalesces into one push; a no-op outside `.auto` (also gated in
+    /// `syncNow`). Call from the main thread.
+    public func syncAfterSave() {
+        guard SettingsViewModel.SyncMode.current == .auto else { return }
+        saveDebounce?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.syncNow(trigger: .saveCommitted) }
+        saveDebounce = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.saveDebounceInterval, execute: work)
+    }
 
     /// Pure throttle decision — extracted for unit testing.
     static func shouldRunActivationSync(lastRun: Date?, now: Date,
@@ -180,12 +200,21 @@ public final class BackgroundSyncCoordinator {
         }
         guard !isSyncing else { stateLock.unlock(); return }
         isSyncing = true
-        if trigger == .appBecameActive { lastActivationSync = now }
         stateLock.unlock()
 
         guard let engine = makeEngine() else {
             stateLock.lock(); isSyncing = false; stateLock.unlock()
             return   // local-only mode, locked, or pre-onboarding — nothing to do
+        }
+
+        // Stamp the activation throttle ONLY now that a sync is actually proceeding
+        // (the engine built) — NOT before the `makeEngine` guard (2026-07-02). On a
+        // cold launch the first `.appBecameActive` fires while still LOCKED, so it
+        // bails at `makeEngine` (keys not cached); stamping beforehand made the
+        // post-unlock `.appBecameActive` (fired seconds later) throttle out, so a cold
+        // launch never synced until a manual tap or a >60s-later foreground.
+        if trigger == .appBecameActive {
+            stateLock.lock(); lastActivationSync = now; stateLock.unlock()
         }
 
         // Background-task assertion: the entering-background trigger must be

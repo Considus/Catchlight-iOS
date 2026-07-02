@@ -10,6 +10,7 @@
 //
 
 import SwiftUI
+import UIKit
 import CatchlightCore
 
 /// The fixed gap below the brand mark at which EVERY onboarding hero line (the
@@ -49,16 +50,22 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// Every onboarding step carries the brand mark except the Failure escape-hatch.
+    /// Every onboarding step carries the hoisted (fixed) brand mark EXCEPT the Failure
+    /// escape-hatch and Restore. Restore draws its own mark inside its ScrollView so the
+    /// mark scrolls away as the keyboard rises (owner 2026-07-02); a fixed mark there
+    /// would hover over the entry fields.
     private var showsBrandMark: Bool {
-        if case .failure = vm.step { return false }
-        return true
+        switch vm.step {
+        case .failure, .restoreEntry: return false
+        default: return true
+        }
     }
 
     @ViewBuilder
     private var stepView: some View {
         switch vm.step {
         case .welcome:        WelcomeStep()
+        case .restoreEntry:   RestoreEntryStep()
         case .storageChoice:  StorageChoiceStep()
         case .localWarning:   LocalWarningStep()
         case .reveal:         RevealStep()
@@ -94,6 +101,7 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
                         .padding(.horizontal, 24)
                         .padding(.vertical, 16)
                 }
+                .scrollIndicators(.hidden)   // app-wide: no scrollbars (Style Reference)
             } else {
                 ZStack {
                     content()
@@ -189,7 +197,8 @@ private struct WelcomeStep: View {
     @Environment(OnboardingViewModel.self) private var vm
 
     var body: some View {
-        WelcomeContent(mode: .welcome) { vm.beginStorageChoice() }
+        WelcomeContent(mode: .welcome, onPrimary: { vm.beginStorageChoice() },
+                       onSecondary: { vm.beginRestore() })
     }
 }
 
@@ -205,6 +214,8 @@ struct WelcomeContent: View {
     enum Mode { case splash, welcome }
     let mode: Mode
     var onPrimary: () -> Void = {}
+    /// Welcome only — "I already use Catchlight" (restore an existing phrase). D-087.
+    var onSecondary: () -> Void = {}
 
     private var isWelcome: Bool { mode == .welcome }
 
@@ -234,8 +245,18 @@ struct WelcomeContent: View {
             // non-interactive © footer styled as a subtle outline pill (owner
             // 2026-06-16) — keeps the splash's bottom edge anchored like the others.
             if isWelcome {
-                DockPillRow {
-                    DockPill(title: "Create my privacy phrase", action: onPrimary)
+                VStack(spacing: 12) {
+                    // Secondary path (owner 2026-07-02, D-087): adopt an existing identity by
+                    // entering its phrase — styled as a link in ckTextObie (the Restore token).
+                    Button(action: onSecondary) {
+                        Text("I already use Catchlight")
+                            .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                            .foregroundStyle(Color.ckTextObie)
+                    }
+                    .accessibilityIdentifier("onboarding-restore-link")
+                    DockPillRow {
+                        DockPill(title: "Create my privacy phrase", action: onPrimary)
+                    }
                 }
             } else {
                 DockPillRow {
@@ -284,6 +305,191 @@ struct WelcomeContent: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+// MARK: - Post-restore: connect the cloud folder (3c, D-103)
+
+/// Shown AFTER a restore completes (the account is keyed on this device but the Takes
+/// live in the cloud folder). A full onboarding-style screen — brand mark, hero + subtext
+/// at the shared positions, and the primary action in the bottom dock with a quiet "Not
+/// now" above it — rather than an overlay on the empty Dailies timeline (owner 2026-07-02).
+/// Rendered by `RootView` while `AppModel.restoreAwaitingFolder` is set.
+struct RestoreFolderView: View {
+    @Environment(AppModel.self) private var app
+    @State private var pickerPresented = false
+
+    var body: some View {
+        IntroChapterScaffold(drawsBrandMark: true) {
+            VStack(spacing: 0) {
+                Spacer().frame(height: introHeroTopGap)
+                Text("Welcome back")
+                    .font(CatchlightFont.displayFixed(size: 28))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+
+                Spacer(minLength: 24)
+                Text("Your account is restored on this device. Connect the cloud folder where your Takes are saved and they'll appear here.")
+                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer().frame(height: 24)
+            }
+        } bottom: {
+            VStack(spacing: 12) {
+                Button("Not now") { app.restoreAwaitingFolder = false }
+                    .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextObie)
+                    .accessibilityIdentifier("restore-connect-later")
+                DockPillRow {
+                    DockPill(title: "Connect cloud folder") { pickerPresented = true }
+                }
+            }
+        }
+        .sheet(isPresented: $pickerPresented) {
+            FolderPicker { url in _ = app.connectCloudFolder(url) }
+                .ignoresSafeArea()
+        }
+    }
+}
+
+// MARK: - Restore: "I already use Catchlight" — enter an existing phrase (D-087)
+
+private struct RestoreEntryStep: View {
+    @Environment(OnboardingViewModel.self) private var vm
+    /// Status-bar / Dynamic Island inset (set at the app root) — drives the top fade.
+    @Environment(\.deviceTopInset) private var deviceTopInset
+    /// Twelve discrete word fields (owner 2026-07-02, option B): explicit positions, sturdy
+    /// for a once-a-year action, and no per-word validity signal (correctness is a whole-
+    /// phrase check on Restore — matching onboarding's "reveal nothing granular" posture).
+    @State private var fields: [String] = Array(repeating: "", count: 12)
+
+    private var words: [String] {
+        fields.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+    }
+    private var filledCount: Int { words.filter { !$0.isEmpty }.count }
+    private var ready: Bool { filledCount == 12 }
+
+    /// When a field is focused the Restore/Back pills live in the keyboard's UIKit
+    /// accessory bar (docked flush on the keyboard); when it's down they sit in the
+    /// bottom dock. `keyboardUp` hides the bottom copy so there's never two rows.
+    @State private var keyboardUp = false
+    /// Owns the shared keyboard accessory each phrase field vends (D-103).
+    @State private var bridge = RestoreBarBridge()
+
+    var body: some View {
+        StepScaffold {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Unlike the other steps, this screen draws its OWN brand mark INSIDE
+                        // the scroll (not the hoisted fixed one — `showsBrandMark` excludes
+                        // `.restoreEntry`) so it scrolls UP with the hero when the keyboard
+                        // rises instead of hovering over the fields (owner 2026-07-02).
+                        IntroBrandMark()
+
+                        Spacer().frame(height: introHeroTopGap)
+
+                        VStack(spacing: 20) {
+                            Text("Enter your privacy phrase")
+                                .font(CatchlightFont.displayFixed(size: 28))
+                                .foregroundStyle(Color.ckTextPrimary)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityAddTraits(.isHeader)
+
+                            // Grid leads directly under the hero — same start position as the
+                            // Reveal/Confirm word grids (owner 2026-07-02).
+                            PhraseEntryGrid(fields: $fields,
+                                            onEdit: { vm.clearRestoreError() },
+                                            accessory: bridge.accessory)
+                                .padding(.top, 4)
+
+                            VStack(spacing: 8) {
+                                Text("The 12 words from your other device, in order.")
+                                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                                    .foregroundStyle(Color.ckTextSecondary)
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                statusLine
+                            }
+                            .id("restore-bottom")
+                        }
+                    }
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                    keyboardUp = true
+                    // Pull the subtext / "N of 12" line up above the accessory bar (owner
+                    // 2026-07-02) once the keyboard's frame has settled.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            proxy.scrollTo("restore-bottom", anchor: .bottom)
+                        }
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                    keyboardUp = false
+                }
+                .onAppear { wireAccessory() }
+                .onChange(of: fields) { _, _ in wireAccessory() }
+            }
+        } bottom: {
+            // Keyboard DOWN → the pills sit in the bottom dock. Keyboard UP → the fields'
+            // accessory bar carries them, so hide the bottom copy to avoid two rows.
+            if !keyboardUp { pillButtons }
+        }
+        // A top mask so content scrolled up dissolves before the status bar / Dynamic
+        // Island instead of running behind it — mirrors the Dailies heading fade.
+        .overlay(alignment: .top) { topFade }
+    }
+
+    private var topFade: some View {
+        VStack(spacing: 0) {
+            // +10 (owner 2026-07-02) drops the whole fade zone down a touch.
+            Color.ckBackground.frame(height: deviceTopInset + 10)
+            LinearGradient(colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 16)
+        }
+        .ignoresSafeArea(edges: .top)
+        .allowsHitTesting(false)
+    }
+
+    /// Keep the keyboard accessory's actions bound to the CURRENT words and its Restore
+    /// button enabled only when all 12 fields are filled. Re-bound on every edit so a tap
+    /// submits the latest entry.
+    private func wireAccessory() {
+        bridge.onRestore = { vm.submitRestore(words) }
+        bridge.onBack = { vm.cancelRestore() }
+        bridge.setReady(ready)
+    }
+
+    private var pillButtons: some View {
+        DockPillRow(primary: {
+            DockPill(title: "Restore") { vm.submitRestore(words) }
+                .disabled(!ready)
+                .opacity(ready ? 1 : 0.5)
+        }, trailing: {
+            DockPill(title: "Back", secondary: true) { vm.cancelRestore() }
+        })
+    }
+
+    private var statusLine: some View {
+        let message: String
+        let isError: Bool
+        if let err = vm.restoreError { message = err; isError = true }
+        else if ready { message = "Ready to restore."; isError = false }
+        else { message = "\(filledCount) of 12 words"; isError = false }
+        return Text(message)
+            .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .caption))
+            .foregroundStyle(isError ? Color.ckRuby : Color.ckTextSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -414,7 +620,7 @@ private struct RevealStep: View {
         case .local:
             return "Write these 12 words down and keep them somewhere safe. They encrypt your Takes and enable a second device."
         case .cloud:
-            return "Write these 12 words down and keep them somewhere safe. Together with your cloud folder, they're how you restore your Takes on any device."
+            return "Write these 12 words down and keep them somewhere safe. They're needed in order to decrypt your Takes on a new device."
         }
     }
 
@@ -466,6 +672,7 @@ private struct RevealStep: View {
             // exceeds the viewport (e.g. accessibility text sizes), so at default
             // sizes the screen sits truly static.
             .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
         } bottom: {
             DockPillRow {
                 DockPill(title: "I've written them down") { vm.proceedToConfirm() }
@@ -593,6 +800,7 @@ private struct ConfirmStep: View {
             }
             // As Reveal: bounce only when content actually overflows.
             .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
         } bottom: {
             // Reveal-return (owner 2026-06-12, HiFi v1.11.5): a user who blanks
             // on a word must never be stuck guessing — the gate proves a usable
@@ -803,14 +1011,14 @@ private struct FailureStep: View {
 // MARK: - Previews
 
 #Preview("Onboarding — welcome (Night)") {
-    let vm = OnboardingViewModel(onComplete: { _ in })
+    let vm = OnboardingViewModel(onComplete: { _, _ in })
     return OnboardingView()
         .environment(vm)
         .preferredColorScheme(.dark)
 }
 
 #Preview("Onboarding — reveal (Night)") {
-    let vm = OnboardingViewModel(onComplete: { _ in })
+    let vm = OnboardingViewModel(onComplete: { _, _ in })
     vm.beginStorageChoice()
     vm.chooseStorage(.cloud)
     return OnboardingView()
@@ -819,7 +1027,7 @@ private struct FailureStep: View {
 }
 
 #Preview("Onboarding — confirm (Daylight)") {
-    let vm = OnboardingViewModel(onComplete: { _ in })
+    let vm = OnboardingViewModel(onComplete: { _, _ in })
     vm.beginStorageChoice()
     vm.chooseStorage(.cloud)
     vm.proceedToConfirm()

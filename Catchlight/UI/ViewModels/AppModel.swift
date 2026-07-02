@@ -70,6 +70,19 @@ final class AppModel {
     /// (previews / tests) — the Cloud Storage button is a no-op in that case.
     var performManualSync: (() -> Void)?
 
+    /// Debounced push after a local Take edit (owner 2026-07-02). Wired by `CatchlightApp`
+    /// to the coordinator's `syncAfterSave`; nil in previews/tests (no-op).
+    var syncAfterSave: (() -> Void)?
+
+    /// Set true when a cross-device RESTORE completes with no cloud folder yet
+    /// configured (chunk 3c, D-087). A restore lands on an empty timeline — the real
+    /// Takes live in the cloud folder — so the empty state shows a guidance card that
+    /// walks the user to connect that folder rather than the generic "first Take is
+    /// waiting" line. Cleared once a folder is connected or the user dismisses.
+    /// In-memory only: the phrase is already stored, so Settings → Cloud Storage
+    /// remains a reliable fallback if the app is quit before connecting.
+    var restoreAwaitingFolder: Bool = false
+
     private(set) var needsOnboarding: Bool
     private(set) var onboardingVM: OnboardingViewModel?
 
@@ -162,18 +175,29 @@ final class AppModel {
 
         if needsOnboarding {
             self.onboardingVM = nil
-            self.onboardingVM = OnboardingViewModel { [weak self] masterKeyData in
-                self?.completeOnboarding(with: masterKeyData)
+            self.onboardingVM = OnboardingViewModel { [weak self] masterKeyData, isRestore in
+                self?.completeOnboarding(with: masterKeyData, isRestore: isRestore)
             }
         }
     }
 
     /// Called by OnboardingViewModel after the master key is stored. Rebinds the
-    /// feature view model to the now-openable production store and seeds the first
-    /// Takes, then flips to the main app.
-    private func completeOnboarding(with masterKeyData: Data) {
+    /// feature view model to the now-openable production store and (for a fresh
+    /// generate) seeds the first Takes, then flips to the main app.
+    ///
+    /// `isRestore` — a cross-device restore MUST NOT seed. The restored user's real
+    /// Takes arrive from the cloud folder on the first sync; seeding five example
+    /// Takes locally would (a) show examples the user never wanted and (b) push those
+    /// examples UP into their real data the moment the folder is connected. So a
+    /// restore lands on an empty timeline that fills in once the folder is connected
+    /// (chunk 3, D-087). Applies to BOTH the immediate open and the seed-on-next-unlock
+    /// fallback below.
+    private func completeOnboarding(with masterKeyData: Data, isRestore: Bool) {
         onboardingVM = nil
         needsOnboarding = false
+        // A restoring user already knows the app — skip the first-run orientation tour
+        // (owner 2026-07-02). step 5 = complete, so no hint ever arms.
+        if isRestore { orientation.step = 5 }
         // Open the store directly from the key we JUST derived — no Keychain read,
         // so NO Face ID/passcode prompt right after setup (the user lands straight in
         // the seeded timeline). The `.userPresence` prompt first appears on the next
@@ -183,15 +207,110 @@ final class AppModel {
         let keys = KeyHierarchy(masterKeyBytes: masterKeyData)
         session.adopt(keys)
         if let store = makeStoreFromKeys(keys) {
-            seedIfEmpty(store)
+            if !isRestore { seedIfEmpty(store) }
             rebind(to: store)
             lockState = .unlocked
+            // A restore lands empty and needs the cloud folder connected to pull the
+            // user's Takes — surface the guidance card unless a folder is already set.
+            if isRestore { restoreAwaitingFolder = !cloudFolderConfigured }
         } else {
             // The store genuinely couldn't open (corrupt / I/O) — fall back to the
-            // lock screen so a relaunch/retry can recover; seed on that first unlock.
-            seedOnNextUnlock = true
+            // lock screen so a relaunch/retry can recover; seed on that first unlock
+            // (never for a restore).
+            seedOnNextUnlock = !isRestore
             lockState = .locked
         }
+    }
+
+    /// Whether a cloud-folder bookmark is already persisted (App Group defaults).
+    private var cloudFolderConfigured: Bool {
+        UserDefaults(suiteName: AppGroup.identifier)?
+            .data(forKey: Wiring.bookmarkDefaultsKey) != nil
+    }
+
+    /// Persist a picked cloud folder and immediately sync — the single connect path
+    /// shared by Settings → Cloud Storage and the post-restore guidance card. Saving
+    /// the bookmark alone isn't enough: the sync coordinator otherwise only fires on
+    /// app-active / background / the Sync Now button, so a freshly-connected folder
+    /// would sit idle. Firing here is also what PULLS a restored user's Takes down
+    /// (`pullInbound`'s manifest-HMAC check is the right-phrase-for-this-folder gate).
+    /// Returns a user-readable error string on failure, nil on success. D-087.
+    @discardableResult
+    func connectCloudFolder(_ url: URL) -> String? {
+        do {
+            let bookmark = try FileCloudFolder.makeBookmark(for: url)
+            UserDefaults(suiteName: AppGroup.identifier)?
+                .set(bookmark, forKey: Wiring.bookmarkDefaultsKey)
+            restoreAwaitingFolder = false   // guidance served its purpose
+            performManualSync?()
+            return nil
+        } catch {
+            return "Couldn't save that folder: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Second device (Settings re-key, D-087)
+
+    /// Re-key THIS device to the account behind `words`, in process. Destructive by
+    /// necessity: to be in Settings the device is already onboarded, so its local
+    /// Takes are sealed under the CURRENT master key. Installing a new key would leave
+    /// those rows undecryptable — and the store's read path THROWS on an undecryptable
+    /// row rather than hiding it, which breaks the whole timeline. So we wipe the local
+    /// store before re-binding under the new key (the user has already confirmed the
+    /// warning). The restored account's real Takes then arrive from its cloud folder,
+    /// via the same post-restore guidance a fresh-install restore uses.
+    ///
+    /// Returns a user-readable error string on failure (nil on success):
+    ///   • a bad phrase → inline message, NOTHING destroyed (validation is first);
+    ///   • a Keychain / store-open fault → message, and the app is left locked so a
+    ///     relaunch retries the unlock (the new key is already stored by then).
+    @discardableResult
+    func replaceAccountForSecondDevice(_ words: [String]) -> String? {
+        let cleaned = words
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+
+        // 1. Validate + derive FIRST — a bad phrase must destroy nothing.
+        let bip39: BIP39
+        do { bip39 = BIP39(wordlist: try EnglishWordlist.load()) }
+        catch { return "Couldn't check your phrase on this device." }
+        let masterKeyData: Data
+        do { masterKeyData = try PhraseRecovery.recoverMasterKey(from: cleaned, bip39: bip39) }
+        catch { return "That doesn't look right. Check the words and try again." }
+
+        // 2. Install the new secrets (overwrites the current account's key + mnemonic).
+        do {
+            try MasterKeyKeychain.store(masterKeyData)
+            try MnemonicKeychain.store(cleaned)
+        } catch {
+            return "Couldn't secure your account on this device."
+        }
+
+        // 3. Drop the old encrypted store (release its SQLite handle), purge the old
+        //    account's Takes from the system Spotlight index, and delete the local DB
+        //    files so the store re-opens EMPTY under the new key.
+        dailiesVM = DailiesViewModel(store: InMemoryTakeStore(), spotlight: spotlight)
+        spotlight.deindexAll()
+        LocalStoreReset.wipeDatabaseFiles()
+
+        // 4. Re-bind under the new keys — mirrors completeOnboarding's open path
+        //    (makeStoreFromKeys primes Wiring.sessionKeys, so no Face ID prompt).
+        let keys = KeyHierarchy(masterKeyBytes: masterKeyData)
+        session.adopt(keys)
+        guard let store = makeStoreFromKeys(keys) else {
+            lockState = .locked   // relaunch will retry the unlock with the stored key
+            return "Couldn't open your library on this device. Please restart Catchlight."
+        }
+        rebind(to: store)        // fresh empty store under the new account
+        lockState = .unlocked
+        orientation.step = 5     // returning user — skip the first-run tour (owner 2026-07-02)
+
+        // 5. The new account needs its OWN cloud folder — the previous bookmark (if any)
+        //    belonged to the old account. Clear it and show the connect-folder guidance,
+        //    the same path a fresh-install restore lands on.
+        Wiring.clearCloudFolderBookmark()
+        restoreAwaitingFolder = true
+        return nil
     }
 
     private func seedIfEmpty(_ store: TakeStore) {
@@ -205,6 +324,10 @@ final class AppModel {
         // onboarding completion — without this, post-onboarding Takes wouldn't
         // be indexed until the next app launch.
         dailiesVM = DailiesViewModel(store: store, spotlight: spotlight)
+        // Push local edits shortly after they're saved (owner 2026-07-02). Set on the
+        // REBOUND (real, unlocked) store only — the locked placeholder never takes user
+        // edits. `syncAfterSave` is debounced + SyncMode-gated by the coordinator.
+        dailiesVM.onLocalChange = { [weak self] in self?.syncAfterSave?() }
     }
 
     // MARK: - D-042 — app-entry lock screen
