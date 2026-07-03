@@ -475,7 +475,7 @@ public final class ReminderScheduler {
     }
 
     /// Cancel by raw identifier — used when the Take no longer carries its
-    /// `timeReminder` (reminder removed via the petal fan, Take deleted) so
+    /// `timeReminder` (reminder removed via the focus-ring fan, Take deleted) so
     /// `cancelReminder(for:)` has nothing to read the identifier from. The app uses the
     /// Take's UUID string as the identifier. Clears BOTH the one-shot id and the whole
     /// recurring window (`<id>#0…`), so it doesn't matter which kind the Take was.

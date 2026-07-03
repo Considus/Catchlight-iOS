@@ -9,7 +9,7 @@
 //      `UIColor` dynamic providers, so a single `Color` value resolves to the
 //      correct Night (dark) or Daylight (light) variant via the active
 //      `userInterfaceStyle`. Views still read `@Environment(\.colorScheme)` where
-//      they need to branch logic (e.g. petal styling), but the colours themselves
+//      they need to branch logic (e.g. mark styling), but the colours themselves
 //      are adaptive by construction.
 //    • Dynamic Type is respected. Font helpers use `relativeTo:` so custom fonts
 //      scale, and the system fallbacks scale automatically.
@@ -65,7 +65,7 @@ extension Color {
     static let ckEmberText = Color(hex: 0x856539)
     /// Accessible warm-grey for secondary text on Paper — WCAG AA. Replaces Fog in Daylight.
     static let ckSlate = Color(hex: 0x5C5650)
-    // "Stone" is the Daylight petal fill — and the Important quadrant / dock-toggle
+    // "Stone" is the Daylight mark fill — and the Important quadrant / dock-toggle
     // swatch. #E0D9CE is the owner-confirmed design value (2026-07-01; replaces the
     // provisional #E7E1D5 this shipped with while the hex was unconfirmed).
     static let ckStone = Color(hex: 0xE0D9CE)
@@ -190,7 +190,7 @@ extension Color {
     /// separate owner call (see audit C4) and are NOT switched here.
     static let ckOnAccent = Color(uiColor: UITheme.onAccent)
 
-    /// The veil — the ONE obscuring overlay for the Dial, the editor, and the
+    /// The veil — the ONE obscuring overlay for the Focus-ring, the editor, and the
     /// Settings backdrop (owner decision 2026-06-11: solid 90% background veil
     /// everywhere; no blur, no dark tint in Daylight). Ink @ 90% (Night) /
     /// Paper @ 90% (Daylight). The screens beneath stay full-opacity — the
@@ -276,7 +276,7 @@ extension Color {
     ))
 }
 
-// MARK: - Quadrant / petal fills (mode-dependent — resolved by the caller)
+// MARK: - Quadrant / mark fills (mode-dependent — resolved by the caller)
 //
 // These need the active colour scheme because the same activity reads differently
 // per mode. Views pass their `@Environment(\.colorScheme)` in.
@@ -523,7 +523,7 @@ enum CatchlightLayout {
     /// 36. Row spacing is unaffected (the touch frame was already 44). The spine
     /// and Add-button alignment math below is parametric on this, so it follows.
     /// (Search/sequence results reuse the timeline row; the edit footer, conflict
-    /// view, and petal fan pass their own explicit diameters and are unaffected.)
+    /// view, and focus-ring fan pass their own explicit diameters and are unaffected.)
     static let circleDiameter: CGFloat = 44
     /// Width of the timeline spine.
     static let spineWidth: CGFloat = 2

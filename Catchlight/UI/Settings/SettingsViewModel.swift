@@ -91,7 +91,7 @@ final class SettingsViewModel {
 
     /// How many HOURS ahead a freshly-added reminder defaults to (owner 2026-06-18 — a
     /// user preference shown as a segmented control of 1/6/12/24/48). The raw value IS
-    /// the hour count. `PetalFanView.defaultReminderDate` reads `current` when seeding
+    /// the hour count. `FocusRingFanView.defaultReminderDate` reads `current` when seeding
     /// the picker; the user always refines from there.
     enum DefaultReminderHours: String, CaseIterable, Identifiable {
         case one = "1", six = "6", twelve = "12", twentyFour = "24", fortyEight = "48"
