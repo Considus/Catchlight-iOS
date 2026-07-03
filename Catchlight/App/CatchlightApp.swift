@@ -87,6 +87,13 @@ struct CatchlightApp: App {
         // stay (harmless, and they document intent at those sites).
         UIScrollView.appearance().showsVerticalScrollIndicator = false
         UIScrollView.appearance().showsHorizontalScrollIndicator = false
+        // UI tests: kill UIKit animations so XCUITest doesn't race the keyboard slide,
+        // the UIKit pan/scroll coordination, or view transitions — a known flake source.
+        // SwiftUI animations (the Focus-ring fan) are handled separately by forcing
+        // reduce-motion in `body`. No effect on shipping builds.
+        if ProcessInfo.processInfo.arguments.contains("--uitesting") {
+            UIView.setAnimationsEnabled(false)
+        }
     }
 
     /// Capture the app handle so the scenePhase observer can drive subscription
