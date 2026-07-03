@@ -158,20 +158,18 @@ final class AppModel {
         self.lockState = lockState
         self.subscription = subscription
         self.spotlight = spotlight
+        // Apply the persisted Spotlight/Siri exposure (D-110) so per-save indexing
+        // honours it from launch. Default `.none` — index nothing until opted in.
+        spotlight.exposure = SpotlightExposure.current
         self.dailiesVM = DailiesViewModel(store: initialStore, spotlight: spotlight)
         // Hand the indexer to the subscription manager so the lapse transition
         // triggers a deindex-all without AppModel needing to observe status.
         subscription.attachSpotlightIndexer(spotlight)
-        // Bulk re-index on RECOVERY from a lapse (2026-07-01): the lapse wipes
-        // the Spotlight index, and per-save re-indexing alone left every
-        // un-resaved Take invisible to system search forever after a transient
-        // false lapse. AppModel holds both the store and the indexer, so the
-        // rebuild lives here. No-op while locked (placeholder store is empty).
-        subscription.onRecoveredFromLapse = { [weak self] in
-            guard let self, self.lockState == .unlocked,
-                  let takes = try? self.dailiesVM.store.allTakes() else { return }
-            takes.forEach { self.spotlight.index($0) }
-        }
+        // Bulk re-index on RECOVERY from a lapse (2026-07-01): the lapse wipes the
+        // Spotlight index, and per-save re-indexing alone left every un-resaved Take
+        // invisible to system search after a transient false lapse. Re-index at the
+        // current exposure (a no-op while locked or at `.none`).
+        subscription.onRecoveredFromLapse = { [weak self] in self?.reindexAllTakes() }
 
         if needsOnboarding {
             self.onboardingVM = nil
@@ -179,6 +177,25 @@ final class AppModel {
                 self?.completeOnboarding(with: masterKeyData, isRestore: isRestore)
             }
         }
+    }
+
+    /// Re-index every stored Take at the current Spotlight exposure. No-op while
+    /// locked (the placeholder store is empty) or at `.none` (`index(_:)` skips).
+    /// Shared by lapse-recovery and the Settings exposure change (D-110).
+    private func reindexAllTakes() {
+        guard lockState == .unlocked, let takes = try? dailiesVM.store.allTakes() else { return }
+        takes.forEach { spotlight.index($0) }
+    }
+
+    /// Apply a new Spotlight/Siri exposure level (Settings › Security, D-110): set it
+    /// on the indexer, clear items indexed at the OLD level, then re-index at the new
+    /// level — unless `.none`, locked, or lapsed (a lapsed user's Takes stay hidden
+    /// from system search, matching the lapse deindex).
+    func applySpotlightExposure(_ exposure: SpotlightExposure) {
+        spotlight.exposure = exposure
+        spotlight.deindexAll()
+        guard exposure != .none, subscription.status != .lapsed else { return }
+        reindexAllTakes()
     }
 
     /// Called by OnboardingViewModel after the master key is stored. Rebinds the
