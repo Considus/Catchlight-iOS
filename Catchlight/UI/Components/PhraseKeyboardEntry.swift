@@ -70,6 +70,12 @@ final class RestoreKeyboardAccessory: UIView {
         applyFadeColors()
         buildLayout()
         setReady(false)
+        // Re-resolve the CGColor-backed border/fade on a Night/Daylight change
+        // (iOS 17+ trait-change registration; replaces the deprecated
+        // `traitCollectionDidChange` override).
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (bar: RestoreKeyboardAccessory, _) in
+            bar.refreshDynamicColors()
+        }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -134,9 +140,9 @@ final class RestoreKeyboardAccessory: UIView {
         }
     }
 
-    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
-        super.traitCollectionDidChange(previous)
-        // CGColors don't auto-resolve for the Scene — refresh the adaptive ones.
+    /// CGColors don't auto-resolve for the Scene — refresh the adaptive ones.
+    /// Called by the trait-change registration in `init`.
+    private func refreshDynamicColors() {
         backButton.layer.borderColor = Self.textPrimary.withAlphaComponent(0.4).cgColor
         backButton.setTitleColor(Self.textPrimary, for: .normal)
         applyFadeColors()

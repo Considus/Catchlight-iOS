@@ -150,6 +150,12 @@ final class SearchBarAccessory: UIView {
         layer.insertSublayer(fade, at: 0)
         applyFadeColors()
         buildLayout()
+        // Re-resolve the CGColor-backed borders/fade on a Night/Daylight change
+        // (iOS 17+ trait-change registration; replaces the deprecated
+        // `traitCollectionDidChange` override).
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (bar: SearchBarAccessory, _) in
+            bar.refreshDynamicColors()
+        }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -285,9 +291,9 @@ final class SearchBarAccessory: UIView {
         ])
     }
 
-    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
-        super.traitCollectionDidChange(previous)
-        // Re-resolve the dynamic colours for the new Scene (CGColor doesn't adapt).
+    /// Re-resolve the dynamic colours for the new Scene (CGColor doesn't adapt).
+    /// Called by the trait-change registration in `init`.
+    private func refreshDynamicColors() {
         cancelButton.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
         dismissButton.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
         field.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
