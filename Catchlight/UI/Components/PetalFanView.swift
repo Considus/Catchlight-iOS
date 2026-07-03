@@ -71,6 +71,14 @@ struct PetalFanView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var scheme
 
+    /// Collapse the fan's 340–700ms choreography to an instant open/close when the
+    /// user has Reduce Motion on — OR under `--uitesting`, so XCUITest doesn't race
+    /// the animation (a known flake source). Mirrors the app-wide
+    /// `UIView.setAnimationsEnabled(false)` that UI-test launches set for UIKit.
+    private var instantMotion: Bool {
+        reduceMotion || ProcessInfo.processInfo.arguments.contains("--uitesting")
+    }
+
     /// Default "when" a freshly-added reminder opens to — now a user preference
     /// (Settings → Reminders → Default timing (hrs); owner 2026-06-18). Read at call
     /// time from UserDefaults so it always reflects the current setting; the picker
@@ -394,7 +402,7 @@ struct PetalFanView: View {
         // Slowed to feel more deliberate in BOTH directions (owner 2026-06-18).
         .animation(.spring(response: 0.52, dampingFraction: 0.9), value: showingReminderPicker)
         .onAppear {
-            if reduceMotion { phase = .open }
+            if instantMotion { phase = .open }
             else { phase = .opening(start: .now) }
             // Settle into the static .open phase once the choreography ends so
             // the TimelineView stops ticking.
@@ -641,7 +649,7 @@ struct PetalFanView: View {
             // Mid-choreography taps wait for the settle (matches the prototype guard).
             return
         }
-        if reduceMotion {
+        if instantMotion {
             finish(commit: commit)
             return
         }
