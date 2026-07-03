@@ -64,7 +64,7 @@ struct SequenceGlyph: View {
 
 /// The Obie identity glyph — the Catchlight Obie brand logo (solid italic "O" +
 /// catch-dot, `obie-glyph` asset from 01_Brand/Logo/Custom Glyphs/Obie_Glyph.svg).
-/// Replaced the earlier ring-and-dot "petal" mark app-wide (owner 2026-06-30), so
+/// Replaced the earlier ring-and-dot Mark glyph app-wide (owner 2026-06-30), so
 /// the in-app Obie matches the widget/brand mark. Template image: tint via
 /// `.foregroundStyle` (callers use `ckTextObie`). The glyph is taller than wide;
 /// `scaledToFit` centres it in the `size` box.
@@ -135,7 +135,7 @@ enum MenuGlyph {
     static let removeImportant = bake(DailiesGlyphSlashed(size: glyphSize))
     // The solid brand "O" reads heavier than the line glyphs, so it's rendered a
     // touch smaller *within* the shared `glyphSize` slot (so it still aligns) — the
-    // SAME 26→22 (≈0.85×) reduction applied to the petal-fan Obie Mark (owner 2026-07-01).
+    // SAME 26→22 (≈0.85×) reduction applied to the focus-ring-fan Obie Mark (owner 2026-07-01).
     static let obie = bake(ObieGlyph(size: glyphSize * 22 / 26))
 
     /// Rendered a touch larger than the dock glyphs — menu icons read small.

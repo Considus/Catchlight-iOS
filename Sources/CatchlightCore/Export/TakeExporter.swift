@@ -127,7 +127,7 @@ public enum TakeExporter {
     ///   Reminder (timeReminder != nil) > Task > Note.
     /// — Reminder is the most specific qualifier so it owns the heading when
     /// present; the body text and any future per-Take view still show all the
-    /// activity types via the petal fan.
+    /// activity types via the focus-ring fan.
     static func heading(for take: Take, timeZone: TimeZone = .current) -> String {
         let ymd = makeFormatter("yyyy-MM-dd", timeZone: timeZone)
         let ymdHm = makeFormatter("yyyy-MM-dd HH:mm", timeZone: timeZone)

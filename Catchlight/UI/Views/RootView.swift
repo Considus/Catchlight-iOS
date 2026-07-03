@@ -5,7 +5,7 @@
 //  The top-level composition for the product UI. Decides onboarding vs. the main
 //  app, hosts the ONE surface (the timeline — the dock morphs instead of tabs
 //  switching, redesign 2026-06-10), the persistent bottom dock, and the modal
-//  overlays (petal fan, Take editor). All view models arrive via the environment
+//  overlays (focus-ring fan, Take editor). All view models arrive via the environment
 //  from Wiring; this view owns no domain logic.
 //
 //  Spine ↔ dock alignment: the timeline spine and the dock's Add button share the
@@ -191,7 +191,7 @@ struct RootView: View {
         // the bottom-aligned resting dock up to the heading whenever it happened to be
         // showing while a keyboard was up — the stray-toolbar bug (owner 2026-06-20).
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .overlay { petalFanOverlay }
+        .overlay { focusRingFanOverlay }
         .overlay { obieIntroOverlay }
         .sheet(isPresented: $ui.isSettingsPresented) {
             SettingsView()
@@ -266,7 +266,7 @@ struct RootView: View {
     // `mainApp` ZStack) so each ViewBuilder stays simple enough for SwiftUI's
     // type-checker.
 
-    /// Opacity for the DOCK while a focus surface is up. Behind the petal fan the
+    /// Opacity for the DOCK while a focus surface is up. Behind the focus-ring fan the
     /// fan's own ckDim veil does the timeline recede; while editing in place the
     /// timeline masks itself (DailiesView), and the dock recedes + goes inert here so
     /// it can't start a competing action mid-edit (owner 2026-06-17).
@@ -281,7 +281,7 @@ struct RootView: View {
     private var fanOpacity: Double {
         // Editing / search hide the dock OUTRIGHT — and this is checked BEFORE the fan
         // dim (owner 2026-06-21): a Focus ring opened FROM the editor sets BOTH
-        // `isEditingInPlace` and `isPetalFanPresented`, and if the fan check won the dock
+        // `isEditingInPlace` and `isFocusRingFanPresented`, and if the fan check won the dock
         // re-appeared at 18% and the keyboard's safe-area avoidance shoved it mid-screen
         // — the "ghostly toolbar" bug. While editing, the keyboard toolbar replaces the
         // dock, so hide it outright regardless of the fan. (The original reason still
@@ -289,7 +289,7 @@ struct RootView: View {
         if ui.isEditingInPlace || searchKeyboardUp { return 0 }
         // The 0.18 dim is for a fan opened from the RESTING timeline (dock recedes
         // behind the veil but stays visible).
-        if ui.isPetalFanPresented { return 0.18 }
+        if ui.isFocusRingFanPresented { return 0.18 }
         return 1
     }
 
@@ -313,24 +313,24 @@ struct RootView: View {
     // MARK: - Overlays
 
     @ViewBuilder
-    private var petalFanOverlay: some View {
-        if let take = ui.petalFanTake {
+    private var focusRingFanOverlay: some View {
+        if let take = ui.focusRingFanTake {
             GeometryReader { geo in
-                PetalFanView(
+                FocusRingFanView(
                     take: take,
-                    hubCentre: ui.petalFanOrigin == .zero
+                    hubCentre: ui.focusRingFanOrigin == .zero
                         ? CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-                        : ui.petalFanOrigin,
+                        : ui.focusRingFanOrigin,
                     containerWidth: geo.size.width,
                     // Lift the tapped Take lit above the veil only when the fan
                     // blooms from a timeline Iris (real origin). From the editor
                     // footer the origin is .zero (screen centre) and the editor is
                     // already the context, so no spotlight card there.
-                    showsFocusCard: ui.petalFanOrigin != .zero,
+                    showsFocusCard: ui.focusRingFanOrigin != .zero,
                     onCommit: { isNote, isTask, hasReminder, reminderDate, reminderAlarm, reminderAllDay, reminderRecurrence, reminderWeekdays, reminderLocation, isObie in
-                        // Task 6.20: petal-fan commit is a mutation — gate it.
+                        // Task 6.20: focus-ring-fan commit is a mutation — gate it.
                         guard app.ensureEntitled() else {
-                            ui.closePetalFan()
+                            ui.closeFocusRingFan()
                             return
                         }
                         if ui.editingTakeID == take.id {
@@ -360,9 +360,9 @@ struct RootView: View {
                                 isObie: isObie
                             )
                         }
-                        ui.closePetalFan()
+                        ui.closeFocusRingFan()
                     },
-                    onDismiss: { ui.closePetalFan() }
+                    onDismiss: { ui.closeFocusRingFan() }
                 )
             }
             .ignoresSafeArea()
