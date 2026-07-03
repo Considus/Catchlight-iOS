@@ -34,27 +34,34 @@ final class CloudStorageSettingsUITests: XCTestCase {
         XCTAssertTrue(settingsSheet.waitForExistence(timeout: 3),
                       "Settings sheet should appear after the dock swipe-up.")
 
-        // Locate and tap the Cloud Storage row. It lives in the System section (owner
-        // 2026-06-21 — Sync folded into System), below Appearance + Security, so it
-        // falls below the fold once those sections grow (e.g. the View/Order rows) —
-        // and SwiftUI's lazy List keeps off-screen rows
-        // OUT of the a11y tree. Scroll the settings list until the row is on screen
-        // and hittable rather than assuming it's visible at rest.
+        // Locate the Cloud Storage row. It lives in the System section (owner 2026-06-21
+        // — Sync folded into System), below Appearance + Security, so it falls below the
+        // fold once those sections grow — and the D-110 Spotlight cell grew Security,
+        // pushing it near the very bottom. SwiftUI's lazy List keeps off-screen rows OUT
+        // of the a11y tree, so scroll it in.
+        //
+        // Then scroll it CLEAR OF THE BOTTOM EDGE before tapping: on the smaller iPhone 16
+        // / iOS 26, a row that just came into view at the bottom is "hittable" but its tap
+        // lands in the home-indicator dead zone and never presents the sheet (#114). Use
+        // gentle 20%-screen drags (a full `swipeUp` overshoots on a short list) until the
+        // row's centre sits in the upper ~55% of the window.
         let cloudRow = app.descendants(matching: .any)
             .matching(identifier: "settings-cloud-storage").firstMatch
+        let safeMidY = app.frame.height * 0.55
         var scrolls = 0
-        while !cloudRow.isHittable && scrolls < 8 {
-            app.swipeUp()
+        while (!cloudRow.isHittable || cloudRow.frame.midY > safeMidY) && scrolls < 15 {
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.70))
+            let to   = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.50))
+            from.press(forDuration: 0.05, thenDragTo: to)
             scrolls += 1
         }
         XCTAssertTrue(cloudRow.isHittable,
                       "Cloud Storage row should be reachable by scrolling the settings list.")
-        cloudRow.tap()
 
-        // The sub-sheet presents with the picker primary CTA visible.
+        // Re-tap until the sub-sheet's primary CTA appears (belt-and-braces for iOS 26
+        // tap timing), now that the row is comfortably clear of the bottom edge.
         let chooseButton = app.buttons["Choose folder from Files"].firstMatch
-        XCTAssertTrue(chooseButton.waitForExistence(timeout: 3),
-                      "Cloud Storage sub-sheet should present.")
+        tapUntil(cloudRow, appears: chooseButton, attempts: 4, timeout: 4)
 
         // No Done button (owner 2026-06-21 — matches the About sheet). Dismiss by
         // dragging the sheet down from near its top (the drag indicator region)

@@ -12,6 +12,7 @@ import SwiftUI
 import Observation
 import UserNotifications
 import Security
+import CatchlightCore
 
 @Observable
 @MainActor
@@ -442,5 +443,31 @@ final class SettingsViewModel {
         case .authorized, .provisional, .ephemeral: return true
         default: return false
         }
+    }
+}
+
+// MARK: - Spotlight exposure (Settings › Security, D-110)
+
+extension SpotlightExposure {
+    /// UserDefaults key the Settings picker writes via `@AppStorage`.
+    static let defaultsKey = "catchlight.spotlightExposure"
+    /// Privacy-preserving default — index nothing until the user opts in.
+    static let `default`: SpotlightExposure = .none
+
+    var label: String {
+        switch self {
+        case .none:      return "None"
+        case .type:      return "Type only"
+        case .firstLine: return "Type + first line"
+        case .all:       return "Type + full text"
+        }
+    }
+
+    /// The user's current choice (falls back to the default), read from the same
+    /// UserDefaults key the Settings picker writes.
+    static var current: SpotlightExposure {
+        guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+              let value = SpotlightExposure(rawValue: raw) else { return .default }
+        return value
     }
 }
