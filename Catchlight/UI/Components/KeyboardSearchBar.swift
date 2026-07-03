@@ -120,19 +120,16 @@ final class SearchBarAccessory: UIView {
     private let dismissButton = UIButton(type: .system)
     private weak var controller: SearchInputController?
 
-    // Brand palette (mirrors CatchlightTheme; UIKit can't read the SwiftUI tokens).
-    private static let ember = adaptive(dark: 0xC9A96E, light: 0x856539)   // ckAccent
-    private static let surface = adaptive(dark: 0x1C1A16, light: 0xFFFFFF) // ckSurface
-    private static let textPrimary = adaptive(dark: 0xF5EDD8, light: 0x0F0E0C)
-    private static let textSecondary = adaptive(dark: 0xB8B0A3, light: 0x5C5650)
-    private static let pageBackground = adaptive(dark: 0x0F0E0C, light: 0xF7F4EF)
-    /// The completed-Take grey (`ckTextComplete`): Fog #B8B0A3 @ 0.58 Night / 0.82
-    /// Daylight. Owner 2026-06-20: the placeholder uses this receded "done" tone.
-    private static let placeholderGrey = UIColor { tc in
-        tc.userInterfaceStyle == .dark
-            ? UIColor(hex: 0xB8B0A3).withAlphaComponent(0.58)
-            : UIColor(hex: 0xB8B0A3).withAlphaComponent(0.82)
-    }
+    // Colours read from the single source (`UITheme`, in CatchlightTheme.swift).
+    // UIKit can't see the SwiftUI `ck*` tokens, so it shares the UIColor layer those
+    // are built on — no brand hex is re-declared here.
+    private static let ember = UITheme.accent            // ckAccent (amber foreground)
+    private static let surface = UITheme.surface         // ckSurface
+    private static let textPrimary = UITheme.textPrimary
+    private static let pageBackground = UITheme.background
+    /// The completed-Take grey — the placeholder uses this receded "done" tone
+    /// (owner 2026-06-20). Shared with `ckTextComplete`.
+    private static let placeholderGrey = UITheme.textComplete
 
     /// The dock's soft fade (HiFi v1.11.5 / `dockFadeBackground`): scrolling content
     /// dissolves UNDER the bar instead of meeting a hard edge. A solid fill here
@@ -295,19 +292,5 @@ final class SearchBarAccessory: UIView {
         dismissButton.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
         field.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
         applyFadeColors()
-    }
-
-    /// Dynamic UIColor from a dark/light hex pair (Night / Daylight).
-    private static func adaptive(dark: Int, light: Int) -> UIColor {
-        UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: dark) : UIColor(hex: light) }
-    }
-}
-
-private extension UIColor {
-    convenience init(hex: Int) {
-        self.init(red: CGFloat((hex >> 16) & 0xFF) / 255,
-                  green: CGFloat((hex >> 8) & 0xFF) / 255,
-                  blue: CGFloat(hex & 0xFF) / 255,
-                  alpha: 1)
     }
 }

@@ -237,7 +237,10 @@ struct BlockTextEditor: UIViewRepresentable {
             bar.backgroundColor = .clear
             bar.autoresizingMask = [.flexibleWidth]
             let grab = UIView()
-            grab.backgroundColor = UIColor(Color.ckTextSecondary).withAlphaComponent(0.4)
+            // Dynamic so it re-resolves on a Night/Daylight change (a plain
+            // `.withAlphaComponent` on a dynamic colour would flatten it). Single
+            // source: `UITheme.textSecondary` (= `ckTextSecondary`).
+            grab.backgroundColor = UIColor { UITheme.textSecondary.resolvedColor(with: $0).withAlphaComponent(0.4) }
             grab.layer.cornerRadius = 2.5
             grab.translatesAutoresizingMaskIntoConstraints = false
             bar.addSubview(grab)

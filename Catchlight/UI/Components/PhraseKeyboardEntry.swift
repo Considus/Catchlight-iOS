@@ -44,11 +44,13 @@ final class RestoreKeyboardAccessory: UIView {
     private let onBack: () -> Void
     private let fade = CAGradientLayer()
 
-    // Brand palette (UIKit can't read the SwiftUI tokens; mirrors CatchlightTheme).
-    private static let ember = ckHex(0xC9A96E)                       // ckAdd — Restore fill
-    private static let ink = ckHex(0x0F0E0C)                         // ckOnAccent — Restore text
-    private static let textPrimary = ckAdaptive(dark: 0xF5EDD8, light: 0x0F0E0C)  // ckTextPrimary — Back
-    private static let pageBackground = ckAdaptive(dark: 0x0F0E0C, light: 0xF7F4EF)
+    // Colours read from the single source (`UITheme`, in CatchlightTheme.swift).
+    // UIKit can't see the SwiftUI `ck*` tokens, so it shares the UIColor layer those
+    // are built on — no brand hex is re-declared here.
+    private static let ember = UITheme.add               // Restore fill (raw Ember, both modes)
+    private static let ink = UITheme.onAccent            // Restore text (Ink on Ember)
+    private static let textPrimary = UITheme.textPrimary // Back button
+    private static let pageBackground = UITheme.background
 
     private static let pad: CGFloat = 12       // dockHorizontalPadding
     private static let circle: CGFloat = 44    // minTouchTarget
@@ -203,17 +205,4 @@ struct PhraseTextField: UIViewRepresentable {
             return false
         }
     }
-}
-
-// MARK: - File-local UIKit colour helpers (mirror CatchlightTheme's private ones)
-
-private func ckHex(_ hex: UInt32) -> UIColor {
-    UIColor(red: CGFloat((hex >> 16) & 0xFF) / 255,
-            green: CGFloat((hex >> 8) & 0xFF) / 255,
-            blue: CGFloat(hex & 0xFF) / 255,
-            alpha: 1)
-}
-
-private func ckAdaptive(dark: UInt32, light: UInt32) -> UIColor {
-    UIColor { $0.userInterfaceStyle == .dark ? ckHex(dark) : ckHex(light) }
 }
