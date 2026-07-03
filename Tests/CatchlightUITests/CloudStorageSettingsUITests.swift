@@ -49,12 +49,13 @@ final class CloudStorageSettingsUITests: XCTestCase {
         }
         XCTAssertTrue(cloudRow.isHittable,
                       "Cloud Storage row should be reachable by scrolling the settings list.")
-        cloudRow.tap()
 
-        // The sub-sheet presents with the picker primary CTA visible.
+        // Tap-until the sub-sheet's primary CTA appears: on iOS 26 a single tap on a
+        // row that just scrolled into view near the bottom edge occasionally doesn't
+        // present the sheet (the Security section grew taller, pushing this row further
+        // down). `tapUntil` re-taps until the CTA shows, returning as soon as it does.
         let chooseButton = app.buttons["Choose folder from Files"].firstMatch
-        XCTAssertTrue(chooseButton.waitForExistence(timeout: 3),
-                      "Cloud Storage sub-sheet should present.")
+        tapUntil(cloudRow, appears: chooseButton, attempts: 3, timeout: 4)
 
         // No Done button (owner 2026-06-21 — matches the About sheet). Dismiss by
         // dragging the sheet down from near its top (the drag indicator region)
