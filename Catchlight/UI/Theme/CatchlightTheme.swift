@@ -87,7 +87,30 @@ private enum Palette {
     static let slate = UIColor(hex: 0x5C5650)
     /// Accessible amber text on Paper — WCAG AA. Matches website `--ember-text: #856539`.
     static let emberText = UIColor(hex: 0x856539)
-    static let stone = UIColor(hex: 0xE7E1D5)
+}
+
+// MARK: - UIKit-facing semantic tokens (single source, shared with SwiftUI)
+//
+// UIKit views (the custom keyboards, the block editor) can't read the SwiftUI
+// `Color` tokens, so they read these UIColors instead. The SwiftUI `ck*` tokens
+// below are built ON TOP of these, so every semantic colour is defined exactly
+// ONCE — adding a future appearance ("Scene") means editing only this file rather
+// than re-hard-coding hex in the views. (Scene-engine Phase 1.)
+
+enum UITheme {
+    static let background    = UIColor.adaptive(dark: Palette.ink,        light: Palette.paper)
+    static let surface       = UIColor.adaptive(dark: Palette.dusk,       light: Palette.white)
+    static let textPrimary   = UIColor.adaptive(dark: Palette.catchlight, light: Palette.ink)
+    static let textSecondary = UIColor.adaptive(dark: Palette.fog,        light: Palette.slate)
+    /// Receded "done" grey — Fog @58% (Night) / @82% (Daylight). Mirrors `ckTextComplete`.
+    static let textComplete  = UIColor.adaptive(dark: Palette.fog.withAlphaComponent(0.58),
+                                                light: Palette.fog.withAlphaComponent(0.82))
+    /// Raw Ember FILL (both modes) — the Add droplet / Restore fill.
+    static let add           = UIColor.adaptive(dark: Palette.ember, light: Palette.ember)
+    /// Amber FOREGROUND accent — Ember (Night) / Ember-text #856539 (Daylight, WCAG AA).
+    static let accent        = UIColor.adaptive(dark: Palette.ember, light: Palette.emberText)
+    /// Foreground drawn ON an Ember fill — Ink in both modes.
+    static let onAccent      = UIColor.adaptive(dark: Palette.ink, light: Palette.ink)
 }
 
 // MARK: - Semantic, adaptive colours (Night / Daylight)
@@ -96,20 +119,20 @@ private enum Palette {
 
 extension Color {
     /// Screen background — Ink (Night) / Paper (Daylight).
-    static let ckBackground = Color(uiColor: .adaptive(dark: Palette.ink, light: Palette.paper))
+    static let ckBackground = Color(uiColor: UITheme.background)
 
     /// Elevated surface (cards, edit sheet) — Dusk (Night) / White (Daylight).
-    static let ckSurface = Color(uiColor: .adaptive(dark: Palette.dusk, light: Palette.white))
+    static let ckSurface = Color(uiColor: UITheme.surface)
 
     /// Primary text — Catchlight cream (Night) / Ink (Daylight).
-    static let ckTextPrimary = Color(uiColor: .adaptive(dark: Palette.catchlight, light: Palette.ink))
+    static let ckTextPrimary = Color(uiColor: UITheme.textPrimary)
 
     /// Obie-emphasis text — Glow (Night) / Ember Text #856539 (Daylight, WCAG AA on Paper).
     static let ckTextObie = Color(uiColor: .adaptive(dark: Palette.glow, light: Palette.emberText))
 
     /// Secondary / muted text — Fog (Night) / Slate #5C5650 (Daylight, WCAG AA on Paper).
     /// Fog (#B8B0A3) fails WCAG AA for body text on Paper; Slate is the accessible replacement.
-    static let ckTextSecondary = Color(uiColor: .adaptive(dark: Palette.fog, light: Palette.slate))
+    static let ckTextSecondary = Color(uiColor: UITheme.textSecondary)
 
     /// Completed-Task text — the receded "done" treatment (colour ONLY, no
     /// strikethrough). Tuned 2026-06-18 (owner): the original (Fog@55% / full Fog) was
@@ -118,8 +141,7 @@ extension Color {
     /// 50%/75% pass (owner 2026-06-18: "could be made a little darker"), still clearly
     /// distinct from active. Single token: the Angle, the inline editor, and the
     /// timeline card all recede by the same amount.
-    static let ckTextComplete = Color(uiColor: .adaptive(dark: Palette.fog.withAlphaComponent(0.58),
-                                                         light: Palette.fog.withAlphaComponent(0.82)))
+    static let ckTextComplete = Color(uiColor: UITheme.textComplete)
 
     /// The timeline spine — Catchlight @ 18% (Night) / Ink @ 13% (Daylight).
     static let ckSpine = Color(uiColor: .adaptive(
@@ -137,7 +159,7 @@ extension Color {
     static var ckSpineWire: Color { ckAccent.opacity(0.35) }
 
     /// The Add button — Ember (both).
-    static let ckAdd = Color(uiColor: .adaptive(dark: Palette.ember, light: Palette.ember))
+    static let ckAdd = Color(uiColor: UITheme.add)
 
     /// Active navigation icon — Ember (both).
     static let ckNavActive = Color(uiColor: .adaptive(dark: Palette.ember, light: Palette.ember))
@@ -158,7 +180,7 @@ extension Color {
     /// Ember). Raw `ckEmber` / `ckAdd` remain the FILL colour (Add droplet,
     /// selection borders, pill fills), where Ember is correct.
     /// (Accessibility audit 7.6 / D-027 follow-up 2026-06-13.)
-    static let ckAccent = Color(uiColor: .adaptive(dark: Palette.ember, light: Palette.emberText))
+    static let ckAccent = Color(uiColor: UITheme.accent)
 
     /// Foreground drawn ON an Ember fill (the Add "+", active filter glyphs):
     /// Ink in BOTH modes. Night was already Ink-coloured (it used `ckBackground`
@@ -166,7 +188,7 @@ extension Color {
     /// (2.04:1, fails) with Ink-on-Ember (8.62:1). Use for amber-filled chrome
     /// controls. NOTE: the locked D-022 primary CTAs (DockPill, Paywall) are a
     /// separate owner call (see audit C4) and are NOT switched here.
-    static let ckOnAccent = Color(uiColor: .adaptive(dark: Palette.ink, light: Palette.ink))
+    static let ckOnAccent = Color(uiColor: UITheme.onAccent)
 
     /// The veil — the ONE obscuring overlay for the Dial, the editor, and the
     /// Settings backdrop (owner decision 2026-06-11: solid 90% background veil
@@ -270,19 +292,26 @@ enum Quadrant {
     // the white card): Note #BCBCBB→#8C8C8C (~1.9→~3.1:1), Task Ember #C9A96E→#A8843E
     // (~2→~3.5:1), Remind #B5A283→#8A7A58 (~2→~3.7:1). Night values unchanged (already
     // light-on-dark). Supersedes the v1.6.9 `--q-*` swatches for Daylight (D-042).
+    //
+    // The Daylight fills are named here so they live in ONE editable place rather
+    // than as inline magic numbers inside each accessor.
+    private static let noteDay   = Color(hex: 0x8C8C8C)   // ~3.1:1 on the white card
+    private static let taskDay   = Color(hex: 0xA8843E)   // ~3.5:1 on the white card
+    private static let remindDay = Color(hex: 0x8A7A58)   // ~3.7:1 on the white card
+
     /// Note — Daylight grey / Night Catchlight @ 55%.
     static func note(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.ckCatchlight.opacity(0.55) : Color(hex: 0x8C8C8C)
+        scheme == .dark ? Color.ckCatchlight.opacity(0.55) : noteDay
     }
 
     /// Task — the warm accent; Daylight darkened to a 3:1 amber, Night keeps Ember.
     static func task(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? .ckEmber : Color(hex: 0xA8843E)
+        scheme == .dark ? .ckEmber : taskDay
     }
 
     /// Remind — Daylight darkened to a 3:1 tan / Night Glow @ 65%.
     static func reminder(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.ckGlow.opacity(0.65) : Color(hex: 0x8A7A58)
+        scheme == .dark ? Color.ckGlow.opacity(0.65) : remindDay
     }
 
     /// Important — the Iris North wedge (owner 2026-06-20, indicator only). Uses the
