@@ -17,6 +17,7 @@ import UserNotifications
 /// Records Spotlight de-index calls so the test can assert a failed delete does NOT
 /// drop the Take from the OS index.
 private final class SpotlightSpy: SpotlightIndexing, @unchecked Sendable {
+    var exposure: SpotlightExposure = .none
     private(set) var deindexed: [UUID] = []
     func index(_ take: Take) {}
     func deindex(takeID: UUID) { deindexed.append(takeID) }

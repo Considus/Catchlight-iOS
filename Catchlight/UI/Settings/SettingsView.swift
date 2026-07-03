@@ -37,6 +37,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.DefaultReminderHours.defaultsKey) private var defaultReminderHoursRaw: String = SettingsViewModel.DefaultReminderHours.default.rawValue
     @AppStorage(SettingsViewModel.SnoozeDuration.defaultsKey) private var snoozeDurationRaw: String = SettingsViewModel.SnoozeDuration.default.rawValue
     @AppStorage(SettingsViewModel.FollowUpReminders.defaultsKey) private var followUpRemindersOn: Bool = SettingsViewModel.FollowUpReminders.default
+    @AppStorage(SpotlightExposure.defaultsKey) private var spotlightExposureRaw: String = SpotlightExposure.default.rawValue
 
     @State private var vm = SettingsViewModel()
     /// The Import-result message; non-nil presents the confirmation alert (owner 2026-06-22).
@@ -511,6 +512,38 @@ struct SettingsView: View {
                         action: { showSecondDeviceWarning = true })
                 .accessibilityIdentifier("settings-second-device")
                 .accessibilityHint("Restore your Takes onto this device from your privacy phrase.")
+
+            // Spotlight & Siri exposure (owner D-110): how much of each Take iOS may
+            // index for system search. Default None; anything past the TYPE label puts
+            // decrypted text into the on-device OS index (readable by iOS search + Siri).
+            // Sits at the BOTTOM of Security (owner 2026-07-03). The SelectorRow picker
+            // and its caption are ONE cell (calm surface — the caption reads as the
+            // picker's footnote); mirrors menuPickerRow internals but carries the
+            // description. Changing it re-indexes via AppModel.applySpotlightExposure.
+            VStack(alignment: .leading, spacing: 6) {
+                Menu {
+                    Picker("Spotlight & Siri", selection: spotlightExposureBinding) {
+                        ForEach(SpotlightExposure.allCases) { option in
+                            Text(option.label).tag(option)
+                        }
+                    }
+                    .labelsHidden()
+                } label: {
+                    SelectorRow(icon: "magnifyingglass",
+                                label: "Spotlight & Siri",
+                                value: spotlightExposureBinding.wrappedValue.label)
+                }
+                .tint(Color.ckTextSecondary)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Spotlight and Siri indexing \(spotlightExposureBinding.wrappedValue.label)")
+
+                Text("Considus can never read your Takes. This only affects on-device search. Anything beyond the Take type (Note / Task / Reminder) becomes readable by iOS search and Siri, outside Catchlight's encryption.")
+                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("spotlight-exposure-description")
+            }
+            .listRowBackground(Color.ckSurface)
         } header: {
             sectionHeader("Security")
         }
@@ -520,6 +553,16 @@ struct SettingsView: View {
         Binding(
             get: { SettingsViewModel.LockAfter(rawValue: lockAfterRaw) ?? .default },
             set: { lockAfterRaw = $0.rawValue }
+        )
+    }
+
+    private var spotlightExposureBinding: Binding<SpotlightExposure> {
+        Binding(
+            get: { SpotlightExposure(rawValue: spotlightExposureRaw) ?? .default },
+            set: {
+                spotlightExposureRaw = $0.rawValue
+                app.applySpotlightExposure($0)
+            }
         )
     }
 
