@@ -497,13 +497,29 @@ struct SettingsView: View {
                 }
             }
 
+            SettingsRow(icon: "key.horizontal",
+                        label: "Privacy phrase",
+                        chevron: true,
+                        action: { vm.isPhraseSheetPresented = true })
+                .accessibilityHint("Double-tap to view your phrase. Face ID or passcode required.")
+
+            // Second device (D-103) — re-key this device to another account's phrase
+            // to pull its Takes from the shared cloud folder. Destructive (it replaces
+            // this device's account), so a warning gates entry.
+            SettingsRow(icon: "iphone.and.arrow.forward",
+                        label: "Second device",
+                        chevron: true,
+                        action: { showSecondDeviceWarning = true })
+                .accessibilityIdentifier("settings-second-device")
+                .accessibilityHint("Restore your Takes onto this device from your privacy phrase.")
+
             // Spotlight & Siri exposure (owner D-110): how much of each Take iOS may
             // index for system search. Default None; anything past the TYPE label puts
             // decrypted text into the on-device OS index (readable by iOS search + Siri).
-            // The `SelectorRow` picker and its explanatory caption are ONE cell (calm
-            // surface — the caption reads as the picker's footnote, not a bare row);
-            // mirrors `menuPickerRow` internals but carries the description. Changing it
-            // re-indexes via AppModel.applySpotlightExposure.
+            // Sits at the BOTTOM of Security (owner 2026-07-03). The SelectorRow picker
+            // and its caption are ONE cell (calm surface — the caption reads as the
+            // picker's footnote); mirrors menuPickerRow internals but carries the
+            // description. Changing it re-indexes via AppModel.applySpotlightExposure.
             VStack(alignment: .leading, spacing: 6) {
                 Menu {
                     Picker("Spotlight & Siri", selection: spotlightExposureBinding) {
@@ -521,29 +537,13 @@ struct SettingsView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Spotlight and Siri indexing \(spotlightExposureBinding.wrappedValue.label)")
 
-                Text("Catchlight is always end-to-end encrypted and Considus can never read your Takes. This setting only affects your own device. Anything beyond the Take type (Note / Task / Reminder) becomes readable by iOS search and Siri, outside Catchlight's encryption.")
+                Text("Considus can never read your Takes. This only affects on-device search. Anything beyond the Take type (Note / Task / Reminder) becomes readable by iOS search and Siri, outside Catchlight's encryption.")
                     .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("spotlight-exposure-description")
             }
             .listRowBackground(Color.ckSurface)
-
-            SettingsRow(icon: "key.horizontal",
-                        label: "Privacy phrase",
-                        chevron: true,
-                        action: { vm.isPhraseSheetPresented = true })
-                .accessibilityHint("Double-tap to view your phrase. Face ID or passcode required.")
-
-            // Second device (D-103) — re-key this device to another account's phrase
-            // to pull its Takes from the shared cloud folder. Destructive (it replaces
-            // this device's account), so a warning gates entry.
-            SettingsRow(icon: "iphone.and.arrow.forward",
-                        label: "Second device",
-                        chevron: true,
-                        action: { showSecondDeviceWarning = true })
-                .accessibilityIdentifier("settings-second-device")
-                .accessibilityHint("Restore your Takes onto this device from your privacy phrase.")
         } header: {
             sectionHeader("Security")
         }
