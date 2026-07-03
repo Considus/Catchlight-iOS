@@ -51,12 +51,31 @@ public enum SpotlightConstants {
     public static let userInfoTakeIDKey = "takeID"
 }
 
+// MARK: - Exposure level (user setting — Settings › Security, D-110)
+
+/// How much of a Take iOS may index for system search. Escalating:
+///   `.none`      — nothing is indexed (default).
+///   `.type`      — the activity-type label only ("Note" / "Task" / "Reminder").
+///   `.firstLine` — the type PLUS the first line of the Take's text.
+///   `.all`       — the type PLUS the Take's full text.
+/// Anything beyond `.type` copies DECRYPTED Take text into the on-device OS index,
+/// where iOS search and Siri can read it. It never leaves the device or reaches
+/// Considus (end-to-end encryption is untouched), but it does leave Catchlight's
+/// encrypted store. The default is `.none` — the privacy-preserving choice.
+public enum SpotlightExposure: String, CaseIterable, Identifiable, Sendable {
+    case none, type, firstLine, all
+    public var id: String { rawValue }
+}
+
 // MARK: - Protocol
 
 /// Indirection point so the app can be unit-tested without touching the real
 /// `CSSearchableIndex.default()`. The production wiring uses
 /// `CoreSpotlightIndexer`; tests inject `RecordingSpotlightIndexer`.
 public protocol SpotlightIndexing: AnyObject, Sendable {
+    /// The current exposure level. Set from the user's Settings choice; every
+    /// subsequent `index(_:)` honours it, so callers never pass it per-Take.
+    var exposure: SpotlightExposure { get set }
     func index(_ take: Take)
     func deindex(takeID: UUID)
     func deindexAll()
@@ -81,13 +100,37 @@ public enum SpotlightAttributes {
         [SpotlightConstants.userInfoTakeIDKey: take.id.uuidString]
     }
 
+    /// The first non-empty line of the Take's text — used by the `.firstLine` level.
+    public static func firstLine(for take: Take) -> String {
+        take.plainText
+            .split(whereSeparator: \.isNewline)
+            .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
+            .map(String.init) ?? ""
+    }
+
+    /// The text placed in `contentDescription` for a given exposure. `nil` at
+    /// `.none`/`.type` — the privacy-preserving levels index NO body content.
+    public static func contentDescription(for take: Take, exposure: SpotlightExposure) -> String? {
+        switch exposure {
+        case .none, .type:
+            return nil
+        case .firstLine:
+            let line = firstLine(for: take)
+            return line.isEmpty ? nil : line
+        case .all:
+            let text = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
+            return text.isEmpty ? nil : text
+        }
+    }
+
     #if canImport(CoreSpotlight)
-    /// Build the CSSearchableItem for a Take. Privacy contract enforced here:
-    ///   • `title` is the activity-type label, never the body.
-    ///   • No content description, no keywords, no thumbnail.
-    ///   • `displayName` is also the activity-type label, since iOS may fall
-    ///     back to it when `title` is unset on certain surfaces.
-    public static func makeItem(for take: Take) -> CSSearchableItem {
+    /// Build the CSSearchableItem for a Take at the given exposure. Returns `nil`
+    /// for `.none` (nothing to index). Privacy contract enforced here:
+    ///   • `title`/`displayName` are ALWAYS the activity-type label, never the body.
+    ///   • `contentDescription` carries body text ONLY at `.firstLine`/`.all`, per
+    ///     the explicit user setting; it stays nil at `.none`/`.type`.
+    public static func makeItem(for take: Take, exposure: SpotlightExposure) -> CSSearchableItem? {
+        guard exposure != .none else { return nil }
         let attributes: CSSearchableItemAttributeSet
         if #available(iOS 14.0, macOS 11.0, *) {
             attributes = CSSearchableItemAttributeSet(contentType: UTType.item)
@@ -97,10 +140,9 @@ public enum SpotlightAttributes {
         let label = title(for: take)
         attributes.title = label
         attributes.displayName = label
-        // contentDescription is left nil — it's the documented field where the
-        // body would belong if we ever indexed it. Leaving it nil is the
-        // load-bearing privacy invariant; the corresponding test asserts this.
-        attributes.contentDescription = nil
+        // Body content is indexed ONLY when the user opts past `.type`; it stays
+        // nil at the private levels (`contentDescription(for:exposure:)`).
+        attributes.contentDescription = contentDescription(for: take, exposure: exposure)
 
         let item = CSSearchableItem(
             uniqueIdentifier: take.id.uuidString,
@@ -128,12 +170,17 @@ public final class CoreSpotlightIndexer: SpotlightIndexing, @unchecked Sendable 
 
     private let index: CSSearchableIndex
 
+    /// Privacy-first default: index nothing until the user opts in via Settings.
+    public var exposure: SpotlightExposure = .none
+
     public init(index: CSSearchableIndex = .default()) {
         self.index = index
     }
 
     public func index(_ take: Take) {
-        let item = SpotlightAttributes.makeItem(for: take)
+        // At `.none` there's nothing to add; the setting-change path deindexes
+        // any items left over from a higher level, so this is a clean no-op.
+        guard let item = SpotlightAttributes.makeItem(for: take, exposure: exposure) else { return }
         index.indexSearchableItems([item]) { _ in /* fire-and-forget */ }
     }
 
@@ -153,6 +200,7 @@ public final class CoreSpotlightIndexer: SpotlightIndexing, @unchecked Sendable 
 /// caller that doesn't want Spotlight side effects. Also the only available
 /// implementation on platforms without CoreSpotlight.
 public final class NoopSpotlightIndexer: SpotlightIndexing, @unchecked Sendable {
+    public var exposure: SpotlightExposure = .none
     public init() {}
     public func index(_ take: Take) {}
     public func deindex(takeID: UUID) {}

@@ -21,6 +21,7 @@ final class SpotlightIndexerTests: XCTestCase {
     // MARK: - Recording mock
 
     final class RecordingIndexer: SpotlightIndexing, @unchecked Sendable {
+        var exposure: SpotlightExposure = .none
         var indexed: [Take] = []
         var deindexed: [UUID] = []
         var deindexAllCount = 0
@@ -76,7 +77,7 @@ final class SpotlightIndexerTests: XCTestCase {
     func testMakeItem_titleIsActivityTypeNotBody() {
         let secret = "do not index this body"
         let t = Take(blocks: [.textLine(secret)], isNote: true)
-        let item = SpotlightAttributes.makeItem(for: t)
+        let item = SpotlightAttributes.makeItem(for: t, exposure: .type)!
         XCTAssertEqual(item.attributeSet.title, "Note")
         XCTAssertEqual(item.attributeSet.displayName, "Note")
         XCTAssertNotEqual(item.attributeSet.title, secret)
@@ -87,26 +88,26 @@ final class SpotlightIndexerTests: XCTestCase {
         // Load-bearing: this is the field where the body would otherwise live.
         // Leaving it nil is the privacy invariant.
         let t = Take(blocks: [.textLine("x")], isNote: true)
-        let item = SpotlightAttributes.makeItem(for: t)
+        let item = SpotlightAttributes.makeItem(for: t, exposure: .type)!
         XCTAssertNil(item.attributeSet.contentDescription)
     }
 
     func testMakeItem_uniqueIdentifierIsTakeUUID() {
         let t = Take(blocks: [.textLine("x")], isNote: true)
-        let item = SpotlightAttributes.makeItem(for: t)
+        let item = SpotlightAttributes.makeItem(for: t, exposure: .type)!
         XCTAssertEqual(item.uniqueIdentifier, t.id.uuidString)
     }
 
     func testMakeItem_domainIdentifierIsBundlePrefix() {
         let t = Take(blocks: [.textLine("x")], isNote: true)
-        let item = SpotlightAttributes.makeItem(for: t)
+        let item = SpotlightAttributes.makeItem(for: t, exposure: .type)!
         XCTAssertEqual(item.domainIdentifier, SpotlightConstants.domainIdentifier)
     }
 
     func testMakeItem_doesNotEmbedBodyInAnyKnownTextField() {
         let secret = "TOP-SECRET-BODY-PAYLOAD-XYZ123"
         let t = Take(blocks: [.textLine(secret)], isNote: true)
-        let item = SpotlightAttributes.makeItem(for: t)
+        let item = SpotlightAttributes.makeItem(for: t, exposure: .type)!
         let attrs = item.attributeSet
         // Scan the broad text surface area on a Spotlight item — every field
         // that could theoretically be indexed and surfaced in search results.
@@ -115,6 +116,36 @@ final class SpotlightIndexerTests: XCTestCase {
         XCTAssertNil(attrs.contentDescription)
         XCTAssertNil(attrs.keywords)
         XCTAssertNil(attrs.textContent)
+    }
+
+    // MARK: - Exposure levels (D-110)
+
+    func testMakeItem_noneExposure_returnsNil() {
+        let t = Take(blocks: [.textLine("secret body")], isNote: true)
+        XCTAssertNil(SpotlightAttributes.makeItem(for: t, exposure: .none))
+    }
+
+    func testContentDescription_typeExposure_isNil() {
+        let t = Take(blocks: [.textLine("secret body")], isNote: true)
+        XCTAssertNil(SpotlightAttributes.contentDescription(for: t, exposure: .type))
+    }
+
+    func testContentDescription_firstLine_isFirstNonEmptyLine() {
+        let t = Take(blocks: [.textLine(""), .textLine("first real line"), .textLine("second")], isNote: true)
+        XCTAssertEqual(SpotlightAttributes.contentDescription(for: t, exposure: .firstLine), "first real line")
+    }
+
+    func testContentDescription_all_isFullPlainText() {
+        let t = Take(blocks: [.textLine("line one"), .textLine("line two")], isNote: true)
+        XCTAssertEqual(SpotlightAttributes.contentDescription(for: t, exposure: .all), "line one\nline two")
+    }
+
+    func testMakeItem_firstLine_titleStaysTypeLabel_bodyOnlyInDescription() {
+        let t = Take(blocks: [.textLine("call the framer")], isNote: true)
+        let item = SpotlightAttributes.makeItem(for: t, exposure: .firstLine)!
+        XCTAssertEqual(item.attributeSet.title, "Note")            // type label, never the body
+        XCTAssertEqual(item.attributeSet.displayName, "Note")
+        XCTAssertEqual(item.attributeSet.contentDescription, "call the framer")
     }
     #endif
 

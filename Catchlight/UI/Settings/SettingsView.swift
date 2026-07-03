@@ -37,6 +37,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.DefaultReminderHours.defaultsKey) private var defaultReminderHoursRaw: String = SettingsViewModel.DefaultReminderHours.default.rawValue
     @AppStorage(SettingsViewModel.SnoozeDuration.defaultsKey) private var snoozeDurationRaw: String = SettingsViewModel.SnoozeDuration.default.rawValue
     @AppStorage(SettingsViewModel.FollowUpReminders.defaultsKey) private var followUpRemindersOn: Bool = SettingsViewModel.FollowUpReminders.default
+    @AppStorage(SpotlightExposure.defaultsKey) private var spotlightExposureRaw: String = SpotlightExposure.default.rawValue
 
     @State private var vm = SettingsViewModel()
     /// The Import-result message; non-nil presents the confirmation alert (owner 2026-06-22).
@@ -496,6 +497,27 @@ struct SettingsView: View {
                 }
             }
 
+            // Spotlight & Siri exposure (owner D-110): how much of each Take iOS may
+            // index for system search. Default None; anything past the TYPE label puts
+            // decrypted text into the on-device OS index (readable by iOS search + Siri).
+            // Changing it re-indexes via AppModel.applySpotlightExposure.
+            menuPickerRow(icon: "magnifyingglass",
+                          label: "Spotlight & Siri",
+                          accessibilityLabel: "Spotlight and Siri indexing",
+                          selectionLabel: spotlightExposureBinding.wrappedValue.label) {
+                Picker("Spotlight & Siri", selection: spotlightExposureBinding) {
+                    ForEach(SpotlightExposure.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+            }
+            Text("Catchlight is always end-to-end encrypted and Considus can never read your Takes. This setting only affects your own device. Anything beyond the Take type (Note / Task / Reminder) becomes readable by iOS search and Siri, outside Catchlight's encryption.")
+                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                .foregroundStyle(Color.ckTextSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .listRowBackground(Color.ckSurface)
+                .accessibilityIdentifier("spotlight-exposure-description")
+
             SettingsRow(icon: "key.horizontal",
                         label: "Privacy phrase",
                         chevron: true,
@@ -520,6 +542,16 @@ struct SettingsView: View {
         Binding(
             get: { SettingsViewModel.LockAfter(rawValue: lockAfterRaw) ?? .default },
             set: { lockAfterRaw = $0.rawValue }
+        )
+    }
+
+    private var spotlightExposureBinding: Binding<SpotlightExposure> {
+        Binding(
+            get: { SpotlightExposure(rawValue: spotlightExposureRaw) ?? .default },
+            set: {
+                spotlightExposureRaw = $0.rawValue
+                app.applySpotlightExposure($0)
+            }
         )
     }
 
