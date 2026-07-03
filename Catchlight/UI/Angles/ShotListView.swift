@@ -1,5 +1,5 @@
 //
-//  ListAngleView.swift
+//  ShotListView.swift
 //  Catchlight (iOS app target) — Phase 3 list Angle (D-033); Phase 4 interactive list
 //
 //  The list Angle's presentation: the shopping-aisle view of a Take's checklist
@@ -26,7 +26,7 @@
 import SwiftUI
 import CatchlightCore
 
-struct ListAngleView: View {
+struct ShotListView: View {
     /// The LIVE Take. Ticks / reorders / deletes mutate it in place (and persist via
     /// the host's save), so the Angle is never a separate copy of the data.
     @Binding var take: Take

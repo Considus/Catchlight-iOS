@@ -5,7 +5,7 @@
 //  A single Take on the timeline: the quadrant circle (aligned to the spine) on the
 //  left, the Take's first line of text on the right. Reminder Takes show their alarm
 //  time as a small Fog label beside the circle. Gestures:
-//    • tap circle      → open the petal fan (activity-type selector)
+//    • tap circle      → open the focus-ring fan (activity-type selector)
 //    • long-press circle → designate as Obie (caller handles replacement confirm)
 //    • tap text        → open the Take edit surface
 //
@@ -20,8 +20,8 @@ struct TakeRowView: View {
     let take: Take
     /// Tap on the Iris. The `CGPoint` is the Iris's centre in WINDOW (global)
     /// coordinates, captured by the tap recognizer, so the caller can bloom the
-    /// petal fan in place at the tapped Iris rather than at the screen centre
-    /// (section 8). The window coordinate space matches the full-screen petal-fan
+    /// focus-ring fan in place at the tapped Iris rather than at the screen centre
+    /// (section 8). The window coordinate space matches the full-screen focus-ring-fan
     /// overlay's space in RootView.
     var onTapCircle: (CGPoint) -> Void = { _ in }
     var onLongPressCircle: () -> Void = {}
@@ -373,7 +373,7 @@ struct TakeRowView: View {
 /// Factored out of `TakeRowView` so the SAME card renders in two places without
 /// drifting: the timeline row (wrapped with gestures/menu/VoiceOver), and the
 /// Focus-ring's lit copy lifted above its dim veil (owner 2026-06-16 — keep the
-/// tapped Take readable while everything else recedes; `PetalFanView`). Purely
+/// tapped Take readable while everything else recedes; `FocusRingFanView`). Purely
 /// visual: callers add interactivity. Fills the width PROPOSED to it (the row
 /// proposes full width; the fan proposes the card's reconstructed width), so the
 /// surface always reaches the card's trailing edge.
@@ -679,7 +679,7 @@ struct TapAndLongPressRecognizer: UIViewRepresentable {
     var minimumDuration: TimeInterval
     /// Receives the recognizer view's centre in WINDOW coordinates (the Iris
     /// touch-frame centre ≈ the Iris circle centre) so the caller can anchor the
-    /// petal fan there (section 8).
+    /// focus-ring fan there (section 8).
     var onTap: (CGPoint) -> Void
     var onLongPress: () -> Void
 
@@ -709,7 +709,7 @@ struct TapAndLongPressRecognizer: UIViewRepresentable {
 
         @objc func tapped(_ recognizer: UITapGestureRecognizer) {
             // The recognizer's view IS the Iris's 44pt touch overlay; its centre
-            // converted to window coordinates is the Iris centre the petal fan
+            // converted to window coordinates is the Iris centre the focus-ring fan
             // should bloom from (section 8). `convert(_:to: nil)` targets the
             // window — which equals the global / full-screen overlay space.
             let centre: CGPoint

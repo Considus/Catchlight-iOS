@@ -12,13 +12,13 @@
 //
 //  STYLING (owner 2026-06-30, widget brand pass): the extension can't link the
 //  app's asset catalog / `CatchlightTheme` / `CatchlightGlyphs`, so the brand
-//  tokens, fonts, and the Obie petal glyph are MIRRORED here (same hex / same
+//  tokens, fonts, and the Obie Mark glyph are MIRRORED here (same hex / same
 //  geometry). Two owner decisions drive this pass:
 //   • Home-screen widgets are ADAPTIVE — they follow Night/Daylight like the app
 //     (was a fixed cream that looked out of place on dark wallpapers).
-//   • The home widget's Obie mark UNIFIES on the in-app petal glyph (ring + dot),
+//   • The home widget's Obie mark UNIFIES on the in-app Mark glyph (ring + dot),
 //     not `crown.fill`. Controls + lock-screen accessories stay `crown.fill`:
-//     those surfaces are limited to SF Symbols, so they can't render the petal.
+//     those surfaces are limited to SF Symbols, so they can't render the Mark.
 //
 
 import WidgetKit
@@ -204,7 +204,7 @@ extension View {
 // 01_Brand/Logo/Custom Glyphs/{Catchlight,Obie}_Glyph.svg. Each is imported TWICE:
 //   • a vector TEMPLATE IMAGE (`*Glyph`) for the home widgets + lock-screen
 //     accessories (full SwiftUI — a solid silhouette survives the lock-screen
-//     monochrome flattening, where the in-app petal could not);
+//     monochrome flattening, where the in-app Mark could not);
 //   • a custom SF SYMBOL (`*Symbol`) for the Controls — a Control's label takes an
 //     SF Symbol, not a plain image asset (a plain image shows the "?" placeholder).
 // (owner 2026-06-30 — Take + Obie read as a matched brand pair.)

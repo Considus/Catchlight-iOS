@@ -196,7 +196,7 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
 
     /// Make this Take a Task (`on == true`, the Focus ring's "Task" Mark turned
     /// on) or a plain note (`on == false`). A thin wrapper over the structural
-    /// conversions used when there is no cursor context (the timeline petal fan).
+    /// conversions used when there is no cursor context (the timeline focus-ring fan).
     public mutating func setTask(_ on: Bool) {
         guard on != isTask else { return }
         if on { _ = convertToChecklist() } else { convertToProse() }

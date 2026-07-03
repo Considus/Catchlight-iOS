@@ -6,7 +6,7 @@
 //  children. The app has ONE surface — the timeline — and the bottom dock MORPHS
 //  between three states (resting / filtering / searching) instead of switching
 //  tabs. This class owns the dock mode, the live filter toggles, and the search
-//  query, plus the petal fan / editor / settings / paywall / conflict / spotlight
+//  query, plus the focus-ring fan / editor / settings / paywall / conflict / spotlight
 //  presentation state. @Observable (iOS 17+). It owns NO domain data — the feature
 //  view models do — so it stays a thin coordinator any screen can read via the
 //  environment.
@@ -72,10 +72,10 @@ final class UIState {
     /// dock bar raises it again. Only meaningful while `dockMode == .searching`.
     var searchKeyboardUp = false
 
-    // Petal fan.
-    var petalFanTake: Take?
-    var petalFanOrigin: CGPoint = .zero
-    var isPetalFanPresented: Bool { petalFanTake != nil }
+    // Focus-ring fan.
+    var focusRingFanTake: Take?
+    var focusRingFanOrigin: CGPoint = .zero
+    var isFocusRingFanPresented: Bool { focusRingFanTake != nil }
 
     // Take editor — edit-in-place (the top-anchored overlay editor was retired in
     // Phase 3, 2026-06-17; all create/edit happens in the timeline now).
@@ -95,7 +95,7 @@ final class UIState {
     /// until the inline save (a blank one dismissed leaves nothing behind).
     var pendingInlineNewTake: Take?
 
-    /// A petal-fan selection handed to the in-place editor, carrying the working
+    /// A focus-ring-fan selection handed to the in-place editor, carrying the working
     /// activity-type set. Reshapes the editor's live block DRAFT — the Task Mark
     /// reshapes the on-screen blocks, never the stored copy — so a make-checklist
     /// toggle lands on what the user is typing, not a stale row. Carries a token so
@@ -301,25 +301,25 @@ final class UIState {
         }
     }
 
-    // MARK: - Petal fan / editor
+    // MARK: - Focus-ring fan / editor
 
-    /// Animation for the surrounding-content fade when the petal fan appears or
+    /// Animation for the surrounding-content fade when the focus-ring fan appears or
     /// dismisses. Driven from the mutation site via `withAnimation` rather than a
     /// `.animation(_:value:)` view modifier, so the fade animates without coupling the
     /// views to a value-observing modifier (which tripped SwiftUI's type-checker).
     static let fanFade: Animation = .easeInOut(duration: 0.2)
 
-    func openPetalFan(for take: Take, origin: CGPoint = .zero) {
-        petalFanOrigin = origin
-        withAnimation(Self.fanFade) { petalFanTake = take }
+    func openFocusRingFan(for take: Take, origin: CGPoint = .zero) {
+        focusRingFanOrigin = origin
+        withAnimation(Self.fanFade) { focusRingFanTake = take }
     }
 
-    func closePetalFan() {
-        withAnimation(Self.fanFade) { petalFanTake = nil }
+    func closeFocusRingFan() {
+        withAnimation(Self.fanFade) { focusRingFanTake = nil }
     }
 
     /// Enter in-place editing on a timeline Take (edit-in-place redesign). The fade
-    /// matches the petal fan's, so masking the surrounding timeline reads the same as
+    /// matches the focus-ring fan's, so masking the surrounding timeline reads the same as
     /// the Iris-touch focus.
     func beginEditingInPlace(_ take: Take) {
         // Editing and searching cannot coexist (owner 2026-06-22 bug): tapping a

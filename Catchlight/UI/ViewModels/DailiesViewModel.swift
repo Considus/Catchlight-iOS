@@ -413,9 +413,9 @@ final class DailiesViewModel {
         save(updated)
     }
 
-    // MARK: - Activity-type toggles (petal fan applies these)
+    // MARK: - Activity-type toggles (focus-ring fan applies these)
 
-    /// Apply the petal-fan selection to a Take, enforcing the Note floor.
+    /// Apply the focus-ring-fan selection to a Take, enforcing the Note floor.
     /// `reminderDate` is the time chosen in the Focus-ring's picker (owner
     /// 2026-06-17); falls back to any existing reminder time, then +24h.
     func applyActivityTypes(to take: Take,

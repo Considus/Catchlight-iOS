@@ -57,7 +57,7 @@ extension Angle {
         systemImage: "checklist",
         appliesTo: { $0.isTask },
         makePresentation: { take, onClose in
-            AnyView(ListAngleView(take: take, onClose: onClose))
+            AnyView(ShotListView(take: take, onClose: onClose))
         }
     )
 }
