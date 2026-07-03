@@ -54,17 +54,17 @@ final class CoreFlowsUITests: XCTestCase {
         XCTAssertTrue(newRow.waitForExistence(timeout: 3), "Newly created Take is not visible in Dailies")
     }
 
-    // MARK: - Flow 2 — Shape a Take (Dial)
+    // MARK: - Flow 2 — Shape a Take (Focus-ring)
 
-    /// Tap a Take's Iris (1) → Dial opens → tap a petal (2) → tap the dim
+    /// Tap a Take's Iris (1) → Focus-ring opens → tap a mark (2) → tap the dim
     /// overlay to commit + close. The Take's row should now advertise the new
     /// Task state via its composed accessibility label.
     ///
-    /// History: prior to the post-7.4 fix, `PetalFanView`'s dim-tap called
+    /// History: prior to the post-7.4 fix, `FocusRingFanView`'s dim-tap called
     /// `retractAndDismiss()` with the default `commit: false`, silently
-    /// dropping every Dial edit. The dim-tap is now the commit gesture
+    /// dropping every Focus-ring edit. The dim-tap is now the commit gesture
     /// (`commit: true`), wired through `onCommit → applyActivityTypes`.
-    func testFlow2_shapeTake_dialEditsCommitToTheRow() {
+    func testFlow2_shapeTake_focusRingEditsCommitToTheRow() {
         let app = launchAppForUITesting()
 
         // Dailies sorts newest-first, so the second upsert ("Call the framer back")
@@ -78,35 +78,35 @@ final class CoreFlowsUITests: XCTestCase {
         let firstIris = app.descendants(matching: .any).matching(identifier: "take-iris").firstMatch
         XCTAssertTrue(firstIris.waitForExistence(timeout: 3), "No Iris found on Dailies")
 
-        // Tap 1: Iris → Dial appears.
+        // Tap 1: Iris → Focus-ring appears.
         assertReachableInTwoInteractions(
-            "Flow 2: open Dial",
+            "Flow 2: open Focus-ring",
             firstInteraction: { firstIris.tap() },
-            expectedElement: app.buttons["dial-petal-task"]
+            expectedElement: app.buttons["focus-ring-mark-task"]
         )
 
         // Tap 2 (counted toward the two-tap rule): toggle Task on. The accessibility
         // value flips to "active" — fan-internal sanity check.
-        let taskPetal = app.buttons["dial-petal-task"]
-        let before = taskPetal.value as? String ?? ""
-        taskPetal.tap()
-        XCTAssertNotEqual(taskPetal.value as? String ?? "", before,
-                          "Task petal accessibility value did not flip on tap")
+        let taskMark = app.buttons["focus-ring-mark-task"]
+        let before = taskMark.value as? String ?? ""
+        taskMark.tap()
+        XCTAssertNotEqual(taskMark.value as? String ?? "", before,
+                          "Task mark accessibility value did not flip on tap")
 
         // Dismiss via the dim overlay — this is the commit gesture and does NOT
         // count toward the two-tap rule. The dim is a full-screen Color with an
         // onTapGesture; we synthesise a touch at a screen corner that's far from
-        // any petal so the dim handles it (element-based `.tap()` is unreliable
+        // any mark so the dim handles it (element-based `.tap()` is unreliable
         // for full-bleed gesture targets without a hosting Button).
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.12)).tap()
 
-        // After the commit + close, the Dial should be gone and the row's
-        // composed label should now mention Task. Wait for the petal to vanish
+        // After the commit + close, the Focus-ring should be gone and the row's
+        // composed label should now mention Task. Wait for the mark to vanish
         // first so we know retractAndDismiss completed (it animates over ~0.4s
         // then fires onCommit on the main queue).
         XCTAssertTrue(
-            app.buttons["dial-petal-task"].waitForNonExistence(timeout: 3),
-            "Dial did not close after dim tap"
+            app.buttons["focus-ring-mark-task"].waitForNonExistence(timeout: 3),
+            "Focus-ring did not close after dim tap"
         )
 
         let predicate = NSPredicate(
@@ -116,7 +116,7 @@ final class CoreFlowsUITests: XCTestCase {
         let updatedRow = app.descendants(matching: .any).matching(predicate).firstMatch
         XCTAssertTrue(
             updatedRow.waitForExistence(timeout: 3),
-            "Take row did not reflect Task state after Dial commit"
+            "Take row did not reflect Task state after Focus-ring commit"
         )
     }
 
@@ -193,7 +193,7 @@ final class CoreFlowsUITests: XCTestCase {
             // synthesized long presses at the leading-edge Iris position are
             // swallowed by the system before reaching the app — verified
             // empirically: a TAP through the very same UIKit recognizer opens
-            // the Dial (so touch delivery to the view is fine), an identical
+            // the Focus-ring (so touch delivery to the view is fine), an identical
             // UILongPressGestureRecognizer fires ~30pt to the right (the row's
             // context menu), and SwiftUI/Button/UIKit long-press variants all
             // fail only at this position. Real-finger behaviour is on the

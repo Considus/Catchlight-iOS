@@ -45,8 +45,8 @@ final class BlockEditorUITests: XCTestCase {
     }
 
     /// Open the Focus ring from the editor footer, toggle Task on, and commit by
-    /// tapping the fan's dim (identifier "dial-dim") near the TOP of the screen —
-    /// clear of the petals, which fan out around the footer hub. Exactly ONE
+    /// tapping the fan's dim (identifier "focus-ring-dim") near the TOP of the screen —
+    /// clear of the marks, which fan out around the footer hub. Exactly ONE
     /// commit tap: a second tap would land on the editor's own dim (exposed once
     /// the fan closes) and dismiss the editor. The wait is generous because the
     /// close choreography is slower on older simulator runtimes (e.g. iOS 17.0).
@@ -55,12 +55,12 @@ final class BlockEditorUITests: XCTestCase {
         // that surfaces as `.other` (not `.button`) on iOS 18.x, so query it by
         // identifier regardless of type.
         tapWhenReady(anyElement(in: app, id: "editor-shape"))
-        let taskPetal = app.buttons["dial-petal-task"]
-        try XCTSkipUnless(taskPetal.waitForExistence(timeout: 3),
+        let taskMark = app.buttons["focus-ring-mark-task"]
+        try XCTSkipUnless(taskMark.waitForExistence(timeout: 3),
                           "Focus ring did not open under synthesized gestures on this runtime.")
-        taskPetal.tap()
+        taskMark.tap()
 
-        let dim = app.descendants(matching: .any).matching(identifier: "dial-dim").firstMatch
+        let dim = app.descendants(matching: .any).matching(identifier: "focus-ring-dim").firstMatch
         _ = dim.waitForExistence(timeout: 3)
         // Commit. Retry only on a GENUINE miss: each attempt waits 3s (longer
         // than the close choreography), so we never re-tap while the fan is
@@ -68,9 +68,9 @@ final class BlockEditorUITests: XCTestCase {
         // dismiss it. On a real miss the fan is still fully open, so re-tapping
         // the dim is safe.
         var closed = false
-        for _ in 0..<3 where taskPetal.exists {
+        for _ in 0..<3 where taskMark.exists {
             dim.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
-            if taskPetal.waitForNonExistence(timeout: 3) { closed = true; break }
+            if taskMark.waitForNonExistence(timeout: 3) { closed = true; break }
         }
         try XCTSkipUnless(closed,
             "Focus-ring dim-commit not delivered on this simulator runtime (deterministic on iOS 26; covered by unit tests + on-device QA).")

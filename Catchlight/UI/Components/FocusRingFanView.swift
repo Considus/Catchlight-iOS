@@ -1,17 +1,17 @@
 //
-//  PetalFanView.swift
+//  FocusRingFanView.swift
 //  Catchlight (iOS app target) — Phase 6 UI · constellation redesign 2026-06-11
 //
 //  The activity-type selector — the signature Catchlight interaction, rebuilt to
 //  the owner-approved constellation (HiFi v1.6 §10, "organic peel"):
 //
-//  LAYOUT — petals settle on an arc to the RIGHT of the timeline: angles
+//  LAYOUT — marks settle on an arc to the RIGHT of the timeline: angles
 //  −80° / −26.7° / +26.7° / +80° from horizontal (screen frame, y down), all at
 //  R = 68pt from the Iris centre; order Notes · Tasks · Reminders · Obie
-//  top→bottom. Petals (Marks) are 44pt — they FILL their 44pt touch circles, to
+//  top→bottom. Marks are 44pt — they FILL their 44pt touch circles, to
 //  match the dock buttons + timeline Iris (owner 2026-06-15; the hub Iris and R
 //  were scaled 36→44 / 56→68 in step so the Focus ring keeps its spacing:
-//  adjacent chord 61 > 44; Iris clearance 68 > 44). Petals deliberately pass ABOVE
+//  adjacent chord 61 > 44; Iris clearance 68 > 44). Marks deliberately pass ABOVE
 //  the Take card. On the Obie row the fan covers the page heading — approved.
 //
 //  MOTION — one fluid action in two distinct movements:
@@ -26,16 +26,16 @@
 //      cascading arrivals, soft ~6–8° overshoot. Notes alone rides the deck
 //      to the top, then nudges its final 10°.
 //  CLOSE — the TRUE time-mirror of the open played 1.25× faster (exits are
-//  quicker than entrances): petals kick slightly outward (the reversed
+//  quicker than entrances): marks kick slightly outward (the reversed
 //  overshoot), spiral back into the descending deck, and the Iris reverses its
 //  OWN turn on the SAME mirrored clock (it nudges to ~96° then sweeps back to 0 —
 //  the open's soft-catch run backwards), so hub and Marks land together rather
 //  than the Iris finishing first. Reduce Motion replaces all of it with a fade.
 //
-//  STYLE — petals share the dock-button language: background-colour face
+//  STYLE — marks share the dock-button language: background-colour face
 //  (readable above cards), 1.5pt Ember@35% ring, no shadow, Ember glyphs at
-//  the light weight; the Obie petal draws the ring+specular glyph in
-//  ckTextObie. Active petals reverse like the dock toggles (Ember fill +
+//  the light weight; the Obie mark draws the ring+specular glyph in
+//  ckTextObie. Active marks reverse like the dock toggles (Ember fill +
 //  background glyph). The veil is ckDim (background @90%, no blur): it recedes
 //  everything beneath it, then the TAPPED Take's card is lifted back LIT above
 //  the veil (owner 2026-06-16) so only that Take, its Iris (the rotating hub),
@@ -43,14 +43,14 @@
 //  away (`showsFocusCard` / `TakeCardSurface`). From the editor footer there is
 //  no spotlight card — the editor is the context there.
 //
-//  Petal taps toggle the working selection; tapping the veil COMMITS and
+//  Mark taps toggle the working selection; tapping the veil COMMITS and
 //  closes (unchanged semantics — Note remains the floor).
 //
 
 import SwiftUI
 import CatchlightCore
 
-struct PetalFanView: View {
+struct FocusRingFanView: View {
     let take: Take
     /// Screen-space point of the hub (centre of the tapped circle).
     let hubCentre: CGPoint
@@ -87,7 +87,7 @@ struct PetalFanView: View {
         SettingsViewModel.DefaultReminderHours.current.date()
     }
 
-    // Working selection (mutated as petals are tapped).
+    // Working selection (mutated as marks are tapped).
     @State private var isNote: Bool
     @State private var isTask: Bool
     @State private var hasReminder: Bool
@@ -117,7 +117,7 @@ struct PetalFanView: View {
         case closing(start: Date, commit: Bool)
         /// Terminal STATIC state, set the instant the fan commits — BEFORE the overlay
         /// is removed. `.closing` keeps the TimelineView animating, which prevented
-        /// SwiftUI from tearing the view down when `petalFanTake` went nil: the veil
+        /// SwiftUI from tearing the view down when `focusRingFanTake` went nil: the veil
         /// lingered in `.closing` and ate every tap, stranding the user over a
         /// perfectly-fine editor (owner-reported lockup 2026-06-18, confirmed via an
         /// on-device state trace: `FAN:nil/closing`). `.dismissed` is non-animating
@@ -153,9 +153,9 @@ struct PetalFanView: View {
         _phase = State(initialValue: .opening(start: .now))
     }
 
-    // MARK: - Petals
+    // MARK: - Marks
 
-    private enum PetalKind: Int, CaseIterable {
+    private enum MarkKind: Int, CaseIterable {
         case note, task, remind, obie
         /// Final screen-frame angle in degrees (y down; −90 = straight up).
         var finalAngle: Double {
@@ -166,7 +166,7 @@ struct PetalFanView: View {
             case .obie:   return 80
             }
         }
-        /// When this petal leaves the rising deck (seconds from open start).
+        /// When this mark leaves the rising deck (seconds from open start).
         var peel: Double {
             switch self {
             case .note:   return Choreo.rise   // rides the deck to the top
@@ -193,7 +193,7 @@ struct PetalFanView: View {
             case .obie:   return nil   // ObieGlyph (brand mark)
             }
         }
-        /// Stable suffix for the XCUITest accessibilityIdentifier ("dial-petal-task" etc.).
+        /// Stable suffix for the XCUITest accessibilityIdentifier ("focus-ring-mark-task" etc.).
         var identifierSuffix: String {
             switch self {
             case .note: return "note"
@@ -225,8 +225,8 @@ struct PetalFanView: View {
         static let radialBlend: Double = 0.520   // spiral: radius reaches R over this
         static let irisTurn: Double = 0.700      // hub rotation incl. ±6° overshoot
         static let closeSpeed: Double = 1.25     // exit plays the mirror this much faster
-        static var total: Double {               // open end (last petal settles)
-            PetalKind.allCases.map { $0.peel + $0.sweepDuration }.max() ?? 1
+        static var total: Double {               // open end (last mark settles)
+            MarkKind.allCases.map { $0.peel + $0.sweepDuration }.max() ?? 1
         }
     }
 
@@ -241,20 +241,20 @@ struct PetalFanView: View {
         p < 0.5 ? 4 * p * p * p : 1 - pow(-2 * p + 2, 3) / 2
     }
 
-    private struct PetalState {
+    private struct MarkState {
         var angle: Double
         var radius: CGFloat
         var opacity: Double
     }
 
-    /// Pure open-kinematics for a petal at time t. The close evaluates this at
+    /// Pure open-kinematics for a mark at time t. The close evaluates this at
     /// mirrored time (TOTAL − t·closeSpeed) — a strict reverse incl. the
     /// outward kick from the reversed overshoot.
-    private static func openState(_ kind: PetalKind, at t: Double) -> PetalState {
+    private static func openState(_ kind: MarkKind, at t: Double) -> MarkState {
         if t < kind.peel {
             // Riding the deck — rising straight up out of the Iris.
             let g = easeInOutCubic(min(max(t / Choreo.rise, 0), 1))
-            return PetalState(
+            return MarkState(
                 angle: Choreo.riseAngle,
                 radius: Choreo.startRadius + (Choreo.radius - Choreo.startRadius) * g,
                 opacity: min(t / 0.08, 1)
@@ -265,33 +265,33 @@ struct PetalFanView: View {
         let rPeel = Choreo.startRadius + (Choreo.radius - Choreo.startRadius)
             * easeInOutCubic(min(kind.peel / Choreo.rise, 1))
         let rq = min((t - kind.peel) / min(Choreo.radialBlend, kind.sweepDuration), 1)
-        return PetalState(
+        return MarkState(
             angle: Choreo.riseAngle + kind.sweep * easeOutBack(q),
             radius: rPeel + (Choreo.radius - rPeel) * easeOutCubic(rq),
             opacity: 1
         )
     }
 
-    private func petalState(_ kind: PetalKind, now: Date) -> PetalState {
+    private func markState(_ kind: MarkKind, now: Date) -> MarkState {
         switch phase {
         case .opening(let start):
             let t = now.timeIntervalSince(start)
             return Self.openState(kind, at: t)
         case .open:
-            return PetalState(angle: kind.finalAngle, radius: Choreo.radius, opacity: 1)
+            return MarkState(angle: kind.finalAngle, radius: Choreo.radius, opacity: 1)
         case .closing(let start, _):
             let tm = Choreo.total - now.timeIntervalSince(start) * Choreo.closeSpeed
-            if tm <= 0 { return PetalState(angle: Choreo.riseAngle, radius: Choreo.startRadius, opacity: 0) }
+            if tm <= 0 { return MarkState(angle: Choreo.riseAngle, radius: Choreo.startRadius, opacity: 0) }
             return Self.openState(kind, at: tm)
         case .dismissed:
-            return PetalState(angle: Choreo.riseAngle, radius: Choreo.startRadius, opacity: 0)
+            return MarkState(angle: Choreo.riseAngle, radius: Choreo.startRadius, opacity: 0)
         }
     }
 
-    /// Open-time hub rotation with the petals' soft-catch character: ~6° past the
+    /// Open-time hub rotation with the marks' soft-catch character: ~6° past the
     /// mark, then settle — nothing moves precisely between two points. Factored out
     /// so the CLOSE can evaluate it at the mirrored time (below), making the hub a
-    /// strict time-reverse of the open IN STEP with the petals (owner 2026-06-16:
+    /// strict time-reverse of the open IN STEP with the marks (owner 2026-06-16:
     /// the close used to drive the hub on its OWN faster clock, so the Iris finished
     /// its turn well before the Marks had spiralled back into it).
     private static func openHubRotation(at t: Double) -> Double {
@@ -300,7 +300,7 @@ struct PetalFanView: View {
             if p < 0.72 { return a + (b - a) * easeOutCubic(p / 0.72) }
             return b + (c - b) * easeInOutCubic((p - 0.72) / 0.28)
         }
-        let tt = t - PetalKind.obie.peel   // the hub starts turning at the first peel
+        let tt = t - MarkKind.obie.peel   // the hub starts turning at the first peel
         guard tt > 0 else { return 0 }
         return turn(min(tt / Choreo.irisTurn, 1), from: 0, over: 96, to: 90)
     }
@@ -312,7 +312,7 @@ struct PetalFanView: View {
         case .open:
             return 90
         case .closing(let start, _):
-            // Same mirrored clock the petals use (petalState .closing) — a strict
+            // Same mirrored clock the marks use (markState .closing) — a strict
             // reverse of the open, so hub and Marks land together.
             let tm = Choreo.total - now.timeIntervalSince(start) * Choreo.closeSpeed
             if tm <= 0 { return 0 }
@@ -436,7 +436,7 @@ struct PetalFanView: View {
             },
             onCancel: {
                 // Cancel = remove the JUST-ADDED reminder (the picker only opens on
-                // an inactive→active petal tap, so there's no pre-existing state to
+                // an inactive→active mark tap, so there's no pre-existing state to
                 // preserve). Clear the place too (2026-07-01) — leaving it made the
                 // cancelled selection silently re-commit as a location reminder.
                 hasReminder = false
@@ -452,7 +452,7 @@ struct PetalFanView: View {
             let now = context.date
             ZStack {
                 // The veil — tap to COMMIT the current selection and dismiss.
-                // (Petal taps toggle but never close; the veil tap is the
+                // (Mark taps toggle but never close; the veil tap is the
                 // commit gesture — see the 4.5/7.4 audit note in history.)
                 Color.ckDim
                     .opacity(veilOpacity(now: now))
@@ -464,7 +464,7 @@ struct PetalFanView: View {
                     // editor beneath — so a veil that lingers mid-teardown can never
                     // strand the user (owner lockup 2026-06-18).
                     .allowsHitTesting(veilIsInteractive)
-                    .accessibilityIdentifier("dial-dim")
+                    .accessibilityIdentifier("focus-ring-dim")
                     .accessibilityLabel("Save and close")
                     .accessibilityHint("Double-tap to apply your selection and close.")
                     .accessibilityAddTraits(.isButton)
@@ -478,7 +478,7 @@ struct PetalFanView: View {
                 // `hubCentre`: the Iris centre sits on the card's top edge and is
                 // `cardSpineInset` right of the card's leading edge, and the card runs
                 // to the 20pt trailing margin — the same geometry DailiesView lays the
-                // row out with. Drawn BEFORE the petals so they still pass above it.
+                // row out with. Drawn BEFORE the marks so they still pass above it.
                 if showsFocusCard, focusCardWidth > 0 {
                     TakeCardSurface(take: take)
                         .frame(width: focusCardWidth, alignment: .leading)
@@ -493,11 +493,11 @@ struct PetalFanView: View {
                 }
 
                 ZStack {
-                    ForEach(PetalKind.allCases.reversed(), id: \.rawValue) { kind in
+                    ForEach(MarkKind.allCases.reversed(), id: \.rawValue) { kind in
                         // Reversed so Notes stacks on top during the emergence.
-                        let s = petalState(kind, now: now)
+                        let s = markState(kind, now: now)
                         let rad = s.angle * .pi / 180
-                        petal(kind)
+                        mark(kind)
                             .offset(x: cos(rad) * s.radius, y: sin(rad) * s.radius)
                             .opacity(s.opacity)
                     }
@@ -547,20 +547,20 @@ struct PetalFanView: View {
         return t
     }
 
-    private func isActive(_ kind: PetalKind) -> Bool {
+    private func isActive(_ kind: MarkKind) -> Bool {
         switch kind {
         case .note: return isNote
         case .obie: return isObie
         // A "where" reads as an active Remind exactly like a "when" (2026-07-01,
         // place/time parity — previously a place-reminder Take showed an inactive
-        // Remind petal, contradicting the card's place subtext).
+        // Remind mark, contradicting the card's place subtext).
         case .remind: return hasReminder || reminderLocation != nil
         case .task: return isTask
         }
     }
 
     @ViewBuilder
-    private func petal(_ kind: PetalKind) -> some View {
+    private func mark(_ kind: MarkKind) -> some View {
         let active = isActive(kind)
         Button {
             toggle(kind)
@@ -607,7 +607,7 @@ struct PetalFanView: View {
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("dial-petal-\(kind.identifierSuffix)")
+        .accessibilityIdentifier("focus-ring-mark-\(kind.identifierSuffix)")
         .accessibilityLabel(kind.title)
         .accessibilityValue(isActive(kind) ? "active" : "inactive")
         .accessibilityHint("Double-tap to \(isActive(kind) ? "remove" : "add") \(kind.title).")
@@ -616,7 +616,7 @@ struct PetalFanView: View {
 
     // MARK: - Toggle (Note is the floor)
 
-    private func toggle(_ kind: PetalKind) {
+    private func toggle(_ kind: MarkKind) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             switch kind {
             case .note:   isNote.toggle()
@@ -624,7 +624,7 @@ struct PetalFanView: View {
             case .remind:
                 // Either/or means "active" can be a "when" OR a "where" — toggling
                 // OFF must clear BOTH (2026-07-01: previously only `hasReminder`
-                // flipped, so the petal could never remove a place reminder).
+                // flipped, so the mark could never remove a place reminder).
                 if isActive(.remind) {
                     hasReminder = false
                     reminderLocation = nil
@@ -1087,9 +1087,9 @@ private extension View {
     }
 }
 
-#Preview("Petal fan — Night") {
+#Preview("Focus-ring fan — Night") {
     GeometryReader { geo in
-        PetalFanView(
+        FocusRingFanView(
             take: Take(blocks: [.checkItem("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
             onCommit: { _, _, _, _, _, _, _, _, _, _ in },
@@ -1100,9 +1100,9 @@ private extension View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("Petal fan — Daylight") {
+#Preview("Focus-ring fan — Daylight") {
     GeometryReader { geo in
-        PetalFanView(
+        FocusRingFanView(
             take: Take(blocks: [.textLine("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
             onCommit: { _, _, _, _, _, _, _, _, _, _ in },

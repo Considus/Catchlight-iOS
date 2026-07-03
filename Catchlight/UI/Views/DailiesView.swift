@@ -16,7 +16,7 @@
 //  In FILTERING, tapping empty timeline background (not rows/Irises) exits to
 //  RESTING and clears all filters.
 //
-//  Petal fan and edit surfaces are presented by the parent RootView via the shared
+//  Focus-ring fan and edit surfaces are presented by the parent RootView via the shared
 //  UIState, so this view stays focused on layout + the spine geometry.
 //
 //  Task 3.9: Error and edge-case states — three quiet, non-blocking strips are
@@ -414,7 +414,7 @@ struct DailiesView: View {
     private var reminderEditorSheet: some View {
         let existing = editDraft?.timeReminder
         ReminderPickerSheet(
-            initialDate: existing?.scheduledDate ?? PetalFanView.defaultReminderDate,
+            initialDate: existing?.scheduledDate ?? FocusRingFanView.defaultReminderDate,
             initialAlarm: existing?.alarmEnabled ?? true,
             initialAllDay: existing?.isAllDay ?? false,
             initialRecurrence: existing?.recurrence ?? .none,
@@ -1510,7 +1510,7 @@ struct DailiesView: View {
                 // (screen centre) only survives as a last resort. While editing THIS
                 // Take, the fan opens against the live draft so it reflects unsaved
                 // shaping, and its commit routes back to the draft (owner 2026-06-17).
-                ui.openPetalFan(for: isEditingThis ? (editDraft ?? take) : take, origin: irisCentre)
+                ui.openFocusRingFan(for: isEditingThis ? (editDraft ?? take) : take, origin: irisCentre)
             },
             onLongPressCircle: {
                 // Iris long-press is disabled during editing (discard moved to the

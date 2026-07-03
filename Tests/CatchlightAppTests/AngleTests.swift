@@ -15,19 +15,19 @@ final class AngleTests: XCTestCase {
 
     // MARK: - The list Angle's predicate
 
-    func testListAngle_appliesToTakesWithCheckItems() {
+    func testShotList_appliesToTakesWithCheckItems() {
         let task = Take(blocks: [.textLine("Shopping"), .checkItem("milk")])
         XCTAssertTrue(Angle.list.appliesTo(task), "the list Angle applies to a Take with check items")
     }
 
-    func testListAngle_doesNotApplyToPlainNote() {
+    func testShotList_doesNotApplyToPlainNote() {
         let note = Take(blocks: [.textLine("just a thought")])
         XCTAssertFalse(Angle.list.appliesTo(note), "no check items ⇒ the list Angle does not apply")
 
         XCTAssertFalse(Angle.list.appliesTo(Take()), "an empty Take is not a list, either")
     }
 
-    func testListAngle_appliesEqualsIsTask() {
+    func testShotList_appliesEqualsIsTask() {
         // The predicate is exactly "the Take is a Task" — verify they track.
         let cases = [
             Take(blocks: [.textLine("note")]),
@@ -41,7 +41,7 @@ final class AngleTests: XCTestCase {
 
     // MARK: - Registry
 
-    func testRegistry_dayOneRegistersOnlyTheListAngle() {
+    func testRegistry_dayOneRegistersOnlyTheShotList() {
         XCTAssertEqual(AngleRegistry.all.map(\.id), ["list"])
     }
 
