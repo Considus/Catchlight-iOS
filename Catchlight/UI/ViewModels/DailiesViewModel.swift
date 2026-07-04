@@ -487,6 +487,18 @@ final class DailiesViewModel {
         }
     }
 
+    /// Long-press on an Obie's Iris turns it back into a standard Take (owner
+    /// 2026-07-04). Mirrors the Focus-ring "Obie off" path: clear the flag and
+    /// re-save — `upsert` re-seals the payload and clears the isObie column, and
+    /// `save` reloads + notifies. NOT entitlement-gated: removing a designation is
+    /// always allowed, even on a lapsed trial. (The auto-set Important flag is left
+    /// as-is, matching the Focus-ring demote.)
+    func demoteObie(_ take: Take) {
+        var t = take
+        t.isObie = false
+        save(t)
+    }
+
     /// Set when a long-press would replace an existing Obie; the view shows a
     /// confirmation and then calls `confirmObieReplacement`.
     var pendingObieConflict: (newTake: UUID, existing: UUID)?

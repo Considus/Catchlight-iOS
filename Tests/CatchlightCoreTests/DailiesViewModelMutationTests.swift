@@ -59,6 +59,22 @@ final class DailiesViewModelMutationTests: XCTestCase {
         XCTAssertEqual(vm.takes.map(\.id), [other.id])
     }
 
+    /// Long-press on an Obie's Iris demotes it back to a standard Take: the pinned
+    /// Obie clears and the Take rejoins the timeline with `isObie == false`.
+    func testDemoteObie_turnsBackIntoStandardTake() throws {
+        let obie = Take(blocks: [.textLine("the one")], isObie: true)
+        let other = Take(blocks: [.textLine("other")])
+        let vm = try makeVM([obie, other])
+        XCTAssertEqual(vm.obie?.id, obie.id)
+
+        vm.demoteObie(obie)
+
+        XCTAssertNil(vm.obie, "no Obie after demote")
+        let demoted = try XCTUnwrap(vm.takes.first { $0.id == obie.id })
+        XCTAssertFalse(demoted.isObie, "the Take is now a standard Take")
+        XCTAssertNil(vm.lastError)
+    }
+
     /// Mark-done updates the Take in place (keeps its position) rather than reloading.
     func testToggleDone_updatesInPlace_keepsPosition() throws {
         let task = Take(createdAt: Date(timeIntervalSince1970: 2), blocks: [.checkItem("do it")])
