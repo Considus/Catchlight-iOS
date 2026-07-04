@@ -516,10 +516,19 @@ struct DailiesView: View {
                 .padding(.bottom, 2)
                 .background(Color.ckBackground)
             if vm.obie != nil && !ui.isEditingInPlace {
-                // With a pinned Obie: SOLID right down to the Obie's card top (no fade
-                // — the gradient is semi-transparent and lets a scrolling Take peek).
-                // The opaque Obie card continues the mask below. Its own Iris is drawn
-                // ON TOP of the heading, so this doesn't cover it (owner 2026-06-16).
+                // With a pinned Obie: the SAME 12pt fade the no-Obie timeline uses, so
+                // the gutter spine dissolves into the top here too — the timeline reaches
+                // the fold in every case (owner 2026-07-04, reversing the earlier
+                // solid-only mask). THEN solid down to the Obie card: the solid must
+                // still reach the card so its rounded top corners mask cleanly, but the
+                // top 12pt can fade (the Obie's Iris crown sits right below it). A Take
+                // scrolling up now dissolves in this fade above the Obie, exactly as it
+                // does without one.
+                LinearGradient(
+                    colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: 12)
                 Color.ckBackground
             } else {
                 // No Obie — OR editing in place (owner 2026-06-17): use the natural
