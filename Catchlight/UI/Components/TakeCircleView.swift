@@ -118,6 +118,8 @@ struct TakeCircleView: View {
 
     private var bladeLine: CGFloat { max(0.6, diameter * 0.017) }        // ~0.75 at 44 pt
     private var rimLine: CGFloat { take.isObie ? diameter * 0.05 : diameter * 0.024 }
+    /// Gap between the shutter's outer edge and the larger Obie ring. Tunable.
+    private var obieRingGap: CGFloat { 5 }
 
     /// A soft warm catchlight in the aperture. Static here (the moving flare belongs
     /// to the tilted/beam concept, which this swap deliberately does NOT ship).
@@ -146,6 +148,16 @@ struct TakeCircleView: View {
         .frame(width: diameter, height: diameter)
         .clipShape(Circle())                                   // clean circular silhouette
         .overlay(Circle().strokeBorder(edge, lineWidth: rimLine))
+        // Obie ring — a larger gold ring OUTSIDE the shutter with a gap (owner 2026-07-04,
+        // "as it was before"). In an overlay sized to `diameter + gap`, so — like the
+        // old obieDecorations (D-042) — the larger ring can't inflate the disc's layout.
+        .overlay {
+            if take.isObie {
+                Circle()
+                    .stroke(Quadrant.obieRing(scheme), lineWidth: max(1.5, diameter * 0.045))
+                    .frame(width: diameter + obieRingGap * 2, height: diameter + obieRingGap * 2)
+            }
+        }
         .accessibilityHidden(true)   // the row exposes a combined label; the disc is decorative there
     }
 
