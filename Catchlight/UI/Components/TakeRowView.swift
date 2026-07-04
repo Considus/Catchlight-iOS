@@ -162,9 +162,12 @@ struct TakeRowView: View {
             // ring. Same crown geometry as the visible wire segment below.
             Rectangle()
                 .fill(Color.ckBackground)
-                .frame(width: CatchlightLayout.spineWidth,
+                // Widened to the full THREE-track span so all three dotted tracks are
+                // occluded behind the Iris, not just the centre one (owner 2026-07-04).
+                .frame(width: CatchlightLayout.spineWidth + CatchlightLayout.spineTrackOffset * 2,
                        height: CatchlightLayout.circleDiameter / 2)
-                .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.spineWidth / 2,
+                .offset(x: CatchlightLayout.cardSpineInset
+                        - (CatchlightLayout.spineWidth + CatchlightLayout.spineTrackOffset * 2) / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
@@ -186,8 +189,8 @@ struct TakeRowView: View {
             // Stays on the spine (no `cardSwipeOffset`) so the wire holds while the
             // card swipes. Same `ckSpineWire` fill + `spineWidth` as the gutter so
             // the two read as one continuous wire.
-            Rectangle()
-                .fill(Color.ckSpineWire)
+            SpineLine()
+                .stroke(Color.ckSpineWire, lineWidth: CatchlightLayout.spineWidth)
                 .frame(width: CatchlightLayout.spineWidth,
                        height: CatchlightLayout.circleDiameter / 2)
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.spineWidth / 2,

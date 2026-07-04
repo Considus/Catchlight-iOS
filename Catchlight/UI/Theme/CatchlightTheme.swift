@@ -525,8 +525,12 @@ enum CatchlightLayout {
     /// (Search/sequence results reuse the timeline row; the edit footer, conflict
     /// view, and focus-ring fan pass their own explicit diameters and are unaffected.)
     static let circleDiameter: CGFloat = 44
-    /// Width of the timeline spine.
+    /// Width of the timeline spine (each individual dotted track).
     static let spineWidth: CGFloat = 2
+    /// The timeline reads as THREE parallel dotted tracks — a centre line plus one
+    /// either side, each `spineWidth` wide (owner 2026-07-04). This is the offset
+    /// from the centre to each side track. Tune on device for tighter/wider tracks.
+    static let spineTrackOffset: CGFloat = 4
     /// The Take card's leading edge sits this far LEFT of the spine. Two things ride
     /// on it together (which is what keeps the Iris ON the spine): the row's leading
     /// padding is `spineX − cardSpineInset` (the card's left edge), and TakeRowView
