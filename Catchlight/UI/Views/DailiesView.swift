@@ -1619,7 +1619,11 @@ struct DailiesView: View {
                         anglePresented = true
                     },
                     onEditReminder: { presentReminderEditor() },
-                    onCommit: { saveInlineEdit() },
+                    // The keyboard × DISCARDS (owner 2026-07-04) — reverts to the
+                    // pre-edit Take (the store is untouched mid-edit) and exits.
+                    // Saving is the tap-blank-space / tap-another-card gesture
+                    // (the mask catchers → saveInlineEdit), unchanged.
+                    onDiscard: { discardInlineEdit() },
                     onCaretMoved: { caretRect in pinCaret(caretRect) })) }
                 : nil
         )

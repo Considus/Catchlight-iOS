@@ -31,9 +31,13 @@ struct InlineTakeEditCard: View {
     /// keyboard toolbar uses it to edit a reminder's time/cadence (or add one to a note)
     /// without the Focus-ring detour. nil where the host can't present the picker.
     var onEditReminder: (() -> Void)? = nil
-    /// Commit-and-exit, fired by the keyboard's ⌄/× (owner 2026-06-19) — the host
-    /// saves the draft and drops the focused-edit overlay in one step.
-    var onCommit: (() -> Void)? = nil
+    /// The keyboard toolbar's × button DISCARDS the edit (owner 2026-07-04): the
+    /// host reverts the draft to its pre-edit state and drops the focused-edit
+    /// overlay, saving NOTHING. Saving is the "tap blank space / another card"
+    /// gesture, handled by the host — not this button. (Was `onCommit` and wired
+    /// to save on the timeline/Storyboard, which contradicted the × meaning and
+    /// the already-correct LockedCaptureView.)
+    var onDiscard: (() -> Void)? = nil
     /// The focused block's caret rect (window coords), forwarded from the active
     /// `BlockTextEditor` so the timeline can keep it above the keyboard while a block
     /// grows (owner device report 2026-06-19). Only the focused row fires.
@@ -54,7 +58,7 @@ struct InlineTakeEditCard: View {
             onOpenAngle: { onOpenAngle?() },
             onReminder: onEditReminder,
             onToggleDone: { draft.toggleMarkedDoneAdvancingRecurring(now: Date()) },
-            onDismiss: { onCommit?() }
+            onDismiss: { onDiscard?() }
         )
     }
 
