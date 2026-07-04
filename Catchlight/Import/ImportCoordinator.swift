@@ -112,7 +112,18 @@ enum ImportCoordinator {
     /// the Unicode attempts. Returns nil only for genuinely unreadable content.
     private static func plainText(of url: URL) -> String? {
         guard let data = try? Data(contentsOf: url) else { return nil }
-        if url.pathExtension.lowercased() == "rtf" {
+        return decodeText(data, isRTF: url.pathExtension.lowercased() == "rtf")
+    }
+
+    /// The pure decode step, split out of `plainText(of:)` so the UTF-8 → NSString
+    /// detection → Latin-1 fallback chain is unit-testable without a real file
+    /// (2026-07-04). `isRTF` decodes through NSAttributedString (control words
+    /// stripped); otherwise UTF-8 first, then the common non-UTF-8 text encodings
+    /// (UTF-16 BOM etc. via NSString detection), with Latin-1 as the last resort
+    /// because it can decode ANY byte stream and so must never pre-empt Unicode.
+    /// Returns nil only for genuinely undecodable content.
+    static func decodeText(_ data: Data, isRTF: Bool) -> String? {
+        if isRTF {
             let attributed = try? NSAttributedString(
                 data: data,
                 options: [.documentType: NSAttributedString.DocumentType.rtf],

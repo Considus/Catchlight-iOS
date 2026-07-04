@@ -44,6 +44,18 @@ struct LocationEditor: View {
         radiusOptions.min(by: { abs($0 - value) < abs($1 - value) }) ?? ReminderScheduler.defaultGeofenceRadius
     }
 
+    /// The name this editor writes when a fresh fix drops a pin and the user
+    /// hasn't named the place. Distinguishing it from a real user name is what
+    /// stops the async reverse geocode clobbering e.g. "Home".
+    static let currentLocationPlaceholder = "Current location"
+
+    /// Whether the reverse-geocoded name may replace the current one: only when
+    /// the field is empty or still the auto placeholder. Pure so the clobber
+    /// guard is unit-testable without the view (2026-07-04).
+    static func shouldAdoptGeocodedName(currentName: String) -> Bool {
+        currentName.isEmpty || currentName == currentLocationPlaceholder
+    }
+
     init(trigger: Binding<LocationTrigger?>) {
         _trigger = trigger
         let t = trigger.wrappedValue
@@ -78,11 +90,12 @@ struct LocationEditor: View {
             // Only auto-name when the user hasn't named the place (2026-07-01):
             // the slow reverse geocode previously overwrote a chosen name — e.g.
             // re-pinning "Home" renamed it to the street address — and writeBack
-            // persisted the clobber. "Current location" is the placeholder this
-            // handler itself set, so it counts as unnamed.
-            let hadUserName = !name.isEmpty && name != "Current location"
-            apply(coordinate: loc.coordinate, name: name.isEmpty ? "Current location" : name)
-            guard !hadUserName else { return }
+            // persisted the clobber. The decision is factored into the pure,
+            // testable `shouldAdoptGeocodedName` (2026-07-04).
+            let currentName = name
+            apply(coordinate: loc.coordinate,
+                  name: currentName.isEmpty ? Self.currentLocationPlaceholder : currentName)
+            guard Self.shouldAdoptGeocodedName(currentName: currentName) else { return }
             Task { if let resolved = await search.reverseGeocodedName(for: loc) { name = resolved; writeBack() } }
         }
         .onChange(of: name) { _, _ in writeBack() }

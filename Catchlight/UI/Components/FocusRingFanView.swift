@@ -739,7 +739,10 @@ struct ReminderPickerSheet: View {
     /// Quick "when" presets — one tap fills the calendar below. All computed from
     /// `Calendar.current` (no hardcoded formats), evening at 20:00, the rest at the
     /// scheduler's all-day fire hour so an alarm lands at a sensible time of day.
-    private enum Preset: String, CaseIterable, Identifiable {
+    // `internal` (not `private`) so the pure `date(now:calendar:)` maths — notably
+    // the "This weekend includes the weekend you're in" edge — is unit-testable
+    // via `@testable import` (2026-07-04). Not referenced outside this file.
+    enum Preset: String, CaseIterable, Identifiable {
         case thisEvening = "This evening"
         case tomorrow    = "Tomorrow"
         case thisWeekend = "This weekend"
