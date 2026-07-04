@@ -250,10 +250,12 @@ struct TakeRowView: View {
         .accessibilityLabel(take.isObie
             ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
             : "Iris. \(TakeCircleView.activityDescription(for: take))")
-        .accessibilityHint("Double-tap to open actions. Long press to make this your Obie.")
-        // VoiceOver intercepts long-press, so expose the Obie designation as a
-        // named action too. VO activation lands as a tap on the recognizer.
-        .accessibilityAction(named: "Make Obie") { onLongPressCircle() }
+        .accessibilityHint(take.isObie
+            ? "Double-tap to open actions. Long press to turn this back into a standard Take."
+            : "Double-tap to open actions. Long press to make this your Obie.")
+        // VoiceOver intercepts long-press, so expose the Obie toggle as a named
+        // action too. VO activation lands as a tap on the recognizer.
+        .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") { onLongPressCircle() }
         .accessibilityAddTraits(.isButton)
     }
 
