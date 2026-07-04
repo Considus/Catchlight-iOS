@@ -1524,6 +1524,11 @@ struct DailiesView: View {
                 // Take's long-press menu — owner 2026-06-17); a press on a masked row
                 // just commits and exits.
                 if editingActive { if !isEditingThis { saveInlineEdit() }; return }
+                // Long-press now TOGGLES (owner 2026-07-04): a long-press on an Obie's
+                // Iris turns it back into a standard Take. Demotion is NOT
+                // entitlement-gated — removing a designation is always allowed, even on
+                // a lapsed trial.
+                if take.isObie { vm.demoteObie(take); return }
                 // Hint 4: arm the Obie introduction tooltip on the first long-press.
                 // The actual designation still proceeds — the tooltip provides
                 // context "before the action takes effect" (and persists over the
