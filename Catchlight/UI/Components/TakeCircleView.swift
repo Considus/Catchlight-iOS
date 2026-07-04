@@ -112,13 +112,16 @@ struct TakeCircleView: View {
         return isActive(s) ? color(s) : .ckIrisOff
     }
 
-    /// The ONE outline used on the rim, every blade, and the hex centre — the
-    /// WCAG-raised graphite for EVERY Take, including an Obie (owner 2026-07-04:
-    /// gold lives ONLY on the Obie's outer ring, as on main).
-    private var edge: Color { .ckIrisRing }
+    /// The ONE outline used on the rim, every blade, and the hex centre. Thin GOLD on
+    /// an Obie (owner 2026-07-04: a delicate gold tracery on the blades, distinct from
+    /// the bolder outer ring), the WCAG-raised graphite otherwise.
+    private var edge: Color { take.isObie ? Quadrant.obieRing(scheme) : .ckIrisRing }
 
     private var bladeLine: CGFloat { max(0.6, diameter * 0.017) }        // ~0.75 at 44 pt
-    private var rimLine: CGFloat { take.isObie ? diameter * 0.05 : diameter * 0.024 }
+    // Standard-width rim for EVERY Take (owner 2026-07-04): a thick gold rim on an
+    // Obie read as a second thick gold ring next to the outer one. The bolder Obie
+    // ring is the outer overlay only.
+    private var rimLine: CGFloat { diameter * 0.024 }                    // ~1 pt at 44 pt
     /// Gap between the shutter's outer edge and the Obie ring — main's DS §5.1
     /// obieRingGap 3 (ring at `diameter + 6`). Tunable.
     private var obieRingGap: CGFloat { 3 }
