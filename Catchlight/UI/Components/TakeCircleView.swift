@@ -1,70 +1,72 @@
 //
 //  TakeCircleView.swift
-//  Catchlight (iOS app target) — Phase 6 UI
+//  Catchlight (iOS app target)
 //
-//  The Take "circle": the quadrant-filled disc that encodes a Take's active
-//  activity types at a glance, and the Obie ring (gold outline; the specular dot
-//  was removed 2026-06-30). Used on every
-//  timeline row, in search/sequence results, and in the edit footer. Pure
-//  rendering — no gestures here; callers attach taps/long-presses.
+//  The Take "Iris": the small disc on every timeline row (and in search/sequence
+//  results and the edit footer) that encodes a Take's active types at a glance.
 //
-//  Quadrant map — N/E/S/W DIAMOND (HiFi §2 Iris SVG, owner-confirmed 2026-06-14,
-//  D-042; North reassigned 2026-06-20). Each wedge is a 90° slice centred on a
-//  cardinal direction:
-//    • Top    (N) → Important (Shadow Daylight / Stone Night — indicator only)
-//    • Right  (E) → Task      (Ember — the warm accent, HiFi v1.6.9)
-//    • Left   (W) → Remind    (#B5A283 Daylight / Glow@65% Night)
-//    • Bottom (S) → Note      (grey Daylight / Catchlight@55% Night — moved from N)
-//  Important moved INTO the formerly-reserved diamond (North), pushing Note to the
-//  South wedge (owner 2026-06-20). Important is an indicator, not a toggle, and it
-//  shows on an Obie too (an Obie auto-flags Important; owner wants the flag visible
-//  there alongside the ring).
-//  (Supersedes the prior NE/SE/SW X-orientation and the DS §5.2 prose table.)
+//  REDESIGN 2026-07 — the Iris is now a SIX-BLADE CAMERA SHUTTER (geometry from
+//  `02_Design/.../Shutter-Aperture.svg`, normalised to a unit circle). It reads as
+//  an aperture: six overlapping blades leaving a hexagonal centre, one shared
+//  outline drawn on every blade — which, traced end to end, also outlines the hex.
+//  Pure rendering; callers attach taps/long-presses. Size, position, and the
+//  timeline around it are UNCHANGED from the previous Iris (44 pt, flat, on the
+//  card's top edge) — this swap is the mark only.
+//
+//  Blade map (blade 0 sits at 12 o'clock; going clockwise). Keeps the old Iris's
+//  N/E/S/W bearings and adds the two lower diagonals for features still to ship:
+//    • 0  Top          → Important  (Shadow / Stone — indicator, shown on Obie too)
+//    • 1  Upper-right  → Task       (Ember / amber)
+//    • 2  Lower-right  → Image       (v1.1 image attachment — colour wired, off until built)
+//    • 3  Bottom       → Note        (grey / cream)
+//    • 4  Lower-left   → Voice       (audio attachment — colour wired, off until built)
+//    • 5  Upper-left   → Remind      (#B5A283 tan / Glow — time OR place)
+//  Inactive blades fall to the off-band tone (ckIrisOff) so the shutter always
+//  reads as a complete six-blade aperture. Colours are the existing segment tokens
+//  (`Quadrant`) verbatim; Voice/Image use two new warm-neutral fills, wired here so
+//  they light automatically when those attachment types arrive.
 //
 
 import SwiftUI
 import CatchlightCore
 
-/// One ANNULAR quadrant of the Iris (HiFi v1.7 — section 7). The Iris reads as a
-/// RING with a hollow aperture, not a solid disc: each quadrant fills only the
-/// band between an inner radius (`innerRatio × R`) and the outer radius, leaving
-/// the centre empty (the camera aperture). The path runs along the outer arc,
-/// back along the inner arc, and closes — never through the centre. Owner
-/// 2026-06-15: aperture widened 0.44 → 0.55 of the radius ("the hole was a little
-/// small") — the ring thins and the central hole opens up; the off-band ring's
-/// `strokeBorder` width is kept in lock-step (see `body`).
-private struct QuadrantSlice: Shape {
-    /// Start/end angles in degrees, 0° = 3 o'clock, increasing clockwise in screen
-    /// space (SwiftUI's y grows downward, so `Angle` clockwise matches visual).
-    let startDegrees: Double
-    let endDegrees: Double
-    /// Inner radius as a fraction of the outer radius (owner 2026-06-15: 0.55,
-    /// was v1.7's r8/r18 ≈ 0.44 — bigger aperture).
-    var innerRatio: CGFloat = 0.55
+// MARK: - Blade geometry
+//
+// Each row: a start point followed by cubic curves as flat [c1x,c1y,c2x,c2y,ex,ey]
+// groups, in a unit space centred on the disc (±1 = the outer arc / frame edge).
+// Generated from the aperture SVG; do not hand-edit — regenerate from the source.
+private let irisBladeData: [[CGFloat]] = [
+    [0.4418, -0.2549, 0.3762, -0.3043, 0.3047, -0.3516, 0.2285, -0.3956, 0.1520, -0.4397, 0.0755, -0.4778, 0.0000, -0.5102, -0.1252, -0.5638, -0.2468, -0.6005, -0.3583, -0.6206, -0.6001, -0.6636, -0.7930, -0.6255, -0.8657, -0.5000, -0.8657, -0.5000, -0.8657, -0.5000, -0.8657, -0.5000, -0.6929, -0.7987, -0.3699, -0.9997, 0.0000, -0.9997, 0.1453, -0.9997, 0.2747, -0.8516, 0.3583, -0.6206, 0.3967, -0.5141, 0.4256, -0.3903, 0.4418, -0.2549],
+    [0.7165, 0.0000, 0.6435, 0.0864, 0.5508, 0.1735, 0.4418, 0.2553, 0.4517, 0.1738, 0.4570, 0.0885, 0.4570, 0.0000, 0.4570, -0.0885, 0.4517, -0.1738, 0.4418, -0.2553, 0.4256, -0.3903, 0.3967, -0.5145, 0.3583, -0.6206, 0.2747, -0.8516, 0.1453, -0.9997, 0.0000, -0.9997, 0.3699, -0.9997, 0.6929, -0.7987, 0.8657, -0.5000, 0.8657, -0.5000, 0.8657, -0.5000, 0.8657, -0.5000, 0.9383, -0.3741, 0.8745, -0.1879, 0.7165, 0.0000],
+    [0.9997, 0.0000, 0.9997, 0.1819, 0.9510, 0.3526, 0.8660, 0.5000, 0.8660, 0.5000, 0.8660, 0.5000, 0.8660, 0.5000, 0.7934, 0.6259, 0.6005, 0.6636, 0.3586, 0.6206, 0.2472, 0.6009, 0.1255, 0.5638, 0.0004, 0.5102, 0.0758, 0.4781, 0.1523, 0.4397, 0.2288, 0.3956, 0.3054, 0.3516, 0.3766, 0.3043, 0.4422, 0.2549, 0.5511, 0.1731, 0.6439, 0.0864, 0.7169, -0.0004, 0.8748, -0.1883, 0.9387, -0.3745, 0.8660, -0.5000, 0.8660, -0.5000, 0.8660, -0.5000, 0.8660, -0.5000, 0.9510, -0.3526, 0.9997, -0.1819, 0.9997, 0.0000],
+    [0.8657, 0.5000, 0.6929, 0.7987, 0.3699, 0.9997, -0.0000, 0.9997, -0.1453, 0.9997, -0.2747, 0.8516, -0.3583, 0.6206, -0.3967, 0.5141, -0.4256, 0.3903, -0.4418, 0.2553, -0.3762, 0.3047, -0.3047, 0.3519, -0.2285, 0.3960, -0.1520, 0.4401, -0.0755, 0.4785, -0.0000, 0.5106, 0.1252, 0.5642, 0.2468, 0.6012, 0.3583, 0.6210, 0.6001, 0.6636, 0.7930, 0.6255, 0.8657, 0.5000, 0.8657, 0.5000, 0.8657, 0.5000, 0.8657, 0.5000],
+    [0.0000, 0.9997, -0.3699, 0.9997, -0.6929, 0.7987, -0.8657, 0.5000, -0.8657, 0.5000, -0.8657, 0.5000, -0.8657, 0.5000, -0.9383, 0.3741, -0.8745, 0.1883, -0.7165, 0.0004, -0.6435, -0.0860, -0.5508, -0.1731, -0.4418, -0.2549, -0.4517, -0.1735, -0.4570, -0.0882, -0.4570, 0.0004, -0.4570, 0.0889, -0.4517, 0.1742, -0.4418, 0.2556, -0.4256, 0.3907, -0.3967, 0.5148, -0.3583, 0.6210, -0.2743, 0.8516, -0.1453, 0.9997, 0.0000, 0.9997],
+    [0.0000, -0.5102, -0.0755, -0.4781, -0.1520, -0.4397, -0.2285, -0.3956, -0.3050, -0.3516, -0.3762, -0.3043, -0.4418, -0.2549, -0.5508, -0.1731, -0.6435, -0.0864, -0.7165, 0.0004, -0.8745, 0.1883, -0.9383, 0.3745, -0.8657, 0.5000, -0.8657, 0.5000, -0.8657, 0.5000, -0.8657, 0.5000, -0.9506, 0.3530, -0.9993, 0.1823, -0.9993, -0.0000, -0.9993, -0.1823, -0.9506, -0.3526, -0.8657, -0.5000, -0.8657, -0.5000, -0.8657, -0.5000, -0.8657, -0.5000, -0.7930, -0.6259, -0.6001, -0.6636, -0.3583, -0.6206, -0.2468, -0.6005, -0.1252, -0.5638, 0.0000, -0.5102],
+]
 
+/// One shutter blade, scaled from unit space to the frame.
+private struct IrisBlade: Shape {
+    let index: Int
     func path(in rect: CGRect) -> Path {
-        let centre = CGPoint(x: rect.midX, y: rect.midY)
-        let outerR = min(rect.width, rect.height) / 2
-        let innerR = outerR * innerRatio
+        let r = min(rect.width, rect.height) / 2
+        let cx = rect.midX, cy = rect.midY
+        let d = irisBladeData[index]
+        func P(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: cx + x * r, y: cy + y * r) }
         var p = Path()
-        p.addArc(
-            center: centre,
-            radius: outerR,
-            startAngle: .degrees(startDegrees),
-            endAngle: .degrees(endDegrees),
-            clockwise: false
-        )
-        p.addArc(
-            center: centre,
-            radius: innerR,
-            startAngle: .degrees(endDegrees),
-            endAngle: .degrees(startDegrees),
-            clockwise: true
-        )
+        p.move(to: P(d[0], d[1]))
+        var k = 2
+        while k + 6 <= d.count {
+            p.addCurve(to: P(d[k + 4], d[k + 5]),
+                       control1: P(d[k], d[k + 1]),
+                       control2: P(d[k + 2], d[k + 3]))
+            k += 6
+        }
         p.closeSubpath()
         return p
     }
 }
+
+// MARK: - View
 
 struct TakeCircleView: View {
     let take: Take
@@ -72,78 +74,88 @@ struct TakeCircleView: View {
 
     @Environment(\.colorScheme) private var scheme
 
-    /// A "where" lights the Remind wedge exactly like a "when" (2026-07-01,
-    /// place/time parity — previously a place reminder showed no wedge, so the
-    /// Iris and the card subtext disagreed about whether the Take had a reminder).
-    private var hasReminder: Bool { take.timeReminder != nil || take.locationReminder != nil }
+    private enum Seg { case important, task, image, note, voice, remind }
+    private let bladeSegments: [Seg] = [.important, .task, .image, .note, .voice, .remind]
+
+    /// Voice/Image are wired for the v1.1 attachment features; the fills come from
+    /// the redesign study (warm taupe / grey-sage). Until those features land the
+    /// blades resolve to `false` below (attachments are always empty in v1.0).
+    private static let voiceFill = Color(hex: 0xA99C8B)
+    private static let imageFill = Color(hex: 0x9AA091)
+
+    private func isActive(_ s: Seg) -> Bool {
+        switch s {
+        case .important: return take.isImportant
+        case .task:      return take.isTask
+        case .image:     return take.attachments.contains { $0.mimeType.hasPrefix("image/") }
+        case .note:      return take.isNote
+        case .voice:     return take.attachments.contains { $0.mimeType.hasPrefix("audio/") }
+        case .remind:    return take.timeReminder != nil || take.locationReminder != nil
+        }
+    }
+
+    private func color(_ s: Seg) -> Color {
+        switch s {
+        case .important: return Quadrant.important(scheme)
+        case .task:      return Quadrant.task(scheme)
+        case .image:     return Self.imageFill
+        case .note:      return Quadrant.note(scheme)
+        case .voice:     return Self.voiceFill
+        case .remind:    return Quadrant.reminder(scheme)
+        }
+    }
+
+    /// Active blade → its segment colour; inactive → the off-band tone, so the
+    /// shutter always reads as a complete aperture.
+    private func fill(for index: Int) -> Color {
+        let s = bladeSegments[index]
+        return isActive(s) ? color(s) : .ckIrisOff
+    }
+
+    /// The ONE outline used on the rim, every blade, and the hex centre. Thin GOLD on
+    /// an Obie (owner 2026-07-04: a delicate gold tracery on the blades, distinct from
+    /// the bolder outer ring), the WCAG-raised graphite otherwise.
+    private var edge: Color { take.isObie ? Quadrant.obieRing(scheme) : .ckIrisRing }
+
+    private var bladeLine: CGFloat { max(0.6, diameter * 0.017) }        // ~0.75 at 44 pt
+    // Standard-width rim for EVERY Take (owner 2026-07-04): a thick gold rim on an
+    // Obie read as a second thick gold ring next to the outer one. The bolder Obie
+    // ring is the outer overlay only.
+    private var rimLine: CGFloat { diameter * 0.024 }                    // ~1 pt at 44 pt
+    /// Gap between the shutter's outer edge and the Obie ring — main's DS §5.1
+    /// obieRingGap 3 (ring at `diameter + 6`). Tunable.
+    private var obieRingGap: CGFloat { 3 }
 
     var body: some View {
         ZStack {
-            // Off-band: a faint full ANNULAR ring (v1.7 `--q-off`) so empty
-            // quadrants still read as part of a ring while the centre stays
-            // HOLLOW (the camera aperture). `strokeBorder` fills inward from the
-            // edge to the inner radius, leaving the centre empty. The width MUST
-            // track QuadrantSlice.innerRatio so the off-band and the filled wedges
-            // share one inner edge: band = (1 − innerRatio)·R = (1 − 0.55)/2·D =
-            // 0.225·D (was 0.28·D at innerRatio 0.44).
-            Circle()
-                .strokeBorder(Color.ckIrisOff, lineWidth: diameter * 0.225)
+            // The hex aperture is left hollow (owner 2026-07-04): the earlier centre
+            // catchlight sat at the Iris centre, which straddles the card's top edge,
+            // so it read as a stray flare where the timeline meets the card.
 
-            // N/E/S/W diamond (D-042; North reassigned 2026-06-20): each wedge is
-            // centred on a cardinal point, spanning ±45° from it (corner-to-corner),
-            // so the slices read as a diamond, not an X. 0° = 3 o'clock, clockwise.
-            // Top (N): Important — centred on -90°, spans -135°..-45°. Indicator
-            // only. Shown on an Obie too (owner 2026-06-20): an Obie auto-flags
-            // Important, and the flag should still read on its Iris alongside the ring.
-            if take.isImportant {
-                QuadrantSlice(startDegrees: -135, endDegrees: -45)
-                    .fill(Quadrant.important(scheme))
-            }
-            // Right (E): Task — centred on 0°, spans -45°..45°.
-            if take.isTask {
-                QuadrantSlice(startDegrees: -45, endDegrees: 45)
-                    .fill(Quadrant.task(scheme))
-            }
-            // Left (W): Remind — centred on 180°, spans 135°..225°.
-            if hasReminder {
-                QuadrantSlice(startDegrees: 135, endDegrees: 225)
-                    .fill(Quadrant.reminder(scheme))
-            }
-            // Bottom (S): Note — centred on 90°, spans 45°..135° (moved from N 2026-06-20).
-            if take.isNote {
-                QuadrantSlice(startDegrees: 45, endDegrees: 135)
-                    .fill(Quadrant.note(scheme))
+            // Blade fills.
+            ForEach(0..<6, id: \.self) { i in
+                IrisBlade(index: i).fill(fill(for: i))
             }
 
-            // Hairline outer ring (HiFi v1.7 — section 7): a 0.75pt rim around
-            // the annular quadrants. Daylight #E7E7E7 (v1.7's iris SVG uses the
-            // near-identical #ECECEC); Night rides the divider/line token.
-            Circle()
-                .strokeBorder(Color.ckIrisRing, lineWidth: 0.75)
+            // Shared outline on every blade — traces the blade edges AND the hex.
+            ForEach(0..<6, id: \.self) { i in
+                IrisBlade(index: i).stroke(edge, lineWidth: bladeLine)
+            }
         }
         .frame(width: diameter, height: diameter)
-        // Obie decorations live in an OVERLAY, not as ZStack siblings (owner-measured
-        // bug, D-042): the ring below is a larger fixed-frame view (`diameter + 6`),
-        // and as a sibling of the flexible disc circles it inflated the size PROPOSED
-        // to them — so the off-band's outer grew while its stroke width (fixed at
-        // `diameter × 0.225`) did not, blowing the aperture out disproportionately
-        // (owner: Obie hole ≈ 1.25× a standard Iris, disc ≈ 1.13×). An overlay is
-        // sized to the 44pt disc and lets the ring overflow WITHOUT touching the
-        // disc's layout, so the Obie's disc + aperture now match every other Take.
-        .overlay { if take.isObie { obieDecorations } }
+        .clipShape(Circle())                                   // clean circular silhouette
+        .overlay(Circle().strokeBorder(edge, lineWidth: rimLine))
+        // Obie ring — a larger gold ring OUTSIDE the shutter with a gap (owner 2026-07-04,
+        // "as it was before"). In an overlay sized to `diameter + gap`, so — like the
+        // old obieDecorations (D-042) — the larger ring can't inflate the disc's layout.
+        .overlay {
+            if take.isObie {
+                Circle()
+                    .stroke(Quadrant.obieRing(scheme), lineWidth: 2)
+                    .frame(width: diameter + obieRingGap * 2, height: diameter + obieRingGap * 2)
+            }
+        }
         .accessibilityHidden(true)   // the row exposes a combined label; the disc is decorative there
-    }
-
-    /// The Obie's outer ring (2pt, sitting ~3pt OUTSIDE the disc edge — DS §5.1
-    /// obieRingWidth 2 / obieRingGap 3). Drawn in the body's overlay so the larger
-    /// ring frame can't enlarge the disc (see body). The 3-layer specular catch
-    /// (ground halo + warm core + bright pip) was REMOVED (owner 2026-06-30): the
-    /// Obie Iris is now the gold ring only. (The Obie brand "O" glyph keeps its own
-    /// catch-dot — that's the logo, a separate mark.)
-    private var obieDecorations: some View {
-        Circle()
-            .stroke(Quadrant.obieRing(scheme), lineWidth: 2)
-            .frame(width: diameter + 6, height: diameter + 6)
     }
 
     /// A spoken description of the active types, for callers that DO want the circle
@@ -151,17 +163,15 @@ struct TakeCircleView: View {
     static func activityDescription(for take: Take) -> String {
         var parts: [String] = []
         if take.isObie { parts.append("Obie") }
-        // Important is announced whenever flagged, including on an Obie — the wedge
-        // shows there too (owner 2026-06-20), so the spoken label matches.
         if take.isImportant { parts.append("Important") }
         if take.isNote { parts.append("Note") }
         if take.isTask { parts.append(take.isComplete ? "completed Task" : "Task") }
-        if take.timeReminder != nil { parts.append("Reminder") }
+        if take.timeReminder != nil || take.locationReminder != nil { parts.append("Reminder") }
         return parts.isEmpty ? "Note" : parts.joined(separator: ", ")
     }
 }
 
-#Preview("Take circles — Night") {
+#Preview("Iris — Night") {
     let reminder = TimeReminder(scheduledDate: .now, notificationIdentifier: "x")
     return HStack(spacing: 16) {
         TakeCircleView(take: Take(blocks: [.textLine("Note")]), diameter: 44)
@@ -176,7 +186,7 @@ struct TakeCircleView: View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("Take circles — Daylight") {
+#Preview("Iris — Daylight") {
     let reminder = TimeReminder(scheduledDate: .now, notificationIdentifier: "x")
     return HStack(spacing: 16) {
         TakeCircleView(take: Take(blocks: [.textLine("Note")]), diameter: 44)

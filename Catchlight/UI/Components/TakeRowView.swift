@@ -162,9 +162,12 @@ struct TakeRowView: View {
             // ring. Same crown geometry as the visible wire segment below.
             Rectangle()
                 .fill(Color.ckBackground)
-                .frame(width: CatchlightLayout.spineWidth,
+                // Widened to the full THREE-track span so all three dotted tracks are
+                // occluded behind the Iris, not just the centre one (owner 2026-07-04).
+                .frame(width: CatchlightLayout.spineWidth + CatchlightLayout.spineTrackOffset * 2,
                        height: CatchlightLayout.circleDiameter / 2)
-                .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.spineWidth / 2,
+                .offset(x: CatchlightLayout.cardSpineInset
+                        - (CatchlightLayout.spineWidth + CatchlightLayout.spineTrackOffset * 2) / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
@@ -186,8 +189,8 @@ struct TakeRowView: View {
             // Stays on the spine (no `cardSwipeOffset`) so the wire holds while the
             // card swipes. Same `ckSpineWire` fill + `spineWidth` as the gutter so
             // the two read as one continuous wire.
-            Rectangle()
-                .fill(Color.ckSpineWire)
+            SpineLine()
+                .stroke(Color.ckSpineWire, lineWidth: CatchlightLayout.spineWidth)
                 .frame(width: CatchlightLayout.spineWidth,
                        height: CatchlightLayout.circleDiameter / 2)
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.spineWidth / 2,
@@ -247,10 +250,12 @@ struct TakeRowView: View {
         .accessibilityLabel(take.isObie
             ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
             : "Iris. \(TakeCircleView.activityDescription(for: take))")
-        .accessibilityHint("Double-tap to open actions. Long press to make this your Obie.")
-        // VoiceOver intercepts long-press, so expose the Obie designation as a
-        // named action too. VO activation lands as a tap on the recognizer.
-        .accessibilityAction(named: "Make Obie") { onLongPressCircle() }
+        .accessibilityHint(take.isObie
+            ? "Double-tap to open actions. Long press to turn this back into a standard Take."
+            : "Double-tap to open actions. Long press to make this your Obie.")
+        // VoiceOver intercepts long-press, so expose the Obie toggle as a named
+        // action too. VO activation lands as a tap on the recognizer.
+        .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") { onLongPressCircle() }
         .accessibilityAddTraits(.isButton)
     }
 

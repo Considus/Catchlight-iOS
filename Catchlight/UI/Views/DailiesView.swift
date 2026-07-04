@@ -97,7 +97,11 @@ struct DailiesView: View {
     /// top Take. (With an Obie, `spineTopInset` is constant and this is just a static
     /// offset.) The sign MUST be `+`: `−` advances the phase the wrong way and the
     /// dots slide at ~2× — the bug that put two dotted wires on screen at once.
-    private var dottedSpinePhase: CGFloat { spineTopInset }
+    // The spine now begins at `deviceTopInset` (up behind the heading, dissolving in
+    // its fade — owner 2026-07-04), a per-device constant, so the dots are naturally
+    // screen-static. Phase = the frame's top so a dot lands on the same global-Y grid
+    // as the through-Iris wire (which phases off its own screen minY).
+    private var dottedSpinePhase: CGFloat { deviceTopInset }
     /// The row currently showing its swipe actions (Delete / Mark done), if any.
     /// Shared across rows so opening one closes the rest (`SwipeActionRow`).
     @State private var openSwipeRowID: UUID?
@@ -225,14 +229,14 @@ struct DailiesView: View {
             // timeline's top content pad (deviceTopInset + headingClearance) + the
             // row's 6pt vertical pad; the top edge is one Iris radius higher. The
             // bottom runs on toward the Add button, covered by the dock fade (HiFi).
-            Rectangle()
-                // Owner 2026-06-16: the spine takes the dock buttons' ring colour
-                // (Ember @ 35% — `dockRing()` in BottomDockView) so the wire and the
-                // toolbar read as one family. (Was `ckSpine`, a fainter Catchlight/Ink
-                // tint; that token still serves onboarding + the conflict view.)
-                // Single-sourced via `ckSpineWire` so the gutter spine and the
-                // through-Iris segments (TakeRowView, "rings on a wire") never drift.
-                .fill(Color.ckSpineWire)
+            // Owner 2026-06-16: the spine takes the dock buttons' ring colour
+            // (Ember @ 35% — `dockRing()` in BottomDockView) so the wire and the
+            // toolbar read as one family. Single-sourced via `ckSpineWire` so the
+            // gutter spine and the through-Iris segments (TakeRowView, "rings on a
+            // wire") never drift. Strokes `SpineLine` so it draws the same THREE
+            // tracks as the dotted overlay (owner 2026-07-04).
+            SpineLine()
+                .stroke(Color.ckSpineWire, lineWidth: CatchlightLayout.spineWidth)
                 // Fully hidden while editing in place (owner 2026-06-17): a thin line
                 // reads as a "remnant" even at the 0.12 row-mask — especially once the
                 // Obie card (which used to cover it) goes invisible, exposing the spine
@@ -241,7 +245,9 @@ struct DailiesView: View {
                 .opacity(ui.isEditingInPlace ? 0 : 1)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
-                .padding(.top, spineTopInset)
+                // Start up behind the heading so the wire always dissolves into the
+                // top fade rather than beginning at the first Iris (owner 2026-07-04).
+                .padding(.top, deviceTopInset)
                 // Terminate the spine at the TOP EDGE of the Add button's ring rather
                 // than running full-bleed under the dock (owner 2026-06-16: it was
                 // visible through the +'s hollow ring). The Add ring's top sits
@@ -268,7 +274,8 @@ struct DailiesView: View {
                 .opacity(ui.isEditingInPlace ? 0 : 1)
                 .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
-                .padding(.top, spineTopInset)
+                // Same top as the solid spine — up into the heading fade (owner 2026-07-04).
+                .padding(.top, deviceTopInset)
                 .padding(.bottom, deviceBottomInset
                          + CatchlightLayout.dockBottomPadding
                          + CatchlightLayout.minTouchTarget)
@@ -513,6 +520,8 @@ struct DailiesView: View {
                 // — the gradient is semi-transparent and lets a scrolling Take peek).
                 // The opaque Obie card continues the mask below. Its own Iris is drawn
                 // ON TOP of the heading, so this doesn't cover it (owner 2026-06-16).
+                // (A 12pt fade was tried here 2026-07-04 to run the spine into the top
+                // fade with an Obie, but it let a Take peek above the Obie — reverted.)
                 Color.ckBackground
             } else {
                 // No Obie — OR editing in place (owner 2026-06-17): use the natural
@@ -1517,6 +1526,11 @@ struct DailiesView: View {
                 // Take's long-press menu — owner 2026-06-17); a press on a masked row
                 // just commits and exits.
                 if editingActive { if !isEditingThis { saveInlineEdit() }; return }
+                // Long-press now TOGGLES (owner 2026-07-04): a long-press on an Obie's
+                // Iris turns it back into a standard Take. Demotion is NOT
+                // entitlement-gated — removing a designation is always allowed, even on
+                // a lapsed trial.
+                if take.isObie { vm.demoteObie(take); return }
                 // Hint 4: arm the Obie introduction tooltip on the first long-press.
                 // The actual designation still proceeds — the tooltip provides
                 // context "before the action takes effect" (and persists over the
@@ -1750,8 +1764,15 @@ private struct DottedSpine: View {
 struct SpineLine: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
-        p.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        p.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        // Three parallel tracks — centre + one either side (owner 2026-07-04). Every
+        // spine element strokes this one shape, so the gutter and the through-Iris
+        // wire stay one triple-tracked wire. Side lines fall outside the 2pt frame;
+        // Shapes aren't clipped to their frame, so they render and the enclosing
+        // `.offset` keeps all three centred on the spine.
+        for dx in [-CatchlightLayout.spineTrackOffset, 0, CatchlightLayout.spineTrackOffset] {
+            p.move(to: CGPoint(x: rect.midX + dx, y: rect.minY))
+            p.addLine(to: CGPoint(x: rect.midX + dx, y: rect.maxY))
+        }
         return p
     }
 }
