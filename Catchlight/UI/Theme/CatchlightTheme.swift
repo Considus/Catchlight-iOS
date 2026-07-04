@@ -528,9 +528,10 @@ enum CatchlightLayout {
     /// Width of the timeline spine (each individual dotted track).
     static let spineWidth: CGFloat = 2
     /// The timeline reads as THREE parallel dotted tracks — a centre line plus one
-    /// either side, each `spineWidth` wide (owner 2026-07-04). This is the offset
-    /// from the centre to each side track. Tune on device for tighter/wider tracks.
-    static let spineTrackOffset: CGFloat = 4
+    /// either side, each `spineWidth` wide (owner 2026-07-04). Offset from the centre
+    /// to each side track; `= spineWidth` makes the three tracks ABUT with no gap
+    /// (owner 2026-07-04), i.e. a solid triple-width wire. Tune on device.
+    static let spineTrackOffset: CGFloat = spineWidth
     /// The Take card's leading edge sits this far LEFT of the spine. Two things ride
     /// on it together (which is what keeps the Iris ON the spine): the row's leading
     /// padding is `spineX − cardSpineInset` (the card's left edge), and TakeRowView

@@ -118,8 +118,9 @@ struct TakeCircleView: View {
 
     private var bladeLine: CGFloat { max(0.6, diameter * 0.017) }        // ~0.75 at 44 pt
     private var rimLine: CGFloat { take.isObie ? diameter * 0.05 : diameter * 0.024 }
-    /// Gap between the shutter's outer edge and the larger Obie ring. Tunable.
-    private var obieRingGap: CGFloat { 5 }
+    /// Gap between the shutter's outer edge and the Obie ring — main's DS §5.1
+    /// obieRingGap 3 (ring at `diameter + 6`). Tunable.
+    private var obieRingGap: CGFloat { 3 }
 
     /// A soft warm catchlight in the aperture. Static here (the moving flare belongs
     /// to the tilted/beam concept, which this swap deliberately does NOT ship).
@@ -154,7 +155,7 @@ struct TakeCircleView: View {
         .overlay {
             if take.isObie {
                 Circle()
-                    .stroke(Quadrant.obieRing(scheme), lineWidth: max(1.5, diameter * 0.045))
+                    .stroke(Quadrant.obieRing(scheme), lineWidth: 2)
                     .frame(width: diameter + obieRingGap * 2, height: diameter + obieRingGap * 2)
             }
         }
