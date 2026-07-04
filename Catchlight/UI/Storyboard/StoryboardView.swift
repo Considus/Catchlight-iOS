@@ -209,7 +209,10 @@ struct StoryboardView: View {
                     editFocusedBlockID = nil   // drop the keyboard before the cover
                     anglePresented = true
                 },
-                onCommit: { commitEdit() }
+                // The keyboard × DISCARDS (owner 2026-07-04, consistent with the
+                // timeline + LockedCaptureView); tapping blank space / a card
+                // commits (the mask catcher → commitEdit), unchanged.
+                onDiscard: { discardEdit() }
             )
         } else {
             // A read-only card. Tapping it begins editing; tapping it while ANOTHER
@@ -319,6 +322,17 @@ struct StoryboardView: View {
             return
         }
         vm.save(t)
+    }
+
+    /// Discard the focused edit — revert the Take to its pre-edit state (the store
+    /// is never written mid-edit, so dropping the draft restores it) and drop the
+    /// overlay, saving nothing. The keyboard toolbar × maps here (owner 2026-07-04:
+    /// × discards, tapping blank space commits). Mirrors `commitEdit`'s teardown
+    /// minus the save; deregisters the relock hook so a later relock is a no-op.
+    private func discardEdit() {
+        ui.commitInlineEdit = nil
+        editFocusedBlockID = nil
+        withAnimation(reduceMotion ? nil : UIState.fanFade) { editDraft = nil }
     }
 
     private func closeStoryboard() {

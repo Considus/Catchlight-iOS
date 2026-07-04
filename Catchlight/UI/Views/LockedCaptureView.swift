@@ -45,7 +45,7 @@ struct LockedCaptureView: View {
                                 draft: draft,
                                 focusedBlockID: $focusedBlockID,
                                 // Toolbar × = DISCARD (its one job here), never save.
-                                onCommit: { app.discardLockedCapture() }
+                                onDiscard: { app.discardLockedCapture() }
                             )
                             .padding(.horizontal, 16)
                             .padding(.top, 12)
