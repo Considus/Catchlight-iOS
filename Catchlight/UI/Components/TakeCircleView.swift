@@ -112,9 +112,10 @@ struct TakeCircleView: View {
         return isActive(s) ? color(s) : .ckIrisOff
     }
 
-    /// The ONE outline used on the rim, every blade, and the hex centre. Gold on an
-    /// Obie (owner likes the gold stroke), the WCAG-raised graphite otherwise.
-    private var edge: Color { take.isObie ? Quadrant.obieRing(scheme) : .ckIrisRing }
+    /// The ONE outline used on the rim, every blade, and the hex centre — the
+    /// WCAG-raised graphite for EVERY Take, including an Obie (owner 2026-07-04:
+    /// gold lives ONLY on the Obie's outer ring, as on main).
+    private var edge: Color { .ckIrisRing }
 
     private var bladeLine: CGFloat { max(0.6, diameter * 0.017) }        // ~0.75 at 44 pt
     private var rimLine: CGFloat { take.isObie ? diameter * 0.05 : diameter * 0.024 }
@@ -122,19 +123,11 @@ struct TakeCircleView: View {
     /// obieRingGap 3 (ring at `diameter + 6`). Tunable.
     private var obieRingGap: CGFloat { 3 }
 
-    /// A soft warm catchlight in the aperture. Static here (the moving flare belongs
-    /// to the tilted/beam concept, which this swap deliberately does NOT ship).
-    private var flareColor: Color {
-        scheme == .dark ? Color(hex: 0xFBEFCC).opacity(0.5) : Color(hex: 0xF0DFAE).opacity(0.42)
-    }
-
     var body: some View {
         ZStack {
-            // Catchlight — behind the blades, so it reads only through the hex aperture.
-            Circle()
-                .fill(RadialGradient(gradient: Gradient(colors: [flareColor, flareColor.opacity(0)]),
-                                     center: .center, startRadius: 0, endRadius: diameter * 0.24))
-                .frame(width: diameter * 0.6, height: diameter * 0.6)
+            // The hex aperture is left hollow (owner 2026-07-04): the earlier centre
+            // catchlight sat at the Iris centre, which straddles the card's top edge,
+            // so it read as a stray flare where the timeline meets the card.
 
             // Blade fills.
             ForEach(0..<6, id: \.self) { i in
