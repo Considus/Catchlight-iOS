@@ -125,6 +125,11 @@ struct DailiesView: View {
     /// scrolled in between (owner 2026-06-22). nil when not editing; never set for new Takes
     /// (they use the keyboard-anchored card, not a timeline scroll).
     @State private var preEditScrollOffset: CGFloat?
+    /// Drives the "Make this your Obie?" confirmation when the editing long-press menu's
+    /// "Make Obie" is chosen while another Obie already exists (owner 2026-07-06). The same
+    /// warning the timeline long-press uses, but targeting the draft — the existing Obie is
+    /// demoted by the store's single-Obie upsert when this draft saves.
+    @State private var pendingInlineObieConfirm = false
     /// Drives the reminder picker opened from the editor keyboard's slot-2 Reminder
     /// button (owner 2026-06-21) — edits the editing draft's reminder in place. The
     /// keyboard is dropped before it presents (the established overlay-vs-keyboard
@@ -361,6 +366,15 @@ struct DailiesView: View {
             guard let take else { return }
             beginNewInlineEdit(take)
             ui.pendingInlineNewTake = nil
+        }
+        // Inline Obie confirmation (owner 2026-06-17; re-homed to the editing long-press
+        // menu 2026-07-06) — mirrors the timeline long-press warning, but targets the
+        // draft (the existing Obie is demoted by the store on save).
+        .alert("Make this your Obie?", isPresented: $pendingInlineObieConfirm) {
+            Button("Make Obie") { confirmInlineObie() }
+            Button("Cancel", role: .cancel) { cancelInlineObie() }
+        } message: {
+            Text("Your existing Obie returns to the timeline — only one Take can be your Obie.")
         }
         // Recurring-reminder Delete (owner 2026-06-21): this occurrence vs the series.
         // "This occurrence" rolls the reminder forward (series + alarm stay live);
@@ -1463,6 +1477,36 @@ struct DailiesView: View {
         }
     }
 
+    /// "Make Obie" from the editing long-press menu (owner 2026-07-06 — replaced "Make
+    /// Important" there; Important now lives on the Focus ring). Applies to the live draft
+    /// so it rides the inline save. If another Obie already exists, warn first — exactly
+    /// like the timeline long-press — leaving the flag off until confirmed.
+    private func makeInlineObie() {
+        guard app.ensureEntitled() else { return }
+        guard var d = editDraft else { return }
+        if !d.isObie, let other = vm.obie, other.id != d.id {
+            pendingInlineObieConfirm = true
+        } else {
+            d.isObie = true
+            d.normaliseActivityFloor()
+            editDraft = d
+            orientation.didDismissObieIntro()
+        }
+    }
+
+    private func confirmInlineObie() {
+        pendingInlineObieConfirm = false
+        guard var d = editDraft else { return }
+        d.isObie = true
+        d.normaliseActivityFloor()
+        editDraft = d
+        orientation.didDismissObieIntro()
+    }
+
+    private func cancelInlineObie() {
+        pendingInlineObieConfirm = false   // draft.isObie was left off
+    }
+
     /// The row's visual content (Iris + card). `cardSwipeOffset` slides the card
     /// (only) for its swipe actions, supplied live by the enclosing `SwipeActionRow`.
     private func rowContent(for take: Take, cardSwipeOffset: CGFloat = 0, isFirst: Bool = false) -> some View {
@@ -1539,28 +1583,26 @@ struct DailiesView: View {
                 guard app.ensureEntitled() else { return }
                 vm.toggleDone(take)
             },
-            onSetImportant: {
-                // Manual Important mark (owner 2026-06-19). While editing, ride the
-                // draft so it persists on the inline save; at rest, toggle through
-                // the store.
-                if isEditingThis {
-                    guard var d = editDraft else { return }
-                    d.isImportant.toggle()
-                    editDraft = d
-                    return
-                }
+            // Manual Important mark (owner 2026-06-19) — the RESTING timeline menu only.
+            // While editing, this slot is given over to "Make Obie" instead (owner
+            // 2026-07-06), so no onSetImportant is offered mid-edit.
+            onSetImportant: isEditingThis ? nil : {
                 guard app.ensureEntitled() else { return }
                 var t = take
                 t.isImportant.toggle()
                 vm.save(t)
             },
-            // Make Obie from the card long-press (owner 2026-06-19 accessibility
-            // path). Resting rows only — designating mid-edit goes through the Focus
-            // ring. Same designation path as the Iris long-press (warns on conflict).
-            onMakeObie: isEditingThis ? nil : {
-                guard app.ensureEntitled() else { return }
-                vm.designateObie(take, replaceExisting: false)
-            },
+            // Make Obie from the card long-press. On a RESTING row this is the
+            // accessibility path (owner 2026-06-19), same designation as the Iris
+            // long-press. WHILE EDITING it replaces "Make Important" in the menu (owner
+            // 2026-07-06) and applies to the live draft via `makeInlineObie` — both warn
+            // on conflict. Hidden only when the Take is already the Obie (menu gate).
+            onMakeObie: isEditingThis
+                ? { makeInlineObie() }
+                : {
+                    guard app.ensureEntitled() else { return }
+                    vm.designateObie(take, replaceExisting: false)
+                },
             onDelete: {
                 guard app.ensureEntitled() else { return }
                 deleteTake(take)
