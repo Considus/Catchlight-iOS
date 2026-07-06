@@ -116,13 +116,15 @@ final class UIState {
         let reminderWeekdays: Set<Int>
         /// The location ("where") for this reminder (owner 2026-06-23) — nil for time-only.
         let reminderLocation: LocationTrigger?
-        let isObie: Bool
+        /// The Important flag chosen in the fan (owner 2026-07-06; the fourth Mark toggles
+        /// Important now, not Obie — the fan no longer changes the Obie designation).
+        let isImportant: Bool
     }
 
     /// The Focus-ring selection for the IN-PLACE editor (edit-in-place redesign
     /// 2026-06-17). When the Focus ring is opened from a Take being edited inline,
     /// its commit must reshape that editor's live draft — not the stored copy — so
-    /// the selection (incl. an Obie change) rides the inline save instead of being
+    /// the selection (incl. an Important change) rides the inline save instead of being
     /// silently reverted when the draft is written back. DailiesView consumes it.
     var inlineFanCommand: EditorFanCommand?
 

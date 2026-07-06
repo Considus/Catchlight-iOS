@@ -125,10 +125,6 @@ struct DailiesView: View {
     /// scrolled in between (owner 2026-06-22). nil when not editing; never set for new Takes
     /// (they use the keyboard-anchored card, not a timeline scroll).
     @State private var preEditScrollOffset: CGFloat?
-    /// Drives the "Make this your Obie?" confirmation when the Focus ring turns Obie
-    /// on (inline) while another Obie already exists — the same warning the timeline
-    /// long-press uses, but targeting the draft (owner 2026-06-17).
-    @State private var pendingInlineObieConfirm = false
     /// Drives the reminder picker opened from the editor keyboard's slot-2 Reminder
     /// button (owner 2026-06-21) — edits the editing draft's reminder in place. The
     /// keyboard is dropped before it presents (the established overlay-vs-keyboard
@@ -365,14 +361,6 @@ struct DailiesView: View {
             guard let take else { return }
             beginNewInlineEdit(take)
             ui.pendingInlineNewTake = nil
-        }
-        // Inline Obie confirmation — mirrors the timeline long-press warning, but
-        // targets the draft (the existing Obie is demoted by the store on save).
-        .alert("Make this your Obie?", isPresented: $pendingInlineObieConfirm) {
-            Button("Make Obie") { confirmInlineObie() }
-            Button("Cancel", role: .cancel) { cancelInlineObie() }
-        } message: {
-            Text("Your existing Obie returns to the timeline — only one Take can be your Obie.")
         }
         // Recurring-reminder Delete (owner 2026-06-21): this occurrence vs the series.
         // "This occurrence" rolls the reminder forward (series + alarm stay live);
@@ -1449,15 +1437,11 @@ struct DailiesView: View {
             }
         }
 
-        // Obie ON while another Obie exists → confirm first (the existing Obie is
-        // demoted by the store's single-Obie upsert when this draft saves). Leave it
-        // off until confirmed; otherwise apply the selection directly.
-        if command.isObie && !d.isObie, let other = vm.obie, other.id != d.id {
-            d.isObie = false
-            pendingInlineObieConfirm = true
-        } else {
-            d.isObie = command.isObie
-        }
+        // The fan's fourth Mark toggles Important now, not Obie (owner 2026-07-06). Apply
+        // it straight to the draft — Important never conflicts (any number of Takes can be
+        // Important), so there's no confirmation step. Obie is left untouched by the fan;
+        // an Obie stays Important regardless, so OR it in.
+        d.isImportant = command.isImportant || d.isObie
 
         d.normaliseActivityFloor()
         editDraft = d
@@ -1477,20 +1461,6 @@ struct DailiesView: View {
             scrollToTakeID = d.id
             DispatchQueue.main.async { editFocusedBlockID = refocus }
         }
-    }
-
-    private func confirmInlineObie() {
-        pendingInlineObieConfirm = false
-        guard var d = editDraft else { return }
-        d.isObie = true
-        d.normaliseActivityFloor()
-        editDraft = d
-        orientation.didDismissObieIntro()
-    }
-
-    private func cancelInlineObie() {
-        pendingInlineObieConfirm = false   // draft.isObie was left off
-        orientation.didDismissObieIntro()
     }
 
     /// The row's visual content (Iris + card). `cardSwipeOffset` slides the card
