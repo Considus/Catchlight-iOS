@@ -105,23 +105,38 @@ struct TaskCheckbox: View {
     }
 }
 
-/// The Important mark — an exclamation "!" (owner 2026-07-06). Replaces the two-Iris
-/// `DailiesGlyph` as the app-wide Important glyph, matching the redesigned marketing site
-/// where Important is a "!". Stem + dot are FILLED, round-ended shapes, so the mark
-/// colours via `.foregroundStyle` like the other glyphs and reads as a crisp, slightly
-/// emphatic bang beside the SF Symbols in the dock, editor bar and long-press menu.
+/// The Important mark — an exclamation "!" (owner 2026-07-06, outline form 2026-07-06).
+/// Replaces the two-Iris `DailiesGlyph` as the app-wide Important glyph, matching the
+/// redesigned marketing site where Important is a "!". Drawn as a STROKED OUTLINE — a
+/// tapered stem (rounded top corners, narrowing to a rounded foot) above a ring dot — at
+/// the house `1.2`-unit weight with round caps/joins, so it sits beside the other line
+/// glyphs (Dailies/Sequence) and the .light SF Symbols, and colours via `.foregroundStyle`.
+struct ImportantGlyphShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let u = min(rect.width, rect.height) / 16
+        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * u, y: y * u) }
+        var p = Path()
+        // Tapered stem — rounded top corners, tapering sides, rounded foot.
+        p.move(to: pt(6.0, 2.45))
+        p.addQuadCurve(to: pt(6.85, 1.6), control: pt(6.0, 1.6))
+        p.addLine(to: pt(9.15, 1.6))
+        p.addQuadCurve(to: pt(10.0, 2.45), control: pt(10.0, 1.6))
+        p.addLine(to: pt(8.95, 10.45))
+        p.addQuadCurve(to: pt(8.0, 11.4), control: pt(8.85, 11.4))
+        p.addQuadCurve(to: pt(7.05, 10.45), control: pt(7.15, 11.4))
+        p.closeSubpath()
+        // Dot — a ring, matching the stroke weight.
+        p.addEllipse(in: CGRect(x: (8 - 1.15) * u, y: (13.85 - 1.15) * u, width: 2.3 * u, height: 2.3 * u))
+        return p
+    }
+}
+
 struct ImportantGlyph: View {
     var size: CGFloat = 20
     var body: some View {
-        let u = size / 16
-        let w = size * 1.7 / 16                              // stem/dot weight — a touch bolder than the line glyphs
-        VStack(spacing: u * 1.4) {
-            Capsule(style: .continuous)
-                .frame(width: w, height: size * 8.2 / 16)   // stem, top-weighted with round ends
-            Circle()
-                .frame(width: w, height: w)                 // dot
-        }
-        .frame(width: size, height: size)
+        ImportantGlyphShape()
+            .stroke(style: StrokeStyle(lineWidth: size * 1.2 / 16, lineCap: .round, lineJoin: .round))
+            .frame(width: size, height: size)
     }
 }
 
