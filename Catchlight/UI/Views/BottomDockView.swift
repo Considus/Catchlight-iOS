@@ -431,7 +431,7 @@ struct BottomDockView: View {
     /// Important (slot 1, FILTERING) — replaces the Add button while filtering
     /// (owner 2026-06-19: all filters now live under Sequence). Off ↔ on; orthogonal
     /// to the type toggles, so it neither clears them nor is cleared. Uses the
-    /// Dailies glyph — the app's Important glyph — and the shared Ember ON fill.
+    /// the app's Important glyph (an exclamation "!") and the shared Ember ON fill.
     private var importantToggle: some View {
         Button {
             ui.tapImportantFilter()
@@ -446,7 +446,7 @@ struct BottomDockView: View {
                 } else {
                     dockRing()
                 }
-                DailiesGlyph(size: 24)   // custom open glyph → 24 (matches the editor-bar Important)
+                ImportantGlyph(size: 24)   // "!" → 24 (matches the editor-bar Important)
                     .foregroundStyle(ui.filterImportant ? Color.ckBackground : Color.ckAccent)
             }
             .frame(width: buttonSize, height: buttonSize)

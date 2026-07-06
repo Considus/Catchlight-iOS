@@ -327,7 +327,7 @@ struct RootView: View {
                     // footer the origin is .zero (screen centre) and the editor is
                     // already the context, so no spotlight card there.
                     showsFocusCard: ui.focusRingFanOrigin != .zero,
-                    onCommit: { isNote, isTask, hasReminder, reminderDate, reminderAlarm, reminderAllDay, reminderRecurrence, reminderWeekdays, reminderLocation, isObie in
+                    onCommit: { isNote, isTask, hasReminder, reminderDate, reminderAlarm, reminderAllDay, reminderRecurrence, reminderWeekdays, reminderLocation, isImportant in
                         // Task 6.20: focus-ring-fan commit is a mutation — gate it.
                         guard app.ensureEntitled() else {
                             ui.closeFocusRingFan()
@@ -337,7 +337,7 @@ struct RootView: View {
                             // Edit-in-place: the Take is being edited inline. Hand the
                             // selection to that editor's draft so it rides the inline
                             // save — routing to the store here lets the stale draft
-                            // revert it on save (e.g. an Obie change).
+                            // revert it on save (e.g. an Important change).
                             ui.inlineFanCommand = UIState.EditorFanCommand(
                                 token: UUID(),
                                 isNote: isNote, isTask: isTask,
@@ -346,7 +346,7 @@ struct RootView: View {
                                 reminderRecurrence: reminderRecurrence,
                                 reminderWeekdays: reminderWeekdays,
                                 reminderLocation: reminderLocation,
-                                isObie: isObie
+                                isImportant: isImportant
                             )
                         } else {
                             app.dailiesVM.applyActivityTypes(
@@ -357,7 +357,7 @@ struct RootView: View {
                                 reminderRecurrence: reminderRecurrence,
                                 reminderWeekdays: reminderWeekdays,
                                 reminderLocation: reminderLocation,
-                                isObie: isObie
+                                isImportant: isImportant
                             )
                         }
                         ui.closeFocusRingFan()

@@ -7,8 +7,9 @@
 //
 //  LAYOUT — marks settle on an arc to the RIGHT of the timeline: angles
 //  −80° / −26.7° / +26.7° / +80° from horizontal (screen frame, y down), all at
-//  R = 68pt from the Iris centre; order Notes · Tasks · Reminders · Obie
-//  top→bottom. Marks are 44pt — they FILL their 44pt touch circles, to
+//  R = 68pt from the Iris centre; order Notes · Tasks · Reminders · Important
+//  top→bottom (the fourth Mark was the Obie designation until 2026-07-06; it now
+//  toggles the Important flag — Obie stays on the Iris long-press). Marks are 44pt — they FILL their 44pt touch circles, to
 //  match the dock buttons + timeline Iris (owner 2026-06-15; the hub Iris and R
 //  were scaled 36→44 / 56→68 in step so the Focus ring keeps its spacing:
 //  adjacent chord 61 > 44; Iris clearance 68 > 44). Marks deliberately pass ABOVE
@@ -34,9 +35,9 @@
 //
 //  STYLE — marks share the dock-button language: background-colour face
 //  (readable above cards), 1.5pt Ember@35% ring, no shadow, Ember glyphs at
-//  the light weight; the Obie mark draws the ring+specular glyph in
-//  ckTextObie. Active marks reverse like the dock toggles (Ember fill +
-//  background glyph). The veil is ckDim (background @90%, no blur): it recedes
+//  the light weight; the Important mark draws the "!" glyph in the same Ember/
+//  ckAccent language as the others. Active marks reverse like the dock toggles
+//  (per-type fill + background glyph). The veil is ckDim (background @90%, no blur): it recedes
 //  everything beneath it, then the TAPPED Take's card is lifted back LIT above
 //  the veil (owner 2026-06-16) so only that Take, its Iris (the rotating hub),
 //  and the Focus-ring stay readable while the rest of the timeline + chrome dim
@@ -65,7 +66,7 @@ struct FocusRingFanView: View {
     /// `reminderDate` carries the time chosen in the picker (nil when no Reminder).
     /// `reminderAlarm` / `reminderAllDay` carry the model-C picker choices (owner
     /// 2026-06-18) — undefined/ignored when `hasReminder` is false.
-    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ reminderWeekdays: Set<Int>, _ reminderLocation: LocationTrigger?, _ isObie: Bool) -> Void
+    let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ reminderWeekdays: Set<Int>, _ reminderLocation: LocationTrigger?, _ isImportant: Bool) -> Void
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -91,7 +92,10 @@ struct FocusRingFanView: View {
     @State private var isNote: Bool
     @State private var isTask: Bool
     @State private var hasReminder: Bool
-    @State private var isObie: Bool
+    /// The Important flag — the fourth Mark toggles it (owner 2026-07-06; replaced the
+    /// Obie Mark). Orthogonal to the type Marks: an Important Take can be any type.
+    /// Obie stays reachable via the Iris long-press; the fan no longer changes it.
+    @State private var isImportant: Bool
     /// The working Reminder time. Seeded from the Take's existing reminder (or the
     /// +24h default) and edited by the picker that pops when the Reminder Mark is
     /// tapped on (owner 2026-06-17).
@@ -143,7 +147,7 @@ struct FocusRingFanView: View {
         _isNote = State(initialValue: take.isNote)
         _isTask = State(initialValue: take.isTask)
         _hasReminder = State(initialValue: take.timeReminder != nil)
-        _isObie = State(initialValue: take.isObie)
+        _isImportant = State(initialValue: take.isImportant)
         _reminderDate = State(initialValue: take.timeReminder?.scheduledDate ?? Self.defaultReminderDate)
         _reminderAlarm = State(initialValue: take.timeReminder?.alarmEnabled ?? true)
         _reminderAllDay = State(initialValue: take.timeReminder?.isAllDay ?? false)
@@ -156,23 +160,23 @@ struct FocusRingFanView: View {
     // MARK: - Marks
 
     private enum MarkKind: Int, CaseIterable {
-        case note, task, remind, obie
+        case note, task, remind, important
         /// Final screen-frame angle in degrees (y down; −90 = straight up).
         var finalAngle: Double {
             switch self {
-            case .note:   return -80
-            case .task:   return -80 + 160.0 / 3
-            case .remind: return -80 + 320.0 / 3
-            case .obie:   return 80
+            case .note:      return -80
+            case .task:      return -80 + 160.0 / 3
+            case .remind:    return -80 + 320.0 / 3
+            case .important: return 80
             }
         }
         /// When this mark leaves the rising deck (seconds from open start).
         var peel: Double {
             switch self {
-            case .note:   return Choreo.rise   // rides the deck to the top
-            case .task:   return 0.250
-            case .remind: return 0.185
-            case .obie:   return 0.120
+            case .note:      return Choreo.rise   // rides the deck to the top
+            case .task:      return 0.250
+            case .remind:    return 0.185
+            case .important: return 0.120
             }
         }
         var sweep: Double { finalAngle - Choreo.riseAngle }
@@ -182,15 +186,15 @@ struct FocusRingFanView: View {
             case .note: return "Note"
             case .task: return "Task"
             case .remind: return "Remind"
-            case .obie: return "Obie"
+            case .important: return "Important"
             }
         }
         var systemImage: String? {
             switch self {
-            case .note:   return "note.text"
-            case .task:   return "checkmark.square"
-            case .remind: return "bell"
-            case .obie:   return nil   // ObieGlyph (brand mark)
+            case .note:      return "note.text"
+            case .task:      return "checkmark.square"
+            case .remind:    return "bell"
+            case .important: return nil   // ImportantGlyph (the "!" mark)
             }
         }
         /// Stable suffix for the XCUITest accessibilityIdentifier ("focus-ring-mark-task" etc.).
@@ -199,18 +203,18 @@ struct FocusRingFanView: View {
             case .note: return "note"
             case .task: return "task"
             case .remind: return "remind"
-            case .obie: return "obie"
+            case .important: return "important"
             }
         }
         /// ON-state fill = the SAME colour the Iris uses for this type, matching the
-        /// Sequence filter toggles (owner 2026-06-29). Obie uses the Iris's Obie-ring
-        /// gold (Glow Night / Ember Daylight); Note/Task/Remind use their quadrant fills.
+        /// Sequence filter toggles (owner 2026-06-29). Important uses the Iris's North-wedge
+        /// Important colour (Stone Night / Shadow Daylight); Note/Task/Remind use their quadrant fills.
         func activeFill(_ scheme: ColorScheme) -> Color {
             switch self {
-            case .note:   return Quadrant.note(scheme)
-            case .task:   return Quadrant.task(scheme)
-            case .remind: return Quadrant.reminder(scheme)
-            case .obie:   return Quadrant.obieRing(scheme)
+            case .note:      return Quadrant.note(scheme)
+            case .task:      return Quadrant.task(scheme)
+            case .remind:    return Quadrant.reminder(scheme)
+            case .important: return Quadrant.important(scheme)
             }
         }
     }
@@ -300,7 +304,7 @@ struct FocusRingFanView: View {
             if p < 0.72 { return a + (b - a) * easeOutCubic(p / 0.72) }
             return b + (c - b) * easeInOutCubic((p - 0.72) / 0.28)
         }
-        let tt = t - MarkKind.obie.peel   // the hub starts turning at the first peel
+        let tt = t - MarkKind.important.peel   // the hub starts turning at the first peel
         guard tt > 0 else { return 0 }
         return turn(min(tt / Choreo.irisTurn, 1), from: 0, over: 96, to: 90)
     }
@@ -527,7 +531,9 @@ struct FocusRingFanView: View {
         var t = take
         t.isNote = isNote
         t.setTask(isTask)
-        t.isObie = isObie
+        // The fan no longer sets Obie — leave the Take's own designation intact. An Obie
+        // implies Important (model invariant), so OR it in for the live Iris preview.
+        t.isImportant = isImportant || t.isObie
         // Either/or (owner 2026-06-24): a location reminder takes precedence and clears the
         // time; otherwise the time "when" applies (when present).
         if let reminderLocation {
@@ -550,7 +556,7 @@ struct FocusRingFanView: View {
     private func isActive(_ kind: MarkKind) -> Bool {
         switch kind {
         case .note: return isNote
-        case .obie: return isObie
+        case .important: return isImportant
         // A "where" reads as an active Remind exactly like a "when" (2026-07-01,
         // place/time parity — previously a place-reminder Take showed an inactive
         // Remind mark, contradicting the card's place subtext).
@@ -595,8 +601,11 @@ struct FocusRingFanView: View {
                             // Off glyph = ckAccent, matching the dock/editor/search off icons.
                             .foregroundStyle(active ? Color.ckBackground : Color.ckAccent)
                     } else {
-                        ObieGlyph(size: 22)   // the Obie brand glyph. 26→22 (owner 2026-07-01): the SOLID brand "O" reads heavier than the old ring+dot did, so it matched the control/lock size better at 22 (== the sibling glyphs' base)
-                            .foregroundStyle(active ? Color.ckBackground : Color.ckTextObie)
+                        // The Important "!" glyph (owner 2026-07-06; replaced the Obie brand
+                        // mark). Off = ckAccent, on = background, exactly like the three SF
+                        // Symbol Marks — no special-casing now that it's a plain type toggle.
+                        ImportantGlyph(size: 22)
+                            .foregroundStyle(active ? Color.ckBackground : Color.ckAccent)
                     }
                 }
                 .zIndex(2)
@@ -631,10 +640,12 @@ struct FocusRingFanView: View {
                 } else {
                     hasReminder = true
                 }
-            case .obie:   isObie.toggle()
+            case .important: isImportant.toggle()
             }
-            // Note is the floor: if nothing else is active, Note re-asserts.
-            if !isTask && !isActive(.remind) && !isObie { isNote = true }
+            // Note is the floor: if no activity TYPE is active, Note re-asserts. Important
+            // is orthogonal (an Important Take is still a Note/Task/Remind), so it never
+            // stands in for the floor the way the Obie designation used to.
+            if !isTask && !isActive(.remind) { isNote = true }
         }
         // Turning the Reminder Mark ON pops the date/time picker so the user sets
         // the time (or place) there and then (owner 2026-06-17). Turning it off
@@ -667,7 +678,7 @@ struct FocusRingFanView: View {
         // close animation's end frame, so there's no flash.
         phase = .dismissed
         if commit {
-            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, reminderAlarm, reminderAllDay, reminderRecurrence, reminderRecurrence == .weekly ? reminderWeekdays : [], reminderLocation, isObie)
+            onCommit(isNote, isTask, hasReminder, hasReminder ? reminderDate : nil, reminderAlarm, reminderAllDay, reminderRecurrence, reminderRecurrence == .weekly ? reminderWeekdays : [], reminderLocation, isImportant)
         } else {
             onDismiss()
         }

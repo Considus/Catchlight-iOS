@@ -62,10 +62,10 @@ struct EditorKeyboardBar: View {
                 .frame(maxWidth: .infinity)
             }
 
-            // 3 — Important: the STANDARD Dailies glyph (the app's Important glyph).
+            // 3 — Important: the app's Important glyph, an exclamation "!".
             // Ember when flagged, else Ember accent.
             slot(enabled: true, label: "Important", action: config.onToggleImportant) {
-                DailiesGlyph(size: 24)
+                ImportantGlyph(size: 24)
                     .foregroundStyle(config.isImportant ? Color.ckEmber : Color.ckAccent)
             }
             .frame(maxWidth: .infinity)
