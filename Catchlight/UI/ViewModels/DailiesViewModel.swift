@@ -428,7 +428,7 @@ final class DailiesViewModel {
                             reminderRecurrence: TimeReminder.Recurrence = .none,
                             reminderWeekdays: Set<Int> = [],
                             reminderLocation: LocationTrigger? = nil,
-                            isObie: Bool) {
+                            isImportant: Bool) {
         var updated = take
         updated.isNote = isNote
         updated.setTask(isTask)
@@ -457,18 +457,12 @@ final class DailiesViewModel {
         }
         updated.normaliseActivityFloor()
 
-        if isObie {
-            // Persist the base edits first, then designate via the store's Obie rule.
-            // `replaceExisting: false` (owner 2026-06-17): if another Obie already
-            // exists, the store throws `obieConflict` → `pendingObieConflict` → the
-            // same confirmation alert the long-press uses, so the Focus-ring path
-            // warns before bumping the current Obie rather than silently replacing it.
-            save(updated)
-            designateObie(updated, replaceExisting: false)
-        } else {
-            if updated.isObie { updated.isObie = false }
-            save(updated)
-        }
+        // The Focus-ring's fourth Mark now toggles Important, not Obie (owner 2026-07-06).
+        // Obie is left exactly as it was — the fan no longer designates or clears it (that
+        // lives on the Iris long-press). An Obie always stays Important (model invariant),
+        // so OR it in rather than letting a fan toggle strip the flag off a pinned Take.
+        updated.isImportant = isImportant || updated.isObie
+        save(updated)
     }
 
     // MARK: - Obie
