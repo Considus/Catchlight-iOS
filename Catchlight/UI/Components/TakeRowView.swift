@@ -307,7 +307,7 @@ struct TakeRowView: View {
             Button {
                 onSetImportant()
             } label: {
-                // The standard Important mark (`DailiesGlyph`), baked for the menu;
+                // The standard Important mark (`ImportantGlyph`, "!"), baked for the menu;
                 // crossed-out when already Important (owner 2026-06-29).
                 if take.isImportant {
                     Label { Text("Remove Important") } icon: { MenuGlyph.removeImportant }

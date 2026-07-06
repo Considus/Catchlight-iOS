@@ -3,7 +3,10 @@
 //  Catchlight (iOS app target) — cosmetic baseline 2026-06-11
 //
 //  Custom meaning-led glyphs from the icon refinement pass (HiFi v1.6 §-wide):
-//    • DailiesGlyph   — two Irises joined by the spine: the timeline itself.
+//    • ImportantGlyph — an exclamation "!" (stem + dot): the app-wide Important mark
+//                       (owner 2026-07-06; replaced the two-Iris glyph, matches the site).
+//    • DailiesGlyph   — two Irises joined by the spine (the timeline motif). Currently
+//                       unused — Important moved to ImportantGlyph — kept for reuse.
 //    • SequenceGlyph  — three smaller beads chained on the spine: a SEQUENCE
 //                       of Takes (sibling concept to Dailies).
 //    • ObieGlyph      — the Obie brand logo (solid italic "O" + catch-dot), the
@@ -102,14 +105,34 @@ struct TaskCheckbox: View {
     }
 }
 
-/// `DailiesGlyph` with a diagonal strike — the "Remove Important" counterpart, drawn
-/// at the same stroke weight as the base glyph so it reads as the standard Important
-/// mark crossed out (mirrors SF Symbol `.slash` variants).
-struct DailiesGlyphSlashed: View {
+/// The Important mark — an exclamation "!" (owner 2026-07-06). Replaces the two-Iris
+/// `DailiesGlyph` as the app-wide Important glyph, matching the redesigned marketing site
+/// where Important is a "!". Stem + dot are FILLED, round-ended shapes, so the mark
+/// colours via `.foregroundStyle` like the other glyphs and reads as a crisp, slightly
+/// emphatic bang beside the SF Symbols in the dock, editor bar and long-press menu.
+struct ImportantGlyph: View {
     var size: CGFloat = 20
     var body: some View {
-        let lw = size * 1.2 / 16
-        DailiesGlyph(size: size)
+        let u = size / 16
+        let w = size * 1.7 / 16                              // stem/dot weight — a touch bolder than the line glyphs
+        VStack(spacing: u * 1.4) {
+            Capsule(style: .continuous)
+                .frame(width: w, height: size * 8.2 / 16)   // stem, top-weighted with round ends
+            Circle()
+                .frame(width: w, height: w)                 // dot
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// `ImportantGlyph` with a diagonal strike — the "Remove Important" counterpart. Same
+/// direction and weight as the app's other `.slash` marks, so it reads as the Important
+/// "!" crossed out.
+struct ImportantGlyphSlashed: View {
+    var size: CGFloat = 20
+    var body: some View {
+        let lw = size * 1.5 / 16
+        ImportantGlyph(size: size)
             .overlay {
                 Path { p in
                     // bottom-left → top-right, matching the SF `.slash` direction
@@ -131,8 +154,8 @@ struct DailiesGlyphSlashed: View {
 /// `@MainActor` (ImageRenderer is main-actor) + cached (the glyphs never change).
 @MainActor
 enum MenuGlyph {
-    static let makeImportant = bake(DailiesGlyph(size: glyphSize))
-    static let removeImportant = bake(DailiesGlyphSlashed(size: glyphSize))
+    static let makeImportant = bake(ImportantGlyph(size: glyphSize))
+    static let removeImportant = bake(ImportantGlyphSlashed(size: glyphSize))
     // The solid brand "O" reads heavier than the line glyphs, so it's rendered a
     // touch smaller *within* the shared `glyphSize` slot (so it still aligns) — the
     // SAME 26→22 (≈0.85×) reduction applied to the focus-ring-fan Obie Mark (owner 2026-07-01).
@@ -198,6 +221,8 @@ extension EnvironmentValues {
 
 #Preview("Glyphs") {
     HStack(spacing: 24) {
+        ImportantGlyph().foregroundStyle(Color.ckEmber)
+        ImportantGlyphSlashed().foregroundStyle(Color.ckEmber)
         DailiesGlyph().foregroundStyle(Color.ckEmber)
         SequenceGlyph().foregroundStyle(Color.ckEmber)
         ObieGlyph().foregroundStyle(Color.ckTextObie)
