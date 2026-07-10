@@ -219,6 +219,35 @@ struct DailiesView: View {
         return base + pinnedObieZoneHeight + max(0, takeSpacing.gap - 12)
     }
 
+    /// Distance from the SCREEN BOTTOM to the spine's bottom terminus.
+    ///
+    /// At rest the wire plugs into the TOP of the Add "+" ring: the ring's top sits
+    /// `dockBottomPadding + minTouchTarget` above the device bottom inset (the resting
+    /// terminus below). In SEARCH with the keyboard up, the "+" is gone — the search
+    /// bar's × cancel ring rides the keyboard at the SAME x (KeyboardSearchBar lays its
+    /// grid so × lands exactly where + sits at rest). Left alone, the wire kept
+    /// subtracting the resting-dock allowance and ended ~80pt ABOVE the raised bar,
+    /// reading as "disconnected" (owner 2026-07-10). So while the search bar is on the
+    /// keyboard we re-anchor the terminus to the TOP OUTER EDGE of that × ring instead.
+    ///
+    /// `keyboardTopY` is the keyboard's top edge in screen coords and INCLUDES the
+    /// docked search bar (its inputAccessoryView) — so it IS the bar's top. The × ring
+    /// sits `searchBarTopPad` below that (SearchBarAccessory: 10 top + 44 circle + 8),
+    /// so the ring's top is `keyboardTopY + searchBarTopPad` from the screen top, i.e.
+    /// `screenHeight - keyboardTopY - searchBarTopPad` up from the bottom. `max(resting…)`
+    /// keeps it from ever terminating BELOW the resting position, and the guard falls
+    /// back to resting the instant the bar isn't on the keyboard (keyboard lowered →
+    /// `keyboardTopY` resets to the screen height).
+    private var spineBottomInset: CGFloat {
+        let resting = deviceBottomInset
+            + CatchlightLayout.dockBottomPadding
+            + CatchlightLayout.minTouchTarget
+        guard ui.dockMode == .searching, ui.searchKeyboardUp,
+              keyboardTopY < UIScreen.main.bounds.height else { return resting }
+        let searchBarTopPad: CGFloat = 10   // SearchBarAccessory.topPad (× ring's top)
+        return max(resting, UIScreen.main.bounds.height - keyboardTopY - searchBarTopPad)
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.ckBackground.ignoresSafeArea()
@@ -251,13 +280,15 @@ struct DailiesView: View {
                 .padding(.top, deviceTopInset)
                 // Terminate the spine at the TOP EDGE of the Add button's ring rather
                 // than running full-bleed under the dock (owner 2026-06-16: it was
-                // visible through the +'s hollow ring). The Add ring's top sits
-                // `dockBottomPadding + minTouchTarget` above the device bottom inset
-                // (BottomDockView lays the 44pt button `dockBottomPadding` above the
-                // home indicator), so the wire plugs into the top of the +.
-                .padding(.bottom, deviceBottomInset
-                         + CatchlightLayout.dockBottomPadding
-                         + CatchlightLayout.minTouchTarget)
+                // visible through the +'s hollow ring). At rest the ring's top sits
+                // `dockBottomPadding + minTouchTarget` above the device bottom inset so
+                // the wire plugs into the top of the +; in search-with-keyboard it
+                // re-anchors to the raised × ring instead (see `spineBottomInset`).
+                .padding(.bottom, spineBottomInset)
+                // Ride the terminus up/down WITH the keyboard, at the same gentle pace
+                // the new-Take card uses, so the wire glides onto the search bar rather
+                // than snapping (owner 2026-07-10).
+                .animation(.easeOut(duration: 0.56), value: keyboardTopY)
                 .offset(x: spineX - CatchlightLayout.spineWidth / 2)
                 .accessibilityHidden(true)
 
@@ -277,9 +308,9 @@ struct DailiesView: View {
                 .frame(maxHeight: .infinity)
                 // Same top as the solid spine — up into the heading fade (owner 2026-07-04).
                 .padding(.top, deviceTopInset)
-                .padding(.bottom, deviceBottomInset
-                         + CatchlightLayout.dockBottomPadding
-                         + CatchlightLayout.minTouchTarget)
+                // Same bottom terminus + keyboard-follow as the solid spine.
+                .padding(.bottom, spineBottomInset)
+                .animation(.easeOut(duration: 0.56), value: keyboardTopY)
                 .offset(x: spineX - CatchlightLayout.spineWidth / 2)
                 .accessibilityHidden(true)
 
