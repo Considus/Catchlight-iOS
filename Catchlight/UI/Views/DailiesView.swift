@@ -167,6 +167,10 @@ struct DailiesView: View {
     /// keyboard frame reports the inputAccessoryView too). `.greatestFiniteMagnitude`
     /// when the keyboard is down, so the caret pin below never fires at rest.
     @State private var keyboardTopY: CGFloat = .greatestFiniteMagnitude
+    /// The spine container's actual bottom edge in SCREEN coords (captured live via a
+    /// GeometryReader). Used to place the search-mode wire terminus on the × ring without
+    /// assuming how SwiftUI sizes the container under the keyboard (2026-07-11).
+    @State private var spineContainerBottomY: CGFloat = 0
     /// The timeline's underlying `UIScrollView`, captured by `ScrollViewFinder`, so the
     /// caret pin can drive `contentOffset` DIRECTLY (owner 2026-06-19 "pin the caret"):
     /// SwiftUI's `scrollTo(_:anchor:)` can only align a view's edge to the viewport, not
@@ -243,14 +247,35 @@ struct DailiesView: View {
             + CatchlightLayout.dockBottomPadding
             + CatchlightLayout.minTouchTarget
         guard ui.dockMode == .searching, ui.searchKeyboardUp,
-              keyboardTopY < UIScreen.main.bounds.height else { return resting }
-        let searchBarTopPad: CGFloat = 10   // SearchBarAccessory.topPad (× ring's top)
-        return max(resting, UIScreen.main.bounds.height - keyboardTopY - searchBarTopPad)
+              keyboardTopY < UIScreen.main.bounds.height,
+              spineContainerBottomY > 0 else { return resting }
+        // Place the wire's bottom on the × cancel ring's top edge. `keyboardTopY` (incl. the
+        // docked search bar) IS the bar's top; the ring sits `ringTopOffset` below it. The
+        // inset is measured from the spine container's ACTUAL bottom edge
+        // (`spineContainerBottomY`, captured live), so it self-corrects to however SwiftUI
+        // sizes the container under the keyboard — no assumptions about screen/keyboard math
+        // (the source of the earlier "no change" miss). `ringTopOffset` is the only tunable;
+        // calibrated in-sim 2026-07-11, owner may nudge on device.
+        let ringTopOffset: CGFloat = 17   // lands the wire on the × ring's top outer edge
+        return spineContainerBottomY - (keyboardTopY + ringTopOffset)
     }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.ckBackground.ignoresSafeArea()
+
+            // Full-container probe (NO padding) → the spine container's true bottom edge in
+            // screen coords, so the search-mode wire terminus can anchor to it without any
+            // screen/keyboard assumptions. Kept separate from the padded spine so its
+            // padding can't feed back into the measurement (2026-07-11).
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(GeometryReader { g in
+                    Color.clear.preference(key: SpineContainerBottomKey.self,
+                                           value: g.frame(in: .global).maxY)
+                })
+                .onPreferenceChange(SpineContainerBottomKey.self) { spineContainerBottomY = $0 }
+                .allowsHitTesting(false)
 
             // The spine: a hairline behind the rows, at the circle centre. It
             // STARTS at the first Iris's top edge (HiFi §1 "the spine terminates at
@@ -1761,6 +1786,14 @@ private struct FirstRowTopKey: PreferenceKey {
     static let defaultValue: CGFloat = .infinity
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = min(value, nextValue())
+    }
+}
+
+/// Publishes the spine container's bottom edge (screen coords) for the search-terminus math.
+private struct SpineContainerBottomKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
