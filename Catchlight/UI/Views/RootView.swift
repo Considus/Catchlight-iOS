@@ -344,7 +344,7 @@ struct RootView: View {
                             // selection to that editor's draft so it rides the inline
                             // save — routing to the store here lets the stale draft
                             // revert it on save (e.g. an Important change).
-                            ui.inlineFanCommand = UIState.EditorFanCommand(
+                            let command = UIState.EditorFanCommand(
                                 token: UUID(),
                                 isNote: isNote, isTask: isTask,
                                 hasReminder: hasReminder, reminderDate: reminderDate,
@@ -354,6 +354,12 @@ struct RootView: View {
                                 reminderLocation: reminderLocation,
                                 isImportant: isImportant
                             )
+                            // Remove the fan overlay INSTANTLY first, THEN trigger the
+                            // command's card-grow/keyboard/caret relayout — so no fan
+                            // removal transition runs through that relayout (which
+                            // stranded the hub Iris as an orphan glyph, owner 2026-07-11).
+                            ui.closeFocusRingFan(animated: false)
+                            ui.inlineFanCommand = command
                         } else {
                             app.dailiesVM.applyActivityTypes(
                                 to: take,
@@ -365,8 +371,8 @@ struct RootView: View {
                                 reminderLocation: reminderLocation,
                                 isImportant: isImportant
                             )
+                            ui.closeFocusRingFan()
                         }
-                        ui.closeFocusRingFan()
                     },
                     onDismiss: { ui.closeFocusRingFan() }
                 )
