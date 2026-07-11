@@ -386,6 +386,11 @@ public final class SyncEngine {
             }
             switch ConflictResolver.decide(local: local, remote: remoteTake, lastSync: lastSync) {
             case .takeRemote(let t):
+                // TEMP DIAGNOSTIC (Bug: deleted Take reappears, 2026-07-10). A sync
+                // upsert with `localWas=absent` is a re-create — the sync-resurrection
+                // path. Pairs with the store's "tombstone- upsert". REMOVE after repro.
+                DiagnosticsLog.shared.record(.lifecycle,
+                    "DBG syncapply \(t.id.uuidString.prefix(8)) localWas=\(local == nil ? "absent" : "present")")
                 try store.upsert(t)
                 report.applied.append(t.id)
             case .conflict(let l, let r):
