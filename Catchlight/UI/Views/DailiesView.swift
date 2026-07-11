@@ -256,7 +256,10 @@ struct DailiesView: View {
         // sizes the container under the keyboard — no assumptions about screen/keyboard math
         // (the source of the earlier "no change" miss). `ringTopOffset` is the only tunable;
         // calibrated in-sim 2026-07-11, owner may nudge on device.
-        let ringTopOffset: CGFloat = 17   // lands the wire on the × ring's top outer edge
+        // = SearchBarAccessory.topPad: on the real keyboard `keyboardTopY` is the accessory's
+        // true top, so the × ring's top outer edge sits exactly `topPad` below it (device-
+        // calibrated 2026-07-11; the sim's no-keyboard quirk wanted a larger value).
+        let ringTopOffset: CGFloat = 10
         return spineContainerBottomY - (keyboardTopY + ringTopOffset)
     }
 
