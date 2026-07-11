@@ -142,6 +142,12 @@ struct RootView: View {
             case .background:
                 // Start the time-away clock for the grace re-lock (option 1).
                 app.noteEnteredBackground()
+                // Return to Dailies on the next foreground (owner 2026-07-11): drop the
+                // Settings sheet while we're OFF-SCREEN, so resuming never lands back in
+                // Settings. Done on `.background` (a real backgrounding) rather than
+                // `.inactive` so a transient interruption — Control Centre, a Face ID
+                // sheet, the app switcher peek — never closes Settings under the user.
+                ui.isSettingsPresented = false
             case .active:
                 // Warm resume only — the splash `.task` handles cold launch. Re-lock
                 // if we were away past the grace window (or the device-lock notice
