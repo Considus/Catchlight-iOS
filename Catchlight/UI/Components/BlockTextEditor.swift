@@ -314,6 +314,14 @@ struct BlockTextEditor: UIViewRepresentable {
             if parent.focusedBlockID != parent.blockID {
                 parent.focusedBlockID = parent.blockID
             }
+            // Report the caret the moment focus lands on this block, so the caret pin
+            // follows a block→block move (owner 2026-07-11). Adding a checklist item /
+            // pressing Return moves focus to a NEW block whose selection is set
+            // programmatically — which fires neither `textViewDidChange` (check-row Return
+            // returns false, inserting no text) nor `textViewDidChangeSelection` — and the
+            // keyboard is already up, so `keyboardDidShow` never re-fires. Without this the
+            // pin stayed on the previous block and the caret marched below the keyboard.
+            reportCaret(tv)
         }
 
         /// Caret rect in WINDOW coordinates → host (see `onCaretMoved`). Guards the
