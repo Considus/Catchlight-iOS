@@ -13,6 +13,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 @MainActor
 struct AboutView: View {
@@ -76,9 +77,21 @@ struct AboutView: View {
                 .font(CatchlightFont.displayFixed(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
+            // Not a link — a plain label that long-press copies as a short,
+            // paste-ready support block (app version/build + iOS + device model,
+            // no content or personal data), so it can be dropped into a support
+            // email without retyping. Long-press surfaces the standard Copy menu.
             Text(Self.versionString)
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)
+                .contextMenu {
+                    Button {
+                        UIPasteboard.general.string = Self.supportInfoString
+                    } label: {
+                        Label("Copy version and device info", systemImage: "doc.on.doc")
+                    }
+                }
+                .accessibilityHint("Long press to copy version and device info.")
         }
         .frame(maxWidth: .infinity, alignment: .center)
     }
@@ -171,10 +184,39 @@ struct AboutView: View {
             .padding(.top, 8)
     }
 
-    static var versionString: String {
+    /// Marketing version + build, e.g. `1.0.0 (1)` (build omitted if absent).
+    private static var versionAndBuild: String {
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = info?["CFBundleVersion"] as? String ?? ""
-        return build.isEmpty ? "Version \(version)" : "Version \(version) (\(build))"
+        return build.isEmpty ? version : "\(version) (\(build))"
+    }
+
+    /// The label shown under the tagline, e.g. `Version 1.0.0 (1)`.
+    static var versionString: String {
+        "Version \(versionAndBuild)"
+    }
+
+    /// A short, paste-ready support block copied from the version line: app name +
+    /// version/build, iOS version and the device model identifier. Content-free and
+    /// personal-data-free; mirrors the platform/app/os the web report form carries.
+    static var supportInfoString: String {
+        "Catchlight \(versionAndBuild)\niOS \(UIDevice.current.systemVersion) · \(deviceModelIdentifier)"
+    }
+
+    /// Raw hardware identifier, e.g. `iPhone17,1`. On the simulator the real model
+    /// is in an env var (there `hw.machine` is the host architecture instead).
+    private static var deviceModelIdentifier: String {
+        if let sim = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] {
+            return sim
+        }
+        var info = utsname()
+        uname(&info)
+        let id = Mirror(reflecting: info.machine).children.reduce(into: "") { acc, element in
+            if let value = element.value as? Int8, value != 0 {
+                acc.append(Character(UnicodeScalar(UInt8(value))))
+            }
+        }
+        return id.isEmpty ? "iPhone" : id
     }
 }
