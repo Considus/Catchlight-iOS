@@ -116,7 +116,7 @@ struct AboutView: View {
     /// and pointed at an unconfirmed address — 2026-07-01).
     private var links: some View {
         VStack(spacing: 0) {
-            linkRow("Privacy Policy", url: "https://catchlight.app/privacy")
+            linkRow("Privacy Policy", url: "https://catchlight.app/privacy/")
             linkDivider
             linkRow("Terms of Service", url: "https://catchlight.app/terms/")
             linkDivider
