@@ -118,7 +118,7 @@ struct AboutView: View {
         VStack(spacing: 0) {
             linkRow("Privacy Policy", url: "https://catchlight.app/privacy")
             linkDivider
-            linkRow("Terms of Service", url: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")
+            linkRow("Terms of Service", url: "https://catchlight.app/terms/")
             linkDivider
             linkRow("Support", url: "https://catchlight.app/support/?platform=iOS")
             linkDivider

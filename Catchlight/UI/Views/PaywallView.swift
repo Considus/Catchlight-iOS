@@ -286,7 +286,7 @@ struct PaywallView: View {
                     Link("Privacy Policy", destination: privacy)
                 }
                 Spacer()
-                if let terms = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                if let terms = URL(string: "https://catchlight.app/terms/") {
                     Link("Terms of Service", destination: terms)
                 }
             }
