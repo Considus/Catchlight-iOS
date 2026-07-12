@@ -282,7 +282,7 @@ struct PaywallView: View {
             // (2026-07-01): constants today, but a typo in a future edit becomes
             // a missing link rather than a crash.
             HStack {
-                if let privacy = URL(string: "https://catchlight.app/privacy") {
+                if let privacy = URL(string: "https://catchlight.app/privacy/") {
                     Link("Privacy Policy", destination: privacy)
                 }
                 Spacer()
