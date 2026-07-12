@@ -53,6 +53,10 @@ struct SettingsView: View {
     @State private var showSecondDeviceEntry = false
     /// Presents the Files document picker for the offline "Import from a file" path (D-104).
     @State private var showFileImporter = false
+    /// Confirm gate for the folder "Import notes" path: re-scanning the Import folder
+    /// re-imports everything in it, including files imported on a previous run (there is
+    /// no per-file "already imported" tracking), so warn before proceeding.
+    @State private var showImportConfirm = false
 
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
@@ -147,6 +151,14 @@ struct SettingsView: View {
             Button("OK", role: .cancel) { importResultMessage = nil }
         } message: {
             Text(importResultMessage ?? "")
+        }
+        // Folder "Import notes" re-scans the whole Import folder, so re-imports anything
+        // still in it that was imported before. Warn, then import only on Proceed.
+        .alert("Import notes", isPresented: $showImportConfirm) {
+            Button("Proceed") { importNotes() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Any items in the folder, that have previously been imported, will be imported again.")
         }
         #if DEBUG
         .alert("Reset Catchlight?", isPresented: $showResetConfirm) {
@@ -671,7 +683,13 @@ struct SettingsView: View {
                 SettingsRow(icon: "square.and.arrow.down",
                             label: "Import notes",
                             chevron: false,
-                            action: { importNotes() })
+                            action: {
+                                // Import creates Takes, so gate on entitlement first (shows the
+                                // paywall if lapsed); then warn that re-scanning the folder
+                                // re-imports everything before actually importing.
+                                guard app.ensureEntitled() else { return }
+                                showImportConfirm = true
+                            })
                     .accessibilityIdentifier("settings-import-notes")
                     .accessibilityHint("Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes.")
             }
