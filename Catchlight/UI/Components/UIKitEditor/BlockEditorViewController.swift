@@ -34,8 +34,11 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private var desiredFocus: UUID?
     private var focusInFlight = false
     /// Breathing room kept below the caret — how far above the keyboard the caret
-    /// rests before the content scrolls under it. Tunable (old editor used 72).
-    private let caretBottomGap: CGFloat = 28
+    /// rests before the content scrolls under it. 72 matches the old editor's tuned
+    /// `caretPinGap` and leaves room for the dock toolbar (owner, device 2026-07-13:
+    /// measured 69pt as the target via the on-device readout). In the real editor the
+    /// dock is part of the reported keyboard frame, so this gap sits above the dock.
+    private let caretBottomGap: CGFloat = 72
 
     #if DEBUG
     /// Set by the test harness to surface the scroll maths on device (this is the
