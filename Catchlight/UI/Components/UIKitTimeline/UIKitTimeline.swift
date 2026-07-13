@@ -32,25 +32,44 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     }
 }
 
-/// One read-only timeline row: the card with the Iris nested in its top-left corner,
-/// straddling the top edge (centre on the spine). `cardGap` above each card = the density
-/// setting's gap AND leaves room for the Iris's upper half. The occluder + dotted wire
-/// come next; the wire itself is the screen-fixed line drawn behind the collection.
+/// One read-only timeline row — the same layering as `TakeRowView` (card < occluder <
+/// Iris < wire segment < dots), so the wire threads the Iris identically. Offsets are
+/// `cardSpineInset`-relative (the ZStack origin is the card's top-left, after the leading
+/// pad). The gutter wire between rows is the screen-fixed line drawn behind the collection.
 struct TimelineReadCell: View {
     let take: Take
     let spineX: CGFloat
     let cardGap: CGFloat
+
+    private let inset = CatchlightLayout.cardSpineInset
+    private let d = CatchlightLayout.circleDiameter
+    private let w = CatchlightLayout.spineWidth
+    private var occW: CGFloat { CatchlightLayout.spineWidth + CatchlightLayout.spineTrackOffset * 2 }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
-            TakeCardSurface(take: take, linksInteractive: false)
-                .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
-                .padding(.trailing, 20)
-            TakeCircleView(take: take)
-                .frame(width: CatchlightLayout.circleDiameter, height: CatchlightLayout.circleDiameter)
-                // Centre on the spine, straddling the card's top edge.
-                .offset(x: spineX - CatchlightLayout.circleDiameter / 2,
-                        y: -CatchlightLayout.circleDiameter / 2)
+            TakeCardSurface(take: take, linksInteractive: false)                       // card
+            Rectangle().fill(Color.ckBackground)                                       // occluder
+                .frame(width: occW, height: d / 2)
+                .offset(x: inset - occW / 2, y: -d / 2)
+                .allowsHitTesting(false)
+            TakeCircleView(take: take)                                                 // Iris
+                .frame(width: d, height: d)
+                .offset(x: inset - d / 2, y: -d / 2)
+            SpineLine().stroke(Color.ckSpineWire, lineWidth: w)                        // wire over Iris top
+                .frame(width: w, height: d / 2)
+                .offset(x: inset - w / 2, y: -d / 2)
+                .allowsHitTesting(false)
+            GeometryReader { geo in                                                    // dots over Iris top
+                SpineLine().stroke(SpineDots.color,
+                                   style: SpineDots.style(phase: geo.frame(in: .global).minY))
+            }
+            .frame(width: w, height: d / 2)
+            .offset(x: inset - w / 2, y: -d / 2)
+            .allowsHitTesting(false)
         }
+        .padding(.leading, spineX - inset)
+        .padding(.trailing, 20)
         .padding(.top, cardGap)
     }
 }

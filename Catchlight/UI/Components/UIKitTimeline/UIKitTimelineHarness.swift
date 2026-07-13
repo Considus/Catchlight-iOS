@@ -43,13 +43,22 @@ struct UIKitTimelineHarness: View {
             .padding()
             Divider()
             ZStack(alignment: .topLeading) {
-                // The wire — a screen-fixed vertical line at the spine column; the Iris
-                // rings (in the scrolling cells) sit on it. Simple solid line for now;
-                // dotted + occluder + the tight-S redesign come later.
-                Color.ckSpineWire
+                // The gutter wire — screen-fixed at the spine column, behind the cells,
+                // carrying the wire through the gaps between cards. Solid + dotted (three
+                // tracks via SpineLine); the dot phase anchors to screen-Y so it aligns
+                // with the per-cell over-Iris dots. The tight-S redesign lands last.
+                SpineLine().stroke(Color.ckSpineWire, lineWidth: CatchlightLayout.spineWidth)
                     .frame(width: CatchlightLayout.spineWidth)
                     .frame(maxHeight: .infinity)
                     .offset(x: spineX - CatchlightLayout.spineWidth / 2)
+                GeometryReader { geo in
+                    SpineLine().stroke(SpineDots.color,
+                                       style: SpineDots.style(phase: geo.frame(in: .global).minY))
+                }
+                .frame(width: CatchlightLayout.spineWidth)
+                .frame(maxHeight: .infinity)
+                .offset(x: spineX - CatchlightLayout.spineWidth / 2)
+
                 UIKitTimeline(takes: orderedTakes, spineX: spineX, cardGap: spacing.gap)
             }
         }
