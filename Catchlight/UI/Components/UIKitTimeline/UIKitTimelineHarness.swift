@@ -3,15 +3,17 @@ import SwiftUI
 import CatchlightCore
 
 /// DEBUG-only test bed for the Pillar 2 UIKit timeline (`feature/uikit-timeline`).
-/// Presents the recycling `UICollectionView` with a spread of sample Takes so scrolling,
-/// self-sizing heights, and cell recycling can be validated on device WITHOUT touching
-/// the live Dailies timeline. Reached from Settings › Debug. Never ships.
+/// Presents the recycling `UICollectionView` with the owner's REAL Takes (read from
+/// `app.dailiesVM`) so scrolling, self-sizing, recycling, density, order, the Iris, and
+/// the wire can be validated on device WITHOUT touching the live Dailies timeline.
+/// Reached from Settings › Debug. Never ships.
 ///
-/// P2-M1: cards only (no Iris/wire/Obie/headers/gestures yet).
+/// P2-M2 (step 1): real data + Iris + a simple screen-fixed wire. The occluder + dotted
+/// wire, month section headers, and the pinned Obie come next.
 struct UIKitTimelineHarness: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppModel.self) private var app
 
-    // Follow the live View (density) + Order settings, like the real timeline.
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey)
     private var spacingRaw = SettingsViewModel.TakeSpacing.default.rawValue
     @AppStorage(SettingsViewModel.TakeSort.defaultsKey)
@@ -19,36 +21,37 @@ struct UIKitTimelineHarness: View {
     private var spacing: SettingsViewModel.TakeSpacing { .init(rawValue: spacingRaw) ?? .default }
     private var sort: SettingsViewModel.TakeSort { .init(rawValue: sortRaw) ?? .default }
 
-    // Sample Takes in chronological (oldest-first) order — index 0 = oldest.
-    private let takes: [Take] = (0..<40).map { i in
-        switch i % 4 {
-        case 0:
-            return Take(blocks: [.textLine("Sample note \(i) — a plain thought to fill the row.")])
-        case 1:
-            return Take(blocks: [.textLine("Task list \(i)"),
-                                 .checkItem("first item"),
-                                 .checkItem("second item", isComplete: true)])
-        case 2:
-            return Take(blocks: [.checkItem("Standalone task \(i)")])
-        default:
-            return Take(blocks: [.textLine("A longer note number \(i) that wraps across a couple of lines so we can watch variable cell heights self-size and recycle correctly as the list scrolls.")])
-        }
+    /// The real Takes (Obie already excluded by the VM), in the chosen Order. `vm.takes`
+    /// is newest-first, so oldest-first reverses — matching `DailiesView.orderedTakes`.
+    private var orderedTakes: [Take] {
+        let takes = app.dailiesVM.takes
+        return sort == .oldestFirst ? Array(takes.reversed()) : takes
+    }
+
+    private var spineX: CGFloat {
+        CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
     }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("UIKit Timeline — P2-M1")
+                Text("UIKit Timeline — P2-M2")
                     .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .headline))
                 Spacer()
                 Button("Done") { dismiss() }
             }
             .padding()
             Divider()
-            UIKitTimeline(
-                takes: sort == .newestFirst ? Array(takes.reversed()) : takes,
-                cardGap: spacing.gap
-            )
+            ZStack(alignment: .topLeading) {
+                // The wire — a screen-fixed vertical line at the spine column; the Iris
+                // rings (in the scrolling cells) sit on it. Simple solid line for now;
+                // dotted + occluder + the tight-S redesign come later.
+                Color.ckSpineWire
+                    .frame(width: CatchlightLayout.spineWidth)
+                    .frame(maxHeight: .infinity)
+                    .offset(x: spineX - CatchlightLayout.spineWidth / 2)
+                UIKitTimeline(takes: orderedTakes, spineX: spineX, cardGap: spacing.gap)
+            }
         }
         .background(Color.ckBackground.ignoresSafeArea())
     }

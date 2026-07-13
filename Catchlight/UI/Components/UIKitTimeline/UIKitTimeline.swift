@@ -32,18 +32,26 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     }
 }
 
-/// One read-only timeline row (M1: the card only, at the spine-relative leading inset).
-/// The Iris + occluder land in M2; the wire becomes a layout decoration. `cardGap/2` on
-/// each edge makes the card-to-card distance equal the density setting's gap.
+/// One read-only timeline row: the card with the Iris nested in its top-left corner,
+/// straddling the top edge (centre on the spine). `cardGap` above each card = the density
+/// setting's gap AND leaves room for the Iris's upper half. The occluder + dotted wire
+/// come next; the wire itself is the screen-fixed line drawn behind the collection.
 struct TimelineReadCell: View {
     let take: Take
     let spineX: CGFloat
     let cardGap: CGFloat
     var body: some View {
-        TakeCardSurface(take: take, linksInteractive: false)
-            .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
-            .padding(.trailing, 20)
-            .padding(.vertical, cardGap / 2)
+        ZStack(alignment: .topLeading) {
+            TakeCardSurface(take: take, linksInteractive: false)
+                .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
+                .padding(.trailing, 20)
+            TakeCircleView(take: take)
+                .frame(width: CatchlightLayout.circleDiameter, height: CatchlightLayout.circleDiameter)
+                // Centre on the spine, straddling the card's top edge.
+                .offset(x: spineX - CatchlightLayout.circleDiameter / 2,
+                        y: -CatchlightLayout.circleDiameter / 2)
+        }
+        .padding(.top, cardGap)
     }
 }
 
