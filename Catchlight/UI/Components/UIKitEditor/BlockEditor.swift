@@ -67,5 +67,38 @@ struct BlockEditor: UIViewControllerRepresentable {
         func blockEditor(_ vc: BlockEditorViewController, didFocusBlock id: UUID?) {
             if parent.focusedBlockID != id { parent.focusedBlockID = id }
         }
+
+        // Return in a check row — mirrors the current editor's `handleReturn`.
+        func blockEditorReturnInCheckRow(_ vc: BlockEditorViewController, blockID id: UUID) {
+            let isEmpty = (parent.draft.blocks.first { $0.id == id }?.text ?? "").isEmpty
+            if isEmpty {
+                parent.draft.convertCheckToText(blockID: id)   // empty item → exit to prose
+                parent.focusedBlockID = id
+            } else {
+                parent.focusedBlockID = parent.draft.insertCheckItem(after: id)
+            }
+        }
+
+        // Backspace on an empty row — mirrors the current editor's `handleBackspaceEmpty`.
+        func blockEditorBackspaceOnEmpty(_ vc: BlockEditorViewController, blockID id: UUID) {
+            let isCheck = parent.draft.blocks.first { $0.id == id }?.isCheck ?? false
+            if let previous = parent.draft.blockID(before: id) {
+                parent.draft.removeBlock(blockID: id)
+                if parent.draft.blocks.isEmpty {
+                    let t = TextBlock(text: "")
+                    parent.draft.blocks = [.text(t)]
+                    parent.focusedBlockID = t.id
+                } else {
+                    parent.focusedBlockID = previous
+                }
+            } else if isCheck {
+                parent.draft.convertCheckToText(blockID: id)   // first item, no prior block
+                parent.focusedBlockID = id
+            }
+        }
+
+        func blockEditorToggleCheck(_ vc: BlockEditorViewController, blockID id: UUID) {
+            parent.draft.toggleItemComplete(blockID: id)
+        }
     }
 }

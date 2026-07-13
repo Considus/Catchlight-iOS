@@ -11,14 +11,17 @@ import CatchlightCore
 struct BlockEditorHarness: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft = Take(blocks: [
-        .textLine("M1 test — press Return to add lines, or type a long paragraph, and watch the caret hold above the keyboard as the Take grows.")
+        .textLine("M2 test — a note line, then checklist items below."),
+        .checkItem("Tap the box to toggle done"),
+        .checkItem("Return adds an item; empty Return exits to text"),
+        .checkItem("Backspace on an empty item merges up", isComplete: true)
     ])
     @State private var focused: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("UIKit Editor — M1")
+                Text("UIKit Editor — M2")
                     .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .headline))
                 Spacer()
                 Button("Done") { dismiss() }

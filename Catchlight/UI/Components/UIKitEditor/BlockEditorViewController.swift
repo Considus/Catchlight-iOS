@@ -10,6 +10,12 @@ protocol BlockEditorViewControllerDelegate: AnyObject {
     func blockEditor(_ vc: BlockEditorViewController, didChangeText text: String, forBlock id: UUID)
     /// Focus landed on a block (or `nil` = keyboard released).
     func blockEditor(_ vc: BlockEditorViewController, didFocusBlock id: UUID?)
+    /// Return pressed in a CHECK row — a list command (continue / exit), not a newline.
+    func blockEditorReturnInCheckRow(_ vc: BlockEditorViewController, blockID id: UUID)
+    /// Backspace pressed on an EMPTY row — merge with the previous block / exit checklist.
+    func blockEditorBackspaceOnEmpty(_ vc: BlockEditorViewController, blockID id: UUID)
+    /// The checkbox was tapped.
+    func blockEditorToggleCheck(_ vc: BlockEditorViewController, blockID id: UUID)
 }
 
 /// Self-scrolling editor: a `UIScrollView` + vertical `UIStackView` of block
@@ -27,10 +33,14 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private let scrollView = UIScrollView()
     private let stack = UIStackView()
 
-    /// Current block order, so `apply` can tell a structural change (rebuild)
-    /// from a text-only change (sync in place).
-    private var blockOrder: [UUID] = []
-    private var textViews: [UUID: UITextView] = [:]
+    /// Structure signature (block id + kind) so `apply` rebuilds on a structural
+    /// change but only syncs text otherwise. `isComplete` is deliberately NOT in the
+    /// signature — toggling a checkbox updates visuals in place and never rebuilds, so
+    /// a tap can't drop the keyboard from the row being edited.
+    private var blockSig: [String] = []
+    private var textViews: [UUID: BackspaceTextView] = [:]
+    private var checkButtons: [UUID: UIButton] = [:]
+    private var checkRowIDs: Set<UUID> = []
     private var desiredFocus: UUID?
     private var focusInFlight = false
     /// Breathing room kept below the caret — how far above the keyboard the caret
@@ -114,10 +124,10 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
 
     /// Diff the block list into the stack (reuse text views by id) and apply focus.
     func apply(blocks: [TakeBlock], focusedBlockID: UUID?) {
-        let ids = blocks.map(\.id)
-        if ids != blockOrder {
+        let sig = blocks.map { "\($0.id.uuidString):\($0.isCheck)" }
+        if sig != blockSig {
             rebuild(blocks: blocks)
-            blockOrder = ids
+            blockSig = sig
         } else {
             // Same structure — sync text into any field NOT currently being typed
             // in (typing the active field must never be stomped by the echo back).
@@ -126,6 +136,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
                 if !tv.isFirstResponder, tv.text != block.text { tv.text = block.text }
             }
         }
+        updateCheckVisuals(blocks)
         desiredFocus = focusedBlockID
         applyFocus()
     }
@@ -136,31 +147,90 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             v.removeFromSuperview()
         }
         textViews.removeAll()
+        checkButtons.removeAll()
+        checkRowIDs.removeAll()
         for block in blocks {
-            // M1: every block renders as a text row. Check-row chrome (checkbox +
-            // drag handle) and list semantics arrive in M2; showing the text keeps
-            // a mixed Take intact meanwhile.
-            let tv = makeTextView(id: block.id, text: block.text)
+            let tv = makeTextView(id: block.id, text: block.text, isComplete: isComplete(block))
             textViews[block.id] = tv
-            stack.addArrangedSubview(tv)
+            switch block {
+            case .text:
+                stack.addArrangedSubview(tv)
+            case .check:
+                checkRowIDs.insert(block.id)
+                stack.addArrangedSubview(makeCheckRow(id: block.id, textView: tv))
+            }
         }
     }
 
-    /// Matches the current `BlockTextEditor` styling exactly (D-042 DM Sans).
-    private func makeTextView(id: UUID, text: String) -> UITextView {
-        let tv = UITextView()
+    private func isComplete(_ block: TakeBlock) -> Bool {
+        if case .check(let item) = block { return item.isComplete }
+        return false
+    }
+
+    /// Matches the current `BlockTextEditor` styling exactly (D-042 DM Sans). A
+    /// `BackspaceTextView` so an empty-backspace merges with the block above.
+    private func makeTextView(id: UUID, text: String, isComplete: Bool) -> BackspaceTextView {
+        let tv = BackspaceTextView()
         tv.isScrollEnabled = false
         tv.backgroundColor = .clear
         tv.textContainerInset = UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
         tv.textContainer.lineFragmentPadding = 0
         tv.font = CatchlightFont.uiBody(size: 14)
-        tv.textColor = UIColor(Color.ckTextPrimary)
+        tv.textColor = UIColor(isComplete ? Color.ckTextComplete : Color.ckTextPrimary)
         tv.tintColor = UIColor(Color.ckAccent)
         tv.delegate = self
         tv.text = text
         tv.setContentCompressionResistancePriority(.required, for: .vertical)
         tv.setContentHuggingPriority(.required, for: .vertical)
+        tv.onBackspaceEmpty = { [weak self] in
+            guard let self else { return }
+            self.delegate?.blockEditorBackspaceOnEmpty(self, blockID: id)
+        }
         return tv
+    }
+
+    /// A check row: checkbox (44pt touch target) + the item's text view. Matches
+    /// the current editor's centre-aligned layout. Drag-to-reorder arrives in M4.
+    private func makeCheckRow(id: UUID, textView: UITextView) -> UIView {
+        let button = UIButton(type: .system)
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        button.accessibilityIdentifier = "uikit-check-box"
+        button.addAction(UIAction { [weak self] _ in
+            guard let self else { return }
+            self.delegate?.blockEditorToggleCheck(self, blockID: id)
+        }, for: .touchUpInside)
+        checkButtons[id] = button
+
+        let row = UIStackView(arrangedSubviews: [button, textView])
+        row.axis = .horizontal
+        row.alignment = .center
+        row.spacing = 8
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 44),
+            button.heightAnchor.constraint(equalToConstant: 44),
+        ])
+        return row
+    }
+
+    private func checkboxImage(isComplete: Bool) -> UIImage? {
+        let cfg = UIImage.SymbolConfiguration(pointSize: 15, weight: .regular)
+        return UIImage(systemName: isComplete ? "checkmark.circle.fill" : "square",
+                       withConfiguration: cfg)
+    }
+
+    /// Update checkbox glyphs + completed-item dimming IN PLACE (no rebuild), so a
+    /// toggle never tears down the row being edited and drops the keyboard.
+    private func updateCheckVisuals(_ blocks: [TakeBlock]) {
+        for block in blocks where block.isCheck {
+            let done = isComplete(block)
+            if let b = checkButtons[block.id] {
+                b.setImage(checkboxImage(isComplete: done), for: .normal)
+                b.tintColor = UIColor(done ? Color.ckAccent : Color.ckTextSecondary)
+            }
+            if let tv = textViews[block.id], !tv.isFirstResponder {
+                tv.textColor = UIColor(done ? Color.ckTextComplete : Color.ckTextPrimary)
+            }
+        }
     }
 
     private func blockID(for tv: UITextView) -> UUID? {
@@ -260,5 +330,16 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
 
     func textViewDidChangeSelection(_ tv: UITextView) {
         scrollActiveCaretToVisible(animated: false)
+    }
+
+    /// CHECK rows: a Return is a list command (continue / exit), never a newline.
+    /// Text rows fall through and take a literal newline within the same block.
+    func textView(_ tv: UITextView, shouldChangeTextIn range: NSRange,
+                  replacementText text: String) -> Bool {
+        if text == "\n", let id = blockID(for: tv), checkRowIDs.contains(id) {
+            delegate?.blockEditorReturnInCheckRow(self, blockID: id)
+            return false
+        }
+        return true
     }
 }
