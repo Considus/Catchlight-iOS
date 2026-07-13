@@ -3,19 +3,27 @@ import UIKit
 import CatchlightCore
 
 /// Pillar 2 (`feature/uikit-timeline`): the recycling `UICollectionView` timeline that
-/// replaces the eager SwiftUI `ScrollView`+`VStack`. Sections = month buckets, items =
-/// Takes. Recycling returns lazy-load WITH exact geometry (self-sizing cells). See
+/// replaces the eager SwiftUI `ScrollView`+`VStack`. Recycling returns lazy-load WITH
+/// exact geometry (self-sizing cells). See
 /// `03_Engineering/UIKit_Pillar2_Timeline_Design_v1.0.md`.
 ///
-/// STATUS: P2-M2 — read-only. Real Takes, month sections + headers, Iris + wire. The
-/// pinned Obie is rendered by the host above this view. Gestures and edit-in-place are
-/// later milestones; the tight-S wire redesign is the finish.
+/// STATUS: P2-M2 — read-only. Real Takes, month DIVIDER rows (a row in the flow, like the
+/// real timeline — centred between Takes, at the text column), Iris + wire. The pinned
+/// Obie is rendered by the host above this view. Gestures and edit-in-place are later.
 
-/// A month group: section id (yyyy-MM), display title (LLLL yyyy), and its Takes.
+/// A month group: id (yyyy-MM), display title (LLLL yyyy), and its Takes.
 struct TimelineMonthGroup: Identifiable {
     let id: String
     let title: String
     let takes: [Take]
+}
+
+/// One row in the flow: a month divider or a Take. Single section; the divider is a
+/// regular item (not a section header), so it centres between Takes and shares their
+/// spacing + text column — matching the current timeline's divider.
+enum TimelineRow: Hashable {
+    case month(String)   // group id
+    case take(UUID)
 }
 
 struct UIKitTimeline: UIViewControllerRepresentable {
@@ -79,10 +87,12 @@ struct TimelineReadCell: View {
     }
 }
 
-/// A month divider label, matching the current timeline's `group.month` header (kerned
-/// caps at the card-text column).
-struct TimelineSectionHeader: View {
+/// A month divider row — kerned caps at the card TEXT column, `cardGap` above (so it
+/// centres in the inter-card gap, matching the current timeline's divider).
+struct TimelineMonthDivider: View {
     let title: String
+    let spineX: CGFloat
+    let cardGap: CGFloat
     var body: some View {
         HStack(spacing: 6) {
             Text(title.uppercased())
@@ -91,8 +101,9 @@ struct TimelineSectionHeader: View {
                 .foregroundStyle(Color.ckTextSecondary)
             Spacer()
         }
-        .padding(.leading, CatchlightLayout.cardTextLeadingPad)
-        .padding(.vertical, 6)
+        .padding(.leading, spineX - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad)
+        .padding(.trailing, 20)
+        .padding(.top, cardGap)
     }
 }
 
@@ -101,10 +112,9 @@ final class UIKitTimelineViewController: UIViewController {
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
 
     private var collectionView: UICollectionView!
-    private var dataSource: UICollectionViewDiffableDataSource<String, UUID>!
+    private var dataSource: UICollectionViewDiffableDataSource<Int, TimelineRow>!
     private var takesByID: [UUID: Take] = [:]
     private var groupTitles: [String: String] = [:]
-    private var sectionOrder: [String] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -113,7 +123,6 @@ final class UIKitTimelineViewController: UIViewController {
         var config = UICollectionLayoutListConfiguration(appearance: .plain)
         config.showsSeparators = false
         config.backgroundColor = .clear
-        config.headerMode = .supplementary
         let layout = UICollectionViewCompositionalLayout.list(using: config)
 
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
@@ -122,60 +131,47 @@ final class UIKitTimelineViewController: UIViewController {
         collectionView.keyboardDismissMode = .interactive
         view.addSubview(collectionView)
 
-        let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, UUID> {
-            [weak self] cell, _, id in
-            guard let self, let take = self.takesByID[id] else { return }
-            cell.contentConfiguration = UIHostingConfiguration {
-                TimelineReadCell(take: take, spineX: self.spineX, cardGap: self.cardGap)
+        let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, TimelineRow> {
+            [weak self] cell, _, row in
+            guard let self else { return }
+            switch row {
+            case .take(let id):
+                guard let take = self.takesByID[id] else { return }
+                cell.contentConfiguration = UIHostingConfiguration {
+                    TimelineReadCell(take: take, spineX: self.spineX, cardGap: self.cardGap)
+                }
+                .margins(.all, 0)
+            case .month(let key):
+                cell.contentConfiguration = UIHostingConfiguration {
+                    TimelineMonthDivider(title: self.groupTitles[key] ?? "",
+                                         spineX: self.spineX, cardGap: self.cardGap)
+                }
+                .margins(.all, 0)
             }
-            .margins(.all, 0)
             cell.backgroundConfiguration = .clear()
         }
-
-        let headerReg = UICollectionView.SupplementaryRegistration<UICollectionViewListCell>(
-            elementKind: UICollectionView.elementKindSectionHeader) { [weak self] header, _, indexPath in
-            guard let self else { return }
-            // Suppress the first section's month label (the DAILIES heading is its
-            // context in the real view), matching the current timeline.
-            if indexPath.section == 0 {
-                header.contentConfiguration = UIHostingConfiguration { Color.clear.frame(height: 0) }
-                    .margins(.all, 0)
-            } else {
-                let title = self.groupTitles[self.sectionOrder[safe: indexPath.section] ?? ""] ?? ""
-                header.contentConfiguration = UIHostingConfiguration { TimelineSectionHeader(title: title) }
-                    .margins(.all, 0)
-            }
-            header.backgroundConfiguration = .clear()
-        }
-
-        dataSource = UICollectionViewDiffableDataSource<String, UUID>(collectionView: collectionView) {
-            cv, indexPath, id in
-            cv.dequeueConfiguredReusableCell(using: cellReg, for: indexPath, item: id)
-        }
-        dataSource.supplementaryViewProvider = { cv, _, indexPath in
-            cv.dequeueConfiguredReusableSupplementary(using: headerReg, for: indexPath)
+        dataSource = UICollectionViewDiffableDataSource<Int, TimelineRow>(collectionView: collectionView) {
+            cv, indexPath, row in
+            cv.dequeueConfiguredReusableCell(using: cellReg, for: indexPath, item: row)
         }
     }
 
     func apply(groups: [TimelineMonthGroup]) {
         takesByID = Dictionary(groups.flatMap(\.takes).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         groupTitles = Dictionary(groups.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a })
-        sectionOrder = groups.map(\.id)
 
-        var snapshot = NSDiffableDataSourceSnapshot<String, UUID>()
-        snapshot.appendSections(sectionOrder)
-        for group in groups { snapshot.appendItems(group.takes.map(\.id), toSection: group.id) }
+        var snapshot = NSDiffableDataSourceSnapshot<Int, TimelineRow>()
+        snapshot.appendSections([0])
+        for (index, group) in groups.enumerated() {
+            // Suppress the first group's divider (the DAILIES heading is its context).
+            if index > 0 { snapshot.appendItems([.month(group.id)], toSection: 0) }
+            snapshot.appendItems(group.takes.map { .take($0.id) }, toSection: 0)
+        }
         dataSource.apply(snapshot, animatingDifferences: false)
 
         // Reconfigure so a live setting change (spineX / cardGap) refreshes cells.
         var reconfigured = dataSource.snapshot()
         reconfigured.reconfigureItems(reconfigured.itemIdentifiers)
         dataSource.apply(reconfigured, animatingDifferences: false)
-    }
-}
-
-private extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
     }
 }
