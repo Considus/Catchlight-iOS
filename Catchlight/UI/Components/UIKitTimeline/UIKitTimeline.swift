@@ -33,6 +33,9 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// Top inset so content clears the pinned heading + Obie zone; bottom for the dock.
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
+    /// Swipe actions (native), wired to the host's entitlement-gated Take actions.
+    var onToggleDone: (Take) -> Void = { _ in }
+    var onDelete: (Take) -> Void = { _ in }
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
@@ -40,6 +43,8 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.cardGap = cardGap
         vc.topInset = topInset
         vc.bottomInset = bottomInset
+        vc.onToggleDone = onToggleDone
+        vc.onDelete = onDelete
         return vc
     }
 
@@ -48,6 +53,8 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.cardGap = cardGap
         vc.topInset = topInset
         vc.bottomInset = bottomInset
+        vc.onToggleDone = onToggleDone
+        vc.onDelete = onDelete
         vc.apply(groups: groups)
     }
 }
@@ -126,6 +133,8 @@ final class UIKitTimelineViewController: UIViewController {
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
+    var onToggleDone: (Take) -> Void = { _ in }
+    var onDelete: (Take) -> Void = { _ in }
 
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<Int, TimelineRow>!
@@ -139,6 +148,8 @@ final class UIKitTimelineViewController: UIViewController {
         var config = UICollectionLayoutListConfiguration(appearance: .plain)
         config.showsSeparators = false
         config.backgroundColor = .clear
+        config.leadingSwipeActionsConfigurationProvider = { [weak self] in self?.swipeConfig(at: $0, leading: true) }
+        config.trailingSwipeActionsConfigurationProvider = { [weak self] in self?.swipeConfig(at: $0, leading: false) }
         let layout = UICollectionViewCompositionalLayout.list(using: config)
 
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
@@ -169,6 +180,34 @@ final class UIKitTimelineViewController: UIViewController {
         dataSource = UICollectionViewDiffableDataSource<Int, TimelineRow>(collectionView: collectionView) {
             cv, indexPath, row in
             cv.dequeueConfiguredReusableCell(using: cellReg, for: indexPath, item: row)
+        }
+    }
+
+    /// Native swipe actions — Done (leading, when settle-able) / Delete (trailing),
+    /// firing the host's entitlement-gated closures. Style `.normal` (not `.destructive`)
+    /// so UIKit doesn't auto-remove the row out from under the diffable data source — the
+    /// removal comes from the model reload's next snapshot. Month dividers get no swipe.
+    private func swipeConfig(at indexPath: IndexPath, leading: Bool) -> UISwipeActionsConfiguration? {
+        guard let row = dataSource.itemIdentifier(for: indexPath),
+              case .take(let id) = row, let take = takesByID[id] else { return nil }
+        if leading {
+            guard take.canBeMarkedDone else { return nil }
+            let action = UIContextualAction(style: .normal,
+                                            title: take.isMarkedDone ? "Not done" : "Done") {
+                [weak self] _, _, done in
+                self?.onToggleDone(take); done(true)
+            }
+            action.image = UIImage(systemName: take.isMarkedDone ? "arrow.uturn.left" : "checkmark")
+            action.backgroundColor = UIColor(Color.ckEmber)
+            return UISwipeActionsConfiguration(actions: [action])
+        } else {
+            let action = UIContextualAction(style: .normal, title: "Delete") {
+                [weak self] _, _, done in
+                self?.onDelete(take); done(true)
+            }
+            action.image = UIImage(systemName: "trash")
+            action.backgroundColor = UIColor(Color.ckRuby)
+            return UISwipeActionsConfiguration(actions: [action])
         }
     }
 

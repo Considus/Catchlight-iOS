@@ -907,7 +907,16 @@ struct DailiesView: View {
             spineX: spineX,
             cardGap: takeSpacing.gap,
             topInset: timelineTopInset,
-            bottomInset: CatchlightLayout.dockClearance + deviceBottomInset
+            bottomInset: CatchlightLayout.dockClearance + deviceBottomInset,
+            onToggleDone: { take in
+                guard app.ensureEntitled() else { return }
+                vm.toggleDone(take)
+            },
+            onDelete: { take in
+                guard app.ensureEntitled() else { return }
+                if take.timeReminder?.repeats == true { pendingRecurringDelete = take }
+                else { deleteTake(take) }
+            }
         )
     }
 
