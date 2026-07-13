@@ -47,11 +47,11 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// the shared `inputAccessoryView` of every row — only the first responder shows it.
     private var toolbarHost: UIHostingController<EditorKeyboardBar>?
     /// Breathing room kept below the caret — how far above the keyboard the caret
-    /// rests before the content scrolls under it. 72 matches the old editor's tuned
-    /// `caretPinGap` and leaves room for the dock toolbar (owner, device 2026-07-13:
-    /// measured 69pt as the target via the on-device readout). In the real editor the
-    /// dock is part of the reported keyboard frame, so this gap sits above the dock.
-    private let caretBottomGap: CGFloat = 72
+    /// rests before the content scrolls under it. The toolbar (inputAccessoryView) is
+    /// already part of the reported keyboard frame, so this is a SMALL margin ABOVE the
+    /// toolbar, not the whole dock-clearance (owner, device 2026-07-13: 72 stacked on
+    /// top of the 62pt toolbar double-counted the space). Tunable via the readout.
+    private let caretBottomGap: CGFloat = 16
 
     #if DEBUG
     /// Set by the test harness to surface the scroll maths on device (this is the
