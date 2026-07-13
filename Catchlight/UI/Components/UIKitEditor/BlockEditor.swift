@@ -48,6 +48,7 @@ struct BlockEditor: UIViewControllerRepresentable {
         #if DEBUG
         vc.showsDiagnostics = diagnostics
         #endif
+        vc.setToolbar(context.coordinator.makeToolbarConfig())
         vc.apply(blocks: draft.blocks, focusedBlockID: focusedBlockID)
     }
 
@@ -99,6 +100,25 @@ struct BlockEditor: UIViewControllerRepresentable {
 
         func blockEditorToggleCheck(_ vc: BlockEditorViewController, blockID id: UUID) {
             parent.draft.toggleItemComplete(blockID: id)
+        }
+
+        /// The keyboard toolbar's state + actions, derived from the draft — identical
+        /// to the current editor's `InlineTakeEditCard.toolbarConfig`.
+        func makeToolbarConfig() -> BlockTextEditor.EditorToolbarConfig {
+            .init(
+                isImportant: parent.draft.isImportant,
+                angleEnabled: AngleRegistry.applicable(to: parent.draft).first != nil,
+                isDone: parent.draft.isMarkedDone,
+                doneEnabled: parent.draft.canBeMarkedDone,
+                hasReminder: parent.draft.timeReminder != nil,
+                onToggleImportant: { [weak self] in self?.parent.draft.isImportant.toggle() },
+                onOpenAngle: { [weak self] in self?.parent.onOpenAngle?() },
+                onReminder: parent.onEditReminder,
+                onToggleDone: { [weak self] in
+                    self?.parent.draft.toggleMarkedDoneAdvancingRecurring(now: Date())
+                },
+                onDismiss: { [weak self] in self?.parent.onDiscard?() }
+            )
         }
     }
 }

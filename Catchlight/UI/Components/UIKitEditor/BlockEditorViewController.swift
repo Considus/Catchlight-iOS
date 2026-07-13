@@ -43,6 +43,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private var checkRowIDs: Set<UUID> = []
     private var desiredFocus: UUID?
     private var focusInFlight = false
+    /// The keyboard toolbar (Important / Angle / Reminder / Done / dismiss), hosted as
+    /// the shared `inputAccessoryView` of every row — only the first responder shows it.
+    private var toolbarHost: UIHostingController<EditorKeyboardBar>?
     /// Breathing room kept below the caret — how far above the keyboard the caret
     /// rests before the content scrolls under it. 72 matches the old editor's tuned
     /// `caretPinGap` and leaves room for the dock toolbar (owner, device 2026-07-13:
@@ -186,7 +189,34 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             guard let self else { return }
             self.delegate?.blockEditorBackspaceOnEmpty(self, blockID: id)
         }
+        tv.inputAccessoryView = toolbarHost?.view
         return tv
+    }
+
+    /// Install / refresh the keyboard toolbar from the current draft-derived config.
+    /// Called before `apply` on every SwiftUI update, so the bar reflects live state
+    /// (Important tint, Angle enablement, Done). The reported keyboard frame includes
+    /// this accessory, so the caret-follow already rests the caret above the toolbar.
+    func setToolbar(_ config: BlockTextEditor.EditorToolbarConfig) {
+        let bar = EditorKeyboardBar(config: config, onDismiss: { [weak self] in
+            self?.view.endEditing(true)
+            config.onDismiss()
+        })
+        if let host = toolbarHost {
+            host.rootView = bar
+        } else {
+            let host = UIHostingController(rootView: bar)
+            host.view.backgroundColor = .clear
+            host.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 62)
+            host.view.autoresizingMask = [.flexibleWidth]
+            addChild(host)
+            host.didMove(toParent: self)
+            toolbarHost = host
+            for tv in textViews.values {
+                tv.inputAccessoryView = host.view
+                if tv.isFirstResponder { tv.reloadInputViews() }
+            }
+        }
     }
 
     /// A check row: checkbox (44pt touch target) + the item's text view. Matches

@@ -21,14 +21,15 @@ struct BlockEditorHarness: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("UIKit Editor — M2")
+                Text("UIKit Editor — M3")
                     .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .headline))
                 Spacer()
                 Button("Done") { dismiss() }
             }
             .padding()
             Divider()
-            BlockEditor(draft: $draft, focusedBlockID: $focused, diagnostics: true)
+            BlockEditor(draft: $draft, focusedBlockID: $focused,
+                        onDiscard: { dismiss() }, diagnostics: true)
                 .padding(.horizontal, 20)
                 // Opt out of SwiftUI's automatic keyboard avoidance — the editor's
                 // own UIKit scroll view reserves the keyboard space, and letting
