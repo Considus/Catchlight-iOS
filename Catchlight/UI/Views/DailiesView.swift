@@ -120,6 +120,10 @@ struct DailiesView: View {
     /// through the same `vm.save` chokepoint the top-anchored editor uses.
     @State private var editDraft: Take?
     @State private var editFocusedBlockID: UUID?
+    /// DEBUG A/B: render the timeline with the new recycling UIKit `UICollectionView`
+    /// (Pillar 2) instead of the SwiftUI `ScrollView`+`VStack`. Default off (old ships);
+    /// toggled in Settings › Debug. Read-only for now — gestures + edit come on top.
+    @AppStorage("debug-use-new-timeline") private var useNewTimeline = false
     /// Timeline scroll offset captured when an EXISTING-Take edit opens, restored on close
     /// so finishing an edit never leaves the timeline drifted from whatever the caret-pin
     /// scrolled in between (owner 2026-06-22). nil when not editing; never set for new Takes
@@ -350,6 +354,8 @@ struct DailiesView: View {
                 // but that guidance is a full screen (RestoreFolderView, shown by RootView
                 // while `restoreAwaitingFolder`), not an overlay here (owner 2026-07-02).
                 emptyState
+            } else if useNewTimeline {
+                newUIKitTimeline
             } else {
                 timeline
             }
@@ -890,6 +896,19 @@ struct DailiesView: View {
                 onDismiss: { app.clearQuarantineNotice() }
             )
         }
+    }
+
+    /// DEBUG A/B (Pillar 2): the recycling UIKit timeline, fed the real month groups,
+    /// spine column, density gap, and heading/dock insets. Read-only for now; the pinned
+    /// Obie, heading, and gutter spine still come from the surrounding body.
+    private var newUIKitTimeline: some View {
+        UIKitTimeline(
+            groups: monthGroups.map { TimelineMonthGroup(id: $0.key, title: $0.month, takes: $0.takes) },
+            spineX: spineX,
+            cardGap: takeSpacing.gap,
+            topInset: timelineTopInset,
+            bottomInset: CatchlightLayout.dockClearance + deviceBottomInset
+        )
     }
 
     private var timeline: some View {

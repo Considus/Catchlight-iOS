@@ -30,17 +30,24 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     var groups: [TimelineMonthGroup]
     var spineX: CGFloat = CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
+    /// Top inset so content clears the pinned heading + Obie zone; bottom for the dock.
+    var topInset: CGFloat = 0
+    var bottomInset: CGFloat = 0
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
         vc.spineX = spineX
         vc.cardGap = cardGap
+        vc.topInset = topInset
+        vc.bottomInset = bottomInset
         return vc
     }
 
     func updateUIViewController(_ vc: UIKitTimelineViewController, context: Context) {
         vc.spineX = spineX
         vc.cardGap = cardGap
+        vc.topInset = topInset
+        vc.bottomInset = bottomInset
         vc.apply(groups: groups)
     }
 }
@@ -110,6 +117,8 @@ struct TimelineMonthDivider: View {
 final class UIKitTimelineViewController: UIViewController {
     var spineX: CGFloat = 0
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
+    var topInset: CGFloat = 0
+    var bottomInset: CGFloat = 0
 
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<Int, TimelineRow>!
@@ -157,6 +166,8 @@ final class UIKitTimelineViewController: UIViewController {
     }
 
     func apply(groups: [TimelineMonthGroup]) {
+        collectionView.contentInset = UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
+        collectionView.verticalScrollIndicatorInsets.top = topInset
         takesByID = Dictionary(groups.flatMap(\.takes).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         groupTitles = Dictionary(groups.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a })
 

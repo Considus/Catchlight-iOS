@@ -65,6 +65,8 @@ struct SettingsView: View {
     @State private var showEditorHarness = false
     /// Presents the UIKit-timeline test bed (Pillar 2 M1). DEBUG only.
     @State private var showTimelineHarness = false
+    /// A/B the new recycling UIKit timeline in real Dailies (Pillar 2 M3+).
+    @AppStorage("debug-use-new-timeline") private var useNewTimeline = false
     /// Settings-backed toggle for the section 2b on-device inset readout overlay.
     @AppStorage(DebugInsetReadoutSettings.defaultsKey) private var showInsetReadout = false
     #endif
@@ -270,6 +272,25 @@ struct SettingsView: View {
             .listRowBackground(Color.ckSurface)
             .accessibilityIdentifier("debug-uikit-timeline")
             .accessibilityHint("Opens the new UIKit timeline test bed to check scrolling + recycling.")
+
+            // Section 2e — A/B the new timeline in real Dailies (M3+).
+            Toggle(isOn: $useNewTimeline) {
+                HStack(spacing: 14) {
+                    Image(systemName: "rectangle.stack")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(Color.ckAccent)
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    Text("New timeline in Dailies")
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextPrimary)
+                }
+            }
+            .tint(Color.ckEmber)
+            .frame(minHeight: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityIdentifier("debug-new-timeline-toggle")
+            .accessibilityHint("Renders Dailies with the new recycling UIKit timeline.")
         } header: {
             sectionHeader("Debug")
         }
