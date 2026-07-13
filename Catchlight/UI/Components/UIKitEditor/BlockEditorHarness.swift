@@ -21,7 +21,7 @@ struct BlockEditorHarness: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("UIKit Editor — M3")
+                Text("UIKit Editor — M4")
                     .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .headline))
                 Spacer()
                 Button("Done") { dismiss() }

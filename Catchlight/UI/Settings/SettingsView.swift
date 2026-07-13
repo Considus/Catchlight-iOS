@@ -238,7 +238,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color.ckAccent)
                         .frame(width: 26)
                         .accessibilityHidden(true)
-                    Text("UIKit editor (M3)")
+                    Text("UIKit editor (M4)")
                         .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
                         .foregroundStyle(Color.ckTextPrimary)
                 }

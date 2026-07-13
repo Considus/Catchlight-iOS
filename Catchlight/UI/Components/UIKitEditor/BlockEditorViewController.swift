@@ -16,6 +16,8 @@ protocol BlockEditorViewControllerDelegate: AnyObject {
     func blockEditorBackspaceOnEmpty(_ vc: BlockEditorViewController, blockID id: UUID)
     /// The checkbox was tapped.
     func blockEditorToggleCheck(_ vc: BlockEditorViewController, blockID id: UUID)
+    /// A row was dragged to a new position (final block index).
+    func blockEditor(_ vc: BlockEditorViewController, didMoveBlock id: UUID, toIndex index: Int)
 }
 
 /// Self-scrolling editor: a `UIScrollView` + vertical `UIStackView` of block
@@ -46,6 +48,14 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// The keyboard toolbar (Important / Angle / Reminder / Done / dismiss), hosted as
     /// the shared `inputAccessoryView` of every row — only the first responder shows it.
     private var toolbarHost: UIHostingController<EditorKeyboardBar>?
+
+    // Drag-to-reorder (check items, via the trailing handle). The dragged row floats
+    // over the scroll content while a placeholder holds the gap in the stack.
+    private var reorderRowID: [UIPanGestureRecognizer: UUID] = [:]
+    private var dragID: UUID?
+    private var dragRow: UIView?
+    private var dragPlaceholder: UIView?
+    private var dragLastY: CGFloat = 0
     /// Breathing room kept below the caret — how far above the keyboard the caret
     /// rests before the content scrolls under it. The toolbar (inputAccessoryView) is
     /// already part of the reported keyboard frame, so this is a SMALL margin ABOVE the
@@ -131,6 +141,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// removed — both deferred together — so adding/removing a row transfers the
     /// keyboard between live fields instead of flicking it down and up.
     func apply(blocks: [TakeBlock], focusedBlockID: UUID?) {
+        guard dragID == nil else { return }   // never reconcile mid-drag (row is floating)
         for block in blocks {
             if textViews[block.id] == nil {
                 createRow(block)
@@ -183,12 +194,14 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         textViews[id] = nil
         checkButtons[id] = nil
         checkRowIDs.remove(id)
+        reorderRowID = reorderRowID.filter { $0.value != id }
     }
 
     /// Kind change (text <-> check) reusing the SAME text view, so focus + caret and
     /// the keyboard survive — only the surrounding chrome (the checkbox) changes.
     private func rewrapRow(_ block: TakeBlock) {
         guard let tv = textViews[block.id], let old = rowContainers[block.id] else { return }
+        reorderRowID = reorderRowID.filter { $0.value != block.id }   // drop the old handle's pan
         let wasFocused = tv.isFirstResponder
         stack.removeArrangedSubview(old)
         old.removeFromSuperview()
@@ -273,15 +286,95 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         }, for: .touchUpInside)
         checkButtons[id] = button
 
-        let row = UIStackView(arrangedSubviews: [button, textView])
+        let handle = UIImageView(image: UIImage(systemName: "line.3.horizontal",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 15, weight: .regular)))
+        handle.tintColor = UIColor(Color.ckTextSecondary).withAlphaComponent(0.55)
+        handle.contentMode = .center
+        handle.isUserInteractionEnabled = true
+        handle.setContentHuggingPriority(.required, for: .horizontal)
+        handle.accessibilityIdentifier = "uikit-reorder-handle"
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(reorderPan(_:)))
+        handle.addGestureRecognizer(pan)
+        reorderRowID[pan] = id
+
+        let row = UIStackView(arrangedSubviews: [button, textView, handle])
         row.axis = .horizontal
         row.alignment = .center
         row.spacing = 8
         NSLayoutConstraint.activate([
             button.widthAnchor.constraint(equalToConstant: 44),
             button.heightAnchor.constraint(equalToConstant: 44),
+            handle.widthAnchor.constraint(equalToConstant: 36),
         ])
         return row
+    }
+
+    // MARK: - Drag-to-reorder
+
+    @objc private func reorderPan(_ g: UIPanGestureRecognizer) {
+        guard let id = reorderRowID[g], let row = rowContainers[id] else { return }
+        switch g.state {
+        case .began:   beginDrag(id: id, row: row, gesture: g)
+        case .changed: updateDrag(g)
+        default:       endDrag()
+        }
+    }
+
+    /// Lift the row out of the stack to float over the content, leaving a placeholder
+    /// of equal height to hold the gap.
+    private func beginDrag(id: UUID, row: UIView, gesture: UIPanGestureRecognizer) {
+        guard let index = stack.arrangedSubviews.firstIndex(of: row) else { return }
+        scrollView.isScrollEnabled = false
+        let frame = row.frame
+        let placeholder = UIView()
+        placeholder.translatesAutoresizingMaskIntoConstraints = false
+        placeholder.heightAnchor.constraint(equalToConstant: frame.height).isActive = true
+        stack.insertArrangedSubview(placeholder, at: index)
+        stack.removeArrangedSubview(row)
+        row.translatesAutoresizingMaskIntoConstraints = true
+        scrollView.addSubview(row)
+        row.frame = frame
+        row.layer.shadowColor = UIColor.black.cgColor
+        row.layer.shadowOpacity = 0.15
+        row.layer.shadowRadius = 6
+        row.layer.shadowOffset = CGSize(width: 0, height: 3)
+        UIView.animate(withDuration: 0.15) { row.transform = CGAffineTransform(scaleX: 1.02, y: 1.02) }
+        dragID = id; dragRow = row; dragPlaceholder = placeholder
+        dragLastY = gesture.location(in: scrollView).y
+    }
+
+    /// Follow the finger and slide the placeholder to the slot under the row's centre.
+    private func updateDrag(_ gesture: UIPanGestureRecognizer) {
+        guard let row = dragRow, let placeholder = dragPlaceholder else { return }
+        let y = gesture.location(in: scrollView).y
+        row.frame.origin.y += (y - dragLastY)
+        dragLastY = y
+        let centerY = row.frame.midY
+        let others = stack.arrangedSubviews.filter { $0 !== placeholder }
+        let target = min(others.prefix { $0.frame.midY < centerY }.count, others.count)
+        if stack.arrangedSubviews.firstIndex(of: placeholder) != target {
+            UIView.animate(withDuration: 0.16) {
+                self.stack.insertArrangedSubview(placeholder, at: target)
+                self.stack.layoutIfNeeded()
+            }
+        }
+    }
+
+    /// Drop the row into the placeholder's slot and commit the new order to the model.
+    private func endDrag() {
+        guard let id = dragID, let row = dragRow, let placeholder = dragPlaceholder else { return }
+        dragID = nil; dragRow = nil; dragPlaceholder = nil
+        scrollView.isScrollEnabled = true
+        let finalIndex = stack.arrangedSubviews.firstIndex(of: placeholder) ?? 0
+        row.removeFromSuperview()
+        row.transform = .identity
+        row.layer.shadowOpacity = 0
+        row.translatesAutoresizingMaskIntoConstraints = false
+        stack.insertArrangedSubview(row, at: finalIndex)
+        stack.removeArrangedSubview(placeholder)
+        placeholder.removeFromSuperview()
+        UIView.animate(withDuration: 0.15) { self.stack.layoutIfNeeded() }
+        delegate?.blockEditor(self, didMoveBlock: id, toIndex: finalIndex)
     }
 
     private func checkboxImage(isComplete: Bool) -> UIImage? {

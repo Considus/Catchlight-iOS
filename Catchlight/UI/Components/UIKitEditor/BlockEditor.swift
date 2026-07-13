@@ -102,6 +102,14 @@ struct BlockEditor: UIViewControllerRepresentable {
             parent.draft.toggleItemComplete(blockID: id)
         }
 
+        func blockEditor(_ vc: BlockEditorViewController, didMoveBlock id: UUID, toIndex index: Int) {
+            guard let from = parent.draft.blocks.firstIndex(where: { $0.id == id }) else { return }
+            var blocks = parent.draft.blocks
+            let moved = blocks.remove(at: from)
+            blocks.insert(moved, at: min(index, blocks.count))
+            parent.draft.blocks = blocks
+        }
+
         /// The keyboard toolbar's state + actions, derived from the draft — identical
         /// to the current editor's `InlineTakeEditCard.toolbarConfig`.
         func makeToolbarConfig() -> BlockTextEditor.EditorToolbarConfig {
