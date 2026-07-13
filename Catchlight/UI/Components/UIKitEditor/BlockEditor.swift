@@ -45,11 +45,19 @@ struct BlockEditor: UIViewControllerRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
-    /// Bridges UIKit edits back to SwiftUI. Milestone 1+: forward text/focus/
-    /// Return/Backspace into `parent.draft` via `Take`'s mutators only, and
-    /// mirror focus into `parent.focusedBlockID`.
+    /// Bridges UIKit edits back to SwiftUI. Milestone 1: text + focus. Mutates
+    /// `parent.draft` only through `Take`'s mutators so derived flags stay
+    /// consistent. Return/Backspace/check-toggle arrive in M2.
     final class Coordinator: BlockEditorViewControllerDelegate {
         var parent: BlockEditor
         init(_ parent: BlockEditor) { self.parent = parent }
+
+        func blockEditor(_ vc: BlockEditorViewController, didChangeText text: String, forBlock id: UUID) {
+            parent.draft.updateText(text, blockID: id)
+        }
+
+        func blockEditor(_ vc: BlockEditorViewController, didFocusBlock id: UUID?) {
+            if parent.focusedBlockID != id { parent.focusedBlockID = id }
+        }
     }
 }
