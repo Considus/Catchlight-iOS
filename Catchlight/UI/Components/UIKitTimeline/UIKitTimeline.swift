@@ -104,7 +104,50 @@ struct TimelineReadCell: View {
         }
         .padding(.leading, spineX - inset)
         .padding(.trailing, 20)
-        .padding(.top, cardGap)
+        // SYMMETRIC so the card is centred in the cell — a swipe action fill then centres
+        // on the CARD, not the cell (the Iris overhang is render-only `.offset`, so it
+        // doesn't grow the layout; the cell must simply not clip).
+        .padding(.vertical, cardGap / 2)
+    }
+}
+
+/// Shared single-open coordination for the custom swipe rows.
+@Observable final class TimelineSwipeState {
+    var openRowID: UUID?
+}
+
+/// A Take row wrapped in the app's own `SwipeActionRow` (the SwiftUI-version swipe: fill
+/// tucks under the card, full-swipe commit, resting-open). The WHOLE cell content slides,
+/// so the Iris rides with the card (owner 2026-07-13). `contentVerticalInset = cardGap/2`
+/// centres the action fill on the card regardless of card height.
+struct TimelineSwipeCell: View {
+    let take: Take
+    let spineX: CGFloat
+    let cardGap: CGFloat
+    @Bindable var swipeState: TimelineSwipeState
+    let onToggleDone: (Take) -> Void
+    let onDelete: (Take) -> Void
+
+    var body: some View {
+        SwipeActionRow(
+            id: take.id,
+            leading: take.canBeMarkedDone
+                ? SwipeAction(title: take.isMarkedDone ? "Not done" : "Done",
+                              systemImage: take.isMarkedDone ? "arrow.uturn.left" : "checkmark",
+                              tint: .ckEmber, style: .standard,
+                              perform: { onToggleDone(take) })
+                : nil,
+            trailing: SwipeAction(title: "Delete", systemImage: "trash", tint: .ckRuby,
+                                  style: take.timeReminder?.repeats == true ? .standard : .destructive,
+                                  perform: { onDelete(take) }),
+            openRowID: $swipeState.openRowID,
+            leadingInset: spineX - CatchlightLayout.cardSpineInset,
+            trailingInset: 20,
+            contentVerticalInset: cardGap / 2
+        ) { offset in
+            TimelineReadCell(take: take, spineX: spineX, cardGap: cardGap)
+                .offset(x: offset)
+        }
     }
 }
 
@@ -136,6 +179,7 @@ final class UIKitTimelineViewController: UIViewController {
     var onToggleDone: (Take) -> Void = { _ in }
     var onDelete: (Take) -> Void = { _ in }
 
+    private let swipeState = TimelineSwipeState()
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<Int, TimelineRow>!
     private var takesByID: [UUID: Take] = [:]
@@ -148,8 +192,10 @@ final class UIKitTimelineViewController: UIViewController {
         var config = UICollectionLayoutListConfiguration(appearance: .plain)
         config.showsSeparators = false
         config.backgroundColor = .clear
-        config.leadingSwipeActionsConfigurationProvider = { [weak self] in self?.swipeConfig(at: $0, leading: true) }
-        config.trailingSwipeActionsConfigurationProvider = { [weak self] in self?.swipeConfig(at: $0, leading: false) }
+        // Swipe is the app's own SwipeActionRow, hosted in the cell (below) — not the
+        // native provider — so the fill/buttons match the SwiftUI version and centre on
+        // the card. Native `.trailingSwipeActionsConfigurationProvider` is intentionally
+        // NOT set.
         let layout = UICollectionViewCompositionalLayout.list(using: config)
 
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
@@ -161,11 +207,17 @@ final class UIKitTimelineViewController: UIViewController {
         let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, TimelineRow> {
             [weak self] cell, _, row in
             guard let self else { return }
+            // Don't clip: the Iris straddles above the card (render-only overhang).
+            cell.clipsToBounds = false
+            cell.contentView.clipsToBounds = false
             switch row {
             case .take(let id):
                 guard let take = self.takesByID[id] else { return }
                 cell.contentConfiguration = UIHostingConfiguration {
-                    TimelineReadCell(take: take, spineX: self.spineX, cardGap: self.cardGap)
+                    TimelineSwipeCell(take: take, spineX: self.spineX, cardGap: self.cardGap,
+                                      swipeState: self.swipeState,
+                                      onToggleDone: { self.onToggleDone($0) },
+                                      onDelete: { self.onDelete($0) })
                 }
                 .margins(.all, 0)
             case .month(let key):
@@ -180,34 +232,6 @@ final class UIKitTimelineViewController: UIViewController {
         dataSource = UICollectionViewDiffableDataSource<Int, TimelineRow>(collectionView: collectionView) {
             cv, indexPath, row in
             cv.dequeueConfiguredReusableCell(using: cellReg, for: indexPath, item: row)
-        }
-    }
-
-    /// Native swipe actions — Done (leading, when settle-able) / Delete (trailing),
-    /// firing the host's entitlement-gated closures. Style `.normal` (not `.destructive`)
-    /// so UIKit doesn't auto-remove the row out from under the diffable data source — the
-    /// removal comes from the model reload's next snapshot. Month dividers get no swipe.
-    private func swipeConfig(at indexPath: IndexPath, leading: Bool) -> UISwipeActionsConfiguration? {
-        guard let row = dataSource.itemIdentifier(for: indexPath),
-              case .take(let id) = row, let take = takesByID[id] else { return nil }
-        if leading {
-            guard take.canBeMarkedDone else { return nil }
-            let action = UIContextualAction(style: .normal,
-                                            title: take.isMarkedDone ? "Not done" : "Done") {
-                [weak self] _, _, done in
-                self?.onToggleDone(take); done(true)
-            }
-            action.image = UIImage(systemName: take.isMarkedDone ? "arrow.uturn.left" : "checkmark")
-            action.backgroundColor = UIColor(Color.ckEmber)
-            return UISwipeActionsConfiguration(actions: [action])
-        } else {
-            let action = UIContextualAction(style: .normal, title: "Delete") {
-                [weak self] _, _, done in
-                self?.onDelete(take); done(true)
-            }
-            action.image = UIImage(systemName: "trash")
-            action.backgroundColor = UIColor(Color.ckRuby)
-            return UISwipeActionsConfiguration(actions: [action])
         }
     }
 
