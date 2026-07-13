@@ -391,12 +391,6 @@ public final class EncryptedTakeStore: TakeStore {
             defer { sqlite3_finalize(ts) }
             bindText(ts, 1, take.id.uuidString)
             guard sqlite3_step(ts) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
-            // TEMP DIAGNOSTIC (Bug: deleted Take reappears, 2026-07-10). If this upsert
-            // just cleared a LIVE tombstone, an item that was deleted is being re-created
-            // — the resurrection moment. Content-free (id prefix only). REMOVE after repro.
-            if sqlite3_changes(db) > 0 {
-                DiagnosticsLog.shared.record(.lifecycle, "DBG tombstone- upsert \(take.id.uuidString.prefix(8))")
-            }
             try exec("COMMIT;")
             committed = true
         }
@@ -436,8 +430,6 @@ public final class EncryptedTakeStore: TakeStore {
             bindText(ts, 1, id.uuidString)
             bindText(ts, 2, ISO8601.string(from: Date()))
             guard sqlite3_step(ts) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
-            // TEMP DIAGNOSTIC (Bug: deleted Take reappears, 2026-07-10). REMOVE after repro.
-            DiagnosticsLog.shared.record(.lifecycle, "DBG tombstone+ delete \(id.uuidString.prefix(8))")
             try exec("COMMIT;")
             committed = true
         }
