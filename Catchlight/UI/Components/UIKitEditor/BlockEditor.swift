@@ -31,6 +31,9 @@ struct BlockEditor: UIViewControllerRepresentable {
     /// Retained for the seam only. A self-scrolling editor should leave this
     /// unset so `DailiesView` skips the (to-be-deleted) caret pin.
     var onCaretMoved: ((CGRect) -> Void)? = nil
+    /// Reports the editor's intrinsic content height, so a host can size a card to
+    /// the content (up to an available max, then the editor scrolls internally).
+    var onContentHeightChange: ((CGFloat) -> Void)? = nil
 
     #if DEBUG
     /// The test harness turns on an on-device readout of the scroll maths.
@@ -48,6 +51,7 @@ struct BlockEditor: UIViewControllerRepresentable {
         #if DEBUG
         vc.showsDiagnostics = diagnostics
         #endif
+        vc.onContentHeight = onContentHeightChange
         vc.setToolbar(context.coordinator.makeToolbarConfig())
         vc.apply(blocks: draft.blocks, focusedBlockID: focusedBlockID)
     }

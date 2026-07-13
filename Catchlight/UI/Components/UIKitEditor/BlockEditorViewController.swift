@@ -48,6 +48,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// The keyboard toolbar (Important / Angle / Reminder / Done / dismiss), hosted as
     /// the shared `inputAccessoryView` of every row — only the first responder shows it.
     private var toolbarHost: UIHostingController<EditorKeyboardBar>?
+    /// Reports intrinsic content height (the stack) so a host can size to content.
+    var onContentHeight: ((CGFloat) -> Void)?
+    private var lastReportedHeight: CGFloat = -1
 
     // Drag-to-reorder (check items, via the trailing handle). The dragged row floats
     // over the scroll content while a placeholder holds the gap in the stack.
@@ -132,6 +135,12 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     }
 
     deinit { NotificationCenter.default.removeObserver(self) }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        let h = stack.frame.height
+        if abs(h - lastReportedHeight) > 0.5 { lastReportedHeight = h; onContentHeight?(h) }
+    }
 
     // MARK: - Data
 

@@ -120,6 +120,13 @@ struct DailiesView: View {
     /// through the same `vm.save` chokepoint the top-anchored editor uses.
     @State private var editDraft: Take?
     @State private var editFocusedBlockID: UUID?
+    /// DEBUG A/B: route edit-in-place through the new self-scrolling UIKit editor
+    /// (Pillar 1) instead of the timeline card + `pinCaret`. Default off, toggled in
+    /// Settings › Debug. Reads the same key in release (always false) so the old path ships.
+    @AppStorage("debug-use-new-editor") private var useNewEditor = false
+    /// The new editor's reported content height, so its card sizes to content up to the
+    /// available space before scrolling internally.
+    @State private var newEditorContentHeight: CGFloat = 0
     /// Timeline scroll offset captured when an EXISTING-Take edit opens, restored on close
     /// so finishing an edit never leaves the timeline drifted from whatever the caret-pin
     /// scrolled in between (owner 2026-06-22). nil when not editing; never set for new Takes
@@ -359,9 +366,14 @@ struct DailiesView: View {
             // (often off-screen) sorted row. Placed under the heading so a tall card
             // dissolves beneath it like a timeline card. On save it drops into its
             // sorted place; existing-Take editing is unchanged.
-            if let newTake = inlineNewTake {
+            if let newTake = inlineNewTake, !useNewEditor {
                 newTakeFocusCard(newTake)
             }
+
+            // DEBUG A/B — the new self-scrolling UIKit editor (Pillar 1 M5). Handles
+            // both new and existing edits uniformly; the old timeline card + pinCaret
+            // and the new-Take card are suppressed while this is on.
+            newEditorRegion
 
             // Pinned page heading + top fade (cosmetic baseline 2026-06-11):
             // a plain overlay child, NOT .safeAreaInset — in this full-bleed
@@ -1272,6 +1284,46 @@ struct DailiesView: View {
         Binding(get: { editDraft ?? Take() }, set: { editDraft = $0 })
     }
 
+    /// DEBUG A/B (Pillar 1 M5): the new self-scrolling editor, presented in a card-styled
+    /// region below the heading down to the keyboard. Sizes to content up to the available
+    /// space, then scrolls internally (no `pinCaret`). Tapping the masked area around it
+    /// SAVES (the timeline idiom); the toolbar × discards. Row-anchored in-place positioning
+    /// is the next increment.
+    @ViewBuilder
+    private var newEditorRegion: some View {
+        if useNewEditor, ui.isEditingInPlace, editDraft != nil {
+            let top = deviceTopInset + CatchlightLayout.headingClearance + 8
+            let available = max(140, keyboardTopY - top - 8)
+            let cardH = min(max(newEditorContentHeight + 16, 96), available)
+            ZStack(alignment: .top) {
+                // Tap the masked area to commit — the timeline's save idiom.
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { saveInlineEdit() }
+                VStack(spacing: 0) {
+                    BlockEditor(
+                        draft: editDraftBinding,
+                        focusedBlockID: $editFocusedBlockID,
+                        onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
+                        onEditReminder: { presentReminderEditor() },
+                        onDiscard: { discardInlineEdit() },
+                        onContentHeightChange: { newEditorContentHeight = $0 }
+                    )
+                    .frame(height: cardH)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.ckSurface))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.ckStone, lineWidth: 1))
+                    .padding(.horizontal, 16)
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, top)
+            }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+        }
+    }
+
     /// The applicable Angle's full-screen presentation, bound to the live `editDraft`.
     /// (Only the list Angle exists today; it applies whenever the draft has check items.)
     @ViewBuilder
@@ -1388,6 +1440,7 @@ struct DailiesView: View {
         // The NEW Take rides the keyboard via `newTakeFocusCard`, not the timeline scroll —
         // so don't pin/scroll the (masked) timeline for it (owner 2026-06-22). Existing-Take
         // editing is unaffected: `inlineNewTake` is nil then, so this is a no-op for it.
+        guard !useNewEditor else { return }   // new editor self-scrolls; no pin
         guard inlineNewTake == nil else { return }
         // Only act while the keyboard is actually UP — otherwise the focus-time report
         // (keyboard still down) could spuriously scroll.
@@ -1681,7 +1734,7 @@ struct DailiesView: View {
             // Dimmed background rows during edit-in-place make their URLs inert, so a
             // save/discard tap can't open a link under the mask (owner 2026-06-27).
             linksInteractive: !(editingActive && !isEditingThis),
-            editingCard: isEditingThis
+            editingCard: (isEditingThis && !useNewEditor)
                 ? { AnyView(InlineTakeEditCard(
                     draft: editDraftBinding,
                     focusedBlockID: $editFocusedBlockID,
