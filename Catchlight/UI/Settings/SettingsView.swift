@@ -63,8 +63,6 @@ struct SettingsView: View {
     @State private var showResetConfirm = false
     /// Presents the UIKit-editor test bed (Pillar 1 M1). DEBUG only.
     @State private var showEditorHarness = false
-    /// A/B the new self-scrolling editor in real Dailies edit-in-place (Pillar 1 M5).
-    @AppStorage("debug-use-new-editor") private var useNewEditor = false
     /// Settings-backed toggle for the section 2b on-device inset readout overlay.
     @AppStorage(DebugInsetReadoutSettings.defaultsKey) private var showInsetReadout = false
     #endif
@@ -249,25 +247,6 @@ struct SettingsView: View {
             .listRowBackground(Color.ckSurface)
             .accessibilityIdentifier("debug-uikit-editor")
             .accessibilityHint("Opens the new UIKit editor test bed to check caret-follow.")
-
-            // Section 2d — A/B the new editor in real Dailies edit-in-place (M5).
-            Toggle(isOn: $useNewEditor) {
-                HStack(spacing: 14) {
-                    Image(systemName: "square.and.pencil")
-                        .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(Color.ckAccent)
-                        .frame(width: 26)
-                        .accessibilityHidden(true)
-                    Text("New editor in Dailies")
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextPrimary)
-                }
-            }
-            .tint(Color.ckEmber)
-            .frame(minHeight: 52)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityIdentifier("debug-new-editor-toggle")
-            .accessibilityHint("Routes edit-in-place through the new self-scrolling editor.")
         } header: {
             sectionHeader("Debug")
         }
