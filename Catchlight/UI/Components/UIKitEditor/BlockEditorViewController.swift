@@ -33,11 +33,11 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private let scrollView = UIScrollView()
     private let stack = UIStackView()
 
-    /// Structure signature (block id + kind) so `apply` rebuilds on a structural
-    /// change but only syncs text otherwise. `isComplete` is deliberately NOT in the
-    /// signature — toggling a checkbox updates visuals in place and never rebuilds, so
-    /// a tap can't drop the keyboard from the row being edited.
-    private var blockSig: [String] = []
+    /// The stack row (a text view, or a checkbox+text HStack) per block id, kept so
+    /// `apply` can reconcile INCREMENTALLY — reuse / insert / remove individual rows
+    /// rather than rebuild the whole stack, which tore down the focused field and
+    /// flicked the keyboard down-and-up whenever a row was added or removed.
+    private var rowContainers: [UUID: UIView] = [:]
     private var textViews: [UUID: BackspaceTextView] = [:]
     private var checkButtons: [UUID: UIButton] = [:]
     private var checkRowIDs: Set<UUID> = []
@@ -125,44 +125,86 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
 
     // MARK: - Data
 
-    /// Diff the block list into the stack (reuse text views by id) and apply focus.
+    /// Reconcile the block list into the stack INCREMENTALLY: reuse existing rows,
+    /// insert only new ones, rewrap kind changes (keeping the same text view), and
+    /// remove only vanished ones. Focus moves to the target BEFORE the old row is
+    /// removed — both deferred together — so adding/removing a row transfers the
+    /// keyboard between live fields instead of flicking it down and up.
     func apply(blocks: [TakeBlock], focusedBlockID: UUID?) {
-        let sig = blocks.map { "\($0.id.uuidString):\($0.isCheck)" }
-        if sig != blockSig {
-            rebuild(blocks: blocks)
-            blockSig = sig
-        } else {
-            // Same structure — sync text into any field NOT currently being typed
-            // in (typing the active field must never be stomped by the echo back).
-            for block in blocks {
-                guard let tv = textViews[block.id] else { continue }
-                if !tv.isFirstResponder, tv.text != block.text { tv.text = block.text }
+        for block in blocks {
+            if textViews[block.id] == nil {
+                createRow(block)
+            } else if checkRowIDs.contains(block.id) != block.isCheck {
+                rewrapRow(block)                       // text <-> check, same text view
+            } else if let tv = textViews[block.id], !tv.isFirstResponder, tv.text != block.text {
+                tv.text = block.text
             }
+        }
+        // Order the stack to match the block order.
+        for (index, block) in blocks.enumerated() {
+            if let row = rowContainers[block.id] { stack.insertArrangedSubview(row, at: index) }
         }
         updateCheckVisuals(blocks)
-        desiredFocus = focusedBlockID
-        applyFocus()
-    }
 
-    private func rebuild(blocks: [TakeBlock]) {
-        for v in stack.arrangedSubviews {
-            stack.removeArrangedSubview(v)
-            v.removeFromSuperview()
-        }
-        textViews.removeAll()
-        checkButtons.removeAll()
-        checkRowIDs.removeAll()
-        for block in blocks {
-            let tv = makeTextView(id: block.id, text: block.text, isComplete: isComplete(block))
-            textViews[block.id] = tv
-            switch block {
-            case .text:
-                stack.addArrangedSubview(tv)
-            case .check:
-                checkRowIDs.insert(block.id)
-                stack.addArrangedSubview(makeCheckRow(id: block.id, textView: tv))
+        desiredFocus = focusedBlockID
+        let liveIDs = Set(blocks.map(\.id))
+        // Defer focus + removal together, out of the SwiftUI update cycle: focus the
+        // target first, THEN drop any vanished row — so the keyboard is never yanked
+        // off a focused field that's about to be removed.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.applyFocusNow()
+            for id in Array(self.rowContainers.keys) where !liveIDs.contains(id) {
+                self.removeRow(id)
             }
         }
+    }
+
+    private func createRow(_ block: TakeBlock) {
+        let tv = makeTextView(id: block.id, text: block.text, isComplete: isComplete(block))
+        textViews[block.id] = tv
+        let row: UIView
+        if block.isCheck {
+            checkRowIDs.insert(block.id)
+            row = makeCheckRow(id: block.id, textView: tv)
+        } else {
+            row = tv
+        }
+        rowContainers[block.id] = row
+        stack.addArrangedSubview(row)
+    }
+
+    private func removeRow(_ id: UUID) {
+        if let row = rowContainers[id] {
+            stack.removeArrangedSubview(row)
+            row.removeFromSuperview()
+        }
+        rowContainers[id] = nil
+        textViews[id] = nil
+        checkButtons[id] = nil
+        checkRowIDs.remove(id)
+    }
+
+    /// Kind change (text <-> check) reusing the SAME text view, so focus + caret and
+    /// the keyboard survive — only the surrounding chrome (the checkbox) changes.
+    private func rewrapRow(_ block: TakeBlock) {
+        guard let tv = textViews[block.id], let old = rowContainers[block.id] else { return }
+        let wasFocused = tv.isFirstResponder
+        stack.removeArrangedSubview(old)
+        old.removeFromSuperview()
+        tv.removeFromSuperview()
+        checkButtons[block.id] = nil
+        let row: UIView
+        if block.isCheck {
+            checkRowIDs.insert(block.id)
+            row = makeCheckRow(id: block.id, textView: tv)
+        } else {
+            checkRowIDs.remove(block.id)
+            row = tv
+        }
+        rowContainers[block.id] = row
+        stack.addArrangedSubview(row)
+        if wasFocused { tv.becomeFirstResponder() }
     }
 
     private func isComplete(_ block: TakeBlock) -> Bool {
@@ -273,11 +315,20 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
 
     // MARK: - Focus
 
-    private func applyFocus() {
-        guard let id = desiredFocus, let tv = textViews[id], !tv.isFirstResponder,
-              !focusInFlight else { return }
-        focusInFlight = true
-        requestFocus(tv, attemptsLeft: 8)
+    /// Move focus to `desiredFocus`. Called from the deferred block in `apply`, so a
+    /// same-window sibling can take focus synchronously (transferring the keyboard with
+    /// no flicker). Falls back to the retry loop only when the target isn't in a window
+    /// yet (a freshly opened Take on a cold launch).
+    private func applyFocusNow() {
+        guard let id = desiredFocus, let tv = textViews[id], !tv.isFirstResponder else { return }
+        if tv.window != nil, tv.becomeFirstResponder() {
+            let end = tv.endOfDocument
+            tv.selectedTextRange = tv.textRange(from: end, to: end)
+            scrollActiveCaretToVisible(animated: false)
+        } else if !focusInFlight {
+            focusInFlight = true
+            requestFocus(tv, attemptsLeft: 8)
+        }
     }
 
     /// Retry become-first-responder until the field is in a window (mirrors the
