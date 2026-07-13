@@ -143,7 +143,8 @@ struct TimelineSwipeCell: View {
             openRowID: $swipeState.openRowID,
             leadingInset: spineX - CatchlightLayout.cardSpineInset,
             trailingInset: 20,
-            contentVerticalInset: cardGap / 2
+            contentVerticalInset: cardGap / 2,
+            centersActionLabel: true    // centre glyph/label in the revealed button, not hugged to the screen edge
         ) { offset in
             TimelineReadCell(take: take, spineX: spineX, cardGap: cardGap)
                 .offset(x: offset)
