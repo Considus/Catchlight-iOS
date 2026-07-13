@@ -32,6 +32,11 @@ struct BlockEditor: UIViewControllerRepresentable {
     /// unset so `DailiesView` skips the (to-be-deleted) caret pin.
     var onCaretMoved: ((CGRect) -> Void)? = nil
 
+    #if DEBUG
+    /// The test harness turns on an on-device readout of the scroll maths.
+    var diagnostics = false
+    #endif
+
     func makeUIViewController(context: Context) -> BlockEditorViewController {
         let vc = BlockEditorViewController()
         vc.delegate = context.coordinator
@@ -40,6 +45,9 @@ struct BlockEditor: UIViewControllerRepresentable {
 
     func updateUIViewController(_ vc: BlockEditorViewController, context: Context) {
         context.coordinator.parent = self
+        #if DEBUG
+        vc.showsDiagnostics = diagnostics
+        #endif
         vc.apply(blocks: draft.blocks, focusedBlockID: focusedBlockID)
     }
 

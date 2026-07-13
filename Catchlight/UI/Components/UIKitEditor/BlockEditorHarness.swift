@@ -25,8 +25,12 @@ struct BlockEditorHarness: View {
             }
             .padding()
             Divider()
-            BlockEditor(draft: $draft, focusedBlockID: $focused)
+            BlockEditor(draft: $draft, focusedBlockID: $focused, diagnostics: true)
                 .padding(.horizontal, 20)
+                // Opt out of SwiftUI's automatic keyboard avoidance — the editor's
+                // own UIKit scroll view reserves the keyboard space, and letting
+                // SwiftUI ALSO push up double-avoids and pins the caret too high.
+                .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .background(Color.ckBackground.ignoresSafeArea())
         .onAppear { focused = draft.blocks.first?.id }

@@ -33,6 +33,26 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private var textViews: [UUID: UITextView] = [:]
     private var desiredFocus: UUID?
     private var focusInFlight = false
+    /// Breathing room kept below the caret — how far above the keyboard the caret
+    /// rests before the content scrolls under it. Tunable (old editor used 72).
+    private let caretBottomGap: CGFloat = 28
+
+    #if DEBUG
+    /// Set by the test harness to surface the scroll maths on device (this is the
+    /// device-only zone the sim doesn't reproduce). Removed when M1 is wired into
+    /// the real hosts.
+    var showsDiagnostics = false { didSet { diagLabel.isHidden = !showsDiagnostics } }
+    private lazy var diagLabel: UILabel = {
+        let l = UILabel()
+        l.numberOfLines = 0
+        l.font = .monospacedSystemFont(ofSize: 10, weight: .semibold)
+        l.textColor = .systemRed
+        l.backgroundColor = UIColor.white.withAlphaComponent(0.85)
+        l.isHidden = true
+        l.translatesAutoresizingMaskIntoConstraints = false
+        return l
+    }()
+    #endif
 
     // MARK: - Setup
 
@@ -43,7 +63,10 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.keyboardDismissMode = .interactive
         scrollView.alwaysBounceVertical = true
-        scrollView.contentInsetAdjustmentBehavior = .always
+        // We manage the bottom inset ourselves from the keyboard frame; letting the
+        // scroll view ALSO add safe-area insets stacked a phantom gap at the top and
+        // fought the keyboard reservation. Own it fully.
+        scrollView.contentInsetAdjustmentBehavior = .never
         view.addSubview(scrollView)
 
         stack.axis = .vertical
@@ -66,6 +89,14 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             stack.bottomAnchor.constraint(equalTo: content.bottomAnchor),
             stack.widthAnchor.constraint(equalTo: frame.widthAnchor),
         ])
+
+        #if DEBUG
+        view.addSubview(diagLabel)
+        NSLayoutConstraint.activate([
+            diagLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 4),
+            diagLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 6),
+        ])
+        #endif
 
         let nc = NotificationCenter.default
         nc.addObserver(self, selector: #selector(keyboardChanged(_:)),
@@ -182,12 +213,31 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// respects `adjustedContentInset` (which includes the keyboard overlap), so
     /// the caret is held above the keyboard — natively, against exact geometry.
     private func scrollActiveCaretToVisible(animated: Bool) {
-        guard let tv = activeTextView(), let sel = tv.selectedTextRange else { return }
+        guard let tv = activeTextView(), let sel = tv.selectedTextRange else {
+            #if DEBUG
+            updateDiag(nil)
+            #endif
+            return
+        }
         let caret = tv.caretRect(for: sel.end)
         guard caret.origin.y.isFinite, caret.size.height.isFinite else { return }
         let inScroll = scrollView.convert(caret, from: tv)
-        scrollView.scrollRectToVisible(inScroll.insetBy(dx: 0, dy: -8), animated: animated)
+        scrollView.scrollRectToVisible(inScroll.insetBy(dx: 0, dy: -caretBottomGap), animated: animated)
+        #if DEBUG
+        updateDiag(inScroll)
+        #endif
     }
+
+    #if DEBUG
+    private func updateDiag(_ caretInScroll: CGRect?) {
+        guard showsDiagnostics else { return }
+        diagLabel.text = String(format: "fH=%.0f  ins.b=%.0f  off=%.0f\ncs=%.0f  caretY=%@",
+                                scrollView.frame.height, scrollView.adjustedContentInset.bottom,
+                                scrollView.contentOffset.y, scrollView.contentSize.height,
+                                caretInScroll.map { String(format: "%.0f", $0.maxY) } ?? "-")
+        view.bringSubviewToFront(diagLabel)
+    }
+    #endif
 
     // MARK: - UITextViewDelegate
 
