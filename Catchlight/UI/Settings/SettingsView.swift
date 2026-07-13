@@ -63,6 +63,8 @@ struct SettingsView: View {
     @State private var showResetConfirm = false
     /// Presents the UIKit-editor test bed (Pillar 1 M1). DEBUG only.
     @State private var showEditorHarness = false
+    /// Presents the UIKit-timeline test bed (Pillar 2 M1). DEBUG only.
+    @State private var showTimelineHarness = false
     /// Settings-backed toggle for the section 2b on-device inset readout overlay.
     @AppStorage(DebugInsetReadoutSettings.defaultsKey) private var showInsetReadout = false
     #endif
@@ -172,6 +174,7 @@ struct SettingsView: View {
             Text("Deletes the master key, privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
         }
         .fullScreenCover(isPresented: $showEditorHarness) { BlockEditorHarness() }
+        .fullScreenCover(isPresented: $showTimelineHarness) { UIKitTimelineHarness() }
         #endif
     }
 
@@ -247,6 +250,26 @@ struct SettingsView: View {
             .listRowBackground(Color.ckSurface)
             .accessibilityIdentifier("debug-uikit-editor")
             .accessibilityHint("Opens the new UIKit editor test bed to check caret-follow.")
+
+            // Section 2d — open the UIKit-timeline test bed (Pillar 2 M1).
+            Button {
+                showTimelineHarness = true
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(Color.ckAccent)
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    Text("UIKit timeline (M1)")
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextPrimary)
+                }
+            }
+            .frame(minHeight: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityIdentifier("debug-uikit-timeline")
+            .accessibilityHint("Opens the new UIKit timeline test bed to check scrolling + recycling.")
         } header: {
             sectionHeader("Debug")
         }
