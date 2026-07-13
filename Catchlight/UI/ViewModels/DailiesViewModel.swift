@@ -155,9 +155,6 @@ final class DailiesViewModel {
         updated.modifiedAt = Date()
         if updated.isSeeded { updated.isSeeded = false }
         updated.normaliseActivityFloor()
-        // TEMP DIAGNOSTIC (Bug: deleted Take reappears, 2026-07-10). Attributes a
-        // following "tombstone- upsert" to a LOCAL save. REMOVE after repro.
-        DiagnosticsLog.shared.record(.lifecycle, "DBG localsave \(updated.id.uuidString.prefix(8))")
         do {
             try store.upsert(updated)
             // Spotlight (Task 6.19) — re-index every save (covers both create
@@ -183,8 +180,6 @@ final class DailiesViewModel {
         updated.modifiedAt = Date()
         if updated.isSeeded { updated.isSeeded = false }
         updated.normaliseActivityFloor()
-        // TEMP DIAGNOSTIC (Bug: deleted Take reappears, 2026-07-10). REMOVE after repro.
-        DiagnosticsLog.shared.record(.lifecycle, "DBG localsave(inplace) \(updated.id.uuidString.prefix(8))")
         do {
             try store.upsert(updated)
             spotlight.index(updated)
