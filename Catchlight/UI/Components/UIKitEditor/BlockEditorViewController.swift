@@ -338,18 +338,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         row.translatesAutoresizingMaskIntoConstraints = true
         scrollView.addSubview(row)
         row.frame = frame
-        // A solid surface + explicit shadowPath so the lift actually casts a shadow
-        // (a transparent stack view has no shape to cast from).
-        row.backgroundColor = UIColor(Color.ckSurface)
-        row.layer.cornerRadius = 10
-        row.layer.masksToBounds = false
-        row.layer.shadowColor = UIColor.black.cgColor
-        row.layer.shadowOpacity = 0.22
-        row.layer.shadowRadius = 8
-        row.layer.shadowOffset = CGSize(width: 0, height: 4)
-        row.layer.shadowPath = UIBezierPath(roundedRect: CGRect(origin: .zero, size: frame.size),
-                                            cornerRadius: 10).cgPath
-        UIView.animate(withDuration: 0.15) { row.transform = CGAffineTransform(scaleX: 1.03, y: 1.03) }
+        // Just a subtle scale on lift — owner prefers this to a surface+shadow chip
+        // (device 2026-07-13).
+        UIView.animate(withDuration: 0.15) { row.transform = CGAffineTransform(scaleX: 1.02, y: 1.02) }
         dragID = id; dragRow = row; dragPlaceholder = placeholder
         dragLastY = gesture.location(in: scrollView).y
     }
@@ -379,10 +370,6 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         let finalIndex = stack.arrangedSubviews.firstIndex(of: placeholder) ?? 0
         row.removeFromSuperview()
         row.transform = .identity
-        row.backgroundColor = .clear
-        row.layer.shadowOpacity = 0
-        row.layer.shadowPath = nil
-        row.layer.cornerRadius = 0
         row.translatesAutoresizingMaskIntoConstraints = false
         stack.insertArrangedSubview(row, at: finalIndex)
         stack.removeArrangedSubview(placeholder)
