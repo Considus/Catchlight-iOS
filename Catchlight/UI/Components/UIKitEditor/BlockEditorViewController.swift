@@ -174,14 +174,20 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private func createRow(_ block: TakeBlock) {
         let tv = makeTextView(id: block.id, text: block.text, isComplete: isComplete(block))
         textViews[block.id] = tv
-        let row: UIView
+        // Every row is an HStack that ALWAYS holds the text view; a check row just adds
+        // the checkbox + handle around it. Keeping the tv permanently inside its HStack
+        // means a check<->text conversion only adds/removes chrome — the tv never changes
+        // superview, so it never resigns first responder and the keyboard never flicks
+        // (owner device report 2026-07-13).
+        let row = UIStackView(arrangedSubviews: [tv])
+        row.axis = .horizontal
+        row.alignment = .center
+        row.spacing = 8
+        rowContainers[block.id] = row
         if block.isCheck {
             checkRowIDs.insert(block.id)
-            row = makeCheckRow(id: block.id, textView: tv)
-        } else {
-            row = tv
+            addCheckChrome(to: row, id: block.id)
         }
-        rowContainers[block.id] = row
         stack.addArrangedSubview(row)
     }
 
@@ -197,27 +203,18 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         reorderRowID = reorderRowID.filter { $0.value != id }
     }
 
-    /// Kind change (text <-> check) reusing the SAME text view, so focus + caret and
-    /// the keyboard survive — only the surrounding chrome (the checkbox) changes.
+    /// Kind change (text <-> check) reusing the SAME row + text view — only the chrome
+    /// (checkbox + handle) is added or removed. The tv never leaves the window, so it
+    /// keeps first responder and the keyboard stays put.
     private func rewrapRow(_ block: TakeBlock) {
-        guard let tv = textViews[block.id], let old = rowContainers[block.id] else { return }
-        reorderRowID = reorderRowID.filter { $0.value != block.id }   // drop the old handle's pan
-        let wasFocused = tv.isFirstResponder
-        stack.removeArrangedSubview(old)
-        old.removeFromSuperview()
-        tv.removeFromSuperview()
-        checkButtons[block.id] = nil
-        let row: UIView
+        guard let row = rowContainers[block.id] as? UIStackView else { return }
         if block.isCheck {
             checkRowIDs.insert(block.id)
-            row = makeCheckRow(id: block.id, textView: tv)
+            addCheckChrome(to: row, id: block.id)
         } else {
             checkRowIDs.remove(block.id)
-            row = tv
+            removeCheckChrome(from: row, id: block.id)
         }
-        rowContainers[block.id] = row
-        stack.addArrangedSubview(row)
-        if wasFocused { tv.becomeFirstResponder() }
     }
 
     private func isComplete(_ block: TakeBlock) -> Bool {
@@ -274,9 +271,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         }
     }
 
-    /// A check row: checkbox (44pt touch target) + the item's text view. Matches
-    /// the current editor's centre-aligned layout. Drag-to-reorder arrives in M4.
-    private func makeCheckRow(id: UUID, textView: UITextView) -> UIView {
+    /// Add the check chrome (leading checkbox + trailing drag handle) around the row's
+    /// existing text view, without touching the text view itself.
+    private func addCheckChrome(to row: UIStackView, id: UUID) {
         let button = UIButton(type: .system)
         button.setContentHuggingPriority(.required, for: .horizontal)
         button.accessibilityIdentifier = "uikit-check-box"
@@ -297,16 +294,23 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         handle.addGestureRecognizer(pan)
         reorderRowID[pan] = id
 
-        let row = UIStackView(arrangedSubviews: [button, textView, handle])
-        row.axis = .horizontal
-        row.alignment = .center
-        row.spacing = 8
+        row.insertArrangedSubview(button, at: 0)   // leading
+        row.addArrangedSubview(handle)             // trailing
         NSLayoutConstraint.activate([
             button.widthAnchor.constraint(equalToConstant: 44),
             button.heightAnchor.constraint(equalToConstant: 44),
             handle.widthAnchor.constraint(equalToConstant: 36),
         ])
-        return row
+    }
+
+    /// Remove the check chrome, leaving just the text view in the row.
+    private func removeCheckChrome(from row: UIStackView, id: UUID) {
+        for v in row.arrangedSubviews where v !== textViews[id] {
+            row.removeArrangedSubview(v)
+            v.removeFromSuperview()
+        }
+        checkButtons[id] = nil
+        reorderRowID = reorderRowID.filter { $0.value != id }
     }
 
     // MARK: - Drag-to-reorder
