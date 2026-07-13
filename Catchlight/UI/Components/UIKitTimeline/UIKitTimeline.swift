@@ -15,34 +15,41 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     var takes: [Take]
     /// The spine x (dock "+" column) — where the card's leading inset is measured from.
     var spineX: CGFloat = CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
+    /// The card-to-card gap from the View/density setting (Compact/Standard/Comfort).
+    var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
         vc.spineX = spineX
+        vc.cardGap = cardGap
         return vc
     }
 
     func updateUIViewController(_ vc: UIKitTimelineViewController, context: Context) {
         vc.spineX = spineX
+        vc.cardGap = cardGap
         vc.apply(takes: takes)
     }
 }
 
 /// One read-only timeline row (M1: the card only, at the spine-relative leading inset).
-/// The Iris + occluder land in M2; the wire becomes a layout decoration.
+/// The Iris + occluder land in M2; the wire becomes a layout decoration. `cardGap/2` on
+/// each edge makes the card-to-card distance equal the density setting's gap.
 struct TimelineReadCell: View {
     let take: Take
     let spineX: CGFloat
+    let cardGap: CGFloat
     var body: some View {
         TakeCardSurface(take: take, linksInteractive: false)
             .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
             .padding(.trailing, 20)
-            .padding(.vertical, 6)
+            .padding(.vertical, cardGap / 2)
     }
 }
 
 final class UIKitTimelineViewController: UIViewController {
     var spineX: CGFloat = 0
+    var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
 
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<Int, UUID>!
@@ -68,7 +75,7 @@ final class UIKitTimelineViewController: UIViewController {
             [weak self] cell, _, id in
             guard let self, let take = self.takesByID[id] else { return }
             cell.contentConfiguration = UIHostingConfiguration {
-                TimelineReadCell(take: take, spineX: self.spineX)
+                TimelineReadCell(take: take, spineX: self.spineX, cardGap: self.cardGap)
             }
             .margins(.all, 0)
             cell.backgroundConfiguration = .clear()
@@ -86,5 +93,10 @@ final class UIKitTimelineViewController: UIViewController {
         snapshot.appendSections([0])
         snapshot.appendItems(takes.map(\.id), toSection: 0)
         dataSource.apply(snapshot, animatingDifferences: false)
+        // Reconfigure so a live setting change (spineX / cardGap) refreshes cells even
+        // when the item ids are unchanged.
+        var reconfigured = dataSource.snapshot()
+        reconfigured.reconfigureItems(reconfigured.itemIdentifiers)
+        dataSource.apply(reconfigured, animatingDifferences: false)
     }
 }

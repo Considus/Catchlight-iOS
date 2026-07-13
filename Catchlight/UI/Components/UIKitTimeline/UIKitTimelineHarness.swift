@@ -11,6 +11,15 @@ import CatchlightCore
 struct UIKitTimelineHarness: View {
     @Environment(\.dismiss) private var dismiss
 
+    // Follow the live View (density) + Order settings, like the real timeline.
+    @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey)
+    private var spacingRaw = SettingsViewModel.TakeSpacing.default.rawValue
+    @AppStorage(SettingsViewModel.TakeSort.defaultsKey)
+    private var sortRaw = SettingsViewModel.TakeSort.default.rawValue
+    private var spacing: SettingsViewModel.TakeSpacing { .init(rawValue: spacingRaw) ?? .default }
+    private var sort: SettingsViewModel.TakeSort { .init(rawValue: sortRaw) ?? .default }
+
+    // Sample Takes in chronological (oldest-first) order — index 0 = oldest.
     private let takes: [Take] = (0..<40).map { i in
         switch i % 4 {
         case 0:
@@ -36,7 +45,10 @@ struct UIKitTimelineHarness: View {
             }
             .padding()
             Divider()
-            UIKitTimeline(takes: takes)
+            UIKitTimeline(
+                takes: sort == .newestFirst ? Array(takes.reversed()) : takes,
+                cardGap: spacing.gap
+            )
         }
         .background(Color.ckBackground.ignoresSafeArea())
     }
