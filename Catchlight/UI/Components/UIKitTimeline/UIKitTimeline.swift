@@ -61,6 +61,7 @@ struct TimelineReadCell: View {
     let spineX: CGFloat
     let cardGap: CGFloat
 
+    @Environment(\.colorScheme) private var scheme
     private let inset = CatchlightLayout.cardSpineInset
     private let d = CatchlightLayout.circleDiameter
     private let w = CatchlightLayout.spineWidth
@@ -75,6 +76,12 @@ struct TimelineReadCell: View {
                 .allowsHitTesting(false)
             TakeCircleView(take: take)                                                 // Iris
                 .frame(width: d, height: d)
+                // Lift the Iris off the background (owner 2026-07-13) — raised but still
+                // attached to the card. Stronger than the card's default shadow because
+                // the Iris is smaller + partly hollow, so it casts less. `caretBottomGap`-
+                // style single tunable: bump/soften via the opacity/radius here.
+                .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.16),
+                        radius: 5, y: 2)
                 .offset(x: inset - d / 2, y: -d / 2)
             SpineLine().stroke(Color.ckSpineWire, lineWidth: w)                        // wire over Iris top
                 .frame(width: w, height: d / 2)
