@@ -93,13 +93,6 @@ struct InlineTakeEditCard: View {
     /// consistent target — steadier to position above the keyboard. Tunable.
     private let focusMinHeight: CGFloat = 96
 
-    /// The "Creation date" setting — the editor shows the stamp for both `.editor`
-    /// and `.always` (both include the editing surface). See `CreationStampLabel`.
-    @AppStorage(SettingsViewModel.CreationStamp.defaultsKey)
-    private var creationStampRaw: String = SettingsViewModel.CreationStamp.default.rawValue
-    private var creationStamp: SettingsViewModel.CreationStamp {
-        SettingsViewModel.CreationStamp(rawValue: creationStampRaw) ?? .default
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -120,12 +113,9 @@ struct InlineTakeEditCard: View {
                     .zIndex(draggingID == block.id ? 1 : 0)
             }
 
-            // Created-at stamp at the bottom of the editing card, shown when the
-            // "Creation date" setting is In-the-editor or Always (owner 2026-07-01).
-            if creationStamp != .off {
-                CreationStampLabel(date: draft.createdAt)
-                    .padding(.top, 6)
-            }
+            // No creation stamp WHILE EDITING (owner 2026-07-14): the new UIKit in-place
+            // editor doesn't show it, so for consistency the editor never does. The stamp
+            // remains a RESTING-card feature (TakeCardSurface, gated by the setting).
         }
         .onPreferenceChange(RowHeightKey.self) { rowHeights = $0 }
         // Match TakeCardSurface's v1.7 padding: 24 top (clears the overlapping Iris) /
