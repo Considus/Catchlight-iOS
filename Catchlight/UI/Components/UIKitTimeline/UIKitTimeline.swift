@@ -40,6 +40,11 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// → toggle Obie. Wired to the same `ui`/`vm` the SwiftUI timeline uses.
     var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
     var onLongPressCircle: (Take) -> Void = { _ in }
+    /// Card context-menu actions (resting-row set). Mark-done/Delete reuse the swipe
+    /// closures above; these three are the menu-only extras.
+    var onSetImportant: (Take) -> Void = { _ in }
+    var onMakeObie: (Take) -> Void = { _ in }
+    var onExport: (Take) -> Void = { _ in }
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
@@ -51,6 +56,9 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onDelete = onDelete
         vc.onTapCircle = onTapCircle
         vc.onLongPressCircle = onLongPressCircle
+        vc.onSetImportant = onSetImportant
+        vc.onMakeObie = onMakeObie
+        vc.onExport = onExport
         return vc
     }
 
@@ -63,6 +71,9 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onDelete = onDelete
         vc.onTapCircle = onTapCircle
         vc.onLongPressCircle = onLongPressCircle
+        vc.onSetImportant = onSetImportant
+        vc.onMakeObie = onMakeObie
+        vc.onExport = onExport
         vc.apply(groups: groups)
     }
 }
@@ -82,6 +93,15 @@ struct TimelineReadCell: View {
     /// move to a UIKit-hosted cell).
     var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
     var onLongPressCircle: (Take) -> Void = { _ in }
+    /// Card context-menu actions (mirrors `TakeRowView.rowMenuItems`, resting variant).
+    /// Mark-done / Delete reuse the swipe closures; the menu-delete is thus recurring-
+    /// aware too. Attached to the CARD only — the Iris is a sibling, so its long-press
+    /// (Obie) still wins, matching the SwiftUI row's deliberate split.
+    var onToggleDone: (Take) -> Void = { _ in }
+    var onDelete: (Take) -> Void = { _ in }
+    var onSetImportant: (Take) -> Void = { _ in }
+    var onMakeObie: (Take) -> Void = { _ in }
+    var onExport: (Take) -> Void = { _ in }
 
     @Environment(\.colorScheme) private var scheme
     private let inset = CatchlightLayout.cardSpineInset
@@ -92,6 +112,7 @@ struct TimelineReadCell: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             TakeCardSurface(take: take, linksInteractive: false)                       // card
+                .contextMenu { menuItems }
             Rectangle().fill(Color.ckBackground)                                       // occluder
                 .frame(width: occW, height: d / 2)
                 .offset(x: inset - occW / 2, y: -d / 2)
@@ -136,6 +157,46 @@ struct TimelineReadCell: View {
         // doesn't grow the layout; the cell must simply not clip).
         .padding(.vertical, cardGap / 2)
     }
+
+    /// The resting-row menu (mirrors `TakeRowView.rowMenuItems`, minus the edit-only
+    /// "Discard changes" — the new timeline has no edit-in-place yet, M4).
+    @ViewBuilder
+    private var menuItems: some View {
+        if take.canBeMarkedDone {
+            Button {
+                onToggleDone(take)
+            } label: {
+                Label(take.isMarkedDone ? "Mark Not Done" : "Mark Done",
+                      systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
+            }
+        }
+        Button {
+            onSetImportant(take)
+        } label: {
+            if take.isImportant {
+                Label { Text("Remove Important") } icon: { MenuGlyph.removeImportant }
+            } else {
+                Label { Text("Make Important") } icon: { MenuGlyph.makeImportant }
+            }
+        }
+        if !take.isObie {
+            Button {
+                onMakeObie(take)
+            } label: {
+                Label { Text("Make Obie") } icon: { MenuGlyph.obie }
+            }
+        }
+        Button {
+            onExport(take)
+        } label: {
+            Label("Export Take", systemImage: "square.and.arrow.up")
+        }
+        Button(role: .destructive) {
+            onDelete(take)
+        } label: {
+            Label("Delete Take", systemImage: "trash")
+        }
+    }
 }
 
 /// Shared single-open coordination for the custom swipe rows.
@@ -156,6 +217,9 @@ struct TimelineSwipeCell: View {
     let onDelete: (Take) -> Void
     var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
     var onLongPressCircle: (Take) -> Void = { _ in }
+    var onSetImportant: (Take) -> Void = { _ in }
+    var onMakeObie: (Take) -> Void = { _ in }
+    var onExport: (Take) -> Void = { _ in }
 
     var body: some View {
         SwipeActionRow(
@@ -176,14 +240,19 @@ struct TimelineSwipeCell: View {
             centersActionLabel: true    // centre glyph/label in the revealed button, not hugged to the screen edge
         ) { offset in
             TimelineReadCell(take: take, spineX: spineX, cardGap: cardGap,
-                             onTapCircle: onTapCircle, onLongPressCircle: onLongPressCircle)
+                             onTapCircle: onTapCircle, onLongPressCircle: onLongPressCircle,
+                             onToggleDone: onToggleDone, onDelete: onDelete,
+                             onSetImportant: onSetImportant, onMakeObie: onMakeObie,
+                             onExport: onExport)
                 .offset(x: offset)
         }
     }
 }
 
-/// A month divider row — kerned caps at the card TEXT column, `cardGap` above (so it
-/// centres in the inter-card gap, matching the current timeline's divider).
+/// A month divider row — kerned caps at the card TEXT column, centred in the inter-card
+/// gap. Each adjacent card contributes a `cardGap/2` half-gap on its facing edge, so a
+/// SYMMETRIC `cardGap/2` here puts equal space (`cardGap`) above and below the label —
+/// centred on the y-axis — while keeping the overall card-to-card gap unchanged.
 struct TimelineMonthDivider: View {
     let title: String
     let spineX: CGFloat
@@ -198,7 +267,7 @@ struct TimelineMonthDivider: View {
         }
         .padding(.leading, spineX - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad)
         .padding(.trailing, 20)
-        .padding(.top, cardGap)
+        .padding(.vertical, cardGap / 2)
     }
 }
 
@@ -211,6 +280,9 @@ final class UIKitTimelineViewController: UIViewController {
     var onDelete: (Take) -> Void = { _ in }
     var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
     var onLongPressCircle: (Take) -> Void = { _ in }
+    var onSetImportant: (Take) -> Void = { _ in }
+    var onMakeObie: (Take) -> Void = { _ in }
+    var onExport: (Take) -> Void = { _ in }
 
     private let swipeState = TimelineSwipeState()
     private var collectionView: UICollectionView!
@@ -252,7 +324,10 @@ final class UIKitTimelineViewController: UIViewController {
                                       onToggleDone: { self.onToggleDone($0) },
                                       onDelete: { self.onDelete($0) },
                                       onTapCircle: { self.onTapCircle($0, $1) },
-                                      onLongPressCircle: { self.onLongPressCircle($0) })
+                                      onLongPressCircle: { self.onLongPressCircle($0) },
+                                      onSetImportant: { self.onSetImportant($0) },
+                                      onMakeObie: { self.onMakeObie($0) },
+                                      onExport: { self.onExport($0) })
                 }
                 .margins(.all, 0)
             case .month(let key):

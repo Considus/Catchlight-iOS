@@ -931,6 +931,21 @@ struct DailiesView: View {
                 orientation.triggerObieIntro()
                 guard app.ensureEntitled() else { return }
                 vm.designateObie(take, replaceExisting: false)
+            },
+            // Card context-menu extras (resting-row set) — mirror rowContent. Mark-done
+            // and Delete reuse onToggleDone/onDelete above.
+            onSetImportant: { take in
+                guard app.ensureEntitled() else { return }
+                var t = take
+                t.isImportant.toggle()
+                vm.save(t)
+            },
+            onMakeObie: { take in
+                guard app.ensureEntitled() else { return }
+                vm.designateObie(take, replaceExisting: false)
+            },
+            onExport: { take in
+                ExportCoordinator.presentShareSheet(takes: [take])
             }
         )
     }
