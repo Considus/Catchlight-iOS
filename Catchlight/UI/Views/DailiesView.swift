@@ -161,6 +161,11 @@ struct DailiesView: View {
     /// `editDraft` so its ticks / reorders / deletes ride the inline save.
     @State private var anglePresented = false
 
+    /// M4.2 — the tapped card's frame in WINDOW coords, so the new-timeline in-place editor
+    /// opens anchored at the row (reported by `UIKitTimeline.onEditAnchor`). `.zero` until a
+    /// card is tapped (falls back to a full-bleed panel).
+    @State private var editAnchor: CGRect = .zero
+
     /// Extra bottom scroll room added while editing so the focused Take — even the
     /// last one under Oldest-first — can scroll up to its clear position above the
     /// keyboard rather than clamping against the content end (owner 2026-06-19).
@@ -962,7 +967,9 @@ struct DailiesView: View {
                     return
                 }
                 beginInlineEdit(take)
-            }
+            },
+            // M4.2 — the tapped card's window frame; anchors the editor overlay in place.
+            onEditAnchor: { editAnchor = $0 }
         )
     }
 
@@ -977,27 +984,32 @@ struct DailiesView: View {
         // keyboard-anchored `newTakeFocusCard`, so exclude it here (`inlineNewTake != nil`).
         if useNewTimeline, ui.isEditingInPlace, inlineNewTake == nil, ui.editingTakeID != nil {
             VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Button("Done") { saveInlineEdit() }
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckAccent)
-                }
-                .padding(.horizontal, 20)
-                .frame(height: 44)
-                .padding(.top, deviceTopInset)
-                BlockEditor(
-                    draft: editDraftBinding,
-                    focusedBlockID: $editFocusedBlockID,
-                    onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
-                    onEditReminder: { presentReminderEditor() },
-                    onDiscard: { discardInlineEdit() })
+                // Push the editor panel down so its top sits at the tapped row (M4.2). The
+                // anchor is the cell's window frame; `+ takeSpacing.gap/2` aligns to the CARD
+                // top (the cell carries a cardGap/2 vertical pad above the card).
+                Color.clear.frame(height: max(0, editAnchor.minY + takeSpacing.gap / 2))
+                VStack(spacing: 0) {
+                    HStack {
+                        Spacer()
+                        Button("Done") { saveInlineEdit() }
+                            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                            .foregroundStyle(Color.ckAccent)
+                    }
                     .padding(.horizontal, 20)
+                    .frame(height: 40)
+                    BlockEditor(
+                        draft: editDraftBinding,
+                        focusedBlockID: $editFocusedBlockID,
+                        onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
+                        onEditReminder: { presentReminderEditor() },
+                        onDiscard: { discardInlineEdit() })
+                        .padding(.horizontal, 20)
+                }
+                .background(Color.ckBackground)
             }
-            .background(Color.ckBackground.ignoresSafeArea())
-            // The editor's own UIKit scroll reserves keyboard space; opt out of SwiftUI's
-            // avoidance so it doesn't double up (harness lesson).
-            .ignoresSafeArea(.keyboard, edges: .bottom)
+            .ignoresSafeArea()                          // top-left = window origin, so the
+                                                        // window-coord anchor lines up
+            .ignoresSafeArea(.keyboard, edges: .bottom) // editor reserves keyboard space itself
             .transition(.opacity)
         }
     }
