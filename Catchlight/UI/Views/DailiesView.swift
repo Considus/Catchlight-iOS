@@ -165,6 +165,9 @@ struct DailiesView: View {
     /// opens anchored at the row (reported by `UIKitTimeline.onEditAnchor`). `.zero` until a
     /// card is tapped (falls back to a full-bleed panel).
     @State private var editAnchor: CGRect = .zero
+    /// M4.7 — the in-place editor card's content height (grows with the Take, capped so the
+    /// caret stays above the keyboard, then the editor scrolls internally).
+    @State private var editorHeight: CGFloat = 60
 
     /// Extra bottom scroll room added while editing so the focused Take — even the
     /// last one under Oldest-first — can scroll up to its clear position above the
@@ -1037,32 +1040,58 @@ struct DailiesView: View {
         }
     }
 
-    /// The opaque editor panel, anchored at the row (M4.2), lifted for low rows (M4.3).
+    /// M4.7 — the in-place editor as a SNUG CARD matching the read card (`TakeCardStyle`
+    /// chrome + the Iris on the spine), anchored at the row (M4.2), lifted for low rows
+    /// (M4.3). Grows with content to `editCardMaxHeight`, then the editor scrolls internally
+    /// (caret stays above the keyboard). Save = tap away (the catcher); × on the toolbar
+    /// discards — matching the app's in-place idiom (no Done button, like the read card).
     private var editPanel: some View {
-        VStack(spacing: 0) {
-            Color.clear.frame(height: editPanelTop).allowsHitTesting(false)
-            VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Button("Done") { saveInlineEdit() }
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckAccent)
-                }
-                .padding(.horizontal, 20)
-                .frame(height: 40)
-                BlockEditor(
-                    draft: editDraftBinding,
-                    focusedBlockID: $editFocusedBlockID,
-                    onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
-                    onEditReminder: { presentReminderEditor() },
-                    onDiscard: { discardInlineEdit() })
-                    .padding(.horizontal, 20)
-            }
-            .background(Color.ckBackground)
+        editCard
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.top, editPanelTop)
+            .ignoresSafeArea()                          // top-left = window origin (anchor lines up)
+            .ignoresSafeArea(.keyboard, edges: .bottom) // editor reserves keyboard space itself
+    }
+
+    private var editCard: some View {
+        let draft = editDraft ?? Take()
+        let style = TakeCardStyle(take: draft, scheme: scheme)
+        let d = CatchlightLayout.circleDiameter
+        let inset = CatchlightLayout.cardSpineInset
+        let maxH = editCardMaxHeight
+        return ZStack(alignment: .topLeading) {
+            BlockEditor(
+                draft: editDraftBinding,
+                focusedBlockID: $editFocusedBlockID,
+                onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
+                onEditReminder: { presentReminderEditor() },
+                onDiscard: { discardInlineEdit() },
+                onContentHeightChange: { h in
+                    var t = Transaction(); t.disablesAnimations = true
+                    withTransaction(t) { editorHeight = min(max(h, 44), maxH) }
+                })
+                .frame(height: editorHeight)
+                // v1.7 card text inset: 24 top (clears the overlapping Iris) / text column
+                // leading / 14 bottom+trailing — matches TakeCardSurface.
+                .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
+                                    bottom: 14, trailing: 14))
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(style.surface))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth))
+            TakeCircleView(take: draft)                                  // Iris on the spine
+                .frame(width: d, height: d)
+                .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.16), radius: 5, y: 2)
+                .offset(x: inset - d / 2, y: -d / 2)
         }
-        .ignoresSafeArea()                              // top-left = window origin, so the
-                                                        // window-coord anchor lines up
-        .ignoresSafeArea(.keyboard, edges: .bottom)     // editor reserves keyboard space itself
+        .padding(.leading, spineX - inset)
+        .padding(.trailing, 20)
+    }
+
+    /// Cap the editor card so it fits from its top down to just above the keyboard; beyond
+    /// this the editor scrolls internally (static keyboard estimate — no reactive follow).
+    private var editCardMaxHeight: CGFloat {
+        let kbReserve: CGFloat = 400
+        return max(120, UIScreen.main.bounds.height - editPanelTop - kbReserve - 8)
     }
 
     private var timeline: some View {
