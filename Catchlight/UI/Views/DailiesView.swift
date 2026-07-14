@@ -369,6 +369,7 @@ struct DailiesView: View {
                 newTakeFocusCard(newTake)
             }
 
+            // M4.1 — existing-Take edit-in-place for the NEW timeline (plain-SwiftUI editor).
             // Pinned page heading + top fade (cosmetic baseline 2026-06-11):
             // a plain overlay child, NOT .safeAreaInset — in this full-bleed
             // hierarchy (.ignoresSafeArea(.container) at the app root) a top
@@ -381,6 +382,11 @@ struct DailiesView: View {
             // under it instead of running to the Dynamic Island — and only the title
             // TEXT dims (the dimming lives on `Text(headingTitle)` inside `heading`).
             heading
+
+            // M4.1 — existing-Take edit-in-place for the NEW timeline (plain-SwiftUI editor).
+            // ABOVE the heading in z-order so its full-bleed panel + Done button aren't
+            // masked by the pinned heading. (Positioning/anchoring/dim are later increments.)
+            newTimelineEditOverlay
 
             // The pinned Obie sits below the heading at the first-Take position, with
             // its own solid backing + fade; scrolling Takes pass behind it and dissolve.
@@ -946,8 +952,54 @@ struct DailiesView: View {
             },
             onExport: { take in
                 ExportCoordinator.presentShareSheet(takes: [take])
+            },
+            // M4.1 — tap a card begins edit-in-place, or commits an open edit when tapping
+            // a DIFFERENT Take (mirrors rowContent.onTapText). New-Take is unaffected here;
+            // it rides the separate `newTakeFocusCard` overlay.
+            onTapText: { take in
+                if ui.isEditingInPlace {
+                    if ui.editingTakeID != take.id { saveInlineEdit() }
+                    return
+                }
+                beginInlineEdit(take)
             }
         )
+    }
+
+    /// M4.1 — the in-place editor for the NEW timeline, hosted in PLAIN SwiftUI (exactly the
+    /// environment the Pillar 1 harness proves `BlockEditor` works in — live typing + Return
+    /// create rows immediately). This step ONLY proves the editor end-to-end; positioning /
+    /// row-anchoring / dim veil / keyboard tuning are later increments (M4.2+). A full-bleed
+    /// panel over the timeline with an explicit Done to save.
+    @ViewBuilder
+    private var newTimelineEditOverlay: some View {
+        // Existing-Take edit only. A new Take also sets `ui.editingTakeID` but shows in the
+        // keyboard-anchored `newTakeFocusCard`, so exclude it here (`inlineNewTake != nil`).
+        if useNewTimeline, ui.isEditingInPlace, inlineNewTake == nil, ui.editingTakeID != nil {
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Button("Done") { saveInlineEdit() }
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckAccent)
+                }
+                .padding(.horizontal, 20)
+                .frame(height: 44)
+                .padding(.top, deviceTopInset)
+                BlockEditor(
+                    draft: editDraftBinding,
+                    focusedBlockID: $editFocusedBlockID,
+                    onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
+                    onEditReminder: { presentReminderEditor() },
+                    onDiscard: { discardInlineEdit() })
+                    .padding(.horizontal, 20)
+            }
+            .background(Color.ckBackground.ignoresSafeArea())
+            // The editor's own UIKit scroll reserves keyboard space; opt out of SwiftUI's
+            // avoidance so it doesn't double up (harness lesson).
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+            .transition(.opacity)
+        }
     }
 
     private var timeline: some View {

@@ -45,6 +45,8 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     var onSetImportant: (Take) -> Void = { _ in }
     var onMakeObie: (Take) -> Void = { _ in }
     var onExport: (Take) -> Void = { _ in }
+    /// Tap a card → begin edit-in-place / commit an open edit (M4.1).
+    var onTapText: (Take) -> Void = { _ in }
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
@@ -59,6 +61,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onSetImportant = onSetImportant
         vc.onMakeObie = onMakeObie
         vc.onExport = onExport
+        vc.onTapText = onTapText
         return vc
     }
 
@@ -74,6 +77,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onSetImportant = onSetImportant
         vc.onMakeObie = onMakeObie
         vc.onExport = onExport
+        vc.onTapText = onTapText
         vc.apply(groups: groups)
     }
 }
@@ -102,6 +106,8 @@ struct TimelineReadCell: View {
     var onSetImportant: (Take) -> Void = { _ in }
     var onMakeObie: (Take) -> Void = { _ in }
     var onExport: (Take) -> Void = { _ in }
+    /// Tap the card → begin edit-in-place (M4.1), or commit an open edit of another Take.
+    var onTapText: (Take) -> Void = { _ in }
 
     @Environment(\.colorScheme) private var scheme
     private let inset = CatchlightLayout.cardSpineInset
@@ -112,6 +118,8 @@ struct TimelineReadCell: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             TakeCardSurface(take: take, linksInteractive: false)                       // card
+                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .onTapGesture { onTapText(take) }
                 .contextMenu { menuItems }
             Rectangle().fill(Color.ckBackground)                                       // occluder
                 .frame(width: occW, height: d / 2)
@@ -220,6 +228,7 @@ struct TimelineSwipeCell: View {
     var onSetImportant: (Take) -> Void = { _ in }
     var onMakeObie: (Take) -> Void = { _ in }
     var onExport: (Take) -> Void = { _ in }
+    var onTapText: (Take) -> Void = { _ in }
 
     var body: some View {
         SwipeActionRow(
@@ -243,7 +252,7 @@ struct TimelineSwipeCell: View {
                              onTapCircle: onTapCircle, onLongPressCircle: onLongPressCircle,
                              onToggleDone: onToggleDone, onDelete: onDelete,
                              onSetImportant: onSetImportant, onMakeObie: onMakeObie,
-                             onExport: onExport)
+                             onExport: onExport, onTapText: onTapText)
                 .offset(x: offset)
         }
     }
@@ -283,6 +292,7 @@ final class UIKitTimelineViewController: UIViewController {
     var onSetImportant: (Take) -> Void = { _ in }
     var onMakeObie: (Take) -> Void = { _ in }
     var onExport: (Take) -> Void = { _ in }
+    var onTapText: (Take) -> Void = { _ in }
 
     private let swipeState = TimelineSwipeState()
     private var collectionView: UICollectionView!
@@ -327,7 +337,8 @@ final class UIKitTimelineViewController: UIViewController {
                                       onLongPressCircle: { self.onLongPressCircle($0) },
                                       onSetImportant: { self.onSetImportant($0) },
                                       onMakeObie: { self.onMakeObie($0) },
-                                      onExport: { self.onExport($0) })
+                                      onExport: { self.onExport($0) },
+                                      onTapText: { self.onTapText($0) })
                 }
                 .margins(.all, 0)
             case .month(let key):
