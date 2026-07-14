@@ -169,6 +169,14 @@ struct DailiesView: View {
     /// caret stays above the keyboard, then the editor scrolls internally).
     @State private var editorHeight: CGFloat = 60
 
+    /// "Creation date" setting — the in-place editor shows the stamp for `.editor` and
+    /// `.always` (both include the editing surface), matching `InlineTakeEditCard`.
+    @AppStorage(SettingsViewModel.CreationStamp.defaultsKey)
+    private var creationStampRaw: String = SettingsViewModel.CreationStamp.default.rawValue
+    private var creationStamp: SettingsViewModel.CreationStamp {
+        SettingsViewModel.CreationStamp(rawValue: creationStampRaw) ?? .default
+    }
+
     /// Extra bottom scroll room added while editing so the focused Take — even the
     /// last one under Oldest-first — can scroll up to its clear position above the
     /// keyboard rather than clamping against the content end (owner 2026-06-19).
@@ -1060,24 +1068,32 @@ struct DailiesView: View {
         let inset = CatchlightLayout.cardSpineInset
         let maxH = editCardMaxHeight
         return ZStack(alignment: .topLeading) {
-            BlockEditor(
-                draft: editDraftBinding,
-                focusedBlockID: $editFocusedBlockID,
-                onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
-                onEditReminder: { presentReminderEditor() },
-                onDiscard: { discardInlineEdit() },
-                onContentHeightChange: { h in
-                    var t = Transaction(); t.disablesAnimations = true
-                    withTransaction(t) { editorHeight = min(max(h, 44), maxH) }
-                })
-                .frame(height: editorHeight)
-                // v1.7 card text inset: 24 top (clears the overlapping Iris) / text column
-                // leading / 14 bottom+trailing — matches TakeCardSurface.
-                .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
-                                    bottom: 14, trailing: 14))
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(style.surface))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth))
+            VStack(alignment: .leading, spacing: 0) {
+                BlockEditor(
+                    draft: editDraftBinding,
+                    focusedBlockID: $editFocusedBlockID,
+                    onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
+                    onEditReminder: { presentReminderEditor() },
+                    onDiscard: { discardInlineEdit() },
+                    onContentHeightChange: { h in
+                        var t = Transaction(); t.disablesAnimations = true
+                        withTransaction(t) { editorHeight = min(max(h, 44), maxH) }
+                    })
+                    .frame(height: editorHeight)
+                // Created-at stamp, gated by the setting — Editor-only + Always both show it
+                // while editing (matches InlineTakeEditCard so all three options stay consistent).
+                if creationStamp != .off {
+                    CreationStampLabel(date: draft.createdAt)
+                        .padding(.top, 6)
+                }
+            }
+            // v1.7 card text inset: 24 top (clears the overlapping Iris) / text column
+            // leading / 14 bottom+trailing — matches TakeCardSurface.
+            .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
+                                bottom: 14, trailing: 14))
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(style.surface))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth))
             TakeCircleView(take: draft)                                  // Iris on the spine
                 .frame(width: d, height: d)
                 .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.16), radius: 5, y: 2)
