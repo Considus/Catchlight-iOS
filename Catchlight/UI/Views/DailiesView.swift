@@ -998,32 +998,40 @@ struct DailiesView: View {
         // Existing-Take edit only. A new Take also sets `ui.editingTakeID` but shows in the
         // keyboard-anchored `newTakeFocusCard`, so exclude it here (`inlineNewTake != nil`).
         if useNewTimeline, ui.isEditingInPlace, inlineNewTake == nil, ui.editingTakeID != nil {
-            VStack(spacing: 0) {
-                // Push the editor down so its top sits at the tapped row (M4.2), clamped up
-                // for low rows so it stays above the keyboard (M4.3, `editPanelTop`).
-                Color.clear.frame(height: editPanelTop)
+            ZStack(alignment: .top) {
+                // M4.4 — dim the timeline behind the editor; a tap anywhere OFF the editor
+                // commits (the app's tap-away-to-save idiom). The veil also makes the
+                // background inert (it intercepts taps), so no link fires under the mask.
+                Color.ckBackground.opacity(0.86)
+                    .ignoresSafeArea()
+                    .onTapGesture { saveInlineEdit() }
                 VStack(spacing: 0) {
-                    HStack {
-                        Spacer()
-                        Button("Done") { saveInlineEdit() }
-                            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                            .foregroundStyle(Color.ckAccent)
-                    }
-                    .padding(.horizontal, 20)
-                    .frame(height: 40)
-                    BlockEditor(
-                        draft: editDraftBinding,
-                        focusedBlockID: $editFocusedBlockID,
-                        onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
-                        onEditReminder: { presentReminderEditor() },
-                        onDiscard: { discardInlineEdit() })
+                    // Push the editor down to the tapped row (M4.2), clamped up for low rows
+                    // (M4.3). Non-hit-testing so a tap in this strip reaches the veil (save).
+                    Color.clear.frame(height: editPanelTop).allowsHitTesting(false)
+                    VStack(spacing: 0) {
+                        HStack {
+                            Spacer()
+                            Button("Done") { saveInlineEdit() }
+                                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                                .foregroundStyle(Color.ckAccent)
+                        }
                         .padding(.horizontal, 20)
+                        .frame(height: 40)
+                        BlockEditor(
+                            draft: editDraftBinding,
+                            focusedBlockID: $editFocusedBlockID,
+                            onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
+                            onEditReminder: { presentReminderEditor() },
+                            onDiscard: { discardInlineEdit() })
+                            .padding(.horizontal, 20)
+                    }
+                    .background(Color.ckBackground)
                 }
-                .background(Color.ckBackground)
+                .ignoresSafeArea(.keyboard, edges: .bottom) // editor reserves keyboard space itself
             }
-            .ignoresSafeArea()                          // top-left = window origin, so the
-                                                        // window-coord anchor lines up
-            .ignoresSafeArea(.keyboard, edges: .bottom) // editor reserves keyboard space itself
+            .ignoresSafeArea()                              // top-left = window origin, so the
+                                                            // window-coord anchor lines up
             .transition(.opacity)
         }
     }
