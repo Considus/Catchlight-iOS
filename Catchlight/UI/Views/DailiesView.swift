@@ -380,6 +380,17 @@ struct DailiesView: View {
             // (often off-screen) sorted row. Placed under the heading so a tall card
             // dissolves beneath it like a timeline card. On save it drops into its
             // sorted place; existing-Take editing is unchanged.
+            // M4.6 — new-Take save catcher (new timeline). The collection is faded +
+            // non-interactive while editing, so a tap off the new-Take card lands here and
+            // commits (tap-away-to-save). Rendered BEFORE the card below, so the card stays
+            // editable above it.
+            if useNewTimeline, inlineNewTake != nil {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture { saveInlineEdit() }
+            }
+
             if let newTake = inlineNewTake {
                 newTakeFocusCard(newTake)
             }
@@ -979,7 +990,10 @@ struct DailiesView: View {
                 beginInlineEdit(take)
             },
             // M4.2 — the tapped card's window frame; anchors the editor overlay in place.
-            onEditAnchor: { editAnchor = $0 }
+            onEditAnchor: { editAnchor = $0 },
+            // M4.6 — fade + disable the collection while editing (cards recede, taps fall
+            // through to the save catcher). Covers both existing-edit and new-Take.
+            isEditing: ui.isEditingInPlace
         )
     }
 
@@ -1008,42 +1022,47 @@ struct DailiesView: View {
         // Existing-Take edit only. A new Take also sets `ui.editingTakeID` but shows in the
         // keyboard-anchored `newTakeFocusCard`, so exclude it here (`inlineNewTake != nil`).
         if useNewTimeline, ui.isEditingInPlace, inlineNewTake == nil, ui.editingTakeID != nil {
+            // No dim veil — the collection fades ITSELF while editing (M4.6). A TRANSPARENT
+            // catcher sits above everything but the panel: a tap off the editor commits. It
+            // must be above the heading (which otherwise absorbs top taps) — the faded
+            // collection is non-interactive, so it no longer steals taps over the cards.
             ZStack(alignment: .top) {
-                // M4.4 — dim the timeline behind the editor; a tap anywhere OFF the editor
-                // commits (the app's tap-away-to-save idiom). The veil also makes the
-                // background inert (it intercepts taps), so no link fires under the mask.
-                Color.ckBackground.opacity(0.86)
+                Color.clear
+                    .contentShape(Rectangle())
                     .ignoresSafeArea()
                     .onTapGesture { saveInlineEdit() }
-                VStack(spacing: 0) {
-                    // Push the editor down to the tapped row (M4.2), clamped up for low rows
-                    // (M4.3). Non-hit-testing so a tap in this strip reaches the veil (save).
-                    Color.clear.frame(height: editPanelTop).allowsHitTesting(false)
-                    VStack(spacing: 0) {
-                        HStack {
-                            Spacer()
-                            Button("Done") { saveInlineEdit() }
-                                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                                .foregroundStyle(Color.ckAccent)
-                        }
-                        .padding(.horizontal, 20)
-                        .frame(height: 40)
-                        BlockEditor(
-                            draft: editDraftBinding,
-                            focusedBlockID: $editFocusedBlockID,
-                            onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
-                            onEditReminder: { presentReminderEditor() },
-                            onDiscard: { discardInlineEdit() })
-                            .padding(.horizontal, 20)
-                    }
-                    .background(Color.ckBackground)
-                }
-                .ignoresSafeArea(.keyboard, edges: .bottom) // editor reserves keyboard space itself
+                editPanel
             }
-            .ignoresSafeArea()                              // top-left = window origin, so the
-                                                            // window-coord anchor lines up
             .transition(.opacity)
         }
+    }
+
+    /// The opaque editor panel, anchored at the row (M4.2), lifted for low rows (M4.3).
+    private var editPanel: some View {
+        VStack(spacing: 0) {
+            Color.clear.frame(height: editPanelTop).allowsHitTesting(false)
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Button("Done") { saveInlineEdit() }
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .foregroundStyle(Color.ckAccent)
+                }
+                .padding(.horizontal, 20)
+                .frame(height: 40)
+                BlockEditor(
+                    draft: editDraftBinding,
+                    focusedBlockID: $editFocusedBlockID,
+                    onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
+                    onEditReminder: { presentReminderEditor() },
+                    onDiscard: { discardInlineEdit() })
+                    .padding(.horizontal, 20)
+            }
+            .background(Color.ckBackground)
+        }
+        .ignoresSafeArea()                              // top-left = window origin, so the
+                                                        // window-coord anchor lines up
+        .ignoresSafeArea(.keyboard, edges: .bottom)     // editor reserves keyboard space itself
     }
 
     private var timeline: some View {

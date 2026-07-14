@@ -50,6 +50,11 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// M4.2 — reports the tapped card's frame in WINDOW coords at tap time, so the host
     /// can anchor the editor overlay in place (same coord pattern as the Focus-ring fan).
     var onEditAnchor: (CGRect) -> Void = { _ in }
+    /// M4.6 — while editing, FADE + disable the collection itself (like the old timeline
+    /// fades its rows to 0.12), so the cards recede and taps fall THROUGH to the save
+    /// catcher behind. This avoids fighting the representable's compositing (the collection
+    /// otherwise sits above the SwiftUI veil for hit-testing — tap-between-Takes was dead).
+    var isEditing: Bool = false
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
@@ -84,6 +89,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onTapText = onTapText
         vc.onEditAnchor = onEditAnchor
         vc.apply(groups: groups)
+        vc.updateEditing(isEditing)
     }
 }
 
@@ -423,6 +429,17 @@ final class UIKitTimelineViewController: UIViewController {
             reconfigured.reconfigureItems(toApply)
             dataSource.apply(reconfigured, animatingDifferences: false)
         }
+    }
+
+    private var editingActive = false
+    /// Fade + disable the whole collection while editing (cards recede, taps pass through to
+    /// the save catcher behind). Matches the old timeline's row-mask dim, but applied to the
+    /// UIKit view so it can't be defeated by representable compositing.
+    func updateEditing(_ editing: Bool) {
+        guard editing != editingActive else { return }
+        editingActive = editing
+        collectionView.isUserInteractionEnabled = !editing
+        UIView.animate(withDuration: 0.22) { self.collectionView.alpha = editing ? 0.14 : 1 }
     }
 
     /// The take's cell frame in WINDOW coords (for anchoring the in-place editor). The cell
