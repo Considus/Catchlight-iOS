@@ -304,6 +304,10 @@ final class UIKitTimelineViewController: UIViewController {
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<Int, TimelineRow>!
     private var takesByID: [UUID: Take] = [:]
+    private var previousTakes: [UUID: Take] = [:]   // reconfigure only what changed
+    private var lastItems: [TimelineRow] = []        // skip re-applying an unchanged snapshot
+    private var lastSpineX: CGFloat = -1             // density/spine change → reconfigure all
+    private var lastCardGap: CGFloat = -1
     private var groupTitles: [String: String] = [:]
 
     override func viewDidLoad() {
@@ -322,7 +326,10 @@ final class UIKitTimelineViewController: UIViewController {
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
         collectionView.backgroundColor = .clear
         collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        collectionView.keyboardDismissMode = .interactive
+        // .none (not .interactive): with the new-Take overlay's keyboard up and this
+        // collection behind it, interactive tracking contributed to keyboard re-placement
+        // thrash (caps-flash, attempt 1). Nothing here needs scroll-to-dismiss.
+        collectionView.keyboardDismissMode = .none
         view.addSubview(collectionView)
 
         let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, TimelineRow> {
@@ -370,24 +377,52 @@ final class UIKitTimelineViewController: UIViewController {
     }
 
     func apply(groups: [TimelineMonthGroup]) {
-        collectionView.contentInset = UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
-        collectionView.verticalScrollIndicatorInsets.top = topInset
+        let inset = UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
+        if collectionView.contentInset != inset {
+            collectionView.contentInset = inset
+            collectionView.verticalScrollIndicatorInsets.top = topInset
+        }
         takesByID = Dictionary(groups.flatMap(\.takes).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         groupTitles = Dictionary(groups.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a })
 
-        var snapshot = NSDiffableDataSourceSnapshot<Int, TimelineRow>()
-        snapshot.appendSections([0])
+        var items: [TimelineRow] = []
         for (index, group) in groups.enumerated() {
             // Suppress the first group's divider (the DAILIES heading is its context).
-            if index > 0 { snapshot.appendItems([.month(group.id)], toSection: 0) }
-            snapshot.appendItems(group.takes.map { .take($0.id) }, toSection: 0)
+            if index > 0 { items.append(.month(group.id)) }
+            items.append(contentsOf: group.takes.map { .take($0.id) })
         }
-        dataSource.apply(snapshot, animatingDifferences: false)
 
-        // Reconfigure so a live setting change (spineX / cardGap) refreshes cells.
-        var reconfigured = dataSource.snapshot()
-        reconfigured.reconfigureItems(reconfigured.itemIdentifiers)
-        dataSource.apply(reconfigured, animatingDifferences: false)
+        // Re-apply the snapshot ONLY when the item list changed. SwiftUI re-renders DailiesView
+        // many times during the new-Take bloom animation; re-applying an identical snapshot each
+        // time churned collection layout and thrashed the keyboard placement (caps-flash, attempt 1).
+        if items != lastItems {
+            lastItems = items
+            var snapshot = NSDiffableDataSourceSnapshot<Int, TimelineRow>()
+            snapshot.appendSections([0])
+            snapshot.appendItems(items, toSection: 0)
+            dataSource.apply(snapshot, animatingDifferences: false)
+        }
+
+        // Item identity is the id alone, so a CONTENT change (mark-done, saved edit) needs an
+        // explicit reconfigure. Normally reconfigure ONLY the Takes whose value changed (Take
+        // is Equatable). A density/spine SETTING change doesn't touch Take content but does
+        // change every cell's layout, so reconfigure all in that case.
+        let layoutChanged = spineX != lastSpineX || cardGap != lastCardGap
+        lastSpineX = spineX; lastCardGap = cardGap
+        let current = dataSource.snapshot()
+        let toApply: [TimelineRow]
+        if layoutChanged {
+            toApply = current.itemIdentifiers
+        } else {
+            let changedIDs = Set(takesByID.compactMap { id, take in previousTakes[id] != take ? id : nil })
+            toApply = current.itemIdentifiers.filter { if case .take(let id) = $0 { return changedIDs.contains(id) } else { return false } }
+        }
+        previousTakes = takesByID
+        if !toApply.isEmpty {
+            var reconfigured = current
+            reconfigured.reconfigureItems(toApply)
+            dataSource.apply(reconfigured, animatingDifferences: false)
+        }
     }
 
     /// The take's cell frame in WINDOW coords (for anchoring the in-place editor). The cell

@@ -275,6 +275,16 @@ struct DailiesView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.ckBackground.ignoresSafeArea()
+                // Track the keyboard top here (always present) — the old `timeline`'s copy
+                // lives inside its ScrollView, which the NEW timeline doesn't render, so
+                // `keyboardTopY` stayed off and the new-Take card collapsed to the very bottom
+                // under the keyboard (invisible, 2026-07-14). This keeps it fed on BOTH timelines.
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+                    guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+                    else { return }
+                    keyboardTopY = frame.origin.y
+                }
 
             // Full-container probe (NO padding) → the spine container's true bottom edge in
             // screen coords, so the search-mode wire terminus can anchor to it without any
