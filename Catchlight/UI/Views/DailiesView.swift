@@ -978,16 +978,30 @@ struct DailiesView: View {
     /// create rows immediately). This step ONLY proves the editor end-to-end; positioning /
     /// row-anchoring / dim veil / keyboard tuning are later increments (M4.2+). A full-bleed
     /// panel over the timeline with an explicit Done to save.
+    /// M4.3 — where the editor panel's top sits. Normally the tapped row (in place), but
+    /// clamped UP so a row low on the screen still keeps a usable height above the keyboard.
+    /// STATIC (a keyboard-size estimate, computed once) — NOT a reactive keyboard-follow
+    /// constraint, which deadlocked layout against `BlockEditor`'s own keyboard handling
+    /// (device lockup, attempt 1). `BlockEditor` still does the precise caret/keyboard work
+    /// within the panel; this only bounds where the panel starts. The panel's opaque
+    /// background covers the timeline below its top, so a lifted editor reads cleanly.
+    private var editPanelTop: CGFloat {
+        let cardTop = max(0, editAnchor.minY + takeSpacing.gap / 2)
+        let kbReserve: CGFloat = 400        // keyboard + the editor's own toolbar (estimate)
+        let minVisible: CGFloat = 220       // keep at least this much editor above the keyboard
+        let maxTop = max(deviceTopInset + 8, UIScreen.main.bounds.height - kbReserve - minVisible)
+        return min(cardTop, maxTop)
+    }
+
     @ViewBuilder
     private var newTimelineEditOverlay: some View {
         // Existing-Take edit only. A new Take also sets `ui.editingTakeID` but shows in the
         // keyboard-anchored `newTakeFocusCard`, so exclude it here (`inlineNewTake != nil`).
         if useNewTimeline, ui.isEditingInPlace, inlineNewTake == nil, ui.editingTakeID != nil {
             VStack(spacing: 0) {
-                // Push the editor panel down so its top sits at the tapped row (M4.2). The
-                // anchor is the cell's window frame; `+ takeSpacing.gap/2` aligns to the CARD
-                // top (the cell carries a cardGap/2 vertical pad above the card).
-                Color.clear.frame(height: max(0, editAnchor.minY + takeSpacing.gap / 2))
+                // Push the editor down so its top sits at the tapped row (M4.2), clamped up
+                // for low rows so it stays above the keyboard (M4.3, `editPanelTop`).
+                Color.clear.frame(height: editPanelTop)
                 VStack(spacing: 0) {
                     HStack {
                         Spacer()
