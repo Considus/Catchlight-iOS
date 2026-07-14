@@ -916,6 +916,21 @@ struct DailiesView: View {
                 guard app.ensureEntitled() else { return }
                 if take.timeReminder?.repeats == true { pendingRecurringDelete = take }
                 else { deleteTake(take) }
+            },
+            // Iris tap → bloom the Focus-ring fan at the tapped Iris (window coords
+            // match RootView's full-screen overlay). No edit-in-place on the new
+            // timeline yet (M4), so the SwiftUI row's editing branches don't apply.
+            onTapCircle: { take, irisCentre in
+                orientation.didTapIris()
+                ui.openFocusRingFan(for: take, origin: irisCentre)
+            },
+            // Iris long-press toggles Obie (owner 2026-07-04): demote is not gated,
+            // designate is. Mirrors DailiesView.rowContent's onLongPressCircle.
+            onLongPressCircle: { take in
+                if take.isObie { vm.demoteObie(take); return }
+                orientation.triggerObieIntro()
+                guard app.ensureEntitled() else { return }
+                vm.designateObie(take, replaceExisting: false)
             }
         )
     }

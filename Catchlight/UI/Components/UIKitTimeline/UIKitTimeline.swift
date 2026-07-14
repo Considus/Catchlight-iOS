@@ -36,6 +36,10 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// Swipe actions (native), wired to the host's entitlement-gated Take actions.
     var onToggleDone: (Take) -> Void = { _ in }
     var onDelete: (Take) -> Void = { _ in }
+    /// Iris tap → open the Focus-ring fan at the given WINDOW-coord centre; long-press
+    /// → toggle Obie. Wired to the same `ui`/`vm` the SwiftUI timeline uses.
+    var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
+    var onLongPressCircle: (Take) -> Void = { _ in }
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
@@ -45,6 +49,8 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.bottomInset = bottomInset
         vc.onToggleDone = onToggleDone
         vc.onDelete = onDelete
+        vc.onTapCircle = onTapCircle
+        vc.onLongPressCircle = onLongPressCircle
         return vc
     }
 
@@ -55,6 +61,8 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.bottomInset = bottomInset
         vc.onToggleDone = onToggleDone
         vc.onDelete = onDelete
+        vc.onTapCircle = onTapCircle
+        vc.onLongPressCircle = onLongPressCircle
         vc.apply(groups: groups)
     }
 }
@@ -67,6 +75,13 @@ struct TimelineReadCell: View {
     let take: Take
     let spineX: CGFloat
     let cardGap: CGFloat
+    /// Iris tap → the CGPoint is the Iris centre in WINDOW (global) coords, so the
+    /// host can bloom the Focus-ring fan in place (matches `RootView`'s full-screen
+    /// `ignoresSafeArea` overlay space). Long-press → toggle Obie. Both reuse the
+    /// existing `TapAndLongPressRecognizer` from `TakeRowView` (built to survive the
+    /// move to a UIKit-hosted cell).
+    var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
+    var onLongPressCircle: (Take) -> Void = { _ in }
 
     @Environment(\.colorScheme) private var scheme
     private let inset = CatchlightLayout.cardSpineInset
@@ -89,6 +104,18 @@ struct TimelineReadCell: View {
                 // style single tunable: bump/soften via the opacity/radius here.
                 .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.16),
                         radius: 5, y: 2)
+                .contentShape(Rectangle())
+                // Tap → Focus-ring fan, long-press (0.45s, .began) → toggle Obie. Same
+                // recognizer the SwiftUI row uses; `convert(_:to: nil)` yields the Iris
+                // centre in window coords. The overloccluding wire/dots are hit-testing-
+                // off, so touches reach this overlay.
+                .overlay(
+                    TapAndLongPressRecognizer(
+                        minimumDuration: 0.45,
+                        onTap: { onTapCircle(take, $0) },
+                        onLongPress: { onLongPressCircle(take) }
+                    )
+                )
                 .offset(x: inset - d / 2, y: -d / 2)
             SpineLine().stroke(Color.ckSpineWire, lineWidth: w)                        // wire over Iris top
                 .frame(width: w, height: d / 2)
@@ -127,6 +154,8 @@ struct TimelineSwipeCell: View {
     @Bindable var swipeState: TimelineSwipeState
     let onToggleDone: (Take) -> Void
     let onDelete: (Take) -> Void
+    var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
+    var onLongPressCircle: (Take) -> Void = { _ in }
 
     var body: some View {
         SwipeActionRow(
@@ -146,7 +175,8 @@ struct TimelineSwipeCell: View {
             contentVerticalInset: cardGap / 2,
             centersActionLabel: true    // centre glyph/label in the revealed button, not hugged to the screen edge
         ) { offset in
-            TimelineReadCell(take: take, spineX: spineX, cardGap: cardGap)
+            TimelineReadCell(take: take, spineX: spineX, cardGap: cardGap,
+                             onTapCircle: onTapCircle, onLongPressCircle: onLongPressCircle)
                 .offset(x: offset)
         }
     }
@@ -179,6 +209,8 @@ final class UIKitTimelineViewController: UIViewController {
     var bottomInset: CGFloat = 0
     var onToggleDone: (Take) -> Void = { _ in }
     var onDelete: (Take) -> Void = { _ in }
+    var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
+    var onLongPressCircle: (Take) -> Void = { _ in }
 
     private let swipeState = TimelineSwipeState()
     private var collectionView: UICollectionView!
@@ -218,7 +250,9 @@ final class UIKitTimelineViewController: UIViewController {
                     TimelineSwipeCell(take: take, spineX: self.spineX, cardGap: self.cardGap,
                                       swipeState: self.swipeState,
                                       onToggleDone: { self.onToggleDone($0) },
-                                      onDelete: { self.onDelete($0) })
+                                      onDelete: { self.onDelete($0) },
+                                      onTapCircle: { self.onTapCircle($0, $1) },
+                                      onLongPressCircle: { self.onLongPressCircle($0) })
                 }
                 .margins(.all, 0)
             case .month(let key):
