@@ -398,24 +398,29 @@ struct DailiesView: View {
             // non-interactive while editing, so a tap off the new-Take card lands here and
             // commits (tap-away-to-save). Rendered BEFORE the card below, so the card stays
             // editable above it.
-            // M5a — new-Take save catcher (new timeline): the collection is faded +
+            // M5a consistency pass (2026-07-15) — save catcher for the new timeline's in-place
+            // editor, BOTH new-Take AND existing-Take edits. The collection is faded +
             // non-interactive while editing, so a tap off the card lands here and commits.
             // Before the card so the card stays editable above it.
-            if useNewTimeline, inlineNewTake != nil {
+            if useNewTimeline, ui.isEditingInPlace {
                 Color.clear
                     .contentShape(Rectangle())
                     .ignoresSafeArea()
                     .onTapGesture { saveInlineEdit() }
             }
 
-            if let newTake = inlineNewTake {
-                // New timeline: bottom-anchored BlockEditor card that grows UP from the
-                // dockbar (owner spec 2026-07-15). Old timeline: the InlineTakeEditCard path.
-                if useNewTimeline {
-                    newTakeBlockCard(newTake)
-                } else {
-                    newTakeFocusCard(newTake)
+            // New timeline: BOTH new-Take and existing-Take edits ride the SAME bottom-anchored
+            // BlockEditor card that grows UP from the dockbar (owner consistency pass 2026-07-15),
+            // drawn BELOW the heading so its top dissolves under the heading fade and its bottom
+            // always sits above the dockbar (the top-anchored editPanel ran its bottom off-screen
+            // under the keyboard — "the edit-Take card has no bottom"). Old timeline: only the
+            // new-Take rides the keyboard card (existing-edit uses the in-cell editor).
+            if useNewTimeline {
+                if ui.isEditingInPlace {
+                    newTakeBlockCard(editDraft ?? Take())
                 }
+            } else if let newTake = inlineNewTake {
+                newTakeFocusCard(newTake)
             }
 
             // M4.1 — existing-Take edit-in-place for the NEW timeline (plain-SwiftUI editor).
@@ -432,10 +437,9 @@ struct DailiesView: View {
             // TEXT dims (the dimming lives on `Text(headingTitle)` inside `heading`).
             heading
 
-            // M4.1 — existing-Take edit-in-place for the NEW timeline (plain-SwiftUI editor).
-            // ABOVE the heading in z-order so its full-bleed panel + Done button aren't
-            // masked by the pinned heading. (Positioning/anchoring/dim are later increments.)
-            newTimelineEditOverlay
+            // (Existing-Take edit-in-place now rides the bottom-anchored card above — BELOW the
+            // heading — as the M5a consistency pass. The old top-anchored `newTimelineEditOverlay`
+            // / `editPanel` is retired for the new timeline and left dead pending a cleanup.)
 
             // The pinned Obie sits below the heading at the first-Take position, with
             // its own solid backing + fade; scrolling Takes pass behind it and dissolve.
