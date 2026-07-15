@@ -1567,10 +1567,12 @@ struct DailiesView: View {
         // 2026-06-17 — should feel organic; LazyVStack swallows insertion transitions).
         newTakeBloom = 0
         editDraft = t
-        // M5a — a new Take has no cell to anchor to. Seed a low anchor so the shared
-        // editPanel clamps to its top position (the same spot a low existing-Take edit
-        // lands), giving BlockEditor the fixed-top frame it renders correctly in.
-        editAnchor = CGRect(x: 0, y: UIScreen.main.bounds.height,
+        // M5a — a new Take has no cell to anchor to. Anchor it HIGH, just under the pinned
+        // heading (where a new Take belongs under Newest-first), so the card has the MOST
+        // room to grow down toward the keyboard before BlockEditor needs to scroll internally
+        // — a low anchor gave the smallest maxHeight, so it capped after a few lines and the
+        // scroll hid the text / pinned the caret near the keyboard (device 2026-07-15).
+        editAnchor = CGRect(x: 0, y: deviceTopInset + CatchlightLayout.headingClearance,
                             width: UIScreen.main.bounds.width, height: 0)
         withAnimation(UIState.fanFade) { ui.editingTakeID = take.id }
         DispatchQueue.main.async {
