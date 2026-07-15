@@ -147,6 +147,27 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         recomputeKeyboardInset()   // re-derive overlap once the (bottom-anchored) frame settles
         let h = stack.frame.height
         if abs(h - lastReportedHeight) > 0.5 { lastReportedHeight = h; onContentHeight?(h) }
+        settleScrollWhenContentFits()
+    }
+
+    /// When the content fits the visible area, pin it to the TOP and report `true`. A caret-follow
+    /// that ran against a momentarily-too-small frame or keyboard inset — before the card's height
+    /// / the inset had settled — otherwise strands the content scrolled UP, hiding the top lines and
+    /// pushing the caret off the top (device 2026-07-15: "caret appears then scrolls up out of
+    /// view"). This can't rely on a later `viewDidLayoutSubviews`: the bottom-anchored card RISES
+    /// (a position change) without its bounds changing, so no further layout pass fires — hence the
+    /// deferred re-settle in `keyboardChanged`. Returns `false` when the content genuinely overflows
+    /// (then the caret-follow governs).
+    @discardableResult
+    private func settleScrollWhenContentFits(animated: Bool = false) -> Bool {
+        let inset = scrollView.adjustedContentInset
+        let visibleH = scrollView.bounds.height - inset.top - inset.bottom
+        guard scrollView.contentSize.height <= visibleH + 0.5 else { return false }
+        let topOffset = -inset.top
+        if abs(scrollView.contentOffset.y - topOffset) > 0.5 {
+            scrollView.setContentOffset(CGPoint(x: 0, y: topOffset), animated: animated)
+        }
+        return true
     }
 
     /// Derive the bottom inset from the last keyboard frame against the CURRENT view geometry.
@@ -263,6 +284,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// `BackspaceTextView` so an empty-backspace merges with the block above.
     private func makeTextView(id: UUID, text: String, isComplete: Bool) -> BackspaceTextView {
         let tv = BackspaceTextView()
+        tv.countsTrailingLine = true   // grow the row for a trailing-newline's empty last line
         tv.isScrollEnabled = false
         tv.backgroundColor = .clear
         tv.textContainerInset = UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
@@ -490,12 +512,31 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         lastKeyboardEndFrame = hiding ? nil : end
         recomputeKeyboardInset()
         scrollActiveCaretToVisible(animated: true)
+        // The bottom-anchored card is still RISING into place (a SwiftUI position animation that
+        // fires no further layout pass here), so the geometry `recomputeKeyboardInset` just used
+        // is stale. Re-derive the inset + re-settle once the animation has completed, against the
+        // FINAL geometry — this is what deterministically clears the "caret scrolled up" race that
+        // only the diagnostics label's extra layout pass was accidentally fixing.
+        let duration = (note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.3
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.02) { [weak self] in
+            guard let self else { return }
+            self.recomputeKeyboardInset()
+            self.scrollActiveCaretToVisible(animated: false)
+        }
     }
 
     /// Scroll the active caret into the visible area. `scrollRectToVisible`
     /// respects `adjustedContentInset` (which includes the keyboard overlap), so
     /// the caret is held above the keyboard — natively, against exact geometry.
     private func scrollActiveCaretToVisible(animated: Bool) {
+        // Content fits → pin to the top; never follow the caret (following it against a
+        // not-yet-settled frame/inset is exactly what strands the top off-screen).
+        if settleScrollWhenContentFits(animated: animated) {
+            #if DEBUG
+            updateDiag(nil)
+            #endif
+            return
+        }
         guard let tv = activeTextView(), let sel = tv.selectedTextRange else {
             #if DEBUG
             updateDiag(nil)
@@ -533,7 +574,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     func textViewDidChange(_ tv: UITextView) {
         guard let id = blockID(for: tv) else { return }
         delegate?.blockEditor(self, didChangeText: tv.text, forBlock: id)
-        // The row's intrinsic height changed — settle layout, then keep the caret up.
+        // The row's intrinsic height changed (incl. a trailing newline's empty line) — re-measure,
+        // settle layout, then keep the caret up.
+        tv.invalidateIntrinsicContentSize()
         view.layoutIfNeeded()
         scrollActiveCaretToVisible(animated: false)
     }

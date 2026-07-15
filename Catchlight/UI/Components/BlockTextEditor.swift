@@ -355,6 +355,21 @@ struct BlockTextEditor: UIViewRepresentable {
 final class BackspaceTextView: UITextView {
     var onBackspaceEmpty: (() -> Void)?
 
+    /// When true, the intrinsic height INCLUDES the empty last line left by a trailing newline.
+    /// UITextView omits that line from its intrinsic size even though the caret sits on it, so a
+    /// bare Return doesn't grow the row and the caret drops below the frame (device 2026-07-15:
+    /// "the 4th Return doesn't grow the card; typing a character fixes it"). The new BlockEditor
+    /// (which sizes its card to this height) sets this on; the legacy editor leaves it off.
+    var countsTrailingLine = false
+
+    override var intrinsicContentSize: CGSize {
+        var size = super.intrinsicContentSize
+        if countsTrailingLine, text.hasSuffix("\n") {
+            size.height += font?.lineHeight ?? 18
+        }
+        return size
+    }
+
     override func deleteBackward() {
         if text.isEmpty {
             onBackspaceEmpty?()
