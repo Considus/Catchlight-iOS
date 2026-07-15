@@ -403,7 +403,13 @@ struct DailiesView: View {
             }
 
             if let newTake = inlineNewTake {
-                newTakeFocusCard(newTake)
+                // M5a — the new timeline's new-Take rides the same snug BlockEditor card as
+                // the in-place editor; the old timeline keeps the InlineTakeEditCard path.
+                if useNewTimeline {
+                    newTakeBlockCard(newTake)
+                } else {
+                    newTakeFocusCard(newTake)
+                }
             }
 
             // M4.1 — existing-Take edit-in-place for the NEW timeline (plain-SwiftUI editor).
@@ -1061,12 +1067,19 @@ struct DailiesView: View {
             .ignoresSafeArea(.keyboard, edges: .bottom) // editor reserves keyboard space itself
     }
 
-    private var editCard: some View {
+    private var editCard: some View { editCardChrome(maxHeight: editCardMaxHeight) }
+
+    /// The snug in-place editor card — a `TakeCardStyle`-chromed `BlockEditor` with the Iris
+    /// nested in its corner (M4.7). Shared by the existing-Take editor (`editPanel`, anchored
+    /// to the tapped cell) and, on the new timeline, the new-Take card (`newTakeBlockCard`,
+    /// anchored to the keyboard). Both edit through `editDraft`/`editFocusedBlockID`, and only
+    /// one is ever on screen, so they can share `editorHeight`. `maxH` differs per host: the
+    /// point past which the `BlockEditor` scrolls internally instead of growing the card.
+    private func editCardChrome(maxHeight maxH: CGFloat) -> some View {
         let draft = editDraft ?? Take()
         let style = TakeCardStyle(take: draft, scheme: scheme)
         let d = CatchlightLayout.circleDiameter
         let inset = CatchlightLayout.cardSpineInset
-        let maxH = editCardMaxHeight
         return ZStack(alignment: .topLeading) {
             VStack(alignment: .leading, spacing: 0) {
                 BlockEditor(
@@ -1108,6 +1121,36 @@ struct DailiesView: View {
     private var editCardMaxHeight: CGFloat {
         let kbReserve: CGFloat = 400
         return max(120, UIScreen.main.bounds.height - editPanelTop - kbReserve - 8)
+    }
+
+    /// The new-Take editor on the NEW timeline (M5a): the same snug `BlockEditor` card as the
+    /// existing-Take editor, but anchored to the keyboard's top edge and growing UPWARD as
+    /// content is added — the behaviour the old `newTakeFocusCard` established (a new Take
+    /// inserts at the far, often off-screen sorted end, so riding the keyboard beats chasing
+    /// it with a scroll). On save it drops into its sorted place. Old timeline keeps
+    /// `newTakeFocusCard` (the `InlineTakeEditCard` path) unchanged.
+    private func newTakeBlockCard(_ take: Take) -> some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            editCardChrome(maxHeight: newTakeCardMaxHeight)
+                .padding(.bottom, 8)   // small breath above the keyboard toolbar
+        }
+        // Sit the card's bottom on the keyboard's top edge; as the keyboard rises this
+        // padding grows and the card rides up with it (same maths as newTakeFocusCard).
+        .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .animation(.easeOut(duration: 0.56), value: keyboardTopY)
+        .transition(.move(edge: .bottom).combined(with: .opacity)
+            .animation(.easeInOut(duration: 0.4)))
+    }
+
+    /// Cap the new-Take card to the band between the pinned heading and the keyboard top;
+    /// beyond it the `BlockEditor` scrolls internally rather than the card overrunning the
+    /// heading. `keyboardTopY` is the keyboard top in screen coords.
+    private var newTakeCardMaxHeight: CGFloat {
+        let headingRoom = deviceTopInset + CatchlightLayout.headingClearance + 24
+        return max(120, keyboardTopY - headingRoom - 8)
     }
 
     private var timeline: some View {
