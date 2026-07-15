@@ -395,21 +395,10 @@ struct DailiesView: View {
             // non-interactive while editing, so a tap off the new-Take card lands here and
             // commits (tap-away-to-save). Rendered BEFORE the card below, so the card stays
             // editable above it.
-            if useNewTimeline, inlineNewTake != nil {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .ignoresSafeArea()
-                    .onTapGesture { saveInlineEdit() }
-            }
-
-            if let newTake = inlineNewTake {
-                // M5a — the new timeline's new-Take rides the same snug BlockEditor card as
-                // the in-place editor; the old timeline keeps the InlineTakeEditCard path.
-                if useNewTimeline {
-                    newTakeBlockCard(newTake)
-                } else {
-                    newTakeFocusCard(newTake)
-                }
+            // M5a — the new timeline's new-Take is drawn by `newTimelineEditOverlay`
+            // (the shared editPanel), not a bespoke card, so no separate catcher here.
+            if !useNewTimeline, let newTake = inlineNewTake {
+                newTakeFocusCard(newTake)
             }
 
             // M4.1 — existing-Take edit-in-place for the NEW timeline (plain-SwiftUI editor).
@@ -1036,9 +1025,12 @@ struct DailiesView: View {
 
     @ViewBuilder
     private var newTimelineEditOverlay: some View {
-        // Existing-Take edit only. A new Take also sets `ui.editingTakeID` but shows in the
-        // keyboard-anchored `newTakeFocusCard`, so exclude it here (`inlineNewTake != nil`).
-        if useNewTimeline, ui.isEditingInPlace, inlineNewTake == nil, ui.editingTakeID != nil {
+        // M5a — BOTH existing-Take edit AND new-Take now use this one proven host. The
+        // keyboard-anchored new-Take card (attempt) left BlockEditor's native caret/keyboard
+        // scrolling fighting the riding card (text painted off-screen); the fixed-top editPanel
+        // is the environment BlockEditor is proven in, so new Takes ride it too (anchored via
+        // beginNewInlineEdit's editAnchor). Old timeline keeps newTakeFocusCard.
+        if useNewTimeline, ui.isEditingInPlace, ui.editingTakeID != nil {
             // No dim veil — the collection fades ITSELF while editing (M4.6). A TRANSPARENT
             // catcher sits above everything but the panel: a tap off the editor commits. It
             // must be above the heading (which otherwise absorbs top taps) — the faded
@@ -1121,36 +1113,6 @@ struct DailiesView: View {
     private var editCardMaxHeight: CGFloat {
         let kbReserve: CGFloat = 400
         return max(120, UIScreen.main.bounds.height - editPanelTop - kbReserve - 8)
-    }
-
-    /// The new-Take editor on the NEW timeline (M5a): the same snug `BlockEditor` card as the
-    /// existing-Take editor, but anchored to the keyboard's top edge and growing UPWARD as
-    /// content is added — the behaviour the old `newTakeFocusCard` established (a new Take
-    /// inserts at the far, often off-screen sorted end, so riding the keyboard beats chasing
-    /// it with a scroll). On save it drops into its sorted place. Old timeline keeps
-    /// `newTakeFocusCard` (the `InlineTakeEditCard` path) unchanged.
-    private func newTakeBlockCard(_ take: Take) -> some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            editCardChrome(maxHeight: newTakeCardMaxHeight)
-                .padding(.bottom, 8)   // small breath above the keyboard toolbar
-        }
-        // Sit the card's bottom on the keyboard's top edge; as the keyboard rises this
-        // padding grows and the card rides up with it (same maths as newTakeFocusCard).
-        .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY))
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-        .animation(.easeOut(duration: 0.56), value: keyboardTopY)
-        .transition(.move(edge: .bottom).combined(with: .opacity)
-            .animation(.easeInOut(duration: 0.4)))
-    }
-
-    /// Cap the new-Take card to the band between the pinned heading and the keyboard top;
-    /// beyond it the `BlockEditor` scrolls internally rather than the card overrunning the
-    /// heading. `keyboardTopY` is the keyboard top in screen coords.
-    private var newTakeCardMaxHeight: CGFloat {
-        let headingRoom = deviceTopInset + CatchlightLayout.headingClearance + 24
-        return max(120, keyboardTopY - headingRoom - 8)
     }
 
     private var timeline: some View {
@@ -1605,6 +1567,11 @@ struct DailiesView: View {
         // 2026-06-17 — should feel organic; LazyVStack swallows insertion transitions).
         newTakeBloom = 0
         editDraft = t
+        // M5a — a new Take has no cell to anchor to. Seed a low anchor so the shared
+        // editPanel clamps to its top position (the same spot a low existing-Take edit
+        // lands), giving BlockEditor the fixed-top frame it renders correctly in.
+        editAnchor = CGRect(x: 0, y: UIScreen.main.bounds.height,
+                            width: UIScreen.main.bounds.width, height: 0)
         withAnimation(UIState.fanFade) { ui.editingTakeID = take.id }
         DispatchQueue.main.async {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { newTakeBloom = 1 }
