@@ -168,6 +168,9 @@ struct DailiesView: View {
     /// M4.7 — the in-place editor card's content height (grows with the Take, capped so the
     /// caret stays above the keyboard, then the editor scrolls internally).
     @State private var editorHeight: CGFloat = 60
+    /// Raw editor CONTENT height (before floor/lead/cap), tracked so the new-Take card can grow
+    /// its bottom DOWN by one line for the first line of content before it starts growing upward.
+    @State private var editorContentHeight: CGFloat = 30
 
     /// "Creation date" setting — the in-place editor shows the stamp for `.editor` and
     /// `.always` (both include the editing surface), matching `InlineTakeEditCard`.
@@ -395,10 +398,24 @@ struct DailiesView: View {
             // non-interactive while editing, so a tap off the new-Take card lands here and
             // commits (tap-away-to-save). Rendered BEFORE the card below, so the card stays
             // editable above it.
-            // M5a — the new timeline's new-Take is drawn by `newTimelineEditOverlay`
-            // (the shared editPanel), not a bespoke card, so no separate catcher here.
-            if !useNewTimeline, let newTake = inlineNewTake {
-                newTakeFocusCard(newTake)
+            // M5a — new-Take save catcher (new timeline): the collection is faded +
+            // non-interactive while editing, so a tap off the card lands here and commits.
+            // Before the card so the card stays editable above it.
+            if useNewTimeline, inlineNewTake != nil {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture { saveInlineEdit() }
+            }
+
+            if let newTake = inlineNewTake {
+                // New timeline: bottom-anchored BlockEditor card that grows UP from the
+                // dockbar (owner spec 2026-07-15). Old timeline: the InlineTakeEditCard path.
+                if useNewTimeline {
+                    newTakeBlockCard(newTake)
+                } else {
+                    newTakeFocusCard(newTake)
+                }
             }
 
             // M4.1 — existing-Take edit-in-place for the NEW timeline (plain-SwiftUI editor).
@@ -1025,12 +1042,10 @@ struct DailiesView: View {
 
     @ViewBuilder
     private var newTimelineEditOverlay: some View {
-        // M5a — BOTH existing-Take edit AND new-Take now use this one proven host. The
-        // keyboard-anchored new-Take card (attempt) left BlockEditor's native caret/keyboard
-        // scrolling fighting the riding card (text painted off-screen); the fixed-top editPanel
-        // is the environment BlockEditor is proven in, so new Takes ride it too (anchored via
-        // beginNewInlineEdit's editAnchor). Old timeline keeps newTakeFocusCard.
-        if useNewTimeline, ui.isEditingInPlace, ui.editingTakeID != nil {
+        // Existing-Take edit only (top-anchored at the tapped cell). A new Take sets
+        // `ui.editingTakeID` too but rides the bottom-anchored `newTakeBlockCard`, so exclude
+        // it here (`inlineNewTake != nil`).
+        if useNewTimeline, ui.isEditingInPlace, inlineNewTake == nil, ui.editingTakeID != nil {
             // No dim veil — the collection fades ITSELF while editing (M4.6). A TRANSPARENT
             // catcher sits above everything but the panel: a tap off the editor commits. It
             // must be above the heading (which otherwise absorbs top taps) — the faded
@@ -1061,13 +1076,34 @@ struct DailiesView: View {
 
     private var editCard: some View { editCardChrome(maxHeight: editCardMaxHeight) }
 
+    /// A NEW Take's caret starts ~2 lines above its resting line and descends into it before the
+    /// card begins growing upward (owner 2026-07-15). Implemented as a minimum CONTENT floor: the
+    /// frame is held at ~this-many-lines while the text is short, so the caret falls through the
+    /// reserve; once content passes it, the card grows up with the caret pinned. One text line is
+    /// ~18pt; a 1-line block is ~30pt, so 66pt ≈ room for the caret to drop two lines.
+    private let newTakeDescentFloor: CGFloat = 66
+    /// One text line (~18pt) — the metric behind the new-Take descent + downward growth.
+    private static let newTakeLineH: CGFloat = 18
+    /// How many lines the card's bottom drops (grows DOWN) after the descent, before it grows up.
+    private static let newTakeDownExpandLines: CGFloat = 2
+
+    /// How far the new-Take card's bottom is LIFTED above the dockbar right now. It stays
+    /// `downExpandLines` up through the whole DESCENT (while content < the floor, the caret falling
+    /// to the stamp), then closes to 0 over the next that-many lines of content — so the card's
+    /// bottom drops to the dockbar (grows DOWN) only AFTER the caret has reached the bottom.
+    private var newTakeBottomLift: CGFloat {
+        let span = DailiesView.newTakeLineH * DailiesView.newTakeDownExpandLines
+        let phase = min(1, max(0, (editorContentHeight - newTakeDescentFloor) / span))
+        return span * (1 - phase)
+    }
+
     /// The snug in-place editor card — a `TakeCardStyle`-chromed `BlockEditor` with the Iris
     /// nested in its corner (M4.7). Shared by the existing-Take editor (`editPanel`, anchored
     /// to the tapped cell) and, on the new timeline, the new-Take card (`newTakeBlockCard`,
     /// anchored to the keyboard). Both edit through `editDraft`/`editFocusedBlockID`, and only
     /// one is ever on screen, so they can share `editorHeight`. `maxH` differs per host: the
     /// point past which the `BlockEditor` scrolls internally instead of growing the card.
-    private func editCardChrome(maxHeight maxH: CGFloat) -> some View {
+    private func editCardChrome(maxHeight maxH: CGFloat, minContent: CGFloat = 0) -> some View {
         let draft = editDraft ?? Take()
         let style = TakeCardStyle(take: draft, scheme: scheme)
         let d = CatchlightLayout.circleDiameter
@@ -1081,8 +1117,25 @@ struct DailiesView: View {
                     onEditReminder: { presentReminderEditor() },
                     onDiscard: { discardInlineEdit() },
                     onContentHeightChange: { h in
+                        // LEAD the content by one line. onContentHeight round-trips through
+                        // SwiftUI so `editorHeight` lags the real content by ~a line; a frame
+                        // shorter than its content makes BlockEditor scroll (top text vanishes,
+                        // caret pinned low) even below the cap. The +lineLead keeps the frame
+                        // >= content until the cap, so `off` stays 0 and nothing scrolls until
+                        // the card genuinely fills (device readout 2026-07-15).
+                        editorContentHeight = h
+                        // Hold the frame at `minContent` while the text is short so the caret
+                        // descends through the reserve to just above the stamp; past that it tracks
+                        // content, always leading by ~a line so nothing scrolls until the cap. The
+                        // one-line downward growth is done by `newTakeBottomLift` (the card's bottom
+                        // dropping AFTER the descent), NOT extra frame height — so there's no dead
+                        // space below the caret (owner 2026-07-15).
+                        // Tiny lead only (owner wants the caret right on the "Created on" line); the
+                        // trade is a small scroll nudge on a Return in the upward phase.
+                        let lineLead: CGFloat = 4
+                        let effective = max(h, minContent) + lineLead
                         var t = Transaction(); t.disablesAnimations = true
-                        withTransaction(t) { editorHeight = min(max(h, 44), maxH) }
+                        withTransaction(t) { editorHeight = min(max(effective, 44), maxH) }
                     })
                     .frame(height: editorHeight)
                 // Created-at stamp, gated by the setting — Editor-only + Always both show it
@@ -1113,6 +1166,35 @@ struct DailiesView: View {
     private var editCardMaxHeight: CGFloat {
         let kbReserve: CGFloat = 400
         return max(120, UIScreen.main.bounds.height - editPanelTop - kbReserve - 8)
+    }
+
+    /// New-Take grow-UP cap: the card's bottom is pinned above the dockbar and it grows upward
+    /// as lines are added; this is how tall it may get before its TOP reaches the heading, past
+    /// which BlockEditor scrolls internally (the top line scrolls off, caret stays low). Owner
+    /// spec 2026-07-15.
+    private var newTakeEditMaxHeight: CGFloat {
+        let topLimit = deviceTopInset + CatchlightLayout.headingClearance + 12
+        // Use the live keyboard/toolbar top; fall back to the static estimate before it settles.
+        let kbTop = keyboardTopY < UIScreen.main.bounds.height
+            ? keyboardTopY
+            : UIScreen.main.bounds.height - 400
+        return max(160, kbTop - topLimit - 38)   // minus the card's top+bottom chrome
+    }
+
+    /// The NEW-Take editor on the new timeline: a bottom-anchored BlockEditor card pinned just
+    /// above the dockbar that grows UPWARD as lines are added (owner spec 2026-07-15 — the caret
+    /// rests low near the keyboard, older lines climb and scroll off the top under the heading).
+    /// No custom keyboard animation — it rides the system keyboard in sync with BlockEditor's own
+    /// handling (a custom rise desynced and scrolled the text off-screen, the first M5a attempt).
+    private func newTakeBlockCard(_ take: Take) -> some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            editCardChrome(maxHeight: newTakeEditMaxHeight, minContent: newTakeDescentFloor)
+        }
+        .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY) + newTakeBottomLift)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .transition(.opacity)
     }
 
     private var timeline: some View {
@@ -1567,13 +1649,6 @@ struct DailiesView: View {
         // 2026-06-17 — should feel organic; LazyVStack swallows insertion transitions).
         newTakeBloom = 0
         editDraft = t
-        // M5a — a new Take has no cell to anchor to. Anchor it HIGH, just under the pinned
-        // heading (where a new Take belongs under Newest-first), so the card has the MOST
-        // room to grow down toward the keyboard before BlockEditor needs to scroll internally
-        // — a low anchor gave the smallest maxHeight, so it capped after a few lines and the
-        // scroll hid the text / pinned the caret near the keyboard (device 2026-07-15).
-        editAnchor = CGRect(x: 0, y: deviceTopInset + CatchlightLayout.headingClearance,
-                            width: UIScreen.main.bounds.width, height: 0)
         withAnimation(UIState.fanFade) { ui.editingTakeID = take.id }
         DispatchQueue.main.async {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { newTakeBloom = 1 }

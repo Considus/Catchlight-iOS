@@ -51,6 +51,12 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// Reports intrinsic content height (the stack) so a host can size to content.
     var onContentHeight: ((CGFloat) -> Void)?
     private var lastReportedHeight: CGFloat = -1
+    /// The last keyboard END frame (window coords), or nil when hidden. Kept so the bottom
+    /// inset can be RE-derived on every layout pass — a bottom-anchored host's view frame is
+    /// still settling when the keyboard notification fires, so a one-shot overlap (computed in
+    /// `keyboardChanged`) reads the wrong geometry and scrolls the content off-screen. Layout
+    /// recompute corrects it once the frame settles (idempotent for fixed-frame hosts).
+    private var lastKeyboardEndFrame: CGRect?
 
     // Drag-to-reorder (check items, via the trailing handle). The dragged row floats
     // over the scroll content while a placeholder holds the gap in the stack.
@@ -138,8 +144,30 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        recomputeKeyboardInset()   // re-derive overlap once the (bottom-anchored) frame settles
         let h = stack.frame.height
         if abs(h - lastReportedHeight) > 0.5 { lastReportedHeight = h; onContentHeight?(h) }
+    }
+
+    /// Derive the bottom inset from the last keyboard frame against the CURRENT view geometry.
+    /// Called both on the keyboard notification and on every layout pass, so a host whose frame
+    /// settles AFTER the notification (bottom-anchored new-Take) ends up with the right overlap.
+    /// Guarded so it only writes on a real change — no layout feedback loop.
+    private func recomputeKeyboardInset() {
+        let overlap: CGFloat
+        if let end = lastKeyboardEndFrame {
+            let kbInView = view.convert(end, from: nil)
+            overlap = max(0, scrollView.frame.maxY - kbInView.minY)
+        } else {
+            overlap = 0
+        }
+        guard abs(scrollView.contentInset.bottom - overlap) > 0.5 else { return }
+        scrollView.contentInset.bottom = overlap
+        scrollView.verticalScrollIndicatorInsets.bottom = overlap
+        // The inset just changed (e.g. a bottom-anchored card finished rising) — re-settle the
+        // caret against the corrected geometry so content over-scrolled under a stale inset
+        // springs back into view instead of staying hidden.
+        scrollActiveCaretToVisible(animated: false)
     }
 
     // MARK: - Data
@@ -459,10 +487,8 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         guard let end = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
         else { return }
         let hiding = note.name == UIResponder.keyboardWillHideNotification
-        let kbInView = view.convert(end, from: nil)
-        let overlap = hiding ? 0 : max(0, scrollView.frame.maxY - kbInView.minY)
-        scrollView.contentInset.bottom = overlap
-        scrollView.verticalScrollIndicatorInsets.bottom = overlap
+        lastKeyboardEndFrame = hiding ? nil : end
+        recomputeKeyboardInset()
         scrollActiveCaretToVisible(animated: true)
     }
 
