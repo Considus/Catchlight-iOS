@@ -386,11 +386,12 @@ public final class SyncEngine {
             }
             switch ConflictResolver.decide(local: local, remote: remoteTake, lastSync: lastSync) {
             case .takeRemote(let t):
-                // TEMP DIAGNOSTIC (Bug: deleted Take reappears, 2026-07-10). A sync
-                // upsert with `localWas=absent` is a re-create — the sync-resurrection
-                // path. Pairs with the store's "tombstone- upsert". REMOVE after repro.
-                DiagnosticsLog.shared.record(.lifecycle,
-                    "DBG syncapply \(t.id.uuidString.prefix(8)) localWas=\(local == nil ? "absent" : "present")")
+                // (Removed 2026-07-16: a TEMP "REMOVE after repro" trap from the deleted-Take-
+                // reappears hunt of 2026-07-10 — that bug was CLOSED as non-reproducible and
+                // PR #128 pulled the traps, but this one was missed. It fired on every sync
+                // apply, so it would have swamped the breadcrumb budget with dead output, and
+                // it logged a Take id fragment — the one thing here that leans toward
+                // identifying content.)
                 try store.upsert(t)
                 report.applied.append(t.id)
             case .conflict(let l, let r):

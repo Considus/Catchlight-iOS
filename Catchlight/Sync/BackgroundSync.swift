@@ -94,6 +94,13 @@ public final class BackgroundSyncCoordinator {
             // Info.plist identifier mismatch) is the classic "background sync
             // never runs and nobody can tell why" failure.
             Self.logger.error("BGTaskScheduler.submit failed: \(String(describing: error))")
+            // ALSO into the exportable log (owner 2026-07-16): os.Logger can't be pulled from a
+            // user's device, so this — the comment above literally calls it "the classic
+            // 'background sync never runs and nobody can tell why' failure" — was invisible in
+            // exactly the case it describes. Content-free: system error domain/code only.
+            let ns = error as NSError
+            DiagnosticsLog.shared.record(.lifecycle,
+                "Background sync scheduling FAILED — BG refresh will not run (\(ns.domain) \(ns.code))")
         }
     }
 

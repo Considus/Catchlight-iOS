@@ -478,6 +478,13 @@ struct DailiesView: View {
             // note-free Takes past the user's chosen retention window. No-op unless the
             // user turned it on (Settings default = Never); see DailiesViewModel.
             vm.runAutoCleanup(olderThan: SettingsViewModel.AutoCleanup.current.maxAge)
+            // Trim the diagnostics log on the SAME sweep (owner 2026-07-16): reuse the retention
+            // intent already expressed rather than add a setting for a log they never see. The log
+            // takes the SHORTER of its own 30-day ceiling and this window — Auto-delete alone can't
+            // govern it (it defaults to Never, which would leave the log unbounded in time, and
+            // "keep my writing forever" isn't a wish to hoard technical logs).
+            DiagnosticsLog.shared.enforceRetention(
+                autoDeleteWindow: SettingsViewModel.AutoCleanup.current.maxAge)
             // Kick off the first-run orientation tour the first time the main app
             // is visible. No-op once the tour has started or completed.
             orientation.beginIfNeeded()

@@ -401,9 +401,17 @@ final class AppModel {
         // Read the live draft from the observed property the editor mutates directly —
         // no view-local @State copy that could lag behind the typed text.
         guard let draft = lockedCapture else { return }
+        // The locked-capture path is where a crash is INVISIBLE — it looks exactly like
+        // "returned to the lock screen" (5 silent crashes on 2026-07-16). If the run dies here,
+        // these breadcrumbs are the only evidence of how far it got, and of typed text lost.
+        DiagnosticsLog.shared.record(.lifecycle, "Locked capture: commit requested")
         let isBlank = draft.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !draft.isTask && draft.timeReminder == nil
-        guard !isBlank else { lockedCapture = nil; return }
+        guard !isBlank else {
+            DiagnosticsLog.shared.record(.lifecycle, "Locked capture: blank, discarded")
+            lockedCapture = nil
+            return
+        }
 
         await attemptUnlock()
         // Cancelled / failed: stay in the capture editor (text preserved) for a retry.
@@ -422,7 +430,10 @@ final class AppModel {
     }
 
     /// Abandon a locked capture without saving — back to the normal lock screen.
-    func discardLockedCapture() { lockedCapture = nil }
+    func discardLockedCapture() {
+        DiagnosticsLog.shared.record(.lifecycle, "Locked capture discarded")
+        lockedCapture = nil
+    }
 
     /// When the app last entered the background, for the time-away re-lock. iOS
     /// can't reliably tell a SUSPENDED app that the device locked, so we re-lock on
@@ -546,6 +557,7 @@ final class AppModel {
     /// Hold a draft whose `ensureEntitled()` just returned false (the paywall is
     /// presenting) for the paywall's outcome, instead of discarding typed text.
     func holdDraftForPaywall(_ draft: Take) {
+        DiagnosticsLog.shared.record(.lifecycle, "Draft held for paywall (entitlement check failed)")
         pendingEntitledSave = draft
     }
 
@@ -556,7 +568,16 @@ final class AppModel {
         defer { pendingEntitledSave = nil }
         guard let draft = pendingEntitledSave,
               lockState == .unlocked,
-              subscriptionStatus.isEntitled else { return }
+              subscriptionStatus.isEntitled else {
+            // The agreed policy (no subscription, no write) — but it DESTROYS typed text, so it
+            // leaves a trail. If someone reports "my note vanished after the paywall", this line
+            // is the difference between a mystery and an answer. Kind only, never the text.
+            if pendingEntitledSave != nil {
+                DiagnosticsLog.shared.record(.lifecycle, "Paywall draft DROPPED (not entitled) — typed text discarded")
+            }
+            return
+        }
+        DiagnosticsLog.shared.record(.lifecycle, "Paywall draft saved (now entitled)")
         dailiesVM.save(draft)
     }
 
