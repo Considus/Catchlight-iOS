@@ -229,6 +229,12 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         for (index, block) in blocks.enumerated() {
             if let row = rowContainers[block.id] { stack.insertArrangedSubview(row, at: index) }
         }
+        // REFRESH every row's a11y id, don't just set it at creation: a row KEEPS its text view
+        // across a text<->check conversion (that's what stops the keyboard flicking), and the
+        // "first prose block" can change as blocks are added, removed or reordered.
+        for block in blocks {
+            textViews[block.id]?.accessibilityIdentifier = axIdentifier(for: block, in: blocks)
+        }
         updateCheckVisuals(blocks)
 
         desiredFocus = focusedBlockID
@@ -248,6 +254,21 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             self.view.layoutIfNeeded()
             self.reportContentHeightIfChanged()
         }
+    }
+
+    /// ⚠️ THE A11Y IDS BELOW ARE A TEST CONTRACT, not decoration. The whole XCUITest suite
+    /// (`BlockEditorUITests`, `CoreFlowsUITests`, `TwoTapRegressionTests`) reaches the editor
+    /// through them, and they must match what the RETIRED SwiftUI editor published — that view
+    /// owned them until M7, and the A/B toggle meant CI only ever exercised it, so this editor
+    /// shipped for three milestones with no ids and nothing caught it until the default flipped
+    /// (PR #130). The tests are also TYPE-pinned: `take-edit-body`/`take-edit-check-field` are
+    /// queried via `app.textViews`, `take-edit-checkbox` via `app.buttons`, `take-edit-reorder`
+    /// via `app.images`. Changing an id or an element's type breaks CI.
+    private func axIdentifier(for block: TakeBlock, in blocks: [TakeBlock]) -> String {
+        if block.isCheck { return "take-edit-check-field" }
+        // The FIRST prose block is the one tests type into to open/assert an editor.
+        let firstProseID = blocks.first(where: { !$0.isCheck })?.id
+        return block.id == firstProseID ? "take-edit-body" : "take-edit-text"
     }
 
     private func createRow(_ block: TakeBlock) {
@@ -355,7 +376,8 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private func addCheckChrome(to row: UIStackView, id: UUID) {
         let button = UIButton(type: .system)
         button.setContentHuggingPriority(.required, for: .horizontal)
-        button.accessibilityIdentifier = "uikit-check-box"
+        // ⚠️ A11Y IDS ARE A TEST CONTRACT — see `axIdentifier(for:)`.
+        button.accessibilityIdentifier = "take-edit-checkbox"
         button.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             self.delegate?.blockEditorToggleCheck(self, blockID: id)
@@ -368,7 +390,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         handle.contentMode = .center
         handle.isUserInteractionEnabled = true
         handle.setContentHuggingPriority(.required, for: .horizontal)
-        handle.accessibilityIdentifier = "uikit-reorder-handle"
+        handle.accessibilityIdentifier = "take-edit-reorder"
         let pan = UIPanGestureRecognizer(target: self, action: #selector(reorderPan(_:)))
         handle.addGestureRecognizer(pan)
         reorderRowID[pan] = id
@@ -474,6 +496,15 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             if let b = checkButtons[block.id] {
                 b.setImage(checkboxImage(isComplete: done), for: .normal)
                 b.tintColor = UIColor(done ? Color.ckAccent : Color.ckTextSecondary)
+                // The a11y VALUE is what VoiceOver speaks for the tick state — and what the
+                // XCUITests assert on (`box.value == "checked"/"unchecked"`), since a UIButton's
+                // image says nothing to a test. Republished here, next to the glyph, so the two
+                // can't disagree. Mirrors what the retired SwiftUI checkbox exposed.
+                b.accessibilityLabel = block.text.isEmpty ? "Checklist item" : block.text
+                b.accessibilityValue = done ? "checked" : "unchecked"
+                b.accessibilityHint = "Double-tap to \(done ? "untick" : "tick") this item."
+                if done { b.accessibilityTraits.insert(.selected) }
+                else { b.accessibilityTraits.remove(.selected) }
             }
             if let tv = textViews[block.id], !tv.isFirstResponder {
                 tv.textColor = UIColor(done ? Color.ckTextComplete : Color.ckTextPrimary)

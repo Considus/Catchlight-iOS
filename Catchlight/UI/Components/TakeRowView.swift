@@ -90,10 +90,25 @@ struct TakeRowView: View {
     /// Composed VoiceOver label: text + status (+ progress) + reminder date.
     /// Example: "Buy milk. Task, 3 of 5 complete." or "The north star. Obie, your
     /// pinned Take. Note. Reminder set. Tomorrow at 3 PM."
-    private var rowAccessibilityLabel: String {
-        var parts: [String] = [firstLine, Self.statusDescription(for: take)]
+    private var rowAccessibilityLabel: String { Self.accessibilityLabel(for: take) }
+
+    /// STATIC so the UIKit timeline's cell (`TimelineReadCell`) speaks a row identically — it
+    /// draws `TakeCardSurface` directly rather than going through this view, so without a shared
+    /// helper the two would drift (as the checkbox glyph did once this stopped being one view).
+    static func accessibilityLabel(for take: Take) -> String {
+        let line = take.plainText
+            .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+            .first.map(String.init) ?? ""
+        var parts: [String] = [line, statusDescription(for: take)]
         if let when = TakeCardSurface.reminderString(for: take) { parts.append(when) }
         return parts.filter { !$0.isEmpty }.joined(separator: ". ")
+    }
+
+    /// The Iris's spoken label — shared with the UIKit cell for the same reason.
+    static func irisAccessibilityLabel(for take: Take) -> String {
+        take.isObie
+            ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
+            : "Iris. \(TakeCircleView.activityDescription(for: take))"
     }
 
     /// The spoken status (Obie / Task + progress / Note / reminder-set) portion of

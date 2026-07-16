@@ -141,6 +141,18 @@ struct TimelineReadCell: View {
                 .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .onTapGesture { onTapText(take) }
                 .contextMenu { menuItems }
+                // ⚠️ VoiceOver + TEST CONTRACT. This cell draws `TakeCardSurface` DIRECTLY rather
+                // than going through `TakeRowView`, so none of that view's accessibility came with
+                // it — this timeline was unreadable to VoiceOver, and invisible to the XCUITests
+                // that find a Take by the "take-row" identifier. It went unnoticed for six
+                // milestones because the A/B toggle meant CI only ever drove the OLD timeline
+                // (found when M7 flipped the default, PR #130). Labels are shared statics so the
+                // two rows can't drift apart again.
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("take-row")
+                .accessibilityLabel(TakeRowView.accessibilityLabel(for: take))
+                .accessibilityHint("Double-tap to edit this Take.")
+                .accessibilityActions { menuItems }
             Rectangle().fill(Color.ckBackground)                                       // occluder
                 .frame(width: occW, height: d / 2)
                 .offset(x: inset - occW / 2, y: -d / 2)
@@ -165,6 +177,16 @@ struct TimelineReadCell: View {
                         onLongPress: { onLongPressCircle(take) }
                     )
                 )
+                .accessibilityElement()
+                .accessibilityIdentifier("take-iris")
+                .accessibilityLabel(TakeRowView.irisAccessibilityLabel(for: take))
+                .accessibilityHint(take.isObie
+                    ? "Double-tap to open actions. Long press to turn this back into a standard Take."
+                    : "Double-tap to open actions. Long press to make this your Obie.")
+                // VoiceOver intercepts long-press, so the Obie toggle needs a named action too.
+                .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") {
+                    onLongPressCircle(take)
+                }
                 .offset(x: inset - d / 2, y: -d / 2)
             SpineLine().stroke(Color.ckSpineWire, lineWidth: w)                        // wire over Iris top
                 .frame(width: w, height: d / 2)

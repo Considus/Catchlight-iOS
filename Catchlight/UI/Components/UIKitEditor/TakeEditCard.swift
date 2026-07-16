@@ -159,6 +159,15 @@ struct TakeEditCard: View {
                         }
                     }
                     .offset(x: inset - d / 2, y: -d / 2)
+                    // ⚠️ TEST CONTRACT: the XCUITests open the Focus ring through "editor-shape"
+                    // (the EDITING card's Iris) — the retired row-hosted editor published it, and
+                    // it moved here with the card. Queried type-agnostically (`anyElement`), since
+                    // a SwiftUI a11y element surfaces as .other on some runtimes and .button on
+                    // others — but the IDENTIFIER must survive.
+                    .accessibilityElement()
+                    .accessibilityIdentifier("editor-shape")
+                    .accessibilityLabel("Take shape")
+                    .accessibilityHint("Opens the Focus ring to change what this Take is.")
             }
         }
     }
