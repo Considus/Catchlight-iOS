@@ -9,12 +9,10 @@ import CatchlightCore
 /// hand-rolled caret pin in `DailiesView` can be retired. This is the fix for
 /// the caret-below-keyboard bug that returned four times.
 ///
-/// Designed as a drop-in for `InlineTakeEditCard` so all three hosts
-/// (`DailiesView`, `StoryboardView`, `LockedCaptureView`) keep the same seam.
-/// See `03_Engineering/UIKit_Pillar1_Editor_Design_v1.0.md`.
-///
-/// STATUS: skeleton only — the seam is declared; Milestone 1 (text rows +
-/// native caret-follow) is not yet implemented.
+/// Built as a drop-in for `InlineTakeEditCard` so all three hosts (`DailiesView`,
+/// `StoryboardView`, `LockedCaptureView`) could keep the same seam — they all took it,
+/// and that view is gone as of M7. Hosts wrap this in `TakeEditCard` rather than using it
+/// raw. See `03_Engineering/UIKit_Pillar1_Editor_Design_v1.0.md`.
 struct BlockEditor: UIViewControllerRepresentable {
     /// Single source of truth. Mutate ONLY through `Take`'s block mutators so
     /// the derived flags (`isTask`/`isComplete`/`checkItems`/`isMarkedDone`)
@@ -31,14 +29,13 @@ struct BlockEditor: UIViewControllerRepresentable {
     /// Retained for the seam only. A self-scrolling editor should leave this
     /// unset so `DailiesView` skips the (to-be-deleted) caret pin.
     var onCaretMoved: ((CGRect) -> Void)? = nil
+    /// True once the host's card has hit its height cap and can no longer grow. Below the cap the
+    /// editor must NOT scroll to follow the caret — an overflow there is just the frame lagging the
+    /// content by a layout pass, and scrolling jumps the text instead of letting the card grow.
+    var atMaxHeight: Bool = false
     /// Reports the editor's intrinsic content height, so a host can size a card to
     /// the content (up to an available max, then the editor scrolls internally).
     var onContentHeightChange: ((CGFloat) -> Void)? = nil
-
-    #if DEBUG
-    /// The test harness turns on an on-device readout of the scroll maths.
-    var diagnostics = false
-    #endif
 
     func makeUIViewController(context: Context) -> BlockEditorViewController {
         let vc = BlockEditorViewController()
@@ -48,10 +45,8 @@ struct BlockEditor: UIViewControllerRepresentable {
 
     func updateUIViewController(_ vc: BlockEditorViewController, context: Context) {
         context.coordinator.parent = self
-        #if DEBUG
-        vc.showsDiagnostics = diagnostics
-        #endif
         vc.onContentHeight = onContentHeightChange
+        vc.frameAtMax = atMaxHeight
         vc.setToolbar(context.coordinator.makeToolbarConfig())
         vc.apply(blocks: draft.blocks, focusedBlockID: focusedBlockID)
     }
@@ -116,7 +111,7 @@ struct BlockEditor: UIViewControllerRepresentable {
 
         /// The keyboard toolbar's state + actions, derived from the draft — identical
         /// to the current editor's `InlineTakeEditCard.toolbarConfig`.
-        func makeToolbarConfig() -> BlockTextEditor.EditorToolbarConfig {
+        func makeToolbarConfig() -> EditorToolbarConfig {
             .init(
                 isImportant: parent.draft.isImportant,
                 angleEnabled: AngleRegistry.applicable(to: parent.draft).first != nil,

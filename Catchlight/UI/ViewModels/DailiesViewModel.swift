@@ -157,6 +157,7 @@ final class DailiesViewModel {
         updated.normaliseActivityFloor()
         do {
             try store.upsert(updated)
+            DiagnosticsLog.shared.record(.lifecycle, "Take saved")
             // Spotlight (Task 6.19) — re-index every save (covers both create
             // and update paths since both funnel here). Fire-and-forget; the
             // store write is the authoritative outcome.
@@ -223,6 +224,7 @@ final class DailiesViewModel {
     func delete(_ take: Take) {
         do {
             try store.delete(id: take.id)
+            DiagnosticsLog.shared.record(.lifecycle, "Take deleted")
             // Spotlight (Task 6.19) — drop the item from the OS index so a
             // deleted Take can't be discovered via search.
             spotlight.deindex(takeID: take.id)

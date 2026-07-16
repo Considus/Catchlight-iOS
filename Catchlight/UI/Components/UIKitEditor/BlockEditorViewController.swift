@@ -51,6 +51,16 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// Reports intrinsic content height (the stack) so a host can size to content.
     var onContentHeight: ((CGFloat) -> Void)?
     private var lastReportedHeight: CGFloat = -1
+    /// Set by the host: is the card already at its maximum height (can it no longer grow)? Only
+    /// then does an overflow warrant scrolling to follow the caret — below the cap an overflow is
+    /// just the frame lagging the content by a layout pass, and scrolling would jump the text.
+    var frameAtMax = false
+    /// The last keyboard END frame (window coords), or nil when hidden. Kept so the bottom
+    /// inset can be RE-derived on every layout pass — a bottom-anchored host's view frame is
+    /// still settling when the keyboard notification fires, so a one-shot overlap (computed in
+    /// `keyboardChanged`) reads the wrong geometry and scrolls the content off-screen. Layout
+    /// recompute corrects it once the frame settles (idempotent for fixed-frame hosts).
+    private var lastKeyboardEndFrame: CGRect?
 
     // Drag-to-reorder (check items, via the trailing handle). The dragged row floats
     // over the scroll content while a placeholder holds the gap in the stack.
@@ -66,22 +76,6 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// top of the 62pt toolbar double-counted the space). Tunable via the readout.
     private let caretBottomGap: CGFloat = 16
 
-    #if DEBUG
-    /// Set by the test harness to surface the scroll maths on device (this is the
-    /// device-only zone the sim doesn't reproduce). Removed when M1 is wired into
-    /// the real hosts.
-    var showsDiagnostics = false { didSet { diagLabel.isHidden = !showsDiagnostics } }
-    private lazy var diagLabel: UILabel = {
-        let l = UILabel()
-        l.numberOfLines = 0
-        l.font = .monospacedSystemFont(ofSize: 10, weight: .semibold)
-        l.textColor = .systemRed
-        l.backgroundColor = UIColor.white.withAlphaComponent(0.85)
-        l.isHidden = true
-        l.translatesAutoresizingMaskIntoConstraints = false
-        return l
-    }()
-    #endif
 
     // MARK: - Setup
 
@@ -119,14 +113,6 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             stack.widthAnchor.constraint(equalTo: frame.widthAnchor),
         ])
 
-        #if DEBUG
-        view.addSubview(diagLabel)
-        NSLayoutConstraint.activate([
-            diagLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 4),
-            diagLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 6),
-        ])
-        #endif
-
         let nc = NotificationCenter.default
         nc.addObserver(self, selector: #selector(keyboardChanged(_:)),
                        name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
@@ -138,8 +124,87 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        recomputeKeyboardInset()   // re-derive overlap once the (bottom-anchored) frame settles
+        reportContentHeightIfChanged()
+        // Run the FULL caret decision, not just the fits-pin: once the frame settles at its cap
+        // (e.g. opening a long Take), this is what finally follows the caret to the end. Pinning
+        // only would leave the caret parked off-screen (device 2026-07-15).
+        scrollActiveCaretToVisible(animated: false)
+    }
+
+    /// Measure the stack and report its height to the host if it changed.
+    ///
+    /// MUST be called whenever the ROWS change, not only from `viewDidLayoutSubviews`. That only
+    /// runs when our view's frame changes — so if the height we'd report happens to equal the card's
+    /// current height (e.g. opening a long Take right after a single-line one, where both start at
+    /// the descent floor), nothing re-renders, no layout pass fires, and the real content height is
+    /// NEVER measured: the card stays stuck at the previous Take's size (device trace 2026-07-15 —
+    /// session 2 sat at fH=70 with stack=286 and only reported at teardown, while session 3 worked
+    /// purely because 290→70 was a change that forced an extra pass).
+    private func reportContentHeightIfChanged() {
         let h = stack.frame.height
-        if abs(h - lastReportedHeight) > 0.5 { lastReportedHeight = h; onContentHeight?(h) }
+        guard abs(h - lastReportedHeight) > 0.5 else { return }
+        lastReportedHeight = h
+        onContentHeight?(h)
+    }
+
+    /// When the content fits the visible area, pin it to the TOP and report `true`. A caret-follow
+    /// that ran against a momentarily-too-small frame or keyboard inset — before the card's height
+    /// / the inset had settled — otherwise strands the content scrolled UP, hiding the top lines and
+    /// pushing the caret off the top (device 2026-07-15: "caret appears then scrolls up out of
+    /// view"). This can't rely on a later `viewDidLayoutSubviews`: the bottom-anchored card RISES
+    /// (a position change) without its bounds changing, so no further layout pass fires — hence the
+    /// deferred re-settle in `keyboardChanged`. Returns `false` when the content genuinely overflows
+    /// (then the caret-follow governs).
+    @discardableResult
+    private func settleScrollWhenContentFits(animated: Bool = false) -> Bool {
+        let inset = scrollView.adjustedContentInset
+        let visibleH = scrollView.bounds.height - inset.top - inset.bottom
+        let fits = scrollView.contentSize.height <= visibleH + 0.5
+        // Doesn't fit, but the host's card can still GROW? Then the overflow is TRANSIENT — the
+        // frame is simply one layout pass behind the content (the host sizes it from our reported
+        // height, a SwiftUI round-trip). Scrolling here is the "text scrolls inside the card before
+        // it grows" jump (owner 2026-07-15). Hold at the top instead and let the card grow to fit;
+        // only a card pinned at its cap genuinely needs the caret-follow.
+        guard fits || !frameAtMax else { return false }
+        let topOffset = -inset.top
+        if abs(scrollView.contentOffset.y - topOffset) > 0.5 {
+            scrollView.setContentOffset(CGPoint(x: 0, y: topOffset), animated: animated)
+        }
+        return true
+    }
+
+    /// Derive the bottom inset from the last keyboard frame against the CURRENT view geometry.
+    /// Called both on the keyboard notification and on every layout pass, so a host whose frame
+    /// settles AFTER the notification (bottom-anchored new-Take) ends up with the right overlap.
+    /// Guarded so it only writes on a real change — no layout feedback loop.
+    private func recomputeKeyboardInset() {
+        let overlap: CGFloat
+        if let end = lastKeyboardEndFrame {
+            let kbInView = view.convert(end, from: nil)
+            if kbInView.minY <= 0 {
+                // The keyboard's top converts to AT/ABOVE our view's own top — meaning this view is
+                // still entirely BELOW the keyboard line: a bottom-anchored card that hasn't risen
+                // into place yet (the notification fires before the rise). Any overlap derived here
+                // is meaningless — the raw formula reads "the whole card is buried" (device trace
+                // 2026-07-15: kbInView.minY=-223 → overlap=312 → visible=-223 → the caret-follow
+                // shoved 85pt of text to off=300 = the BLANK CARD). Take no overlap; the deferred
+                // re-settle applies the real geometry once the card has risen.
+                overlap = 0
+            } else {
+                // Clamp to our own height: a view can never be overlapped by more than it measures.
+                overlap = min(max(0, scrollView.frame.maxY - kbInView.minY), scrollView.bounds.height)
+            }
+        } else {
+            overlap = 0
+        }
+        guard abs(scrollView.contentInset.bottom - overlap) > 0.5 else { return }
+        scrollView.contentInset.bottom = overlap
+        scrollView.verticalScrollIndicatorInsets.bottom = overlap
+        // The inset just changed (e.g. a bottom-anchored card finished rising) — re-settle the
+        // caret against the corrected geometry so content over-scrolled under a stale inset
+        // springs back into view instead of staying hidden.
+        scrollActiveCaretToVisible(animated: false)
     }
 
     // MARK: - Data
@@ -164,6 +229,12 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         for (index, block) in blocks.enumerated() {
             if let row = rowContainers[block.id] { stack.insertArrangedSubview(row, at: index) }
         }
+        // REFRESH every row's a11y id, don't just set it at creation: a row KEEPS its text view
+        // across a text<->check conversion (that's what stops the keyboard flicking), and the
+        // "first prose block" can change as blocks are added, removed or reordered.
+        for block in blocks {
+            textViews[block.id]?.accessibilityIdentifier = axIdentifier(for: block, in: blocks)
+        }
         updateCheckVisuals(blocks)
 
         desiredFocus = focusedBlockID
@@ -177,7 +248,27 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             for id in Array(self.rowContainers.keys) where !liveIDs.contains(id) {
                 self.removeRow(id)
             }
+            // The rows just changed — settle their layout and report the new content height NOW.
+            // Waiting for `viewDidLayoutSubviews` loses it entirely when our frame doesn't change
+            // (see reportContentHeightIfChanged). Deferred so we're outside SwiftUI's update cycle.
+            self.view.layoutIfNeeded()
+            self.reportContentHeightIfChanged()
         }
+    }
+
+    /// ⚠️ THE A11Y IDS BELOW ARE A TEST CONTRACT, not decoration. The whole XCUITest suite
+    /// (`BlockEditorUITests`, `CoreFlowsUITests`, `TwoTapRegressionTests`) reaches the editor
+    /// through them, and they must match what the RETIRED SwiftUI editor published — that view
+    /// owned them until M7, and the A/B toggle meant CI only ever exercised it, so this editor
+    /// shipped for three milestones with no ids and nothing caught it until the default flipped
+    /// (PR #130). The tests are also TYPE-pinned: `take-edit-body`/`take-edit-check-field` are
+    /// queried via `app.textViews`, `take-edit-checkbox` via `app.buttons`, `take-edit-reorder`
+    /// via `app.images`. Changing an id or an element's type breaks CI.
+    private func axIdentifier(for block: TakeBlock, in blocks: [TakeBlock]) -> String {
+        if block.isCheck { return "take-edit-check-field" }
+        // The FIRST prose block is the one tests type into to open/assert an editor.
+        let firstProseID = blocks.first(where: { !$0.isCheck })?.id
+        return block.id == firstProseID ? "take-edit-body" : "take-edit-text"
     }
 
     private func createRow(_ block: TakeBlock) {
@@ -258,7 +349,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// Called before `apply` on every SwiftUI update, so the bar reflects live state
     /// (Important tint, Angle enablement, Done). The reported keyboard frame includes
     /// this accessory, so the caret-follow already rests the caret above the toolbar.
-    func setToolbar(_ config: BlockTextEditor.EditorToolbarConfig) {
+    func setToolbar(_ config: EditorToolbarConfig) {
         let bar = EditorKeyboardBar(config: config, onDismiss: { [weak self] in
             self?.view.endEditing(true)
             config.onDismiss()
@@ -285,7 +376,8 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private func addCheckChrome(to row: UIStackView, id: UUID) {
         let button = UIButton(type: .system)
         button.setContentHuggingPriority(.required, for: .horizontal)
-        button.accessibilityIdentifier = "uikit-check-box"
+        // ⚠️ A11Y IDS ARE A TEST CONTRACT — see `axIdentifier(for:)`.
+        button.accessibilityIdentifier = "take-edit-checkbox"
         button.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             self.delegate?.blockEditorToggleCheck(self, blockID: id)
@@ -298,7 +390,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         handle.contentMode = .center
         handle.isUserInteractionEnabled = true
         handle.setContentHuggingPriority(.required, for: .horizontal)
-        handle.accessibilityIdentifier = "uikit-reorder-handle"
+        handle.accessibilityIdentifier = "take-edit-reorder"
         let pan = UIPanGestureRecognizer(target: self, action: #selector(reorderPan(_:)))
         handle.addGestureRecognizer(pan)
         reorderRowID[pan] = id
@@ -387,6 +479,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         delegate?.blockEditor(self, didMoveBlock: id, toIndex: finalIndex)
     }
 
+    /// ⚠️ KEEP IN STEP WITH `TaskCheckbox` (the SwiftUI twin the Shot List draws). Same symbols,
+    /// same size, same tints — they can't be single-sourced across UIKit/SwiftUI, so the pair only
+    /// stays honest by hand. They drifted once (owner 2026-07-16).
     private func checkboxImage(isComplete: Bool) -> UIImage? {
         let cfg = UIImage.SymbolConfiguration(pointSize: 15, weight: .regular)
         return UIImage(systemName: isComplete ? "checkmark.circle.fill" : "square",
@@ -401,6 +496,15 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             if let b = checkButtons[block.id] {
                 b.setImage(checkboxImage(isComplete: done), for: .normal)
                 b.tintColor = UIColor(done ? Color.ckAccent : Color.ckTextSecondary)
+                // The a11y VALUE is what VoiceOver speaks for the tick state — and what the
+                // XCUITests assert on (`box.value == "checked"/"unchecked"`), since a UIButton's
+                // image says nothing to a test. Republished here, next to the glyph, so the two
+                // can't disagree. Mirrors what the retired SwiftUI checkbox exposed.
+                b.accessibilityLabel = block.text.isEmpty ? "Checklist item" : block.text
+                b.accessibilityValue = done ? "checked" : "unchecked"
+                b.accessibilityHint = "Double-tap to \(done ? "untick" : "tick") this item."
+                if done { b.accessibilityTraits.insert(.selected) }
+                else { b.accessibilityTraits.remove(.selected) }
             }
             if let tv = textViews[block.id], !tv.isFirstResponder {
                 tv.textColor = UIColor(done ? Color.ckTextComplete : Color.ckTextPrimary)
@@ -459,42 +563,35 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         guard let end = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
         else { return }
         let hiding = note.name == UIResponder.keyboardWillHideNotification
-        let kbInView = view.convert(end, from: nil)
-        let overlap = hiding ? 0 : max(0, scrollView.frame.maxY - kbInView.minY)
-        scrollView.contentInset.bottom = overlap
-        scrollView.verticalScrollIndicatorInsets.bottom = overlap
+        lastKeyboardEndFrame = hiding ? nil : end
+        recomputeKeyboardInset()
         scrollActiveCaretToVisible(animated: true)
+        // The bottom-anchored card is still RISING into place (a SwiftUI position animation that
+        // fires no further layout pass here), so the geometry `recomputeKeyboardInset` just used
+        // is stale. Re-derive the inset + re-settle once the animation has completed, against the
+        // FINAL geometry — this is what deterministically clears the "caret scrolled up" race that
+        // only the diagnostics label's extra layout pass was accidentally fixing.
+        let duration = (note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.3
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.02) { [weak self] in
+            guard let self else { return }
+            self.recomputeKeyboardInset()
+            self.scrollActiveCaretToVisible(animated: false)
+        }
     }
 
     /// Scroll the active caret into the visible area. `scrollRectToVisible`
     /// respects `adjustedContentInset` (which includes the keyboard overlap), so
     /// the caret is held above the keyboard — natively, against exact geometry.
     private func scrollActiveCaretToVisible(animated: Bool) {
-        guard let tv = activeTextView(), let sel = tv.selectedTextRange else {
-            #if DEBUG
-            updateDiag(nil)
-            #endif
-            return
-        }
+        // Content fits → pin to the top; never follow the caret (following it against a
+        // not-yet-settled frame/inset is exactly what strands the top off-screen).
+        if settleScrollWhenContentFits(animated: animated) { return }
+        guard let tv = activeTextView(), let sel = tv.selectedTextRange else { return }
         let caret = tv.caretRect(for: sel.end)
         guard caret.origin.y.isFinite, caret.size.height.isFinite else { return }
         let inScroll = scrollView.convert(caret, from: tv)
         scrollView.scrollRectToVisible(inScroll.insetBy(dx: 0, dy: -caretBottomGap), animated: animated)
-        #if DEBUG
-        updateDiag(inScroll)
-        #endif
     }
-
-    #if DEBUG
-    private func updateDiag(_ caretInScroll: CGRect?) {
-        guard showsDiagnostics else { return }
-        diagLabel.text = String(format: "fH=%.0f  ins.b=%.0f  off=%.0f\ncs=%.0f  caretY=%@",
-                                scrollView.frame.height, scrollView.adjustedContentInset.bottom,
-                                scrollView.contentOffset.y, scrollView.contentSize.height,
-                                caretInScroll.map { String(format: "%.0f", $0.maxY) } ?? "-")
-        view.bringSubviewToFront(diagLabel)
-    }
-    #endif
 
     // MARK: - UITextViewDelegate
 
@@ -507,7 +604,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     func textViewDidChange(_ tv: UITextView) {
         guard let id = blockID(for: tv) else { return }
         delegate?.blockEditor(self, didChangeText: tv.text, forBlock: id)
-        // The row's intrinsic height changed — settle layout, then keep the caret up.
+        // The row's intrinsic height changed (incl. a trailing newline's empty line) — re-measure,
+        // settle layout, then keep the caret up.
+        tv.invalidateIntrinsicContentSize()
         view.layoutIfNeeded()
         scrollActiveCaretToVisible(animated: false)
     }

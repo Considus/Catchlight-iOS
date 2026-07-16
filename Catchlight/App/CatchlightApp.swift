@@ -94,6 +94,33 @@ struct CatchlightApp: App {
         if ProcessInfo.processInfo.arguments.contains("--uitesting") {
             UIView.setAnimationsEnabled(false)
         }
+        // Detect an unexpected termination of the PREVIOUS run and stamp this launch. Must run
+        // before anything can crash us, and reads/sets the flag `markCleanExit` clears on an
+        // orderly background (owner 2026-07-16, D-085 extension). Content-free: build + OS +
+        // device only — never anything about the user's Takes.
+        DiagnosticsLog.shared.recordLaunch(build: Self.buildStamp,
+                                           systemVersion: UIDevice.current.systemVersion,
+                                           deviceModel: Self.deviceModel)
+    }
+
+    /// App version + the git SHA already stamped into `CFBundleVersion` by the build phase —
+    /// so an exported log names the EXACT build that died.
+    private static var buildStamp: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = info?["CFBundleVersion"] as? String ?? ""
+        return build.isEmpty ? version : "\(version) (\(build))"
+    }
+
+    /// Hardware identifier (e.g. "iPhone17,1") — `UIDevice.model` only ever says "iPhone".
+    private static var deviceModel: String {
+        var info = utsname()
+        uname(&info)
+        return withUnsafePointer(to: &info.machine) {
+            $0.withMemoryRebound(to: CChar.self, capacity: MemoryLayout.size(ofValue: $0.pointee)) {
+                String(validatingUTF8: $0) ?? "unknown"
+            }
+        }
     }
 
     /// Capture the app handle so the scenePhase observer can drive subscription
@@ -210,13 +237,6 @@ struct CatchlightApp: App {
                     PrivacyOverlay()
                 }
 
-                #if DEBUG
-                // Section 2b — on-device safe-area readout (gated behind a
-                // Settings DEBUG toggle, off by default). Reads the env values
-                // from the modifiers below; raw insets come straight off rootGeo.
-                DebugInsetReadout(rawTop: rootGeo.safeAreaInsets.top,
-                                  rawBottom: rootGeo.safeAreaInsets.bottom)
-                #endif
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // `.container` ONLY (2026-06-10 dock redesign): the bare
@@ -282,6 +302,11 @@ struct CatchlightApp: App {
         .onChange(of: scenePhase) { _, newPhase in
             session.handleScenePhase(newPhase)
             if newPhase == .background {
+                // Mark an ORDERLY exit: if this flag is still set at the next launch, the run died
+                // (crash / watchdog / jetsam) and `recordLaunch` logs it. The diagnostics log is
+                // in-process, so it can never witness its own death — only its absence afterwards
+                // (owner 2026-07-16, D-085 extension).
+                DiagnosticsLog.shared.markCleanExit()
                 // Push this session's edits out before suspension (runs under
                 // a background-task assertion with the in-memory keys), then
                 // schedule the opportunistic BG refresh.
@@ -296,6 +321,11 @@ struct CatchlightApp: App {
                 // `.inactive → .active` also fires for Face ID sheets,
                 // Notification Centre, and the app switcher.
                 backgroundSync.syncNow(trigger: .appBecameActive)
+                // Notice a REVOKED notification permission (owner 2026-07-16). Revoking in iOS
+                // Settings silently kills every time-reminder, and nothing else in the app would
+                // ever tell us. Foreground is the only moment we can see it; it writes only on a
+                // CHANGE, so this can't flood despite .active firing often.
+                Task { await ReminderScheduler.recordAuthorizationStatusIfChanged() }
                 // Refresh which reminders are currently snoozed (owner 2026-06-21) so
                 // the timeline shows "SNOOZED" not "OVERDUE". Reads the OS pending queue
                 // (no key needed), so it's fine here regardless of lock state.

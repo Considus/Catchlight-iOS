@@ -82,26 +82,26 @@ struct ObieGlyph: View {
     }
 }
 
-/// The shared checklist checkbox glyph (owner 2026-06-18): a rounded SQUARE when
-/// open, a ticked CIRCLE when complete, about half the old size. Used by both the
-/// list Angle and the inline editor so the two never drift. The caller wraps it in
-/// the 44pt touch target / Button.
+/// The checklist checkbox glyph (owner 2026-06-18): a SQUARE when open, a ticked CIRCLE when
+/// complete. The caller wraps it in the 44pt touch target / Button.
+///
+/// ⚠️ KEEP IN STEP WITH `BlockEditorViewController.checkboxImage` — the editor is UIKit and draws
+/// its own, so this pair can't be single-sourced the way `TakeCardStyle` is. Both must render the
+/// SAME symbols at the SAME size: `square` / `checkmark.circle.fill`, 15pt regular,
+/// `ckTextSecondary` / `ckAccent`. The open state drifted once already — the editor moved to the SF
+/// `square` while this still hand-drew a `RoundedRectangle`, so a checklist item looked different in
+/// the Shot List than in the Take you'd just typed it into (owner 2026-07-16). This view was
+/// originally shared with the SwiftUI inline editor, which is what kept them honest; that editor
+/// died at M7, so the only thing holding them together now is this comment.
 struct TaskCheckbox: View {
     let isComplete: Bool
-    /// 14pt (owner 2026-06-18: 25% smaller than the previous 19pt — read as chunky).
+    /// 15pt, matching the editor's `SymbolConfiguration(pointSize: 15, weight: .regular)`.
     /// The caller still wraps it in the 44pt touch frame, so the tap target is unchanged.
-    var size: CGFloat = 14
+    var size: CGFloat = 15
     var body: some View {
-        if isComplete {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: size + 1))
-                .foregroundStyle(Color.ckAccent)
-        } else {
-            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                // Stroke scaled down with the box so the smaller glyph doesn't read heavy.
-                .strokeBorder(Color.ckTextSecondary, lineWidth: 1.5)
-                .frame(width: size, height: size)
-        }
+        Image(systemName: isComplete ? "checkmark.circle.fill" : "square")
+            .font(.system(size: size, weight: .regular))
+            .foregroundStyle(isComplete ? Color.ckAccent : Color.ckTextSecondary)
     }
 }
 
