@@ -50,6 +50,14 @@ struct TakeEditCard: View {
     var onEditReminder: (() -> Void)? = nil
     /// The keyboard × discards (revert); save is the host's tap-away.
     var onDiscard: (() -> Void)? = nil
+    /// Tap the Iris → open the Focus-ring fan against the LIVE DRAFT (owner 2026-06-17, so the
+    /// fan reflects unsaved shaping and its commit routes back to the draft — `RootView` does
+    /// that routing off `ui.editingTakeID`). The `CGPoint` is the Iris centre in WINDOW coords,
+    /// which is the Focus-ring overlay's space. Only meaningful with `showsIris`.
+    ///
+    /// Iris LONG-press is deliberately absent: it's disabled during editing (discard moved to the
+    /// Take's long-press menu — owner 2026-06-17), matching the old timeline's row.
+    var onTapIris: ((CGPoint) -> Void)? = nil
     /// Reports the RAW (uncapped) content height, for a host that sizes itself off it.
     var onContentHeightChange: ((CGFloat) -> Void)? = nil
 
@@ -138,6 +146,18 @@ struct TakeEditCard: View {
                     .frame(width: d, height: d)
                     .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.16),
                             radius: 5, y: 2)
+                    // Tap → the Focus-ring fan, as on a read card. This card's Iris was purely
+                    // DECORATIVE from M4.7 until 2026-07-16: on the old timeline the row's own
+                    // Iris stays beside the editor and carries the gesture, so nothing was lost
+                    // until M5a routed every edit through this floating card. Reuses the row's
+                    // recognizer, which reports the view's centre in WINDOW coords.
+                    .overlay {
+                        if let onTapIris {
+                            TapAndLongPressRecognizer(minimumDuration: 0.45,
+                                                      onTap: onTapIris,
+                                                      onLongPress: {})
+                        }
+                    }
                     .offset(x: inset - d / 2, y: -d / 2)
             }
         }
@@ -175,6 +195,8 @@ struct KeyboardTakeEditor: View {
     var onOpenAngle: (() -> Void)? = nil
     var onEditReminder: (() -> Void)? = nil
     var onDiscard: (() -> Void)? = nil
+    /// Tap the Iris → the Focus-ring fan at the given WINDOW-coord centre (see `TakeEditCard`).
+    var onTapIris: ((CGPoint) -> Void)? = nil
 
     @Environment(\.deviceTopInset) private var deviceTopInset
 
@@ -235,6 +257,7 @@ struct KeyboardTakeEditor: View {
                 onOpenAngle: onOpenAngle,
                 onEditReminder: onEditReminder,
                 onDiscard: onDiscard,
+                onTapIris: onTapIris,
                 onContentHeightChange: { editorContentHeight = $0 }
             )
             .padding(.leading, leadingInset)

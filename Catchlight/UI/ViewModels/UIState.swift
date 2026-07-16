@@ -311,8 +311,20 @@ final class UIState {
     /// views to a value-observing modifier (which tripped SwiftUI's type-checker).
     static let fanFade: Animation = .easeInOut(duration: 0.2)
 
-    func openFocusRingFan(for take: Take, origin: CGPoint = .zero) {
+    /// Whether the fan lifts the tapped Take's card back LIT above the veil (owner 2026-06-16).
+    /// True from a timeline Iris — the spotlight is what keeps that one Take readable while the
+    /// rest dims. FALSE whenever the EDITOR is the context: the editor already IS the context, and
+    /// the spotlight would draw a READ card (shorter than the editing card, and Preview-capped)
+    /// over it — which reads as the Take shrinking (owner 2026-07-16).
+    ///
+    /// This used to be inferred in `RootView` from `focusRingFanOrigin != .zero`, i.e. "a real
+    /// Iris origin ⇒ came from the timeline". That proxy broke when the EDITING card grew a
+    /// tappable Iris of its own (M5b): a real origin, but the editor is the context. Explicit now.
+    var focusRingFanShowsCard = false
+
+    func openFocusRingFan(for take: Take, origin: CGPoint = .zero, showsCard: Bool = true) {
         focusRingFanOrigin = origin
+        focusRingFanShowsCard = showsCard && origin != .zero
         withAnimation(Self.fanFade) { focusRingFanTake = take }
     }
 

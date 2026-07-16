@@ -636,18 +636,32 @@ struct DailiesView: View {
     /// tight so the pinned Obie's circle is clear of it at rest).
     private var heading: some View {
         VStack(spacing: 0) {
-            Text(headingTitle)
-                // Shared page-heading style (Cormorant ROMAN 24, kerned, centred —
-                // §catalogue, includes the kerning-centring fix).
-                .pageHeadingStyle()
-                // Recede the title while editing in place; the mask below stays
-                // opaque so scrolled-up content still dissolves under the top.
-                .opacity(ui.isEditingInPlace ? 0.12 : 1)
-                .id(headingTitle)
-                .transition(.opacity)
-                .padding(.top, deviceTopInset + 14)
-                .padding(.bottom, 2)
-                .background(Color.ckBackground)
+            // The title crossfades on a dock-mode change (DAILIES → SEQUENCE → SEARCH), and the
+            // ZStack is what keeps the MASK out of that crossfade. Without it the
+            // `.background(Color.ckBackground)` below was applied to the very view carrying
+            // `.id` + `.transition`, so the mask faded WITH the title — and two half-faded opaque
+            // layers don't compose to opaque. For ~150ms the mask went see-through and whatever
+            // sits behind it showed: the spine wire above the Obie, or a Take scrolled up under
+            // the top (owner 2026-07-16; measured off a screen recording — the wire region dipped
+            // to 195 luma mid-fade and returned).
+            //
+            // The ZStack has a stable identity, so only the Text inside it transitions; the mask
+            // is a sibling that never fades. Keep it that way: anything that must stay opaque
+            // during the title change belongs OUTSIDE the `.id`/`.transition` view.
+            ZStack {
+                Text(headingTitle)
+                    // Shared page-heading style (Cormorant ROMAN 24, kerned, centred —
+                    // §catalogue, includes the kerning-centring fix).
+                    .pageHeadingStyle()
+                    // Recede the title while editing in place; the mask stays opaque so
+                    // scrolled-up content still dissolves under the top.
+                    .opacity(ui.isEditingInPlace ? 0.12 : 1)
+                    .id(headingTitle)
+                    .transition(.opacity)
+            }
+            .padding(.top, deviceTopInset + 14)
+            .padding(.bottom, 2)
+            .background(Color.ckBackground)
             if vm.obie != nil && !ui.isEditingInPlace {
                 // With a pinned Obie: SOLID right down to the Obie's card top (no fade
                 // — the gradient is semi-transparent and lets a scrolling Take peek).
@@ -681,7 +695,21 @@ struct DailiesView: View {
                        : nil,
                alignment: .top)
         .animation(.easeInOut(duration: 0.18), value: headingTitle)
-        .allowsHitTesting(false)
+        // The mask zone ABSORBS taps and reads as timeline background (owner 2026-07-16). It was
+        // `.allowsHitTesting(false)`, so a tap here fell through to whatever Take had scrolled up
+        // UNDER the mask — selecting a card the user couldn't see. Now it's a way out instead:
+        // exit a Sequence, or commit an open edit. That last part matters — the tap used to reach
+        // the save-catcher below, and absorbing it here must not lose that (hence the shared
+        // `timelineBackgroundTap`).
+        //
+        // The pinned Obie is drawn AFTER the heading in the ZStack, so it still owns its hit
+        // region and keeps its taps + swipe, including where this frame extends down behind it.
+        //
+        // The mask leaking mid-crossfade (a Take, then the spine wire, flashing through) was NOT
+        // this gesture — it was the title's `.background` riding the `.transition`, fixed with the
+        // ZStack above and measured off a screen recording.
+        .contentShape(Rectangle())
+        .onTapGesture { timelineBackgroundTap() }
         .accessibilityAddTraits(.isHeader)
         .accessibilityLabel(headingTitle.capitalized)
     }
@@ -691,6 +719,15 @@ struct DailiesView: View {
     /// top item is in the same place with or without an Obie. Scrolling Takes pass
     /// behind its solid background and dissolve under the fade below it. It keeps its
     /// swipe actions, so it stays interactive (the heading title/fade above do not).
+    /// Whether the pinned Obie slot yields while an edit is open. Always when the edit is another
+    /// Take (it would ghost over the faded timeline). On the NEW timeline also when the edit is the
+    /// OBIE ITSELF — there the floating card is the editor, so a visible pinned slot is a duplicate.
+    /// On the old timeline the pinned slot IS the Obie's editor, so it stays.
+    private func pinnedObieStandsDown(_ obie: Take) -> Bool {
+        guard ui.isEditingInPlace else { return false }
+        return useNewTimeline || ui.editingTakeID != obie.id
+    }
+
     @ViewBuilder
     private var pinnedObie: some View {
         if let obie = vm.obie {
@@ -717,11 +754,15 @@ struct DailiesView: View {
                 // 12% a focused Take scrolling behind it reads as a ghost (owner
                 // 2026-06-17). Hidden, not removed, so it fades with the mask and its
                 // measured height (the scroll inset) is preserved — no position jump.
-                // When the Obie ITSELF is the focused Take it stays bright and
-                // interactive — the pinned slot IS its inline editor (owner-agreed
-                // re-engineer 2026-06-19, back to in-place editing).
-                .opacity(ui.isEditingInPlace && ui.editingTakeID != obie.id ? 0 : 1)
-                .allowsHitTesting(!(ui.isEditingInPlace && ui.editingTakeID != obie.id))
+                //
+                // OLD timeline: when the Obie ITSELF is the focused Take it stays bright and
+                // interactive — the pinned slot IS its inline editor (owner-agreed re-engineer
+                // 2026-06-19, back to in-place editing).
+                // NEW timeline: the floating card is the editor for EVERY Take, so the pinned slot
+                // must stand down for its own Take too — otherwise the read card sits at the top
+                // while the editor floats below it: the SAME Obie twice (device 2026-07-16).
+                .opacity(pinnedObieStandsDown(obie) ? 0 : 1)
+                .allowsHitTesting(!pinnedObieStandsDown(obie))
         }
     }
 
@@ -1027,6 +1068,7 @@ struct DailiesView: View {
                 }
                 beginInlineEdit(take)
             },
+            onTapBackground: { timelineBackgroundTap() },
             // M4.6 — fade + disable the collection while editing (cards recede, taps fall
             // through to the save catcher). Covers both existing-edit and new-Take.
             isEditing: ui.isEditingInPlace
@@ -1042,6 +1084,18 @@ struct DailiesView: View {
     /// too (M5b, 2026-07-16), so the owner-tuned geometry has ONE home and cannot drift between
     /// the two screens. The old top-anchored `newTimelineEditOverlay` / `editPanel` path that
     /// the consistency pass retired is deleted with it.
+    /// A tap on the timeline BACKGROUND — every part of the screen that isn't a Take. Three
+    /// callers: the collection's empty space, a month divider's blank strip, and the heading
+    /// mask zone. One home so they can't drift apart (they read as one surface to the user).
+    ///
+    /// The editing branch is what the heading needs: while editing, the mask zone used to fall
+    /// through to the save-catcher, and the heading absorbing taps must not lose that. The
+    /// collection never reaches that branch (the catcher sits above it), which is harmless.
+    private func timelineBackgroundTap() {
+        if ui.isEditingInPlace { saveInlineEdit(); return }
+        if ui.dockMode == .filtering || ui.dockMode == .searching { ui.exitToResting() }
+    }
+
     private var newTakeBlockCard: some View {
         KeyboardTakeEditor(
             draft: editDraftBinding,
@@ -1049,7 +1103,17 @@ struct DailiesView: View {
             leadingInset: spineX - CatchlightLayout.cardSpineInset,
             onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
             onEditReminder: { presentReminderEditor() },
-            onDiscard: { discardInlineEdit() }
+            onDiscard: { discardInlineEdit() },
+            // Iris tap → the Focus-ring fan, against the LIVE DRAFT so it reflects unsaved
+            // shaping and its commit routes back through the draft rather than the store
+            // (owner 2026-06-17; `RootView` keys that off `ui.editingTakeID`). Drop the keyboard
+            // first, exactly as the old timeline's row does before blooming the fan.
+            onTapIris: { irisCentre in
+                editFocusedBlockID = nil
+                // No spotlight card — this IS the editor (owner 2026-07-16). The fan still blooms
+                // at the Iris; it just doesn't redraw the Take as a read card over the veil.
+                ui.openFocusRingFan(for: editDraft ?? Take(), origin: irisCentre, showsCard: false)
+            }
         )
     }
 
@@ -1761,7 +1825,11 @@ struct DailiesView: View {
                 // (screen centre) only survives as a last resort. While editing THIS
                 // Take, the fan opens against the live draft so it reflects unsaved
                 // shaping, and its commit routes back to the draft (owner 2026-06-17).
-                ui.openFocusRingFan(for: isEditingThis ? (editDraft ?? take) : take, origin: irisCentre)
+                // Spotlight card only when this row ISN'T the one being edited — editing makes the
+                // editor the context, and the spotlight's READ card over it reads as the Take
+                // shrinking (owner 2026-07-16; the new timeline's editing card behaves the same).
+                ui.openFocusRingFan(for: isEditingThis ? (editDraft ?? take) : take,
+                                    origin: irisCentre, showsCard: !isEditingThis)
             },
             onLongPressCircle: {
                 // Iris long-press is disabled during editing (discard moved to the
@@ -1850,7 +1918,16 @@ struct DailiesView: View {
             // Dimmed background rows during edit-in-place make their URLs inert, so a
             // save/discard tap can't open a link under the mask (owner 2026-06-27).
             linksInteractive: !(editingActive && !isEditingThis),
-            editingCard: isEditingThis
+            // NEW timeline: never build the in-cell editor. Every edit rides the floating
+            // `TakeEditCard` there (the M5a consistency pass), and this row is still rendered for
+            // the PINNED OBIE — so editing the Obie built TWO live editors on the same draft: this
+            // one in the pinned slot and the floating card. Two Obies on screen, and two
+            // UITextViews fighting for first responder (the keyboard flashing between upper and
+            // lowercase). Latent since M5a; found on device 2026-07-16.
+            //
+            // Gating VISIBILITY isn't enough — an invisible UITextView still takes first
+            // responder. The editor must not be CONSTRUCTED.
+            editingCard: isEditingThis && !useNewTimeline
                 ? { AnyView(InlineTakeEditCard(
                     draft: editDraftBinding,
                     focusedBlockID: $editFocusedBlockID,

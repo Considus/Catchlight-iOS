@@ -52,6 +52,9 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     var onExport: (Take) -> Void = { _ in }
     /// Tap a card → begin edit-in-place / commit an open edit (M4.1).
     var onTapText: (Take) -> Void = { _ in }
+    /// Tap the EMPTY timeline (off any cell) → the host clears a filter / closes search. The old
+    /// SwiftUI timeline had this as a `.background` catcher; this collection covers that area.
+    var onTapBackground: () -> Void = {}
     /// M4.6 — while editing, FADE + disable the collection itself (like the old timeline
     /// fades its rows to 0.12), so the cards recede and taps fall THROUGH to the save
     /// catcher behind. This avoids fighting the representable's compositing (the collection
@@ -74,6 +77,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onMakeObie = onMakeObie
         vc.onExport = onExport
         vc.onTapText = onTapText
+        vc.onTapBackground = onTapBackground
         return vc
     }
 
@@ -92,6 +96,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onMakeObie = onMakeObie
         vc.onExport = onExport
         vc.onTapText = onTapText
+        vc.onTapBackground = onTapBackground
         vc.apply(groups: groups)
         vc.updateEditing(isEditing)
     }
@@ -283,36 +288,55 @@ struct TimelineMonthDivider: View {
     let cardGap: CGFloat
     /// This month is the ACTIVE filter — lit amber with an × as the clear affordance.
     var isActive: Bool = false
-    /// TAP to filter the timeline to this creation month; tap the lit one again to clear.
+    /// TAP the LABEL to filter the timeline to this creation month; tap the lit one again to clear.
     var onTap: () -> Void = {}
+    /// Tap the blank space beside the label → the host's background action (clear a filter / close
+    /// search), so this row reads as timeline background rather than a dead strip (owner
+    /// 2026-07-16). The collection's own background tap can't do it: this row IS a cell, so that
+    /// recognizer is gated off here.
+    var onTapBlank: () -> Void = {}
     var body: some View {
         HStack(spacing: 6) {
-            Text(title.uppercased())
-                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
-                .kerning(0.5)
-                .foregroundStyle(isActive ? Color.ckTextObie : Color.ckTextSecondary)
-            if isActive {
-                Image(systemName: "xmark.circle.fill")
-                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                    .foregroundStyle(Color.ckTextObie)
-                    .accessibilityHidden(true)
+            // Only the LABEL takes the tap — not the whole row (owner 2026-07-16). The row runs
+            // the full width (the Spacer sets the divider's rhythm), so a row-wide target meant a
+            // tap in the empty space to the right silently filtered the timeline. The vertical
+            // padding sits INSIDE the target, so the touch height is still the full row.
+            HStack(spacing: 6) {
+                Text(title.uppercased())
+                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
+                    .kerning(0.5)
+                    .foregroundStyle(isActive ? Color.ckTextObie : Color.ckTextSecondary)
+                if isActive {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                        .foregroundStyle(Color.ckTextObie)
+                        .accessibilityHidden(true)
+                }
             }
-            Spacer()
+            .padding(.vertical, cardGap / 2)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onTap)
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(isActive
+                ? "\(title), filtering. Double-tap to clear."
+                : "\(title). Double-tap to show only Takes created this month.")
+            // The rest of the row reads as timeline background: tapping it exits a Sequence, the
+            // same as tapping any empty space. `Color.clear` rather than `Spacer` — a Spacer has
+            // no content to hit-test, so it can't carry the gesture. Fills the row's height (set
+            // by the label's vertical padding) so the whole strip is live.
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onTapBlank)
+                .accessibilityHidden(true)
         }
         .padding(.leading, spineX - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad)
         .padding(.trailing, 20)
-        .padding(.vertical, cardGap / 2)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onTap)
-        .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(isActive
-            ? "\(title), filtering. Double-tap to clear."
-            : "\(title). Double-tap to show only Takes created this month.")
     }
 }
 
-final class UIKitTimelineViewController: UIViewController {
+final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDelegate {
     var spineX: CGFloat = 0
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
     var activeMonthKey: String?
@@ -327,6 +351,7 @@ final class UIKitTimelineViewController: UIViewController {
     var onMakeObie: (Take) -> Void = { _ in }
     var onExport: (Take) -> Void = { _ in }
     var onTapText: (Take) -> Void = { _ in }
+    var onTapBackground: () -> Void = {}
 
     private let swipeState = TimelineSwipeState()
     private var collectionView: UICollectionView!
@@ -338,6 +363,15 @@ final class UIKitTimelineViewController: UIViewController {
     private var lastCardGap: CGFloat = -1
     private var lastActiveMonthKey: String??        // month-filter change → restyle the dividers
     private var groupTitles: [String: String] = [:]
+
+    @objc private func handleBackgroundTap() { onTapBackground() }
+
+    /// Only let the background tap see touches that land OFF a cell — a tap on a card, its Iris,
+    /// or a month divider belongs to that cell's own recognizers.
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldReceive touch: UITouch) -> Bool {
+        collectionView.indexPathForItem(at: touch.location(in: collectionView)) == nil
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -365,6 +399,18 @@ final class UIKitTimelineViewController: UIViewController {
         // collection behind it, interactive tracking contributed to keyboard re-placement
         // thrash (caps-flash, attempt 1). Nothing here needs scroll-to-dismiss.
         collectionView.keyboardDismissMode = .none
+        // Tap the EMPTY timeline → the host's background action (clear a filter / close search).
+        // The old SwiftUI timeline did this with a `.background` catcher behind its VStack; this
+        // collection covers that area and eats the tap, so the exit was lost in the rebuild —
+        // leaving a Sequence with no way out (owner 2026-07-16).
+        //
+        // Gated in `gestureRecognizerShouldReceive` rather than by testing the hit inside the
+        // handler: the cells carry their own tap / Iris / swipe / context-menu recognizers, and
+        // this must never engage alongside them. Off a cell there is nothing to compete with.
+        let backgroundTap = UITapGestureRecognizer(target: self,
+                                                   action: #selector(handleBackgroundTap))
+        backgroundTap.delegate = self
+        collectionView.addGestureRecognizer(backgroundTap)
         view.addSubview(collectionView)
 
         let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, TimelineRow> {
@@ -396,7 +442,8 @@ final class UIKitTimelineViewController: UIViewController {
                     TimelineMonthDivider(title: self.groupTitles[key] ?? "",
                                          spineX: self.spineX, cardGap: self.cardGap,
                                          isActive: self.activeMonthKey == key,
-                                         onTap: { self.onToggleMonthFilter(key) })
+                                         onTap: { self.onToggleMonthFilter(key) },
+                                         onTapBlank: { self.onTapBackground() })
                 }
                 .margins(.all, 0)
             }
