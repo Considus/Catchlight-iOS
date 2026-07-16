@@ -211,7 +211,7 @@ final class SettingsViewModel {
             switch self {
             case .compact:  return 26
             case .standard: return 44
-            case .comfort:  return 56
+            case .comfort:  return 62   // 56 → 62 (owner 2026-07-16)
             }
         }
 

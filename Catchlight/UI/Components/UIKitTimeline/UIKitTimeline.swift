@@ -170,20 +170,13 @@ struct TimelineReadCell: View {
                 .frame(width: w, height: d / 2)
                 .offset(x: inset - w / 2, y: -d / 2)
                 .allowsHitTesting(false)
-            // Dots over the Iris top. The phase is FIXED — it must NOT read the cell's scroll
-            // position. A `GeometryReader { geo.frame(in: .global).minY }` here (to phase-match the
-            // screen-fixed gutter dashes) made the cell's content depend on its scroll offset: inside
-            // a self-sizing UIHostingConfiguration that re-measures the cell on every scroll tick, so
-            // the layout invalidates DURING the visible-cells pass and recurses until UIKit trips its
-            // assertion — a hard CRASH plus stuttery scroll (device crash logs 2026-07-16:
-            // -[UICollectionView _updateVisibleCellsNow:] 7 deep → _assertionFailure).
-            // Trade: the dash rhythm no longer continues the gutter's exactly at each Iris. M6's wire
-            // redesign replaces this segment wholesale; if the seam reads badly before then, draw it
-            // in a UIKit layer the VC updates on scroll — never in the cell's SwiftUI content.
-            SpineLine().stroke(SpineDots.color, style: SpineDots.style(phase: 0))
-                .frame(width: w, height: d / 2)
-                .offset(x: inset - w / 2, y: -d / 2)
-                .allowsHitTesting(false)
+            GeometryReader { geo in                                                    // dots over Iris top
+                SpineLine().stroke(SpineDots.color,
+                                   style: SpineDots.style(phase: geo.frame(in: .global).minY))
+            }
+            .frame(width: w, height: d / 2)
+            .offset(x: inset - w / 2, y: -d / 2)
+            .allowsHitTesting(false)
         }
         .padding(.leading, spineX - inset)
         .padding(.trailing, 20)
@@ -282,14 +275,6 @@ struct TimelineSwipeCell: View {
                              onExport: onExport, onTapText: onTapText)
                 .offset(x: offset)
         }
-        // Pin to NATURAL height. `SwipeActionRow`'s action fills are `maxHeight: .infinity`, and a
-        // self-sizing `UIHostingConfiguration` proposes an UNBOUNDED height — so the fill stretches
-        // and the cell's measured height never settles. The layout then invalidates during the
-        // visible-cells pass and re-measures, over and over: stuttery, jumpy scroll that recurses
-        // until UIKit trips its assertion (device crash logs 2026-07-16: -[UICollectionView
-        // _updateVisibleCellsNow:] 7 deep → _assertionFailure). `DailiesView` hit the same trap
-        // hosting the pinned Obie and pins it the same way.
-        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
