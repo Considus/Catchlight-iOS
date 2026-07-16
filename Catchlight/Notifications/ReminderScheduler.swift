@@ -47,12 +47,49 @@ extension UNUserNotificationCenter: NotificationScheduling {
         self.add(request) { error in
             if let error {
                 ReminderScheduler.logger.error("UNUserNotificationCenter.add failed: \(String(describing: error))")
+                // ALSO into the exportable diagnostics log (owner 2026-07-16). os.Logger is
+                // dev-only: we cannot pull it from a user's device, so a shipped failure here was
+                // invisible — and this is the app's core promise failing SILENTLY (the user finds
+                // out only by NOT being reminded). Content-free: a system error domain/code, never
+                // the reminder's text. `.lifecycle` = export-only, no new user-facing notice.
+                let ns = error as NSError
+                DiagnosticsLog.shared.record(.lifecycle,
+                    "Reminder scheduling FAILED — the OS will not deliver it (\(ns.domain) \(ns.code))")
             }
         }
     }
 }
 
 public final class ReminderScheduler {
+
+    /// Record the notification authorization status whenever it CHANGES (owner 2026-07-16).
+    ///
+    /// This is the app's core promise failing SILENTLY: revoke notifications in iOS Settings and
+    /// EVERY time-reminder simply stops firing — no error, no banner, nothing in any log. The app
+    /// just looks broken. `SettingsViewModel.refreshNotificationStatus` reads the status, but only
+    /// while Settings is open, so a revocation is otherwise never noticed. (`LocationEditor` DOES
+    /// handle `.denied` for location — notifications were the inconsistency.)
+    ///
+    /// Only writes on a CHANGE, so calling it on every foreground can't flood the log. Content-free
+    /// (a permission state), and `.lifecycle` so it stays export-only, not a new user-facing notice.
+    public static func recordAuthorizationStatusIfChanged(defaults: UserDefaults = .standard) async {
+        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        let name: String
+        switch status {
+        case .authorized:          name = "authorized"
+        case .provisional:         name = "provisional"
+        case .ephemeral:           name = "ephemeral"
+        case .denied:              name = "denied"
+        case .notDetermined:       name = "notDetermined"
+        @unknown default:          name = "unknown(\(status.rawValue))"
+        }
+        let key = "catchlight.diagnostics.lastNotificationAuth"
+        guard defaults.string(forKey: key) != name else { return }
+        defaults.set(name, forKey: key)
+        let consequence = (status == .denied || status == .notDetermined)
+            ? " — reminders will NOT fire" : ""
+        DiagnosticsLog.shared.record(.lifecycle, "Notification permission: \(name)\(consequence)")
+    }
 
     public static let categoryIdentifier = "TAKE_REMINDER"
     /// `userInfo` key carrying the reminder's ORIGINAL "when" text across snoozes, so a
@@ -257,6 +294,9 @@ public final class ReminderScheduler {
         // Genuinely past one-shot: a calendar trigger in the past never fires, so refuse it
         // rather than leave the model holding a reminder the OS silently drops.
         Self.logger.warning("Refusing to schedule a past-dated reminder (id \(reminder.notificationIdentifier, privacy: .public))")
+        // Export-visible too: the Take shows a reminder the OS will never deliver, and the user
+        // has no way to know. Content-free — no date, no text (a due date is user data).
+        DiagnosticsLog.shared.record(.lifecycle, "Reminder refused — past-dated, will never fire")
     }
 
     /// Schedule the geofence notification for a Take's LOCATION reminder (owner 2026-06-23).

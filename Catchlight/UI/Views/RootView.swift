@@ -328,11 +328,12 @@ struct RootView: View {
                         ? CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
                         : ui.focusRingFanOrigin,
                     containerWidth: geo.size.width,
-                    // Lift the tapped Take lit above the veil only when the fan
-                    // blooms from a timeline Iris (real origin). From the editor
-                    // footer the origin is .zero (screen centre) and the editor is
-                    // already the context, so no spotlight card there.
-                    showsFocusCard: ui.focusRingFanOrigin != .zero,
+                    // Lift the tapped Take lit above the veil only when the fan blooms from a
+                    // TIMELINE Iris. Decided at the call site (`ui.openFocusRingFan`), not inferred
+                    // from the origin: the editing card has a real Iris origin of its own since
+                    // M5b, but the editor is already the context there — and the spotlight draws a
+                    // READ card, so it read as the Take shrinking (owner 2026-07-16).
+                    showsFocusCard: ui.focusRingFanShowsCard,
                     onCommit: { isNote, isTask, hasReminder, reminderDate, reminderAlarm, reminderAllDay, reminderRecurrence, reminderWeekdays, reminderLocation, isImportant in
                         // Task 6.20: focus-ring-fan commit is a mutation — gate it.
                         guard app.ensureEntitled() else {

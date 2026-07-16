@@ -286,8 +286,9 @@ struct ShotListView: View {
         // FUTURE (flagged in the 2026-07-01 review): this assumes uniform
         // `rowHeight` rows, but prose rows render at natural height, so a drag
         // across interleaved prose lands slightly off the finger.
-        // InlineTakeEditCard already solves this with measured heights
-        // (RowHeightKey + pure rowCenters/reorderTarget statics) — port that
+        // The retired InlineTakeEditCard solved this with measured heights
+        // (a RowHeightKey + pure rowCenters/reorderTarget statics; both died with it at
+        // M7 — see git history if porting) — port that
         // approach here alongside a device walk-test of the drag feel.
         let proposed = start + Int((translationY / rowHeight).rounded())
         let target = min(max(proposed, 0), take.blocks.count - 1)
