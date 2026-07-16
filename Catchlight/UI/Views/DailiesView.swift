@@ -161,11 +161,6 @@ struct DailiesView: View {
     /// `editDraft` so its ticks / reorders / deletes ride the inline save.
     @State private var anglePresented = false
 
-    /// M4.2 — the tapped card's frame in WINDOW coords, reported by `UIKitTimeline.onEditAnchor`.
-    /// WRITE-ONLY since M5b: it anchored the top-anchored editor panel, which the M5a consistency
-    /// pass retired (the editor now rides the keyboard and needs no row anchor). Kept only because
-    /// retiring it means unpicking `onEditAnchor` from `UIKitTimeline` — a separate cleanup.
-    @State private var editAnchor: CGRect = .zero
 
     /// "Creation date" setting — the in-place editor shows the stamp for `.editor` and
     /// `.always` (both include the editing surface), matching `InlineTakeEditCard`.
@@ -1032,8 +1027,6 @@ struct DailiesView: View {
                 }
                 beginInlineEdit(take)
             },
-            // M4.2 — the tapped card's window frame; anchors the editor overlay in place.
-            onEditAnchor: { editAnchor = $0 },
             // M4.6 — fade + disable the collection while editing (cards recede, taps fall
             // through to the save catcher). Covers both existing-edit and new-Take.
             isEditing: ui.isEditingInPlace
@@ -1050,7 +1043,7 @@ struct DailiesView: View {
     /// the two screens. The old top-anchored `newTimelineEditOverlay` / `editPanel` path that
     /// the consistency pass retired is deleted with it.
     private var newTakeBlockCard: some View {
-        TakeEditCard(
+        KeyboardTakeEditor(
             draft: editDraftBinding,
             focusedBlockID: $editFocusedBlockID,
             leadingInset: spineX - CatchlightLayout.cardSpineInset,
@@ -1436,8 +1429,16 @@ struct DailiesView: View {
     /// A non-optional binding into `editDraft` for the inline editor. The fallback
     /// `Take()` is never reached in practice — `beginInlineEdit` sets `editDraft`
     /// before `editingTakeID`, so the editor only renders once the draft exists.
+    /// The draft binding handed to the editor. The setter is GUARDED on the draft still existing:
+    /// `BlockEditor` is UIKit-backed and its coordinator OUTLIVES the SwiftUI teardown, so a late
+    /// write arriving after `saveInlineEdit`/`discardInlineEdit` cleared the draft would RESURRECT
+    /// it through this setter and re-open the editor on an already-saved Take. The same shape (an
+    /// unguarded binding into a long-lived UIKit coordinator) crashed `LockedCaptureView` on
+    /// device, 2026-07-16. Safe because every begin-edit path assigns `editDraft` DIRECTLY —
+    /// nothing starts an edit through this setter.
     private var editDraftBinding: Binding<Take> {
-        Binding(get: { editDraft ?? Take() }, set: { editDraft = $0 })
+        Binding(get: { editDraft ?? Take() },
+                set: { if editDraft != nil { editDraft = $0 } })
     }
 
     /// The applicable Angle's full-screen presentation, bound to the live `editDraft`.

@@ -52,9 +52,6 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     var onExport: (Take) -> Void = { _ in }
     /// Tap a card → begin edit-in-place / commit an open edit (M4.1).
     var onTapText: (Take) -> Void = { _ in }
-    /// M4.2 — reports the tapped card's frame in WINDOW coords at tap time, so the host
-    /// can anchor the editor overlay in place (same coord pattern as the Focus-ring fan).
-    var onEditAnchor: (CGRect) -> Void = { _ in }
     /// M4.6 — while editing, FADE + disable the collection itself (like the old timeline
     /// fades its rows to 0.12), so the cards recede and taps fall THROUGH to the save
     /// catcher behind. This avoids fighting the representable's compositing (the collection
@@ -77,7 +74,6 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onMakeObie = onMakeObie
         vc.onExport = onExport
         vc.onTapText = onTapText
-        vc.onEditAnchor = onEditAnchor
         return vc
     }
 
@@ -96,7 +92,6 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onMakeObie = onMakeObie
         vc.onExport = onExport
         vc.onTapText = onTapText
-        vc.onEditAnchor = onEditAnchor
         vc.apply(groups: groups)
         vc.updateEditing(isEditing)
     }
@@ -332,7 +327,6 @@ final class UIKitTimelineViewController: UIViewController {
     var onMakeObie: (Take) -> Void = { _ in }
     var onExport: (Take) -> Void = { _ in }
     var onTapText: (Take) -> Void = { _ in }
-    var onEditAnchor: (CGRect) -> Void = { _ in }
 
     private let swipeState = TimelineSwipeState()
     private var collectionView: UICollectionView!
@@ -393,12 +387,7 @@ final class UIKitTimelineViewController: UIViewController {
                                       onMakeObie: { self.onMakeObie($0) },
                                       onExport: { self.onExport($0) },
                                       onTapText: { [weak self] tapped in
-                                          guard let self else { return }
-                                          // Report the tapped card's on-screen frame FIRST
-                                          // (before the edit begins) so the host anchors the
-                                          // editor in place, then begin the edit.
-                                          self.onEditAnchor(self.cardFrameInWindow(for: tapped.id))
-                                          self.onTapText(tapped)
+                                          self?.onTapText(tapped)
                                       })
                 }
                 .margins(.all, 0)
@@ -523,11 +512,4 @@ final class UIKitTimelineViewController: UIViewController {
         UIView.animate(withDuration: 0.22) { self.collectionView.alpha = editing ? 0.14 : 1 }
     }
 
-    /// The take's cell frame in WINDOW coords (for anchoring the in-place editor). The cell
-    /// is on-screen at tap time, so its layout attributes are available.
-    private func cardFrameInWindow(for id: UUID) -> CGRect {
-        guard let ip = dataSource.indexPath(for: .take(id)),
-              let attr = collectionView.layoutAttributesForItem(at: ip) else { return .zero }
-        return collectionView.convert(attr.frame, to: nil)   // nil = window
-    }
 }

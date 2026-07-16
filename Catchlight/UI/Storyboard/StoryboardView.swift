@@ -165,7 +165,7 @@ struct StoryboardView: View {
     /// has no spine — owner 2026-06-19). It anchors itself to the keyboard and owns the tuned
     /// descent/grow-up geometry, so there is nothing to position here.
     private var editPanel: some View {
-        TakeEditCard(
+        KeyboardTakeEditor(
             draft: editDraftBinding,
             focusedBlockID: $editFocusedBlockID,
             showsIris: false,
