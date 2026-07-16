@@ -128,7 +128,14 @@ struct LockedCaptureView: View {
         // Match TakeCardSurface's v1.7 padding, as InlineTakeEditCard did.
         .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
                             bottom: 14, trailing: 14))
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(style.surface))
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(style.surface)
+                // A Take-card carries the same lift EVERYWHERE it is drawn (owner 2026-07-16) —
+                // read card, timeline editor, lock-screen capture. This card lost it when the
+                // shell was re-added during the M5b BlockEditor migration.
+                .daylightCardShadow(strong: style.isOverdue && !draft.wrappedValue.isObie)
+        )
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
             .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth))
     }

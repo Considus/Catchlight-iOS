@@ -3,9 +3,23 @@
 //  Catchlight (iOS app target) — Take colour/border system 2026-06-18
 //
 //  The card's colour treatment, derived ONCE from a Take (+ the active colour
-//  scheme) and shared by the read-only `TakeCardSurface` and the inline
-//  `InlineTakeEditCard`, so read↔edit never drift and the precedence lives in one
-//  place. Owner spec 2026-06-18 — two independent axes:
+//  scheme) and shared by every view that draws a Take-card — the read-only
+//  `TakeCardSurface`, the shared editing card `TakeEditCard` (Dailies + Storyboard),
+//  `LockedCaptureView`'s capture card, and the legacy `InlineTakeEditCard` — so
+//  read↔edit never drift and the precedence lives in one place.
+//
+//  🎨 A TAKE-CARD CARRIES THE SAME LIFT EVERYWHERE IT IS DRAWN (owner 2026-07-16).
+//  Any view drawing this shell must pair the surface with the standard shadow:
+//
+//      .fill(style.surface)
+//      .daylightCardShadow(strong: style.isOverdue && !take.isObie)
+//
+//  This is easy to lose: BOTH BlockEditor migrations (M5a's Dailies card, M5b's
+//  LockedCapture card) rebuilt the shell and silently dropped the shadow, leaving those
+//  editors flat against the page while the read card behind them was lifted. If you are
+//  writing a new card shell rather than reusing one, this line is the one you'll forget.
+//
+//  Owner spec 2026-06-18 — two independent axes:
 //
 //    • SURFACE = emphasis. Dark (`ckCardObieSurface`) if the Take is Important (the
 //      Obie always is, sticky); else the standard light `ckSurface`.
