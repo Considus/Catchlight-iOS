@@ -28,8 +28,26 @@ struct LockedCaptureView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.deviceTopInset) private var topInset
 
+    @Environment(\.colorScheme) private var scheme
+
     @State private var focusedBlockID: UUID?
     @State private var unlockFailed = false
+
+    /// The "Creation date" setting — the editor shows the stamp for `.editor` and `.always`,
+    /// matching `InlineTakeEditCard` (which this view used to host) so the modes stay consistent.
+    @AppStorage(SettingsViewModel.CreationStamp.defaultsKey)
+    private var creationStampRaw: String = SettingsViewModel.CreationStamp.default.rawValue
+    private var creationStamp: SettingsViewModel.CreationStamp {
+        SettingsViewModel.CreationStamp(rawValue: creationStampRaw) ?? .default
+    }
+    /// The editor sizes to its content, capped to the room above the keyboard; past that
+    /// `BlockEditor` scrolls internally. `editorContentHeight` is the raw (uncapped) content.
+    @State private var editorHeight: CGFloat = 60
+    @State private var editorContentHeight: CGFloat = 30
+
+    /// How far the editor's frame LEADS its content, so the frame is never shorter than the
+    /// text (which would make `BlockEditor` scroll instead of the card growing).
+    private static let editorLineLead: CGFloat = 4
 
     var body: some View {
         @Bindable var app = app
@@ -37,29 +55,25 @@ struct LockedCaptureView: View {
             Color.ckBackground.ignoresSafeArea()
 
             if let draft = Binding($app.lockedCapture) {
+                // Tap the empty area to commit — text → save, blank → discard. The app's own
+                // "tap the masked area" idiom. BEHIND the editor so the editor stays editable;
+                // it can no longer be a spacer inside a ScrollView because `BlockEditor` does
+                // its own scrolling (nesting it in one is the fight Pillar 1 exists to kill).
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture { commit() }
+
                 VStack(spacing: 0) {
                     header(isObie: draft.wrappedValue.isObie)
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            InlineTakeEditCard(
-                                draft: draft,
-                                focusedBlockID: $focusedBlockID,
-                                // Toolbar × = DISCARD (its one job here), never save.
-                                onDiscard: { app.discardLockedCapture() }
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.top, 12)
-
-                            // Tap the empty area to commit — text → save, blank → discard.
-                            // The app's own "tap the masked area" idiom.
-                            Color.clear
-                                .frame(minHeight: 500)
-                                .contentShape(Rectangle())
-                                .onTapGesture { commit() }
-                        }
-                    }
-                    .scrollIndicators(.hidden)
+                    editCard(draft: draft)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                    Spacer(minLength: 0)
                 }
+                // `BlockEditor` owns the keyboard (it reserves the overlap itself), so don't let
+                // SwiftUI shove the whole stack up as well.
+                .ignoresSafeArea(.keyboard, edges: .bottom)
             }
         }
         .onAppear {
@@ -69,6 +83,56 @@ struct LockedCaptureView: View {
                 focusedBlockID = app.lockedCapture?.blocks.first?.id
             }
         }
+    }
+
+    /// The editing CARD: `BlockEditor` in the same shell `InlineTakeEditCard` gave this view —
+    /// `TakeCardStyle` surface + border, the v1.7 padding, and the creation stamp. Single-sourced
+    /// via `TakeCardStyle` so read↔edit never drift (as `DailiesView.editCardChrome` does).
+    private func editCard(draft: Binding<Take>) -> some View {
+        let style = TakeCardStyle(take: draft.wrappedValue, scheme: scheme)
+        return VStack(alignment: .leading, spacing: 0) {
+            BlockEditor(
+                draft: draft,
+                focusedBlockID: $focusedBlockID,
+                // Toolbar × = DISCARD (its one job here), never save.
+                onDiscard: { app.discardLockedCapture() },
+                // Only a card at its cap should scroll to follow the caret; below it let the card
+                // grow. Content-derived so it stays stable as the keyboard settles.
+                atMaxHeight: editorContentHeight + Self.editorLineLead >= editorMaxHeight,
+                onContentHeightChange: { h in
+                    editorContentHeight = h
+                    var t = Transaction(); t.disablesAnimations = true
+                    withTransaction(t) {
+                        editorHeight = min(max(h + Self.editorLineLead, Self.editorMinHeight),
+                                           editorMaxHeight)
+                    }
+                })
+                .frame(height: editorHeight)
+
+            if creationStamp != .off {
+                CreationStampLabel(date: draft.wrappedValue.createdAt)
+                    .padding(.top, 6)
+            }
+        }
+        // Match TakeCardSurface's v1.7 padding, as InlineTakeEditCard did.
+        .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
+                            bottom: 14, trailing: 14))
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(style.surface))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth))
+    }
+
+    /// Keep a one-line capture a proper editing surface (InlineTakeEditCard's `focusMinHeight`
+    /// of 96 for the whole card ≈ this, once the 24+14 padding is added back).
+    private static let editorMinHeight: CGFloat = 60
+
+    /// Cap the editor to the room between the header and the keyboard; beyond it `BlockEditor`
+    /// scrolls internally. A STATIC keyboard estimate (as in `DailiesView`) — deriving it from the
+    /// live keyboard frame makes the cap flicker as the keyboard settles.
+    private var editorMaxHeight: CGFloat {
+        let headerRoom = topInset + 72          // header block + its padding
+        let kbReserve: CGFloat = 400            // keyboard + the editor's own toolbar (estimate)
+        return max(160, UIScreen.main.bounds.height - headerRoom - kbReserve)
     }
 
     private func header(isObie: Bool) -> some View {
