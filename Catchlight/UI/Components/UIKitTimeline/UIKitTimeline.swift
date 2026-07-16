@@ -30,6 +30,11 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     var groups: [TimelineMonthGroup]
     var spineX: CGFloat = CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
+    /// The month key ("yyyy-MM") currently filtering the timeline, if any — that divider lights
+    /// amber with an × and always shows (even as the first group) so the clear affordance survives.
+    var activeMonthKey: String? = nil
+    /// Tap a month divider → filter to that creation month; tap the lit one again → clear.
+    var onToggleMonthFilter: (String) -> Void = { _ in }
     /// Top inset so content clears the pinned heading + Obie zone; bottom for the dock.
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
@@ -60,6 +65,8 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         let vc = UIKitTimelineViewController()
         vc.spineX = spineX
         vc.cardGap = cardGap
+        vc.activeMonthKey = activeMonthKey
+        vc.onToggleMonthFilter = onToggleMonthFilter
         vc.topInset = topInset
         vc.bottomInset = bottomInset
         vc.onToggleDone = onToggleDone
@@ -77,6 +84,8 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     func updateUIViewController(_ vc: UIKitTimelineViewController, context: Context) {
         vc.spineX = spineX
         vc.cardGap = cardGap
+        vc.activeMonthKey = activeMonthKey
+        vc.onToggleMonthFilter = onToggleMonthFilter
         vc.topInset = topInset
         vc.bottomInset = bottomInset
         vc.onToggleDone = onToggleDone
@@ -161,13 +170,20 @@ struct TimelineReadCell: View {
                 .frame(width: w, height: d / 2)
                 .offset(x: inset - w / 2, y: -d / 2)
                 .allowsHitTesting(false)
-            GeometryReader { geo in                                                    // dots over Iris top
-                SpineLine().stroke(SpineDots.color,
-                                   style: SpineDots.style(phase: geo.frame(in: .global).minY))
-            }
-            .frame(width: w, height: d / 2)
-            .offset(x: inset - w / 2, y: -d / 2)
-            .allowsHitTesting(false)
+            // Dots over the Iris top. The phase is FIXED — it must NOT read the cell's scroll
+            // position. A `GeometryReader { geo.frame(in: .global).minY }` here (to phase-match the
+            // screen-fixed gutter dashes) made the cell's content depend on its scroll offset: inside
+            // a self-sizing UIHostingConfiguration that re-measures the cell on every scroll tick, so
+            // the layout invalidates DURING the visible-cells pass and recurses until UIKit trips its
+            // assertion — a hard CRASH plus stuttery scroll (device crash logs 2026-07-16:
+            // -[UICollectionView _updateVisibleCellsNow:] 7 deep → _assertionFailure).
+            // Trade: the dash rhythm no longer continues the gutter's exactly at each Iris. M6's wire
+            // redesign replaces this segment wholesale; if the seam reads badly before then, draw it
+            // in a UIKit layer the VC updates on scroll — never in the cell's SwiftUI content.
+            SpineLine().stroke(SpineDots.color, style: SpineDots.style(phase: 0))
+                .frame(width: w, height: d / 2)
+                .offset(x: inset - w / 2, y: -d / 2)
+                .allowsHitTesting(false)
         }
         .padding(.leading, spineX - inset)
         .padding(.trailing, 20)
@@ -266,6 +282,14 @@ struct TimelineSwipeCell: View {
                              onExport: onExport, onTapText: onTapText)
                 .offset(x: offset)
         }
+        // Pin to NATURAL height. `SwipeActionRow`'s action fills are `maxHeight: .infinity`, and a
+        // self-sizing `UIHostingConfiguration` proposes an UNBOUNDED height — so the fill stretches
+        // and the cell's measured height never settles. The layout then invalidates during the
+        // visible-cells pass and re-measures, over and over: stuttery, jumpy scroll that recurses
+        // until UIKit trips its assertion (device crash logs 2026-07-16: -[UICollectionView
+        // _updateVisibleCellsNow:] 7 deep → _assertionFailure). `DailiesView` hit the same trap
+        // hosting the pinned Obie and pins it the same way.
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -277,23 +301,42 @@ struct TimelineMonthDivider: View {
     let title: String
     let spineX: CGFloat
     let cardGap: CGFloat
+    /// This month is the ACTIVE filter — lit amber with an × as the clear affordance.
+    var isActive: Bool = false
+    /// TAP to filter the timeline to this creation month; tap the lit one again to clear.
+    var onTap: () -> Void = {}
     var body: some View {
         HStack(spacing: 6) {
             Text(title.uppercased())
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
                 .kerning(0.5)
-                .foregroundStyle(Color.ckTextSecondary)
+                .foregroundStyle(isActive ? Color.ckTextObie : Color.ckTextSecondary)
+            if isActive {
+                Image(systemName: "xmark.circle.fill")
+                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                    .foregroundStyle(Color.ckTextObie)
+                    .accessibilityHidden(true)
+            }
             Spacer()
         }
         .padding(.leading, spineX - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad)
         .padding(.trailing, 20)
         .padding(.vertical, cardGap / 2)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(isActive
+            ? "\(title), filtering. Double-tap to clear."
+            : "\(title). Double-tap to show only Takes created this month.")
     }
 }
 
 final class UIKitTimelineViewController: UIViewController {
     var spineX: CGFloat = 0
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
+    var activeMonthKey: String?
+    var onToggleMonthFilter: (String) -> Void = { _ in }
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
     var onToggleDone: (Take) -> Void = { _ in }
@@ -314,6 +357,7 @@ final class UIKitTimelineViewController: UIViewController {
     private var lastItems: [TimelineRow] = []        // skip re-applying an unchanged snapshot
     private var lastSpineX: CGFloat = -1             // density/spine change → reconfigure all
     private var lastCardGap: CGFloat = -1
+    private var lastActiveMonthKey: String??        // month-filter change → restyle the dividers
     private var groupTitles: [String: String] = [:]
 
     override func viewDidLoad() {
@@ -332,6 +376,12 @@ final class UIKitTimelineViewController: UIViewController {
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
         collectionView.backgroundColor = .clear
         collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        // BISECT 2026-07-16: `.never` here (to stop iOS double-counting the top safe area — see
+        // `newTimelineTopInset`) correlates EXACTLY with the onset of a fatal collection-layout
+        // recursion (`_updateVisibleCellsNow` 7 deep → _assertionFailure) plus stuttery scroll:
+        // no such crash before it, three after. Reverted to the default while we confirm the cause;
+        // the top Take goes back to sitting too low until the inset is fixed another way.
+        // collectionView.contentInsetAdjustmentBehavior = .never
         // .none (not .interactive): with the new-Take overlay's keyboard up and this
         // collection behind it, interactive tracking contributed to keyboard re-placement
         // thrash (caps-flash, attempt 1). Nothing here needs scroll-to-dismiss.
@@ -370,7 +420,9 @@ final class UIKitTimelineViewController: UIViewController {
             case .month(let key):
                 cell.contentConfiguration = UIHostingConfiguration {
                     TimelineMonthDivider(title: self.groupTitles[key] ?? "",
-                                         spineX: self.spineX, cardGap: self.cardGap)
+                                         spineX: self.spineX, cardGap: self.cardGap,
+                                         isActive: self.activeMonthKey == key,
+                                         onTap: { self.onToggleMonthFilter(key) })
                 }
                 .margins(.all, 0)
             }
@@ -382,19 +434,53 @@ final class UIKitTimelineViewController: UIViewController {
         }
     }
 
-    func apply(groups: [TimelineMonthGroup]) {
-        let inset = UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        applyContentInsets()   // the compensation below depends on the safe area — re-derive it
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // Re-derive here too: on the FIRST layout `safeAreaInsets` is still zero, so the
+        // compensation subtracts nothing and the top Take renders low — then pops up a beat later
+        // when some unrelated update happens to call `apply` (owner 2026-07-15). Deriving it on
+        // every layout lands it on the first pass instead. `applyContentInsets` only writes on a
+        // real change, so this can't ping-pong.
+        applyContentInsets()
+    }
+
+    /// The default `contentInsetAdjustmentBehavior` ADDS `safeAreaInsets` to `contentInset`, but
+    /// `topInset` already includes `deviceTopInset` (it's `deviceTopInset + headingClearance`, plus
+    /// the pinned-Obie zone) — so the device inset was counted TWICE and the first Take sat ~60pt
+    /// too low (owner 2026-07-15: "the first Take should rest in the Obie's position"). Subtract
+    /// what iOS is about to give back, so the NET top is exactly `topInset`.
+    ///
+    /// Do NOT "fix" this by setting `.never` instead: that bisected to a FATAL compositional-layout
+    /// recursion (`_updateVisibleCellsNow` 7 deep → `_assertionFailure`) plus stuttery scroll —
+    /// three device crashes, none before it (2026-07-16). Compensate; don't opt out.
+    ///
+    /// `bottomInset` is deliberately left uncompensated — it's what ships today and the dock end
+    /// reads correctly; changing it isn't warranted by any observed problem.
+    private func applyContentInsets() {
+        let inset = UIEdgeInsets(top: max(0, topInset - collectionView.safeAreaInsets.top),
+                                 left: 0, bottom: bottomInset, right: 0)
         if collectionView.contentInset != inset {
             collectionView.contentInset = inset
-            collectionView.verticalScrollIndicatorInsets.top = topInset
+            collectionView.verticalScrollIndicatorInsets.top = inset.top
         }
+    }
+
+    func apply(groups: [TimelineMonthGroup]) {
+        applyContentInsets()
         takesByID = Dictionary(groups.flatMap(\.takes).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         groupTitles = Dictionary(groups.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a })
 
         var items: [TimelineRow] = []
         for (index, group) in groups.enumerated() {
-            // Suppress the first group's divider (the DAILIES heading is its context).
-            if index > 0 { items.append(.month(group.id)) }
+            // Suppress the first group's divider (the DAILIES heading is its context) — EXCEPT
+            // when it's the active filter month, so the amber "× MONTH" stays as the clear
+            // affordance even once it's the only group left.
+            if index > 0 || group.id == activeMonthKey { items.append(.month(group.id)) }
             items.append(contentsOf: group.takes.map { .take($0.id) })
         }
 
@@ -415,13 +501,23 @@ final class UIKitTimelineViewController: UIViewController {
         // change every cell's layout, so reconfigure all in that case.
         let layoutChanged = spineX != lastSpineX || cardGap != lastCardGap
         lastSpineX = spineX; lastCardGap = cardGap
+        // A month-filter change doesn't touch any Take's content, but it restyles the DIVIDERS
+        // (the active one lights amber with an ×) — item identity is the id alone, so they need
+        // an explicit reconfigure or the lit state never appears.
+        let monthFilterChanged = lastActiveMonthKey != .some(activeMonthKey)
+        lastActiveMonthKey = .some(activeMonthKey)
         let current = dataSource.snapshot()
         let toApply: [TimelineRow]
         if layoutChanged {
             toApply = current.itemIdentifiers
         } else {
             let changedIDs = Set(takesByID.compactMap { id, take in previousTakes[id] != take ? id : nil })
-            toApply = current.itemIdentifiers.filter { if case .take(let id) = $0 { return changedIDs.contains(id) } else { return false } }
+            toApply = current.itemIdentifiers.filter { row in
+                switch row {
+                case .take(let id): return changedIDs.contains(id)
+                case .month: return monthFilterChanged
+                }
+            }
         }
         previousTakes = takesByID
         if !toApply.isEmpty {

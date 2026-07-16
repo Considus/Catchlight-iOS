@@ -49,12 +49,23 @@ struct LockedCaptureView: View {
     /// text (which would make `BlockEditor` scroll instead of the card growing).
     private static let editorLineLead: CGFloat = 4
 
+    /// A NON-optional binding into `app.lockedCapture`, mirroring `DailiesView.editDraftBinding`.
+    /// `Binding($app.lockedCapture)` is a FORCE-UNWRAPPING projection: the moment the capture is
+    /// committed/discarded (`lockedCapture = nil`), any read from a binding BlockEditor's coordinator
+    /// still holds traps — crashing right after a save, which reads as "returned to the lock screen"
+    /// (device crash logs 2026-07-16: BindingOperations.ForceUnwrapping.get). The `Take()` fallback is
+    /// never shown (the view is gated on non-nil) and writes are dropped once it's gone.
+    private var lockedDraftBinding: Binding<Take> {
+        Binding(get: { app.lockedCapture ?? Take() },
+                set: { if app.lockedCapture != nil { app.lockedCapture = $0 } })
+    }
+
     var body: some View {
-        @Bindable var app = app
         ZStack(alignment: .top) {
             Color.ckBackground.ignoresSafeArea()
 
-            if let draft = Binding($app.lockedCapture) {
+            if app.lockedCapture != nil {
+                let draft = lockedDraftBinding
                 // Tap the empty area to commit — text → save, blank → discard. The app's own
                 // "tap the masked area" idiom. BEHIND the editor so the editor stays editable;
                 // it can no longer be a spacer inside a ScrollView because `BlockEditor` does

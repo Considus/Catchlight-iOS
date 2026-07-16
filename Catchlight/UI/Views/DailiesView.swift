@@ -246,6 +246,16 @@ struct DailiesView: View {
         return base + pinnedObieZoneHeight + max(0, takeSpacing.gap - 12)
     }
 
+    /// The NEW timeline's top inset. `timelineTopInset` is written for the OLD rows, which carry a
+    /// flat 6pt top padding — but every UIKit cell carries a `cardGap/2` HALF-GAP on each edge (so
+    /// two adjacent cards make a full `gap`). That means the FIRST cell already contributes
+    /// `cardGap/2` above itself, stacking on the content inset and leaving the top Take sitting
+    /// `cardGap/2 - 6` too low at the scroll origin (owner 2026-07-15). Subtract the difference so
+    /// the first card lands exactly where the old timeline puts it.
+    private var newTimelineTopInset: CGFloat {
+        max(0, timelineTopInset + 6 - takeSpacing.gap / 2)
+    }
+
     /// Distance from the SCREEN BOTTOM to the spine's bottom terminus.
     ///
     /// At rest the wire plugs into the TOP of the Add "+" ring: the ring's top sits
@@ -965,7 +975,11 @@ struct DailiesView: View {
             groups: monthGroups.map { TimelineMonthGroup(id: $0.key, title: $0.month, takes: $0.takes) },
             spineX: spineX,
             cardGap: takeSpacing.gap,
-            topInset: timelineTopInset,
+            activeMonthKey: ui.filterMonth,
+            onToggleMonthFilter: { key in
+                withAnimation(.easeInOut(duration: 0.2)) { ui.toggleMonthFilter(key) }
+            },
+            topInset: newTimelineTopInset,
             bottomInset: CatchlightLayout.dockClearance + deviceBottomInset,
             onToggleDone: { take in
                 guard app.ensureEntitled() else { return }
