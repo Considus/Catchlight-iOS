@@ -14,12 +14,22 @@
 //  spaced by View (the same three Settings the timeline honours). An X in the
 //  top-right (the Shot List's chrome) is the only way out.
 //
-//  Editing: tapping a card focuses it for editing through the standard inline
-//  editor (`InlineTakeEditCard`) — background masked, the keyboard editing toolbar
-//  kept — but with NO Iris (owner 2026-06-19). It commits on a tap off the focused
-//  card, exactly like the timeline (DailiesView's masked-background catcher). The
-//  edit state is LOCAL to the Storyboard so the timeline underneath never thinks it is
-//  editing.
+//  Editing: tapping a card focuses it for editing through the standard inline editor
+//  — background masked, the keyboard editing toolbar kept — but with NO Iris (owner
+//  2026-06-19). It commits on a tap off the focused card, exactly like the timeline.
+//  The edit state is LOCAL to the Storyboard so the timeline underneath never thinks
+//  it is editing.
+//
+//  M5b (2026-07-16) — the editor is now the shared `TakeEditCard` (the UIKit `BlockEditor`),
+//  LIFTED OUT of the list into an overlay that rides the keyboard, exactly as `DailiesView`
+//  does. This is a restructure, not a swap: the caret fix depends on the editor having a
+//  BOUNDED frame (it scrolls internally once it hits the cap), and a card that is just a row
+//  inside this ScrollView cannot have one — its height is content-driven and its screen
+//  position moves with the scroll. That combination IS the caret-below-keyboard architecture.
+//  So the focused row stays in the list as a dimmed PLACEHOLDER (which keeps the list
+//  geometry still, so nothing reflows under the editor), and the real editor floats above it,
+//  anchored to the keyboard and growing upward. Same card, same tuned geometry, same feel as
+//  the timeline — minus the Iris.
 //
 //  Opened from the main dock's Angle button (∠, slot 2 — owner 2026-06-19);
 //  leaving is the X, top-right (owner: "same as the shopping list").
@@ -103,8 +113,15 @@ struct StoryboardView: View {
         return takeSort == .oldestFirst ? newestFirst.reversed() : newestFirst
     }
 
+    /// The draft binding handed to the editor. The setter is GUARDED on the draft still
+    /// existing: `BlockEditor` is UIKit-backed and its coordinator outlives the SwiftUI
+    /// teardown, so a late write arriving after `commitEdit`/`discardEdit` cleared the draft
+    /// would RESURRECT it through this setter and re-open the editor on a saved Take. The
+    /// same shape (an unguarded binding into a long-lived UIKit coordinator) crashed
+    /// `LockedCaptureView` on device, 2026-07-16.
     private var editDraftBinding: Binding<Take> {
-        Binding(get: { editDraft ?? Take() }, set: { editDraft = $0 })
+        Binding(get: { editDraft ?? Take() },
+                set: { if editDraft != nil { editDraft = $0 } })
     }
 
     // MARK: - Body
@@ -112,11 +129,56 @@ struct StoryboardView: View {
     var body: some View {
         list
             .background(Color.ckBackground.ignoresSafeArea())
+            // The floating editor + its commit catcher. Applied BEFORE the chrome inset so the
+            // × still sits above the catcher and stays tappable mid-edit (it commits and closes
+            // in one tap, via `closeStoryboard`) — the behaviour this view already had.
+            .overlay { editOverlay }
             // Dailies-style chrome: an opaque X-row + a 12pt fade, content scrolling
             // under it (same as the Shot List — owner 2026-06-19).
             .safeAreaInset(edge: .top, spacing: 0) { topChrome }
             // The keyboard toolbar's bag → the full-screen Shot List on the draft.
             .fullScreenCover(isPresented: $anglePresented) { angleCover }
+    }
+
+    // MARK: - The floating editor (M5b)
+
+    @ViewBuilder
+    private var editOverlay: some View {
+        if isEditing {
+            ZStack(alignment: .top) {
+                // Transparent catcher: a tap ANYWHERE off the editor commits. It sits above the
+                // dimmed list, so the read cards' own tap handlers no longer have to serve as
+                // commit targets (they still do, harmlessly, if one ever gets through).
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture { commitEdit() }
+                    .accessibilityLabel("Save and close")
+                    .accessibilityHint("Double-tap to save this Take and stop editing.")
+                editPanel
+            }
+            .transition(.opacity)
+        }
+    }
+
+    /// The shared editing card — identical to the timeline's, minus the Iris (the Storyboard
+    /// has no spine — owner 2026-06-19). It anchors itself to the keyboard and owns the tuned
+    /// descent/grow-up geometry, so there is nothing to position here.
+    private var editPanel: some View {
+        TakeEditCard(
+            draft: editDraftBinding,
+            focusedBlockID: $editFocusedBlockID,
+            showsIris: false,
+            leadingInset: cardLeading,
+            trailingInset: cardTrailing,
+            onOpenAngle: {
+                editFocusedBlockID = nil   // drop the keyboard before the cover
+                anglePresented = true
+            },
+            // The keyboard × DISCARDS (owner 2026-07-04, consistent with the timeline +
+            // LockedCaptureView); tapping blank space commits (the catcher → commitEdit).
+            onDiscard: { discardEdit() }
+        )
     }
 
     // MARK: - Chrome (X top-right)
@@ -181,58 +243,37 @@ struct StoryboardView: View {
             .padding(.top, 8)
             .padding(.bottom, 32)
             .frame(maxWidth: .infinity, alignment: .leading)
-            // Commit catcher: a tap in the empty gaps off the focused Take commits
-            // (masked cards commit via their own tap handler). A `.background` (not
-            // an overlay) so the focused editor and the masked rows still win
-            // hit-testing — mirrors DailiesView's masked-background catcher.
-            .background {
-                if isEditing {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture { commitEdit() }
-                        .accessibilityLabel("Save and close")
-                        .accessibilityHint("Double-tap to save this Take and stop editing.")
-                }
-            }
         }
         .scrollIndicators(.hidden)
+        // The editor floats ABOVE this list and positions itself from a snapshot of the row's
+        // window frame, so the list must not slide when the keyboard opens — SwiftUI's automatic
+        // avoidance would shift the dimmed cards out from under the card that replaced them, and
+        // `BlockEditor` reserves the keyboard space itself anyway. The Storyboard has no keyboard
+        // outside of editing, so this is unconditional.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
-    @ViewBuilder
+    /// Every row is a read card. The focused one stays in place as a dimmed PLACEHOLDER —
+    /// the real editor floats above it (`editPanel`). Keeping it in the list is what holds
+    /// the list geometry still while editing, so the anchor snapshot stays true.
+    ///
+    /// Links go INERT while any Take is edited (2026-07-01) — a SwiftUI Text .link beats the
+    /// card's own tap gesture, so a commit tap on a dimmed card could open Safari instead of
+    /// saving (the exact bug fixed on the timeline 2026-06-27; this view missed it).
     private func row(for take: Take) -> some View {
-        if editingID == take.id {
-            // The focused editor — no Iris, keyboard toolbar kept.
-            InlineTakeEditCard(
-                draft: editDraftBinding,
-                focusedBlockID: $editFocusedBlockID,
-                onOpenAngle: {
-                    editFocusedBlockID = nil   // drop the keyboard before the cover
-                    anglePresented = true
-                },
-                // The keyboard × DISCARDS (owner 2026-07-04, consistent with the
-                // timeline + LockedCaptureView); tapping blank space / a card
-                // commits (the mask catcher → commitEdit), unchanged.
-                onDiscard: { discardEdit() }
-            )
-        } else {
-            // A read-only card. Tapping it begins editing; tapping it while ANOTHER
-            // Take is focused commits that edit (matches the timeline).
-            // Links go INERT while another Take is edited (2026-07-01) — a
-            // SwiftUI Text .link beats the card's own tap gesture, so a commit
-            // tap on a dimmed card could open Safari instead of saving (the
-            // exact bug fixed on the timeline 2026-06-27; this view missed it).
-            TakeCardSurface(take: take, linksInteractive: !isEditing)
-                .opacity(isEditing ? 0.12 : 1)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if isEditing { commitEdit() } else { beginEdit(take) }
-                }
-                .contextMenu { rowMenu(for: take) }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(TakeRowView.statusDescription(for: take))
-                .accessibilityHint("Double-tap to edit this Take.")
-                .accessibilityActions { rowMenu(for: take) }
-        }
+        TakeCardSurface(take: take, linksInteractive: !isEditing)
+            .opacity(isEditing ? 0.12 : 1)
+            .contentShape(Rectangle())
+            // While editing, the full-screen catcher above absorbs taps first; this remains
+            // as the not-editing path (and a harmless fallback).
+            .onTapGesture {
+                if isEditing { commitEdit() } else { beginEdit(take) }
+            }
+            .contextMenu { rowMenu(for: take) }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(TakeRowView.statusDescription(for: take))
+            .accessibilityHint("Double-tap to edit this Take.")
+            .accessibilityActions { rowMenu(for: take) }
     }
 
     private var emptyState: some View {
