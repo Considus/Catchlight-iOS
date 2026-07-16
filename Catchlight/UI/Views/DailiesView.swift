@@ -1086,6 +1086,10 @@ struct DailiesView: View {
     /// reserve; once content passes it, the card grows up with the caret pinned. One text line is
     /// ~18pt; a 1-line block is ~30pt, so 66pt ≈ room for the caret to drop two lines.
     private let newTakeDescentFloor: CGFloat = 66
+    /// How far the editor's frame LEADS its content, so the frame is never shorter than the text
+    /// (which would make BlockEditor scroll). Kept tiny — the owner wants the caret to sit right on
+    /// the "Created on" line, not a line above it.
+    private static let editorLineLead: CGFloat = 4
     /// One text line (~18pt) — the metric behind the new-Take descent + downward growth.
     private static let newTakeLineH: CGFloat = 18
     /// How many lines the card's bottom drops (grows DOWN) after the descent, before it grows up.
@@ -1120,13 +1124,14 @@ struct DailiesView: View {
                     onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
                     onEditReminder: { presentReminderEditor() },
                     onDiscard: { discardInlineEdit() },
+                    // Only a card pinned at its cap should scroll to follow the caret; below it, let
+                    // the card grow instead of jumping the text. Derive this from the CONTENT (does
+                    // it WANT to be taller than the cap) — NOT from the current frame vs maxH, which
+                    // flickers false whenever maxH shifts by a few points (the keyboard settling
+                    // changes it), wrongly telling the editor it can still grow and pinning a long
+                    // Take's caret off-screen (device 2026-07-15).
+                    atMaxHeight: max(editorContentHeight, minContent) + Self.editorLineLead >= maxH,
                     onContentHeightChange: { h in
-                        // LEAD the content by one line. onContentHeight round-trips through
-                        // SwiftUI so `editorHeight` lags the real content by ~a line; a frame
-                        // shorter than its content makes BlockEditor scroll (top text vanishes,
-                        // caret pinned low) even below the cap. The +lineLead keeps the frame
-                        // >= content until the cap, so `off` stays 0 and nothing scrolls until
-                        // the card genuinely fills (device readout 2026-07-15).
                         editorContentHeight = h
                         // Hold the frame at `minContent` while the text is short so the caret
                         // descends through the reserve to just above the stamp; past that it tracks
@@ -1134,10 +1139,8 @@ struct DailiesView: View {
                         // one-line downward growth is done by `newTakeBottomLift` (the card's bottom
                         // dropping AFTER the descent), NOT extra frame height — so there's no dead
                         // space below the caret (owner 2026-07-15).
-                        // Tiny lead only (owner wants the caret right on the "Created on" line); the
-                        // trade is a small scroll nudge on a Return in the upward phase.
-                        let lineLead: CGFloat = 4
-                        let effective = max(h, minContent) + lineLead
+                        // Tiny lead only (owner wants the caret right on the "Created on" line).
+                        let effective = max(h, minContent) + Self.editorLineLead
                         var t = Transaction(); t.disablesAnimations = true
                         withTransaction(t) { editorHeight = min(max(effective, 44), maxH) }
                     })

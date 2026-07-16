@@ -51,6 +51,10 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// Reports intrinsic content height (the stack) so a host can size to content.
     var onContentHeight: ((CGFloat) -> Void)?
     private var lastReportedHeight: CGFloat = -1
+    /// Set by the host: is the card already at its maximum height (can it no longer grow)? Only
+    /// then does an overflow warrant scrolling to follow the caret — below the cap an overflow is
+    /// just the frame lagging the content by a layout pass, and scrolling would jump the text.
+    var frameAtMax = false
     /// The last keyboard END frame (window coords), or nil when hidden. Kept so the bottom
     /// inset can be RE-derived on every layout pass — a bottom-anchored host's view frame is
     /// still settling when the keyboard notification fires, so a one-shot overlap (computed in
@@ -145,9 +149,27 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         recomputeKeyboardInset()   // re-derive overlap once the (bottom-anchored) frame settles
+        reportContentHeightIfChanged()
+        // Run the FULL caret decision, not just the fits-pin: once the frame settles at its cap
+        // (e.g. opening a long Take), this is what finally follows the caret to the end. Pinning
+        // only would leave the caret parked off-screen (device 2026-07-15).
+        scrollActiveCaretToVisible(animated: false)
+    }
+
+    /// Measure the stack and report its height to the host if it changed.
+    ///
+    /// MUST be called whenever the ROWS change, not only from `viewDidLayoutSubviews`. That only
+    /// runs when our view's frame changes — so if the height we'd report happens to equal the card's
+    /// current height (e.g. opening a long Take right after a single-line one, where both start at
+    /// the descent floor), nothing re-renders, no layout pass fires, and the real content height is
+    /// NEVER measured: the card stays stuck at the previous Take's size (device trace 2026-07-15 —
+    /// session 2 sat at fH=70 with stack=286 and only reported at teardown, while session 3 worked
+    /// purely because 290→70 was a change that forced an extra pass).
+    private func reportContentHeightIfChanged() {
         let h = stack.frame.height
-        if abs(h - lastReportedHeight) > 0.5 { lastReportedHeight = h; onContentHeight?(h) }
-        settleScrollWhenContentFits()
+        guard abs(h - lastReportedHeight) > 0.5 else { return }
+        lastReportedHeight = h
+        onContentHeight?(h)
     }
 
     /// When the content fits the visible area, pin it to the TOP and report `true`. A caret-follow
@@ -162,7 +184,13 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private func settleScrollWhenContentFits(animated: Bool = false) -> Bool {
         let inset = scrollView.adjustedContentInset
         let visibleH = scrollView.bounds.height - inset.top - inset.bottom
-        guard scrollView.contentSize.height <= visibleH + 0.5 else { return false }
+        let fits = scrollView.contentSize.height <= visibleH + 0.5
+        // Doesn't fit, but the host's card can still GROW? Then the overflow is TRANSIENT — the
+        // frame is simply one layout pass behind the content (the host sizes it from our reported
+        // height, a SwiftUI round-trip). Scrolling here is the "text scrolls inside the card before
+        // it grows" jump (owner 2026-07-15). Hold at the top instead and let the card grow to fit;
+        // only a card pinned at its cap genuinely needs the caret-follow.
+        guard fits || !frameAtMax else { return false }
         let topOffset = -inset.top
         if abs(scrollView.contentOffset.y - topOffset) > 0.5 {
             scrollView.setContentOffset(CGPoint(x: 0, y: topOffset), animated: animated)
@@ -178,7 +206,19 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         let overlap: CGFloat
         if let end = lastKeyboardEndFrame {
             let kbInView = view.convert(end, from: nil)
-            overlap = max(0, scrollView.frame.maxY - kbInView.minY)
+            if kbInView.minY <= 0 {
+                // The keyboard's top converts to AT/ABOVE our view's own top — meaning this view is
+                // still entirely BELOW the keyboard line: a bottom-anchored card that hasn't risen
+                // into place yet (the notification fires before the rise). Any overlap derived here
+                // is meaningless — the raw formula reads "the whole card is buried" (device trace
+                // 2026-07-15: kbInView.minY=-223 → overlap=312 → visible=-223 → the caret-follow
+                // shoved 85pt of text to off=300 = the BLANK CARD). Take no overlap; the deferred
+                // re-settle applies the real geometry once the card has risen.
+                overlap = 0
+            } else {
+                // Clamp to our own height: a view can never be overlapped by more than it measures.
+                overlap = min(max(0, scrollView.frame.maxY - kbInView.minY), scrollView.bounds.height)
+            }
         } else {
             overlap = 0
         }
@@ -226,6 +266,11 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             for id in Array(self.rowContainers.keys) where !liveIDs.contains(id) {
                 self.removeRow(id)
             }
+            // The rows just changed — settle their layout and report the new content height NOW.
+            // Waiting for `viewDidLayoutSubviews` loses it entirely when our frame doesn't change
+            // (see reportContentHeightIfChanged). Deferred so we're outside SwiftUI's update cycle.
+            self.view.layoutIfNeeded()
+            self.reportContentHeightIfChanged()
         }
     }
 
@@ -284,7 +329,6 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// `BackspaceTextView` so an empty-backspace merges with the block above.
     private func makeTextView(id: UUID, text: String, isComplete: Bool) -> BackspaceTextView {
         let tv = BackspaceTextView()
-        tv.countsTrailingLine = true   // grow the row for a trailing-newline's empty last line
         tv.isScrollEnabled = false
         tv.backgroundColor = .clear
         tv.textContainerInset = UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)

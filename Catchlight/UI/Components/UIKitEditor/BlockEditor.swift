@@ -31,6 +31,10 @@ struct BlockEditor: UIViewControllerRepresentable {
     /// Retained for the seam only. A self-scrolling editor should leave this
     /// unset so `DailiesView` skips the (to-be-deleted) caret pin.
     var onCaretMoved: ((CGRect) -> Void)? = nil
+    /// True once the host's card has hit its height cap and can no longer grow. Below the cap the
+    /// editor must NOT scroll to follow the caret — an overflow there is just the frame lagging the
+    /// content by a layout pass, and scrolling jumps the text instead of letting the card grow.
+    var atMaxHeight: Bool = false
     /// Reports the editor's intrinsic content height, so a host can size a card to
     /// the content (up to an available max, then the editor scrolls internally).
     var onContentHeightChange: ((CGFloat) -> Void)? = nil
@@ -52,6 +56,7 @@ struct BlockEditor: UIViewControllerRepresentable {
         vc.showsDiagnostics = diagnostics
         #endif
         vc.onContentHeight = onContentHeightChange
+        vc.frameAtMax = atMaxHeight
         vc.setToolbar(context.coordinator.makeToolbarConfig())
         vc.apply(blocks: draft.blocks, focusedBlockID: focusedBlockID)
     }
