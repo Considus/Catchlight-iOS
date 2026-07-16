@@ -261,7 +261,7 @@ final class SettingsViewModel {
     /// Where the "Created at …" stamp shows (owner 2026-07-01). Default `.off` — the
     /// timeline stays clean unless the user opts in. `.editor` shows it only while a
     /// Take is open in the inline editor; `.always` also shows it on every resting
-    /// timeline card. Read by `TakeCardSurface` (always) and `InlineTakeEditCard`
+    /// timeline card. Read by `TakeCardSurface` (always) and `TakeEditCard`
     /// (editor + always). See `CreationStampLabel`.
     enum CreationStamp: String, CaseIterable, Identifiable {
         case off, editor, always

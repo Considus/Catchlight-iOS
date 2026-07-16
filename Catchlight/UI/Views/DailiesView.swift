@@ -123,12 +123,6 @@ struct DailiesView: View {
     /// DEBUG A/B: render the timeline with the new recycling UIKit `UICollectionView`
     /// (Pillar 2) instead of the SwiftUI `ScrollView`+`VStack`. Default off (old ships);
     /// toggled in Settings › Debug. Read-only for now — gestures + edit come on top.
-    @AppStorage("debug-use-new-timeline") private var useNewTimeline = false
-    /// Timeline scroll offset captured when an EXISTING-Take edit opens, restored on close
-    /// so finishing an edit never leaves the timeline drifted from whatever the caret-pin
-    /// scrolled in between (owner 2026-06-22). nil when not editing; never set for new Takes
-    /// (they use the keyboard-anchored card, not a timeline scroll).
-    @State private var preEditScrollOffset: CGFloat?
     /// Drives the "Make this your Obie?" confirmation when the editing long-press menu's
     /// "Make Obie" is chosen while another Obie already exists (owner 2026-07-06). The same
     /// warning the timeline long-press uses, but targeting the draft — the existing Obie is
@@ -170,12 +164,6 @@ struct DailiesView: View {
         SettingsViewModel.CreationStamp(rawValue: creationStampRaw) ?? .default
     }
 
-    /// Extra bottom scroll room added while editing so the focused Take — even the
-    /// last one under Oldest-first — can scroll up to its clear position above the
-    /// keyboard rather than clamping against the content end (owner 2026-06-19).
-    /// A generous screen fraction; it's empty space below the keyboard, never seen.
-    private let editScrollRoom: CGFloat = 420
-
     /// The keyboard's top edge in screen coordinates (incl. its docked toolbar — the
     /// keyboard frame reports the inputAccessoryView too). `.greatestFiniteMagnitude`
     /// when the keyboard is down, so the caret pin below never fires at rest.
@@ -184,28 +172,6 @@ struct DailiesView: View {
     /// GeometryReader). Used to place the search-mode wire terminus on the × ring without
     /// assuming how SwiftUI sizes the container under the keyboard (2026-07-11).
     @State private var spineContainerBottomY: CGFloat = 0
-    /// The timeline's underlying `UIScrollView`, captured by `ScrollViewFinder`, so the
-    /// caret pin can drive `contentOffset` DIRECTLY (owner 2026-06-19 "pin the caret"):
-    /// SwiftUI's `scrollTo(_:anchor:)` can only align a view's edge to the viewport, not
-    /// hold an arbitrary interior point (the caret) on a fixed line — and on device its
-    /// idea of the viewport bottom didn't account for the keyboard toolbar, so the caret
-    /// slid behind it. Direct offset maths against the real caret + keyboard frame is
-    /// deterministic on device.
-    @State private var caretScrollView: UIScrollView?
-    /// One-shot: the NEXT caret pin should animate (a smooth glide) rather than snap.
-    /// Set when the keyboard is appearing so the ENTRY pin glides into place in one
-    /// motion instead of the reveal-then-jump "two steps" (owner 2026-06-19); typing
-    /// pins stay instant so they track keystrokes without lag.
-    @State private var animateNextPin = false
-    /// How far above the keyboard's top edge the caret is held (owner screenshot
-    /// 2026-06-19 — the caret sits ~one card's breathing room above the toolbar).
-    /// The LOWER bound of the caret band. Tunable on device.
-    private let caretPinGap: CGFloat = 72
-    /// How far below the pinned heading the caret may rise before the content scrolls
-    /// back DOWN — the UPPER bound of the caret band (owner 2026-06-19: deleting a long
-    /// Take let the caret climb off the top under the heading). Dropped one text line
-    /// (24 → 46) so the caret rests a line lower at the top (owner 2026-06-19). Tunable.
-    private let caretTopGap: CGFloat = 46
 
     /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
     /// MEASURED first-row top; before the first layout, fall back to the constant
@@ -383,8 +349,6 @@ struct DailiesView: View {
                 // but that guidance is a full screen (RestoreFolderView, shown by RootView
                 // while `restoreAwaitingFolder`), not an overlay here (owner 2026-07-02).
                 emptyState
-            } else if useNewTimeline {
-                newUIKitTimeline
             } else {
                 timeline
             }
@@ -394,33 +358,24 @@ struct DailiesView: View {
             // (often off-screen) sorted row. Placed under the heading so a tall card
             // dissolves beneath it like a timeline card. On save it drops into its
             // sorted place; existing-Take editing is unchanged.
-            // M4.6 — new-Take save catcher (new timeline). The collection is faded +
-            // non-interactive while editing, so a tap off the new-Take card lands here and
-            // commits (tap-away-to-save). Rendered BEFORE the card below, so the card stays
-            // editable above it.
-            // M5a consistency pass (2026-07-15) — save catcher for the new timeline's in-place
-            // editor, BOTH new-Take AND existing-Take edits. The collection is faded +
-            // non-interactive while editing, so a tap off the card lands here and commits.
-            // Before the card so the card stays editable above it.
-            if useNewTimeline, ui.isEditingInPlace {
+            // Save catcher for the in-place editor, BOTH new-Take AND existing-Take edits
+            // (M5a consistency pass, 2026-07-15). The timeline is faded + non-interactive while
+            // editing, so a tap off the card lands here and commits (tap-away-to-save). Before
+            // the card below, so the card stays editable above it.
+            if ui.isEditingInPlace {
                 Color.clear
                     .contentShape(Rectangle())
                     .ignoresSafeArea()
                     .onTapGesture { saveInlineEdit() }
             }
 
-            // New timeline: BOTH new-Take and existing-Take edits ride the SAME bottom-anchored
-            // `TakeEditCard` that grows UP from the dockbar (owner consistency pass 2026-07-15),
-            // drawn BELOW the heading so its top dissolves under the heading fade and its bottom
-            // always sits above the dockbar (the top-anchored editPanel ran its bottom off-screen
-            // under the keyboard — "the edit-Take card has no bottom"). Old timeline: only the
-            // new-Take rides the keyboard card (existing-edit uses the in-cell editor).
-            if useNewTimeline {
-                if ui.isEditingInPlace {
-                    newTakeBlockCard
-                }
-            } else if let newTake = inlineNewTake {
-                newTakeFocusCard(newTake)
+            // BOTH new-Take and existing-Take edits ride the SAME bottom-anchored `TakeEditCard`
+            // that grows UP from the dockbar (owner consistency pass 2026-07-15), drawn BELOW the
+            // heading so its top dissolves under the heading fade and its bottom always sits above
+            // the dockbar (the top-anchored editPanel ran its bottom off-screen under the keyboard
+            // — "the edit-Take card has no bottom").
+            if ui.isEditingInPlace {
+                newTakeBlockCard
             }
 
             // Pinned page heading + top fade (cosmetic baseline 2026-06-11):
@@ -719,14 +674,10 @@ struct DailiesView: View {
     /// top item is in the same place with or without an Obie. Scrolling Takes pass
     /// behind its solid background and dissolve under the fade below it. It keeps its
     /// swipe actions, so it stays interactive (the heading title/fade above do not).
-    /// Whether the pinned Obie slot yields while an edit is open. Always when the edit is another
-    /// Take (it would ghost over the faded timeline). On the NEW timeline also when the edit is the
-    /// OBIE ITSELF — there the floating card is the editor, so a visible pinned slot is a duplicate.
-    /// On the old timeline the pinned slot IS the Obie's editor, so it stays.
-    private func pinnedObieStandsDown(_ obie: Take) -> Bool {
-        guard ui.isEditingInPlace else { return false }
-        return useNewTimeline || ui.editingTakeID != obie.id
-    }
+    /// Whether the pinned Obie slot yields while an edit is open — ALWAYS, now. For another Take
+    /// it would ghost over the faded timeline; for the Obie ITSELF the floating card is the editor,
+    /// so a visible pinned slot is a duplicate (two live editors on one draft, device 2026-07-16).
+    private func pinnedObieStandsDown(_ obie: Take) -> Bool { ui.isEditingInPlace }
 
     @ViewBuilder
     private var pinnedObie: some View {
@@ -1005,10 +956,10 @@ struct DailiesView: View {
         }
     }
 
-    /// DEBUG A/B (Pillar 2): the recycling UIKit timeline, fed the real month groups,
-    /// spine column, density gap, and heading/dock insets. Read-only for now; the pinned
-    /// Obie, heading, and gutter spine still come from the surrounding body.
-    private var newUIKitTimeline: some View {
+    /// THE timeline (Pillar 2, default since M7): the recycling UIKit collection, fed the real
+    /// month groups, spine column, density gap, and heading/dock insets. The pinned Obie, heading,
+    /// and gutter spine still come from the surrounding body.
+    private var timeline: some View {
         UIKitTimeline(
             groups: monthGroups.map { TimelineMonthGroup(id: $0.key, title: $0.month, takes: $0.takes) },
             spineX: spineX,
@@ -1060,7 +1011,7 @@ struct DailiesView: View {
             },
             // M4.1 — tap a card begins edit-in-place, or commits an open edit when tapping
             // a DIFFERENT Take (mirrors rowContent.onTapText). New-Take is unaffected here;
-            // it rides the separate `newTakeFocusCard` overlay.
+            // it rides the keyboard-anchored `newTakeBlockCard` overlay.
             onTapText: { take in
                 if ui.isEditingInPlace {
                     if ui.editingTakeID != take.id { saveInlineEdit() }
@@ -1117,274 +1068,6 @@ struct DailiesView: View {
         )
     }
 
-    private var timeline: some View {
-        // ScrollViewReader wraps the timeline so the Spotlight deep-link handler
-        // (Task 6.19) can scroll programmatically to a target Take id.
-        ScrollViewReader { proxy in
-            ScrollView {
-              // Zero-spacing wrapper: a ScrollView's implicit VStack would add ~8pt
-              // between the offset reader and the list, pushing the first Take ~8pt
-              // below the pinned Obie (owner 2026-06-16 — the visible "jump" on
-              // designating an Obie). This makes them flush so positions match.
-              VStack(spacing: 0) {
-                // Hosts the ScrollViewFinder — placed INSIDE the scroll content so its
-                // superview chain reaches the timeline's UIScrollView (a .background on
-                // the reader would sit beside it, not within). Feeds `caretScrollView`
-                // for the caret pin. (Scroll-offset tracking was removed with the ghost
-                // month markers — the month labels are now persistent, owner 2026-07-01.)
-                Color.clear
-                    .frame(height: 0)
-                    .background(ScrollViewFinder { sv in
-                        if caretScrollView !== sv { caretScrollView = sv }
-                    })
-
-                // Inter-card spacing is user-configurable (Compact/Standard/Comfort —
-                // owner 2026-06-16). The chosen `gap` minus the 12pt each row already
-                // carries gives the visible card-to-card distance, sized so a lower
-                // card's Iris (straddling its top edge) never overlaps the card above.
-                // EXPERIMENT (owner 2026-06-22): VStack (eager), not LazyVStack — every row
-                // is always built so the content height is exact and rows never get dropped
-                // mid-edit. This is the suspected cure for the edit-exit blank (lazy rows not
-                // rebuilding at the restored position). Watch scroll performance on a long
-                // timeline; revert to LazyVStack if it lags.
-                VStack(alignment: .leading, spacing: interCardSpacing) {
-                    // The Obie is no longer here — it's a STATIC pinned header now
-                    // (owner 2026-06-16; see `heading`). The scrolling list below is
-                    // the non-Obie Takes only, which scroll up and under the pinned Obie.
-
-                    // Filter active but no non-Obie Take matches: quiet line in
-                    // place of the grouped list (NOT the first-run empty state).
-                    if !activeFilter.isEmpty && filteredTakes.isEmpty {
-                        Text("Nothing here yet.")
-                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                            .foregroundStyle(Color.ckTextSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 48)
-                            .accessibilityIdentifier("timeline-filter-empty")
-                            .accessibilityLabel("Nothing here yet.")
-                    }
-
-                    ForEach(Array(monthGroups.enumerated()), id: \.element.key) { groupIndex, group in
-                        // PERSISTENT, TAPPABLE month divider (owner 2026-07-01). No ghost
-                        // markers under any circumstance: uppercased "JULY 2026" at the
-                        // Take-body size (14pt regular), no rule, ckTextSecondary (the
-                        // accessible muted grey — Done/ckTextComplete was too faint, ~1.7:1
-                        // on Paper). Takes ONLY the timeline's density gap (the "View"
-                        // setting), no fixed padding.
-                        //
-                        // TAP it to filter the timeline to that creation month (via the
-                        // existing SequenceFilter.months); tap the lit (amber) divider again
-                        // to clear. The first group's label is normally suppressed (the
-                        // DAILIES heading is its context) — but the ACTIVE filter month
-                        // always shows, so the amber "× MONTH" stays as the clear affordance
-                        // even when it's the only group left after filtering.
-                        let isActiveMonth = ui.filterMonth == group.key
-                        if groupIndex > 0 || isActiveMonth {
-                            HStack(spacing: 6) {
-                                Text(group.month.uppercased())
-                                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
-                                    .kerning(0.5)
-                                    .foregroundStyle(isActiveMonth ? Color.ckTextObie : Color.ckTextSecondary)
-                                if isActiveMonth {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                                        .foregroundStyle(Color.ckTextObie)
-                                        .accessibilityHidden(true)
-                                }
-                            }
-                            .padding(.leading, textColumnLeading)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) { ui.toggleMonthFilter(group.key) }
-                            }
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityAddTraits(.isButton)
-                            .accessibilityLabel(isActiveMonth
-                                ? "\(group.month), filtering. Double-tap to clear."
-                                : "\(group.month). Double-tap to show only Takes created this month.")
-                        }
-
-                        ForEach(Array(group.takes.enumerated()), id: \.element.id) { takeIndex, take in
-                            // The very first row across all months (when there's no Obie)
-                            // anchors the Iris hint tooltip in Hint 2.
-                            let isFirstOverall = (vm.obie == nil) && groupIndex == 0 && takeIndex == 0
-                            let isNewRow = take.id == inlineNewTake?.id
-                            row(for: take, isFirst: isFirstOverall)
-                                .id(take.id)
-                                // The in-place NEW Take blooms in — scale+fade from its
-                                // Iris corner, driven by `newTakeBloom` (explicit, so it
-                                // animates inside the timeline stack and after the scroll).
-                                // Existing rows are pinned at full (owner 2026-06-17).
-                                // NB: the fade is FLOORED at 0.3, never 0 — SwiftUI maps
-                                // opacity 0 to isHidden, and UIKit refuses
-                                // becomeFirstResponder on a hidden view, so a 0-opacity
-                                // bloom silently swallowed the new Take's keyboard/caret
-                                // (you had to tap to focus). 0.3→1 still reads as a fade-in.
-                                .scaleEffect(isNewRow ? 0.92 + 0.08 * newTakeBloom : 1, anchor: .topLeading)
-                                .opacity(isNewRow ? (0.3 + 0.7 * newTakeBloom) : 1)
-                        }
-                    }
-                }
-                // Section 4 / D-041 — inset-aware on BOTH edges (the app runs
-                // full-bleed, so these manual paddings are the only safe-area
-                // correction). Top: clear the pinned heading + its 12pt fade on
-                // large-inset devices (was a fixed 52 that ignored the inset, so
-                // the first Take tucked under the fade on iPhone 17 / iOS 26.5.1).
-                // Bottom: lift the last-row clearance by the home-indicator inset
-                // so it still clears the now-raised dock.
-                .padding(.top, timelineTopInset)
-                // While editing, add a screenful of scroll room below the cards so the
-                // focused Take can ALWAYS scroll up to its clear position above the
-                // keyboard — otherwise the bottom-most Take (where new ones land under
-                // Oldest-first) clamps against the content end and sits high, its top
-                // tucked under the heading fade (owner 2026-06-19). Empty space below
-                // the keyboard, so it's never visible; removed on exit.
-                .padding(.bottom, CatchlightLayout.dockClearance + deviceBottomInset
-                         + (ui.isEditingInPlace ? editScrollRoom : 0))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // FILTERING exit: tapping empty timeline background (not rows /
-                // Irises — they stay fully interactive and win hit-testing)
-                // returns the dock to RESTING and clears all filters. A
-                // .background tap catcher (not an overlay) so row gestures and
-                // scrolling are unaffected; attached only in FILTERING.
-                .background {
-                    if ui.isEditingInPlace {
-                        // Tapping anywhere off the focused Take commits the edit
-                        // (owner 2026-06-17 — "tap the masked area to save"). Masked
-                        // rows commit via their own tap handlers; this catches the
-                        // empty gaps so a single-Take timeline can still be exited.
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture { saveInlineEdit() }
-                            .accessibilityLabel("Save and close")
-                            .accessibilityHint("Double-tap to save this Take and stop editing.")
-                    } else if ui.dockMode == .filtering {
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture { ui.exitToResting() }
-                            .accessibilityLabel("Clear filters")
-                            .accessibilityHint("Double-tap the timeline background to clear all filters.")
-                    } else if ui.dockMode == .searching {
-                        // Tapping empty timeline space exits search entirely (owner
-                        // 2026-06-22). Row taps still open that Take for editing; this
-                        // only catches the gaps, so search is easy to back out of.
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture { ui.exitToResting() }
-                            .accessibilityLabel("Close search")
-                            .accessibilityHint("Double-tap the timeline background to close search.")
-                    }
-                }
-              }   // VStack(spacing: 0)
-            }
-            .scrollIndicators(.hidden)   // the spine is the timeline affordance (owner 2026-06-16)
-            // NOTE: deliberately NO `.scrollDismissesKeyboard` here — it interfered with
-            // a NEW Take's keyboard appearing (the programmatic scroll-to-new-row
-            // suppressed it). The keyboard is dismissed via the grabber bar on top of
-            // the keyboard instead (BlockTextEditor.showsKeyboardGrabber, owner 2026-06-17).
-            .coordinateSpace(name: "dailies")
-            .onPreferenceChange(FirstRowTopKey.self) { firstRowTop = $0.isFinite ? $0 : nil }
-            // `initial: true` (2026-06-10): when the Spotlight tap arrives from
-            // another tab, this view is created with the target ALREADY set, so
-            // a change-only observer never fired — no scroll, and the highlight
-            // never cleared (blocking re-taps of the same result).
-            .onChange(of: ui.spotlightTargetTakeID, initial: true) { _, newTarget in
-                // Task 6.19 — Spotlight tap deep-link. Scroll the matching row
-                // into view and let the row's own opacity flash do the rest.
-                guard let id = newTarget else { return }
-                withAnimation(.easeInOut(duration: 0.35)) {
-                    proxy.scrollTo(id, anchor: .center)
-                }
-                // Clear the target after the flash has time to start so a
-                // subsequent tap on the same item re-triggers the highlight.
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 1_400_000_000)
-                    if ui.spotlightTargetTakeID == id { ui.spotlightTargetTakeID = nil }
-                }
-            }
-            // 1) INITIAL reveal: a new Take is created off-screen (bottom, under
-            //    Oldest-first); before the 2026-06-22 eager-VStack swap the lazy
-            //    container hadn't built its row yet, and realising it early is
-            //    still what guarantees focus + keyboard work first time — it can't
-            //    take focus or raise the keyboard until it's scrolled into view. A
-            //    MINIMAL, instant `scrollTo` (no anchor) just realises it — no-op if
-            //    it's already visible (so an on-screen Take doesn't jump pre-keyboard).
-            //    The final resting position is the entry caret pin (keyboardDidShow),
-            //    which glides in one motion — replacing the old animated scroll-to-0.82
-            //    that fought the pin and read as a jerky "two steps" (owner 2026-06-19).
-            .onChange(of: scrollToTakeID) { _, id in
-                guard let id else { return }
-                proxy.scrollTo(id)
-            }
-            // 2) ENTRY position is no longer a separate scrollTo here. The focused
-            //    editor re-reports its caret on keyboardDidShow (BlockTextEditor), which
-            //    runs the SAME caret pin used while typing — so a freshly opened Take
-            //    lands at the identical resting position every time (the "jumps to the
-            //    right spot when you start typing" inconsistency — owner 2026-06-19).
-            //    A separate scrollTo here would RACE the pin (undefined notification
-            //    order) and could re-drop the card. We only clear the one-shot target.
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                scrollToTakeID = nil
-            }
-            // Edit-exit scroll restore (owner 2026-06-22): once the keyboard is FULLY gone —
-            // so iOS is no longer driving the scroll view and can't override us — return the
-            // timeline to exactly where it was when the edit opened, undoing whatever the
-            // caret-pin scrolled. Reliable now the eager VStack gives exact content heights
-            // (it was the LazyVStack's estimate-based heights — rows left un-built — that
-            // caused the intermittent blank). No-ops unless an existing-Take edit truly ended.
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
-                restorePreEditScroll()
-            }
-            // Track the keyboard's top edge (incl. its docked toolbar) so the
-            // caret-follow gate knows when the caret is about to slip behind it.
-            // willHide reports origin.y = screen height, which resets the gate off.
-            .onReceive(NotificationCenter.default.publisher(
-                for: UIResponder.keyboardWillChangeFrameNotification)) { note in
-                guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
-                else { return }
-                // Keyboard APPEARING (was off-screen, now on) → glide the entry pin
-                // smoothly into place rather than snapping after a separate reveal.
-                if keyboardTopY >= UIScreen.main.bounds.height && frame.origin.y < UIScreen.main.bounds.height {
-                    animateNextPin = true
-                }
-                keyboardTopY = frame.origin.y
-            }
-        }
-    }
-
-    /// The NEW-Take editor, anchored just above the keyboard rather than parked at its
-    /// (often off-screen) sorted row (owner 2026-06-22). A new Take inserts at the far end
-    /// under the user's sort, so chasing it with a timeline scroll was fragile — and a lazy
-    /// row that far off-screen never built, leaving a blank screen. Instead the new Take
-    /// rides up with the keyboard as the veil falls; on save it drops into its sorted place.
-    /// Reuses `rowContent` (with the timeline card's exact insets) so the chrome / Iris /
-    /// toolbar / Focus ring / save all behave identically. The caret-pin is skipped for it
-    /// (see `pinCaret`) — a card growing up from the keyboard keeps its own caret visible.
-    private func newTakeFocusCard(_ take: Take) -> some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            rowContent(for: take)
-                .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
-                .padding(.trailing, 20)
-                .padding(.bottom, 8)   // small breath above the keyboard toolbar
-        }
-        // Sit the card's bottom on the keyboard's top edge (incl. its docked toolbar):
-        // `keyboardTopY` is the keyboard top in screen coords, so the gap from the screen
-        // bottom is its height. As the keyboard rises, this padding grows and the card
-        // rides up with it.
-        .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY))
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        // Position manually off `keyboardTopY`; opt out of SwiftUI's own keyboard avoidance
-        // so it isn't pushed up twice.
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-        // Half-speed rise (owner 2026-06-22): durations doubled so the card glides up more
-        // gently. Both motions are slowed — the keyboard-follow (0.28→0.56) and the entry
-        // slide-in. The transition gets its OWN animation (0.2→0.4) so the shared `fanFade`,
-        // used elsewhere, is left as-is.
-        .animation(.easeOut(duration: 0.56), value: keyboardTopY)
-        .transition(.move(edge: .bottom).combined(with: .opacity)
-            .animation(.easeInOut(duration: 0.4)))
-    }
 
     private func row(for take: Take, isFirst: Bool = false) -> some View {
         // Swipe actions (2026-06-16): swipe LEFT → Delete (all rows), swipe RIGHT →
@@ -1535,15 +1218,12 @@ struct DailiesView: View {
     /// "continue / append" position (owner 2026-06-17). The caret's block is the
     /// text-entry row, and iOS keyboard avoidance keeps THAT row above the keyboard —
     /// so focusing the LAST block pulls the bottom of the Take clear of the keyboard
-    /// (the obscured-bottom fix), and lands you ready to keep writing. (`BlockTextEditor`
+    /// (the obscured-bottom fix), and lands you ready to keep writing. (The editor's text view
     /// places the caret at the end of the focused block's text on becoming first
     /// responder.)
     private func beginInlineEdit(_ take: Take) {
         // Task 6.20: editing is gated for lapsed users — paywall opens instead.
         guard app.ensureEntitled() else { return }
-        // Snapshot where the timeline is RIGHT NOW (before the reveal/caret-pin move it),
-        // so closing this edit returns to exactly here (owner 2026-06-22).
-        preEditScrollOffset = caretScrollView?.contentOffset.y
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editDraft = t
@@ -1564,14 +1244,11 @@ struct DailiesView: View {
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editFocusedBlockID = t.blocks.first?.id
-        // EXPERIMENT (owner 2026-06-22): the new-Take reveal scroll is DISABLED. When the
-        // timeline was scrolled to the far end from where the new Take inserts (e.g. top,
-        // under Oldest-first → new Take lands at the bottom), this long-distance reveal
-        // landed in the blank edit-room and left a blank screen. Disabling it leans purely
-        // on the caret-pin (keyboardDidShow → pinCaret) to bring the focused new Take into
-        // its band — the SAME mechanism that already positions an edited existing Take.
-        // Left in place for existing-Take editing (`beginInlineEdit`), only skipped here.
-        //   scrollToTakeID = take.id   // ← disabled for this experiment
+        // NO reveal scroll for a new Take (owner 2026-06-22): when the timeline was scrolled
+        // to the far end from where the new Take inserts (e.g. top, under Oldest-first → the
+        // new Take lands at the bottom), the long-distance reveal left a blank screen. It
+        // needs none now — the editor rides the keyboard as its own card, wherever the row
+        // ends up. (The caret-pin this once leaned on died with the old timeline at M7.)
         // Insert the row COLLAPSED (bloom 0.3 → scale 0.92) as the rest masks back, then
         // bloom it in explicitly so the "appear" is visible wherever it lands (owner
         // 2026-06-17 — should feel organic; LazyVStack swallows insertion transitions).
@@ -1608,49 +1285,6 @@ struct DailiesView: View {
         }
     }
 
-    /// PIN the caret to a fixed line above the keyboard (owner 2026-06-19 — "pin the
-    /// caret … as long as it stays in view"). The focused editor reports its caret rect
-    /// in window coords on every keystroke; whenever the caret would drop below the pin
-    /// line (`keyboardTop − caretPinGap`), scroll the timeline's UIScrollView up by
-    /// exactly the overshoot so the caret holds on that line and the text scrolls under
-    /// it. Driving `contentOffset` directly (not `scrollTo`) is what makes it land on an
-    /// exact line and respect the keyboard TOOLBAR, which `scrollTo` missed on device.
-    /// Only pulls the caret UP (never forces a high caret down), so a short Take keeps
-    /// its natural rest position; clamped so it can't overscroll past the content.
-    private func pinCaret(_ caretRect: CGRect) {
-        // The NEW Take rides the keyboard via `newTakeFocusCard`, not the timeline scroll —
-        // so don't pin/scroll the (masked) timeline for it (owner 2026-06-22). Existing-Take
-        // editing is unaffected: `inlineNewTake` is nil then, so this is a no-op for it.
-        guard inlineNewTake == nil else { return }
-        // Only act while the keyboard is actually UP — otherwise the focus-time report
-        // (keyboard still down) could spuriously scroll.
-        guard ui.isEditingInPlace, let sv = caretScrollView,
-              keyboardTopY < UIScreen.main.bounds.height else { return }
-        let animated = animateNextPin
-        animateNextPin = false
-        let minOffset = -sv.adjustedContentInset.top
-        let maxOffset = max(minOffset,
-                            sv.contentSize.height - sv.bounds.height + sv.adjustedContentInset.bottom)
-        // Keep the caret inside a BAND: not below the line above the keyboard
-        // (`pinY` — scroll content UP), and not above a line just under the heading
-        // (`topY` — scroll content DOWN, so deleting a long Take brings it back into
-        // view instead of letting the caret climb off the top). Between the two it
-        // roams freely (the Notes feel).
-        let pinY = keyboardTopY - caretPinGap
-        let topY = deviceTopInset + CatchlightLayout.headingClearance + caretTopGap
-        var target = sv.contentOffset.y
-        if caretRect.maxY > pinY {
-            target += caretRect.maxY - pinY
-        } else if caretRect.minY < topY {
-            target -= topY - caretRect.minY
-        } else {
-            return                                       // within the band — leave it
-        }
-        target = min(max(target, minOffset), maxOffset)
-        guard abs(target - sv.contentOffset.y) > 0.5 else { return }
-        sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: target), animated: animated)
-    }
-
     /// Discard the edits (owner 2026-06-17 — via the row's long-press menu): drop the
     /// draft and leave the stored Take exactly as it was. A no-op revert, never a
     /// delete.
@@ -1658,30 +1292,6 @@ struct DailiesView: View {
         editFocusedBlockID = nil
         editDraft = nil
         ui.endEditingInPlace()
-    }
-
-    /// Return the timeline to the offset captured when this edit opened (owner 2026-06-22),
-    /// undoing whatever the caret-pin scrolled while editing — so finishing an edit never
-    /// leaves the timeline drifted (e.g. a trailing short Take shoved above the heading fade).
-    ///
-    /// Called from `keyboardDidHide`, so the keyboard is gone and the mask/scroll-room collapse
-    /// has settled — and with the eager VStack the content height is exact, so the precise
-    /// contentOffset set sticks. Fires ONLY on a true exit: a Focus-ring / reminder-picker
-    /// excursion also lowers the keyboard mid-edit (editingTakeID stays set), and restoring
-    /// then would yank the timeline out from under the still-open editor — the snapshot is kept
-    /// for the real exit. iOS returns the scroll itself on keyboard hide (Newest-first reads
-    /// perfectly), so we only step in when it left the timeline drifted, and glide there. The
-    /// caret-pin is untouched; this only brackets it.
-    private func restorePreEditScroll() {
-        guard !ui.isEditingInPlace, let y = preEditScrollOffset else { return }
-        preEditScrollOffset = nil
-        guard let sv = caretScrollView else { return }
-        let minOffset = -sv.adjustedContentInset.top
-        let maxOffset = max(minOffset,
-                            sv.contentSize.height - sv.bounds.height + sv.adjustedContentInset.bottom)
-        let target = min(max(y, minOffset), maxOffset)
-        guard abs(sv.contentOffset.y - target) > 20 else { return }
-        sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: target), animated: true)
     }
 
     /// Delete a Take from ANY entry point (swipe, context menu, recurring "Delete series"),
@@ -1918,31 +1528,12 @@ struct DailiesView: View {
             // Dimmed background rows during edit-in-place make their URLs inert, so a
             // save/discard tap can't open a link under the mask (owner 2026-06-27).
             linksInteractive: !(editingActive && !isEditingThis),
-            // NEW timeline: never build the in-cell editor. Every edit rides the floating
-            // `TakeEditCard` there (the M5a consistency pass), and this row is still rendered for
-            // the PINNED OBIE — so editing the Obie built TWO live editors on the same draft: this
-            // one in the pinned slot and the floating card. Two Obies on screen, and two
-            // UITextViews fighting for first responder (the keyboard flashing between upper and
-            // lowercase). Latent since M5a; found on device 2026-07-16.
-            //
-            // Gating VISIBILITY isn't enough — an invisible UITextView still takes first
-            // responder. The editor must not be CONSTRUCTED.
-            editingCard: isEditingThis && !useNewTimeline
-                ? { AnyView(InlineTakeEditCard(
-                    draft: editDraftBinding,
-                    focusedBlockID: $editFocusedBlockID,
-                    onOpenAngle: {
-                        editFocusedBlockID = nil   // drop the keyboard before the cover
-                        anglePresented = true
-                    },
-                    onEditReminder: { presentReminderEditor() },
-                    // The keyboard × DISCARDS (owner 2026-07-04) — reverts to the
-                    // pre-edit Take (the store is untouched mid-edit) and exits.
-                    // Saving is the tap-blank-space / tap-another-card gesture
-                    // (the mask catchers → saveInlineEdit), unchanged.
-                    onDiscard: { discardInlineEdit() },
-                    onCaretMoved: { caretRect in pinCaret(caretRect) })) }
-                : nil
+            // NO in-cell editor. Every edit rides the floating `TakeEditCard` (the M5a
+            // consistency pass), and this row survives only to render the PINNED OBIE — building
+            // an editor here gave two live editors on one draft: two Obies, and two UITextViews
+            // fighting for first responder (device 2026-07-16). The seam stays on `TakeRowView`
+            // for now; it is the last caller, so it can go with a `TakeRowView` trim.
+            editingCard: nil
         )
         .background(
             // Task 6.19 — brief flash when this row is the Spotlight deep-link
@@ -1993,7 +1584,7 @@ struct DailiesView: View {
     /// rest and while editing it.
     private var displayedTakes: [Take] {
         // The new Take is NO LONGER injected as a row (owner 2026-06-22) — it renders in the
-        // keyboard-anchored `newTakeFocusCard`, which removes the fragile "scroll to an
+        // keyboard-anchored `newTakeBlockCard`, which removes the fragile "scroll to an
         // off-screen far row" path entirely. It joins the timeline list only once saved.
         filteredTakes
     }
@@ -2047,27 +1638,6 @@ private struct SpineContainerBottomKey: PreferenceKey {
 }
 
 // MARK: - UIScrollView capture (caret pin)
-
-/// Finds the enclosing `UIScrollView` by walking up from a zero-size probe placed
-/// INSIDE the ScrollView's content, and hands it back. The caret pin needs the real
-/// scroll view to drive `contentOffset` precisely (SwiftUI exposes no such handle),
-/// which is the only way to hold the caret on a fixed line above the keyboard
-/// regardless of the toolbar (owner 2026-06-19). Reports once it's found / changes.
-private struct ScrollViewFinder: UIViewRepresentable {
-    var onFound: (UIScrollView) -> Void
-
-    func makeUIView(context: Context) -> UIView { UIView(frame: .zero) }
-
-    func updateUIView(_ uiView: UIView, context: Context) {
-        DispatchQueue.main.async {
-            var view: UIView? = uiView.superview
-            while let current = view {
-                if let scroll = current as? UIScrollView { onFound(scroll); return }
-                view = current.superview
-            }
-        }
-    }
-}
 
 // MARK: - Rings-on-a-wire texture (static dotted spine overlay)
 

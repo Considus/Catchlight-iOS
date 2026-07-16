@@ -5,15 +5,52 @@
 //  The editing toolbar shown above the keyboard, styled to MATCH the bottom dock
 //  (owner 2026-06-19): Ember-ringed circular buttons + the dock's faded background
 //  (`dockFadeBackground`), so it reads as the same control family rather than a plain
-//  UIKit toolbar. Hosted in `BlockTextEditor`'s `inputAccessoryView` via a
-//  `UIHostingController`. Four buttons: ⌄ dismiss · Angle (greyed when no task) ·
+//  UIKit toolbar. Hosted as the editor text view's `inputAccessoryView` via a
+//  `UIHostingController` (`BlockEditorViewController.setToolbar`). Four buttons: ⌄ dismiss · Angle (greyed when no task) ·
 //  Important · Done (tick — marks the Take done; greyed for a pure note).
 //
 
 import SwiftUI
 
+// Moved out of `BlockTextEditor` at M7 (2026-07-16): the toolbar config is the TOOLBAR's,
+// and the NEW UIKit editor needs it — `BlockEditor`, `BlockEditorViewController` and this
+// bar all take one. Leaving it nested meant the retired SwiftUI editor could not be
+// deleted without taking the live editor's toolbar with it.
+/// The editing toolbar's state + actions — the Take-level context a per-block
+/// editor doesn't otherwise hold. Dismiss is handled internally (clears focus).
+struct EditorToolbarConfig {
+    var isImportant: Bool
+    /// The Angle (shopping-bag) button is enabled only when an Angle applies
+    /// (a checklist Take); greyed out otherwise.
+    var angleEnabled: Bool
+    /// Whether the Take currently reads as done (drives the Done button's
+    /// filled/active look).
+    var isDone: Bool
+    /// The Done (tick) button is enabled only for a task or reminder Take —
+    /// a pure note can't be "done"; greyed otherwise.
+    var doneEnabled: Bool
+    /// Whether the Take already carries a reminder — drives the reminder button's
+    /// "Edit reminder" vs "Add reminder" affordance (owner 2026-06-21).
+    var hasReminder: Bool = false
+    var onToggleImportant: () -> Void
+    var onOpenAngle: () -> Void
+    /// Open the reminder picker for THIS Take (owner 2026-06-21). When supplied,
+    /// slot 2 becomes a Reminder button wherever the Angle would be greyed (a note or
+    /// reminder-only Take) — editing the time/cadence in place, no Focus-ring detour.
+    /// nil where the host can't present the picker (e.g. Storyboard), leaving the
+    /// previous greyed-Angle behaviour.
+    var onReminder: (() -> Void)? = nil
+    /// Mark the whole Take done / not-done (all checklist items + the reminder).
+    var onToggleDone: () -> Void
+    /// The keyboard ⌄/× — commit the edit and EXIT (owner 2026-06-19): the host
+    /// saves and drops the focused-edit overlay in one step, back to the timeline
+    /// (or Storyboard), rather than just lowering the keyboard onto a still-focused
+    /// Take. Default no-op (the keyboard still resigns).
+    var onDismiss: () -> Void = {}
+}
+
 struct EditorKeyboardBar: View {
-    var config: BlockTextEditor.EditorToolbarConfig
+    var config: EditorToolbarConfig
     var onDismiss: () -> Void
 
     /// Matches the dock's 44pt button circle.

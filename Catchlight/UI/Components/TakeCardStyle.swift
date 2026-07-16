@@ -5,7 +5,7 @@
 //  The card's colour treatment, derived ONCE from a Take (+ the active colour
 //  scheme) and shared by every view that draws a Take-card — the read-only
 //  `TakeCardSurface`, the shared editing card `TakeEditCard` (Dailies + Storyboard),
-//  `LockedCaptureView`'s capture card, and the legacy `InlineTakeEditCard` — so
+//  and `LockedCaptureView`'s capture card — so
 //  read↔edit never drift and the precedence lives in one place.
 //
 //  🎨 A TAKE-CARD CARRIES THE SAME LIFT EVERYWHERE IT IS DRAWN (owner 2026-07-16).

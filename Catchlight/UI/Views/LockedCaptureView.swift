@@ -3,8 +3,8 @@
 //  Catchlight (iOS app target) — zero-Face-ID capture (owner 2026-06-23)
 //
 //  Shown by RootView INSTEAD of LockView when a widget/intent capture arrived
-//  while the app was locked (`AppModel.lockedCapture`). It hosts the canonical
-//  `InlineTakeEditCard` against a brand background so the user can type the new
+//  while the app was locked (`AppModel.lockedCapture`). It hosts the canonical editing
+//  card (`TakeEditCard`) against a brand background so the user can type the new
 //  Take (or Obie) IMMEDIATELY — "one glance → type" — with NO app-lock prompt
 //  first. The store is still the empty in-memory placeholder, so no existing
 //  Take content is loaded or visible here.

@@ -76,22 +76,6 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// top of the 62pt toolbar double-counted the space). Tunable via the readout.
     private let caretBottomGap: CGFloat = 16
 
-    #if DEBUG
-    /// Set by the test harness to surface the scroll maths on device (this is the
-    /// device-only zone the sim doesn't reproduce). Removed when M1 is wired into
-    /// the real hosts.
-    var showsDiagnostics = false { didSet { diagLabel.isHidden = !showsDiagnostics } }
-    private lazy var diagLabel: UILabel = {
-        let l = UILabel()
-        l.numberOfLines = 0
-        l.font = .monospacedSystemFont(ofSize: 10, weight: .semibold)
-        l.textColor = .systemRed
-        l.backgroundColor = UIColor.white.withAlphaComponent(0.85)
-        l.isHidden = true
-        l.translatesAutoresizingMaskIntoConstraints = false
-        return l
-    }()
-    #endif
 
     // MARK: - Setup
 
@@ -128,14 +112,6 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             stack.bottomAnchor.constraint(equalTo: content.bottomAnchor),
             stack.widthAnchor.constraint(equalTo: frame.widthAnchor),
         ])
-
-        #if DEBUG
-        view.addSubview(diagLabel)
-        NSLayoutConstraint.activate([
-            diagLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 4),
-            diagLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 6),
-        ])
-        #endif
 
         let nc = NotificationCenter.default
         nc.addObserver(self, selector: #selector(keyboardChanged(_:)),
@@ -352,7 +328,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     /// Called before `apply` on every SwiftUI update, so the bar reflects live state
     /// (Important tint, Angle enablement, Done). The reported keyboard frame includes
     /// this accessory, so the caret-follow already rests the caret above the toolbar.
-    func setToolbar(_ config: BlockTextEditor.EditorToolbarConfig) {
+    func setToolbar(_ config: EditorToolbarConfig) {
         let bar = EditorKeyboardBar(config: config, onDismiss: { [weak self] in
             self?.view.endEditing(true)
             config.onDismiss()
@@ -481,6 +457,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         delegate?.blockEditor(self, didMoveBlock: id, toIndex: finalIndex)
     }
 
+    /// ⚠️ KEEP IN STEP WITH `TaskCheckbox` (the SwiftUI twin the Shot List draws). Same symbols,
+    /// same size, same tints — they can't be single-sourced across UIKit/SwiftUI, so the pair only
+    /// stays honest by hand. They drifted once (owner 2026-07-16).
     private func checkboxImage(isComplete: Bool) -> UIImage? {
         let cfg = UIImage.SymbolConfiguration(pointSize: 15, weight: .regular)
         return UIImage(systemName: isComplete ? "checkmark.circle.fill" : "square",
@@ -575,37 +554,13 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private func scrollActiveCaretToVisible(animated: Bool) {
         // Content fits → pin to the top; never follow the caret (following it against a
         // not-yet-settled frame/inset is exactly what strands the top off-screen).
-        if settleScrollWhenContentFits(animated: animated) {
-            #if DEBUG
-            updateDiag(nil)
-            #endif
-            return
-        }
-        guard let tv = activeTextView(), let sel = tv.selectedTextRange else {
-            #if DEBUG
-            updateDiag(nil)
-            #endif
-            return
-        }
+        if settleScrollWhenContentFits(animated: animated) { return }
+        guard let tv = activeTextView(), let sel = tv.selectedTextRange else { return }
         let caret = tv.caretRect(for: sel.end)
         guard caret.origin.y.isFinite, caret.size.height.isFinite else { return }
         let inScroll = scrollView.convert(caret, from: tv)
         scrollView.scrollRectToVisible(inScroll.insetBy(dx: 0, dy: -caretBottomGap), animated: animated)
-        #if DEBUG
-        updateDiag(inScroll)
-        #endif
     }
-
-    #if DEBUG
-    private func updateDiag(_ caretInScroll: CGRect?) {
-        guard showsDiagnostics else { return }
-        diagLabel.text = String(format: "fH=%.0f  ins.b=%.0f  off=%.0f\ncs=%.0f  caretY=%@",
-                                scrollView.frame.height, scrollView.adjustedContentInset.bottom,
-                                scrollView.contentOffset.y, scrollView.contentSize.height,
-                                caretInScroll.map { String(format: "%.0f", $0.maxY) } ?? "-")
-        view.bringSubviewToFront(diagLabel)
-    }
-    #endif
 
     // MARK: - UITextViewDelegate
 

@@ -61,14 +61,6 @@ struct SettingsView: View {
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
     @State private var showResetConfirm = false
-    /// Presents the UIKit-editor test bed (Pillar 1 M1). DEBUG only.
-    @State private var showEditorHarness = false
-    /// Presents the UIKit-timeline test bed (Pillar 2 M1). DEBUG only.
-    @State private var showTimelineHarness = false
-    /// A/B the new recycling UIKit timeline in real Dailies (Pillar 2 M3+).
-    @AppStorage("debug-use-new-timeline") private var useNewTimeline = false
-    /// Settings-backed toggle for the section 2b on-device inset readout overlay.
-    @AppStorage(DebugInsetReadoutSettings.defaultsKey) private var showInsetReadout = false
     #endif
 
     var body: some View {
@@ -175,8 +167,6 @@ struct SettingsView: View {
         } message: {
             Text("Deletes the master key, privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
         }
-        .fullScreenCover(isPresented: $showEditorHarness) { BlockEditorHarness() }
-        .fullScreenCover(isPresented: $showTimelineHarness) { UIKitTimelineHarness() }
         #endif
     }
 
@@ -212,85 +202,6 @@ struct SettingsView: View {
             .accessibilityIdentifier("debug-reset")
             .accessibilityHint("Wipes everything and returns to onboarding. Debug builds only.")
 
-            // Section 2b — toggle the on-device safe-area inset readout overlay.
-            Toggle(isOn: $showInsetReadout) {
-                HStack(spacing: 14) {
-                    Image(systemName: "ruler")
-                        .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(Color.ckAccent)
-                        .frame(width: 26)
-                        .accessibilityHidden(true)
-                    Text("Inset readout")
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextPrimary)
-                }
-            }
-            .tint(Color.ckEmber)
-            .frame(minHeight: 52)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityIdentifier("debug-inset-readout-toggle")
-            .accessibilityHint("Shows live safe-area insets bottom-right, to verify the device-layout fix.")
-
-            // Section 2c — open the UIKit-editor test bed (Pillar 1 M1). Validates
-            // the new self-scrolling editor's caret-follow in isolation, without
-            // touching the live edit-in-place path.
-            Button {
-                showEditorHarness = true
-            } label: {
-                HStack(spacing: 14) {
-                    Image(systemName: "text.cursor")
-                        .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(Color.ckAccent)
-                        .frame(width: 26)
-                        .accessibilityHidden(true)
-                    Text("UIKit editor (M4)")
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextPrimary)
-                }
-            }
-            .frame(minHeight: 52)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityIdentifier("debug-uikit-editor")
-            .accessibilityHint("Opens the new UIKit editor test bed to check caret-follow.")
-
-            // Section 2d — open the UIKit-timeline test bed (Pillar 2 M1).
-            Button {
-                showTimelineHarness = true
-            } label: {
-                HStack(spacing: 14) {
-                    Image(systemName: "list.bullet.rectangle")
-                        .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(Color.ckAccent)
-                        .frame(width: 26)
-                        .accessibilityHidden(true)
-                    Text("UIKit timeline (M1)")
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextPrimary)
-                }
-            }
-            .frame(minHeight: 52)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityIdentifier("debug-uikit-timeline")
-            .accessibilityHint("Opens the new UIKit timeline test bed to check scrolling + recycling.")
-
-            // Section 2e — A/B the new timeline in real Dailies (M3+).
-            Toggle(isOn: $useNewTimeline) {
-                HStack(spacing: 14) {
-                    Image(systemName: "rectangle.stack")
-                        .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(Color.ckAccent)
-                        .frame(width: 26)
-                        .accessibilityHidden(true)
-                    Text("New timeline in Dailies")
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextPrimary)
-                }
-            }
-            .tint(Color.ckEmber)
-            .frame(minHeight: 52)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityIdentifier("debug-new-timeline-toggle")
-            .accessibilityHint("Renders Dailies with the new recycling UIKit timeline.")
         } header: {
             sectionHeader("Debug")
         }

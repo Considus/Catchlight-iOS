@@ -237,13 +237,6 @@ struct CatchlightApp: App {
                     PrivacyOverlay()
                 }
 
-                #if DEBUG
-                // Section 2b — on-device safe-area readout (gated behind a
-                // Settings DEBUG toggle, off by default). Reads the env values
-                // from the modifiers below; raw insets come straight off rootGeo.
-                DebugInsetReadout(rawTop: rootGeo.safeAreaInsets.top,
-                                  rawBottom: rootGeo.safeAreaInsets.bottom)
-                #endif
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // `.container` ONLY (2026-06-10 dock redesign): the bare
