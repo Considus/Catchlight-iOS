@@ -103,6 +103,15 @@ final class AppModel {
     /// (the blank editor only — no timeline, no decrypted content) instead of
     /// `LockView`. Nil = the normal lock screen. The single Face ID fires in
     /// `saveLockedCapture`, the first moment the encrypted store is actually needed.
+    ///
+    /// DELIBERATELY IN-MEMORY ONLY (D-130, owner 2026-07-16). It survives suspend/resume, but an
+    /// abandoned draft dies with the process — a crash, a force-quit, or (the realistic one) iOS
+    /// reclaiming the suspended app after someone jots on the lock screen and walks away. That is
+    /// ACCEPTED, not an oversight: persisting it can't be done cleanly, because this whole feature
+    /// exists so you can jot WITHOUT unlocking, so while the draft is live the keys aren't in hand.
+    /// Plaintext at rest breaks the privacy claim; encrypting needs Face ID and defeats the point;
+    /// the Keychain would work but puts note content outside the app's own encryption and would
+    /// need a privacy-policy line. Don't "fix" this without re-reading D-130.
     var lockedCapture: Take?
 
     /// Set when onboarding completes but the store hasn't opened yet (the user
