@@ -968,6 +968,9 @@ struct DailiesView: View {
             onToggleMonthFilter: { key in
                 withAnimation(.easeInOut(duration: 0.2)) { ui.toggleMonthFilter(key) }
             },
+            // Snoozed overdue Takes read "SNOOZED" rather than "OVERDUE" in the label lane
+            // (D-058/D-060). Not derivable from the Take, so it has to be handed over.
+            snoozedIDs: vm.snoozedReminderIDs,
             topInset: newTimelineTopInset,
             bottomInset: CatchlightLayout.dockClearance + deviceBottomInset,
             onToggleDone: { take in
