@@ -35,6 +35,11 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     var activeMonthKey: String? = nil
     /// Tap a month divider → filter to that creation month; tap the lit one again → clear.
     var onToggleMonthFilter: (String) -> Void = { _ in }
+    /// Takes whose overdue reminder is SNOOZED — their label lane reads "SNOOZED" instead of
+    /// "OVERDUE" (D-058/D-060). Not derivable from the Take: snooze lives in the view model
+    /// (`vm.snoozedReminderIDs`), which is exactly why the rebuild lost it (see the VC's
+    /// `snoozedIDs`).
+    var snoozedIDs: Set<UUID> = []
     /// Top inset so content clears the pinned heading + Obie zone; bottom for the dock.
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
@@ -67,6 +72,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.cardGap = cardGap
         vc.activeMonthKey = activeMonthKey
         vc.onToggleMonthFilter = onToggleMonthFilter
+        vc.snoozedIDs = snoozedIDs
         vc.topInset = topInset
         vc.bottomInset = bottomInset
         vc.onToggleDone = onToggleDone
@@ -86,6 +92,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.cardGap = cardGap
         vc.activeMonthKey = activeMonthKey
         vc.onToggleMonthFilter = onToggleMonthFilter
+        vc.snoozedIDs = snoozedIDs
         vc.topInset = topInset
         vc.bottomInset = bottomInset
         vc.onToggleDone = onToggleDone
@@ -110,6 +117,11 @@ struct TimelineReadCell: View {
     let take: Take
     let spineX: CGFloat
     let cardGap: CGFloat
+    /// Overdue reminder currently SNOOZED → the label lane reads "SNOOZED" not "OVERDUE"
+    /// (D-058/D-060). It can't be read off the Take — snooze lives in the view model — so it has
+    /// to be threaded down. The rebuild simply never passed it, and every snoozed Take on the new
+    /// timeline said OVERDUE (found 2026-07-16 while re-anchoring the Feature Register).
+    var isSnoozed: Bool = false
     /// Iris tap → the CGPoint is the Iris centre in WINDOW (global) coords, so the
     /// host can bloom the Focus-ring fan in place (matches `RootView`'s full-screen
     /// `ignoresSafeArea` overlay space). Long-press → toggle Obie. Both reuse the
@@ -137,7 +149,7 @@ struct TimelineReadCell: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            TakeCardSurface(take: take, linksInteractive: false)                       // card
+            TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: false)  // card
                 .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .onTapGesture { onTapText(take) }
                 .contextMenu { menuItems }
@@ -262,6 +274,8 @@ struct TimelineSwipeCell: View {
     let take: Take
     let spineX: CGFloat
     let cardGap: CGFloat
+    /// Threaded straight through to `TimelineReadCell` (see its `isSnoozed`).
+    var isSnoozed: Bool = false
     @Bindable var swipeState: TimelineSwipeState
     let onToggleDone: (Take) -> Void
     let onDelete: (Take) -> Void
@@ -291,6 +305,7 @@ struct TimelineSwipeCell: View {
             centersActionLabel: true    // centre glyph/label in the revealed button, not hugged to the screen edge
         ) { offset in
             TimelineReadCell(take: take, spineX: spineX, cardGap: cardGap,
+                             isSnoozed: isSnoozed,
                              onTapCircle: onTapCircle, onLongPressCircle: onLongPressCircle,
                              onToggleDone: onToggleDone, onDelete: onDelete,
                              onSetImportant: onSetImportant, onMakeObie: onMakeObie,
@@ -384,6 +399,10 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     private var lastSpineX: CGFloat = -1             // density/spine change → reconfigure all
     private var lastCardGap: CGFloat = -1
     private var lastActiveMonthKey: String??        // month-filter change → restyle the dividers
+    /// Snoozed Take ids (from the host's view model). A snooze does NOT change the `Take`, so the
+    /// value-diff reconfigure below can't see it — it needs its own trigger, like the month filter.
+    var snoozedIDs: Set<UUID> = []
+    private var lastSnoozedIDs: Set<UUID>?
     private var groupTitles: [String: String] = [:]
 
     @objc private func handleBackgroundTap() { onTapBackground() }
@@ -446,6 +465,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
                 guard let take = self.takesByID[id] else { return }
                 cell.contentConfiguration = UIHostingConfiguration {
                     TimelineSwipeCell(take: take, spineX: self.spineX, cardGap: self.cardGap,
+                                      isSnoozed: self.snoozedIDs.contains(id),
                                       swipeState: self.swipeState,
                                       onToggleDone: { self.onToggleDone($0) },
                                       onDelete: { self.onDelete($0) },
@@ -549,12 +569,18 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         // an explicit reconfigure or the lit state never appears.
         let monthFilterChanged = lastActiveMonthKey != .some(activeMonthKey)
         lastActiveMonthKey = .some(activeMonthKey)
+        // Snoozing doesn't touch a Take's VALUE (it lives in the view model), so the value-diff
+        // below would never restyle the card — the lane would keep saying OVERDUE. Diff the SET.
+        let snoozeChanged = lastSnoozedIDs != nil && lastSnoozedIDs != snoozedIDs
+        let snoozeAffected = (lastSnoozedIDs ?? []).symmetricDifference(snoozedIDs)
+        lastSnoozedIDs = snoozedIDs
         let current = dataSource.snapshot()
         let toApply: [TimelineRow]
         if layoutChanged {
             toApply = current.itemIdentifiers
         } else {
-            let changedIDs = Set(takesByID.compactMap { id, take in previousTakes[id] != take ? id : nil })
+            var changedIDs = Set(takesByID.compactMap { id, take in previousTakes[id] != take ? id : nil })
+            if snoozeChanged { changedIDs.formUnion(snoozeAffected) }
             toApply = current.itemIdentifiers.filter { row in
                 switch row {
                 case .take(let id): return changedIDs.contains(id)
