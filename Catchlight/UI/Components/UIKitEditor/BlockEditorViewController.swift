@@ -416,6 +416,24 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
 
     // MARK: - Drag-to-reorder
 
+    /// The slot the dragged row should occupy: the number of OTHER rows whose centre is still
+    /// above the dragged row's centre, clamped to the end.
+    ///
+    /// Extracted from `updateDrag` so the maths is testable at all — the retired SwiftUI editor
+    /// had pure `rowCenters`/`reorderTarget` statics with unit tests, and when that editor was
+    /// deleted at M7 the tests went with it, leaving reorder with NO coverage. This is the same
+    /// decision the old `reorderTarget` made (by REAL row centres, so a drag over wrapped
+    /// multi-line rows lands where the finger is — a fixed row height under/overshot tall rows,
+    /// owner 2026-06-21); only the surrounding mechanics differ.
+    ///
+    /// `prefix(while:)` and NOT `filter(_:).count` — deliberately. It counts the LEADING run of
+    /// rows above the drag, i.e. it STOPS at the first row below it. That's equivalent to a
+    /// filter-count only because the stack's rows are in visual order (ascending centres); if a
+    /// caller ever passes unsorted centres, prefix-while is the behaviour that was shipped.
+    nonisolated static func reorderTarget(draggedCenterY: CGFloat, otherCenterYs: [CGFloat]) -> Int {
+        min(otherCenterYs.prefix { $0 < draggedCenterY }.count, otherCenterYs.count)
+    }
+
     @objc private func reorderPan(_ g: UIPanGestureRecognizer) {
         guard let id = reorderRowID[g], let row = rowContainers[id] else { return }
         switch g.state {
@@ -452,9 +470,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         let y = gesture.location(in: scrollView).y
         row.frame.origin.y += (y - dragLastY)
         dragLastY = y
-        let centerY = row.frame.midY
         let others = stack.arrangedSubviews.filter { $0 !== placeholder }
-        let target = min(others.prefix { $0.frame.midY < centerY }.count, others.count)
+        let target = Self.reorderTarget(draggedCenterY: row.frame.midY,
+                                        otherCenterYs: others.map(\.frame.midY))
         if stack.arrangedSubviews.firstIndex(of: placeholder) != target {
             UIView.animate(withDuration: 0.16) {
                 self.stack.insertArrangedSubview(placeholder, at: target)
