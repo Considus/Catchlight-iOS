@@ -347,53 +347,78 @@ public final class EncryptedTakeStore: TakeStore {
     // MARK: - TakeStore: Takes
 
     public func upsert(_ take: Take) throws {
+        try queue.sync { try upsertHoldingQueue(take) }
+    }
+
+    public func applyRemote(_ take: Take) throws -> Bool {
         try queue.sync {
-            try exec("BEGIN IMMEDIATE;")
-            var committed = false
-            defer { if !committed { try? exec("ROLLBACK;") } }
-            // Single-Obie invariant under last-write-wins: an incoming Obie
-            // (e.g. applied from another device by sync) demotes any existing
-            // one. Without this, the partial unique index rejected the row with
-            // an opaque writeFailed and the whole upsert rolled back — and the
-            // in-memory store (no index) silently accepted it, so the two
-            // implementations diverged on the same input.
-            if take.isObie {
-                // Demote any existing Obie. The is_obie COLUMN is only an index — a
-                // Take's isObie ALSO lives inside its encrypted PAYLOAD, which
-                // allTakes() decrypts as the source of truth. A column-only UPDATE (the
-                // previous approach) left the demoted Take's payload still isObie=true,
-                // so the timeline read TWO Obies and the newly-set one was invisible
-                // (owner-reported 2026-06-23; pinned by the upsert-demote contract
-                // test, which the column-only path failed). Re-seal each existing Obie
-                // with isObie=false so column AND payload agree. Decoding by PAYLOAD
-                // (not the column) also REPAIRS a store already holding a stray Obie on
-                // the next Obie set. Mirrors InMemoryTakeStore.upsert.
-                let sel = try prepare("SELECT id, payload FROM takes WHERE id != ?1;")
-                defer { sqlite3_finalize(sel) }
-                bindText(sel, 1, take.id.uuidString)
-                for var existing in try collectTakes(sel) where existing.isObie {
-                    existing.isObie = false
-                    // Bump modifiedAt so the demotion SYNCS (2026-07-01). pushOutbound
-                    // selects by `modifiedAt > watermark`; without the bump the demoted
-                    // Take was never re-uploaded, the cloud kept a second isObie=true
-                    // blob, and every later pull hit ConflictResolver's (false,false)
-                    // branch — a phantom "changed on another device" conflict. Matches
-                    // setObie. When SYNC applies a remote Obie this can bump a Take the
-                    // fleet already demoted — one redundant, converging re-upload;
-                    // accepted trade-off for never losing the demotion.
-                    existing.modifiedAt = Date()
-                    try insertOrReplace(existing)
+            // Tombstone check and write INSIDE one queue.sync so a concurrent
+            // delete (main thread) cannot land between them — the pull loop's
+            // own guard reads a pull-start snapshot and cannot see a mid-pull
+            // delete (the delete-resurrection bug, closed 2026-07-23). Deletion
+            // wins ties (`>=`), matching the pull guard: a remote edit STRICTLY
+            // after the deletion still resurrects.
+            let sel = try prepare("SELECT deleted_at FROM tombstones WHERE id = ?1;")
+            defer { sqlite3_finalize(sel) }
+            bindText(sel, 1, take.id.uuidString)
+            if sqlite3_step(sel) == SQLITE_ROW {
+                guard let deletedAt = ISO8601.date(from: columnText(sel, 0)) else {
+                    throw StorageError.corruptRow("tombstone row has unparseable date")
                 }
+                if deletedAt >= take.modifiedAt { return false }
             }
-            try insertOrReplace(take)
-            // Re-creating an item supersedes any pending tombstone for it.
-            let ts = try prepare("DELETE FROM tombstones WHERE id = ?1;")
-            defer { sqlite3_finalize(ts) }
-            bindText(ts, 1, take.id.uuidString)
-            guard sqlite3_step(ts) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
-            try exec("COMMIT;")
-            committed = true
+            try upsertHoldingQueue(take)
+            return true
         }
+    }
+
+    /// The upsert body. NOT serialised — callers hold the queue.
+    private func upsertHoldingQueue(_ take: Take) throws {
+        try exec("BEGIN IMMEDIATE;")
+        var committed = false
+        defer { if !committed { try? exec("ROLLBACK;") } }
+        // Single-Obie invariant under last-write-wins: an incoming Obie
+        // (e.g. applied from another device by sync) demotes any existing
+        // one. Without this, the partial unique index rejected the row with
+        // an opaque writeFailed and the whole upsert rolled back — and the
+        // in-memory store (no index) silently accepted it, so the two
+        // implementations diverged on the same input.
+        if take.isObie {
+            // Demote any existing Obie. The is_obie COLUMN is only an index — a
+            // Take's isObie ALSO lives inside its encrypted PAYLOAD, which
+            // allTakes() decrypts as the source of truth. A column-only UPDATE (the
+            // previous approach) left the demoted Take's payload still isObie=true,
+            // so the timeline read TWO Obies and the newly-set one was invisible
+            // (owner-reported 2026-06-23; pinned by the upsert-demote contract
+            // test, which the column-only path failed). Re-seal each existing Obie
+            // with isObie=false so column AND payload agree. Decoding by PAYLOAD
+            // (not the column) also REPAIRS a store already holding a stray Obie on
+            // the next Obie set. Mirrors InMemoryTakeStore.upsert.
+            let sel = try prepare("SELECT id, payload FROM takes WHERE id != ?1;")
+            defer { sqlite3_finalize(sel) }
+            bindText(sel, 1, take.id.uuidString)
+            for var existing in try collectTakes(sel) where existing.isObie {
+                existing.isObie = false
+                // Bump modifiedAt so the demotion SYNCS (2026-07-01). pushOutbound
+                // selects by `modifiedAt > watermark`; without the bump the demoted
+                // Take was never re-uploaded, the cloud kept a second isObie=true
+                // blob, and every later pull hit ConflictResolver's (false,false)
+                // branch — a phantom "changed on another device" conflict. Matches
+                // setObie. When SYNC applies a remote Obie this can bump a Take the
+                // fleet already demoted — one redundant, converging re-upload;
+                // accepted trade-off for never losing the demotion.
+                existing.modifiedAt = Date()
+                try insertOrReplace(existing)
+            }
+        }
+        try insertOrReplace(take)
+        // Re-creating an item supersedes any pending tombstone for it.
+        let ts = try prepare("DELETE FROM tombstones WHERE id = ?1;")
+        defer { sqlite3_finalize(ts) }
+        bindText(ts, 1, take.id.uuidString)
+        guard sqlite3_step(ts) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
+        try exec("COMMIT;")
+        committed = true
     }
 
     /// Shared by upsert and migration. NOT serialised — callers hold the queue

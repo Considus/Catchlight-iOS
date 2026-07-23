@@ -73,6 +73,32 @@ public protocol TakeStore: AnyObject {
     /// Remove tombstones once the deletion is durably recorded in the uploaded
     /// cloud manifest (or applied from a remote tombstone).
     func purgeTombstones(ids: [UUID]) throws
+
+    /// Apply a Take arriving FROM SYNC unless a live local tombstone supersedes
+    /// it (`deletedAt >= take.modifiedAt` — deletion wins ties, mirroring the
+    /// pull loop's resurrection guard; a remote edit STRICTLY after the deletion
+    /// still resurrects). Returns false when the tombstone wins and NOTHING was
+    /// written. This exists because the pull loop's own guard reads a tombstone
+    /// snapshot taken at pull-start — a delete landing mid-pull is invisible to
+    /// it, and a plain `upsert` would resurrect the Take and clear the fresh
+    /// tombstone (the delete-resurrection bug, closed 2026-07-23). Stores that
+    /// serialise their operations MUST check-and-write inside one critical
+    /// section so a concurrent `delete` cannot interleave.
+    func applyRemote(_ take: Take) throws -> Bool
+}
+
+public extension TakeStore {
+    /// Default (read-then-write; race-free only where the caller already is —
+    /// fine for synchronous test doubles, NOT for concurrent production stores,
+    /// which must override with an atomic implementation).
+    func applyRemote(_ take: Take) throws -> Bool {
+        if let tomb = try tombstones().first(where: { $0.id == take.id }),
+           tomb.deletedAt >= take.modifiedAt {
+            return false
+        }
+        try upsert(take)
+        return true
+    }
 }
 
 /// In-memory `TakeStore` for tests and previews. Not used in production.
@@ -108,6 +134,16 @@ public final class InMemoryTakeStore: TakeStore {
         guard takes[id] != nil else { throw StorageError.notFound(id) }
         takes[id] = nil
         tombstoneMap[id] = Tombstone(id: id, deletedAt: Date())
+    }
+
+    public func applyRemote(_ take: Take) throws -> Bool {
+        // Mirrors EncryptedTakeStore.applyRemote so the two implementations stay
+        // contract-identical for sync-applied rows.
+        if let tomb = tombstoneMap[take.id], tomb.deletedAt >= take.modifiedAt {
+            return false
+        }
+        try upsert(take)
+        return true
     }
 
     public func tombstones() throws -> [Tombstone] {
