@@ -33,7 +33,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Intentionally not pinning the Xcode version — the macos-15 image ships
       # multiple side-by-side Xcodes (16.x and newer). Letting the runner use
@@ -47,7 +47,7 @@ jobs:
       # the same thing). Commit Package.resolved and add it back here the day a
       # third-party dependency lands.
       - name: Cache SwiftPM
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             .build
@@ -73,7 +73,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -82,7 +82,7 @@ jobs:
         run: xcodegen generate
 
       - name: Cache SwiftPM
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/Library/Caches/org.swift.swiftpm
           key: ${{ runner.os }}-xcode-spm-${{ hashFiles('Package.swift') }}
@@ -111,11 +111,17 @@ jobs:
           # dropped the exact 18.0 runtime (2026-06-15: now ships 18.5 / 18.6 +
           # 26.x), so this is pinned to the lowest available 18.x. Bump again if a
           # future image drops 18.5 too (check the "List available simulators" step).
+          #
+          # ⚠️ These matrix strings ARE the status-check names on branch protection
+          # (e.g. "iOS (xcodebuild test) (platform=iOS Simulator,name=iPhone 16,
+          # OS=18.5)"). Editing one renames its check, and the old name stays
+          # required and never reports — which blocks every merge to main until
+          # branch protection is updated to match. Change both together.
           - 'platform=iOS Simulator,name=iPhone 16,OS=18.5'
           - 'platform=iOS Simulator,name=iPhone 16,OS=latest'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Intentionally not pinning the Xcode version — the macos-15 image ships
       # multiple side-by-side Xcodes (16.x and newer). Letting the runner use
@@ -135,7 +141,7 @@ jobs:
       # SourcePackages under DerivedData/<Project>-<hash>/), so it restored
       # nothing while costing save/restore time.
       - name: Cache SwiftPM
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/Library/Caches/org.swift.swiftpm
           key: ${{ runner.os }}-xcode-spm-${{ hashFiles('Package.swift') }}

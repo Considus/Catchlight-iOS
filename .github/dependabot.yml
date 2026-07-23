@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # The app has no third-party package dependencies today (Package.resolved is
+  # gitignored and never exists at checkout), so there is no Swift manifest to
+  # track. The only pinned versions in the repo are the CI workflow's actions,
+  # which are pinned to commit SHAs — this keeps those SHAs current.
+  #
+  # Add a "swift" ecosystem block here the day a third-party dependency lands
+  # and Package.resolved gets committed.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
