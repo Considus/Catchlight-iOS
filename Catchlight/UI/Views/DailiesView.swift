@@ -1270,8 +1270,16 @@ struct DailiesView: View {
         defer { editDraft = nil; ui.endEditingInPlace() }
         guard var t = editDraft else { return }
         t.removeEmptyTextBlocks()
+        // A tapped-away Take with nothing in it is discarded, NOT saved — and that now
+        // includes a brand-new Obie (owner 2026-07-20): the Obie widget/intent opens a
+        // blank Obie draft, and tapping the background with nothing typed used to persist
+        // an empty pinned Obie. `!t.isObie` was in this test, forcing `isBlank` false for
+        // any Obie; dropping it treats an Obie like any other Take, matching the locked-
+        // capture path (`AppModel.saveLockedCapture`), which already discards a blank Obie.
+        // An EXISTING Obie whose text is cleared is still kept, via the `storedHadContent`
+        // guard below.
         let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !t.isTask && t.timeReminder == nil && !t.isObie
+            && !t.isTask && t.timeReminder == nil
             && t.attachments.isEmpty && t.locationReminder == nil
         let storedCopy = try? vm.store.take(id: t.id)
         let storedHadContent = (storedCopy?.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)

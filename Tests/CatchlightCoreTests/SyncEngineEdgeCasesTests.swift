@@ -372,6 +372,48 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         XCTAssertEqual(try local.take(id: remoteTake.id)?.primaryText, "remote-new")
     }
 
+    // MARK: - Pull: delete lands mid-pull (delete-resurrection race, closed 2026-07-23)
+
+    /// The pull loop snapshots pending tombstones ONCE at pull-start; a user
+    /// delete committed while the loop is mid-flight is invisible to that
+    /// snapshot, and a plain `upsert` on the `.takeRemote` branch resurrected
+    /// the Take and cleared its fresh tombstone. `applyRemote` re-checks
+    /// tombstones atomically with the write, so the deletion must now win and
+    /// survive to propagate on the next push.
+    func testSyncEngine_deleteLandsMidPull_takeStaysDeleted_tombstoneSurvives() throws {
+        let k = makeKeys()
+        let cloud = InMemoryCloudFolder()
+        let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+
+        // Another device pushes the Take at modifiedAt = 200.
+        let remoteStore = InMemoryTakeStore()
+        var remoteTake = TestFixtures.richTake()
+        remoteTake.primaryText = "remote-new"
+        remoteTake.modifiedAt = t0.addingTimeInterval(200)
+        try remoteStore.upsert(remoteTake)
+        try makeEngine(store: remoteStore, cloud: cloud, keys: k, now: { t0.addingTimeInterval(201) }).pushOutbound()
+
+        // Local holds an older, unchanged copy (modifiedAt 100 ≤ watermark 150),
+        // so the pull decides `.takeRemote`. The wrapper lands the user's delete
+        // the moment the loop reads this id — after the pull-start snapshot.
+        let inner = InMemoryTakeStore()
+        var localTake = remoteTake
+        localTake.primaryText = "local-old"
+        localTake.modifiedAt = t0.addingTimeInterval(100)
+        try inner.upsert(localTake)
+        inner.setLastSyncDate(t0.addingTimeInterval(150))
+        let local = MidPullDeleteStore(wrapping: inner, deleting: localTake.id)
+
+        let report = try makeEngine(store: local, cloud: cloud, keys: k,
+                                    now: { t0.addingTimeInterval(300) }).pullInbound()
+
+        XCTAssertTrue(local.deleteFired, "test seam must have exercised the mid-pull delete")
+        XCTAssertTrue(report.applied.isEmpty, "the mid-pull deletion must win over the remote copy")
+        XCTAssertNil(try inner.take(id: localTake.id), "the deleted Take must NOT be resurrected")
+        XCTAssertEqual(try inner.tombstones().map(\.id), [localTake.id],
+                       "the fresh tombstone must survive so the deletion propagates on push")
+    }
+
     // MARK: - Pull: partial-sync quarantine
 
     /// A 5-blob pull where the middle blob is corrupted should quarantine that
@@ -592,4 +634,44 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         let lock = SyncLock(deviceId: UUID(), acquiredAt: "not-a-real-iso-date")
         XCTAssertTrue(lock.isStale(now: Date()))
     }
+}
+
+/// Simulates the user deleting a Take MID-PULL: the first time the pull loop
+/// reads the target id — which happens AFTER the pull-start tombstone snapshot —
+/// the delete lands before the read returns. That is exactly the window the
+/// stale snapshot cannot see. Everything else forwards to the wrapped store.
+private final class MidPullDeleteStore: TakeStore {
+    private let wrapped: InMemoryTakeStore
+    private let targetID: UUID
+    private(set) var deleteFired = false
+
+    init(wrapping wrapped: InMemoryTakeStore, deleting targetID: UUID) {
+        self.wrapped = wrapped
+        self.targetID = targetID
+    }
+
+    func take(id: UUID) throws -> Take? {
+        if id == targetID, !deleteFired {
+            deleteFired = true
+            try wrapped.delete(id: id)   // the user's delete lands here
+        }
+        return try wrapped.take(id: id)
+    }
+
+    func upsert(_ take: Take) throws { try wrapped.upsert(take) }
+    func delete(id: UUID) throws { try wrapped.delete(id: id) }
+    func allTakes() throws -> [Take] { try wrapped.allTakes() }
+    func takesModified(since date: Date?) throws -> [Take] { try wrapped.takesModified(since: date) }
+    func search(_ query: String) throws -> [Take] { try wrapped.search(query) }
+    func upsert(_ sequence: CatchlightSequence) throws { try wrapped.upsert(sequence) }
+    func sequence(id: UUID) throws -> CatchlightSequence? { try wrapped.sequence(id: id) }
+    func allSequences() throws -> [CatchlightSequence] { try wrapped.allSequences() }
+    func deleteSequence(id: UUID) throws { try wrapped.deleteSequence(id: id) }
+    func currentObie() throws -> Take? { try wrapped.currentObie() }
+    func setObie(id: UUID, replaceExisting: Bool) throws { try wrapped.setObie(id: id, replaceExisting: replaceExisting) }
+    func lastSyncDate() -> Date? { wrapped.lastSyncDate() }
+    func setLastSyncDate(_ date: Date) { wrapped.setLastSyncDate(date) }
+    func tombstones() throws -> [Tombstone] { try wrapped.tombstones() }
+    func purgeTombstones(ids: [UUID]) throws { try wrapped.purgeTombstones(ids: ids) }
+    func applyRemote(_ take: Take) throws -> Bool { try wrapped.applyRemote(take) }
 }

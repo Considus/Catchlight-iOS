@@ -116,6 +116,42 @@ class TakeStoreContractTests: XCTestCase {
         XCTAssertNotNil(try store.take(id: take.id))
     }
 
+    // MARK: - applyRemote — the sync-apply path (delete-resurrection guard)
+
+    func testContract_applyRemote_liveTombstoneWins_nothingWritten() throws {
+        var take = TestFixtures.richTake()
+        try store.upsert(take)
+        try store.delete(id: take.id)
+        let deletedAt = try XCTUnwrap(store.tombstones().first).deletedAt
+
+        // Remote copy NOT edited after the deletion (ties included) → blocked.
+        take.modifiedAt = deletedAt
+        XCTAssertFalse(try store.applyRemote(take))
+        XCTAssertNil(try store.take(id: take.id), "blocked apply must not resurrect")
+        XCTAssertEqual(try store.tombstones().map(\.id), [take.id],
+                       "blocked apply must not clear the pending tombstone")
+    }
+
+    func testContract_applyRemote_remoteEditedAfterDeletion_resurrects() throws {
+        var take = TestFixtures.richTake()
+        try store.upsert(take)
+        try store.delete(id: take.id)
+        let deletedAt = try XCTUnwrap(store.tombstones().first).deletedAt
+
+        // Edit-wins: a remote edit STRICTLY after the deletion re-creates the
+        // Take and supersedes the deletion record, exactly like upsert.
+        take.modifiedAt = deletedAt.addingTimeInterval(1)
+        XCTAssertTrue(try store.applyRemote(take))
+        XCTAssertNotNil(try store.take(id: take.id))
+        XCTAssertTrue(try store.tombstones().isEmpty)
+    }
+
+    func testContract_applyRemote_noTombstone_behavesLikeUpsert() throws {
+        let take = TestFixtures.richTake()
+        XCTAssertTrue(try store.applyRemote(take))
+        XCTAssertEqual(try store.take(id: take.id)?.id, take.id)
+    }
+
     // MARK: - Collection ordering
 
     func testContract_allTakes_emptyStoreReturnsEmpty() throws {
