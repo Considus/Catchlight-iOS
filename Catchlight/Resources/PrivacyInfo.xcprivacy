@@ -9,13 +9,15 @@
     • No data collection at all — Takes are end-to-end encrypted on device and
       the developer operates no server that ever receives user data.
     • Required-reason APIs in use:
-        - UserDefaults (NSPrivacyAccessedAPICategoryUserDefaults): app-group
-          defaults for settings, device id, cloud-folder bookmark. Reason
-          CA92.1 — "access info from same app, per documentation".
+        - UserDefaults (NSPrivacyAccessedAPICategoryUserDefaults): standard
+          defaults for settings (CA92.1 — same app only) AND the App-Group
+          suite shared with the widget extension for the capture hand-off
+          (1C8F.1 — app + extensions in the same App Group).
         - File timestamps (NSPrivacyAccessedAPICategoryFileTimestamp): the
           store and cloud-folder layers read/set file attributes inside the
-          app's own containers and the user-picked sync folder. Reason
-          C617.1 — "inside app/group container, per documentation".
+          app's own containers (C617.1) and read modification dates in the
+          USER-PICKED sync folder via the document-picker grant (3B52.1 —
+          files the user granted access to; see ImportCoordinator).
 -->
 <plist version="1.0">
 <dict>
@@ -33,6 +35,7 @@
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
 				<string>CA92.1</string>
+				<string>1C8F.1</string>
 			</array>
 		</dict>
 		<dict>
@@ -41,6 +44,7 @@
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
 				<string>C617.1</string>
+				<string>3B52.1</string>
 			</array>
 		</dict>
 	</array>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  PrivacyInfo.xcprivacy — privacy manifest for the CatchlightWidgets extension.
+  Required PER BUNDLE since May 2024: the extension compiles the shared capture
+  intents (NewTakeIntent / NewObieIntent), whose CaptureRouting.setPending(...)
+  writes the App-Group UserDefaults suite — a required-reason API. Missing this
+  manifest raises ITMS-91053 against the .appex at upload even though the app
+  bundle's own manifest is present.
+
+  The extension's honest position mirrors the app's: no tracking, no tracking
+  domains, no data collection. Its ONLY required-reason API is the App-Group
+  UserDefaults hand-off — reason 1C8F.1 ("read/write info accessible to the
+  app and extensions in the same App Group"). It never touches the encrypted
+  store, the keychain, or file timestamps.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>1C8F.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -136,6 +136,17 @@ targets:
         # Info.plist").
         BGTaskSchedulerPermittedIdentifiers:
           - com.considus.catchlight.sync
+        # ALSO required for BGAppRefreshTask (2026-07-23 mid-point review): the
+        # permitted identifier above is necessary but NOT sufficient — without
+        # the Background fetch MODE, BGTaskScheduler.submit fails with
+        # BGTaskSchedulerErrorCodeUnavailable and background sync never runs
+        # (the exact silent failure BackgroundSync.scheduleNext's comment warns
+        # about).
+        UIBackgroundModes:
+          - fetch
+        # Standard iOS-bundle marker. Xcode-generated plists always carry it;
+        # this custom plist didn't, and upload validation can reject without it.
+        LSRequiresIPhoneOS: true
         # Task 6.19 — Spotlight deep-link activity type. iOS uses this to
         # dispatch `application(_:continue:)` (SwiftUI's
         # `.onContinueUserActivity`) when the user taps a Catchlight result
