@@ -287,6 +287,28 @@ do {
         let afterDelete = try storeB.take(id: take.id)
         check("Inbound deletion from another device applied locally", report.deletedLocally == [take.id] && afterDelete == nil)
     }
+    // applyRemote — the sync-apply path must not resurrect a Take over a live
+    // tombstone (delete-resurrection guard, closed 2026-07-23), while a remote
+    // edit strictly after the deletion still lands (edit-wins).
+    do {
+        let store = InMemoryTakeStore()
+        var t = richTake()
+        try store.upsert(t)
+        try store.delete(id: t.id)
+        let deletedAt = try store.tombstones()[0].deletedAt
+
+        t.modifiedAt = deletedAt   // ties go to the deletion
+        let blocked = try store.applyRemote(t) == false
+        let stillGone = try store.take(id: t.id) == nil
+        let tombKept = try store.tombstones().map(\.id) == [t.id]
+        check("applyRemote blocked by live tombstone (no resurrection, tombstone kept)", blocked && stillGone && tombKept)
+
+        t.modifiedAt = deletedAt.addingTimeInterval(1)
+        let applied = try store.applyRemote(t)
+        let restored = try store.take(id: t.id) != nil
+        let tombCleared = try store.tombstones().isEmpty
+        check("applyRemote applies a remote edited after the deletion (edit-wins)", applied && restored && tombCleared)
+    }
     // Conflict detection + surfaced end-to-end without overwrite.
     do {
         let lastSync = Date(timeIntervalSince1970: 1_700_000_000)

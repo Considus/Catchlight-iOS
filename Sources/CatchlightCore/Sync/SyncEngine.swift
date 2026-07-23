@@ -386,14 +386,17 @@ public final class SyncEngine {
             }
             switch ConflictResolver.decide(local: local, remote: remoteTake, lastSync: lastSync) {
             case .takeRemote(let t):
-                // (Removed 2026-07-16: a TEMP "REMOVE after repro" trap from the deleted-Take-
-                // reappears hunt of 2026-07-10 — that bug was CLOSED as non-reproducible and
-                // PR #128 pulled the traps, but this one was missed. It fired on every sync
-                // apply, so it would have swamped the breadcrumb budget with dead output, and
-                // it logged a Take id fragment — the one thing here that leans toward
-                // identifying content.)
-                try store.upsert(t)
-                report.applied.append(t.id)
+                // RESURRECTION GUARD, part 2 (2026-07-23): the guard above consults
+                // `pendingTombstoneByID`, a snapshot taken at pull-start — a delete
+                // committed MID-PULL is invisible to it, and a plain `upsert` here
+                // would re-create the Take AND clear its fresh tombstone (the
+                // delete-resurrection bug). `applyRemote` re-checks tombstones
+                // atomically with the write (the same store critical section a
+                // concurrent `delete` uses), so the freshest deletion always wins
+                // ties; a remote edit strictly after it still lands.
+                if try store.applyRemote(t) {
+                    report.applied.append(t.id)
+                }
             case .conflict(let l, let r):
                 report.conflicts.append((local: l, remote: r))   // surfaced; UI resolves
             case .keepLocal, .noChange:
