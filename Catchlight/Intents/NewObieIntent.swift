@@ -8,8 +8,9 @@
 //  upsert demotes the previous Obie on save (owner 2026-06-23 — set it in process,
 //  remove the old, no confirmation).
 //
-//  App-target only (not shared into the widget extension) — there is no Obie
-//  Control/widget yet; the routing supports one as a drop-in if wanted later.
+//  Shared into the widget extension (see project.yml's CatchlightWidgets sources)
+//  — the Obie Control, launcher widget, and split widget all fire it via
+//  `Button(intent:)`.
 //
 
 import AppIntents
