@@ -157,9 +157,11 @@ final class UIState {
     var isStoryboardPresented = false
 
     /// Task 6.19 — Spotlight deep-link target. Set by the app's
-    /// `onContinueUserActivity` handler when a Take is tapped in Spotlight;
-    /// DailiesView reads this to scroll-and-flash the matching row. The
-    /// handler clears it after the highlight fires so a re-tap re-targets.
+    /// `onContinueUserActivity` handler when a Take is tapped in Spotlight.
+    /// Consumed one-shot (re-wired 2026-07-23 after the M7 rewrite left it
+    /// dangling): the UIKit timeline scrolls the row into view, pulses it, and
+    /// clears this via `onRevealHandled`; a target on the PINNED OBIE is pulsed
+    /// and cleared by DailiesView itself (the Obie is not a collection row).
     var spotlightTargetTakeID: UUID?
 
     // MARK: - Dock mode transitions

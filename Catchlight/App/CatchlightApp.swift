@@ -142,14 +142,22 @@ struct CatchlightApp: App {
 
         // Return the dock to RESTING (clearing any live filter) BEFORE setting
         // the target, so the row is guaranteed visible on the unfiltered
-        // timeline. DailiesView reads `ui.spotlightTargetTakeID` to
-        // scroll-and-flash. We deliberately do not open the editor here —
-        // editing is gated for lapsed users, and a Spotlight tap shouldn't
-        // surface the paywall.
+        // timeline. The UIKit timeline consumes `ui.spotlightTargetTakeID`
+        // (scroll + ember pulse, then it clears the state); the pinned Obie is
+        // handled by DailiesView directly. We deliberately do not open the
+        // editor here — editing is gated for lapsed users, and a Spotlight tap
+        // shouldn't surface the paywall.
         app.ui.exitToResting()
-        // Verify the Take still exists; fail silently if not.
-        let allTakes = (try? app.dailiesVM.store.allTakes()) ?? []
-        guard allTakes.contains(where: { $0.id == uuid }) else { return }
+        // Verify the Take still exists; fail silently if not. Only checkable
+        // while UNLOCKED — a cold Spotlight tap lands on the LOCKED app, where
+        // the store is still the empty placeholder (D-042). Set the target
+        // anyway in that case: the timeline's reveal stays pending until the
+        // row appears after unlock, and never fires for a Take that's gone
+        // (Spotlight may surface a deleted item before its deindex propagates).
+        if app.lockState == .unlocked {
+            let allTakes = (try? app.dailiesVM.store.allTakes()) ?? []
+            guard allTakes.contains(where: { $0.id == uuid }) else { return }
+        }
         app.ui.spotlightTargetTakeID = uuid
     }
 

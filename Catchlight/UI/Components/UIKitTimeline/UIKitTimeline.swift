@@ -65,6 +65,10 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// catcher behind. This avoids fighting the representable's compositing (the collection
     /// otherwise sits above the SwiftUI veil for hit-testing — tap-between-Takes was dead).
     var isEditing: Bool = false
+    /// Task 6.19 — the Spotlight deep-link target (nil when none). The VC scrolls the row
+    /// into view, pulses it, then fires `onRevealHandled` so the host clears the state.
+    var revealTargetID: UUID? = nil
+    var onRevealHandled: () -> Void = {}
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
@@ -84,6 +88,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onExport = onExport
         vc.onTapText = onTapText
         vc.onTapBackground = onTapBackground
+        vc.onRevealHandled = onRevealHandled
         return vc
     }
 
@@ -104,8 +109,12 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onExport = onExport
         vc.onTapText = onTapText
         vc.onTapBackground = onTapBackground
+        vc.onRevealHandled = onRevealHandled
         vc.apply(groups: groups)
         vc.updateEditing(isEditing)
+        // After apply, so a target set while the data was still loading (e.g. a
+        // Spotlight tap on the locked app) can resolve against the fresh rows.
+        vc.requestReveal(revealTargetID)
     }
 }
 
@@ -140,6 +149,10 @@ struct TimelineReadCell: View {
     var onExport: (Take) -> Void = { _ in }
     /// Tap the card → begin edit-in-place (M4.1), or commit an open edit of another Take.
     var onTapText: (Take) -> Void = { _ in }
+    /// Task 6.19 — true while this row is the Spotlight deep-link target's pulse
+    /// window (driven by the VC's `flashingID` via reconfigure). The card overlays
+    /// a brief ember tint; `.animation(value:)` fades both edges.
+    var isSpotlightTarget: Bool = false
 
     @Environment(\.colorScheme) private var scheme
     private let inset = CatchlightLayout.cardSpineInset
@@ -150,6 +163,16 @@ struct TimelineReadCell: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: false)  // card
+                // Task 6.19 — brief flash when this row is the Spotlight deep-link
+                // target. The ember accent at low opacity reads as a gentle pulse,
+                // not a notification (same treatment as the pinned Obie's flash in
+                // DailiesView.rowContent). Render-only.
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.ckEmber.opacity(isSpotlightTarget ? 0.18 : 0))
+                        .animation(.easeInOut(duration: 0.4), value: isSpotlightTarget)
+                        .allowsHitTesting(false)
+                )
                 .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .onTapGesture { onTapText(take) }
                 .contextMenu { menuItems }
@@ -285,6 +308,8 @@ struct TimelineSwipeCell: View {
     var onMakeObie: (Take) -> Void = { _ in }
     var onExport: (Take) -> Void = { _ in }
     var onTapText: (Take) -> Void = { _ in }
+    /// Threaded straight through to `TimelineReadCell` (see its `isSpotlightTarget`).
+    var isSpotlightTarget: Bool = false
 
     var body: some View {
         SwipeActionRow(
@@ -309,7 +334,8 @@ struct TimelineSwipeCell: View {
                              onTapCircle: onTapCircle, onLongPressCircle: onLongPressCircle,
                              onToggleDone: onToggleDone, onDelete: onDelete,
                              onSetImportant: onSetImportant, onMakeObie: onMakeObie,
-                             onExport: onExport, onTapText: onTapText)
+                             onExport: onExport, onTapText: onTapText,
+                             isSpotlightTarget: isSpotlightTarget)
                 .offset(x: offset)
         }
     }
@@ -476,7 +502,8 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
                                       onExport: { self.onExport($0) },
                                       onTapText: { [weak self] tapped in
                                           self?.onTapText(tapped)
-                                      })
+                                      },
+                                      isSpotlightTarget: self.flashingID == id)
                 }
                 .margins(.all, 0)
             case .month(let key):
@@ -594,6 +621,70 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
             reconfigured.reconfigureItems(toApply)
             dataSource.apply(reconfigured, animatingDifferences: false)
         }
+
+        // A reveal may be waiting for its row (Spotlight tap while LOCKED lands
+        // before the store opens) — this apply may just have delivered it.
+        attemptReveal()
+    }
+
+    // MARK: - Spotlight deep-link reveal (Task 6.19, re-wired for the UIKit timeline 2026-07-23)
+    //
+    // The SwiftUI timeline's scroll-and-flash died in the M7 rewrite: the host set
+    // `ui.spotlightTargetTakeID` but nothing in this collection consumed it (only
+    // the pinned-Obie row path did, and nothing ever cleared it). The host now
+    // hands the target to `requestReveal`; this scrolls the row into view, pulses
+    // the card via `flashingID` → reconfigure → the cell's ember overlay, and
+    // fires `onRevealHandled` so the host clears the one-shot state.
+
+    /// Fired (async) once a reveal has been actioned — the host clears
+    /// `ui.spotlightTargetTakeID` so a later re-tap of the same Take re-targets.
+    var onRevealHandled: () -> Void = {}
+    /// The row currently pulsing ember (read by the cell registration).
+    private var flashingID: UUID?
+    /// A reveal whose row is not in the snapshot yet. Held until `apply` delivers
+    /// it; deliberately never times out — for a Take that no longer exists
+    /// (Spotlight raced the deindex) it simply never fires.
+    private var pendingRevealID: UUID?
+    /// The last target accepted, so the host's repeated `updateUIViewController`
+    /// passes (the one-shot state clears asynchronously) don't re-trigger the
+    /// scroll. Reset when the host's target clears to nil.
+    private var lastRequestedRevealID: UUID?
+
+    func requestReveal(_ id: UUID?) {
+        guard let id else { lastRequestedRevealID = nil; return }
+        guard id != lastRequestedRevealID else { return }
+        lastRequestedRevealID = id
+        pendingRevealID = id
+        attemptReveal()
+    }
+
+    private func attemptReveal() {
+        guard let id = pendingRevealID, dataSource != nil,
+              let indexPath = dataSource.indexPath(for: .take(id)) else { return }
+        pendingRevealID = nil
+        collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: true)
+        // Pulse once the scroll has settled, hold ~1s, fade out — the cell overlay's
+        // `.animation(value:)` animates both edges.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.setFlashing(id)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.setFlashing(nil)
+            }
+        }
+        // Clear the host's one-shot target OUTSIDE the current SwiftUI update pass
+        // (attemptReveal can run inside updateUIViewController via apply).
+        DispatchQueue.main.async { [weak self] in self?.onRevealHandled() }
+    }
+
+    /// Flip the pulse on/off by reconfiguring only the affected row(s).
+    private func setFlashing(_ id: UUID?) {
+        let affected = [flashingID, id].compactMap { $0 }.map { TimelineRow.take($0) }
+        flashingID = id
+        var snapshot = dataSource.snapshot()
+        let present = affected.filter { snapshot.itemIdentifiers.contains($0) }
+        guard !present.isEmpty else { return }
+        snapshot.reconfigureItems(present)
+        dataSource.apply(snapshot, animatingDifferences: false)
     }
 
     private var editingActive = false
