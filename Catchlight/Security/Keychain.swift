@@ -295,19 +295,29 @@ public struct MasterKeyKeychain {
 
         let updateStatus = SecItemUpdate(searchQuery as CFDictionary, update as CFDictionary)
         if updateStatus == errSecSuccess { return }
-        guard updateStatus == errSecItemNotFound else {
-            // e.g. errSecInteractionNotAllowed on an access-controlled item: fall
-            // back to replacing the item outright with a minimal search query.
-            let deleteQuery: [String: Any] = [
-                kSecClass as String:           kSecClassGenericPassword,
-                kSecAttrService as String:     service,
-                kSecAttrAccount as String:     account,
-                kSecAttrAccessGroup as String: accessGroup
-            ]
-            SecItemDelete(deleteQuery as CFDictionary)
+        if updateStatus == errSecItemNotFound {
             try addItem(data, accessControl: accessControl)
             return
         }
+        // Delete-then-add is a LAST resort for this item (2026-07-23, mirroring
+        // MnemonicKeychain.upsert's 2026-07-01 narrowing): a kill — or a failed
+        // add — between the delete and the add leaves NO master key stored, which
+        // presents as "needs onboarding" on a device that still holds encrypted
+        // Takes. Narrow the fallback to the single case it exists for —
+        // `errSecInteractionNotAllowed` (the item exists but can't be updated in
+        // the current protection state). Any OTHER update failure now throws so
+        // the caller sees it, instead of a blind delete opening a data-loss
+        // window on an unknown error.
+        guard updateStatus == errSecInteractionNotAllowed else {
+            throw KeychainError.storeFailed(updateStatus)
+        }
+        let deleteQuery: [String: Any] = [
+            kSecClass as String:           kSecClassGenericPassword,
+            kSecAttrService as String:     service,
+            kSecAttrAccount as String:     account,
+            kSecAttrAccessGroup as String: accessGroup
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
         try addItem(data, accessControl: accessControl)
     }
 
