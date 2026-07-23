@@ -35,6 +35,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<true/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Catchlight uses Face ID to unlock your encrypted Takes.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -51,6 +53,10 @@
 	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiresFullScreen</key>
