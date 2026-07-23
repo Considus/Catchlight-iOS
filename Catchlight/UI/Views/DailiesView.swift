@@ -449,6 +449,17 @@ struct DailiesView: View {
             beginNewInlineEdit(take)
             ui.pendingInlineNewTake = nil
         }
+        // Spotlight deep-link to the PINNED OBIE (Task 6.19, re-wired 2026-07-23):
+        // the Obie is not a collection row, so the UIKit reveal path can't clear
+        // its flash — rowContent's equality-based background pulses it; clear the
+        // one-shot target here so the pulse ends and a re-tap re-targets. No
+        // scroll needed: the pinned Obie is always visible.
+        .onChange(of: ui.spotlightTargetTakeID) { _, target in
+            guard let target, target == vm.obie?.id else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                if ui.spotlightTargetTakeID == target { ui.spotlightTargetTakeID = nil }
+            }
+        }
         // Inline Obie confirmation (owner 2026-06-17; re-homed to the editing long-press
         // menu 2026-07-06) — mirrors the timeline long-press warning, but targets the
         // draft (the existing Obie is demoted by the store on save).
@@ -1021,7 +1032,13 @@ struct DailiesView: View {
             onTapBackground: { timelineBackgroundTap() },
             // M4.6 — fade + disable the collection while editing (cards recede, taps fall
             // through to the save catcher). Covers both existing-edit and new-Take.
-            isEditing: ui.isEditingInPlace
+            isEditing: ui.isEditingInPlace,
+            // Task 6.19 (re-wired 2026-07-23): the Spotlight deep-link target. The
+            // pinned Obie never enters the collection — its flash rides rowContent's
+            // background and is cleared by the onChange below — so it's filtered out
+            // here rather than left pending in the VC forever.
+            revealTargetID: ui.spotlightTargetTakeID == vm.obie?.id ? nil : ui.spotlightTargetTakeID,
+            onRevealHandled: { ui.spotlightTargetTakeID = nil }
         )
     }
 
