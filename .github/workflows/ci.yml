@@ -111,6 +111,12 @@ jobs:
           # dropped the exact 18.0 runtime (2026-06-15: now ships 18.5 / 18.6 +
           # 26.x), so this is pinned to the lowest available 18.x. Bump again if a
           # future image drops 18.5 too (check the "List available simulators" step).
+          #
+          # ⚠️ These matrix strings ARE the status-check names on branch protection
+          # (e.g. "iOS (xcodebuild test) (platform=iOS Simulator,name=iPhone 16,
+          # OS=18.5)"). Editing one renames its check, and the old name stays
+          # required and never reports — which blocks every merge to main until
+          # branch protection is updated to match. Change both together.
           - 'platform=iOS Simulator,name=iPhone 16,OS=18.5'
           - 'platform=iOS Simulator,name=iPhone 16,OS=latest'
     steps:
