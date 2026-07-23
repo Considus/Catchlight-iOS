@@ -141,10 +141,6 @@ struct DailiesView: View {
     /// Delete on a recurring reminder asks "this occurrence" vs "the whole series"
     /// rather than deleting outright; nil when no such prompt is up.
     @State private var pendingRecurringDelete: Take?
-    /// One-shot scroll target — set to bring a Take into view (e.g. a new Take that
-    /// landed at the bottom under Oldest-first). The timeline's ScrollViewReader
-    /// consumes and clears it.
-    @State private var scrollToTakeID: UUID?
     /// Bloom progress (0→1) for the in-place NEW Take's "appear". Driven explicitly
     /// (scale+opacity on the row) rather than via a LazyVStack insertion transition,
     /// which doesn't animate reliably. 1 at rest so existing rows are unaffected.
@@ -1232,11 +1228,6 @@ struct DailiesView: View {
         editDraft = t
         editFocusedBlockID = t.blocks.last?.id
         ui.beginEditingInPlace(take)
-        // Lift the Take above the keyboard via the same one-shot target the new-Take
-        // and fan paths use (owner 2026-06-19). Previously an existing Take set no
-        // target and leaned on iOS's native avoidance, which scrolled it up only a
-        // little — "nowhere near enough" when it started below the keyboard line.
-        scrollToTakeID = take.id
     }
 
     /// Create a NEW Take in place (Phase 2): seed the blank draft, inject it into the
@@ -1379,13 +1370,6 @@ struct DailiesView: View {
         let refocus = newTaskEntryID ?? d.blocks.first?.id
         editFocusedBlockID = nil
         if let refocus {
-            // Bring the Take above the rising keyboard (owner 2026-06-19): the ring
-            // closed with the keyboard down, and re-focusing raises it again. Without
-            // a scroll target the Take can sit under the keyboard — e.g. a new Take
-            // just reshaped to a Task, sorted to the bottom under Oldest-first. Same
-            // one-shot target the new-Take flow uses; the keyboardDidShow handler
-            // settles it to the low anchor against the keyboard-reduced viewport.
-            scrollToTakeID = d.id
             DispatchQueue.main.async { editFocusedBlockID = refocus }
         }
     }

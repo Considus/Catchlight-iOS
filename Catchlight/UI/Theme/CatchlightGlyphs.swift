@@ -5,8 +5,6 @@
 //  Custom meaning-led glyphs from the icon refinement pass (HiFi v1.6 §-wide):
 //    • ImportantGlyph — an exclamation "!" (stem + dot): the app-wide Important mark
 //                       (owner 2026-07-06; replaced the two-Iris glyph, matches the site).
-//    • DailiesGlyph   — two Irises joined by the spine (the timeline motif). Currently
-//                       unused — Important moved to ImportantGlyph — kept for reuse.
 //    • SequenceGlyph  — three smaller beads chained on the spine: a SEQUENCE
 //                       of Takes (sibling concept to Dailies).
 //    • ObieGlyph      — the Obie brand logo (solid italic "O" + catch-dot), the
@@ -16,19 +14,6 @@
 //
 
 import SwiftUI
-
-/// Two Irises on the spine (Dailies). Stroke-only; colour via .foregroundStyle.
-struct DailiesGlyphShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let u = min(rect.width, rect.height) / 16
-        var p = Path()
-        p.addEllipse(in: CGRect(x: (8 - 2.3) * u, y: (4.3 - 2.3) * u, width: 4.6 * u, height: 4.6 * u))
-        p.move(to: CGPoint(x: 8 * u, y: 6.9 * u))
-        p.addLine(to: CGPoint(x: 8 * u, y: 9.1 * u))
-        p.addEllipse(in: CGRect(x: (8 - 2.3) * u, y: (11.7 - 2.3) * u, width: 4.6 * u, height: 4.6 * u))
-        return p
-    }
-}
 
 /// Three beads chained on the spine (Sequence).
 struct SequenceGlyphShape: Shape {
@@ -47,15 +32,6 @@ struct SequenceGlyphShape: Shape {
 }
 
 /// Convenience views matching the dock's SF Symbol sizing (icon box ~20pt).
-struct DailiesGlyph: View {
-    var size: CGFloat = 20
-    var body: some View {
-        DailiesGlyphShape()
-            .stroke(style: StrokeStyle(lineWidth: size * 1.2 / 16, lineCap: .round))
-            .frame(width: size, height: size)
-    }
-}
-
 struct SequenceGlyph: View {
     var size: CGFloat = 20
     var body: some View {
@@ -106,7 +82,7 @@ struct TaskCheckbox: View {
 }
 
 /// The Important mark — an exclamation "!" (owner 2026-07-06, outline form 2026-07-06).
-/// Replaces the two-Iris `DailiesGlyph` as the app-wide Important glyph, matching the
+/// Replaces the earlier two-Iris glyph as the app-wide Important glyph, matching the
 /// redesigned marketing site where Important is a "!". Drawn as a STROKED OUTLINE — a
 /// tapered stem (rounded top corners, narrowing to a rounded foot) above a ring dot — at
 /// the house `1.2`-unit weight with round caps/joins, so it sits beside the other line
@@ -238,7 +214,6 @@ extension EnvironmentValues {
     HStack(spacing: 24) {
         ImportantGlyph().foregroundStyle(Color.ckEmber)
         ImportantGlyphSlashed().foregroundStyle(Color.ckEmber)
-        DailiesGlyph().foregroundStyle(Color.ckEmber)
         SequenceGlyph().foregroundStyle(Color.ckEmber)
         ObieGlyph().foregroundStyle(Color.ckTextObie)
     }

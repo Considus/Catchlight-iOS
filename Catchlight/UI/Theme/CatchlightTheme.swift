@@ -316,7 +316,7 @@ enum Quadrant {
 
     /// Important — the Iris North wedge (owner 2026-06-20, indicator only). Uses the
     /// two previously-unused brand swatches, paired for legibility per mode: Shadow
-    /// #0A0908 (near-black, ~20:1 on the white card) in Daylight, Stone #E7E1D5
+    /// #0A0908 (near-black, ~20:1 on the white card) in Daylight, Stone #E0D9CE
     /// (light warm stone, light-on-dark) in Night. Shown on an Obie too (an Obie
     /// auto-flags Important; owner wants the flag visible there alongside the ring).
     static func important(_ scheme: ColorScheme) -> Color {
