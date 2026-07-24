@@ -119,6 +119,10 @@ final class AppModel {
     /// seeds the starter Takes, so seeding survives a cancel-then-retry without the
     /// eager open path having to run.
     private var seedOnNextUnlock = false
+    /// One-shot: the 2026-07-24 body-level lock migration wiped the OS index at
+    /// init (locked, placeholder store); rebuild the type-label items on the
+    /// first real unlock.
+    private var reindexAfterUnlock = false
 
     // Feature view model. Available once a store is bound (after onboarding).
     // (Dock redesign 2026-06-10: the timeline is the ONE surface; the former
@@ -170,6 +174,20 @@ final class AppModel {
         // Apply the persisted Spotlight/Siri exposure (D-110) so per-save indexing
         // honours it from launch. Default `.none` — index nothing until opted in.
         spotlight.exposure = SpotlightExposure.current
+        // One-time migration for the 2026-07-24 body-level lock: a user who had
+        // opted into a body-indexing level still has decrypted Take text sitting
+        // in the OS index. Rewrite their stored choice to the clamped `.type`,
+        // wipe the index NOW (a CoreSpotlight delete needs no store, so it runs
+        // even while locked), and rebuild the type-label items after the first
+        // unlock — per-save alone would leave un-edited Takes missing from
+        // search indefinitely.
+        if let raw = UserDefaults.standard.string(forKey: SpotlightExposure.defaultsKey),
+           let stored = SpotlightExposure(rawValue: raw), !stored.isSelectable {
+            UserDefaults.standard.set(SpotlightExposure.type.rawValue,
+                                      forKey: SpotlightExposure.defaultsKey)
+            spotlight.deindexAll()
+            reindexAfterUnlock = true
+        }
         self.dailiesVM = DailiesViewModel(store: initialStore, spotlight: spotlight)
         // Hand the indexer to the subscription manager so the lapse transition
         // triggers a deindex-all without AppModel needing to observe status.
@@ -192,7 +210,13 @@ final class AppModel {
     /// locked (the placeholder store is empty) or at `.none` (`index(_:)` skips).
     /// Shared by lapse-recovery and the Settings exposure change (D-110).
     private func reindexAllTakes() {
-        guard lockState == .unlocked, let takes = try? dailiesVM.store.allTakes() else { return }
+        guard lockState == .unlocked, let takes = try? dailiesVM.store.allTakes() else {
+            DiagnosticsLog.shared.record(.lifecycle, "Spotlight reindex skipped (locked or store unavailable)")
+            return
+        }
+        // Content-free: count + exposure level only, never any Take text or id.
+        DiagnosticsLog.shared.record(.lifecycle,
+            "Spotlight reindex: \(takes.count) takes at exposure=\(spotlight.exposure.rawValue), status=\(subscription.status)")
         takes.forEach { spotlight.index($0) }
     }
 
@@ -206,6 +230,7 @@ final class AppModel {
         guard exposure != .none, subscription.status != .lapsed else { return }
         reindexAllTakes()
     }
+
 
     /// Called by OnboardingViewModel after the master key is stored. Rebinds the
     /// feature view model to the now-openable production store and (for a fresh
@@ -394,6 +419,12 @@ final class AppModel {
         rebind(to: store)        // bind the REAL store before the UI un-gates
         session.clearObscured()  // drop the privacy curtain so it can't flash post-Face ID
         lockState = .unlocked
+        if reindexAfterUnlock {
+            // The body-level lock's index scrub ran at init (locked, empty store);
+            // now the real store is bound, rebuild the type-label items once.
+            reindexAfterUnlock = false
+            reindexAllTakes()
+        }
     }
 
     // MARK: - Zero-Face-ID capture (owner 2026-06-23, "one glance → type")

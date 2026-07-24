@@ -140,12 +140,52 @@ final class SpotlightIndexerTests: XCTestCase {
         XCTAssertEqual(SpotlightAttributes.contentDescription(for: t, exposure: .all), "line one\nline two")
     }
 
-    func testMakeItem_firstLine_titleStaysTypeLabel_bodyOnlyInDescription() {
+    func testMakeItem_firstLine_titleStaysTypeLabel_bodyInDescriptionAndTextContent() {
         let t = Take(blocks: [.textLine("call the framer")], isNote: true)
         let item = SpotlightAttributes.makeItem(for: t, exposure: .firstLine)!
         XCTAssertEqual(item.attributeSet.title, "Note")            // type label, never the body
         XCTAssertEqual(item.attributeSet.displayName, "Note")
-        XCTAssertEqual(item.attributeSet.contentDescription, "call the framer")
+        XCTAssertEqual(item.attributeSet.contentDescription, "call the framer")   // subtitle shown in results
+        XCTAssertEqual(item.attributeSet.textContent, "call the framer")          // the full-text search field
+    }
+
+    func testMakeItem_all_bodyLandsInTextContentForFullTextSearch() {
+        // Regression for the 2026-07-24 report: at full-text the type label matched
+        // but interior body words did not, because the body was only in
+        // `contentDescription`. It must ALSO be in `textContent` — the field
+        // Spotlight word-searches — and the two must agree.
+        let t = Take(blocks: [.textLine("meeting with Considus about the roadmap")], isNote: true)
+        let item = SpotlightAttributes.makeItem(for: t, exposure: .all)!
+        XCTAssertEqual(item.attributeSet.textContent, "meeting with Considus about the roadmap")
+        XCTAssertEqual(item.attributeSet.textContent, item.attributeSet.contentDescription,
+                       "both body fields share one exposure-gated source and must not diverge")
+    }
+
+    // MARK: - keywords (the field GLOBAL Spotlight surfaces — proven on-device 2026-07-24)
+
+    func testKeywords_typeExposure_isNil() {
+        let t = Take(blocks: [.textLine("secret body")], isNote: true)
+        XCTAssertNil(SpotlightAttributes.keywords(for: t, exposure: .type))
+    }
+
+    func testKeywords_all_tokenisesBodyWords_dedupedAndLowercased() {
+        let t = Take(blocks: [.textLine("Considus Considus roadmap A")], isNote: true)
+        let kw = SpotlightAttributes.keywords(for: t, exposure: .all)
+        // "considus" deduped, "roadmap" kept, single-char "A" dropped (<2 chars).
+        XCTAssertEqual(kw, ["considus", "roadmap"])
+    }
+
+    func testKeywords_firstLine_onlyFirstLineTokens() {
+        let t = Take(blocks: [.textLine("alpha bravo"), .textLine("charlie")], isNote: true)
+        XCTAssertEqual(SpotlightAttributes.keywords(for: t, exposure: .firstLine), ["alpha", "bravo"])
+    }
+
+    func testMakeItem_all_bodyWordAppearsInKeywords() {
+        // The actual on-device fix: an interior body word must be a keyword, since
+        // that is the body field global home-screen Spotlight surfaces.
+        let t = Take(blocks: [.textLine("meeting with zorbleflux tomorrow")], isNote: true)
+        let item = SpotlightAttributes.makeItem(for: t, exposure: .all)!
+        XCTAssertEqual(item.attributeSet.keywords?.contains("zorbleflux"), true)
     }
     #endif
 

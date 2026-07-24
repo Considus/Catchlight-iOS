@@ -123,12 +123,35 @@ public enum SpotlightAttributes {
         }
     }
 
+    /// Body words as `keywords` — the ONLY body-carrying field iOS's global
+    /// home-screen Spotlight actually surfaces matches on (proven on-device
+    /// 2026-07-24: an in-app query matched a body word in `contentDescription`
+    /// and `textContent`, yet global Spotlight showed nothing; `title`/`keywords`
+    /// are what it ranks and surfaces). Derived from the SAME exposure-gated body
+    /// as `contentDescription`, so it exposes nothing new — nil at `.none`/`.type`,
+    /// first-line tokens at `.firstLine`, full-body tokens at `.all`. Deduped,
+    /// lowercased, ≥2 chars, capped so a very long Take can't produce a runaway
+    /// keyword array.
+    public static func keywords(for take: Take, exposure: SpotlightExposure) -> [String]? {
+        guard let body = contentDescription(for: take, exposure: exposure) else { return nil }
+        var seen = Set<String>()
+        var out: [String] = []
+        for token in body.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
+        where token.count >= 2 && seen.insert(token).inserted {
+            out.append(token)
+            if out.count >= 100 { break }
+        }
+        return out.isEmpty ? nil : out
+    }
+
     #if canImport(CoreSpotlight)
     /// Build the CSSearchableItem for a Take at the given exposure. Returns `nil`
     /// for `.none` (nothing to index). Privacy contract enforced here:
     ///   • `title`/`displayName` are ALWAYS the activity-type label, never the body.
-    ///   • `contentDescription` carries body text ONLY at `.firstLine`/`.all`, per
-    ///     the explicit user setting; it stays nil at `.none`/`.type`.
+    ///   • `contentDescription` AND `textContent` carry body text ONLY at
+    ///     `.firstLine`/`.all`, per the explicit user setting; both stay nil at
+    ///     `.none`/`.type`. They share ONE gated source (`contentDescription(for:
+    ///     exposure:)`) so they cannot diverge — the same text, in two fields.
     public static func makeItem(for take: Take, exposure: SpotlightExposure) -> CSSearchableItem? {
         guard exposure != .none else { return nil }
         let attributes: CSSearchableItemAttributeSet
@@ -142,7 +165,20 @@ public enum SpotlightAttributes {
         attributes.displayName = label
         // Body content is indexed ONLY when the user opts past `.type`; it stays
         // nil at the private levels (`contentDescription(for:exposure:)`).
-        attributes.contentDescription = contentDescription(for: take, exposure: exposure)
+        let body = contentDescription(for: take, exposure: exposure)
+        // `contentDescription` is the subtitle shown UNDER a Spotlight result;
+        // `textContent` is the dedicated full-text field Spotlight actually
+        // word-searches. Body words (e.g. mid-note terms) were unreliable /
+        // unmatched with only `contentDescription` set — the title label matched
+        // but interior text did not (owner-reported 2026-07-24). Set BOTH from
+        // the SAME exposure-gated `body`, so this adds no new exposure at any
+        // level — it just places the already-permitted text where search reads it.
+        attributes.contentDescription = body
+        attributes.textContent = body
+        // Body words ALSO go in `keywords` — the field global home-screen Spotlight
+        // surfaces matches on (contentDescription/textContent are matched by in-app
+        // CSSearchQuery but NOT surfaced by the global search). Same gated source.
+        attributes.keywords = keywords(for: take, exposure: exposure)
 
         let item = CSSearchableItem(
             uniqueIdentifier: take.id.uuidString,
@@ -191,6 +227,7 @@ public final class CoreSpotlightIndexer: SpotlightIndexing, @unchecked Sendable 
     public func deindexAll() {
         index.deleteSearchableItems(withDomainIdentifiers: [SpotlightConstants.domainIdentifier]) { _ in }
     }
+
 }
 #endif
 
