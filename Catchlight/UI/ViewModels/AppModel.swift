@@ -192,7 +192,13 @@ final class AppModel {
     /// locked (the placeholder store is empty) or at `.none` (`index(_:)` skips).
     /// Shared by lapse-recovery and the Settings exposure change (D-110).
     private func reindexAllTakes() {
-        guard lockState == .unlocked, let takes = try? dailiesVM.store.allTakes() else { return }
+        guard lockState == .unlocked, let takes = try? dailiesVM.store.allTakes() else {
+            DiagnosticsLog.shared.record(.lifecycle, "Spotlight reindex skipped (locked or store unavailable)")
+            return
+        }
+        // Content-free: count + exposure level only, never any Take text or id.
+        DiagnosticsLog.shared.record(.lifecycle,
+            "Spotlight reindex: \(takes.count) takes at exposure=\(spotlight.exposure.rawValue), status=\(subscription.status)")
         takes.forEach { spotlight.index($0) }
     }
 
@@ -206,6 +212,21 @@ final class AppModel {
         guard exposure != .none, subscription.status != .lapsed else { return }
         reindexAllTakes()
     }
+
+    #if DEBUG
+    /// DEBUG-ONLY on-device test aid (2026-07-24). A sideloaded dev build has no
+    /// App Store receipt, so `refreshEntitlements()` derives `.lapsed` — which
+    /// WIPES the Spotlight index and blocks re-indexing. That makes Spotlight
+    /// impossible to validate on a dev build. This pins the status to
+    /// `.subscribed` (via the existing test hook, which also stops
+    /// `refreshEntitlements` overwriting it) and rebuilds the index at the current
+    /// exposure, so on-device Spotlight search can actually be exercised. Compiled
+    /// out of Release/TestFlight entirely.
+    func debugForceEntitledAndReindex() {
+        subscription.forceStatusForTesting(.subscribed)
+        applySpotlightExposure(SpotlightExposure.current)
+    }
+    #endif
 
     /// Called by OnboardingViewModel after the master key is stored. Rebinds the
     /// feature view model to the now-openable production store and (for a fresh

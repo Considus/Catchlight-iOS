@@ -61,6 +61,9 @@ struct SettingsView: View {
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
     @State private var showResetConfirm = false
+    /// Latches once the DEBUG "force subscribed + rebuild Spotlight" aid has run,
+    /// so the row confirms it fired (2026-07-24 on-device Spotlight testing).
+    @State private var debugForcedEntitled = false
     #endif
 
     var body: some View {
@@ -201,6 +204,34 @@ struct SettingsView: View {
             .listRowBackground(Color.ckSurface)
             .accessibilityIdentifier("debug-reset")
             .accessibilityHint("Wipes everything and returns to onboarding. Debug builds only.")
+
+            // 2026-07-24 — a sideloaded dev build has no App Store receipt, so the
+            // app resolves to `.lapsed`, which wipes the Spotlight index and blocks
+            // re-indexing — making Spotlight impossible to test on-device. This
+            // pins the status to subscribed and rebuilds the index at the current
+            // exposure so Spotlight search can be exercised. DEBUG only.
+            Button {
+                app.debugForceEntitledAndReindex()
+                debugForcedEntitled = true
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: debugForcedEntitled ? "checkmark.circle" : "magnifyingglass.circle")
+                        .font(.system(size: 20, weight: .regular))
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    Text(debugForcedEntitled ? "Entitled — Spotlight re-indexed" : "Force subscribed + rebuild Spotlight")
+                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 8)
+                }
+                .frame(minHeight: 40)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.ckTextPrimary)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityIdentifier("debug-force-entitled")
+            .accessibilityHint("Forces subscribed status and rebuilds the Spotlight index. Debug builds only.")
 
         } header: {
             sectionHeader("Debug")
