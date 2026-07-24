@@ -222,9 +222,21 @@ final class AppModel {
     /// `refreshEntitlements` overwriting it) and rebuilds the index at the current
     /// exposure, so on-device Spotlight search can actually be exercised. Compiled
     /// out of Release/TestFlight entirely.
-    func debugForceEntitledAndReindex() {
+    func debugForceEntitledAndReindex(_ report: @escaping (String) -> Void) {
         subscription.forceStatusForTesting(.subscribed)
-        applySpotlightExposure(SpotlightExposure.current)
+        spotlight.deindexAll()
+        spotlight.exposure = SpotlightExposure.current
+        guard lockState == .unlocked, let takes = try? dailiesVM.store.allTakes() else {
+            report("locked or store unavailable"); return
+        }
+        if let core = spotlight as? CoreSpotlightIndexer {
+            core.debugReport(reindexing: takes) { msg in
+                DispatchQueue.main.async { report(msg) }
+            }
+        } else {
+            takes.forEach { spotlight.index($0) }
+            report("indexed \(takes.count) (non-CoreSpotlight indexer)")
+        }
     }
     #endif
 

@@ -202,6 +202,30 @@ public final class CoreSpotlightIndexer: SpotlightIndexing, @unchecked Sendable 
     public func deindexAll() {
         index.deleteSearchableItems(withDomainIdentifiers: [SpotlightConstants.domainIdentifier]) { _ in }
     }
+
+    #if DEBUG
+    /// DEBUG diagnostic (2026-07-24): re-index every Take and report what iOS
+    /// actually did — whether indexing is even available to the app, how many
+    /// items were submitted, and the exact error the OS returns (normally
+    /// swallowed by the fire-and-forget callbacks). Content-free: counts +
+    /// exposure + OS error text only, never any Take body or id. Not shipped.
+    public func debugReport(reindexing takes: [Take], _ completion: @escaping (String) -> Void) {
+        let available = CSSearchableIndex.isIndexingAvailable()
+        let items = takes.compactMap { SpotlightAttributes.makeItem(for: $0, exposure: exposure) }
+        guard !items.isEmpty else {
+            completion("available=\(available)\ntakes=\(takes.count) items=0\nexposure=\(exposure.rawValue)")
+            return
+        }
+        index.indexSearchableItems(items) { error in
+            completion("""
+                available=\(available)
+                takes=\(takes.count) items=\(items.count)
+                exposure=\(self.exposure.rawValue)
+                error=\(error?.localizedDescription ?? "none")
+                """)
+        }
+    }
+    #endif
 }
 #endif
 

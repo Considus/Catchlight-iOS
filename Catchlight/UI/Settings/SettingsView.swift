@@ -61,9 +61,10 @@ struct SettingsView: View {
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
     @State private var showResetConfirm = false
-    /// Latches once the DEBUG "force subscribed + rebuild Spotlight" aid has run,
-    /// so the row confirms it fired (2026-07-24 on-device Spotlight testing).
-    @State private var debugForcedEntitled = false
+    /// The DEBUG Spotlight diagnostic's on-screen report (2026-07-24), shown in an
+    /// alert so the actual availability / item count / OS error is visible without
+    /// exporting diagnostics.
+    @State private var debugSpotlightReport: String?
     #endif
 
     var body: some View {
@@ -211,15 +212,14 @@ struct SettingsView: View {
             // pins the status to subscribed and rebuilds the index at the current
             // exposure so Spotlight search can be exercised. DEBUG only.
             Button {
-                app.debugForceEntitledAndReindex()
-                debugForcedEntitled = true
+                app.debugForceEntitledAndReindex { report in debugSpotlightReport = report }
             } label: {
                 HStack(spacing: 14) {
-                    Image(systemName: debugForcedEntitled ? "checkmark.circle" : "magnifyingglass.circle")
+                    Image(systemName: "magnifyingglass.circle")
                         .font(.system(size: 20, weight: .regular))
                         .frame(width: 26)
                         .accessibilityHidden(true)
-                    Text(debugForcedEntitled ? "Entitled — Spotlight re-indexed" : "Force subscribed + rebuild Spotlight")
+                    Text("Force subscribed + rebuild Spotlight")
                         .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
                         .multilineTextAlignment(.leading)
                     Spacer(minLength: 8)
@@ -232,6 +232,14 @@ struct SettingsView: View {
             .listRowBackground(Color.ckSurface)
             .accessibilityIdentifier("debug-force-entitled")
             .accessibilityHint("Forces subscribed status and rebuilds the Spotlight index. Debug builds only.")
+            .alert("Spotlight rebuild", isPresented: Binding(
+                get: { debugSpotlightReport != nil },
+                set: { if !$0 { debugSpotlightReport = nil } }
+            )) {
+                Button("OK", role: .cancel) { debugSpotlightReport = nil }
+            } message: {
+                Text(debugSpotlightReport ?? "")
+            }
 
         } header: {
             sectionHeader("Debug")
