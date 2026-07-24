@@ -127,8 +127,10 @@ public enum SpotlightAttributes {
     /// Build the CSSearchableItem for a Take at the given exposure. Returns `nil`
     /// for `.none` (nothing to index). Privacy contract enforced here:
     ///   • `title`/`displayName` are ALWAYS the activity-type label, never the body.
-    ///   • `contentDescription` carries body text ONLY at `.firstLine`/`.all`, per
-    ///     the explicit user setting; it stays nil at `.none`/`.type`.
+    ///   • `contentDescription` AND `textContent` carry body text ONLY at
+    ///     `.firstLine`/`.all`, per the explicit user setting; both stay nil at
+    ///     `.none`/`.type`. They share ONE gated source (`contentDescription(for:
+    ///     exposure:)`) so they cannot diverge — the same text, in two fields.
     public static func makeItem(for take: Take, exposure: SpotlightExposure) -> CSSearchableItem? {
         guard exposure != .none else { return nil }
         let attributes: CSSearchableItemAttributeSet
@@ -142,7 +144,16 @@ public enum SpotlightAttributes {
         attributes.displayName = label
         // Body content is indexed ONLY when the user opts past `.type`; it stays
         // nil at the private levels (`contentDescription(for:exposure:)`).
-        attributes.contentDescription = contentDescription(for: take, exposure: exposure)
+        let body = contentDescription(for: take, exposure: exposure)
+        // `contentDescription` is the subtitle shown UNDER a Spotlight result;
+        // `textContent` is the dedicated full-text field Spotlight actually
+        // word-searches. Body words (e.g. mid-note terms) were unreliable /
+        // unmatched with only `contentDescription` set — the title label matched
+        // but interior text did not (owner-reported 2026-07-24). Set BOTH from
+        // the SAME exposure-gated `body`, so this adds no new exposure at any
+        // level — it just places the already-permitted text where search reads it.
+        attributes.contentDescription = body
+        attributes.textContent = body
 
         let item = CSSearchableItem(
             uniqueIdentifier: take.id.uuidString,
