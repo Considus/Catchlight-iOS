@@ -61,12 +61,6 @@ struct SettingsView: View {
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
     @State private var showResetConfirm = false
-    /// The DEBUG Spotlight diagnostic's on-screen report (2026-07-24), shown in an
-    /// alert so the actual availability / item count / OS error is visible without
-    /// exporting diagnostics.
-    @State private var debugSpotlightReport: String?
-    /// The probe word for the DEBUG per-field Spotlight query.
-    @State private var debugQueryTerm = ""
     #endif
 
     var body: some View {
@@ -207,57 +201,6 @@ struct SettingsView: View {
             .listRowBackground(Color.ckSurface)
             .accessibilityIdentifier("debug-reset")
             .accessibilityHint("Wipes everything and returns to onboarding. Debug builds only.")
-
-            // 2026-07-24 — a sideloaded dev build has no App Store receipt, so the
-            // app resolves to `.lapsed`, which wipes the Spotlight index and blocks
-            // re-indexing — making Spotlight impossible to test on-device. This
-            // pins the status to subscribed and rebuilds the index at the current
-            // exposure so Spotlight search can be exercised. DEBUG only.
-            Button {
-                app.debugForceEntitledAndReindex { report in debugSpotlightReport = report }
-            } label: {
-                HStack(spacing: 14) {
-                    Image(systemName: "magnifyingglass.circle")
-                        .font(.system(size: 20, weight: .regular))
-                        .frame(width: 26)
-                        .accessibilityHidden(true)
-                    Text("Force subscribed + rebuild Spotlight")
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .multilineTextAlignment(.leading)
-                    Spacer(minLength: 8)
-                }
-                .frame(minHeight: 40)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.ckTextPrimary)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityIdentifier("debug-force-entitled")
-            .accessibilityHint("Forces subscribed status and rebuilds the Spotlight index. Debug builds only.")
-            .alert("Spotlight", isPresented: Binding(
-                get: { debugSpotlightReport != nil },
-                set: { if !$0 { debugSpotlightReport = nil } }
-            )) {
-                Button("OK", role: .cancel) { debugSpotlightReport = nil }
-            } message: {
-                Text(debugSpotlightReport ?? "")
-            }
-
-            // Per-field query probe: type a word, see which index field matches it.
-            HStack(spacing: 10) {
-                TextField("word to query", text: $debugQueryTerm)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                Button("Query") {
-                    app.debugSpotlightQuery(debugQueryTerm) { debugSpotlightReport = $0 }
-                }
-                .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .subheadline))
-                .foregroundStyle(Color.ckAccent)
-            }
-            .frame(minHeight: 40)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityIdentifier("debug-spotlight-query")
 
         } header: {
             sectionHeader("Debug")
@@ -571,12 +514,22 @@ struct SettingsView: View {
             // description. Changing it re-indexes via AppModel.applySpotlightExposure.
             VStack(alignment: .leading, spacing: 6) {
                 Menu {
-                    Picker("Spotlight & Siri", selection: spotlightExposureBinding) {
-                        ForEach(SpotlightExposure.allCases) { option in
-                            Text(option.label).tag(option)
+                    // Explicit Buttons rather than a Picker so the LOCKED body
+                    // levels render greyed + non-selectable (owner 2026-07-24;
+                    // see `SpotlightExposure.isSelectable` for why). A Picker
+                    // can't disable individual options.
+                    ForEach(SpotlightExposure.allCases) { option in
+                        Button {
+                            spotlightExposureBinding.wrappedValue = option
+                        } label: {
+                            if option == spotlightExposureBinding.wrappedValue {
+                                Label(option.label, systemImage: "checkmark")
+                            } else {
+                                Text(option.label)
+                            }
                         }
+                        .disabled(!option.isSelectable)
                     }
-                    .labelsHidden()
                 } label: {
                     SelectorRow(icon: "magnifyingglass",
                                 label: "Spotlight & Siri",
@@ -586,7 +539,7 @@ struct SettingsView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Spotlight and Siri indexing \(spotlightExposureBinding.wrappedValue.label)")
 
-                Text("Considus can never read your Takes. This only affects on-device search. Anything beyond the Take type (Note / Task / Reminder) becomes readable by iOS search and Siri, outside Catchlight's encryption.")
+                Text("Considus can never read your Takes. This only affects on-device search. The text options are unavailable for now. iOS does not currently show app text in search results, so Catchlight only offers the levels that work. They will return when Apple resolves this.")
                     .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -607,7 +560,13 @@ struct SettingsView: View {
 
     private var spotlightExposureBinding: Binding<SpotlightExposure> {
         Binding(
-            get: { SpotlightExposure(rawValue: spotlightExposureRaw) ?? .default },
+            get: {
+                // Clamp exactly like `SpotlightExposure.current` — a pre-lock
+                // body level reads as `.type` (the menu's locked rows can't be
+                // selected, so only the clamped value can round-trip).
+                let stored = SpotlightExposure(rawValue: spotlightExposureRaw) ?? .default
+                return stored.isSelectable ? stored : .type
+            },
             set: {
                 spotlightExposureRaw = $0.rawValue
                 app.applySpotlightExposure($0)

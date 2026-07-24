@@ -463,11 +463,30 @@ extension SpotlightExposure {
         }
     }
 
+    /// Whether the app currently OFFERS this level (owner 2026-07-24). The two
+    /// body-indexing levels are LOCKED: since iOS 17, global Spotlight no longer
+    /// surfaces third-party body fields — title/displayName matches only (Apple
+    /// FB17330079/FB17408320, unresolved). Verified on-device 2026-07-24: a body
+    /// word matched in `contentDescription`, `textContent` AND `keywords` via an
+    /// in-app CSSearchQuery, yet never appeared in home-screen search. Offering
+    /// these levels would put decrypted text in the OS index in exchange for
+    /// search results iOS cannot deliver. The indexing pipeline still supports
+    /// them end-to-end — re-enable here once Apple fixes surfacing.
+    var isSelectable: Bool {
+        switch self {
+        case .none, .type:      return true
+        case .firstLine, .all:  return false
+        }
+    }
+
     /// The user's current choice (falls back to the default), read from the same
-    /// UserDefaults key the Settings picker writes.
+    /// UserDefaults key the Settings picker writes. A persisted body level (chosen
+    /// before the 2026-07-24 lock) clamps to `.type` — the nearest level still
+    /// offered; that user had indexing ON, so `.none` would under-shoot their
+    /// intent. `AppModel.init` performs the matching one-time index scrub.
     static var current: SpotlightExposure {
         guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
               let value = SpotlightExposure(rawValue: raw) else { return .default }
-        return value
+        return value.isSelectable ? value : .type
     }
 }

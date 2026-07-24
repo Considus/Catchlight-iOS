@@ -228,62 +228,6 @@ public final class CoreSpotlightIndexer: SpotlightIndexing, @unchecked Sendable 
         index.deleteSearchableItems(withDomainIdentifiers: [SpotlightConstants.domainIdentifier]) { _ in }
     }
 
-    #if DEBUG
-    /// DEBUG diagnostic (2026-07-24): re-index every Take and report what iOS
-    /// actually did — whether indexing is even available to the app, how many
-    /// items were submitted, and the exact error the OS returns (normally
-    /// swallowed by the fire-and-forget callbacks). Content-free: counts +
-    /// exposure + OS error text only, never any Take body or id. Not shipped.
-    public func debugReport(reindexing takes: [Take], _ completion: @escaping (String) -> Void) {
-        let available = CSSearchableIndex.isIndexingAvailable()
-        let items = takes.compactMap { SpotlightAttributes.makeItem(for: $0, exposure: exposure) }
-        guard !items.isEmpty else {
-            completion("available=\(available)\ntakes=\(takes.count) items=0\nexposure=\(exposure.rawValue)")
-            return
-        }
-        index.indexSearchableItems(items) { error in
-            completion("""
-                available=\(available)
-                takes=\(takes.count) items=\(items.count)
-                exposure=\(self.exposure.rawValue)
-                error=\(error?.localizedDescription ?? "none")
-                """)
-        }
-    }
-
-    /// DEBUG diagnostic (2026-07-24): query the LIVE Core Spotlight index for
-    /// `term` against each searchable field separately, so we can see which
-    /// field(s) actually match — isolating "the index can't match this word"
-    /// from "global home-screen Spotlight won't surface body matches". The term
-    /// is the user's own probe word, evaluated on-device; only per-field COUNTS
-    /// are reported, never any item content.
-    public func debugQuery(term: String, _ completion: @escaping (String) -> Void) {
-        let safe = term.replacingOccurrences(of: "\"", with: "")
-        guard !safe.isEmpty else { completion("enter a word to query"); return }
-
-        func count(_ attribute: String, _ done: @escaping (Int, String?) -> Void) {
-            let query = CSSearchQuery(queryString: "\(attribute) == \"*\(safe)*\"cd", attributes: ["title"])
-            var n = 0
-            query.foundItemsHandler = { items in n += items.count }
-            query.completionHandler = { error in
-                DispatchQueue.main.async { done(n, error?.localizedDescription) }
-            }
-            query.start()
-        }
-        // Chained so the three queries don't contend; report all counts together.
-        count("title") { t, e1 in
-            count("contentDescription") { d, e2 in
-                count("textContent") { x, e3 in
-                    count("keywords") { k, e4 in
-                        let err = [e1, e2, e3, e4].compactMap { $0 }.first
-                        completion("query \"\(safe)\"\ntitle=\(t)  desc=\(d)  text=\(x)  kw=\(k)"
-                            + (err.map { "\nerr=\($0)" } ?? ""))
-                    }
-                }
-            }
-        }
-    }
-    #endif
 }
 #endif
 
