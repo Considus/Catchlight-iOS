@@ -123,6 +123,27 @@ public enum SpotlightAttributes {
         }
     }
 
+    /// Body words as `keywords` — the ONLY body-carrying field iOS's global
+    /// home-screen Spotlight actually surfaces matches on (proven on-device
+    /// 2026-07-24: an in-app query matched a body word in `contentDescription`
+    /// and `textContent`, yet global Spotlight showed nothing; `title`/`keywords`
+    /// are what it ranks and surfaces). Derived from the SAME exposure-gated body
+    /// as `contentDescription`, so it exposes nothing new — nil at `.none`/`.type`,
+    /// first-line tokens at `.firstLine`, full-body tokens at `.all`. Deduped,
+    /// lowercased, ≥2 chars, capped so a very long Take can't produce a runaway
+    /// keyword array.
+    public static func keywords(for take: Take, exposure: SpotlightExposure) -> [String]? {
+        guard let body = contentDescription(for: take, exposure: exposure) else { return nil }
+        var seen = Set<String>()
+        var out: [String] = []
+        for token in body.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
+        where token.count >= 2 && seen.insert(token).inserted {
+            out.append(token)
+            if out.count >= 100 { break }
+        }
+        return out.isEmpty ? nil : out
+    }
+
     #if canImport(CoreSpotlight)
     /// Build the CSSearchableItem for a Take at the given exposure. Returns `nil`
     /// for `.none` (nothing to index). Privacy contract enforced here:
@@ -154,6 +175,10 @@ public enum SpotlightAttributes {
         // level — it just places the already-permitted text where search reads it.
         attributes.contentDescription = body
         attributes.textContent = body
+        // Body words ALSO go in `keywords` — the field global home-screen Spotlight
+        // surfaces matches on (contentDescription/textContent are matched by in-app
+        // CSSearchQuery but NOT surfaced by the global search). Same gated source.
+        attributes.keywords = keywords(for: take, exposure: exposure)
 
         let item = CSSearchableItem(
             uniqueIdentifier: take.id.uuidString,
@@ -249,9 +274,11 @@ public final class CoreSpotlightIndexer: SpotlightIndexing, @unchecked Sendable 
         count("title") { t, e1 in
             count("contentDescription") { d, e2 in
                 count("textContent") { x, e3 in
-                    let err = [e1, e2, e3].compactMap { $0 }.first
-                    completion("query \"\(safe)\"\ntitle=\(t)  desc=\(d)  text=\(x)"
-                        + (err.map { "\nerr=\($0)" } ?? ""))
+                    count("keywords") { k, e4 in
+                        let err = [e1, e2, e3, e4].compactMap { $0 }.first
+                        completion("query \"\(safe)\"\ntitle=\(t)  desc=\(d)  text=\(x)  kw=\(k)"
+                            + (err.map { "\nerr=\($0)" } ?? ""))
+                    }
                 }
             }
         }
