@@ -33,7 +33,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Intentionally not pinning the Xcode version — the macos-15 image ships
       # multiple side-by-side Xcodes (16.x and newer). Letting the runner use
@@ -73,7 +73,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -121,7 +121,7 @@ jobs:
           - 'platform=iOS Simulator,name=iPhone 16,OS=latest'
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Intentionally not pinning the Xcode version — the macos-15 image ships
       # multiple side-by-side Xcodes (16.x and newer). Letting the runner use
