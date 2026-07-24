@@ -514,12 +514,22 @@ struct SettingsView: View {
             // description. Changing it re-indexes via AppModel.applySpotlightExposure.
             VStack(alignment: .leading, spacing: 6) {
                 Menu {
-                    Picker("Spotlight & Siri", selection: spotlightExposureBinding) {
-                        ForEach(SpotlightExposure.allCases) { option in
-                            Text(option.label).tag(option)
+                    // Explicit Buttons rather than a Picker so the LOCKED body
+                    // levels render greyed + non-selectable (owner 2026-07-24;
+                    // see `SpotlightExposure.isSelectable` for why). A Picker
+                    // can't disable individual options.
+                    ForEach(SpotlightExposure.allCases) { option in
+                        Button {
+                            spotlightExposureBinding.wrappedValue = option
+                        } label: {
+                            if option == spotlightExposureBinding.wrappedValue {
+                                Label(option.label, systemImage: "checkmark")
+                            } else {
+                                Text(option.label)
+                            }
                         }
+                        .disabled(!option.isSelectable)
                     }
-                    .labelsHidden()
                 } label: {
                     SelectorRow(icon: "magnifyingglass",
                                 label: "Spotlight & Siri",
@@ -529,7 +539,7 @@ struct SettingsView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Spotlight and Siri indexing \(spotlightExposureBinding.wrappedValue.label)")
 
-                Text("Considus can never read your Takes. This only affects on-device search. Anything beyond the Take type (Note / Task / Reminder) becomes readable by iOS search and Siri, outside Catchlight's encryption.")
+                Text("Considus can never read your Takes. This only affects on-device search. The text options are unavailable for now. iOS does not currently show app text in search results, so Catchlight only offers the levels that work. They will return when Apple resolves this.")
                     .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -550,7 +560,13 @@ struct SettingsView: View {
 
     private var spotlightExposureBinding: Binding<SpotlightExposure> {
         Binding(
-            get: { SpotlightExposure(rawValue: spotlightExposureRaw) ?? .default },
+            get: {
+                // Clamp exactly like `SpotlightExposure.current` — a pre-lock
+                // body level reads as `.type` (the menu's locked rows can't be
+                // selected, so only the clamped value can round-trip).
+                let stored = SpotlightExposure(rawValue: spotlightExposureRaw) ?? .default
+                return stored.isSelectable ? stored : .type
+            },
             set: {
                 spotlightExposureRaw = $0.rawValue
                 app.applySpotlightExposure($0)
