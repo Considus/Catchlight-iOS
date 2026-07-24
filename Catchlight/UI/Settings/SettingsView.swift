@@ -65,6 +65,8 @@ struct SettingsView: View {
     /// alert so the actual availability / item count / OS error is visible without
     /// exporting diagnostics.
     @State private var debugSpotlightReport: String?
+    /// The probe word for the DEBUG per-field Spotlight query.
+    @State private var debugQueryTerm = ""
     #endif
 
     var body: some View {
@@ -232,7 +234,7 @@ struct SettingsView: View {
             .listRowBackground(Color.ckSurface)
             .accessibilityIdentifier("debug-force-entitled")
             .accessibilityHint("Forces subscribed status and rebuilds the Spotlight index. Debug builds only.")
-            .alert("Spotlight rebuild", isPresented: Binding(
+            .alert("Spotlight", isPresented: Binding(
                 get: { debugSpotlightReport != nil },
                 set: { if !$0 { debugSpotlightReport = nil } }
             )) {
@@ -240,6 +242,22 @@ struct SettingsView: View {
             } message: {
                 Text(debugSpotlightReport ?? "")
             }
+
+            // Per-field query probe: type a word, see which index field matches it.
+            HStack(spacing: 10) {
+                TextField("word to query", text: $debugQueryTerm)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                Button("Query") {
+                    app.debugSpotlightQuery(debugQueryTerm) { debugSpotlightReport = $0 }
+                }
+                .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .subheadline))
+                .foregroundStyle(Color.ckAccent)
+            }
+            .frame(minHeight: 40)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityIdentifier("debug-spotlight-query")
 
         } header: {
             sectionHeader("Debug")

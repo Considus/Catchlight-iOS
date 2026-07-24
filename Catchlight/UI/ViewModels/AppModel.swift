@@ -238,6 +238,18 @@ final class AppModel {
             report("indexed \(takes.count) (non-CoreSpotlight indexer)")
         }
     }
+
+    /// DEBUG-ONLY (2026-07-24): query the live Spotlight index for `term` against
+    /// each field, so we can see which field matches — isolating an index-match
+    /// problem from a global-Spotlight surfacing limitation.
+    func debugSpotlightQuery(_ term: String, _ report: @escaping (String) -> Void) {
+        guard let core = spotlight as? CoreSpotlightIndexer else {
+            report("non-CoreSpotlight indexer"); return
+        }
+        core.debugQuery(term: term) { msg in
+            DispatchQueue.main.async { report(msg) }
+        }
+    }
     #endif
 
     /// Called by OnboardingViewModel after the master key is stored. Rebinds the
