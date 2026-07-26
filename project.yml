@@ -27,6 +27,11 @@ settings:
     # iPhone-only (owner 2026-07-23): iPad is not yet in scope — nothing has been
     # designed or validated for it, and XcodeGen's default ("1,2") silently opted
     # us into iPad App Review + iPad screenshot requirements.
+    # D-139 (2026-07-26): this project-level value is NOT sufficient on its own.
+    # XcodeGen writes its own TARGETED_DEVICE_FAMILY = "1,2" into every target,
+    # and target level beats project level in Xcode, so the lock was inert from
+    # 2026-07-23 until 2026-07-26. Each target below repeats it. If you add a
+    # target, repeat it there too.
     TARGETED_DEVICE_FAMILY: "1"
     DEVELOPMENT_TEAM: YTPP9HU9F9 # Mark Stradling (brief §3.1)
     MARKETING_VERSION: "1.0.0"
@@ -192,6 +197,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight   # brief §3.1
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base (D-139)
         CODE_SIGN_ENTITLEMENTS: Catchlight/Resources/Catchlight.entitlements
         # Pin signing to Automatic so the Xcode UI can't silently flip the app
         # target to Manual on a future fix-warning prompt. Pre-archive audit
@@ -278,6 +284,7 @@ targets:
         # target does not have an Info.plist file…" (hit 2026-06-06 on iPhone 17).
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.tests
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base (D-139)
     dependencies:
       - target: Catchlight
       - package: CatchlightCore
@@ -297,6 +304,7 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.uitests
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base (D-139)
     dependencies:
       - target: Catchlight
 
@@ -343,6 +351,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.widgets
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base (D-139)
         CODE_SIGN_ENTITLEMENTS: CatchlightWidgets/CatchlightWidgets.entitlements
         CODE_SIGN_STYLE: Automatic
         # The extension has no UIKit app delegate / launch storyboard.
