@@ -156,13 +156,17 @@ final class UIState {
     /// DEBUG-only Settings row; comment corrected 2026-07-01.)
     var isStoryboardPresented = false
 
-    /// Task 6.19 — Spotlight deep-link target. Set by the app's
-    /// `onContinueUserActivity` handler when a Take is tapped in Spotlight.
-    /// Consumed one-shot (re-wired 2026-07-23 after the M7 rewrite left it
-    /// dangling): the UIKit timeline scrolls the row into view, pulses it, and
-    /// clears this via `onRevealHandled`; a target on the PINNED OBIE is pulsed
-    /// and cleared by DailiesView itself (the Obie is not a collection row).
-    var spotlightTargetTakeID: UUID?
+    /// The Take to scroll to and pulse — "show me that one".
+    ///
+    /// Renamed from `revealTargetTakeID` on 2026-08-11: Spotlight was its first caller but is
+    /// no longer its only one. Tapping a REMINDER now sets it too, which is the whole point of a
+    /// nudge — the owner reported landing on a plain timeline with no idea which Take had fired.
+    ///
+    /// Consumed one-shot (re-wired 2026-07-23 after the M7 rewrite left it dangling): the UIKit
+    /// timeline scrolls the row into view, pulses it, and clears this via `onRevealHandled`; a
+    /// target on the PINNED OBIE is pulsed and cleared by DailiesView itself (the Obie is not a
+    /// collection row).
+    var revealTargetTakeID: UUID?
 
     // MARK: - Dock mode transitions
 

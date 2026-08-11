@@ -142,7 +142,7 @@ struct CatchlightApp: App {
 
         // Return the dock to RESTING (clearing any live filter) BEFORE setting
         // the target, so the row is guaranteed visible on the unfiltered
-        // timeline. The UIKit timeline consumes `ui.spotlightTargetTakeID`
+        // timeline. The UIKit timeline consumes `ui.revealTargetTakeID`
         // (scroll + ember pulse, then it clears the state); the pinned Obie is
         // handled by DailiesView directly. We deliberately do not open the
         // editor here — editing is gated for lapsed users, and a Spotlight tap
@@ -158,7 +158,7 @@ struct CatchlightApp: App {
             let allTakes = (try? app.dailiesVM.store.allTakes()) ?? []
             guard allTakes.contains(where: { $0.id == uuid }) else { return }
         }
-        app.ui.spotlightTargetTakeID = uuid
+        app.ui.revealTargetTakeID = uuid
     }
 
     /// Drain a capture request queued by a widget / the New Take intent / the
@@ -195,6 +195,29 @@ struct CatchlightApp: App {
             guard app.lockedCapture == nil else { return }
             app.lockedCapture = draft
         }
+    }
+
+    /// Show the Take a notification TAP asked for (owner-reported 2026-08-11).
+    ///
+    /// Tapping a reminder used to open the plain timeline with no sign of which Take had fired —
+    /// "I couldn't remember which one to look at". Routes through the SAME reveal the Spotlight
+    /// deep link uses (`ui.revealTargetTakeID`), so the row is scrolled to and pulsed, and the
+    /// locked case is already handled there: the reveal stays pending until the row exists after
+    /// unlock.
+    ///
+    /// Deliberately does NOT open the editor, matching `handleSpotlight`. Editing is gated for
+    /// lapsed users and a reminder tap must never surface the paywall.
+    @MainActor
+    private func drainPendingReveal() {
+        guard let uuid = NotificationPresenter.takePendingReveal() else { return }
+        app.ui.exitToResting()
+        // Only checkable while unlocked — the locked app holds the empty placeholder store, so a
+        // cold tap sets the target regardless and the timeline resolves it after unlock.
+        if app.lockState == .unlocked {
+            let all = (try? app.dailiesVM.store.allTakes()) ?? []
+            guard all.contains(where: { $0.id == uuid }) else { return }
+        }
+        app.ui.revealTargetTakeID = uuid
     }
 
     /// Commit anything the Share Extension queued while we were away (2026-08-11).
@@ -328,6 +351,12 @@ struct CatchlightApp: App {
                 CaptureRouting.setPending(.init(mode: mode))
                 drainPendingCapture()
             }
+            // A reminder TAP while the app is already foregrounded — reveal at once rather than
+            // waiting for the next activation (2026-08-11).
+            .onReceive(NotificationCenter.default.publisher(
+                for: NotificationPresenter.revealRequested)) { _ in
+                drainPendingReveal()
+            }
             // D-042 — re-lock when the DEVICE locks (auto-lock or manual), not on
             // mere app-switching. `protectedDataWillBecomeUnavailable` fires on
             // device lock only; the app drops its keys + encrypted store and the
@@ -383,6 +412,10 @@ struct CatchlightApp: App {
                 // open an editor: saving runs a `reload()`, and doing that underneath an open
                 // editor is the kind of ordering that strands a draft.
                 drainSharedCaptures()
+                // A reminder tapped from a COLD launch: this delegate can run before any view is
+                // observing the notification above, so the tap is also held statically and drained
+                // here.
+                drainPendingReveal()
                 // An intent/Control/Shortcut foregrounds the app via this path;
                 // drain any queued capture (no-op if still locked — see below).
                 drainPendingCapture()
@@ -407,6 +440,8 @@ struct CatchlightApp: App {
                 // Anything shared while locked now has a readable store to land in (2026-08-11).
                 // Before the widget capture, for the reload-under-an-open-editor reason above.
                 drainSharedCaptures()
+                // …and a reminder tapped while locked reveals once the store is readable.
+                drainPendingReveal()
                 // A capture queued by a widget/intent before unlock now drains into
                 // the blank (or pre-filled) editor (2026-06-23).
                 drainPendingCapture()
