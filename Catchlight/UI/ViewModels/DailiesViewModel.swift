@@ -28,6 +28,14 @@ final class DailiesViewModel {
         didSet { if let lastError { DiagnosticsLog.shared.record(.storage, lastError) } }
     }
 
+    /// The Take whose LAST outstanding item was just ticked, while it still carries a live
+    /// reminder (owner 2026-08-11). Drives the "All tasks done. Stop reminding?" strip.
+    ///
+    /// A prompt rather than an automatic silencing, because finishing the subtasks says nothing
+    /// about whether a Take's NOTE still needs its nudge — that is the user's call
+    /// ([[catchlight-user-decides-principle]]). nil whenever there is nothing to ask.
+    private(set) var tasksCompletedTakeID: UUID?
+
     /// The underlying store. Exposed so conflict resolution (Task 6.15) can write
     /// the winning version through the same backend the timeline reads from.
     let store: TakeStore
@@ -115,10 +123,59 @@ final class DailiesViewModel {
                     if $0.createdAt != $1.createdAt { return $0.createdAt > $1.createdAt }
                     return $0.id.uuidString > $1.id.uuidString
                 }
+            pruneExpandedTakeIDs(live: Set(all.map(\.id)))
             lastError = nil
         } catch {
             lastError = "Couldn't load your Takes."
         }
+    }
+
+    /// Raise the "All tasks done. Stop reminding?" prompt, if this save is the moment it
+    /// becomes worth asking (owner 2026-08-11).
+    ///
+    /// Four conditions, and the last two are what stop it being a nuisance:
+    ///   • the Take has just TRANSITIONED to complete (not merely still complete),
+    ///   • it carries a time reminder whose alarm is on and which isn't already settled,
+    ///   • the reminder would actually still FIRE — `hasNothingOutstanding` already suppresses
+    ///     a one-shot on a pure checklist, and asking about a reminder that will never sound
+    ///     again is noise,
+    ///   • …which means the prompt is offered exactly where the lever is missing: a repeating
+    ///     series, or a Take whose note still matters.
+    private func noteTasksCompletedIfNeeded(_ take: Take, wasComplete: Bool) {
+        guard !wasComplete, take.isTask, take.isComplete,
+              let reminder = take.timeReminder,
+              reminder.alarmEnabled, !reminder.isDone,
+              !ReminderScheduler.hasNothingOutstanding(take, reminder: reminder) else { return }
+        tasksCompletedTakeID = take.id
+    }
+
+    /// Silence the prompted Take's reminder for good — the in-app twin of the "Stop reminding"
+    /// notification action. Keeps the Take and its date; only the alarm goes off.
+    func stopRemindingForCompletedTake() {
+        guard let id = tasksCompletedTakeID else { return }
+        tasksCompletedTakeID = nil
+        guard var updated = try? store.take(id: id),
+              updated.timeReminder?.alarmEnabled == true else { return }
+        updated.timeReminder?.alarmEnabled = false
+        save(updated)
+    }
+
+    func clearTasksCompletedNotice() { tasksCompletedTakeID = nil }
+
+    /// Forget "Expand Take" overrides for Takes that no longer exist (owner 2026-08-11).
+    ///
+    /// The overrides live in UserDefaults keyed by Take id, so without this a delete would
+    /// strand its id there forever and a long-lived device would accumulate ghosts — and a
+    /// recycled id (a restore from an export) would come back mysteriously expanded. Runs on
+    /// every reload, which is cheap: it's a set intersection over a handful of ids, and it
+    /// writes ONLY when something actually changed, so it can't churn the defaults or thrash
+    /// the views observing that key.
+    private func pruneExpandedTakeIDs(live: Set<UUID>) {
+        let key = SettingsViewModel.ExpandedTakes.defaultsKey
+        let raw = UserDefaults.standard.string(forKey: key) ?? ""
+        guard !raw.isEmpty,
+              let pruned = SettingsViewModel.ExpandedTakes.pruned(raw, keeping: live) else { return }
+        UserDefaults.standard.set(pruned, forKey: key)
     }
 
     /// True when the store holds nothing at all — drives the first-launch empty state.
@@ -151,6 +208,10 @@ final class DailiesViewModel {
     /// Persist edits to an existing Take (or a new one). Bumps `modifiedAt` and
     /// clears the seed flag on first edit (UX §12).
     func save(_ take: Take) {
+        // Read the PRIOR state before writing, so "the last item was just ticked" is a
+        // transition rather than a standing condition — otherwise every subsequent save of an
+        // already-finished Take would re-raise the prompt.
+        let wasComplete = (try? store.take(id: take.id))?.isComplete ?? false
         var updated = take
         updated.modifiedAt = Date()
         if updated.isSeeded { updated.isSeeded = false }
@@ -163,6 +224,7 @@ final class DailiesViewModel {
             // store write is the authoritative outcome.
             spotlight.index(updated)
             reconcileNotification(for: updated)
+            noteTasksCompletedIfNeeded(updated, wasComplete: wasComplete)
             reload()
             notifyLocalChange()
         } catch {
@@ -372,6 +434,20 @@ final class DailiesViewModel {
                       !reminder.repeats else { continue }
                 updated.timeReminder?.alarmEnabled = false
             }
+            save(updated)
+        }
+
+        // "Stop reminding" (owner 2026-08-11) — unlike a dismissal this silences the reminder
+        // WHATEVER its recurrence, which is the whole point: it is the only way to end a
+        // repeating series. Without this store write the app-open rebuild would replan the
+        // series from the store and it would simply come back.
+        //
+        // The Take, its date and its checklist are untouched. This silences, it never deletes,
+        // so the timeline still shows when the thing was due.
+        for id in PendingReminderActions.drainStopReminding() {
+            guard var updated = try? store.take(id: id),
+                  updated.timeReminder?.alarmEnabled == true else { continue }
+            updated.timeReminder?.alarmEnabled = false
             save(updated)
         }
     }

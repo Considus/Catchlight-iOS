@@ -91,6 +91,12 @@ targets:
     info:
       path: Catchlight/Resources/Info.plist
       properties:
+        # The name Siri matches against. `\(.applicationName)` in every App Shortcut phrase
+        # (CatchlightAppShortcuts) resolves to CFBundleDisplayName, falling back to
+        # CFBundleName — which here was only `$(PRODUCT_NAME)`, i.e. correct by coincidence
+        # of the target being called Catchlight. Stated explicitly so a target rename can't
+        # silently break every Siri phrase (owner-reported unresponsiveness, 2026-08-11).
+        CFBundleDisplayName: Catchlight
         # Version strings reference the build settings (single source of truth
         # in `settings.base` above) — previously the generated plist hardcoded
         # "1.0"/"1", so a TestFlight build bump needed two edits and the
@@ -260,6 +266,8 @@ targets:
         product: CatchlightCore
       # WidgetKit extension — embedded automatically (app-extension dependency).
       - target: CatchlightWidgets
+      # Share Extension — likewise embedded by the dependency (2026-08-11).
+      - target: CatchlightShare
 
   CatchlightTests:
     type: bundle.unit-test
@@ -360,6 +368,70 @@ targets:
       - package: CatchlightCore
         product: CatchlightCore
 
+  # Share Extension (2026-08-11) — "Share to Catchlight" from any app. Was deferred to
+  # v1.1 (see the closing note below, now amended); brought into v1.0 on owner testing
+  # feedback, because Catchlight never appeared in ANY share sheet — no such target
+  # existed. The prerequisites really were already in place, as that note promised: the
+  # App Group below is the only capability it needs.
+  #
+  # Like the widgets, it CANNOT write the encrypted store — the master key is
+  # `.userPresence`-gated and lives only in the foreground, unlocked app. So it queues
+  # the shared item through `CaptureRouting`'s shared queue and the app commits on next
+  # open. No keychain access group, therefore, and no store: it holds no key.
+  CatchlightShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: CatchlightShare
+    info:
+      # ⚠️ XcodeGen REWRITES this file from the properties below on every `generate`.
+      # A hand-written CatchlightShare/Info.plist is silently replaced — that is not a
+      # theory: the first build of this target shipped an .appex with NO `NSExtension`
+      # key at all, and the simulator refused to install the app with "Failed to create
+      # app extension placeholder". These properties ARE the source of truth, exactly as
+      # the entitlements note on the app target says of its own file.
+      path: CatchlightShare/Info.plist
+      properties:
+        # The name the SHARE SHEET shows. Without it iOS falls back to the executable
+        # name and the row reads "CatchlightShare".
+        CFBundleDisplayName: Catchlight
+        # App Store validation requires an extension's version strings to MATCH the
+        # app's; the widgets hit exactly this as an archive rejection on 2026-07-01,
+        # and XcodeGen's defaults ("1.0"/"1") reintroduce it on every new target.
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          # Module-qualified: a Swift principal class fails to instantiate without the
+          # module prefix, and the failure looks like the extension never opening.
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).ShareViewController"
+          NSExtensionAttributes:
+            # Text and links only, which is what a Take can hold today. Images and files
+            # are deliberately absent: `Attachment` exists in the model but there is no
+            # capture path for it, so offering the row would accept a share Catchlight
+            # then silently drops.
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 10
+              NSExtensionActivationSupportsWebPageWithMaxCount: 10
+    entitlements:
+      path: CatchlightShare/CatchlightShare.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.considus.catchlight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.share
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base (D-139)
+        CODE_SIGN_ENTITLEMENTS: CatchlightShare/CatchlightShare.entitlements
+        CODE_SIGN_STYLE: Automatic
+        # Hand-written Info.plist above (the extension point + activation rule), so
+        # Xcode must not synthesise a second one — same as CatchlightWidgets.
+        GENERATE_INFOPLIST_FILE: NO
+    dependencies:
+      - package: CatchlightCore
+        product: CatchlightCore
+
 # XcodeGen auto-discovery puts `CatchlightTests` into the Catchlight scheme's
 # test action but does NOT add the `bundle.ui-testing` target. We declare the
 # scheme so a single `xcodebuild test -scheme Catchlight` invocation runs both
@@ -386,7 +458,9 @@ schemes:
         - CatchlightUITests
 
 # WidgetKit + App Intents landed 2026-06-23 (the New Take capture surfaces) — see the
-# CatchlightWidgets target above and Catchlight/Intents. The remaining v1.1 extension
-# (a branded Share Extension) is still out of scope here; its prerequisites (App Group
-# + shared Keychain access group) remain configured in the app entitlements, so adding
-# it later requires no migration (brief §10.1).
+# CatchlightWidgets target above and Catchlight/Intents. The Share Extension followed on
+# 2026-08-11 (CatchlightShare above), pulled forward from v1.1 after owner testing found
+# Catchlight absent from every share sheet. The prerequisites noted here held: the App
+# Group was all it needed, and no migration was required (brief §10.1). The shared
+# Keychain access group turned out to be unnecessary — the extension holds no key and
+# queues instead of writing the store.

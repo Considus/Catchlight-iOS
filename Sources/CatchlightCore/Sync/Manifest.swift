@@ -7,22 +7,46 @@
 //  inbound sync the manifest signature is verified FIRST; then each downloaded
 //  blob is verified against its per-entry HMAC before any decryption is attempted.
 //
+//  v3 (owner 2026-08-11, D-196) — THE BODY IS NOW ENCRYPTED. What is on disk:
+//
 //      {
-//        "version": 1,
+//        "version": 3,
+//        "encryptedBody": "<Base64 nonce+ciphertext+tag>",
+//        "manifestHmac": "<hex HMAC of the envelope body>"
+//      }
+//
+//  and the sealed body inside it is the same index as before:
+//
+//      {
+//        "version": 3,
 //        "updated": "2026-05-28T07:00:00.000Z",
 //        "schemaVersion": 1,
 //        "takes": [
 //          { "uuid": "...", "modified": "...", "hmac": "<hex HMAC of the .clk blob>" }
 //        ],
-//        "manifestHmac": "<hex HMAC of the manifest body>"
+//        "tombstones": [ { "uuid": "...", "deletedAt": "..." } ]
 //      }
 //
-//  The `manifestHmac` field is computed over the manifest body with the field set
-//  to empty, then filled in — so verification recomputes over the same canonical
-//  body. Because PlatformJSON uses `.sortedKeys`, the body serialises deterministically.
+//  WHY. Up to v2 that index sat in the cloud folder as readable JSON. It was signed,
+//  so it could not be tampered with — but signing is not encryption. Anyone with
+//  folder access could read every Take's uuid, its last-modified time to the
+//  millisecond, and a 180-day record of what had been deleted and when: a complete
+//  log of when the user worked and what they threw away, even though no Take's
+//  CONTENT was ever readable.
+//
+//  Not hidden, and the privacy policy must not claim otherwise: the number of files,
+//  their sizes, and the cloud provider's own file timestamps. Those are properties of
+//  putting files in someone else's folder, not of this format.
+//
+//  The `manifestHmac` field is computed over the envelope with the field set to empty,
+//  then filled in — so verification recomputes over the same canonical body. Because
+//  PlatformJSON uses `.sortedKeys`, it serialises deterministically. v1/v2 plaintext
+//  manifests are still READ (a folder written by an earlier build keeps syncing) but are
+//  never written: the next push rewrites the folder as v3.
 //
 
 import Foundation
+import CryptoKit
 
 public struct ManifestEntry: Codable, Equatable, Sendable {
     public let uuid: UUID
@@ -50,11 +74,72 @@ public struct ManifestTombstone: Codable, Equatable, Sendable {
     }
 }
 
+/// The v3 on-disk form of `catchlight-manifest.json` — an ENCRYPTED envelope (owner
+/// 2026-08-11, D-196).
+///
+/// Up to v2 the manifest was plain JSON. It was HMAC-signed, so nobody could tamper with
+/// it, but signing is not encryption: anyone with folder access — the cloud provider, a
+/// stale backup, a disclosure request — could read every Take's uuid, its last-modified
+/// time to the millisecond, and a 180-day log of what had been deleted and when. Not what
+/// any Take SAID, but a complete record of when the user worked and what they threw away.
+///
+/// `version` and `manifestHmac` stay OUTSIDE the ciphertext, deliberately:
+///   • `version` must be readable WITHOUT the key, or a client cannot tell a v2 manifest
+///     from a v3 one and the fail-closed version gate becomes unreachable.
+///   • `manifestHmac` keeps `SyncEngine`'s "verify the signature FIRST, quarantine
+///     everything on failure" flow working unchanged. AES-GCM's tag already authenticates
+///     the body, so this is belt-and-braces — but it means the pull path did not have to be
+///     restructured around a new failure mode.
+///
+/// What this does NOT hide, and the privacy policy must not claim it does: the number of
+/// files, their sizes, and the provider's own file timestamps.
+public struct ManifestEnvelope: Codable, Equatable, Sendable {
+    public var version: Int
+    /// Base64 of the AES-256-GCM combined form (nonce + ciphertext + tag) over the
+    /// canonical `Manifest` JSON.
+    public var encryptedBody: String
+    /// Hex HMAC-SHA-256 over this envelope with the field cleared.
+    public var manifestHmac: String
+
+    public init(version: Int = Manifest.currentVersion, encryptedBody: String, manifestHmac: String = "") {
+        self.version = version
+        self.encryptedBody = encryptedBody
+        self.manifestHmac = manifestHmac
+    }
+
+    /// A copy with the HMAC cleared — the canonical bytes that are signed.
+    public func bodyForSigning() -> ManifestEnvelope {
+        var copy = self
+        copy.manifestHmac = ""
+        return copy
+    }
+
+    public func serialise() throws -> Data { try PlatformJSON.encode(self) }
+
+    public static func parse(_ data: Data) throws -> ManifestEnvelope {
+        try PlatformJSON.decode(ManifestEnvelope.self, from: data)
+    }
+
+    /// Peek at the version of whatever is in the folder without needing the key, so the
+    /// caller can route a v1/v2 plaintext manifest to the legacy path and a v3 here.
+    public static func peekVersion(_ data: Data) -> Int? {
+        struct VersionOnly: Decodable { let version: Int }
+        return (try? PlatformJSON.decode(VersionOnly.self, from: data))?.version
+    }
+}
+
 public struct Manifest: Codable, Equatable, Sendable {
-    public static let currentVersion = 2
+    /// v3 (2026-08-11) — the body is ENCRYPTED inside a `ManifestEnvelope`. v1/v2 were
+    /// plain JSON.
+    public static let currentVersion = 3
     /// Versions this client can process. A manifest with a HIGHER version than
     /// we understand is rejected rather than misread as v1.
-    public static let supportedVersions = 1...2
+    ///
+    /// v1 and v2 stay READABLE so a folder written by an earlier build still syncs and is
+    /// then rewritten as v3 on the next push — the upgrade is a push, not a migration step.
+    /// Nothing is shipped, so this costs one decode branch and removes any chance of a
+    /// tester's folder becoming unreadable.
+    public static let supportedVersions = 1...3
     /// Tombstones older than this are pruned from the manifest on push.
     /// Raised 30 → 180 days (2026-07-01): a device offline past the retention
     /// window still holds its deleted Takes live, and push's self-heal step
@@ -129,6 +214,36 @@ public struct Manifest: Codable, Equatable, Sendable {
 
     public static func parse(_ data: Data) throws -> Manifest {
         try PlatformJSON.decode(Manifest.self, from: data)
+    }
+
+    // MARK: - v3 encrypted form (owner 2026-08-11)
+
+    /// Seal this manifest into a v3 envelope. The envelope is returned UNSIGNED — the caller
+    /// signs it through `ManifestSigner`, keeping signing in one place.
+    public func sealed(with key: SymmetricKey) throws -> ManifestEnvelope {
+        var body = self
+        body.version = Manifest.currentVersion
+        body.manifestHmac = ""   // the signature lives on the envelope, not the body
+        let sealed = try CryptoService.encrypt(try body.serialise(), key: key)
+        return ManifestEnvelope(encryptedBody: sealed.base64EncodedString())
+    }
+
+    /// Open a v3 envelope. Throws `SyncError.manifestSignatureInvalid` on a bad payload
+    /// rather than a crypto error, so a corrupted manifest lands on the pull path's existing
+    /// fail-closed branch instead of an unhandled failure mode.
+    public static func opening(_ envelope: ManifestEnvelope, with key: SymmetricKey) throws -> Manifest {
+        guard let ciphertext = Data(base64Encoded: envelope.encryptedBody) else {
+            throw SyncError.manifestSignatureInvalid
+        }
+        do {
+            var manifest = try Manifest.parse(try CryptoService.decrypt(ciphertext, key: key))
+            // The envelope carries the authoritative version; the inner copy is incidental.
+            manifest.version = envelope.version
+            manifest.manifestHmac = envelope.manifestHmac
+            return manifest
+        } catch {
+            throw SyncError.manifestSignatureInvalid
+        }
     }
 
     public static let fileName = "catchlight-manifest.json"

@@ -28,6 +28,10 @@ public enum KeyInfo {
     public static let databaseKey     = "catchlight-sqlcipher-db-v1"
     public static let manifestHMAC    = "catchlight-manifest-hmac-v1"
     public static let deviceHandshake = "catchlight-device-handshake-v1"
+    /// Manifest BODY encryption (manifest v3, owner 2026-08-11) — distinct from the HMAC
+    /// key above, which authenticates. Separate info strings so the two uses never share
+    /// key material, the same discipline the database / handshake keys follow.
+    public static let manifestEncryption = "catchlight-manifest-encryption-v1"
 }
 
 public struct KeyHierarchy: Sendable {
@@ -56,6 +60,19 @@ public struct KeyHierarchy: Sendable {
         HKDF<SHA256>.deriveKey(
             inputKeyMaterial: masterKey,
             info: Data(KeyInfo.manifestHMAC.utf8),
+            outputByteCount: 32
+        )
+    }
+
+    /// Manifest BODY encryption key (manifest v3, owner 2026-08-11). Seals the index —
+    /// every Take's uuid, its modification time, and the deletion log — which was plain
+    /// JSON up to v2, readable by anyone with folder access even though Take CONTENT was
+    /// always sealed. Derived, never stored; no new Keychain entry and no change to the
+    /// recovery phrase.
+    public func manifestEncryptionKey() -> SymmetricKey {
+        HKDF<SHA256>.deriveKey(
+            inputKeyMaterial: masterKey,
+            info: Data(KeyInfo.manifestEncryption.utf8),
             outputByteCount: 32
         )
     }

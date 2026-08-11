@@ -37,9 +37,12 @@ final class SyncEngineTests: XCTestCase {
         // The .clk envelope is the platform-agnostic JSON form, not binary.
         let blobData = try cloud.read(take.fileNameForTest)!
         let blob = try CloudBlob.parse(blobData)
-        XCTAssertEqual(blob.uuid, take.id)
-        XCTAssertEqual(blob.version, 1)
+        XCTAssertEqual(blob.version, CloudBlob.currentVersion)
         XCTAssertNotNil(blob.ciphertext)
+        // v2 (D-196): the uuid and modification time are NO LONGER written. The uuid is
+        // already the filename and the timestamp had no readers, so both were pure leak.
+        XCTAssertNil(blob.uuid, "the envelope must not repeat the uuid in plaintext")
+        XCTAssertNil(blob.modified, "the envelope must not carry a plaintext timestamp")
     }
 
     // §12.4 — Manifest HMAC verification fails on any modification to a Take blob.
@@ -73,10 +76,12 @@ final class SyncEngineTests: XCTestCase {
         try store.upsert(TestFixtures.richTake())
         try makeEngine(store: store, cloud: cloud, keys: k).pushOutbound()
 
-        // Tamper with the manifest body so its own HMAC no longer verifies.
-        var manifest = try Manifest.parse(try cloud.read(Manifest.fileName)!)
+        // Tamper with the manifest body so its own HMAC no longer verifies. Re-sealing
+        // WITHOUT re-signing is the v3 equivalent of editing the old plaintext body.
+        var manifest = try Manifest.readEncrypted(from: cloud, keys: k)
         manifest.updated = "1999-01-01T00:00:00.000Z"
-        try cloud.write(try manifest.serialise(), to: Manifest.fileName)
+        let resealed = try manifest.sealed(with: k.manifestEncryptionKey())
+        try cloud.write(try resealed.serialise(), to: Manifest.fileName)
 
         let store2 = InMemoryTakeStore()
         let existing = TestFixtures.richTake(id: UUID())
@@ -204,7 +209,7 @@ final class SyncEngineTests: XCTestCase {
 
         // The push half then propagates the deletion end-to-end.
         try engine.pushOutbound()
-        let manifest = try Manifest.parse(try XCTUnwrap(cloud.read(Manifest.fileName)))
+        let manifest = try Manifest.readEncrypted(from: cloud, keys: k)
         XCTAssertTrue(manifest.tombstones.contains { $0.uuid == take.id }, "manifest records the tombstone")
         XCTAssertFalse(manifest.takes.contains { $0.uuid == take.id }, "manifest no longer lists the Take")
         XCTAssertNil(try cloud.read("\(take.id.uuidString).clk"), "the blob is deleted")
@@ -336,7 +341,7 @@ final class SyncEngineTests: XCTestCase {
         try engine.pushOutbound()
         // Manifest still verifies; file set unchanged (1 blob + manifest + metadata).
         let signer = ManifestSigner(keys: k)
-        XCTAssertTrue(try signer.verify(Manifest.parse(try cloud.read(Manifest.fileName)!)))
+        XCTAssertTrue(try signer.verify(ManifestEnvelope.parse(try cloud.read(Manifest.fileName)!)))
         XCTAssertNotNil(firstManifest)
         XCTAssertEqual(try cloud.clkFiles().count, 1)
     }

@@ -225,7 +225,15 @@ do {
         let manifestData = try cloud.read(Manifest.fileName)
         let metaData = try cloud.read("catchlight-account-metadata.json")
         let blob = try CloudBlob.parse(blobData!)
-        check("Outbound writes .clk envelope (JSON, v1, has ciphertext)", blob.uuid == take.id && blob.version == 1 && blob.ciphertext != nil)
+        // v2 (D-196): the envelope carries ONLY the version and the ciphertext. `uuid` and
+        // `modified` are no longer written — the uuid is already the filename and the timestamp
+        // had no readers, so both were plaintext metadata for nothing.
+        check("Outbound writes .clk envelope (JSON, v2, has ciphertext)",
+              blob.version == CloudBlob.currentVersion && blob.ciphertext != nil)
+        check("Envelope leaks no uuid or timestamp", blob.uuid == nil && blob.modified == nil)
+        let manifestText = String(decoding: manifestData ?? Data(), as: UTF8.self)
+        check("Manifest body is encrypted (no uuid, no timestamps in the clear)",
+              !manifestText.contains(take.id.uuidString) && !manifestText.contains("takes"))
         check("Outbound writes manifest + plaintext metadata", manifestData != nil && metaData != nil)
     }
     // Blob tampering quarantined.
@@ -245,9 +253,12 @@ do {
     do {
         let k = keys(); let store = InMemoryTakeStore(); let cloud = InMemoryCloudFolder()
         try store.upsert(richTake()); try engine(store, cloud, k).pushOutbound()
-        var manifest = try Manifest.parse(try cloud.read(Manifest.fileName)!)
+        // Re-seal WITHOUT re-signing — the v3 equivalent of editing the old plaintext body.
+        let envelope0 = try ManifestEnvelope.parse(try cloud.read(Manifest.fileName)!)
+        var manifest = try Manifest.opening(envelope0, with: k.manifestEncryptionKey())
         manifest.updated = "1999-01-01T00:00:00.000Z"
-        try cloud.write(try manifest.serialise(), to: Manifest.fileName)
+        try cloud.write(try manifest.sealed(with: k.manifestEncryptionKey()).serialise(),
+                        to: Manifest.fileName)
         let store2 = InMemoryTakeStore(); let existing = richTake(id: UUID()); try store2.upsert(existing)
         checkThrows("Manifest signature failure throws", SyncError.manifestSignatureInvalid) {
             _ = try engine(store2, cloud, k).pullInbound()
@@ -350,7 +361,7 @@ do {
         let cloud = InMemoryCloudFolder(); let e = engine(store, cloud, k)
         try e.pushOutbound(); try e.pushOutbound()
         let signer = ManifestSigner(keys: k)
-        let verifies = try signer.verify(Manifest.parse(try cloud.read(Manifest.fileName)!))
+        let verifies = try signer.verify(ManifestEnvelope.parse(try cloud.read(Manifest.fileName)!))
         let blobCount = try cloud.clkFiles().count
         check("Outbound idempotent (manifest still verifies; 1 blob)", verifies && blobCount == 1)
     }

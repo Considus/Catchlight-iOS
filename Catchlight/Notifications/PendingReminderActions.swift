@@ -34,6 +34,13 @@ enum PendingReminderActions {
     /// touched. A SET (deduped) — repeated taps on the same reminder collapse to one.
     private static let dismissedKey = "ckPendingDismissedIDs"
 
+    /// App-group defaults key holding the Take ids a background "Stop reminding" tap touched
+    /// (owner 2026-08-11). A SEPARATE key from `dismissedKey`, not a flag on it, because the two
+    /// mean different things at drain time: a dismissal turns the alarm off ONLY for a one-shot
+    /// and leaves a repeating series alone, while this one silences whatever it finds. Merging
+    /// them would make the drain guess which the user meant.
+    private static let stopRemindingKey = "ckPendingStopRemindingIDs"
+
     private static var defaults: UserDefaults? {
         UserDefaults(suiteName: AppGroup.identifier)
     }
@@ -66,6 +73,24 @@ enum PendingReminderActions {
 
     /// Return every queued dismissal and CLEAR the queue, so each pending action
     /// resolves exactly once. Non-UUID junk is dropped.
+    /// Record a "Stop reminding" tap for the next unlock. The OS alarms are already cancelled
+    /// by the caller; this is only the store half, which needs the key.
+    static func enqueueStopReminding(takeID: String) {
+        guard let defaults else { return }
+        var ids = Set(defaults.stringArray(forKey: stopRemindingKey) ?? [])
+        ids.insert(takeID)
+        defaults.set(Array(ids), forKey: stopRemindingKey)
+    }
+
+    /// Drain the "Stop reminding" queue. Ids only — no Take content ever enters app-group
+    /// defaults, same discipline as the dismiss queue.
+    static func drainStopReminding() -> [UUID] {
+        guard let defaults else { return [] }
+        let raw = defaults.stringArray(forKey: stopRemindingKey) ?? []
+        defaults.removeObject(forKey: stopRemindingKey)
+        return raw.compactMap(UUID.init(uuidString:))
+    }
+
     static func drainDismissed() -> [DismissedAction] {
         guard let defaults else { return [] }
         let raw = defaults.stringArray(forKey: dismissedKey) ?? []

@@ -197,6 +197,38 @@ struct CatchlightApp: App {
         }
     }
 
+    /// Commit anything the Share Extension queued while we were away (2026-08-11).
+    ///
+    /// The extension has no master key, so it can only queue (see `ShareViewController`); this
+    /// is where shared content actually becomes Takes. Unlike a widget capture, a share is NOT
+    /// opened in the editor: sharing three articles would mean three editors, and the user has
+    /// already decided to keep the content — it's saved, and it's on the timeline to edit.
+    ///
+    /// Three ordering rules, each load-bearing:
+    ///   • UNLOCKED ONLY. Saving needs the store, so a locked app leaves the queue untouched
+    ///     for the next open rather than dropping it.
+    ///   • CLEAR ONLY WHAT WAS WRITTEN. The count is captured first and cleared after, so a
+    ///     share arriving mid-drain isn't discarded unread, and a failed save doesn't lose
+    ///     content.
+    ///   • ENTITLEMENT FIRST, and the queue survives it. A lapsed user's shares stay queued
+    ///     behind the paywall instead of being silently binned — matching `drainPendingCapture`,
+    ///     which also refuses to capture but never destroys the request.
+    @MainActor
+    private func drainSharedCaptures() {
+        guard app.lockState == .unlocked else { return }
+        let queued = CaptureRouting.sharedQueue()
+        guard !queued.isEmpty else { return }
+        guard app.ensureEntitled() else { return }
+
+        for text in queued {
+            var take = app.dailiesVM.createTake()
+            take.blocks = [.textLine(text)]
+            take.normaliseActivityFloor()
+            app.dailiesVM.save(take)
+        }
+        CaptureRouting.clearSharedQueue(consumed: queued.count)
+    }
+
     /// Build the in-memory draft for a capture, shared by the unlocked (inline) and
     /// locked (zero-Face-ID) paths so they can't drift. nil for `.audio` (reserved
     /// until the recording engine ships). An Obie draft is pre-flagged; the store's
@@ -347,6 +379,10 @@ struct CatchlightApp: App {
                 if let bookmarkError = Wiring.checkCloudBookmarkHealth() {
                     app.reportBookmarkError(bookmarkError)
                 }
+                // Shared items land as saved Takes BEFORE the widget capture below, which may
+                // open an editor: saving runs a `reload()`, and doing that underneath an open
+                // editor is the kind of ordering that strands a draft.
+                drainSharedCaptures()
                 // An intent/Control/Shortcut foregrounds the app via this path;
                 // drain any queued capture (no-op if still locked — see below).
                 drainPendingCapture()
@@ -368,6 +404,9 @@ struct CatchlightApp: App {
                 // readable (keys cached) — they don't auto-extend, so opening the app is
                 // when we re-arm the next batch (owner 2026-06-21).
                 app.dailiesVM.refreshRecurringSchedules()
+                // Anything shared while locked now has a readable store to land in (2026-08-11).
+                // Before the widget capture, for the reload-under-an-open-editor reason above.
+                drainSharedCaptures()
                 // A capture queued by a widget/intent before unlock now drains into
                 // the blank (or pre-filled) editor (2026-06-23).
                 drainPendingCapture()

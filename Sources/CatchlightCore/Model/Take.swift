@@ -178,6 +178,47 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         blocks.map { $0.text }.joined(separator: "\n")
     }
 
+    /// `plainText`, but with COMPLETED check items left out — what a reminder should say
+    /// (owner 2026-08-11).
+    ///
+    /// The problem it solves: a repeating reminder on a task list read out the whole Take,
+    /// ticked items included, so a weekly list kept naming the shopping you already did. You
+    /// couldn't settle it either — marking the reminder done settles the WHOLE Take, which is
+    /// wrong while other items are outstanding.
+    ///
+    /// Order is preserved (blocks interleave freely under D-035, so collecting the items to the
+    /// end would reshuffle the Take). Each maximal RUN of consecutive outstanding items collapses
+    /// to one comma-joined line, which is what makes the common "prose, then a list" shape read
+    /// as a sentence in a banner instead of a run-on. Prose blocks are untouched — a completed
+    /// item is the only thing ever dropped.
+    ///
+    /// Falls back to `plainText` when nothing survives (a Take that is ONLY a checklist, all
+    /// ticked), so a notification title can never come out empty.
+    public var outstandingText: String {
+        var lines: [String] = []
+        var run: [String] = []
+
+        func flushRun() {
+            guard !run.isEmpty else { return }
+            lines.append(run.joined(separator: ", "))
+            run.removeAll()
+        }
+
+        for block in blocks {
+            switch block {
+            case .check(let item):
+                if !item.isComplete { run.append(item.text) }
+            case .text(let textBlock):
+                flushRun()
+                lines.append(textBlock.text)
+            }
+        }
+        flushRun()
+
+        let joined = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        return joined.isEmpty ? plainText : joined
+    }
+
     /// `(done, total)` for the card's "0 of 1 / 3 of 5 completed" progress marker —
     /// shown for ANY Task with 1+ check items (owner 2026-06-19: a single-item Task
     /// should still read "0 of 1 completed"; previously one-item Tasks were silent).

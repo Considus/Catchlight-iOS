@@ -87,5 +87,91 @@ final class DailiesViewModelMutationTests: XCTestCase {
         XCTAssertTrue(updated.isMarkedDone, "the Take is now done")
         XCTAssertEqual(vm.takes.map(\.id), [task.id, other.id], "position preserved, no re-sort")
     }
+
+    // MARK: - "All tasks done. Stop reminding?" (owner 2026-08-11)
+
+    private func reminderTake(prose: String?, items: [(String, Bool)],
+                              recurrence: TimeReminder.Recurrence = .none) -> Take {
+        let id = UUID()
+        var blocks: [TakeBlock] = []
+        if let prose { blocks.append(.textLine(prose)) }
+        blocks += items.map { .checkItem($0.0, isComplete: $0.1) }
+        return Take(id: id, blocks: blocks,
+                    timeReminder: TimeReminder(scheduledDate: Date().addingTimeInterval(3600),
+                                               notificationIdentifier: id.uuidString,
+                                               recurrence: recurrence))
+    }
+
+    func testPrompt_raisedWhenLastItemTicked_onATakeWithANote() throws {
+        let take = reminderTake(prose: "Ring the surveyor back",
+                                items: [("find the report", true), ("scan it", false)])
+        let vm = try makeVM([take])
+        XCTAssertNil(vm.tasksCompletedTakeID)
+
+        var done = take
+        done.setAllItemsComplete(true)
+        vm.save(done)
+        XCTAssertEqual(vm.tasksCompletedTakeID, take.id)
+    }
+
+    /// A TRANSITION, not a standing condition — otherwise every later save of an
+    /// already-finished Take would re-raise the prompt.
+    func testPrompt_notRaisedAgainOnASecondSaveOfAFinishedTake() throws {
+        var take = reminderTake(prose: "Ring the surveyor back", items: [("scan it", false)])
+        let vm = try makeVM([take])
+        take.setAllItemsComplete(true)
+        vm.save(take)
+        vm.clearTasksCompletedNotice()
+
+        take.isImportant = true          // some later, unrelated edit
+        vm.save(take)
+        XCTAssertNil(vm.tasksCompletedTakeID)
+    }
+
+    /// A one-shot on a PURE checklist is already auto-skipped by the scheduler, so asking
+    /// about a reminder that will never sound again would be noise.
+    func testPrompt_notRaisedForAPureChecklistOneShot() throws {
+        let take = reminderTake(prose: nil, items: [("Milk", false)])
+        let vm = try makeVM([take])
+        var done = take
+        done.setAllItemsComplete(true)
+        vm.save(done)
+        XCTAssertNil(vm.tasksCompletedTakeID)
+    }
+
+    /// …but the same pure checklist REPEATING still fires forever, so the prompt is exactly
+    /// where the missing lever is.
+    func testPrompt_raisedForAPureChecklistRepeating() throws {
+        let take = reminderTake(prose: nil, items: [("Milk", false)], recurrence: .weekly)
+        let vm = try makeVM([take])
+        var done = take
+        done.setAllItemsComplete(true)
+        vm.save(done)
+        XCTAssertEqual(vm.tasksCompletedTakeID, take.id)
+    }
+
+    func testPrompt_notRaisedWhenThereIsNoReminder() throws {
+        let take = Take(blocks: [.textLine("shopping"), .checkItem("Milk", isComplete: false)])
+        let vm = try makeVM([take])
+        var done = take
+        done.setAllItemsComplete(true)
+        vm.save(done)
+        XCTAssertNil(vm.tasksCompletedTakeID)
+    }
+
+    func testStopReminding_turnsTheAlarmOff_andKeepsTheTakeAndItsDate() throws {
+        let take = reminderTake(prose: "Ring the surveyor back",
+                                items: [("scan it", false)], recurrence: .weekly)
+        let vm = try makeVM([take])
+        var done = take
+        done.setAllItemsComplete(true)
+        vm.save(done)
+
+        vm.stopRemindingForCompletedTake()
+        let stored = try XCTUnwrap(vm.store.take(id: take.id))
+        XCTAssertEqual(stored.timeReminder?.alarmEnabled, false, "the alarm is off")
+        XCTAssertNotNil(stored.timeReminder, "but the reminder and its date survive")
+        XCTAssertNil(vm.tasksCompletedTakeID)
+    }
 }
 #endif

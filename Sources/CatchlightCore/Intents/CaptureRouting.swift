@@ -120,4 +120,59 @@ public enum CaptureRouting {
         defaults?.removeObject(forKey: pendingModeKey)
         defaults?.removeObject(forKey: pendingTextKey)
     }
+
+    // MARK: - Shared-item queue (Share Extension, 2026-08-11)
+
+    private static let sharedQueueKey = "capture.sharedQueue"
+
+    /// How many shared items the queue holds before it starts dropping the OLDEST.
+    ///
+    /// The queue only drains when the app is opened AND unlocked, so an unbounded one would
+    /// grow without limit on a device where Catchlight isn't opened for a week. 50 is far
+    /// beyond any realistic share-then-open gap while still bounding the App Group defaults —
+    /// and dropping the oldest, not the newest, keeps the share the user just made.
+    public static let sharedQueueCap = 50
+
+    /// Append a shared item for the app to turn into a Take on next open.
+    ///
+    /// A QUEUE, deliberately, where the widget hand-off above is a single slot. A launcher
+    /// widget is idempotent — tapping it twice should not make two blank Takes, so last-wins is
+    /// correct there. Sharing is the opposite: each share is a distinct piece of content the
+    /// user expects to keep, and share-three-articles-then-open-the-app is ordinary behaviour.
+    /// Reusing `setPending` would have silently kept only the last one.
+    ///
+    /// Runs in the SHARE EXTENSION's process, so it never touches the encrypted store: the
+    /// master key is `.userPresence`-gated and only materialises in the foreground app, which
+    /// is why the extension queues rather than saves.
+    public static func enqueueShared(_ text: String,
+                                     defaults: UserDefaults? = UserDefaults(suiteName: appGroupSuite)) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let defaults, !trimmed.isEmpty else { return }
+        var queue = defaults.stringArray(forKey: sharedQueueKey) ?? []
+        queue.append(trimmed)
+        if queue.count > sharedQueueCap { queue.removeFirst(queue.count - sharedQueueCap) }
+        defaults.set(queue, forKey: sharedQueueKey)
+    }
+
+    /// Read the queued shared items WITHOUT consuming them. Separated from the clear below so
+    /// the app can drop the queue only once the Takes are safely written — a crash or a failed
+    /// save between the two must not lose the user's content.
+    public static func sharedQueue(defaults: UserDefaults? = UserDefaults(suiteName: appGroupSuite)) -> [String] {
+        defaults?.stringArray(forKey: sharedQueueKey) ?? []
+    }
+
+    /// Drop the shared items the app has now committed. Takes the COUNT it consumed rather than
+    /// clearing wholesale, so a share that arrived while the app was mid-drain isn't discarded
+    /// unread.
+    public static func clearSharedQueue(consumed: Int,
+                                        defaults: UserDefaults? = UserDefaults(suiteName: appGroupSuite)) {
+        guard let defaults, consumed > 0 else { return }
+        var queue = defaults.stringArray(forKey: sharedQueueKey) ?? []
+        queue.removeFirst(min(consumed, queue.count))
+        if queue.isEmpty {
+            defaults.removeObject(forKey: sharedQueueKey)
+        } else {
+            defaults.set(queue, forKey: sharedQueueKey)
+        }
+    }
 }

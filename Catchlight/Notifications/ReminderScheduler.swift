@@ -92,6 +92,20 @@ public final class ReminderScheduler {
     }
 
     public static let categoryIdentifier = "TAKE_REMINDER"
+    /// Category for a REPEATING reminder (owner 2026-08-11). Identical to the one above plus a
+    /// "Stop reminding" action that ends the whole series.
+    ///
+    /// A separate category, rather than adding the action everywhere, so each control means
+    /// exactly ONE thing. On a one-shot, "Dismiss" already turns the alarm off, so a second
+    /// button doing the same job would be noise. On a repeating reminder "Dismiss" is
+    /// deliberately this-occurrence-only (owner 2026-06-22) and NOTHING ends the series — that
+    /// is the missing lever this fills.
+    public static let repeatingCategoryIdentifier = "TAKE_REMINDER_REPEATING"
+
+    /// The category a Take's reminder notification should carry.
+    static func category(for take: Take) -> String {
+        take.timeReminder?.repeats == true ? repeatingCategoryIdentifier : categoryIdentifier
+    }
     /// `userInfo` key carrying the reminder's ORIGINAL "when" text across snoozes, so a
     /// snoozed re-nudge can read "Snoozed — Originally due …" (owner 2026-06-21).
     static let dueTextKey = "ckDueText"
@@ -221,6 +235,43 @@ public final class ReminderScheduler {
         (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
+    /// The notification TITLE for a Take — the one place its content crosses the encrypted
+    /// boundary, so every content path (calendar occurrence, geofence, follow-up) goes through
+    /// here and can't drift.
+    ///
+    /// Uses `outstandingText`, NOT `plainText`: a repeating reminder on a task list used to read
+    /// out items the user had already ticked, with no way to stop it while other items were still
+    /// outstanding (owner 2026-08-11). Completed items are dropped; prose is untouched. Still
+    /// capped at 100 characters — a banner truncates anyway, and the cap bounds what leaves the
+    /// boundary.
+    static func notificationTitle(for take: Take) -> String {
+        String(take.outstandingText.prefix(100))
+    }
+
+    /// Whether this reminder's occurrence should be SKIPPED because there is genuinely nothing
+    /// left to say (owner 2026-08-11, narrowed the same day).
+    ///
+    /// THREE conditions, and each one excludes a real case:
+    ///
+    ///   • **Not repeating.** `advanceRecurringOccurrence` rolls a repeating reminder forward and
+    ///     clears `isDone`, but it does NOT untick the check items — so skipping a repeating
+    ///     series on "all ticked" would silence it PERMANENTLY, with no way back except unticking
+    ///     by hand. The same silent-alarm trap `toggleMarkedDoneAdvancingRecurring` exists to
+    ///     avoid.
+    ///   • **Every check item ticked.** The original point.
+    ///   • **No PROSE blocks.** The owner's correction, and the first cut got this wrong: it
+    ///     skipped on `isTask && isComplete` alone, which would also silence a Take carrying a
+    ///     NOTE plus subtasks. There the note is the thing being reminded about and finishing the
+    ///     subtasks says nothing about whether it still matters. Only a Take that is nothing but
+    ///     a finished checklist has nothing left to nudge about.
+    ///
+    /// Everything else fires. When a still-relevant reminder should stop, that is the user's
+    /// call, not this function's — see the "Stop reminding" notification action.
+    static func hasNothingOutstanding(_ take: Take, reminder: TimeReminder) -> Bool {
+        guard !reminder.repeats, take.isTask, take.isComplete else { return false }
+        return take.blocks.allSatisfy(\.isCheck)
+    }
+
     /// Localised "when" line for the notification subtitle — e.g. "Today at 3:00 PM" /
     /// "Tomorrow at 09:00" / "14 Jul 2026 at 3:00 PM", following the user's Region and
     /// 12/24-hour preference (style-based formatter, never a hardcoded pattern). An
@@ -266,6 +317,10 @@ public final class ReminderScheduler {
         // enabled; a silent (planner-only) reminder schedules nothing. A reminder marked
         // done also schedules nothing (a future reminder completed early never fires).
         guard reminder.alarmEnabled, !reminder.isDone else { return }
+        // Repeated here, not only in `plannedAlarms`: the all-day CATCH-UP below fires on an
+        // empty alarm plan, so without this guard a fully-ticked one-shot all-day reminder
+        // would skip its calendar alarm and then nudge anyway through the catch-up path.
+        guard !Self.hasNothingOutstanding(take, reminder: reminder) else { return }
 
         let alarms = plannedAlarms(for: take, now: now())
         if !alarms.isEmpty {
@@ -313,6 +368,10 @@ public final class ReminderScheduler {
         // A place marked DONE schedules nothing either (2026-07-01, mirrors the time
         // reminder's `!isDone` guard — a settled "where" must not re-arm on rebuild).
         guard loc.alarmEnabled, !loc.isDone else { return }
+        // Nothing outstanding to nudge about (owner 2026-08-11). No repeating-series caveat
+        // here: `UNLocationNotificationTrigger` is registered with `repeats: false`, so a
+        // geofence is always a one-shot and skipping it can't silence a series.
+        guard !(take.isTask && take.isComplete) else { return }
         let identifier = Self.locationIdentifier(base: take.id.uuidString)
         let radius = max(Self.minGeofenceRadius, loc.radiusMetres)
         let coordinate = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
@@ -332,10 +391,14 @@ public final class ReminderScheduler {
     /// single boundary-crossing as time reminders), with a "When you arrive/leave …" subtitle.
     private func locationContent(for take: Take, loc: LocationTrigger) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = String(take.plainText.prefix(100))
+        content.title = Self.notificationTitle(for: take)
         let place = (loc.locationName?.isEmpty == false) ? loc.locationName! : "your location"
         content.subtitle = loc.triggerOnArrival ? "When you arrive at \(place)" : "When you leave \(place)"
         content.sound = .default
+        // ALWAYS the plain category, never `category(for:)`. A geofence is registered with
+        // `repeats: false` so it can't be a series — and a Take may carry BOTH a repeating
+        // "when" and a "where", where `category(for:)` would put "Stop reminding" on the
+        // PLACE notification and silence the time reminder instead.
         content.categoryIdentifier = Self.categoryIdentifier
         content.interruptionLevel = .timeSensitive
         return content
@@ -391,6 +454,9 @@ public final class ReminderScheduler {
     /// here — it is a single-save-only extra; see `scheduleReminder`.)
     private func plannedAlarms(for take: Take, now: Date) -> [PlannedAlarm] {
         guard let reminder = take.timeReminder, reminder.alarmEnabled, !reminder.isDone else { return [] }
+        // Nothing left to nudge about — a one-shot reminder on a fully-ticked list (see
+        // `hasNothingOutstanding` for why repeating reminders are excluded).
+        guard !Self.hasNothingOutstanding(take, reminder: reminder) else { return [] }
 
         if reminder.repeats {
             // Anchor an all-day series at the all-day fire hour so every occurrence lands at
@@ -434,10 +500,12 @@ public final class ReminderScheduler {
     /// boundary). Time-Sensitive so an explicit reminder breaks through Focus / DND.
     private func makeContent(for take: Take, occurrence: Date, isAllDay: Bool) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = String(take.plainText.prefix(100))
+        content.title = Self.notificationTitle(for: take)
         content.subtitle = Self.subtitle(for: occurrence, isAllDay: isAllDay)
         content.sound = .default
-        content.categoryIdentifier = Self.categoryIdentifier
+        // Repeating reminders get the category carrying "Stop reminding" (owner 2026-08-11) —
+        // the only way to end a series, since Dismiss is this-occurrence-only.
+        content.categoryIdentifier = Self.category(for: take)
         // Group every notification for THIS reminder (all recurring-window occurrences,
         // its snooze, its catch-up) under one thread keyed on the Take, so iOS STACKS
         // them in Notification Centre instead of showing each delivered occurrence as a
@@ -476,10 +544,10 @@ public final class ReminderScheduler {
     /// reminder's thread and snoozable/dismissable like the original.
     private func followUpContent(for take: Take) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = String(take.plainText.prefix(100))
+        content.title = Self.notificationTitle(for: take)
         content.subtitle = "Reminder — still not done"
         content.sound = .default
-        content.categoryIdentifier = Self.categoryIdentifier
+        content.categoryIdentifier = Self.category(for: take)
         content.threadIdentifier = take.id.uuidString
         content.userInfo[Self.dueTextKey] = content.subtitle
         content.interruptionLevel = .timeSensitive
@@ -567,14 +635,19 @@ public final class ReminderScheduler {
     /// as "Snoozed — Originally due …" and carried forward unchanged so it still reads as
     /// the original due time after repeated snoozes (owner 2026-06-21). The re-nudge's
     /// own delivery time is already in the banner header, so echoing it was redundant.
-    public func scheduleSnooze(title: String, identifier: String, fireAt: Date, dueText: String) {
+    /// - Parameter categoryIdentifier: the category the FIRED notification carried, passed
+    ///   straight through (owner 2026-08-11). Snooze never touches the store, so there is no
+    ///   Take here to re-derive it from — and without this a snoozed repeating reminder would
+    ///   quietly lose its "Stop reminding" action on the re-nudge.
+    public func scheduleSnooze(title: String, identifier: String, fireAt: Date, dueText: String,
+                               categoryIdentifier: String = ReminderScheduler.categoryIdentifier) {
         let interval = fireAt.timeIntervalSince(now())
         guard interval > 0 else { return }
         let content = UNMutableNotificationContent()
         content.title = title
         content.subtitle = dueText.isEmpty ? "Snoozed" : "Snoozed — Originally due \(dueText)"
         content.sound = .default
-        content.categoryIdentifier = Self.categoryIdentifier   // snoozed nudge is snoozable again
+        content.categoryIdentifier = categoryIdentifier        // snoozed nudge keeps the same actions
         // Same thread as the reminder's other notifications so the snooze stacks with
         // them (the id is `<uuid>#snooze`; take the base before the `#`).
         content.threadIdentifier = identifier.split(separator: "#", maxSplits: 1).first.map(String.init) ?? identifier

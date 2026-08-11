@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  PrivacyInfo.xcprivacy — privacy manifest for the CatchlightShare extension.
+  Required PER BUNDLE since May 2024. Missing it raises ITMS-91053 against the
+  .appex at upload even when the app bundle's own manifest is present (the
+  widgets extension hit exactly that).
+
+  Same honest position as the app and the widgets: no tracking, no tracking
+  domains, no data collection. The only required-reason API is the App-Group
+  UserDefaults hand-off that queues the shared item — reason 1C8F.1 ("read/write
+  info accessible to the app and extensions in the same App Group"). It never
+  touches the encrypted store, the keychain, or file timestamps: it has no key.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>1C8F.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
