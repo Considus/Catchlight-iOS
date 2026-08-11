@@ -115,10 +115,27 @@ final class DailiesViewModel {
                     if $0.createdAt != $1.createdAt { return $0.createdAt > $1.createdAt }
                     return $0.id.uuidString > $1.id.uuidString
                 }
+            pruneExpandedTakeIDs(live: Set(all.map(\.id)))
             lastError = nil
         } catch {
             lastError = "Couldn't load your Takes."
         }
+    }
+
+    /// Forget "Expand Take" overrides for Takes that no longer exist (owner 2026-08-11).
+    ///
+    /// The overrides live in UserDefaults keyed by Take id, so without this a delete would
+    /// strand its id there forever and a long-lived device would accumulate ghosts — and a
+    /// recycled id (a restore from an export) would come back mysteriously expanded. Runs on
+    /// every reload, which is cheap: it's a set intersection over a handful of ids, and it
+    /// writes ONLY when something actually changed, so it can't churn the defaults or thrash
+    /// the views observing that key.
+    private func pruneExpandedTakeIDs(live: Set<UUID>) {
+        let key = SettingsViewModel.ExpandedTakes.defaultsKey
+        let raw = UserDefaults.standard.string(forKey: key) ?? ""
+        guard !raw.isEmpty,
+              let pruned = SettingsViewModel.ExpandedTakes.pruned(raw, keeping: live) else { return }
+        UserDefaults.standard.set(pruned, forKey: key)
     }
 
     /// True when the store holds nothing at all — drives the first-launch empty state.

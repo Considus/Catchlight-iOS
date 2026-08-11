@@ -363,4 +363,52 @@ final class TakeModelTests: XCTestCase {
         XCTAssertTrue(take.isNote)
         XCTAssertTrue(take.isObie)
     }
+
+    // MARK: - outstandingText (owner 2026-08-11)
+
+    func testOutstandingText_dropsCompletedItemsOnly() {
+        let take = Take(blocks: [
+            .textLine("Weekly shop"),
+            .checkItem("Milk", isComplete: true),
+            .checkItem("Bread", isComplete: false),
+            .checkItem("Coffee", isComplete: false)
+        ])
+        XCTAssertEqual(take.outstandingText, "Weekly shop\nBread, Coffee")
+        XCTAssertEqual(take.plainText, "Weekly shop\nMilk\nBread\nCoffee",
+                       "plainText is untouched — the timeline still shows everything")
+    }
+
+    func testOutstandingText_preservesInterleavedOrder() {
+        let take = Take(blocks: [
+            .checkItem("Bread", isComplete: false),
+            .textLine("then the chemist"),
+            .checkItem("Milk", isComplete: true),
+            .checkItem("Coffee", isComplete: false)
+        ])
+        XCTAssertEqual(take.outstandingText, "Bread\nthen the chemist\nCoffee")
+    }
+
+    func testOutstandingText_noCheckItems_equalsPlainText() {
+        let take = Take(blocks: [.textLine("call the framer"), .textLine("about the mount")])
+        XCTAssertEqual(take.outstandingText, take.plainText)
+    }
+
+    func testOutstandingText_allTickedWithProse_keepsTheProse() {
+        let take = Take(blocks: [
+            .textLine("Weekly shop"),
+            .checkItem("Milk", isComplete: true)
+        ])
+        XCTAssertEqual(take.outstandingText, "Weekly shop")
+    }
+
+    /// A Take that is ONLY a fully-ticked checklist has nothing left to say, so it falls back
+    /// to `plainText` — a notification title must never come out empty.
+    func testOutstandingText_allTickedNoProse_fallsBackToPlainText() {
+        let take = Take(blocks: [
+            .checkItem("Milk", isComplete: true),
+            .checkItem("Bread", isComplete: true)
+        ])
+        XCTAssertEqual(take.outstandingText, take.plainText)
+        XCTAssertFalse(take.outstandingText.isEmpty)
+    }
 }

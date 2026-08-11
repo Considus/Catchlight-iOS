@@ -80,6 +80,17 @@ struct TakeEditCard: View {
     /// ON the "Created on" line, not a line above it.
     static let editorLineLead: CGFloat = 4
 
+    /// The card's own chrome above and below the `BlockEditor` frame: the 24pt top pad (which
+    /// clears the overlapping Iris) + the 14pt bottom pad, PLUS the "Created on" stamp row when
+    /// the setting shows it (11pt text + its 6pt top pad ≈ 20).
+    ///
+    /// A host that computes a grow-up cap must discount THIS, not a guess: `KeyboardTakeEditor`
+    /// carried a flat 38 — exactly the stamp-OFF value — so with the stamp on (Editor or Always,
+    /// and Always is the busier default) the card came out 20pt taller than its own cap intended
+    /// and its top overshot the limit by that much. Half of the "Iris behind the fade" report
+    /// (owner 2026-08-11); `irisReserve` is the other half.
+    static func chrome(showsStamp: Bool) -> CGFloat { showsStamp ? 58 : 38 }
+
     /// The content height the frame should honour — the floor while short, the real content after.
     private var effectiveContent: CGFloat { max(editorContentHeight, minContent) }
 
@@ -209,6 +220,14 @@ struct KeyboardTakeEditor: View {
 
     @Environment(\.deviceTopInset) private var deviceTopInset
 
+    /// The "Creation date" setting — read here for the SAME reason `TakeEditCard` reads it: the
+    /// stamp row is part of the card's height, so the grow-up cap has to know whether it's there.
+    @AppStorage(SettingsViewModel.CreationStamp.defaultsKey)
+    private var creationStampRaw: String = SettingsViewModel.CreationStamp.default.rawValue
+    private var showsStamp: Bool {
+        (SettingsViewModel.CreationStamp(rawValue: creationStampRaw) ?? .default) != .off
+    }
+
     /// The keyboard's top edge in screen coords, INCLUDING its docked toolbar.
     @State private var keyboardTopY: CGFloat = .greatestFiniteMagnitude
     /// The card's last reported RAW content height — drives the bottom drop.
@@ -223,8 +242,6 @@ struct KeyboardTakeEditor: View {
     private static let descentFloor: CGFloat = 66
     /// Keyboard + toolbar estimate, used only before the real keyboard frame arrives.
     private static let keyboardReserveFallback: CGFloat = 400
-    /// The card's own top+bottom chrome, discounted from the growth allowance.
-    private static let cardChrome: CGFloat = 38
     /// Inert while `descentFloor` dominates (the floor forces a taller frame regardless), but kept
     /// at the value `DailiesView` was device-validated with rather than quietly re-tuned.
     private static let minEditorHeight: CGFloat = 44
@@ -239,15 +256,28 @@ struct KeyboardTakeEditor: View {
         return span * (1 - phase)
     }
 
+    /// How much room above the card's TOP EDGE the Iris needs. It straddles that edge — `TakeEditCard`
+    /// offsets it by `-circleDiameter / 2`, so half the Iris is drawn ABOVE the card and the card's
+    /// top is NOT the topmost pixel. The cap below treated it as if it were, so at full extension the
+    /// card stopped at the limit and the Iris carried on into the pinned heading.
+    ///
+    /// That heading is drawn AFTER this card in `DailiesView`'s ZStack and takes taps across its whole
+    /// frame (`contentShape` + `timelineBackgroundTap`), so an overlapped Iris isn't merely hidden
+    /// under the fade — it's dead: a tap meant for the Focus ring commits the edit instead. Hence a
+    /// hard reserve rather than a cosmetic nudge (owner 2026-08-11).
+    private var irisReserve: CGFloat {
+        showsIris ? CatchlightLayout.circleDiameter / 2 : 0
+    }
+
     /// The grow-UP cap: how tall the card may get before its TOP reaches the heading, past which
     /// `BlockEditor` scrolls internally.
     private var maxHeight: CGFloat {
-        let topLimit = deviceTopInset + CatchlightLayout.headingClearance + 12
+        let topLimit = deviceTopInset + CatchlightLayout.headingClearance + 12 + irisReserve
         // Use the live keyboard top; fall back to the static estimate before it settles.
         let kbTop = keyboardTopY < UIScreen.main.bounds.height
             ? keyboardTopY
             : UIScreen.main.bounds.height - Self.keyboardReserveFallback
-        return max(160, kbTop - topLimit - Self.cardChrome)
+        return max(160, kbTop - topLimit - TakeEditCard.chrome(showsStamp: showsStamp))
     }
 
     /// Bottom-anchored, riding the system keyboard. NO custom keyboard animation — it rides in sync

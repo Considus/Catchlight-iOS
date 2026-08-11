@@ -247,6 +247,8 @@ struct TimelineReadCell: View {
     /// "Discard changes" — the new timeline has no edit-in-place yet, M4).
     @ViewBuilder
     private var menuItems: some View {
+        // Device-local view preference — owns itself, no callback (see ExpandTakeMenuButton).
+        ExpandTakeMenuButton(take: take)
         if take.canBeMarkedDone {
             Button {
                 onToggleDone(take)

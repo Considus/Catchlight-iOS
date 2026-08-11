@@ -641,6 +641,52 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             delegate?.blockEditorReturnInCheckRow(self, blockID: id)
             return false
         }
+        // Paste normalisation (owner 2026-08-11): "pasting text on one line below another
+        // adds a line break that isn't needed".
+        //
+        // The editor never added that break — this delegate returned true unchanged and
+        // `textViewDidChange` copies `tv.text` verbatim. It rides in ON THE CLIPBOARD: copying
+        // a line out of Safari, Mail or Notes usually carries its trailing newline, which lands
+        // here as a real empty line. So the fix is at the boundary, on the way in.
+        //
+        // INTERNAL newlines are untouched — a deliberate multi-paragraph paste keeps its shape.
+        // Only what trails is dropped.
+        let normalised = Self.normalisedPaste(text)
+        if normalised != text {
+            guard let textRange = tv.textRange(for: range) else { return false }
+            tv.replace(textRange, withText: normalised)
+            return false   // we performed the edit ourselves
+        }
         return true
+    }
+
+    /// Trim newlines from the END of pasted text, leaving everything else exactly as it was.
+    ///
+    /// Gated on `count > 1` so it can only ever act on a PASTE (or dictation insert), never on
+    /// a single keystroke: pressing Return in a prose row inserts "\n" on its own and must keep
+    /// working — stripping that would make the Return key dead.
+    ///
+    /// `nonisolated static` + pure so it is testable without a view controller, the same reason
+    /// `reorderTarget` above is.
+    nonisolated static func normalisedPaste(_ text: String) -> String {
+        guard text.count > 1 else { return text }
+        var out = text
+        // `isNewline`, NOT a comparison against "\n" and "\r" separately. Swift treats CRLF
+        // as ONE Character (an extended grapheme cluster equal to "\r\n"), so testing the
+        // two individually silently misses every Windows-origin paste — which is a large
+        // share of copied web and email content. Caught by
+        // `PasteNormalisationTests.testTrailingCarriageReturn_isTrimmed`.
+        while let last = out.last, last.isNewline { out.removeLast() }
+        return out
+    }
+}
+
+private extension UITextView {
+    /// `UITextRange` for an `NSRange` — needed because `replace(_:withText:)` works in
+    /// UITextPosition space while the delegate reports NSRange.
+    func textRange(for range: NSRange) -> UITextRange? {
+        guard let start = position(from: beginningOfDocument, offset: range.location),
+              let end = position(from: start, offset: range.length) else { return nil }
+        return textRange(from: start, to: end)
     }
 }

@@ -221,6 +221,32 @@ public final class ReminderScheduler {
         (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
+    /// The notification TITLE for a Take — the one place its content crosses the encrypted
+    /// boundary, so every content path (calendar occurrence, geofence, follow-up) goes through
+    /// here and can't drift.
+    ///
+    /// Uses `outstandingText`, NOT `plainText`: a repeating reminder on a task list used to read
+    /// out items the user had already ticked, with no way to stop it while other items were still
+    /// outstanding (owner 2026-08-11). Completed items are dropped; prose is untouched. Still
+    /// capped at 100 characters — a banner truncates anyway, and the cap bounds what leaves the
+    /// boundary.
+    static func notificationTitle(for take: Take) -> String {
+        String(take.outstandingText.prefix(100))
+    }
+
+    /// Whether this reminder's occurrence should be SKIPPED because the Take's checklist is
+    /// entirely ticked (owner 2026-08-11) — there is nothing outstanding left to nudge about.
+    ///
+    /// Deliberately restricted to NON-repeating reminders. `advanceRecurringOccurrence` rolls a
+    /// repeating reminder forward and clears `isDone`, but it does NOT untick the check items — so
+    /// skipping a repeating series on "all ticked" would silence it PERMANENTLY, with no way back
+    /// except unticking by hand. That is the same silent-alarm trap
+    /// `toggleMarkedDoneAdvancingRecurring` was written to avoid; a repeating reminder therefore
+    /// still fires, and simply names no items (its title falls back to the Take's prose).
+    static func hasNothingOutstanding(_ take: Take, reminder: TimeReminder) -> Bool {
+        !reminder.repeats && take.isTask && take.isComplete
+    }
+
     /// Localised "when" line for the notification subtitle — e.g. "Today at 3:00 PM" /
     /// "Tomorrow at 09:00" / "14 Jul 2026 at 3:00 PM", following the user's Region and
     /// 12/24-hour preference (style-based formatter, never a hardcoded pattern). An
@@ -266,6 +292,10 @@ public final class ReminderScheduler {
         // enabled; a silent (planner-only) reminder schedules nothing. A reminder marked
         // done also schedules nothing (a future reminder completed early never fires).
         guard reminder.alarmEnabled, !reminder.isDone else { return }
+        // Repeated here, not only in `plannedAlarms`: the all-day CATCH-UP below fires on an
+        // empty alarm plan, so without this guard a fully-ticked one-shot all-day reminder
+        // would skip its calendar alarm and then nudge anyway through the catch-up path.
+        guard !Self.hasNothingOutstanding(take, reminder: reminder) else { return }
 
         let alarms = plannedAlarms(for: take, now: now())
         if !alarms.isEmpty {
@@ -313,6 +343,10 @@ public final class ReminderScheduler {
         // A place marked DONE schedules nothing either (2026-07-01, mirrors the time
         // reminder's `!isDone` guard — a settled "where" must not re-arm on rebuild).
         guard loc.alarmEnabled, !loc.isDone else { return }
+        // Nothing outstanding to nudge about (owner 2026-08-11). No repeating-series caveat
+        // here: `UNLocationNotificationTrigger` is registered with `repeats: false`, so a
+        // geofence is always a one-shot and skipping it can't silence a series.
+        guard !(take.isTask && take.isComplete) else { return }
         let identifier = Self.locationIdentifier(base: take.id.uuidString)
         let radius = max(Self.minGeofenceRadius, loc.radiusMetres)
         let coordinate = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
@@ -332,7 +366,7 @@ public final class ReminderScheduler {
     /// single boundary-crossing as time reminders), with a "When you arrive/leave …" subtitle.
     private func locationContent(for take: Take, loc: LocationTrigger) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = String(take.plainText.prefix(100))
+        content.title = Self.notificationTitle(for: take)
         let place = (loc.locationName?.isEmpty == false) ? loc.locationName! : "your location"
         content.subtitle = loc.triggerOnArrival ? "When you arrive at \(place)" : "When you leave \(place)"
         content.sound = .default
@@ -391,6 +425,9 @@ public final class ReminderScheduler {
     /// here — it is a single-save-only extra; see `scheduleReminder`.)
     private func plannedAlarms(for take: Take, now: Date) -> [PlannedAlarm] {
         guard let reminder = take.timeReminder, reminder.alarmEnabled, !reminder.isDone else { return [] }
+        // Nothing left to nudge about — a one-shot reminder on a fully-ticked list (see
+        // `hasNothingOutstanding` for why repeating reminders are excluded).
+        guard !Self.hasNothingOutstanding(take, reminder: reminder) else { return [] }
 
         if reminder.repeats {
             // Anchor an all-day series at the all-day fire hour so every occurrence lands at
@@ -434,7 +471,7 @@ public final class ReminderScheduler {
     /// boundary). Time-Sensitive so an explicit reminder breaks through Focus / DND.
     private func makeContent(for take: Take, occurrence: Date, isAllDay: Bool) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = String(take.plainText.prefix(100))
+        content.title = Self.notificationTitle(for: take)
         content.subtitle = Self.subtitle(for: occurrence, isAllDay: isAllDay)
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier
@@ -476,7 +513,7 @@ public final class ReminderScheduler {
     /// reminder's thread and snoozable/dismissable like the original.
     private func followUpContent(for take: Take) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = String(take.plainText.prefix(100))
+        content.title = Self.notificationTitle(for: take)
         content.subtitle = "Reminder — still not done"
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier
