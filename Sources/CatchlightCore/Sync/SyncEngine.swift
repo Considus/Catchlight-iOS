@@ -34,6 +34,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 public struct SyncReport: Equatable, Sendable {
     public var applied: [UUID] = []          // remote versions written to local
@@ -75,6 +76,9 @@ public final class SyncEngine {
     private let cloud: CloudFolder?
     private let crypto: TakeCrypto
     private let signer: ManifestSigner
+    /// Seals the manifest BODY (v3, owner 2026-08-11). Distinct from the signer's HMAC key —
+    /// separate HKDF info strings, so authentication and confidentiality never share material.
+    private let manifestKey: SymmetricKey
     private let schemaVersion: Int
     private let appVersion: String
     private let deviceId: UUID
@@ -97,6 +101,7 @@ public final class SyncEngine {
         self.cloud = cloud
         self.crypto = TakeCrypto(keys: keys)
         self.signer = ManifestSigner(keys: keys)
+        self.manifestKey = keys.manifestEncryptionKey()
         self.schemaVersion = schemaVersion
         self.appVersion = appVersion
         self.deviceId = deviceId
@@ -132,23 +137,14 @@ public final class SyncEngine {
         // readable, which other devices then interpreted as deletions.)
         var entries: [UUID: ManifestEntry] = [:]
         var mergedTombstones: [UUID: ManifestTombstone] = [:]
-        if let data = try cloud.read(Manifest.fileName) {
-            // FAIL CLOSED on an existing-but-bad manifest (2026-06-10): pushing
-            // over an unverifiable or future-version manifest would silently
-            // rebuild with empty carry-forward — dropping other devices'
-            // not-yet-pulled entries and EVERY tombstone (resurrection), or
-            // destructively downgrading a newer client's format. A genuinely
-            // malformed manifest (unparseable JSON) gets the same treatment as
-            // a bad signature: stop and surface, never overwrite.
-            guard let prev = try? Manifest.parse(data) else {
-                throw SyncError.manifestSignatureInvalid
-            }
-            guard Manifest.supportedVersions.contains(prev.version) else {
-                throw SyncError.unsupportedManifestVersion(prev.version)
-            }
-            guard try signer.verify(prev) else {
-                throw SyncError.manifestSignatureInvalid
-            }
+        // FAIL CLOSED on an existing-but-bad manifest (2026-06-10): pushing over an
+        // unverifiable or future-version manifest would silently rebuild with empty
+        // carry-forward — dropping other devices' not-yet-pulled entries and EVERY tombstone
+        // (resurrection), or destructively downgrading a newer client's format. A genuinely
+        // malformed manifest gets the same treatment as a bad signature: stop and surface,
+        // never overwrite. `readVerifiedManifest` throws on every one of those; a nil return
+        // means only "no manifest yet".
+        if let prev = try readVerifiedManifest(from: cloud) {
             for e in prev.takes { entries[e.uuid] = e }
             for t in prev.tombstones { mergedTombstones[t.uuid] = t }
         }
@@ -237,8 +233,7 @@ public final class SyncEngine {
             takes: entries.values.sorted { $0.uuid.uuidString < $1.uuid.uuidString },
             tombstones: finalTombstones.sorted { $0.uuid.uuidString < $1.uuid.uuidString }
         )
-        let signed = try signer.sign(manifest)
-        try cloud.writeAtomically(try signed.serialise(), to: Manifest.fileName)
+        try writeManifest(manifest, to: cloud)
 
         // 6. Local tombstones are NOT purged here (2026-06-10). Two devices can
         //    pass the advisory lock during cloud propagation delay and the later
@@ -258,13 +253,50 @@ public final class SyncEngine {
         return report
     }
 
+    /// Read + verify the manifest, whatever version is in the folder (owner 2026-08-11).
+    ///
+    /// ONE place routes v1/v2 (plain JSON) versus v3 (encrypted envelope), because the push
+    /// path reads the previous manifest too and a second copy of this branch is exactly how
+    /// the two would drift. Returns nil when the folder has no manifest yet.
+    ///
+    /// Fails closed on every unhappy path — unreadable, unsupported version, bad signature —
+    /// so the callers' existing `manifestSignatureInvalid` handling is unchanged.
+    private func readVerifiedManifest(from cloud: CloudFolder) throws -> Manifest? {
+        guard let data = try cloud.read(Manifest.fileName) else { return nil }
+
+        // The version is readable WITHOUT the key in both forms, which is what makes the
+        // fail-closed gate reachable at all on an encrypted manifest.
+        guard let version = ManifestEnvelope.peekVersion(data),
+              Manifest.supportedVersions.contains(version) else {
+            throw SyncError.unsupportedManifestVersion(ManifestEnvelope.peekVersion(data) ?? -1)
+        }
+
+        if version >= 3 {
+            let envelope = try ManifestEnvelope.parse(data)
+            guard try signer.verify(envelope) else { throw SyncError.manifestSignatureInvalid }
+            return try Manifest.opening(envelope, with: manifestKey)
+        }
+        // v1 / v2 — plaintext, written by an earlier build. Still readable so a tester's
+        // folder keeps syncing; the next push rewrites it as v3.
+        let manifest = try Manifest.parse(data)
+        guard try signer.verify(manifest) else { throw SyncError.manifestSignatureInvalid }
+        return manifest
+    }
+
+    /// Seal, sign and write the manifest as v3. The only writer — a plaintext manifest can
+    /// no longer be produced by any path.
+    private func writeManifest(_ manifest: Manifest, to cloud: CloudFolder) throws {
+        let envelope = try signer.sign(try manifest.sealed(with: manifestKey))
+        try cloud.writeAtomically(try envelope.serialise(), to: Manifest.fileName)
+    }
+
     private func upload(_ take: Take, to cloud: CloudFolder,
                         entries: inout [UUID: ManifestEntry],
                         report: inout SyncReport) throws {
         let sealed = try crypto.seal(take)
         let blob = CloudBlob(take: take, sealed: sealed)
         let bytes = try blob.serialise()
-        try cloud.write(bytes, to: blob.fileName)
+        try cloud.write(bytes, to: CloudBlob.fileName(for: take.id))
         entries[take.id] = ManifestEntry(
             uuid: take.id,
             modified: ISO8601.string(from: take.modifiedAt),
@@ -282,19 +314,10 @@ public final class SyncEngine {
         guard let cloud else { throw SyncError.noCloudFolderConfigured }
         var report = SyncReport()
 
-        guard let manifestData = try cloud.read(Manifest.fileName) else {
-            return report   // nothing remote yet
-        }
-        let manifest = try Manifest.parse(manifestData)
-
-        // 0. Forward-compat guard — refuse to misread a future format as v1.
-        guard Manifest.supportedVersions.contains(manifest.version) else {
-            throw SyncError.unsupportedManifestVersion(manifest.version)
-        }
-
-        // 1. Verify manifest signature FIRST. Failure → quarantine everything.
-        guard try signer.verify(manifest) else {
-            throw SyncError.manifestSignatureInvalid
+        // Reads whichever version is in the folder, gates it, verifies the signature FIRST,
+        // and decrypts a v3 body — all fail-closed. nil means nothing remote yet.
+        guard let manifest = try readVerifiedManifest(from: cloud) else {
+            return report
         }
 
         let lastSync = store.lastSyncDate()

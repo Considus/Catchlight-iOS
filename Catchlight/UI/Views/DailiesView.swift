@@ -746,6 +746,7 @@ struct DailiesView: View {
             storageErrorStrip
             syncErrorStrip
             quarantineNoticeStrip
+            tasksCompletedStrip
         }
         // Dodge the status bar / Dynamic Island (owner 2026-06-27). The app root is
         // full-bleed (`.ignoresSafeArea(.container)`), so this `.safeAreaInset(.top)`
@@ -760,13 +761,14 @@ struct DailiesView: View {
     /// Whether ANY top notice strip is currently visible — gates the status-bar dodge
     /// above so the inset reserves space only when there's something to show. Mirrors the
     /// individual strips' own visibility conditions (conflict / lapse / storage / sync /
-    /// quarantine); keep in sync if a strip's trigger changes.
+    /// quarantine / tasks-done); keep in sync if a strip's trigger changes.
     private var hasTopStrip: Bool {
         conflicts.pending.count > 0
             || app.subscriptionStatus == .lapsed
             || vm.lastError != nil
             || app.lastSyncError != nil
             || app.quarantinedCount > 0
+            || vm.tasksCompletedTakeID != nil
     }
 
     /// Read-only banner shown while the user is `.lapsed` (Tasks 6.20 / 6.22).
@@ -869,6 +871,11 @@ struct DailiesView: View {
                              tint: Color,
                              background: Color,
                              accessibilityLabel: String,
+                             // An OPTIONAL action shown before Dismiss (owner 2026-08-11), so a
+                             // strip can offer a choice rather than only an acknowledgement.
+                             // Every existing caller omits it and is unchanged.
+                             primaryTitle: String? = nil,
+                             onPrimary: (() -> Void)? = nil,
                              onDismiss: @escaping () -> Void) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
@@ -885,6 +892,18 @@ struct DailiesView: View {
                 .accessibilityLabel("\(accessibilityLabel). \(text)")
                 .accessibilityAddTraits(.isStaticText)
             Spacer(minLength: 8)
+            if let primaryTitle, let onPrimary {
+                Button(action: onPrimary) {
+                    Text(primaryTitle)
+                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .foregroundStyle(tint)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Double-tap to \(primaryTitle.lowercased()).")
+            }
             Button(action: onDismiss) {
                 Text("Dismiss")
                     .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
@@ -920,6 +939,37 @@ struct DailiesView: View {
             .task(id: message) {
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
                 if vm.lastError == message { vm.clearError() }
+            }
+        }
+    }
+
+    /// "All tasks done" strip (owner 2026-08-11) — offered the moment the LAST item on a Take
+    /// with a live reminder is ticked, so the choice to stop being reminded is made where the
+    /// user already is, rather than waiting for the next nudge to arrive.
+    ///
+    /// Deliberately a CHOICE, not an automatic silencing: a Take carrying a note as well as
+    /// subtasks may still need its reminder once the subtasks are done
+    /// ([[catchlight-user-decides-principle]]). The scheduler only ever auto-skips a Take that
+    /// is nothing but a finished checklist, where there is genuinely nothing left to say.
+    ///
+    /// Longer auto-dismiss than the error strips (8s): this one asks a question rather than
+    /// reporting a fact, and letting it time out is a valid answer, meaning "leave it alone".
+    @ViewBuilder
+    private var tasksCompletedStrip: some View {
+        if let id = vm.tasksCompletedTakeID {
+            noticeStrip(
+                icon: "checkmark.circle",
+                text: "All tasks done. Stop reminding?",
+                tint: Color.ckAccent,
+                background: Color.ckAccent.opacity(0.12),
+                accessibilityLabel: "all tasks done",
+                primaryTitle: "Stop reminding",
+                onPrimary: { vm.stopRemindingForCompletedTake() },
+                onDismiss: { vm.clearTasksCompletedNotice() }
+            )
+            .task(id: id) {
+                try? await Task.sleep(nanoseconds: 8_000_000_000)
+                if vm.tasksCompletedTakeID == id { vm.clearTasksCompletedNotice() }
             }
         }
     }

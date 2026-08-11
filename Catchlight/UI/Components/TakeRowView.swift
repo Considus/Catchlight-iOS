@@ -310,6 +310,8 @@ struct TakeRowView: View {
 
     @ViewBuilder
     private var rowMenuItems: some View {
+        // Device-local view preference — owns itself, no callback (see ExpandTakeMenuButton).
+        ExpandTakeMenuButton(take: take)
         if take.canBeMarkedDone, let onToggleComplete {
             Button {
                 onToggleComplete()
@@ -367,6 +369,7 @@ struct TakeRowView: View {
 
     @ViewBuilder
     private var rowAccessibilityActions: some View {
+        ExpandTakeMenuButton(take: take)
         if take.canBeMarkedDone, let onToggleComplete {
             Button(take.isMarkedDone ? "Mark Not Done" : "Mark Done") { onToggleComplete() }
         }
@@ -427,9 +430,21 @@ struct TakeCardSurface: View {
     private var creationStamp: SettingsViewModel.CreationStamp {
         SettingsViewModel.CreationStamp(rawValue: creationStampRaw) ?? .default
     }
+    /// Per-Take "Expand Take" overrides, set from the long-press menu (owner 2026-08-11).
+    /// Device-local and observed here, so toggling the menu item re-renders this card at once.
+    @AppStorage(SettingsViewModel.ExpandedTakes.defaultsKey)
+    private var expandedRaw: String = ""
+    private var isExpanded: Bool {
+        SettingsViewModel.ExpandedTakes.contains(take.id, in: expandedRaw)
+    }
+
     /// Body line cap: the Preview choice, but never below 4 at accessibility text
     /// sizes so a sentence is not cut mid-word (`nil` = unlimited / "All").
+    ///
+    /// An EXPANDED Take ignores the Preview length entirely and shows in full — that is the
+    /// whole point of the override: read one Take without moving the timeline to "All".
     private var bodyLineLimit: Int? {
+        if isExpanded { return nil }
         guard let base = takePreview.lineLimit else { return nil }
         return dynamicSize.isAccessibilitySize ? max(base, 4) : base
     }

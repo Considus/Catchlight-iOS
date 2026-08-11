@@ -94,7 +94,7 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
         try makeEngine(store: store, cloud: cloud, keys: k, now: Date.init).pushOutbound()
 
         XCTAssertNil(try cloud.read("\(take.id.uuidString).clk"), "blob must be removed")
-        let manifest = try Manifest.parse(try cloud.read(Manifest.fileName)!)
+        let manifest = try Manifest.readEncrypted(from: cloud, keys: k)
         XCTAssertEqual(manifest.version, Manifest.currentVersion)
         XCTAssertTrue(manifest.takes.allSatisfy { $0.uuid != take.id },
                       "manifest must omit the deleted uuid from `takes`")
@@ -237,21 +237,24 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
 
     // MARK: - Manifest forward-compat + v1 parse compatibility
 
-    /// A manifest declaring version 3 (signed correctly, so it gets past the
-    /// signature check shape) is rejected with `unsupportedManifestVersion`.
-    func testPullInbound_manifestVersion3_throwsUnsupportedManifestVersion() throws {
+    /// A manifest declaring a version NEWER than this client understands is rejected with
+    /// `unsupportedManifestVersion` rather than misread. Was version 3 until 2026-08-11,
+    /// when v3 became the current encrypted format (D-196) — so the guard is now probed at
+    /// 4. The version is deliberately readable WITHOUT the key, which is what keeps this
+    /// gate reachable on an encrypted manifest at all.
+    func testPullInbound_futureManifestVersion_throwsUnsupportedManifestVersion() throws {
         let k = makeKeys()
         let cloud = InMemoryCloudFolder()
         let signer = ManifestSigner(keys: k)
 
-        var manifest = Manifest(updated: "2026-06-10T00:00:00.000Z", takes: [])
-        manifest.version = 3   // set BEFORE signing — version is part of the signed body
-        let signed = try signer.sign(manifest)
-        try cloud.write(try signed.serialise(), to: Manifest.fileName)
+        var envelope = try Manifest(updated: "2026-06-10T00:00:00.000Z", takes: [])
+            .sealed(with: k.manifestEncryptionKey())
+        envelope.version = 4   // set BEFORE signing — version is part of the signed body
+        try cloud.write(try signer.sign(envelope).serialise(), to: Manifest.fileName)
 
         let engine = makeEngine(store: InMemoryTakeStore(), cloud: cloud, keys: k)
         XCTAssertThrowsError(try engine.pullInbound()) { error in
-            XCTAssertEqual(error as? SyncError, .unsupportedManifestVersion(3))
+            XCTAssertEqual(error as? SyncError, .unsupportedManifestVersion(4))
         }
     }
 
@@ -299,11 +302,11 @@ final class SyncEngineEdgeCasesTests: XCTestCase {
 
         let t0 = Date(timeIntervalSince1970: 1_700_000_000)
         try makeEngine(store: store, cloud: cloud, keys: k, now: { t0 }).pushOutbound()
-        let firstUpdated = try Manifest.parse(try cloud.read(Manifest.fileName)!).updated
+        let firstUpdated = try Manifest.readEncrypted(from: cloud, keys: k).updated
 
         // Advance the clock and push again with no Take edits.
         try makeEngine(store: store, cloud: cloud, keys: k, now: { t0.addingTimeInterval(60) }).pushOutbound()
-        let secondUpdated = try Manifest.parse(try cloud.read(Manifest.fileName)!).updated
+        let secondUpdated = try Manifest.readEncrypted(from: cloud, keys: k).updated
 
         XCTAssertNotEqual(firstUpdated, secondUpdated,
                           "manifest is rebuilt every push; deviation from spec is documented")

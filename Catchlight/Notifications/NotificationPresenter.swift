@@ -40,6 +40,18 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
     /// `PendingReminderActions`), so it never opens the app or demands Face ID.
     private static let dismissActionIdentifier = "DISMISS"
 
+    /// "Stop reminding" — ends a REPEATING reminder for good (owner 2026-08-11).
+    ///
+    /// The gap it fills: "Dismiss" is deliberately this-occurrence-only on a repeating series
+    /// (owner 2026-06-22), and "Mark Done" ADVANCES a repeating reminder rather than settling it,
+    /// so there was no way at all to stop a series from the notification. Ticking every task
+    /// didn't help either, because the reminder is not the checklist.
+    ///
+    /// Offered ONLY on the repeating category, where it is unambiguous. A BACKGROUND action like
+    /// its siblings: it cancels every pending id immediately (the OS queue needs no key, so this
+    /// works while locked) and queues the `alarmEnabled = false` store write for the next unlock.
+    private static let stopRemindingActionIdentifier = "STOP_REMINDING"
+
     /// Install as the notification-centre delegate AND register the reminder category.
     /// Idempotent — call once, early in launch (before a notification could be delivered
     /// to a foreground app).
@@ -76,7 +88,20 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
             actions: [snooze, dismiss],
             intentIdentifiers: [],
             options: [])
-        UNUserNotificationCenter.current().setNotificationCategories([category])
+        // A REPEATING reminder gets a third action. Last in the list because it is the most
+        // final of the three, and `.destructive` so the system styles it as the one that ends
+        // something — it stops the series without deleting the Take or its date.
+        let stopReminding = UNNotificationAction(
+            identifier: stopRemindingActionIdentifier,
+            title: "Stop reminding",
+            options: [.destructive],
+            icon: UNNotificationActionIcon(systemImageName: "bell.slash.fill"))
+        let repeatingCategory = UNNotificationCategory(
+            identifier: ReminderScheduler.repeatingCategoryIdentifier,
+            actions: [snooze, dismiss, stopReminding],
+            intentIdentifiers: [],
+            options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([category, repeatingCategory])
     }
 
     /// Present reminders in the foreground too: banner + sound, and list them in
@@ -109,6 +134,8 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
             handleSnooze(request: request, base: base)
         case Self.dismissActionIdentifier:
             handleDismiss(request: request, base: base)
+        case Self.stopRemindingActionIdentifier:
+            handleStopReminding(base: base)
         default:
             return
         }
@@ -136,6 +163,21 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         PendingReminderActions.enqueueDismiss(takeID: base, isLocation: isLocation)
     }
 
+    /// "Stop reminding": end the whole series (owner 2026-08-11).
+    ///
+    /// Unlike Dismiss, this clears EVERY id the reminder owns — the base, the full recurring
+    /// window, the snooze, the all-day catch-up and the follow-up chain — so nothing already
+    /// scheduled can fire again. That alone is not enough, though: the app-open rebuild replans
+    /// alarms from the store, so without the queued store write the series would simply come
+    /// back on next launch. Hence the pending action, drained at unlock when the key exists.
+    ///
+    /// The Take and its date are untouched, exactly like Dismiss. This silences, it never deletes.
+    private func handleStopReminding(base: String) {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: ReminderScheduler.allIdentifiers(base: base))
+        PendingReminderActions.enqueueStopReminding(takeID: base)
+    }
+
     /// Snooze (background, works while locked): re-nudge the SAME reminder later without
     /// touching the encrypted store.
     private func handleSnooze(request: UNNotificationRequest, base: String) {
@@ -160,6 +202,10 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
             title: request.content.title,
             identifier: ReminderScheduler.snoozeIdentifier(base: base),
             fireAt: fireAt,
-            dueText: dueText)
+            dueText: dueText,
+            // Carry the FIRED notification's category across, so snoozing a repeating reminder
+            // does not quietly drop its "Stop reminding" action from the re-nudge. There is no
+            // Take here to re-derive it from (snooze never touches the store).
+            categoryIdentifier: request.content.categoryIdentifier)
     }
 }

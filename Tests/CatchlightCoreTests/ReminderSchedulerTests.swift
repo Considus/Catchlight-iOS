@@ -567,5 +567,173 @@ final class ReminderSchedulerTests: XCTestCase {
         XCTAssertFalse(cleared.contains { $0.contains("#followup") },
                        "the rebuild clears base+window only, never the follow-up chain")
     }
+    // MARK: - Outstanding-tasks-only titles (owner 2026-08-11)
+    //
+    // A repeating reminder on a task list used to read out EVERY item, ticked ones included,
+    // and there was no way to quieten it while other items were still outstanding: marking the
+    // reminder done settles the whole Take. The title is now built from `outstandingText`.
+
+    /// A Take carrying prose + a checklist, some of it already ticked, plus a reminder.
+    private func takeWithChecklist(at date: Date,
+                                   recurrence: TimeReminder.Recurrence = .none,
+                                   prose: String = "Weekly shop",
+                                   items: [(String, Bool)]) -> Take {
+        let id = UUID()
+        let reminder = TimeReminder(scheduledDate: date,
+                                    notificationIdentifier: id.uuidString,
+                                    recurrence: recurrence)
+        let blocks: [TakeBlock] = [.textLine(prose)]
+            + items.map { .checkItem($0.0, isComplete: $0.1) }
+        return Take(id: id, blocks: blocks, timeReminder: reminder)
+    }
+
+    func testSchedule_titleOmitsCompletedItems() {
+        let take = takeWithChecklist(at: now.addingTimeInterval(3600),
+                                     items: [("Milk", true), ("Bread", false), ("Coffee", false)])
+        scheduler.scheduleReminder(for: take)
+        let title = center.added.first?.content.title
+        XCTAssertEqual(title, "Weekly shop\nBread, Coffee")
+        XCTAssertFalse(title?.contains("Milk") ?? true, "a ticked item must not be read out again")
+    }
+
+    func testSchedule_titleKeepsBlockOrderAcrossInterleavedProse() {
+        // Blocks interleave freely (D-035), so the title must not hoist items to the end.
+        let id = UUID()
+        let reminder = TimeReminder(scheduledDate: now.addingTimeInterval(3600),
+                                    notificationIdentifier: id.uuidString)
+        let take = Take(id: id, blocks: [
+            .checkItem("Bread", isComplete: false),
+            .textLine("then the chemist"),
+            .checkItem("Milk", isComplete: true),
+            .checkItem("Coffee", isComplete: false)
+        ], timeReminder: reminder)
+        scheduler.scheduleReminder(for: take)
+        XCTAssertEqual(center.added.first?.content.title, "Bread\nthen the chemist\nCoffee")
+    }
+
+    /// Superseded by the owner's 2026-08-11 narrowing: a Take with PROSE still fires even when
+    /// every subtask is ticked, because the note is the thing being reminded about. The skip
+    /// now applies only to a pure checklist — see `testSchedule_pureChecklist_allTicked_doesNotFire`.
+    func testSchedule_oneShot_allItemsTicked_withProse_stillFires() {
+        let take = takeWithChecklist(at: now.addingTimeInterval(3600),
+                                     items: [("Milk", true), ("Bread", true)])
+        scheduler.scheduleReminder(for: take)
+        XCTAssertFalse(center.added.isEmpty)
+        XCTAssertEqual(center.added.first?.content.title, "Weekly shop")
+    }
+
+    /// THE REGRESSION GUARD. `advanceRecurringOccurrence` rolls the date and clears `isDone`
+    /// but does NOT untick the items, so skipping a repeating series on "all ticked" would
+    /// silence it forever with no way back. It must still fire — naming no items.
+    func testSchedule_repeating_allItemsTicked_stillFires_withProseOnlyTitle() {
+        let take = takeWithChecklist(at: now.addingTimeInterval(3600),
+                                     recurrence: .weekly,
+                                     items: [("Milk", true), ("Bread", true)])
+        scheduler.scheduleReminder(for: take)
+        XCTAssertFalse(center.added.isEmpty, "a repeating series must never be silenced by ticking")
+        XCTAssertEqual(center.added.first?.content.title, "Weekly shop")
+    }
+
+    func testSchedule_allDayToday_allItemsTicked_doesNotCatchUp() throws {
+        // The all-day catch-up path fires on an EMPTY alarm plan, so it needs the same guard —
+        // otherwise skipping the calendar alarm just re-routes the nudge through the catch-up.
+        let calendar = Calendar.current
+        let earlierToday = try XCTUnwrap(
+            calendar.date(bySettingHour: 0, minute: 5, second: 0, of: now))
+        // A PURE checklist (no prose), so there is genuinely nothing left to say — the narrowed
+        // rule. With a note it would, correctly, still nudge.
+        let id = UUID()
+        var take = Take(id: id, blocks: [.checkItem("Milk", isComplete: true)],
+                        timeReminder: TimeReminder(scheduledDate: earlierToday,
+                                                   notificationIdentifier: id.uuidString))
+        take.timeReminder?.isAllDay = true
+        scheduler.scheduleReminder(for: take)
+        XCTAssertTrue(center.added.isEmpty, "no catch-up nudge when nothing is outstanding")
+    }
+
+    func testScheduleLocation_allItemsTicked_registersNoGeofence() {
+        var take = takeWithChecklist(at: now.addingTimeInterval(3600),
+                                     items: [("Milk", true)])
+        take.locationReminder = LocationTrigger(latitude: 51.5, longitude: -0.12,
+                                                radiusMetres: 150, triggerOnArrival: true,
+                                                locationName: "the shop")
+        scheduler.scheduleLocationReminder(for: take)
+        XCTAssertTrue(center.added.isEmpty, "a geofence is a one-shot — safe to skip when settled")
+    }
+
+    func testSchedule_plainNote_titleUnchanged() {
+        // No check blocks — behaviour must be exactly as before.
+        let take = takeWithReminder(at: now.addingTimeInterval(3600), body: "call the framer")
+        scheduler.scheduleReminder(for: take)
+        XCTAssertEqual(center.added.first?.content.title, "call the framer")
+    }
+
+    // MARK: - The skip is narrowed to PURE checklists (owner correction, 2026-08-11)
+
+    /// THE OWNER'S CATCH. A Take carrying a NOTE plus subtasks may still need its reminder once
+    /// the subtasks are done, because the note is the thing being reminded about. The first cut
+    /// skipped on `isTask && isComplete` alone and would have silenced exactly this.
+    func testSchedule_allItemsTicked_butTakeHasANote_stillFires() {
+        let take = takeWithChecklist(at: now.addingTimeInterval(3600),
+                                     prose: "Ring the surveyor back",
+                                     items: [("find the report", true), ("scan it", true)])
+        scheduler.scheduleReminder(for: take)
+        XCTAssertFalse(center.added.isEmpty,
+                       "the note still needs saying even though every subtask is done")
+        XCTAssertEqual(center.added.first?.content.title, "Ring the surveyor back")
+    }
+
+    /// Only a Take that is NOTHING BUT a finished checklist has nothing left to nudge about.
+    func testSchedule_pureChecklist_allTicked_doesNotFire() {
+        let id = UUID()
+        let reminder = TimeReminder(scheduledDate: now.addingTimeInterval(3600),
+                                    notificationIdentifier: id.uuidString)
+        let take = Take(id: id, blocks: [
+            .checkItem("Milk", isComplete: true),
+            .checkItem("Bread", isComplete: true)
+        ], timeReminder: reminder)
+        scheduler.scheduleReminder(for: take)
+        XCTAssertTrue(center.added.isEmpty)
+    }
+
+    // MARK: - Repeating reminders carry the Stop-reminding category
+
+    func testSchedule_repeating_usesTheRepeatingCategory() {
+        let take = takeWithChecklist(at: now.addingTimeInterval(3600),
+                                     recurrence: .weekly,
+                                     items: [("Milk", false)])
+        scheduler.scheduleReminder(for: take)
+        XCTAssertEqual(center.added.first?.content.categoryIdentifier,
+                       ReminderScheduler.repeatingCategoryIdentifier,
+                       "only a repeating reminder offers Stop reminding")
+    }
+
+    func testSchedule_oneShot_usesThePlainCategory() {
+        let take = takeWithReminder(at: now.addingTimeInterval(3600))
+        scheduler.scheduleReminder(for: take)
+        XCTAssertEqual(center.added.first?.content.categoryIdentifier,
+                       ReminderScheduler.categoryIdentifier,
+                       "on a one-shot, Dismiss already ends it — a second button would be noise")
+    }
+
+    /// A geofence is always a one-shot, so it must never offer to end a series.
+    func testScheduleLocation_usesThePlainCategory() {
+        var take = takeWithReminder(at: now.addingTimeInterval(3600))
+        take.timeReminder = nil
+        take.locationReminder = LocationTrigger(latitude: 51.5, longitude: -0.12,
+                                                radiusMetres: 150, triggerOnArrival: true)
+        scheduler.scheduleLocationReminder(for: take)
+        XCTAssertEqual(center.added.first?.content.categoryIdentifier,
+                       ReminderScheduler.categoryIdentifier)
+    }
+
+    func testSnooze_keepsTheCategoryItWasGiven() {
+        scheduler.scheduleSnooze(title: "t", identifier: "id", fireAt: now.addingTimeInterval(60),
+                                 dueText: "today",
+                                 categoryIdentifier: ReminderScheduler.repeatingCategoryIdentifier)
+        XCTAssertEqual(center.added.first?.content.categoryIdentifier,
+                       ReminderScheduler.repeatingCategoryIdentifier,
+                       "snoozing a repeating reminder must not drop its Stop reminding action")
+    }
 }
 #endif

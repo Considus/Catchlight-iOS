@@ -66,7 +66,7 @@ final class SyncSelfHealAndVersionGuardTests: XCTestCase {
         XCTAssertTrue(report.uploaded.isEmpty)
         XCTAssertNil(try cloud.read("\(take.id.uuidString).clk"),
                      "a held-back Take must not be uploaded")
-        let manifest = try Manifest.parse(XCTUnwrap(try cloud.read(Manifest.fileName)))
+        let manifest = try Manifest.readEncrypted(from: cloud, keys: k)
         XCTAssertFalse(manifest.takes.contains { $0.uuid == take.id })
     }
 
@@ -134,14 +134,16 @@ final class SyncSelfHealAndVersionGuardTests: XCTestCase {
         try cloud.write(futureBytes, to: blobName)
 
         let signer = ManifestSigner(keys: k)
-        var manifest = try Manifest.parse(XCTUnwrap(try cloud.read(Manifest.fileName)))
+        var manifest = try Manifest.readEncrypted(from: cloud, keys: k)
         manifest.takes = manifest.takes.map { entry in
             entry.uuid == take.id
                 ? ManifestEntry(uuid: entry.uuid, modified: entry.modified,
                                 hmac: signer.blobHMACHex(futureBytes))
                 : entry
         }
-        let resigned = try signer.sign(manifest.bodyForSigning())
+        // v3 (D-196): re-seal as well as re-sign, so the engine still reads an encrypted
+        // manifest and the ONLY thing wrong with the folder is the blob's version number.
+        let resigned = try signer.sign(try manifest.sealed(with: k.manifestEncryptionKey()))
         try cloud.writeAtomically(try resigned.serialise(), to: Manifest.fileName)
 
         // Device A pulls: the future blob must be quarantined, nothing applied.
@@ -185,7 +187,7 @@ final class SyncSelfHealAndVersionGuardTests: XCTestCase {
                       "step 1 legitimately uploads before the tombstone is resolved")
         XCTAssertNil(try cloud.read("\(take.id.uuidString).clk"),
                      "the superseded blob must be deleted, not orphaned")
-        let manifest = try Manifest.parse(XCTUnwrap(try cloud.read(Manifest.fileName)))
+        let manifest = try Manifest.readEncrypted(from: cloud, keys: k)
         XCTAssertFalse(manifest.takes.contains { $0.uuid == take.id })
         XCTAssertTrue(manifest.tombstones.contains { $0.uuid == take.id })
     }

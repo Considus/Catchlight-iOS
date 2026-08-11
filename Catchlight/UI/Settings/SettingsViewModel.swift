@@ -322,6 +322,57 @@ final class SettingsViewModel {
         }
     }
 
+    /// Per-Take overrides of the "Preview" length — the long-press menu's Expand Take
+    /// (owner 2026-08-11): show one Take in full without moving the whole timeline to
+    /// "All", and have that survive a restart.
+    ///
+    /// DEVICE-LOCAL BY DECISION (owner 2026-08-11, D-194). This is a view preference, not
+    /// content, so it stays out of `Take`: no encrypted-payload change, no sync schema bump,
+    /// nothing to migrate. The trade-off is accepted and real — expanding a Take here does
+    /// NOT carry to a second device, and a reinstall forgets it.
+    ///
+    /// Stored as a comma-joined UUID string rather than an array, because `@AppStorage`
+    /// carries `String` but not `Set<UUID>` — and the views need the STORAGE to be observable
+    /// so a menu tap re-renders the card immediately. The helpers below are pure so the
+    /// parsing has one definition and can be unit-tested without a view.
+    enum ExpandedTakes {
+        static let defaultsKey = "catchlight.expandedTakeIDs"
+
+        /// Parse the stored string into ids. Tolerant of blanks and junk: an unparseable
+        /// entry is dropped rather than throwing, so a corrupted value degrades to
+        /// "nothing expanded" instead of breaking the timeline.
+        static func ids(from raw: String) -> Set<UUID> {
+            Set(raw.split(separator: ",").compactMap { UUID(uuidString: String($0)) })
+        }
+
+        static func raw(from ids: Set<UUID>) -> String {
+            // Sorted so the stored value is stable — an unordered Set would rewrite the
+            // defaults entry (and republish to every observing view) on no real change.
+            ids.map(\.uuidString).sorted().joined(separator: ",")
+        }
+
+        static func contains(_ id: UUID, in raw: String) -> Bool {
+            ids(from: raw).contains(id)
+        }
+
+        /// The stored value with `id` added or removed.
+        static func toggling(_ id: UUID, in raw: String) -> String {
+            var current = ids(from: raw)
+            if current.contains(id) { current.remove(id) } else { current.insert(id) }
+            return self.raw(from: current)
+        }
+
+        /// Drop ids for Takes that no longer exist, so a long-lived device can't accumulate
+        /// an unbounded list of ghosts. Returns nil when nothing changed, so the caller can
+        /// skip the write (this runs on every timeline reload).
+        static func pruned(_ raw: String, keeping live: Set<UUID>) -> String? {
+            let current = ids(from: raw)
+            let kept = current.intersection(live)
+            guard kept.count != current.count else { return nil }
+            return self.raw(from: kept)
+        }
+    }
+
     /// Opt-in automatic cleanup of finished, note-free Takes (owner 2026-06-19). The
     /// user — never the app — sets retention ([[catchlight-user-decides-principle]]):
     /// the choice is an AGE/GRACE window after which an eligible Take (all tasks /
