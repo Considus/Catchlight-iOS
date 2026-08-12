@@ -199,7 +199,6 @@ struct RootView: View {
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .overlay { focusRingFanOverlay }
         .overlay { obieIntroOverlay }
-        .overlay { tasksCompletedOverlay }
         .sheet(isPresented: $ui.isSettingsPresented) {
             SettingsView()
         }
@@ -318,74 +317,6 @@ struct RootView: View {
     }
 
     // MARK: - Overlays
-
-    /// "All tasks done. Stop reminding?" — a real modal, drawn here rather than presented.
-    ///
-    /// THIRD ATTEMPT, and the first two failed for reasons worth recording so this is not
-    /// "improved" back into a broken shape:
-    ///   1. A top notice strip. Worked, but the owner disliked it and it timed out on its own
-    ///      when the whole point is to wait for an answer.
-    ///   2. A SwiftUI `.alert` on DailiesView. Never appeared. DailiesView already carries FIVE
-    ///      presentation modifiers (two alerts, a confirmationDialog, a fullScreenCover, a
-    ///      sheet), and SwiftUI reliably honours only ONE presentation per view — stacked alerts
-    ///      silently lose, and the newest was first in the chain. An intermediate @State fix
-    ///      changed nothing, because the binding was never the problem.
-    ///
-    /// Drawn as an overlay instead, the way the Focus-ring fan and the Obie intro already are.
-    /// Nothing can pre-empt it, it sits above the dock, and it is brandable — which is what
-    /// "modal window" meant in the first place.
-    ///
-    /// It cannot be dismissed by tapping away: the backdrop absorbs taps and does nothing. The
-    /// only ways out are the two buttons, by owner decision.
-    @ViewBuilder
-    private var tasksCompletedOverlay: some View {
-        if app.dailiesVM.tasksCompletedTakeID != nil {
-            ZStack {
-                Color.ckInk.opacity(0.45)
-                    .ignoresSafeArea()
-                    // Absorbs every tap. Deliberately no dismiss action.
-                    .contentShape(Rectangle())
-                    .onTapGesture { }
-
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("All tasks done.")
-                        .font(CatchlightFont.ui(.medium, size: 18, relativeTo: .headline))
-                        .foregroundStyle(Color.ckTextPrimary)
-                    Text("Every task on this Take is ticked. Stop its reminder?")
-                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    HStack(spacing: 18) {
-                        Spacer(minLength: 0)
-                        Button("Keep reminding") {
-                            app.dailiesVM.clearTasksCompletedNotice()
-                        }
-                        .font(CatchlightFont.ui(.regular, size: 16, relativeTo: .body))
-                        .foregroundStyle(Color.ckTextSecondary)
-
-                        // Not destructive-styled: this silences a reminder, it deletes nothing.
-                        Button("Stop reminding") {
-                            app.dailiesVM.stopRemindingForCompletedTake()
-                        }
-                        .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
-                        .foregroundStyle(Color.ckAccent)
-                    }
-                    .padding(.top, 4)
-                }
-                .padding(22)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.ckSurface)
-                )
-                .padding(.horizontal, 32)
-            }
-            .transition(.opacity)
-            .accessibilityElement(children: .contain)
-            .accessibilityAddTraits(.isModal)
-            .accessibilityIdentifier("tasks-done-modal")
-        }
-    }
 
     @ViewBuilder
     private var focusRingFanOverlay: some View {

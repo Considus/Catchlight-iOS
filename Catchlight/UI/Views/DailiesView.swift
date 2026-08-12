@@ -469,6 +469,34 @@ struct DailiesView: View {
         //
         // Neither button is destructive-styled. Stopping a reminder deletes nothing — the Take
         // and its date stay on the timeline — so red would overstate it.
+        // "All tasks done. Stop reminding?" — raised by TICKING the last item, not by saving.
+        //
+        // The transition is observed here rather than inside `vm.save` (owner 2026-08-11, and his
+        // call). Both tick paths — the block editor's checkbox and the Angle's Shot List — mutate
+        // this same `editDraft`, so one observer covers both, and it fires while the editor is
+        // open and the view is settled. The old trigger ran during `saveInlineEdit`, i.e. through
+        // the editor teardown, keyboard dismissal and `endEditingInPlace`; that is the leading
+        // suspect for the alert never appearing, and it is being tested by this change.
+        //
+        // The alert itself is deliberately built EXACTLY like the Obie confirmation below — a
+        // plain `.alert` on this same chain, no leaf-view trick — because if the trigger was the
+        // problem then nothing else needs to be special, and if it still fails we have learned
+        // something real instead of papering over it.
+        .onChange(of: editDraft?.isComplete ?? false) { wasComplete, isComplete in
+            guard !wasComplete, isComplete, let draft = editDraft else { return }
+            vm.noteTasksCompleted(draft)
+        }
+        .alert("All tasks done.", isPresented: Binding(
+            get: { vm.tasksCompletedTakeID != nil },
+            set: { if !$0 { vm.clearTasksCompletedNotice() } })) {
+            // Neither is destructive-styled: this silences a reminder, it deletes nothing.
+            // Short labels (owner 2026-08-11) — which also lets iOS lay the buttons out
+            // side by side, like the Obie confirmation, instead of stacking them.
+            Button("Stop") { stopRemindingForPromptedTake() }
+            Button("Ignore", role: .cancel) { vm.clearTasksCompletedNotice() }
+        } message: {
+            Text("Every task on this Take is ticked. Stop its reminder?")
+        }
         // Inline Obie confirmation (owner 2026-06-17; re-homed to the editing long-press
         // menu 2026-07-06) — mirrors the timeline long-press warning, but targets the
         // draft (the existing Obie is demoted by the store on save).
@@ -1282,6 +1310,26 @@ struct DailiesView: View {
 
     /// Commit the in-place edit through the same path the old editor used: drop empty
     /// prose rows, then either discard a never-saved blank Take or `vm.save`.
+    /// Silence the prompted Take's reminder.
+    ///
+    /// Routes through the DRAFT when the prompted Take is the one open in the editor, because
+    /// moving the prompt to the tick means it can now fire on a Take that has never been saved —
+    /// a brand-new Take whose first checklist item is ticked before any tap-away. The view
+    /// model's store-backed path finds nothing for such a Take and silently does nothing, which
+    /// is exactly what the simulator showed: the alert appeared, "Stop reminding" was tapped, and
+    /// the bell stayed lit.
+    ///
+    /// The draft change rides the normal inline save on tap-away, so there is no second write.
+    private func stopRemindingForPromptedTake() {
+        if var draft = editDraft, draft.id == vm.tasksCompletedTakeID {
+            draft.timeReminder?.alarmEnabled = false
+            editDraft = draft
+            vm.clearTasksCompletedNotice()
+            return
+        }
+        vm.stopRemindingForCompletedTake()
+    }
+
     private func saveInlineEdit() {
         editFocusedBlockID = nil            // release the keyboard first
         defer { editDraft = nil; ui.endEditingInPlace() }

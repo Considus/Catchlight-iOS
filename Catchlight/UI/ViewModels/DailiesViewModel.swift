@@ -130,19 +130,24 @@ final class DailiesViewModel {
         }
     }
 
-    /// Raise the "All tasks done. Stop reminding?" prompt, if this save is the moment it
-    /// becomes worth asking (owner 2026-08-11).
+    /// Raise the "All tasks done. Stop reminding?" prompt.
     ///
-    /// Four conditions, and the last two are what stop it being a nuisance:
-    ///   • the Take has just TRANSITIONED to complete (not merely still complete),
+    /// CALLED ON THE TICK, not from `save` (owner 2026-08-11, and his diagnosis). It used to be a
+    /// side effect of saving, which meant it fired during `saveInlineEdit` — the same instant the
+    /// editor tears down, the keyboard drops and `endEditingInPlace` runs. Asking SwiftUI to
+    /// present an alert into that teardown is the leading suspect for why the alert never
+    /// appeared, and ticking a box is in any case the moment the user actually did something.
+    ///
+    /// The caller supplies the TRANSITION (it observes the draft going complete), so this only
+    /// has to judge whether the prompt is worth showing at all:
     ///   • it carries a time reminder whose alarm is on and which isn't already settled,
     ///   • the reminder would actually still FIRE — `hasNothingOutstanding` already suppresses
     ///     a one-shot on a pure checklist, and asking about a reminder that will never sound
     ///     again is noise,
     ///   • …which means the prompt is offered exactly where the lever is missing: a repeating
     ///     series, or a Take whose note still matters.
-    private func noteTasksCompletedIfNeeded(_ take: Take, wasComplete: Bool) {
-        guard !wasComplete, take.isTask, take.isComplete,
+    func noteTasksCompleted(_ take: Take) {
+        guard take.isTask, take.isComplete,
               let reminder = take.timeReminder,
               reminder.alarmEnabled, !reminder.isDone,
               !ReminderScheduler.hasNothingOutstanding(take, reminder: reminder) else { return }
@@ -208,10 +213,6 @@ final class DailiesViewModel {
     /// Persist edits to an existing Take (or a new one). Bumps `modifiedAt` and
     /// clears the seed flag on first edit (UX §12).
     func save(_ take: Take) {
-        // Read the PRIOR state before writing, so "the last item was just ticked" is a
-        // transition rather than a standing condition — otherwise every subsequent save of an
-        // already-finished Take would re-raise the prompt.
-        let wasComplete = (try? store.take(id: take.id))?.isComplete ?? false
         var updated = take
         updated.modifiedAt = Date()
         if updated.isSeeded { updated.isSeeded = false }
@@ -224,7 +225,6 @@ final class DailiesViewModel {
             // store write is the authoritative outcome.
             spotlight.index(updated)
             reconcileNotification(for: updated)
-            noteTasksCompletedIfNeeded(updated, wasComplete: wasComplete)
             reload()
             notifyLocalChange()
         } catch {

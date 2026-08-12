@@ -110,20 +110,22 @@ final class DailiesViewModelMutationTests: XCTestCase {
 
         var done = take
         done.setAllItemsComplete(true)
-        vm.save(done)
+        vm.noteTasksCompleted(done)
         XCTAssertEqual(vm.tasksCompletedTakeID, take.id)
     }
 
-    /// A TRANSITION, not a standing condition — otherwise every later save of an
-    /// already-finished Take would re-raise the prompt.
-    func testPrompt_notRaisedAgainOnASecondSaveOfAFinishedTake() throws {
+    /// Saving is no longer a trigger at all — the tick is. This pins that decoupling.
+    func testPrompt_notRaisedBySavingAnAlreadyFinishedTake() throws {
         var take = reminderTake(prose: "Ring the surveyor back", items: [("scan it", false)])
         let vm = try makeVM([take])
         take.setAllItemsComplete(true)
-        vm.save(take)
+        vm.noteTasksCompleted(take)
         vm.clearTasksCompletedNotice()
 
-        take.isImportant = true          // some later, unrelated edit
+        // Saving an already-finished Take must not re-raise it. Saving no longer triggers the
+        // prompt at all — the TICK does (owner 2026-08-11) — so this is now guarding that the
+        // decoupling holds rather than a transition check inside `save`.
+        take.isImportant = true
         vm.save(take)
         XCTAssertNil(vm.tasksCompletedTakeID)
     }
@@ -135,7 +137,7 @@ final class DailiesViewModelMutationTests: XCTestCase {
         let vm = try makeVM([take])
         var done = take
         done.setAllItemsComplete(true)
-        vm.save(done)
+        vm.noteTasksCompleted(done)
         XCTAssertNil(vm.tasksCompletedTakeID)
     }
 
@@ -146,7 +148,7 @@ final class DailiesViewModelMutationTests: XCTestCase {
         let vm = try makeVM([take])
         var done = take
         done.setAllItemsComplete(true)
-        vm.save(done)
+        vm.noteTasksCompleted(done)
         XCTAssertEqual(vm.tasksCompletedTakeID, take.id)
     }
 
@@ -155,7 +157,7 @@ final class DailiesViewModelMutationTests: XCTestCase {
         let vm = try makeVM([take])
         var done = take
         done.setAllItemsComplete(true)
-        vm.save(done)
+        vm.noteTasksCompleted(done)
         XCTAssertNil(vm.tasksCompletedTakeID)
     }
 
@@ -165,7 +167,8 @@ final class DailiesViewModelMutationTests: XCTestCase {
         let vm = try makeVM([take])
         var done = take
         done.setAllItemsComplete(true)
-        vm.save(done)
+        vm.save(done)                    // stored, so the store-backed path applies
+        vm.noteTasksCompleted(done)
 
         vm.stopRemindingForCompletedTake()
         let stored = try XCTUnwrap(vm.store.take(id: take.id))
