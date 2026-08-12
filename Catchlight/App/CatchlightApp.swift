@@ -189,6 +189,24 @@ struct CatchlightApp: App {
         // Keeping the request until it is actually routed makes the failure retryable instead of
         // fatal. That matters most for a Siri/Shortcuts capture, where the pending payload carries
         // the user's own dictated words — losing it loses content, not just a blank editor.
+        // A capture that ARRIVES WITH TEXT is a finished thought, not a draft — SAVE it, never
+        // open an editor on it (owner 2026-08-11: "liked it better when it saved without me
+        // needing to touch the phone"). Dictating to Siri is the case that matters: you have
+        // already said the thing, and being handed an editor makes you finish something you
+        // finished a second ago.
+        //
+        // Routed through the SHARED QUEUE rather than saved here, because that path already
+        // solves the locked case correctly: it holds the item and commits it at the next unlock,
+        // so a locked phone costs the user nothing and demands no Face ID. A blank launcher (a
+        // widget, the Control, the Action button) still opens the editor below — there is nothing
+        // to save yet, and an editor is exactly what it asked for.
+        if let text = pending.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            CaptureRouting.clearPending()
+            CaptureRouting.enqueueShared(
+                .init(text: text, isObie: pending.mode == .obie))
+            drainSharedCaptures()
+            return
+        }
         if app.lockState == .unlocked {
             // Owner 2026-06-23: a lapsed user hits the paywall instead of capturing,
             // consistent with the dock + and RootView.newTake ("open app, then paywall").
@@ -261,6 +279,7 @@ struct CatchlightApp: App {
         guard !queued.isEmpty else { return }
         guard app.ensureEntitled() else { return }
 
+        var lastSavedID: UUID?
         for item in queued {
             var take = app.dailiesVM.createTake()
             take.blocks = [.textLine(item.text)]
@@ -275,8 +294,17 @@ struct CatchlightApp: App {
             if item.isTask { take.convertToChecklist() }
             take.normaliseActivityFloor()
             app.dailiesVM.save(take)
+            lastSavedID = take.id
         }
         CaptureRouting.clearSharedQueue(consumed: queued.count)
+        // Show what just landed when exactly ONE thing did (owner 2026-08-11). A dictated Take
+        // saves without the user touching anything, so without this it is saved invisibly and
+        // they have to go looking to believe it. Several at once (a batch of shares) get no
+        // reveal — pulsing an arbitrary one of them would be a lie about the rest.
+        if queued.count == 1, let lastSavedID {
+            app.ui.exitToResting()
+            app.ui.revealTargetTakeID = lastSavedID
+        }
     }
 
     /// Build the in-memory draft for a capture, shared by the unlocked (inline) and
