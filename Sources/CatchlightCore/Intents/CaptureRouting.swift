@@ -133,6 +133,29 @@ public enum CaptureRouting {
     /// and dropping the oldest, not the newest, keeps the share the user just made.
     public static let sharedQueueCap = 50
 
+    /// One queued share: the content, plus how the user shaped it on the share sheet
+    /// (owner 2026-08-11 — the sheet gained Obie / Important / Task toggles, so the shaping has
+    /// to survive the hand-off, not just the text).
+    ///
+    /// Encoded as JSON into the same string array the queue already used. Decoding falls back to
+    /// treating a bare string as plain text, so an item queued by an older build still lands
+    /// rather than being dropped as unparseable.
+    public struct SharedItem: Codable, Equatable, Sendable {
+        public var text: String
+        public var isObie: Bool
+        public var isImportant: Bool
+        /// Make it a Task — the app appends an empty check item, matching what the Focus ring's
+        /// Task Mark does in the editor (existing prose is never converted).
+        public var isTask: Bool
+
+        public init(text: String, isObie: Bool = false, isImportant: Bool = false, isTask: Bool = false) {
+            self.text = text
+            self.isObie = isObie
+            self.isImportant = isImportant
+            self.isTask = isTask
+        }
+    }
+
     /// Append a shared item for the app to turn into a Take on next open.
     ///
     /// A QUEUE, deliberately, where the widget hand-off above is a single slot. A launcher
@@ -144,21 +167,34 @@ public enum CaptureRouting {
     /// Runs in the SHARE EXTENSION's process, so it never touches the encrypted store: the
     /// master key is `.userPresence`-gated and only materialises in the foreground app, which
     /// is why the extension queues rather than saves.
-    public static func enqueueShared(_ text: String,
+    public static func enqueueShared(_ item: SharedItem,
                                      defaults: UserDefaults? = UserDefaults(suiteName: appGroupSuite)) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let defaults, !trimmed.isEmpty else { return }
+        var item = item
+        item.text = item.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let defaults, !item.text.isEmpty,
+              let encoded = try? PlatformJSON.encode(item) else { return }
         var queue = defaults.stringArray(forKey: sharedQueueKey) ?? []
-        queue.append(trimmed)
+        queue.append(String(decoding: encoded, as: UTF8.self))
         if queue.count > sharedQueueCap { queue.removeFirst(queue.count - sharedQueueCap) }
         defaults.set(queue, forKey: sharedQueueKey)
+    }
+
+    /// Convenience for a plain text/link share with no shaping.
+    public static func enqueueShared(_ text: String,
+                                     defaults: UserDefaults? = UserDefaults(suiteName: appGroupSuite)) {
+        enqueueShared(SharedItem(text: text), defaults: defaults)
     }
 
     /// Read the queued shared items WITHOUT consuming them. Separated from the clear below so
     /// the app can drop the queue only once the Takes are safely written — a crash or a failed
     /// save between the two must not lose the user's content.
-    public static func sharedQueue(defaults: UserDefaults? = UserDefaults(suiteName: appGroupSuite)) -> [String] {
-        defaults?.stringArray(forKey: sharedQueueKey) ?? []
+    public static func sharedQueue(defaults: UserDefaults? = UserDefaults(suiteName: appGroupSuite)) -> [SharedItem] {
+        (defaults?.stringArray(forKey: sharedQueueKey) ?? []).map { raw in
+            // Tolerant on purpose: anything that isn't our JSON is treated as plain text, so a
+            // share queued by an older build lands as a Take instead of being silently dropped.
+            (try? PlatformJSON.decode(SharedItem.self, from: Data(raw.utf8)))
+                ?? SharedItem(text: raw)
+        }
     }
 
     /// Drop the shared items the app has now committed. Takes the COUNT it consumed rather than

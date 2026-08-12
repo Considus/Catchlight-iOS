@@ -261,9 +261,18 @@ struct CatchlightApp: App {
         guard !queued.isEmpty else { return }
         guard app.ensureEntitled() else { return }
 
-        for text in queued {
+        for item in queued {
             var take = app.dailiesVM.createTake()
-            take.blocks = [.textLine(text)]
+            take.blocks = [.textLine(item.text)]
+            // Shaping chosen on the share sheet (owner 2026-08-11). Obie via the model's own
+            // setter, so its "Obie implies Important" rule applies; the store's single-Obie
+            // upsert demotes the previous one on save, exactly as the Obie widget does.
+            if item.isObie { take.isObie = true }
+            if item.isImportant { take.isImportant = true }
+            // Task appends an EMPTY check item rather than converting the shared text — the same
+            // decision `convertToChecklist` makes in the editor, so a shared link stays a link
+            // and the next line you type becomes the first task.
+            if item.isTask { take.convertToChecklist() }
             take.normaliseActivityFloor()
             app.dailiesVM.save(take)
         }
