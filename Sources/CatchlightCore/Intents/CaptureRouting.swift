@@ -142,17 +142,15 @@ public enum CaptureRouting {
     /// rather than being dropped as unparseable.
     public struct SharedItem: Codable, Equatable, Sendable {
         public var text: String
+        /// Capture it as the Obie. Set by the Siri "New Obie" capture, NOT by the share sheet —
+        /// the sheet briefly carried Obie / Important / Task pills and the owner cut them as
+        /// off-brand (2026-08-11). Those two flags went with them rather than lingering as dead
+        /// fields; decoding ignores unknown keys, so anything already queued still reads.
         public var isObie: Bool
-        public var isImportant: Bool
-        /// Make it a Task — the app appends an empty check item, matching what the Focus ring's
-        /// Task Mark does in the editor (existing prose is never converted).
-        public var isTask: Bool
 
-        public init(text: String, isObie: Bool = false, isImportant: Bool = false, isTask: Bool = false) {
+        public init(text: String, isObie: Bool = false) {
             self.text = text
             self.isObie = isObie
-            self.isImportant = isImportant
-            self.isTask = isTask
         }
     }
 
