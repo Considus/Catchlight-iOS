@@ -50,7 +50,7 @@ struct CaptureTakeIntent: AppIntent {
     @Parameter(
         title: "Take",
         description: "What to capture.",
-        requestValueDialog: "What's the Take?"
+        requestValueDialog: "What's your Take?"
     )
     var text: String
 
@@ -75,7 +75,7 @@ struct CaptureObieIntent: AppIntent {
     @Parameter(
         title: "Obie",
         description: "What to capture as your Obie.",
-        requestValueDialog: "What's the Obie?"
+        requestValueDialog: "What's your Obie?"
     )
     var text: String
 

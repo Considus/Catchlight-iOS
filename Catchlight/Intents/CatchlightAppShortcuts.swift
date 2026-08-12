@@ -27,7 +27,7 @@ struct CatchlightAppShortcuts: AppShortcutsProvider {
         // which Siri routes to its built-in Reminders intent (owner-reported
         // 2026-06-23: "Add a Take, buy milk" created an Apple Reminder). A free-text
         // body can't be embedded in the phrase itself — say the trigger, then Siri
-        // prompts ("What's the Take?" / "What's the Obie?") and you dictate it.
+        // prompts ("What's your Take?" / "What's your Obie?") and you dictate it.
         // Two parallel sets (owner 2026-06-23): every Take phrase has an Obie twin.
         AppShortcut(
             intent: CaptureTakeIntent(),
