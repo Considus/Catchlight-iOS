@@ -19,32 +19,32 @@
 //  "Add a Take 'buy milk'" pre-fills the new Take with the user's own words.
 //
 
+//  LAUNCHER ONLY as of 2026-08-11: the text parameter moved to `CaptureTakeIntent` /
+//  `CaptureObieIntent`. It was Optional here, and App Intents never requests a value for an
+//  optional parameter, so Siri opened a blank editor instead of asking what to capture
+//  (device-confirmed). One parameter cannot be both required for Siri and absent for the
+//  Control, so the intent became two. This one opens a blank editor and takes no input.
+//
+
 import AppIntents
 import CatchlightCore
 
 struct NewTakeIntent: AppIntent {
     static var title: LocalizedStringResource = "New Take"
     static var description = IntentDescription(
-        "Open Catchlight and start a new Take. Optionally pass text to capture it straight away.",
+        "Open Catchlight and start a new Take.",
         categoryName: "Capture"
     )
 
     /// Bring Catchlight to the foreground — capture runs in-app (see file note).
     static var openAppWhenRun: Bool = true
 
-    @Parameter(
-        title: "Take",
-        description: "Text to capture as a new Take. Leave empty to open a blank Take.",
-        requestValueDialog: "What's the Take?"
-    )
-    var text: String?
-
     @MainActor
     func perform() async throws -> some IntentResult {
         // Record the request for the app to drain once it's foregrounded AND
         // unlocked (CatchlightApp.drainPendingCapture). Cross-process safe — this
         // may run in the Shortcuts/Control extension, not the app.
-        CaptureRouting.setPending(.init(mode: .text, text: text))
+        CaptureRouting.setPending(.init(mode: .text))
         return .result()
     }
 }

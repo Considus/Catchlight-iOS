@@ -38,6 +38,24 @@ final class PasteNormalisationTests: XCTestCase {
         XCTAssertEqual(normalise("line two\r\n"), "line two")
     }
 
+    // MARK: - Leading newlines (device round 2 — this is the one the owner actually hit)
+
+    func testLeadingNewline_isTrimmed() {
+        XCTAssertEqual(normalise("\nline two"), "line two")
+    }
+
+    func testSeveralLeadingNewlines_areAllTrimmed() {
+        XCTAssertEqual(normalise("\n\n\nline two"), "line two")
+    }
+
+    func testLeadingCarriageReturn_isTrimmed() {
+        XCTAssertEqual(normalise("\r\nline two"), "line two")
+    }
+
+    func testBothEnds_areTrimmedTogether() {
+        XCTAssertEqual(normalise("\nline two\n"), "line two")
+    }
+
     // MARK: - What must NOT change
 
     /// THE GUARD THAT MATTERS. Return in a prose row inserts a bare "\n" through this same

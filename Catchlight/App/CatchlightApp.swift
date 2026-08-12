@@ -175,14 +175,28 @@ struct CatchlightApp: App {
     private func drainPendingCapture() {
         guard let pending = CaptureRouting.pending() else { return }
         guard let draft = makeCaptureDraft(pending) else {
-            CaptureRouting.clearPending()   // .audio reserved — no-op until it ships
+            CaptureRouting.clearPending()   // .audio reserved — genuinely nothing to route
             return
         }
-        CaptureRouting.clearPending()
+        // CLEAR ONLY AFTER ROUTING (owner-reported 2026-08-11, test 37: "New Take opened the app,
+        // but no editor — only the first time"). This used to clear the hand-off up front and then
+        // hit `ensureEntitled()`, which returns false while `subscription.status` is still
+        // unresolved — and on a COLD launch StoreKit resolves asynchronously, so there is a window
+        // at first activation where an entitled user reads as unentitled. The capture was already
+        // destroyed by then, hence nothing appeared; by the second run the status had resolved and
+        // it worked, which is exactly the reported shape.
+        //
+        // Keeping the request until it is actually routed makes the failure retryable instead of
+        // fatal. That matters most for a Siri/Shortcuts capture, where the pending payload carries
+        // the user's own dictated words — losing it loses content, not just a blank editor.
         if app.lockState == .unlocked {
             // Owner 2026-06-23: a lapsed user hits the paywall instead of capturing,
             // consistent with the dock + and RootView.newTake ("open app, then paywall").
+            // The request SURVIVES: `subscriptionStatus` changing re-drains (see the app body),
+            // so it completes the moment entitlement resolves — whether that is StoreKit catching
+            // up or the user subscribing at the paywall it just raised.
             guard app.ensureEntitled() else { return }
+            CaptureRouting.clearPending()
             app.ui.exitToResting()
             app.ui.pendingInlineNewTake = draft
         } else {
@@ -190,9 +204,13 @@ struct CatchlightApp: App {
             // post-unlock in saveLockedCapture (ensureEntitled needs the unlocked state).
             // Never clobber an IN-PROGRESS locked draft (2026-07-01): a second
             // widget/Control tap while the user is mid-typing would replace their
-            // text with a fresh blank. Keep the live draft; the new request was
-            // cleared above, so it's a deliberate drop, not a deferred re-fire.
-            guard app.lockedCapture == nil else { return }
+            // text with a fresh blank. Keep the live draft and DISCARD the new request —
+            // a deliberate drop, so it is cleared explicitly rather than left to re-fire.
+            guard app.lockedCapture == nil else {
+                CaptureRouting.clearPending()
+                return
+            }
+            CaptureRouting.clearPending()
             app.lockedCapture = draft
         }
     }
@@ -349,6 +367,12 @@ struct CatchlightApp: App {
             .onOpenURL { url in
                 guard let mode = CaptureRouting.mode(from: url) else { return }
                 CaptureRouting.setPending(.init(mode: mode))
+                drainPendingCapture()
+            }
+            // Entitlement resolving is a second chance to route a held capture (2026-08-11):
+            // StoreKit finishing its cold-launch lookup, or the user subscribing at the paywall
+            // the drain just raised. No-op when nothing is pending.
+            .onChange(of: app.subscriptionStatus) { _, _ in
                 drainPendingCapture()
             }
             // A reminder TAP while the app is already foregrounded — reveal at once rather than

@@ -383,6 +383,10 @@ targets:
     platform: iOS
     sources:
       - path: CatchlightShare
+      # Share the THEME so the sheet is branded rather than generic. Safe to share because
+      # `UITheme`/`Palette` are code-defined colours, not asset-catalog entries — the same
+      # reason the widget extension can share the capture intents.
+      - path: Catchlight/UI/Theme/CatchlightTheme.swift
     info:
       # ⚠️ XcodeGen REWRITES this file from the properties below on every `generate`.
       # A hand-written CatchlightShare/Info.plist is silently replaced — that is not a
