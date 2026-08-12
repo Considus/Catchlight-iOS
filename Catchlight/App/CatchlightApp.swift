@@ -407,6 +407,22 @@ struct CatchlightApp: App {
                 backgroundSync.scheduleNext()
             }
             if newPhase == .active {
+                // DECIDE THE LOCK STATE BEFORE ROUTING ANYTHING (owner-reported 2026-08-11:
+                // "phone was unlocked, Catchlight asked separately" after a Siri capture).
+                //
+                // The grace re-lock used to run in RootView's own `.active`, racing the capture
+                // drain below. When the drain won, it saw an app still nominally UNLOCKED, took
+                // the unlocked branch and handed the draft to the inline editor — and only then
+                // did the re-lock fire, throwing up Face ID. The zero-Face-ID path never got a
+                // look in, because at the moment of the decision the app did not yet know it was
+                // about to lock.
+                //
+                // Hoisting it here makes the order deterministic: the drain now sees the TRUE
+                // lock state and routes a capture on a locked app to `LockedCaptureView` (type
+                // now, unlock at save), which is the whole point of that screen. RootView still
+                // calls this and is unaffected — `relockIfAwayTooLong` consumes its timestamp, so
+                // the second call is a no-op.
+                app.relockIfAwayTooLong()
                 // Foreground sync is the PRIMARY sync path on hardware: the
                 // `.userPresence` master key cannot be unwrapped by a cold
                 // background task, so opening the app is when changes from
