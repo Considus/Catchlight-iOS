@@ -127,9 +127,6 @@ struct DailiesView: View {
     /// "Make Obie" is chosen while another Obie already exists (owner 2026-07-06). The same
     /// warning the timeline long-press uses, but targeting the draft — the existing Obie is
     /// demoted by the store's single-Obie upsert when this draft saves.
-    /// Presentation flag for the "All tasks done" modal. @State rather than a binding derived
-    /// from the view model — see the alert below for why that matters.
-    @State private var showTasksCompleted = false
     @State private var pendingInlineObieConfirm = false
     /// Drives the reminder picker opened from the editor keyboard's slot-2 Reminder
     /// button (owner 2026-06-21) — edits the editing draft's reminder in place. The
@@ -472,24 +469,6 @@ struct DailiesView: View {
         //
         // Neither button is destructive-styled. Stopping a reminder deletes nothing — the Take
         // and its date stay on the timeline — so red would overstate it.
-        // Driven by @State via onChange, NOT an inline Binding over `vm.tasksCompletedTakeID`.
-        // That was the first cut and it never appeared (owner: "unable to surface modal"): a
-        // `Binding(get:set:)` closure escapes, so reading an @Observable property inside it does
-        // not reliably register a dependency, and the view was never invalidated to present the
-        // alert. `onChange` reads the property in body context, which does establish it.
-        // The nearby recurring-delete dialog uses the inline-Binding shape safely only because
-        // it reads @State.
-        .onChange(of: vm.tasksCompletedTakeID) { _, id in
-            showTasksCompleted = (id != nil)
-        }
-        .alert("All tasks done.", isPresented: $showTasksCompleted) {
-            Button("Stop reminding") { vm.stopRemindingForCompletedTake() }
-            Button("Keep reminding", role: .cancel) { vm.clearTasksCompletedNotice() }
-            // Both branches clear the view model too: @State drives presentation now, so the
-            // VM's id must not be left set or the next tick would be ignored as "no change".
-        } message: {
-            Text("Every task on this Take is ticked. Stop its reminder?")
-        }
         // Inline Obie confirmation (owner 2026-06-17; re-homed to the editing long-press
         // menu 2026-07-06) — mirrors the timeline long-press warning, but targets the
         // draft (the existing Obie is demoted by the store on save).
