@@ -1310,7 +1310,7 @@ struct DailiesView: View {
 
     /// Commit the in-place edit through the same path the old editor used: drop empty
     /// prose rows, then either discard a never-saved blank Take or `vm.save`.
-    /// Silence the prompted Take's reminder.
+    /// Remove the prompted Take's reminder.
     ///
     /// Routes through the DRAFT when the prompted Take is the one open in the editor, because
     /// moving the prompt to the tick means it can now fire on a Take that has never been saved —
@@ -1322,7 +1322,7 @@ struct DailiesView: View {
     /// The draft change rides the normal inline save on tap-away, so there is no second write.
     private func stopRemindingForPromptedTake() {
         if var draft = editDraft, draft.id == vm.tasksCompletedTakeID {
-            draft.timeReminder?.alarmEnabled = false
+            draft.timeReminder = nil
             editDraft = draft
             vm.clearTasksCompletedNotice()
             return

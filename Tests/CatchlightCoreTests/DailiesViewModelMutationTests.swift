@@ -161,7 +161,9 @@ final class DailiesViewModelMutationTests: XCTestCase {
         XCTAssertNil(vm.tasksCompletedTakeID)
     }
 
-    func testStopReminding_turnsTheAlarmOff_andKeepsTheTakeAndItsDate() throws {
+    /// "Stop" REMOVES the reminder (owner 2026-08-13). Muting it left the date on the card with
+    /// a crossed-out bell, which reads as a reminder that still exists.
+    func testStopReminding_removesTheReminder_andKeepsTheTake() throws {
         let take = reminderTake(prose: "Ring the surveyor back",
                                 items: [("scan it", false)], recurrence: .weekly)
         let vm = try makeVM([take])
@@ -172,8 +174,8 @@ final class DailiesViewModelMutationTests: XCTestCase {
 
         vm.stopRemindingForCompletedTake()
         let stored = try XCTUnwrap(vm.store.take(id: take.id))
-        XCTAssertEqual(stored.timeReminder?.alarmEnabled, false, "the alarm is off")
-        XCTAssertNotNil(stored.timeReminder, "but the reminder and its date survive")
+        XCTAssertNil(stored.timeReminder, "the reminder is gone, not merely muted")
+        XCTAssertEqual(stored.plainText, take.plainText, "the Take itself is untouched")
         XCTAssertNil(vm.tasksCompletedTakeID)
     }
 }

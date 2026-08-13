@@ -154,14 +154,21 @@ final class DailiesViewModel {
         tasksCompletedTakeID = take.id
     }
 
-    /// Silence the prompted Take's reminder for good — the in-app twin of the "Stop reminding"
-    /// notification action. Keeps the Take and its date; only the alarm goes off.
+    /// REMOVE the prompted Take's reminder — the in-app twin of the "Stop reminding"
+    /// notification action.
+    ///
+    /// Removes it outright rather than muting it (owner 2026-08-13). The first cut set
+    /// `alarmEnabled = false`, which keeps the reminder and its date on the card with a
+    /// crossed-out bell — "that isn't removing the reminder, it's removing the alert". A
+    /// finished Take should not go on carrying a due date nobody is waiting for.
+    ///
+    /// `save` reconciles notifications, so clearing the reminder cancels every pending alarm it
+    /// owned, the recurring window included. The Take itself is untouched: this is not a delete.
     func stopRemindingForCompletedTake() {
         guard let id = tasksCompletedTakeID else { return }
         tasksCompletedTakeID = nil
-        guard var updated = try? store.take(id: id),
-              updated.timeReminder?.alarmEnabled == true else { return }
-        updated.timeReminder?.alarmEnabled = false
+        guard var updated = try? store.take(id: id), updated.timeReminder != nil else { return }
+        updated.timeReminder = nil
         save(updated)
     }
 
@@ -437,17 +444,17 @@ final class DailiesViewModel {
             save(updated)
         }
 
-        // "Stop reminding" (owner 2026-08-11) — unlike a dismissal this silences the reminder
+        // "Stop reminding" (owner 2026-08-11) — unlike a dismissal this ends the reminder
         // WHATEVER its recurrence, which is the whole point: it is the only way to end a
         // repeating series. Without this store write the app-open rebuild would replan the
         // series from the store and it would simply come back.
         //
-        // The Take, its date and its checklist are untouched. This silences, it never deletes,
-        // so the timeline still shows when the thing was due.
+        // REMOVES the reminder rather than muting it (owner 2026-08-13): muting left the date on
+        // the card with a crossed-out bell, which reads as a reminder that still exists. The
+        // TAKE is untouched — this ends the nagging, it does not delete anything the user wrote.
         for id in PendingReminderActions.drainStopReminding() {
-            guard var updated = try? store.take(id: id),
-                  updated.timeReminder?.alarmEnabled == true else { continue }
-            updated.timeReminder?.alarmEnabled = false
+            guard var updated = try? store.take(id: id), updated.timeReminder != nil else { continue }
+            updated.timeReminder = nil
             save(updated)
         }
     }
