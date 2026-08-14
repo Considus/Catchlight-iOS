@@ -2,66 +2,73 @@
 //  ShareViewController.swift
 //  CatchlightShare — the Share Extension (owner 2026-08-11)
 //
-//  "Share to Catchlight" from any app. Deferred to v1.1 when the widgets landed (project.yml's
-//  closing note); brought into v1.0 on owner testing feedback — Catchlight simply never appeared
-//  in the share sheet, because no extension target existed at all.
+//  "Share to Catchlight" from any app. Deferred to v1.1 when the widgets landed; brought into
+//  v1.0 on owner testing feedback, because Catchlight simply never appeared in the share sheet —
+//  no such target existed.
 //
-//  IT QUEUES, IT DOES NOT SAVE. The encrypted store needs the master key, which is
-//  `.userPresence`-gated and only materialises in the foreground, unlocked app — the same
-//  zero-knowledge wall that stops the widgets writing. So the extension appends to
-//  `CaptureRouting`'s shared queue in the App Group and the app commits on next open. That is
-//  also why it never reads existing Takes: it has no key, and no business holding one.
+//  CUSTOM UI, replacing `SLComposeServiceViewController` (owner, device round 2). The screen
+//  itself is `ShareSheetView`; this class owns only the extension plumbing and extraction. Apple's compose
+//  sheet owns three things it does not let you change, and the owner hit all three within a minute
+//  of testing: the action button says "Post" (wrong verb — nothing is being published), it draws a
+//  grey placeholder square for an attachment it cannot preview, and it dismisses with no
+//  confirmation, so a shared link looked like it had gone nowhere. This screen fixes all three,
+//  and it is the same surface we would extend if the extension ever writes the store directly.
 //
-//  A QUEUE rather than the widgets' single pending slot: sharing three articles before opening
-//  the app is ordinary behaviour, and last-wins would have silently eaten the first two.
+//  IT QUEUES, IT DOES NOT SAVE. The encrypted store needs the master key, which is Face-ID-gated
+//  and only exists inside the foreground, unlocked app — the same wall that stops the widgets
+//  writing Takes. So this appends to `CaptureRouting`'s shared queue and the app commits on next
+//  open. A QUEUE rather than the widgets' single pending slot: sharing three things before opening
+//  the app is ordinary, and last-wins would silently eat the first two.
 //
-//  The system compose sheet (`SLComposeServiceViewController`) carries the UI. Anything the user
-//  types there becomes the FIRST LINE of the Take — a note about why they kept it — with the
-//  shared text or link below. That's the whole editing surface offered here on purpose: a richer
-//  one would be a second editor that cannot see the store it's writing to.
+//  NOTHING IS EVER SILENTLY DROPPED. If no text or URL can be extracted, the screen SAYS SO rather
+//  than closing as if it had worked — the owner hit that too (a share that "opened the editor and
+//  closed again", which was this path, not the site misbehaving).
 //
 
 import UIKit
+import SwiftUI
 import UniformTypeIdentifiers
-import Social
 import CatchlightCore
 
-final class ShareViewController: SLComposeServiceViewController {
-
-    /// Post is always available: a share with no typed note is the common case, and the
-    /// attachment alone is worth keeping.
-    override func isContentValid() -> Bool { true }
+final class ShareViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Catchlight"
-        placeholder = "Add a note (optional)"
+        view.backgroundColor = .clear
+
+        let root = ShareSheetView(
+            load: { [weak self] in await self?.extractSharedText() ?? [] },
+            onSave: { [weak self] item in
+                CaptureRouting.enqueueShared(item)
+                self?.finish()
+            },
+            onCancel: { [weak self] in self?.finish() }
+        )
+        let host = UIHostingController(rootView: root)
+        host.view.backgroundColor = .clear
+        addChild(host)
+        host.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(host.view)
+        NSLayoutConstraint.activate([
+            host.view.topAnchor.constraint(equalTo: view.topAnchor),
+            host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+        host.didMove(toParent: self)
     }
 
-    override func didSelectPost() {
-        // Read the typed note on the main actor BEFORE hopping off it — `contentText` is UI state.
-        let note = (contentText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let context = extensionContext
-
-        Task {
-            let shared = await extractSharedText()
-            let body = ([note] + shared)
-                .filter { !$0.isEmpty }
-                .joined(separator: "\n")
-            CaptureRouting.enqueueShared(body)
-            // Always complete, even when nothing could be extracted: leaving the sheet open on an
-            // unsupported attachment strands the user inside another app's UI.
-            context?.completeRequest(returningItems: [], completionHandler: nil)
-        }
+    private func finish() {
+        extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
     }
 
     // MARK: - Extraction
 
     /// Pull plain text and URLs out of every attachment on every input item.
     ///
-    /// Order matters: TEXT is preferred over URL on the same attachment, because a share from a
-    /// browser usually carries both and the text is the selection the user actually highlighted.
-    /// A URL-only share (the Share button rather than a text selection) falls through to the link.
+    /// TEXT is preferred over URL on the same attachment: a share from a browser usually carries
+    /// both, and the text is the selection the user actually highlighted. A URL-only share (the
+    /// Share button rather than a text selection) falls through to the link.
     private func extractSharedText() async -> [String] {
         guard let inputItems = extensionContext?.inputItems as? [NSExtensionItem] else { return [] }
         var out: [String] = []

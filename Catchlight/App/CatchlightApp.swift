@@ -142,7 +142,7 @@ struct CatchlightApp: App {
 
         // Return the dock to RESTING (clearing any live filter) BEFORE setting
         // the target, so the row is guaranteed visible on the unfiltered
-        // timeline. The UIKit timeline consumes `ui.spotlightTargetTakeID`
+        // timeline. The UIKit timeline consumes `ui.revealTargetTakeID`
         // (scroll + ember pulse, then it clears the state); the pinned Obie is
         // handled by DailiesView directly. We deliberately do not open the
         // editor here — editing is gated for lapsed users, and a Spotlight tap
@@ -158,7 +158,7 @@ struct CatchlightApp: App {
             let allTakes = (try? app.dailiesVM.store.allTakes()) ?? []
             guard allTakes.contains(where: { $0.id == uuid }) else { return }
         }
-        app.ui.spotlightTargetTakeID = uuid
+        app.ui.revealTargetTakeID = uuid
     }
 
     /// Drain a capture request queued by a widget / the New Take intent / the
@@ -175,14 +175,46 @@ struct CatchlightApp: App {
     private func drainPendingCapture() {
         guard let pending = CaptureRouting.pending() else { return }
         guard let draft = makeCaptureDraft(pending) else {
-            CaptureRouting.clearPending()   // .audio reserved — no-op until it ships
+            CaptureRouting.clearPending()   // .audio reserved — genuinely nothing to route
             return
         }
-        CaptureRouting.clearPending()
+        // CLEAR ONLY AFTER ROUTING (owner-reported 2026-08-11, test 37: "New Take opened the app,
+        // but no editor — only the first time"). This used to clear the hand-off up front and then
+        // hit `ensureEntitled()`, which returns false while `subscription.status` is still
+        // unresolved — and on a COLD launch StoreKit resolves asynchronously, so there is a window
+        // at first activation where an entitled user reads as unentitled. The capture was already
+        // destroyed by then, hence nothing appeared; by the second run the status had resolved and
+        // it worked, which is exactly the reported shape.
+        //
+        // Keeping the request until it is actually routed makes the failure retryable instead of
+        // fatal. That matters most for a Siri/Shortcuts capture, where the pending payload carries
+        // the user's own dictated words — losing it loses content, not just a blank editor.
+        // A capture that ARRIVES WITH TEXT is a finished thought, not a draft — SAVE it, never
+        // open an editor on it (owner 2026-08-11: "liked it better when it saved without me
+        // needing to touch the phone"). Dictating to Siri is the case that matters: you have
+        // already said the thing, and being handed an editor makes you finish something you
+        // finished a second ago.
+        //
+        // Routed through the SHARED QUEUE rather than saved here, because that path already
+        // solves the locked case correctly: it holds the item and commits it at the next unlock,
+        // so a locked phone costs the user nothing and demands no Face ID. A blank launcher (a
+        // widget, the Control, the Action button) still opens the editor below — there is nothing
+        // to save yet, and an editor is exactly what it asked for.
+        if let text = pending.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            CaptureRouting.clearPending()
+            CaptureRouting.enqueueShared(
+                .init(text: text, isObie: pending.mode == .obie))
+            drainSharedCaptures()
+            return
+        }
         if app.lockState == .unlocked {
             // Owner 2026-06-23: a lapsed user hits the paywall instead of capturing,
             // consistent with the dock + and RootView.newTake ("open app, then paywall").
+            // The request SURVIVES: `subscriptionStatus` changing re-drains (see the app body),
+            // so it completes the moment entitlement resolves — whether that is StoreKit catching
+            // up or the user subscribing at the paywall it just raised.
             guard app.ensureEntitled() else { return }
+            CaptureRouting.clearPending()
             app.ui.exitToResting()
             app.ui.pendingInlineNewTake = draft
         } else {
@@ -190,11 +222,38 @@ struct CatchlightApp: App {
             // post-unlock in saveLockedCapture (ensureEntitled needs the unlocked state).
             // Never clobber an IN-PROGRESS locked draft (2026-07-01): a second
             // widget/Control tap while the user is mid-typing would replace their
-            // text with a fresh blank. Keep the live draft; the new request was
-            // cleared above, so it's a deliberate drop, not a deferred re-fire.
-            guard app.lockedCapture == nil else { return }
+            // text with a fresh blank. Keep the live draft and DISCARD the new request —
+            // a deliberate drop, so it is cleared explicitly rather than left to re-fire.
+            guard app.lockedCapture == nil else {
+                CaptureRouting.clearPending()
+                return
+            }
+            CaptureRouting.clearPending()
             app.lockedCapture = draft
         }
+    }
+
+    /// Show the Take a notification TAP asked for (owner-reported 2026-08-11).
+    ///
+    /// Tapping a reminder used to open the plain timeline with no sign of which Take had fired —
+    /// "I couldn't remember which one to look at". Routes through the SAME reveal the Spotlight
+    /// deep link uses (`ui.revealTargetTakeID`), so the row is scrolled to and pulsed, and the
+    /// locked case is already handled there: the reveal stays pending until the row exists after
+    /// unlock.
+    ///
+    /// Deliberately does NOT open the editor, matching `handleSpotlight`. Editing is gated for
+    /// lapsed users and a reminder tap must never surface the paywall.
+    @MainActor
+    private func drainPendingReveal() {
+        guard let uuid = NotificationPresenter.takePendingReveal() else { return }
+        app.ui.exitToResting()
+        // Only checkable while unlocked — the locked app holds the empty placeholder store, so a
+        // cold tap sets the target regardless and the timeline resolves it after unlock.
+        if app.lockState == .unlocked {
+            let all = (try? app.dailiesVM.store.allTakes()) ?? []
+            guard all.contains(where: { $0.id == uuid }) else { return }
+        }
+        app.ui.revealTargetTakeID = uuid
     }
 
     /// Commit anything the Share Extension queued while we were away (2026-08-11).
@@ -220,13 +279,28 @@ struct CatchlightApp: App {
         guard !queued.isEmpty else { return }
         guard app.ensureEntitled() else { return }
 
-        for text in queued {
+        var lastSavedID: UUID?
+        for item in queued {
             var take = app.dailiesVM.createTake()
-            take.blocks = [.textLine(text)]
+            take.blocks = [.textLine(item.text)]
+            // Obie via the model's own setter, so its "Obie implies Important" rule applies;
+            // the store's single-Obie upsert demotes the previous one on save, exactly as the
+            // Obie widget does. Only the Siri "New Obie" capture sets this — the share sheet's
+            // shaping pills were cut as off-brand (owner 2026-08-11).
+            if item.isObie { take.isObie = true }
             take.normaliseActivityFloor()
             app.dailiesVM.save(take)
+            lastSavedID = take.id
         }
         CaptureRouting.clearSharedQueue(consumed: queued.count)
+        // Show what just landed when exactly ONE thing did (owner 2026-08-11). A dictated Take
+        // saves without the user touching anything, so without this it is saved invisibly and
+        // they have to go looking to believe it. Several at once (a batch of shares) get no
+        // reveal — pulsing an arbitrary one of them would be a lie about the rest.
+        if queued.count == 1, let lastSavedID {
+            app.ui.exitToResting()
+            app.ui.revealTargetTakeID = lastSavedID
+        }
     }
 
     /// Build the in-memory draft for a capture, shared by the unlocked (inline) and
@@ -328,6 +402,18 @@ struct CatchlightApp: App {
                 CaptureRouting.setPending(.init(mode: mode))
                 drainPendingCapture()
             }
+            // Entitlement resolving is a second chance to route a held capture (2026-08-11):
+            // StoreKit finishing its cold-launch lookup, or the user subscribing at the paywall
+            // the drain just raised. No-op when nothing is pending.
+            .onChange(of: app.subscriptionStatus) { _, _ in
+                drainPendingCapture()
+            }
+            // A reminder TAP while the app is already foregrounded — reveal at once rather than
+            // waiting for the next activation (2026-08-11).
+            .onReceive(NotificationCenter.default.publisher(
+                for: NotificationPresenter.revealRequested)) { _ in
+                drainPendingReveal()
+            }
             // D-042 — re-lock when the DEVICE locks (auto-lock or manual), not on
             // mere app-switching. `protectedDataWillBecomeUnavailable` fires on
             // device lock only; the app drops its keys + encrypted store and the
@@ -354,6 +440,22 @@ struct CatchlightApp: App {
                 backgroundSync.scheduleNext()
             }
             if newPhase == .active {
+                // DECIDE THE LOCK STATE BEFORE ROUTING ANYTHING (owner-reported 2026-08-11:
+                // "phone was unlocked, Catchlight asked separately" after a Siri capture).
+                //
+                // The grace re-lock used to run in RootView's own `.active`, racing the capture
+                // drain below. When the drain won, it saw an app still nominally UNLOCKED, took
+                // the unlocked branch and handed the draft to the inline editor — and only then
+                // did the re-lock fire, throwing up Face ID. The zero-Face-ID path never got a
+                // look in, because at the moment of the decision the app did not yet know it was
+                // about to lock.
+                //
+                // Hoisting it here makes the order deterministic: the drain now sees the TRUE
+                // lock state and routes a capture on a locked app to `LockedCaptureView` (type
+                // now, unlock at save), which is the whole point of that screen. RootView still
+                // calls this and is unaffected — `relockIfAwayTooLong` consumes its timestamp, so
+                // the second call is a no-op.
+                app.relockIfAwayTooLong()
                 // Foreground sync is the PRIMARY sync path on hardware: the
                 // `.userPresence` master key cannot be unwrapped by a cold
                 // background task, so opening the app is when changes from
@@ -383,6 +485,10 @@ struct CatchlightApp: App {
                 // open an editor: saving runs a `reload()`, and doing that underneath an open
                 // editor is the kind of ordering that strands a draft.
                 drainSharedCaptures()
+                // A reminder tapped from a COLD launch: this delegate can run before any view is
+                // observing the notification above, so the tap is also held statically and drained
+                // here.
+                drainPendingReveal()
                 // An intent/Control/Shortcut foregrounds the app via this path;
                 // drain any queued capture (no-op if still locked — see below).
                 drainPendingCapture()
@@ -407,6 +513,8 @@ struct CatchlightApp: App {
                 // Anything shared while locked now has a readable store to land in (2026-08-11).
                 // Before the widget capture, for the reload-under-an-open-editor reason above.
                 drainSharedCaptures()
+                // …and a reminder tapped while locked reveals once the store is readable.
+                drainPendingReveal()
                 // A capture queued by a widget/intent before unlock now drains into
                 // the blank (or pre-filled) editor (2026-06-23).
                 drainPendingCapture()
