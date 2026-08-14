@@ -258,6 +258,36 @@ final class SettingsViewModel {
         }
     }
 
+    /// How the timeline is ARRANGED: by date, or by hand (D-195, owner 2026-08-14).
+    /// A peer of `TakeSort`, deliberately NOT a third case of it — the owner kept
+    /// oldest/newest adjustable in both arrangements, and folding Manual into that
+    /// picker would have made the direction unreachable exactly when it decides
+    /// where a new Take lands. `Manual` also HIDES the month dividers: they are
+    /// derived from `createdAt`, so the moment a Take is dragged out of its month
+    /// they state something untrue. Read by `DailiesView` and `StoryboardView`;
+    /// the arithmetic is `ManualOrder` in Core.
+    enum TimelineArrangement: String, CaseIterable, Identifiable {
+        case date, manual
+
+        static let defaultsKey = "catchlight.timelineArrangement"
+        static let `default`: TimelineArrangement = .date
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .date: return "Date"
+            case .manual: return "Manual"
+            }
+        }
+
+        static var current: TimelineArrangement {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let value = TimelineArrangement(rawValue: raw) else { return .default }
+            return value
+        }
+    }
+
     /// Where the "Created at …" stamp shows (owner 2026-07-01). Default `.off` — the
     /// timeline stays clean unless the user opts in. `.editor` shows it only while a
     /// Take is open in the inline editor; `.always` also shows it on every resting

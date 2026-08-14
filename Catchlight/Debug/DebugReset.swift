@@ -64,6 +64,7 @@ enum DebugReset {
         standard.removeObject(forKey: SettingsViewModel.appearanceDefaultsKey)
         standard.removeObject(forKey: SettingsViewModel.TakeSpacing.defaultsKey)   // "View"
         standard.removeObject(forKey: SettingsViewModel.TakeSort.defaultsKey)      // "Order"
+        standard.removeObject(forKey: SettingsViewModel.TimelineArrangement.defaultsKey) // "Arrangement"
         standard.removeObject(forKey: SettingsViewModel.TakePreview.defaultsKey)   // "Preview"
         standard.removeObject(forKey: SettingsViewModel.ExpandedTakes.defaultsKey) // per-Take "Expand Take"
         standard.removeObject(forKey: SettingsViewModel.LockAfter.defaultsKey)     // "Lock after"

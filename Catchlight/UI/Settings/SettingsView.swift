@@ -31,6 +31,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.LockAfter.defaultsKey) private var lockAfterRaw: String = SettingsViewModel.LockAfter.default.rawValue
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey) private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
     @AppStorage(SettingsViewModel.TakeSort.defaultsKey) private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
+    @AppStorage(SettingsViewModel.TimelineArrangement.defaultsKey) private var arrangementRaw: String = SettingsViewModel.TimelineArrangement.default.rawValue
     @AppStorage(SettingsViewModel.TakePreview.defaultsKey) private var takePreviewRaw: String = SettingsViewModel.TakePreview.default.rawValue
     @AppStorage(SettingsViewModel.CreationStamp.defaultsKey) private var creationStampRaw: String = SettingsViewModel.CreationStamp.default.rawValue
     @AppStorage(SettingsViewModel.AutoCleanup.defaultsKey) private var autoCleanupRaw: String = SettingsViewModel.AutoCleanup.default.rawValue
@@ -280,6 +281,21 @@ struct SettingsView: View {
                 }
             }
 
+            // Timeline arrangement — Date or Manual (D-195, owner 2026-08-14). Sits
+            // directly under Order because the two read together: Order still says which
+            // end is "now" while Manual is on, and that is what decides where a newly
+            // created Take lands in a hand-arranged timeline.
+            menuPickerRow(icon: "hand.draw",
+                          label: "Arrangement",
+                          accessibilityLabel: "Timeline arrangement",
+                          selectionLabel: arrangementBinding.wrappedValue.label) {
+                Picker("Arrangement", selection: arrangementBinding) {
+                    ForEach(SettingsViewModel.TimelineArrangement.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+            }
+
             // Created-at stamp — Off / In the editor / Always (owner 2026-07-01).
             menuPickerRow(icon: "calendar",
                           label: "Creation date",
@@ -361,6 +377,13 @@ struct SettingsView: View {
         Binding(
             get: { SettingsViewModel.TakeSort(rawValue: takeSortRaw) ?? .default },
             set: { takeSortRaw = $0.rawValue }
+        )
+    }
+
+    private var arrangementBinding: Binding<SettingsViewModel.TimelineArrangement> {
+        Binding(
+            get: { SettingsViewModel.TimelineArrangement(rawValue: arrangementRaw) ?? .default },
+            set: { arrangementRaw = $0.rawValue }
         )
     }
 

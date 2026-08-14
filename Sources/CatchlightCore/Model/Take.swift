@@ -32,12 +32,19 @@
 import Foundation
 
 public struct Take: Identifiable, Codable, Equatable, Sendable {
-    /// Version of the encrypted payload schema. v2 (2026-06-13) is the block
-    /// content model (D-035); v1 carried `bodyText` + `checklistItems`. Old
-    /// payloads without the field decode as version 1 and are upgraded to blocks
-    /// in `init(from:)`. Synthesised Codable offers no decoding defaults, so
-    /// future fields MUST be added with `decodeIfPresent` + a default below.
-    public static let currentSchemaVersion = 2
+    /// Version of the encrypted payload schema. v3 (2026-08-14) adds `manualOrder`
+    /// (D-195 timeline re-ordering). v2 (2026-06-13) is the block content model
+    /// (D-035); v1 carried `bodyText` + `checklistItems`. Old payloads without the
+    /// field decode as version 1 and are upgraded to blocks in `init(from:)`.
+    /// Synthesised Codable offers no decoding defaults, so future fields MUST be
+    /// added with `decodeIfPresent` + a default below.
+    ///
+    /// v3 is ADDITIVE and back-compatible in both directions: a v2 payload decodes
+    /// with `manualOrder == nil` (which means "sits at its date position", so the
+    /// timeline is unchanged), and a v3 payload decoded by an older build simply
+    /// ignores the unknown key. That is why the version is not a gate anywhere —
+    /// unlike the manifest version, which fails closed (D-196).
+    public static let currentSchemaVersion = 3
     public var schemaVersion: Int
 
     /// Primary key. Used as the HKDF `info` parameter for the per-item key.
@@ -130,6 +137,29 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
     /// payloads decoding, and it rides the encrypted payload like any other field.
     public var isImportant: Bool
 
+    // MARK: - Manual timeline order (D-195)
+
+    /// This Take's position in the MANUAL timeline arrangement, or `nil` for a Take
+    /// that has never been dragged (schema v3, 2026-08-14).
+    ///
+    /// A SPARSE FRACTIONAL INDEX, not a rank. Dropping a card between two others
+    /// writes the midpoint of their two values into THIS Take alone — so a drag
+    /// re-encrypts and pushes one Take, not the whole timeline. A dense 0…n rank
+    /// would renumber every Take on every drag, and since each one carries its own
+    /// `modifiedAt` that would also make every Take a conflict candidate against a
+    /// second device. See `ManualOrder`.
+    ///
+    /// `nil` means "wherever `createdAt` puts me": the sort substitutes the Take's
+    /// creation time (as epoch seconds) for a missing value, which is the same
+    /// number line. That is what lets manual mode open on EXACTLY the date order the
+    /// user was already looking at, with no migration write, and it is why turning
+    /// the setting on changes nothing until something is actually dragged.
+    ///
+    /// Ascending = the OLDEST-FIRST reading direction, always. The Order setting
+    /// (oldest/newest) reverses the rendered list rather than the stored values, so
+    /// flipping it twice returns the arrangement exactly (owner 2026-08-14).
+    public var manualOrder: Double?
+
     public init(
         id: UUID = UUID(),
         createdAt: Date = Date(),
@@ -142,7 +172,8 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         locationReminder: LocationTrigger? = nil,
         attachments: [Attachment] = [],
         isSeeded: Bool = false,
-        isImportant: Bool = false
+        isImportant: Bool = false,
+        manualOrder: Double? = nil
     ) {
         self.schemaVersion = Self.currentSchemaVersion
         self.id = id
@@ -159,6 +190,7 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         // didSet doesn't fire during init — apply the Obie ⟹ Important rule explicitly
         // so an Obie constructed directly is also Important.
         self.isImportant = isImportant || isObie
+        self.manualOrder = manualOrder
     }
 
     // MARK: - Derived content accessors
@@ -437,6 +469,7 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         case isNote, isObie
         case timeReminder, locationReminder, attachments
         case isSeeded, isImportant
+        case manualOrder
         // DROPPED in v2 (D-035): `bodyText`, `checklistItems` (now `blocks`), and
         // the formerly-stored `isTask` / `isComplete` (now derived). Old payloads
         // carrying those keys are upgraded in `init(from:)`; unknown keys on
@@ -487,6 +520,10 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         // existed (a pre-existing Obie decodes as Important). didSet doesn't fire in
         // init, so apply the rule explicitly here.
         self.isImportant = (try c.decodeIfPresent(Bool.self, forKey: .isImportant) ?? false) || self.isObie
+        // v2 and earlier carry no manual position — nil, i.e. "sits at its date
+        // position". Never defaulted to a number: a real 0 would pin every legacy
+        // Take to the top of the manual arrangement.
+        self.manualOrder = try c.decodeIfPresent(Double.self, forKey: .manualOrder)
         // NOTE for future versions: new fields added here MUST use
         // `decodeIfPresent` with a default so older payloads keep decoding.
     }
@@ -506,6 +543,9 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         try c.encode(attachments, forKey: .attachments)
         try c.encode(isSeeded, forKey: .isSeeded)
         try c.encode(isImportant, forKey: .isImportant)
+        // Omitted entirely when nil, so a Take nobody has dragged still serialises
+        // byte-identically to its v2 form apart from the version number.
+        try c.encodeIfPresent(manualOrder, forKey: .manualOrder)
     }
 
     /// Enforces the "Note is the floor" rule (UX §6). Call after any activity-type
