@@ -632,14 +632,14 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     // MARK: - Spotlight deep-link reveal (Task 6.19, re-wired for the UIKit timeline 2026-07-23)
     //
     // The SwiftUI timeline's scroll-and-flash died in the M7 rewrite: the host set
-    // `ui.spotlightTargetTakeID` but nothing in this collection consumed it (only
+    // `ui.revealTargetTakeID` but nothing in this collection consumed it (only
     // the pinned-Obie row path did, and nothing ever cleared it). The host now
     // hands the target to `requestReveal`; this scrolls the row into view, pulses
     // the card via `flashingID` → reconfigure → the cell's ember overlay, and
     // fires `onRevealHandled` so the host clears the one-shot state.
 
     /// Fired (async) once a reveal has been actioned — the host clears
-    /// `ui.spotlightTargetTakeID` so a later re-tap of the same Take re-targets.
+    /// `ui.revealTargetTakeID` so a later re-tap of the same Take re-targets.
     var onRevealHandled: () -> Void = {}
     /// The row currently pulsing ember (read by the cell registration).
     private var flashingID: UUID?

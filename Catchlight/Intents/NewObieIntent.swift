@@ -13,28 +13,28 @@
 //  `Button(intent:)`.
 //
 
+//  LAUNCHER ONLY as of 2026-08-11: the text parameter moved to `CaptureTakeIntent` /
+//  `CaptureObieIntent`. It was Optional here, and App Intents never requests a value for an
+//  optional parameter, so Siri opened a blank editor instead of asking what to capture
+//  (device-confirmed). One parameter cannot be both required for Siri and absent for the
+//  Control, so the intent became two. This one opens a blank editor and takes no input.
+//
+
 import AppIntents
 import CatchlightCore
 
 struct NewObieIntent: AppIntent {
     static var title: LocalizedStringResource = "New Obie"
     static var description = IntentDescription(
-        "Open Catchlight and capture a new Take as your Obie. Optionally pass the text.",
+        "Open Catchlight and open a blank Obie.",
         categoryName: "Capture"
     )
 
     static var openAppWhenRun: Bool = true
 
-    @Parameter(
-        title: "Obie",
-        description: "Text to capture as your new Obie. Leave empty to open a blank Obie.",
-        requestValueDialog: "What's the Obie?"
-    )
-    var text: String?
-
     @MainActor
     func perform() async throws -> some IntentResult {
-        CaptureRouting.setPending(.init(mode: .obie, text: text))
+        CaptureRouting.setPending(.init(mode: .obie))
         return .result()
     }
 }

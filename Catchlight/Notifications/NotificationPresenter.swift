@@ -136,9 +136,45 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
             handleDismiss(request: request, base: base)
         case Self.stopRemindingActionIdentifier:
             handleStopReminding(base: base)
+        case UNNotificationDefaultActionIdentifier:
+            handleTap(base: base)
         default:
             return
         }
+    }
+
+    /// The Take a notification TAP asked to see, waiting for the app to reveal it.
+    ///
+    /// Owner-reported 2026-08-11: tapping a reminder opened the app on the plain timeline with
+    /// no sign of which Take the nudge was about — "I couldn't remember which one to look at",
+    /// which defeats the point of the nudge. The default action fell through this delegate's
+    /// `default: return` and did nothing at all.
+    ///
+    /// Held statically as well as broadcast because the two arrival orders differ: on a WARM tap
+    /// the app is already listening and the notification below is enough, but on a COLD launch
+    /// this delegate can run before any view is observing, so the app drains this on activation
+    /// and again after unlock instead.
+    private(set) static var pendingRevealTakeID: UUID?
+
+    /// Broadcast so a foregrounded app can reveal immediately rather than waiting for the next
+    /// activation.
+    static let revealRequested = Notification.Name("catchlight.revealRequested")
+
+    /// Consume the pending reveal, if any.
+    static func takePendingReveal() -> UUID? {
+        defer { pendingRevealTakeID = nil }
+        return pendingRevealTakeID
+    }
+
+    /// Tapping the banner itself (as opposed to a pull-down action) — show me that Take.
+    ///
+    /// `base` has already had any `#` suffix stripped, so this works identically for a plain
+    /// reminder, a recurring occurrence (`#n`), a snooze, an all-day catch-up, a follow-up and a
+    /// geofence: every one of them is the same Take.
+    private func handleTap(base: String) {
+        guard let uuid = UUID(uuidString: base) else { return }
+        Self.pendingRevealTakeID = uuid
+        NotificationCenter.default.post(name: Self.revealRequested, object: nil)
     }
 
     /// "Dismiss": stop the CURRENT instance nagging — without affecting a recurring series'

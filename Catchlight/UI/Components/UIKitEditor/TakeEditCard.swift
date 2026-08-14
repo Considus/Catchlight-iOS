@@ -266,8 +266,18 @@ struct KeyboardTakeEditor: View {
     /// under the fade — it's dead: a tap meant for the Focus ring commits the edit instead. Hence a
     /// hard reserve rather than a cosmetic nudge (owner 2026-08-11).
     private var irisReserve: CGFloat {
-        showsIris ? CatchlightLayout.circleDiameter / 2 : 0
+        showsIris ? CatchlightLayout.circleDiameter / 2 + Self.irisHeadroom : 0
     }
+
+    /// Breathing room ABOVE the Iris, beyond its own radius (owner 2026-08-11, device round 2).
+    ///
+    /// The radius alone is what stops the Iris disappearing under the heading — that was the bug.
+    /// This is a separate, purely visual allowance: with the radius only, the Iris cleared the
+    /// fade but sat hard against it and read as crowded ("sits a little high still"). An
+    /// OWNER-TUNED number like the descent / drop geometry below; push it either way rather than
+    /// re-deriving it. Each point costs a point of editor height, but only once the card is at
+    /// full extension.
+    private static let irisHeadroom: CGFloat = 18
 
     /// The grow-UP cap: how tall the card may get before its TOP reaches the heading, past which
     /// `BlockEditor` scrolls internally.

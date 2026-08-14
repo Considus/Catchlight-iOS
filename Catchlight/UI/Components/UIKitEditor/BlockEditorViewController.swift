@@ -677,6 +677,15 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         // share of copied web and email content. Caught by
         // `PasteNormalisationTests.testTrailingCarriageReturn_isTrimmed`.
         while let last = out.last, last.isNewline { out.removeLast() }
+        // LEADING too (owner device round 2, 2026-08-11). The first cut trimmed only the end and
+        // the blank line survived, which is what located it: the newline is at the START of what
+        // the source app puts on the clipboard. Confirmed by pasting the same clipboard into
+        // Apple Notes, which shows the same blank line — so it is the clipboard's, not ours.
+        //
+        // We normalise it anyway. That other apps pass it through is not a reason to: it is a
+        // line break the user did not type, in an app whose point is that a captured thought
+        // looks like what you meant.
+        while let first = out.first, first.isNewline { out.removeFirst() }
         return out
     }
 }
