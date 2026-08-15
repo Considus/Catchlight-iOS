@@ -30,7 +30,14 @@ struct NewObieIntent: AppIntent {
         categoryName: "Capture"
     )
 
+    /// iOS 18 reads this. iOS 26 reads `supportedModes` below instead.
     static var openAppWhenRun: Bool = true
+
+    /// iOS 26 reads this. FRONT ONLY, and deliberately so (2026-08-15): this intent opens an
+    /// empty editor and carries no text, so a background run has nothing to do and breaks it.
+    /// The behaviour must stay the same as it is on iOS 18. This declaration is API currency.
+    @available(iOS 26.0, *)
+    static var supportedModes: IntentModes { .foreground }
 
     @MainActor
     func perform() async throws -> some IntentResult {
