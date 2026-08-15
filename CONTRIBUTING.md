@@ -16,6 +16,11 @@ Thank you for your interest in contributing.
 
 ```bash
 # Requires full Xcode (not just Command Line Tools) for the iOS app target.
+# XCODE 26 OR LATER (2026-08-15). The App Intents declare `supportedModes` behind
+# `@available(iOS 26.0, *)` (D-202), and `IntentModes` is absent from the iOS 18
+# SDK, so Xcode 16 cannot compile the app. Note what this does NOT change: the
+# deployment floor is still iOS 18.0 (D-039). The app RUNS on iOS 18 and BUILDS
+# only against the iOS 26 SDK.
 # Keep build artifacts OUTSIDE the source tree (see README "Build artifacts"):
 BUILD_DIR="$HOME/CatchlightBuild"
 swift build  --scratch-path "$BUILD_DIR/spm"
