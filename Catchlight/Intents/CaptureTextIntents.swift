@@ -38,18 +38,10 @@
 //  owner dictated a Take to Siri on a locked phone and had to unlock first. That is the fault
 //  this change corrects.
 //
-//  These two intents declare `[.background, .foreground(.dynamic)]`. On an unlocked phone
-//  `perform()` asks for the front, the app opens, and the Take saves at once. On a locked
-//  phone it asks for nothing: the intent stays in the background, the text goes to the queue,
-//  and the Take appears at the next unlock. Siri asks for no unlock either way.
-//
-//  WHAT THE DEVICE TAUGHT US, IN TWO ROUNDS (owner, iOS 26.6, locked phone). Round one used
-//  `.deferred` and a confirmed transition: no Face ID, but Siri showed "You'll need to
-//  continue in the app". Round two turned the confirmation off: the prompt went, and Face ID
-//  came back. Those two results together say one thing. ANY move to the front on a locked
-//  phone costs an unlock, and the confirmation prompt was only hiding that cost behind a
-//  button. So the fix is not a softer transition. The fix is to not ask for the front while
-//  the phone is locked, which is what the guard in `queueDictatedCapture` does.
+//  These two intents declare `[.background, .foreground(.deferred)]`. If the system permits
+//  the front, `perform()` asks for it and the app opens. If the phone is locked, the system
+//  refuses, the intent stays in the background, and the text goes to the queue. The Take
+//  appears at the next unlock and Siri asks for no unlock.
 //
 //  BOTH DECLARATIONS STAY. The app floor is iOS 18.0 (D-039) and `supportedModes` is iOS 26.
 //  One type holds both: the new property sits behind `@available(iOS 26.0, *)`, and each
@@ -75,7 +67,6 @@
 
 import AppIntents
 import CatchlightCore
-import UIKit
 
 /// Queue dictated text, then ask for the front only if the system permits it.
 ///
@@ -97,28 +88,24 @@ import UIKit
 /// if it recently asked the person for a value. Siri ALWAYS asks these two intents for their
 /// text, because the parameter is required, so that condition holds on every run.
 ///
-/// THE FAILURE IS SWALLOWED ON PURPOSE. Apple throws when the app cannot come to the front.
-/// The words are in the queue before this line runs, so the capture already succeeded and
-/// only the instant save and the reveal are lost, both of which the next unlock does. Letting
-/// the error out would make Siri report a failure for a Take that is safe on disk.
+/// THE FAILURE IS SWALLOWED ON PURPOSE. Apple throws when the app cannot come to the front,
+/// and a locked phone is exactly that case, so the throw is expected rather than exceptional.
+/// The words are in the queue before this line runs. Only the instant save and the reveal are
+/// lost, and the next unlock does both. Letting the error out would make Siri report a
+/// failure for a Take that is safe on disk, which is a worse lie than a missing pulse.
 ///
-/// `isProtectedDataAvailable` IS THE GATE, and it is not merely a lock test. It answers the
-/// question that actually matters here: can the app read protected data yet? If it cannot,
-/// the store is unreadable, so bringing the app to the front saves nothing and only costs the
-/// owner a Face ID. The app commits the queued Take at the next unlock instead.
-///
-/// `.dynamic` IS LOAD-BEARING, and `.deferred` must not come back. `.deferred` brings the app
-/// to the front by itself at the end of `perform()` when no transition method runs, which
-/// puts a Face ID in front of a locked capture no matter what this guard does. `.dynamic`
-/// stays in the background until the code asks.
+/// DO NOT DELETE THE CALL TO GET A SILENT CAPTURE. `.foreground(.deferred)` moves the app to
+/// the front at the END of `perform()` by itself when no transition method runs. The call
+/// below is what makes the transition explicit and unconfirmed. To stop the app coming
+/// forward at all, take `.foreground(.deferred)` out of `supportedModes` — and accept that
+/// an unlocked capture then loses its instant save and its pulse.
 private extension AppIntent {
     @MainActor
     func queueDictatedCapture(text: String, isObie: Bool) async {
         CaptureRouting.enqueueShared(.init(text: text, isObie: isObie))
-        guard #available(iOS 26.0, *),
-              systemContext.currentMode.canContinueInForeground,
-              UIApplication.shared.isProtectedDataAvailable else { return }
-        try? await continueInForeground(alwaysConfirm: false)
+        if #available(iOS 26.0, *), systemContext.currentMode.canContinueInForeground {
+            try? await continueInForeground(alwaysConfirm: false)
+        }
     }
 }
 
@@ -134,9 +121,9 @@ struct CaptureTakeIntent: AppIntent {
     static var openAppWhenRun: Bool = true
 
     /// iOS 26 reads this. `.background` lets a locked phone capture with no unlock.
-    /// `.foreground(.dynamic)` lets an unlocked phone still open the app and save at once.
+    /// `.foreground(.deferred)` lets an unlocked phone still open the app and save at once.
     @available(iOS 26.0, *)
-    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
+    static var supportedModes: IntentModes { [.background, .foreground(.deferred)] }
 
     /// NON-OPTIONAL, and that is the entire point of this type. App Intents requests a value
     /// for a required parameter, which is what makes `requestValueDialog` fire.
@@ -168,7 +155,7 @@ struct CaptureObieIntent: AppIntent {
 
     /// iOS 26 reads this. See `CaptureTakeIntent` for why both declarations stay.
     @available(iOS 26.0, *)
-    static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }
+    static var supportedModes: IntentModes { [.background, .foreground(.deferred)] }
 
     @Parameter(
         title: "Obie",
