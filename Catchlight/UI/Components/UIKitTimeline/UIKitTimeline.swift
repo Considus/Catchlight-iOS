@@ -36,12 +36,19 @@ enum TimelineRow: Hashable {
 /// the VC works the zone out from the cell's width rather than asking SwiftUI where it put
 /// the glyph, so the two must agree on one number.
 enum TimelineDragHandle {
-    /// The strip reclaimed from the card's trailing edge in manual mode. The card reflows
-    /// narrower by exactly this much, so the handle sits OUTSIDE the card and covers no
-    /// text — and, usefully, off the swipe surface's visual area.
+    /// The handle's strip, flush to the CARD's trailing edge and lying INSIDE it. The card
+    /// keeps its full width (owner 2026-08-15) — an earlier cut reclaimed this strip from
+    /// the card instead, which narrowed every card in manual mode and also left
+    /// `SwipeActionRow`'s `trailingInset: 20` measuring to an edge the card no longer had.
     static let stripWidth: CGFloat = 44
-    /// The row's existing trailing margin, which the strip sits inside of.
+    /// The row's existing trailing margin — the gap between the card and the screen edge.
     static let trailingMargin: CGFloat = 20
+
+    /// EXTRA trailing padding for the card's CONTENT so no body text runs under the
+    /// handle. The card's SURFACE is untouched; only the text insets. Derived rather than
+    /// hardcoded: the text must stop where the strip begins, and the card already pads its
+    /// own text by `cardTextTrailingPad`.
+    static var contentInset: CGFloat { stripWidth - CatchlightLayout.cardTextTrailingPad }
 
     /// True when `x` (in the collection view's coordinate space) is on the handle.
     static func containsX(_ x: CGFloat, inWidth width: CGFloat) -> Bool {
@@ -207,7 +214,10 @@ struct TimelineReadCell: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: false)  // card
+            TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: false,
+                            // Manual mode: hold the body text clear of the drag handle
+                            // drawn over this card's trailing edge. Surface unaffected.
+                            trailingContentInset: showsDragHandle ? TimelineDragHandle.contentInset : 0)  // card
                 // Task 6.19 — brief flash when this row is the Spotlight deep-link
                 // target. The ember accent at low opacity reads as a gentle pulse,
                 // not a notification (same treatment as the pinned Obie's flash in
@@ -287,20 +297,24 @@ struct TimelineReadCell: View {
             .allowsHitTesting(false)
         }
         .padding(.leading, spineX - inset)
-        .padding(.trailing, 20 + (showsDragHandle ? TimelineDragHandle.stripWidth : 0))
+        .padding(.trailing, 20)
         // SYMMETRIC so the card is centred in the cell — a swipe action fill then centres
         // on the CARD, not the cell (the Iris overhang is render-only `.offset`, so it
         // doesn't grow the layout; the cell must simply not clip).
         .padding(.vertical, cardGap / 2)
-        // AFTER the paddings, deliberately. Overlaid before them it aligns to the CARD's
-        // trailing edge and draws inside the card, ~42pt adrift of the strip the view
-        // controller treats as the handle — a handle you can see and cannot grab (caught on
-        // the simulator, 2026-08-14). Applied here it aligns to the CELL's edge, so
-        // `.frame(width: stripWidth).padding(.trailing: trailingMargin)` places the glyph on
-        // exactly the span `TimelineDragHandle.containsX` tests. The two must not drift:
-        // the drag itself is driven by the VC's recognizer, because a SwiftUI gesture cannot
-        // coordinate with the collection view's scroll pan — the same wall that had
+        // AFTER the paddings, deliberately, so the overlay aligns to the CELL's trailing
+        // edge and `.frame(width: stripWidth).padding(.trailing, trailingMargin)` puts the
+        // glyph on exactly the span `TimelineDragHandle.containsX` tests. Overlaid BEFORE
+        // them it aligns to whatever the ZStack currently measures instead, which is how a
+        // handle you could see and could not grab reached the simulator once already
+        // (2026-08-14) — the drawing and the hit test must not drift, because the drag is
+        // driven by the VC's recognizer rather than by this view. A SwiftUI gesture cannot
+        // coordinate with the collection view's scroll pan, the same wall that had
         // `HorizontalSwipePan` bridged from UIKit.
+        //
+        // The glyph now lands INSIDE the full-width card (owner 2026-08-15); the body text
+        // is held clear of it by `TakeCardSurface.trailingContentInset`, not by shrinking
+        // the card.
         .overlay(alignment: .trailing) {
             if showsDragHandle {
                 Image(systemName: "line.3.horizontal")
