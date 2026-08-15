@@ -70,6 +70,12 @@ import CatchlightCore
 
 /// Queue dictated text, then ask for the front only if the system permits it.
 ///
+/// THE INTENT NEVER WRITES THE ENCRYPTED STORE, and a background mode does not change that.
+/// The master key is `.userPresence`-gated and only materialises in the foreground, unlocked
+/// app, so a capture can only ever be QUEUED here and committed by the app later. That wall
+/// is the reason the share extension queues too. A background run is therefore not a new
+/// risk: it uses the path that already existed for exactly this problem.
+///
 /// The order matters. The queue write happens first, so the words are safe before anything
 /// tries to bring the app forward. On iOS 18 the availability test fails, this method stops
 /// after the queue write, and `openAppWhenRun` opens the app exactly as it did before.
