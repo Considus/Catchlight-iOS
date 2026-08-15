@@ -75,6 +75,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # Xcode 26 is REQUIRED, and the image default is NOT it (2026-08-15). The App
+      # Intents declare `supportedModes` behind `@available(iOS 26.0, *)` ([[D-202]]),
+      # and `IntentModes` does not exist in the iOS 18 SDK. Xcode 16.4, the macos-15
+      # default, therefore cannot compile the app at all. This is a hard requirement of
+      # the source, not a preference: PR #146 went red on exactly this.
+      #
+      # The step takes the HIGHEST installed Xcode 26 instead of one pinned version, so
+      # an image bump inside 26.x does not break the build. If the image drops Xcode 26
+      # completely, the step stops here with a clear message. Without it the build fails
+      # later as "cannot find type 'IntentModes'", which reads like a code fault and is
+      # not one.
+      - name: Select Xcode 26
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            echo "::error::No Xcode 26 on this image. The app needs the iOS 26 SDK (D-202)."
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
+          echo "Selected $XCODE"
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -123,10 +144,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Intentionally not pinning the Xcode version — the macos-15 image ships
-      # multiple side-by-side Xcodes (16.x and newer). Letting the runner use
-      # its default keeps `OS=latest` and the newer simulator runtimes
-      # resolvable. If a future image bump removes a needed runtime, pin here.
+      # Xcode 26 is REQUIRED, and the image default is NOT it (2026-08-15). The App
+      # Intents declare `supportedModes` behind `@available(iOS 26.0, *)` ([[D-202]]),
+      # and `IntentModes` does not exist in the iOS 18 SDK. Xcode 16.4, the macos-15
+      # default, therefore cannot compile the app at all. This is a hard requirement of
+      # the source, not a preference: PR #146 went red on exactly this.
+      #
+      # The step takes the HIGHEST installed Xcode 26 instead of one pinned version, so
+      # an image bump inside 26.x does not break the build. If the image drops Xcode 26
+      # completely, the step stops here with a clear message. Without it the build fails
+      # later as "cannot find type 'IntentModes'", which reads like a code fault and is
+      # not one.
+      - name: Select Xcode 26
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            echo "::error::No Xcode 26 on this image. The app needs the iOS 26 SDK (D-202)."
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
+          echo "Selected $XCODE"
 
       - name: Install XcodeGen
         # XcodeGen is not pre-installed on the macos-15 image. Brew is fastest.
