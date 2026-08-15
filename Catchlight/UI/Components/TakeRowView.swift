@@ -412,6 +412,12 @@ struct TakeCardSurface: View {
     /// a URL under the mask and navigates away instead of dismissing (owner-reported
     /// 2026-06-27): a SwiftUI `Text` link beats the card's own `onTapGesture`.
     var linksInteractive: Bool = true
+    /// EXTRA trailing padding for the card's CONTENT, on top of the standard
+    /// `cardTextTrailingPad`. The card's surface is unaffected and keeps its full width.
+    /// Used by the manual-order timeline (D-195): the drag handle is drawn just inside
+    /// the card's trailing edge, and this is what stops the body text running underneath
+    /// it (owner 2026-08-15 — the handle sits IN the card, and the card is full width).
+    var trailingContentInset: CGFloat = 0
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var dynamicSize
@@ -681,7 +687,8 @@ struct TakeCardSurface: View {
         // 14 bottom. Leading uses the shared token so the DAILIES heading + month
         // markers align to this same text column (owner 2026-06-16).
         .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
-                            bottom: 14, trailing: 14))
+                            bottom: 14,
+                            trailing: CatchlightLayout.cardTextTrailingPad + trailingContentInset))
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)

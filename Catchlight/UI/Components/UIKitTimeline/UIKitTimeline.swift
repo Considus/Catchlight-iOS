@@ -24,6 +24,51 @@ struct TimelineMonthGroup: Identifiable {
 enum TimelineRow: Hashable {
     case month(String)   // group id
     case take(UUID)
+
+    var takeID: UUID? {
+        if case .take(let id) = self { return id }
+        return nil
+    }
+}
+
+/// Geometry of the manual-order drag handle (D-195). Shared between the SwiftUI cell that
+/// DRAWS the handle and the view controller that decides whether a touch landed on one —
+/// the VC works the zone out from the cell's width rather than asking SwiftUI where it put
+/// the glyph, so the two must agree on one number.
+enum TimelineDragHandle {
+    /// The handle's strip, flush to the CARD's trailing edge and lying INSIDE it. The card
+    /// keeps its full width (owner 2026-08-15) — an earlier cut reclaimed this strip from
+    /// the card instead, which narrowed every card in manual mode and also left
+    /// `SwipeActionRow`'s `trailingInset: 20` measuring to an edge the card no longer had.
+    static let stripWidth: CGFloat = 44
+    /// The row's existing trailing margin — the gap between the card and the screen edge.
+    static let trailingMargin: CGFloat = 20
+
+    /// EXTRA trailing padding for the card's CONTENT so no body text runs under the
+    /// handle. The card's SURFACE is untouched; only the text insets. Derived rather than
+    /// hardcoded: the text must stop where the strip begins, and the card already pads its
+    /// own text by `cardTextTrailingPad`.
+    static var contentInset: CGFloat { stripWidth - CatchlightLayout.cardTextTrailingPad }
+
+    /// True when `x` (in the collection view's coordinate space) is on the handle.
+    static func containsX(_ x: CGFloat, inWidth width: CGFloat) -> Bool {
+        x >= width - trailingMargin - stripWidth && x <= width - trailingMargin
+    }
+
+    // MARK: Tunables (device review may nudge these)
+
+    /// How long the handle must be HELD before the row lifts.
+    ///
+    /// Zero at first, so the lift was instant — and that made the timeline hard to scroll
+    /// (owner, on device 2026-08-15): the strip sits at the right edge, which is exactly
+    /// where a thumb starts a scroll, so any stroke beginning there picked a row up instead.
+    ///
+    /// The delay is what separates the two, via `allowableMovement` rather than by guessing
+    /// at direction: a `UILongPressGestureRecognizer` FAILS if the touch travels more than
+    /// that (10pt by default) before the duration elapses. So a scroll — which moves
+    /// immediately — fails this recognizer and goes to the scroll view untouched, while a
+    /// deliberate hold keeps the touch still and lifts. No arbitration to get wrong.
+    static let liftDelay: TimeInterval = 0.25
 }
 
 struct UIKitTimeline: UIViewControllerRepresentable {
@@ -69,6 +114,18 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// into view, pulses it, then fires `onRevealHandled` so the host clears the state.
     var revealTargetID: UUID? = nil
     var onRevealHandled: () -> Void = {}
+    /// MANUAL arrangement (D-195): show the drag handle and allow interactive moves. False
+    /// in date order, and false whenever the timeline is filtered or searched — you cannot
+    /// honestly arrange a list whose middle is hidden (see `DailiesView.canReorder`).
+    var isReorderable: Bool = false
+    /// A drag finished: the Take that moved, and every Take id in the timeline's new
+    /// DISPLAY order. The host converts to the canonical arrangement (the display is
+    /// reversed under Newest first) and persists.
+    var onReorder: (UUID, [UUID]) -> Void = { _, _ in }
+    /// VoiceOver's stand-in for the drag: move this Take one place up (-1) or down (+1) in
+    /// DISPLAY order. A handle that can only be dragged is a handle a VoiceOver user does
+    /// not have, the same reason the Iris's Obie long-press carries a named action.
+    var onNudge: (Take, Int) -> Void = { _, _ in }
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
@@ -89,6 +146,9 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onTapText = onTapText
         vc.onTapBackground = onTapBackground
         vc.onRevealHandled = onRevealHandled
+        vc.isReorderable = isReorderable
+        vc.onReorder = onReorder
+        vc.onNudge = onNudge
         return vc
     }
 
@@ -110,11 +170,27 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onTapText = onTapText
         vc.onTapBackground = onTapBackground
         vc.onRevealHandled = onRevealHandled
+        vc.isReorderable = isReorderable
+        vc.onReorder = onReorder
+        vc.onNudge = onNudge
         vc.apply(groups: groups)
         vc.updateEditing(isEditing)
         // After apply, so a target set while the data was still loading (e.g. a
         // Spotlight tap on the locked app) can resolve against the fresh rows.
         vc.requestReveal(revealTargetID)
+    }
+}
+
+/// The card's interactive region: its full rounded rect, minus the trailing strip the drag
+/// handle occupies. `trailingInset` is 0 outside manual mode, which gives back exactly the
+/// `RoundedRectangle` the card used before the handle existed.
+struct TimelineCardHitShape: Shape {
+    var trailingInset: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let live = CGRect(x: rect.minX, y: rect.minY,
+                          width: max(0, rect.width - trailingInset), height: rect.height)
+        return Path(roundedRect: live, cornerRadius: 12, style: .continuous)
     }
 }
 
@@ -153,6 +229,10 @@ struct TimelineReadCell: View {
     /// window (driven by the VC's `flashingID` via reconfigure). The card overlays
     /// a brief ember tint; `.animation(value:)` fades both edges.
     var isSpotlightTarget: Bool = false
+    /// MANUAL arrangement (D-195) — draw the drag handle and offer the VoiceOver moves.
+    var showsDragHandle: Bool = false
+    /// VoiceOver move: -1 up, +1 down, in DISPLAY order.
+    var onNudge: (Take, Int) -> Void = { _, _ in }
 
     @Environment(\.colorScheme) private var scheme
     private let inset = CatchlightLayout.cardSpineInset
@@ -162,7 +242,10 @@ struct TimelineReadCell: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: false)  // card
+            TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: false,
+                            // Manual mode: hold the body text clear of the drag handle
+                            // drawn over this card's trailing edge. Surface unaffected.
+                            trailingContentInset: showsDragHandle ? TimelineDragHandle.contentInset : 0)  // card
                 // Task 6.19 — brief flash when this row is the Spotlight deep-link
                 // target. The ember accent at low opacity reads as a gentle pulse,
                 // not a notification (same treatment as the pinned Obie's flash in
@@ -173,7 +256,15 @@ struct TimelineReadCell: View {
                         .animation(.easeInOut(duration: 0.4), value: isSpotlightTarget)
                         .allowsHitTesting(false)
                 )
-                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                // The card's hit region STOPS at the drag handle in manual mode. Without
+                // this the strip is still the card's, so a hold there raised the card's
+                // CONTEXT MENU instead of lifting the row — the menu's own long-press beat
+                // the reorder recognizer outright (device + simulator, 2026-08-15). Fixing
+                // it by retuning the two durations against each other would have been a
+                // race to keep balanced; removing the overlap means there is no race. It
+                // also, correctly, stops a tap on the handle opening the editor.
+                .contentShape(TimelineCardHitShape(
+                    trailingInset: showsDragHandle ? TimelineDragHandle.stripWidth : 0))
                 .onTapGesture { onTapText(take) }
                 .contextMenu { menuItems }
                 // ⚠️ VoiceOver + TEST CONTRACT. This cell draws `TakeCardSurface` DIRECTLY rather
@@ -187,7 +278,13 @@ struct TimelineReadCell: View {
                 .accessibilityIdentifier("take-row")
                 .accessibilityLabel(TakeRowView.accessibilityLabel(for: take))
                 .accessibilityHint("Double-tap to edit this Take.")
-                .accessibilityActions { menuItems }
+                .accessibilityActions {
+                    menuItems
+                    if showsDragHandle {
+                        Button("Move Up") { onNudge(take, -1) }
+                        Button("Move Down") { onNudge(take, 1) }
+                    }
+                }
             Rectangle().fill(Color.ckBackground)                                       // occluder
                 .frame(width: occW, height: d / 2)
                 .offset(x: inset - occW / 2, y: -d / 2)
@@ -241,6 +338,30 @@ struct TimelineReadCell: View {
         // on the CARD, not the cell (the Iris overhang is render-only `.offset`, so it
         // doesn't grow the layout; the cell must simply not clip).
         .padding(.vertical, cardGap / 2)
+        // AFTER the paddings, deliberately, so the overlay aligns to the CELL's trailing
+        // edge and `.frame(width: stripWidth).padding(.trailing, trailingMargin)` puts the
+        // glyph on exactly the span `TimelineDragHandle.containsX` tests. Overlaid BEFORE
+        // them it aligns to whatever the ZStack currently measures instead, which is how a
+        // handle you could see and could not grab reached the simulator once already
+        // (2026-08-14) — the drawing and the hit test must not drift, because the drag is
+        // driven by the VC's recognizer rather than by this view. A SwiftUI gesture cannot
+        // coordinate with the collection view's scroll pan, the same wall that had
+        // `HorizontalSwipePan` bridged from UIKit.
+        //
+        // The glyph now lands INSIDE the full-width card (owner 2026-08-15); the body text
+        // is held clear of it by `TakeCardSurface.trailingContentInset`, not by shrinking
+        // the card.
+        .overlay(alignment: .trailing) {
+            if showsDragHandle {
+                Image(systemName: "line.3.horizontal")
+                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .frame(width: TimelineDragHandle.stripWidth)
+                    .padding(.trailing, TimelineDragHandle.trailingMargin)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
     }
 
     /// The resting-row menu (mirrors `TakeRowView.rowMenuItems`, minus the edit-only
@@ -312,6 +433,9 @@ struct TimelineSwipeCell: View {
     var onTapText: (Take) -> Void = { _ in }
     /// Threaded straight through to `TimelineReadCell` (see its `isSpotlightTarget`).
     var isSpotlightTarget: Bool = false
+    /// Threaded straight through to `TimelineReadCell` (see its `showsDragHandle`).
+    var showsDragHandle: Bool = false
+    var onNudge: (Take, Int) -> Void = { _, _ in }
 
     var body: some View {
         SwipeActionRow(
@@ -337,7 +461,9 @@ struct TimelineSwipeCell: View {
                              onToggleDone: onToggleDone, onDelete: onDelete,
                              onSetImportant: onSetImportant, onMakeObie: onMakeObie,
                              onExport: onExport, onTapText: onTapText,
-                             isSpotlightTarget: isSpotlightTarget)
+                             isSpotlightTarget: isSpotlightTarget,
+                             showsDragHandle: showsDragHandle,
+                             onNudge: onNudge)
                 .offset(x: offset)
         }
     }
@@ -417,9 +543,17 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     var onExport: (Take) -> Void = { _ in }
     var onTapText: (Take) -> Void = { _ in }
     var onTapBackground: () -> Void = {}
+    /// MANUAL arrangement (D-195). Gates the handle, the recognizer and the data source's
+    /// reordering handlers together, so date order cannot be dragged by any route.
+    var isReorderable: Bool = false {
+        didSet { if isReorderable != oldValue { reconfigureAllRows() } }
+    }
+    var onReorder: (UUID, [UUID]) -> Void = { _, _ in }
+    var onNudge: (Take, Int) -> Void = { _, _ in }
 
     private let swipeState = TimelineSwipeState()
     private var collectionView: UICollectionView!
+    private var reorderPress: UILongPressGestureRecognizer!
     private var dataSource: UICollectionViewDiffableDataSource<Int, TimelineRow>!
     private var takesByID: [UUID: Take] = [:]
     private var previousTakes: [UUID: Take] = [:]   // reconfigure only what changed
@@ -432,6 +566,12 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     var snoozedIDs: Set<UUID> = []
     private var lastSnoozedIDs: Set<UUID>?
     private var groupTitles: [String: String] = [:]
+    /// The row being dragged, and a latch that keeps `apply` off the snapshot for the
+    /// duration. The host re-renders constantly (every `@Observable` touch runs
+    /// `updateUIViewController`), and re-applying a snapshot underneath a live interactive
+    /// move cancels the drag.
+    private var movingRow: TimelineRow?
+    private var isInteractivelyMoving = false
 
     @objc private func handleBackgroundTap() { onTapBackground() }
 
@@ -439,7 +579,64 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     /// or a month divider belongs to that cell's own recognizers.
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                            shouldReceive touch: UITouch) -> Bool {
-        collectionView.indexPathForItem(at: touch.location(in: collectionView)) == nil
+        let point = touch.location(in: collectionView)
+        if gestureRecognizer === reorderPress {
+            // Only on a Take row's drag handle, and only in manual mode. Gating here rather
+            // than inside the handler matters: the recognizer has `minimumPressDuration = 0`,
+            // so anything it is allowed to receive it claims on touch-DOWN.
+            guard isReorderable,
+                  TimelineDragHandle.containsX(point.x, inWidth: collectionView.bounds.width),
+                  let path = collectionView.indexPathForItem(at: point),
+                  dataSource.itemIdentifier(for: path)?.takeID != nil else { return false }
+            return true
+        }
+        // The background tap: only touches that land OFF a cell — a tap on a card, its Iris,
+        // or a month divider belongs to that cell's own recognizers.
+        return collectionView.indexPathForItem(at: point) == nil
+    }
+
+    /// Press-and-hold on the handle, driving the collection view's interactive movement.
+    ///
+    /// WHY A LONG PRESS AND NOT A PAN. A pan would begin only once the finger moves — by
+    /// which time the scroll view's own pan has claimed the touch too, and the row and the
+    /// timeline both move. A long press resolves BEFORE there is any movement to scroll on,
+    /// which is how UICollectionView expects interactive movement to be driven.
+    ///
+    /// The hold duration is `TimelineDragHandle.liftDelay`, and it is load-bearing rather
+    /// than decorative — see that constant for why an instant lift made the timeline hard to
+    /// scroll. Nothing else contends: the card's swipe pan only begins on HORIZONTAL-led
+    /// strokes, and the context menu and the Iris live on the card's own subviews.
+    @objc private func handleReorderPress(_ press: UILongPressGestureRecognizer) {
+        let point = press.location(in: collectionView)
+        switch press.state {
+        case .began:
+            guard let path = collectionView.indexPathForItem(at: point),
+                  collectionView.beginInteractiveMovementForItem(at: path) else { return }
+            movingRow = dataSource.itemIdentifier(for: path)
+            isInteractivelyMoving = true
+        case .changed:
+            guard isInteractivelyMoving else { return }
+            collectionView.updateInteractiveMovementTargetPosition(point)
+        case .ended:
+            guard isInteractivelyMoving else { return }
+            collectionView.endInteractiveMovement()
+            isInteractivelyMoving = false
+        default:
+            guard isInteractivelyMoving else { return }
+            collectionView.cancelInteractiveMovement()
+            isInteractivelyMoving = false
+            movingRow = nil
+        }
+    }
+
+    /// Reconfigure every row — the handle appears or disappears on all of them at once, and
+    /// item identity is the id alone so nothing else would trigger it.
+    private func reconfigureAllRows() {
+        guard let dataSource else { return }
+        var snapshot = dataSource.snapshot()
+        guard !snapshot.itemIdentifiers.isEmpty else { return }
+        snapshot.reconfigureItems(snapshot.itemIdentifiers)
+        dataSource.apply(snapshot, animatingDifferences: false)
     }
 
     override func viewDidLoad() {
@@ -480,6 +677,13 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
                                                    action: #selector(handleBackgroundTap))
         backgroundTap.delegate = self
         collectionView.addGestureRecognizer(backgroundTap)
+
+        // Manual-order drag (D-195). Gated to the handle strip in `shouldReceive`.
+        reorderPress = UILongPressGestureRecognizer(target: self,
+                                                    action: #selector(handleReorderPress))
+        reorderPress.minimumPressDuration = TimelineDragHandle.liftDelay
+        reorderPress.delegate = self
+        collectionView.addGestureRecognizer(reorderPress)
         view.addSubview(collectionView)
 
         let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, TimelineRow> {
@@ -505,7 +709,9 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
                                       onTapText: { [weak self] tapped in
                                           self?.onTapText(tapped)
                                       },
-                                      isSpotlightTarget: self.flashingID == id)
+                                      isSpotlightTarget: self.flashingID == id,
+                                      showsDragHandle: self.isReorderable,
+                                      onNudge: { self.onNudge($0, $1) })
                 }
                 .margins(.all, 0)
             case .month(let key):
@@ -523,6 +729,22 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         dataSource = UICollectionViewDiffableDataSource<Int, TimelineRow>(collectionView: collectionView) {
             cv, indexPath, row in
             cv.dequeueConfiguredReusableCell(using: cellReg, for: indexPath, item: row)
+        }
+
+        // Only Takes move, and only in manual mode. Month dividers are hidden there anyway
+        // (a single untitled group), but the guard is cheap and states the rule.
+        dataSource.reorderingHandlers.canReorderItem = { [weak self] row in
+            self?.isReorderable == true && row.takeID != nil
+        }
+        dataSource.reorderingHandlers.didReorder = { [weak self] transaction in
+            guard let self, let moved = self.movingRow?.takeID else { return }
+            self.movingRow = nil
+            let order = transaction.finalSnapshot.itemIdentifiers
+            // Keep `lastItems` in step with what the data source has already applied to
+            // itself, or the host's next `apply` would see a "changed" list and re-apply a
+            // snapshot for a move that has already happened.
+            self.lastItems = order
+            self.onReorder(moved, order.compactMap(\.takeID))
         }
     }
 
@@ -564,6 +786,8 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
 
     func apply(groups: [TimelineMonthGroup]) {
         applyContentInsets()
+        // A live drag owns the snapshot until the finger lifts (see `isInteractivelyMoving`).
+        guard !isInteractivelyMoving else { return }
         takesByID = Dictionary(groups.flatMap(\.takes).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         groupTitles = Dictionary(groups.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a })
 

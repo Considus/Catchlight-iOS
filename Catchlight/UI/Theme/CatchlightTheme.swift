@@ -550,6 +550,11 @@ enum CatchlightLayout {
     /// markers align to the same x (`spineX + circleDiameter/2`). Trailing/bottom
     /// stay at the standard 14.
     static let cardTextLeadingPad: CGFloat = circleDiameter / 2 + cardSpineInset
+    /// The card's standard TRAILING text pad. Tokenised 2026-08-15 (D-195) because the
+    /// manual-order drag handle has to inset the body text by exactly enough to clear
+    /// itself, and a literal 14 in two files would drift the moment either moved.
+    /// Unchanged in value — this is the same 14 the card has always used.
+    static let cardTextTrailingPad: CGFloat = 14
     /// Horizontal padding of the bottom dock (each side).
     static let dockHorizontalPadding: CGFloat = 12
     /// x of the timeline spine == the dock Add button's centre, for a given

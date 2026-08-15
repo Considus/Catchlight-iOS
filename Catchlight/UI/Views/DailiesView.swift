@@ -82,6 +82,18 @@ struct DailiesView: View {
     private var takeSort: SettingsViewModel.TakeSort {
         SettingsViewModel.TakeSort(rawValue: takeSortRaw) ?? .default
     }
+    @AppStorage(SettingsViewModel.TimelineArrangement.defaultsKey)
+    private var arrangementRaw: String = SettingsViewModel.TimelineArrangement.default.rawValue
+    private var arrangement: SettingsViewModel.TimelineArrangement {
+        SettingsViewModel.TimelineArrangement(rawValue: arrangementRaw) ?? .default
+    }
+    /// Drag-to-reorder is live only when the timeline shows EVERYTHING. A filtered or
+    /// searched timeline hides rows between the two you can see, so "drop it here" has
+    /// no single honest answer — the moved Take would land somewhere unpredictable
+    /// relative to the hidden neighbours, and you'd only find out on clearing the filter.
+    private var canReorder: Bool {
+        arrangement == .manual && ui.dockMode == .resting && activeFilter.isEmpty
+    }
 
     /// "Rings on a wire" texture (owner idea 2026-06-16): a STATIC dotted line laid
     /// over the solid spine. As the rings scroll past the fixed dots, the eye reads
@@ -458,6 +470,16 @@ struct DailiesView: View {
             guard let target, target == vm.obie?.id else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                 if ui.revealTargetTakeID == target { ui.revealTargetTakeID = nil }
+            }
+        }
+        // Manual arrangement hides the month dividers (D-195), and the LIT divider is the
+        // only way to clear a month filter from the resting timeline — `timelineBackgroundTap`
+        // exits filtering and searching, not this. Switching to Manual with one set would
+        // therefore strand the user in a filtered timeline with no affordance to leave it, so
+        // the filter is dropped on the way in.
+        .onChange(of: arrangement) { _, new in
+            if new == .manual, ui.filterMonth != nil {
+                withAnimation(.easeInOut(duration: 0.2)) { ui.filterMonth = nil }
             }
         }
         // "All tasks done" (owner 2026-08-11) — a real modal that must be ANSWERED, replacing
@@ -1075,7 +1097,17 @@ struct DailiesView: View {
             // background and is cleared by the onChange below — so it's filtered out
             // here rather than left pending in the VC forever.
             revealTargetID: ui.revealTargetTakeID == vm.obie?.id ? nil : ui.revealTargetTakeID,
-            onRevealHandled: { ui.revealTargetTakeID = nil }
+            onRevealHandled: { ui.revealTargetTakeID = nil },
+            // Manual arrangement (D-195) — the drag handle and interactive move.
+            isReorderable: canReorder,
+            onReorder: { movedID, displayOrder in
+                guard app.ensureEntitled() else { return }
+                commitReorder(of: movedID, displayOrder: displayOrder)
+            },
+            onNudge: { take, delta in
+                guard app.ensureEntitled() else { return }
+                nudge(take, by: delta)
+            }
         )
     }
 
@@ -1095,6 +1127,30 @@ struct DailiesView: View {
     /// The editing branch is what the heading needs: while editing, the mask zone used to fall
     /// through to the save-catcher, and the heading absorbing taps must not lose that. The
     /// collection never reaches that branch (the catcher sits above it), which is harmless.
+    /// Persist a finished drag. The timeline hands back the new DISPLAY order, which is the
+    /// canonical arrangement reversed under Newest first — reverse it back before handing it
+    /// to `ManualOrder`, whose number line is always oldest-first.
+    ///
+    /// The moved Take's index in the canonical list IS the destination index into the list
+    /// without it: removing it and re-inserting at that index reproduces exactly this order.
+    private func commitReorder(of movedID: UUID, displayOrder: [UUID]) {
+        let canonical = takeSort == .oldestFirst ? displayOrder : Array(displayOrder.reversed())
+        guard let destination = canonical.firstIndex(of: movedID) else { return }
+        vm.moveTake(movedID, to: destination)
+    }
+
+    /// VoiceOver's "Move Up" / "Move Down": one place in DISPLAY order, then through the same
+    /// commit path as a drag, so both routes can't disagree about what a move means.
+    private func nudge(_ take: Take, by delta: Int) {
+        var ids = displayedTakes.map(\.id)
+        guard let from = ids.firstIndex(of: take.id) else { return }
+        let to = from + delta
+        guard ids.indices.contains(to) else { return }   // already at an end
+        ids.remove(at: from)
+        ids.insert(take.id, at: to)
+        commitReorder(of: take.id, displayOrder: ids)
+    }
+
     private func timelineBackgroundTap() {
         if ui.isEditingInPlace { saveInlineEdit(); return }
         if ui.dockMode == .filtering || ui.dockMode == .searching { ui.exitToResting() }
@@ -1623,7 +1679,19 @@ struct DailiesView: View {
     /// newest-first (deterministic, with an id tie-break); Oldest first is its exact
     /// reverse, so the tie-break stays stable. The Obie is pinned separately.
     private var orderedTakes: [Take] {
-        takeSort == .oldestFirst ? Array(vm.takes.reversed()) : vm.takes
+        switch arrangement {
+        case .date:
+            return takeSort == .oldestFirst ? Array(vm.takes.reversed()) : vm.takes
+        case .manual:
+            // `ManualOrder.arranged` is canonically OLDEST-first, and Order reverses the
+            // RENDER rather than the stored values — so flipping Order twice returns the
+            // arrangement exactly (owner 2026-08-14). With nothing yet dragged every
+            // `manualOrder` is nil and the sort falls back to `createdAt`, which makes
+            // this identical to the date branch above in both directions: turning Manual
+            // on changes nothing until a card actually moves.
+            let canonical = ManualOrder.arranged(vm.takes)
+            return takeSort == .oldestFirst ? canonical : canonical.reversed()
+        }
     }
 
     /// `orderedTakes` narrowed through the live dock filter. The Obie is pinned
@@ -1662,6 +1730,10 @@ struct DailiesView: View {
 
     private struct MonthGroup { let key: String; let month: String; let takes: [Take] }
 
+    /// The single group manual mode emits. Deliberately not a "yyyy-MM" key so it can
+    /// never collide with a real month and light up as the active filter.
+    private static let manualGroupKey = "manual"
+
     /// Cached formatter — `DateFormatter` construction is expensive and this
     /// property is evaluated on every body pass.
     private static let monthFormatter: DateFormatter = {
@@ -1671,6 +1743,14 @@ struct DailiesView: View {
     }()
 
     private var monthGroups: [MonthGroup] {
+        // MANUAL mode hides the dividers entirely (D-195). They are derived from
+        // `createdAt`, so the moment a Take is dragged out of its month a divider states
+        // something untrue — and the owner chose hiding them over restricting drags to
+        // within a month. One group, no title: `UIKitTimeline.apply` suppresses the first
+        // group's divider, so a single group emits no divider row at all.
+        if arrangement == .manual {
+            return [MonthGroup(key: Self.manualGroupKey, month: "", takes: displayedTakes)]
+        }
         // Key by the stable "yyyy-MM" bucket (the same key the month FILTER uses), in
         // first-seen order; the display string ("July 2026") is derived per group.
         var order: [String] = []
