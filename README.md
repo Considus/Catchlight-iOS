@@ -69,12 +69,12 @@ xcodebuild … -derivedDataPath "$BUILD_DIR/DerivedData"
 
 ```bash
 swift build            # builds CatchlightCore (pure Swift + CryptoKit)
-swift run coreverify   # runs the runtime verification harness — 52 checks
+swift run coreverify   # runs the runtime verification harness — 71 checks
 ```
 
 `coreverify` exists because XCTest is not bundled with the Command Line Tools. It
 re-runs the same scenarios as the XCTest suite with a tiny assert harness so the
-core can be proven green without full Xcode. **Current status: 52/52 passing.**
+core can be proven green without full Xcode. **Current status: 71/71 passing.**
 
 ### Full XCTest suite + iOS app (requires full Xcode)
 

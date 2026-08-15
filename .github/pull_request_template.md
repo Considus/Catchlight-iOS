@@ -9,7 +9,7 @@
 <!-- Which of these ran, and on what. Device results carry more weight than simulator
      results for anything involving the keyboard, search, or reminders. -->
 
-- [ ] `swift run coreverify` (52/52 green)
+- [ ] `swift run coreverify` (71/71 green)
 - [ ] `swift test`
 - [ ] `xcodebuild test` on a simulator
 - [ ] Checked on a physical device

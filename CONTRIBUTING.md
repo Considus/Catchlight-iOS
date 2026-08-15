@@ -24,7 +24,7 @@ Thank you for your interest in contributing.
 # Keep build artifacts OUTSIDE the source tree (see README "Build artifacts"):
 BUILD_DIR="$HOME/CatchlightBuild"
 swift build  --scratch-path "$BUILD_DIR/spm"
-swift run coreverify   # 52 runtime checks — must pass before any PR (52/52 green)
+swift run coreverify   # 71 runtime checks — must pass before any PR (71/71 green)
 swift test   --scratch-path "$BUILD_DIR/spm"
 
 brew install xcodegen
