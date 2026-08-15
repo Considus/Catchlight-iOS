@@ -239,6 +239,36 @@ final class DailiesViewModel {
         }
     }
 
+    /// Move a Take to `destination` in the MANUAL arrangement (D-195) and persist it.
+    ///
+    /// `destination` is an index into the canonical oldest-first arrangement WITHOUT the
+    /// moved Take — see `ManualOrder.reorder`, which owns the arithmetic and normally
+    /// hands back a single Take to write.
+    ///
+    /// DELIBERATELY NOT `save(_:)`. That path clears `isSeeded`, re-indexes Spotlight and
+    /// reconciles the OS notification, and a drag has changed none of those things: the
+    /// content, the reminder and the Take's status as a seed are all untouched. It does
+    /// bump `modifiedAt`, which is not optional — the sync engine pushes on the watermark,
+    /// so an unbumped reorder would simply never leave the device.
+    func moveTake(_ id: UUID, to destination: Int) {
+        let values = ManualOrder.reorder(takes, moving: id, to: destination)
+        guard !values.isEmpty else { return }   // dropped where it started
+        do {
+            for (takeID, order) in values {
+                guard var take = takes.first(where: { $0.id == takeID }), take.manualOrder != order else { continue }
+                take.manualOrder = order
+                take.modifiedAt = Date()
+                try store.upsert(take)
+            }
+            DiagnosticsLog.shared.record(.lifecycle, "Timeline reordered")
+            reload()
+            notifyLocalChange()
+        } catch {
+            lastError = "Couldn't reorder your Takes."
+            reload()   // the arrangement on screen may be half-applied — resync from the store
+        }
+    }
+
     /// Like `save`, but reflects the edit IN PLACE (no full `reload()`), so a swipe action
     /// re-renders just that one row instead of rebuilding + re-sorting the whole timeline —
     /// the source of the swipe "jank" (owner 2026-06-27). Safe ONLY when the edit doesn't

@@ -61,6 +61,11 @@ struct StoryboardView: View {
     private var takeSort: SettingsViewModel.TakeSort {
         SettingsViewModel.TakeSort(rawValue: takeSortRaw) ?? .default
     }
+    @AppStorage(SettingsViewModel.TimelineArrangement.defaultsKey)
+    private var arrangementRaw: String = SettingsViewModel.TimelineArrangement.default.rawValue
+    private var arrangement: SettingsViewModel.TimelineArrangement {
+        SettingsViewModel.TimelineArrangement(rawValue: arrangementRaw) ?? .default
+    }
 
     /// The inter-card gap. The "View" setting's gap is tuned for Dailies, where each
     /// card's Iris straddles its top edge — the Iris's top HALF (its radius, 22pt of
@@ -105,6 +110,14 @@ struct StoryboardView: View {
     /// reversed for Oldest-first.
     private var storyboardTakes: [Take] {
         let open = vm.takes.filter { $0.isTask && !$0.isComplete }
+        // MANUAL arrangement (D-195): the Storyboard is a filter over the same Takes and
+        // has always sat "in timeline order", so it honours a hand-arranged timeline too —
+        // reverting to date order here would read as a bug. There is no drag on this
+        // screen; the arrangement is made on Dailies and reflected here.
+        if arrangement == .manual {
+            let canonical = ManualOrder.arranged(open)
+            return takeSort == .oldestFirst ? canonical : canonical.reversed()
+        }
         let newestFirst = open.sorted {
             $0.createdAt != $1.createdAt
                 ? $0.createdAt > $1.createdAt
