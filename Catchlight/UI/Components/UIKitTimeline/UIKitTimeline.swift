@@ -54,6 +54,21 @@ enum TimelineDragHandle {
     static func containsX(_ x: CGFloat, inWidth width: CGFloat) -> Bool {
         x >= width - trailingMargin - stripWidth && x <= width - trailingMargin
     }
+
+    // MARK: Tunables (device review may nudge these)
+
+    /// How long the handle must be HELD before the row lifts.
+    ///
+    /// Zero at first, so the lift was instant — and that made the timeline hard to scroll
+    /// (owner, on device 2026-08-15): the strip sits at the right edge, which is exactly
+    /// where a thumb starts a scroll, so any stroke beginning there picked a row up instead.
+    ///
+    /// The delay is what separates the two, via `allowableMovement` rather than by guessing
+    /// at direction: a `UILongPressGestureRecognizer` FAILS if the touch travels more than
+    /// that (10pt by default) before the duration elapses. So a scroll — which moves
+    /// immediately — fails this recognizer and goes to the scroll view untouched, while a
+    /// deliberate hold keeps the touch still and lifts. No arbitration to get wrong.
+    static let liftDelay: TimeInterval = 0.25
 }
 
 struct UIKitTimeline: UIViewControllerRepresentable {
@@ -166,6 +181,19 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     }
 }
 
+/// The card's interactive region: its full rounded rect, minus the trailing strip the drag
+/// handle occupies. `trailingInset` is 0 outside manual mode, which gives back exactly the
+/// `RoundedRectangle` the card used before the handle existed.
+struct TimelineCardHitShape: Shape {
+    var trailingInset: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let live = CGRect(x: rect.minX, y: rect.minY,
+                          width: max(0, rect.width - trailingInset), height: rect.height)
+        return Path(roundedRect: live, cornerRadius: 12, style: .continuous)
+    }
+}
+
 /// One read-only timeline row — the same layering as `TakeRowView` (card < occluder <
 /// Iris < wire segment < dots), so the wire threads the Iris identically. Offsets are
 /// `cardSpineInset`-relative (the ZStack origin is the card's top-left, after the leading
@@ -228,7 +256,15 @@ struct TimelineReadCell: View {
                         .animation(.easeInOut(duration: 0.4), value: isSpotlightTarget)
                         .allowsHitTesting(false)
                 )
-                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                // The card's hit region STOPS at the drag handle in manual mode. Without
+                // this the strip is still the card's, so a hold there raised the card's
+                // CONTEXT MENU instead of lifting the row — the menu's own long-press beat
+                // the reorder recognizer outright (device + simulator, 2026-08-15). Fixing
+                // it by retuning the two durations against each other would have been a
+                // race to keep balanced; removing the overlap means there is no race. It
+                // also, correctly, stops a tap on the handle opening the editor.
+                .contentShape(TimelineCardHitShape(
+                    trailingInset: showsDragHandle ? TimelineDragHandle.stripWidth : 0))
                 .onTapGesture { onTapText(take) }
                 .contextMenu { menuItems }
                 // ⚠️ VoiceOver + TEST CONTRACT. This cell draws `TakeCardSurface` DIRECTLY rather
@@ -559,16 +595,17 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         return collectionView.indexPathForItem(at: point) == nil
     }
 
-    /// Zero-duration long press on the handle, driving the collection view's interactive
-    /// movement.
+    /// Press-and-hold on the handle, driving the collection view's interactive movement.
     ///
-    /// WHY A LONG PRESS OF ZERO DURATION AND NOT A PAN. A pan would begin only once the
-    /// finger moves — by which time the scroll view's own pan has claimed the touch too, and
-    /// the row and the timeline both move. Beginning on touch-down means
-    /// `beginInteractiveMovementForItem` is already in force before there is any movement to
-    /// scroll on, which is how UICollectionView expects to be driven. Nothing else contends:
-    /// the card's swipe pan only begins on HORIZONTAL-led strokes, the context menu and the
-    /// Iris live on the card, and the handle sits outside it.
+    /// WHY A LONG PRESS AND NOT A PAN. A pan would begin only once the finger moves — by
+    /// which time the scroll view's own pan has claimed the touch too, and the row and the
+    /// timeline both move. A long press resolves BEFORE there is any movement to scroll on,
+    /// which is how UICollectionView expects interactive movement to be driven.
+    ///
+    /// The hold duration is `TimelineDragHandle.liftDelay`, and it is load-bearing rather
+    /// than decorative — see that constant for why an instant lift made the timeline hard to
+    /// scroll. Nothing else contends: the card's swipe pan only begins on HORIZONTAL-led
+    /// strokes, and the context menu and the Iris live on the card's own subviews.
     @objc private func handleReorderPress(_ press: UILongPressGestureRecognizer) {
         let point = press.location(in: collectionView)
         switch press.state {
@@ -644,7 +681,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         // Manual-order drag (D-195). Gated to the handle strip in `shouldReceive`.
         reorderPress = UILongPressGestureRecognizer(target: self,
                                                     action: #selector(handleReorderPress))
-        reorderPress.minimumPressDuration = 0
+        reorderPress.minimumPressDuration = TimelineDragHandle.liftDelay
         reorderPress.delegate = self
         collectionView.addGestureRecognizer(reorderPress)
         view.addSubview(collectionView)
