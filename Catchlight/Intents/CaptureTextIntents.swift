@@ -79,12 +79,32 @@ import CatchlightCore
 /// The order matters. The queue write happens first, so the words are safe before anything
 /// tries to bring the app forward. On iOS 18 the availability test fails, this method stops
 /// after the queue write, and `openAppWhenRun` opens the app exactly as it did before.
+///
+/// THE CONFIRMATION IS OFF ON PURPOSE (owner-reported 2026-08-15). `continueInForeground`
+/// confirms by DEFAULT — `alwaysConfirm` is `true` unless you say otherwise. On a locked
+/// phone that default put a "You'll need to continue in the app" prompt, with a Cancel
+/// button, in front of the owner. That trades the Face ID chore for a different chore and
+/// misses the point of the change. Apple's rule for `false`: the system does not ask again
+/// if it recently asked the person for a value. Siri ALWAYS asks these two intents for their
+/// text, because the parameter is required, so that condition holds on every run.
+///
+/// THE FAILURE IS SWALLOWED ON PURPOSE. Apple throws when the app cannot come to the front,
+/// and a locked phone is exactly that case, so the throw is expected rather than exceptional.
+/// The words are in the queue before this line runs. Only the instant save and the reveal are
+/// lost, and the next unlock does both. Letting the error out would make Siri report a
+/// failure for a Take that is safe on disk, which is a worse lie than a missing pulse.
+///
+/// DO NOT DELETE THE CALL TO GET A SILENT CAPTURE. `.foreground(.deferred)` moves the app to
+/// the front at the END of `perform()` by itself when no transition method runs. The call
+/// below is what makes the transition explicit and unconfirmed. To stop the app coming
+/// forward at all, take `.foreground(.deferred)` out of `supportedModes` — and accept that
+/// an unlocked capture then loses its instant save and its pulse.
 private extension AppIntent {
     @MainActor
-    func queueDictatedCapture(text: String, isObie: Bool) async throws {
+    func queueDictatedCapture(text: String, isObie: Bool) async {
         CaptureRouting.enqueueShared(.init(text: text, isObie: isObie))
         if #available(iOS 26.0, *), systemContext.currentMode.canContinueInForeground {
-            try await continueInForeground()
+            try? await continueInForeground(alwaysConfirm: false)
         }
     }
 }
@@ -116,7 +136,7 @@ struct CaptureTakeIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        try await queueDictatedCapture(text: text, isObie: false)
+        await queueDictatedCapture(text: text, isObie: false)
         return .result()
     }
 }
@@ -146,7 +166,7 @@ struct CaptureObieIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        try await queueDictatedCapture(text: text, isObie: true)
+        await queueDictatedCapture(text: text, isObie: true)
         return .result()
     }
 }
