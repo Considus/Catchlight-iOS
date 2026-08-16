@@ -117,7 +117,12 @@ struct BlockEditor: UIViewControllerRepresentable {
                 angleEnabled: AngleRegistry.applicable(to: parent.draft).first != nil,
                 isDone: parent.draft.isMarkedDone,
                 doneEnabled: parent.draft.canBeMarkedDone,
-                hasReminder: parent.draft.timeReminder != nil,
+                // A "where" counts as a reminder exactly like a "when" (place/time parity,
+                // 2026-07-01) — the Focus ring's Remind mark has read it that way since, and
+                // the toolbar bell now TINTS on it (owner 2026-08-16), so a time-only test
+                // would leave a place reminder showing the untinted "add" bell while the
+                // button in fact opens the picker on the place already set.
+                hasReminder: parent.draft.timeReminder != nil || parent.draft.locationReminder != nil,
                 onToggleImportant: { [weak self] in self?.parent.draft.isImportant.toggle() },
                 onOpenAngle: { [weak self] in self?.parent.onOpenAngle?() },
                 onReminder: parent.onEditReminder,
