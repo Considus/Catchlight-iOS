@@ -182,6 +182,20 @@ final class SettingsViewModel {
     /// times, until the user marks it done / dismisses / snoozes. Default ON, but
     /// user-disableable — the nudges are intrusive, so this honours the "user decides"
     /// principle. A plain bool preference, readable by `ReminderScheduler` while scheduling.
+    /// Ask before deleting a Take (owner 2026-08-16). A delete is a hard store delete —
+    /// there is no trash and no undo — so the confirmation defaults ON: doing nothing
+    /// cannot then lose a Take, and the user can switch it off
+    /// ([[catchlight-user-decides-principle]]). Read by the delete surfaces via
+    /// `@AppStorage` so toggling it takes effect without a relaunch.
+    enum ConfirmBeforeDelete {
+        static let defaultsKey = "catchlight.confirmBeforeDelete"
+        static let `default` = true
+        static var isEnabled: Bool {
+            // `object(forKey:)` so an unset key reads the default (true), not false.
+            UserDefaults.standard.object(forKey: defaultsKey) as? Bool ?? `default`
+        }
+    }
+
     enum FollowUpReminders {
         static let defaultsKey = "catchlight.followUpReminders"
         static let `default` = true
