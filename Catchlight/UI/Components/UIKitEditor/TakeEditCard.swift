@@ -153,10 +153,25 @@ struct TakeEditCard: View {
             )
 
             if showsIris {
-                TakeCircleView(take: draft)                              // Iris on the spine
+                // The SAME treatment the timeline rows use, from the same view (owner
+                // 2026-08-16). This card is a row's stand-in: identical spine inset,
+                // identical card padding, Iris straddling the card's top edge in the
+                // same place — so the gutter beam runs behind it exactly as it runs
+                // behind a read row, and a flat Iris here read as the one that had been
+                // missed. The lean and the cast shadow come with it; `ThreadedIris`
+                // carries its own shadow, so the Daylight-only `.shadow` that used to
+                // sit here is gone with it.
+                //
+                // The FOCUS RING and the CONFLICT view keep a plain `TakeCircleView`,
+                // deliberately: they already have the new lighting, because that lives
+                // in `TakeCircleView` itself, but neither has a beam threading it and a
+                // lean without one is a squashed mark for no reason.
+                ThreadedIris(take: draft, showsBeam: false)
+                    .offset(x: inset - d / 2, y: -d / 2)
+                // The touch and VoiceOver surface, separate from the drawing.
+                Color.clear
                     .frame(width: d, height: d)
-                    .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.16),
-                            radius: 5, y: 2)
+                    .contentShape(Rectangle())
                     // Tap → the Focus-ring fan, as on a read card. This card's Iris was purely
                     // DECORATIVE from M4.7 until 2026-07-16: on the old timeline the row's own
                     // Iris stays beside the editor and carries the gesture, so nothing was lost
@@ -169,7 +184,6 @@ struct TakeEditCard: View {
                                                       onLongPress: {})
                         }
                     }
-                    .offset(x: inset - d / 2, y: -d / 2)
                     // ⚠️ TEST CONTRACT: the XCUITests open the Focus ring through "editor-shape"
                     // (the EDITING card's Iris) — the retired row-hosted editor published it, and
                     // it moved here with the card. Queried type-agnostically (`anyElement`), since
@@ -179,6 +193,7 @@ struct TakeEditCard: View {
                     .accessibilityIdentifier("editor-shape")
                     .accessibilityLabel("Take shape")
                     .accessibilityHint("Opens the Focus ring to change what this Take is.")
+                    .offset(x: inset - d / 2, y: -d / 2)
             }
         }
     }

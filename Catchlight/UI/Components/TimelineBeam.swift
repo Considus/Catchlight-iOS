@@ -268,6 +268,14 @@ struct BeamDust: View {
 struct ThreadedIris: View {
     let take: Take
     var diameter: CGFloat = CatchlightLayout.circleDiameter
+    /// Whether the beam crosses this Iris.
+    ///
+    /// False in the EDITOR, where the gutter beam is deliberately hidden (owner
+    /// 2026-06-17: a wire reads as a remnant behind a focused Take). Threading an Iris
+    /// with a beam that exists nowhere else on the screen leaves a stub of light with
+    /// nothing above or below it. The lean, the lighting and the cast shadow all stay —
+    /// only the beam goes.
+    var showsBeam: Bool = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -287,7 +295,7 @@ struct ThreadedIris: View {
             ZStack(alignment: .topLeading) {
                 shadow
                 half(.far, specular: specularOffset(geo))
-                beam
+                if showsBeam { beam }
                 half(.near, specular: specularOffset(geo))
             }
         }
