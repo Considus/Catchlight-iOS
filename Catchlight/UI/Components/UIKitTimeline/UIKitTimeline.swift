@@ -338,7 +338,7 @@ struct TimelineReadCell: View {
             // wire through the hole is precisely what threading means. Putting it back
             // re-breaks the order.
             TimelineBeamOccluder()                                                     // one beam, not two
-                .offset(x: inset - TimelineBeam.opaqueWidth / 2, y: -d / 2)
+                .offset(x: inset - TimelineBeam.width / 2, y: -d / 2)
             ThreadedIris(take: take)                                                   // shadow, halves, beam
                 .offset(x: inset - d / 2, y: -d / 2)
             irisHitTarget                                                              // gestures + VoiceOver
