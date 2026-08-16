@@ -38,6 +38,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.DefaultReminderHours.defaultsKey) private var defaultReminderHoursRaw: String = SettingsViewModel.DefaultReminderHours.default.rawValue
     @AppStorage(SettingsViewModel.SnoozeDuration.defaultsKey) private var snoozeDurationRaw: String = SettingsViewModel.SnoozeDuration.default.rawValue
     @AppStorage(SettingsViewModel.FollowUpReminders.defaultsKey) private var followUpRemindersOn: Bool = SettingsViewModel.FollowUpReminders.default
+    @AppStorage(SettingsViewModel.ConfirmBeforeDelete.defaultsKey) private var confirmBeforeDeleteOn: Bool = SettingsViewModel.ConfirmBeforeDelete.default
     @AppStorage(SpotlightExposure.defaultsKey) private var spotlightExposureRaw: String = SpotlightExposure.default.rawValue
 
     @State private var vm = SettingsViewModel()
@@ -511,6 +512,34 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            // Confirm before deleting (owner 2026-08-16) — sits under Auto-Delete because
+            // the two are the section's pair about LOSING Takes: one trims them on a
+            // timer, this one guards the manual delete. On by default; a delete cannot
+            // be undone.
+            Toggle(isOn: $confirmBeforeDeleteOn) {
+                HStack(spacing: 14) {
+                    // The alert glyph: this row decides whether that alert appears at all.
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(Color.ckAccent)
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Confirm before deleting")
+                            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                            .foregroundStyle(Color.ckTextPrimary)
+                        Text("A deleted Take cannot be recovered")
+                            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                            .foregroundStyle(Color.ckTextSecondary)
+                    }
+                }
+            }
+            .tint(Color.ckEmber)
+            .frame(minHeight: 52)
+            .listRowBackground(Color.ckSurface)
+            .accessibilityIdentifier("confirm-before-delete-toggle")
+            .accessibilityHint("When on, deleting a Take asks you to confirm first.")
 
             SettingsRow(icon: "key.horizontal",
                         label: "Privacy phrase",
