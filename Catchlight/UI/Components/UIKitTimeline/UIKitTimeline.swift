@@ -233,11 +233,6 @@ struct TimelineReadCell: View {
     var showsDragHandle: Bool = false
     /// VoiceOver move: -1 up, +1 down, in DISPLAY order.
     var onNudge: (Take, Int) -> Void = { _, _ in }
-    /// Degrees to turn this row's rim catchlight by, so the light stays fixed in the
-    /// world while the Take travels past it. Fed by the timeline from the row's
-    /// position on screen; 0 until that lands, which simply leaves the light at ten
-    /// o'clock on every row.
-    var specularOffset: Double = 0
 
     @Environment(\.colorScheme) private var scheme
     private let inset = CatchlightLayout.cardSpineInset
@@ -348,7 +343,7 @@ struct TimelineReadCell: View {
             // the dotted spine bleeding up through the hollow aperture — but seeing the
             // wire through the hole is precisely what threading means. Putting it back
             // re-breaks the order.
-            ThreadedIris(take: take, specularOffset: specularOffset)                   // shadow, halves, beam
+            ThreadedIris(take: take)                                                   // shadow, halves, beam
                 .offset(x: inset - d / 2, y: -d / 2)
             irisHitTarget                                                              // gestures + VoiceOver
         }

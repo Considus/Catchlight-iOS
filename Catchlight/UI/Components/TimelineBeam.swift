@@ -103,6 +103,104 @@ struct TimelineBeam: View {
     }
 }
 
+// MARK: - Dust
+
+/// The dust a projector beam shows you.
+///
+/// 🚨 THIS MUST NOT SCROLL. Dust hangs in the room; scrolling a list does not move the
+/// room. It gets that for free by living in `DailiesView`'s spine layer, which is
+/// screen-fixed and sits BEHIND the timeline — the same layer that made the old dotted
+/// spine hold still. Put it inside the collection and it would ride the content, and
+/// counter-offsetting it every frame is a fight with the compositor that shows up as a
+/// stutter, since the two land on different frames.
+///
+/// The dust is also the only thing on the timeline that moves of its own accord, so it
+/// is the only thing here that needs gating — see `isHeld`.
+struct BeamDust: View {
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+
+    /// Held still — but still drawn — when the owner has asked for less motion, when the
+    /// battery is being conserved, or when the app is not the thing on screen. Owner-
+    /// approved gates, 2026-08-16. Holding rather than hiding matters: the beam keeps its
+    /// air, it simply stops drifting.
+    private var isHeld: Bool {
+        reduceMotion || lowPower || scenePhase != .active
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: isHeld)) { timeline in
+            Canvas { context, size in
+                draw(in: context, size: size,
+                     t: timeline.date.timeIntervalSinceReferenceDate)
+            }
+        }
+        .frame(width: TimelineBeam.width)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .onReceive(NotificationCenter.default.publisher(
+            for: .NSProcessInfoPowerStateDidChange).receive(on: RunLoop.main)) { _ in
+            lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+        }
+    }
+
+    private func draw(in context: GraphicsContext, size: CGSize, t: TimeInterval) {
+        guard size.height > 0 else { return }
+        var gc = context
+        gc.blendMode = scheme == .dark ? .plusLighter : .normal
+        let colour = scheme == .dark ? Color(hex: 0xFFF4D6) : Color(hex: 0x654C21)
+        let cx = size.width / 2
+
+        for m in Mote.all {
+            // Falling, and wrapping over the visible run. Screen space throughout — no
+            // scroll term anywhere, which is the whole point.
+            let y = (m.y * size.height + CGFloat(t) * m.speed)
+                .truncatingRemainder(dividingBy: size.height)
+            let x = cx + m.x + sin(CGFloat(t) * m.wobbleRate + m.wobblePhase) * 1.4
+            // Brightest in the core of the beam, dying towards the edge of the haze —
+            // a mote only shows where there is light on it.
+            let near = 1 - min(1, abs(m.x) / 12)
+            let alpha = 0.12 + 0.80 * near * near
+            gc.fill(Path(ellipseIn: CGRect(x: x - m.radius, y: y - m.radius,
+                                           width: m.radius * 2, height: m.radius * 2)),
+                    with: .color(colour.opacity(alpha)))
+        }
+    }
+
+    /// One speck. Fixed set, generated once from a fixed seed so the drift is smooth
+    /// rather than reshuffling on every redraw.
+    private struct Mote {
+        let x: CGFloat            // offset from the beam's centre
+        let y: CGFloat            // 0…1 down the run
+        let radius: CGFloat
+        let speed: CGFloat        // points per second, DOWNWARD
+        let wobblePhase: CGFloat
+        let wobbleRate: CGFloat
+
+        static let all: [Mote] = {
+            var seed: UInt64 = 20260816
+            func rnd() -> CGFloat {
+                seed = seed &* 6364136223846793005 &+ 1442695040888963407
+                return CGFloat((seed >> 33) % 100_000) / 100_000
+            }
+            return (0..<100).map { _ in
+                let r = 0.4 + rnd() * 1.15
+                return Mote(x: (rnd() - 0.5) * 24,
+                            y: rnd(),
+                            radius: r,
+                            // Settling speed off the RADIUS, not rolled separately: a
+                            // bigger mote falls faster. One speed for all of them reads
+                            // as snow.
+                            speed: 0.8 + 2.2 * r * r,
+                            wobblePhase: rnd() * 6.283,
+                            wobbleRate: 0.15 + rnd() * 0.35)
+            }
+        }()
+    }
+}
+
 // MARK: - The shutter, threaded
 
 /// The Iris as it appears ON THE TIMELINE: leaned back off the card plane, with the
@@ -126,33 +224,52 @@ struct TimelineBeam: View {
 struct ThreadedIris: View {
     let take: Take
     var diameter: CGFloat = CatchlightLayout.circleDiameter
-    /// Turns the rim catchlight so the light stays fixed while the Take travels past it.
-    var specularOffset: Double = 0
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var foreshorten: CGFloat { IrisDepth.foreshorten }
     /// How far the leaned shutter's top edge sits below the untilted frame's top.
     private var leanTop: CGFloat { (diameter - diameter * foreshorten) / 2 }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            shadow
-            half(.far)
-            beam
-            half(.near)
+        // The light is fixed in the WORLD, not on the Iris, so as a Take travels up the
+        // screen its rim catchlight arcs round — which is what makes the timeline read
+        // as a lit space rather than a list of stickers (owner 2026-08-16). The reader
+        // is inside the shared view on purpose: computed at either call site, one of the
+        // two rows would eventually be left without it, exactly as the Obie was left
+        // without the tilt.
+        GeometryReader { geo in
+            ZStack(alignment: .topLeading) {
+                shadow
+                half(.far, specular: specularOffset(geo))
+                beam
+                half(.near, specular: specularOffset(geo))
+            }
         }
         .frame(width: diameter, height: diameter, alignment: .topLeading)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
+    /// Degrees to turn this row's catchlight by, from where the Iris sits on SCREEN.
+    /// Zero under Reduce Motion, which parks every light at ten o'clock.
+    private func specularOffset(_ geo: GeometryProxy) -> Double {
+        guard !reduceMotion else { return 0 }
+        let screen = UIScreen.main.bounds.height
+        guard screen > 0 else { return 0 }
+        let t = min(1, max(0, geo.frame(in: .global).midY / screen))
+        // ±26°, so a Take crosses about a fifth of the rim on its way up the screen.
+        return (0.5 - Double(t)) * 52
+    }
+
     // MARK: Parts
 
     private enum Half { case far, near }
 
-    private func half(_ which: Half) -> some View {
+    private func half(_ which: Half, specular: Double) -> some View {
         TakeCircleView(take: take,
                        diameter: diameter,
-                       specularOffset: specularOffset,
+                       specularOffset: specular,
                        apertureLitFromWithin: true)
             .frame(width: diameter, height: diameter)
             .rotation3DEffect(.degrees(-IrisDepth.tiltDegrees),
