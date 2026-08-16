@@ -61,24 +61,35 @@ import CatchlightCore
 /// ground additive light has nowhere to go. Over its own ground, the warm shoulders give
 /// the white something to be white against, on either ground.
 struct TimelineBeam: View {
-    /// The beam's footprint. Callers place it by its centre (`x - TimelineBeam.width / 2`).
-    /// Narrowed 36 -> 18 (owner 2026-08-16: the white was right, the width was not).
-    static let width: CGFloat = 18
+    /// The beam's footprint, and what callers place it by (`x - width / 2`).
+    ///
+    /// 36 -> 18 -> 9 (owner 2026-08-16). The white was always right; the width was not.
+    /// The last halving is not only taste: the beam passes IN FRONT of the shutter, and
+    /// IMPORTANT is blade 0 at twelve o'clock, so a wide beam runs straight down the one
+    /// marker it must not hide. At 9pt it crosses the crown without covering it.
+    static let width: CGFloat = 9
     /// The middle of the beam, where the feather is fully opaque — see the mask stops.
+    /// What the occluder has to cover, and no more.
     static let opaqueWidth: CGFloat = width * 0.72
 
     /// The light itself, laid over the beam's own ground. Symmetric, so the centre of
     /// the frame is the centre of the light — see `snappedToPixel` for why that has to
     /// land on the pixel grid.
+    /// 🚨 THE SHOULDERS MUST NOT BE DARKER THAN THE LIGHTEST BLADE. The beam carries its
+    /// own ground so that it looks the same wherever it goes — but that ground is Ink in
+    /// Night, so warm shoulders laid over it came out darker than a lit blade and read as
+    /// "a dark shadow behind the beam" wherever the beam crossed one (owner, on device
+    /// 2026-08-16). Raised to Catchlight cream at full strength, which sits above even
+    /// the Stone of an Important blade, so the beam can only ever lighten what it covers.
     private static let light: [Gradient.Stop] = [
-        .init(color: Color(hex: 0xC9A96E).opacity(0),    location: 0.00),
-        .init(color: Color(hex: 0xC9A96E).opacity(0.40), location: 0.20),
-        .init(color: Color(hex: 0xEDD9A3).opacity(0.90), location: 0.36),
-        .init(color: Color(hex: 0xFFFFFF),               location: 0.455),
-        .init(color: Color(hex: 0xFFFFFF),               location: 0.545),
-        .init(color: Color(hex: 0xEDD9A3).opacity(0.90), location: 0.64),
-        .init(color: Color(hex: 0xC9A96E).opacity(0.40), location: 0.80),
-        .init(color: Color(hex: 0xC9A96E).opacity(0),    location: 1.00)
+        .init(color: Color(hex: 0xEDD9A3).opacity(0),    location: 0.00),
+        .init(color: Color(hex: 0xEDD9A3).opacity(0.55), location: 0.18),
+        .init(color: Color(hex: 0xF5EDD8).opacity(0.96), location: 0.34),
+        .init(color: Color(hex: 0xFFFFFF),               location: 0.44),
+        .init(color: Color(hex: 0xFFFFFF),               location: 0.56),
+        .init(color: Color(hex: 0xF5EDD8).opacity(0.96), location: 0.66),
+        .init(color: Color(hex: 0xEDD9A3).opacity(0.55), location: 0.82),
+        .init(color: Color(hex: 0xEDD9A3).opacity(0),    location: 1.00)
     ]
 
     /// Opaque across the middle, feathering to nothing at the two edges. The feather is
