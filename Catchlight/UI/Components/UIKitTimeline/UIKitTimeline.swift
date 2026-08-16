@@ -436,6 +436,10 @@ struct TimelineSwipeCell: View {
     /// Threaded straight through to `TimelineReadCell` (see its `showsDragHandle`).
     var showsDragHandle: Bool = false
     var onNudge: (Take, Int) -> Void = { _, _ in }
+    /// Whether a delete will ask first — decides the swipe's fly-off (see `trailing`).
+    /// The asking itself belongs to the host (`DailiesView.requestDelete`).
+    @AppStorage(SettingsViewModel.ConfirmBeforeDelete.defaultsKey)
+    private var confirmBeforeDelete: Bool = SettingsViewModel.ConfirmBeforeDelete.default
 
     var body: some View {
         SwipeActionRow(
@@ -446,8 +450,13 @@ struct TimelineSwipeCell: View {
                               tint: .ckEmber, style: .standard,
                               perform: { onToggleDone(take) })
                 : nil,
+            // Neither a repeating reminder NOR a confirmed delete may fly the row off on
+            // the swipe: both put a question on screen first, and the row has to still be
+            // there if the answer is no (owner 2026-06-21, extended to the confirmation
+            // 2026-08-16). An unconfirmed delete keeps the destructive slide-off.
             trailing: SwipeAction(title: "Delete", systemImage: "trash", tint: .ckRuby,
-                                  style: take.timeReminder?.repeats == true ? .standard : .destructive,
+                                  style: take.timeReminder?.repeats == true || confirmBeforeDelete
+                                      ? .standard : .destructive,
                                   perform: { onDelete(take) }),
             openRowID: $swipeState.openRowID,
             leadingInset: spineX - CatchlightLayout.cardSpineInset,

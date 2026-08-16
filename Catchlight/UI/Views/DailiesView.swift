@@ -153,6 +153,11 @@ struct DailiesView: View {
     /// Delete on a recurring reminder asks "this occurrence" vs "the whole series"
     /// rather than deleting outright; nil when no such prompt is up.
     @State private var pendingRecurringDelete: Take?
+    /// The Take a delete confirmation is currently asking about (owner 2026-08-16) — nil
+    /// when no alert is up. See `requestDelete`.
+    @State private var pendingDeleteConfirm: Take?
+    @AppStorage(SettingsViewModel.ConfirmBeforeDelete.defaultsKey)
+    private var confirmBeforeDelete: Bool = SettingsViewModel.ConfirmBeforeDelete.default
     /// Bloom progress (0→1) for the in-place NEW Take's "appear". Driven explicitly
     /// (scale+opacity on the row) rather than via a LazyVStack insertion transition,
     /// which doesn't animate reliably. 1 at rest so existing rows are unaffected.
@@ -528,6 +533,9 @@ struct DailiesView: View {
         } message: {
             Text("Your existing Obie returns to the timeline — only one Take can be your Obie.")
         }
+        // Confirm before deleting (owner 2026-08-16) — the shared alert, raised by
+        // `requestDelete` when the setting is on and the Take is not a repeating reminder.
+        .deleteConfirmation(pending: $pendingDeleteConfirm) { deleteTake($0) }
         // Recurring-reminder Delete (owner 2026-06-21): this occurrence vs the series.
         // "This occurrence" rolls the reminder forward (series + alarm stay live);
         // "Delete series" removes the whole Take like a normal delete.
@@ -1045,8 +1053,7 @@ struct DailiesView: View {
             },
             onDelete: { take in
                 guard app.ensureEntitled() else { return }
-                if take.timeReminder?.repeats == true { pendingRecurringDelete = take }
-                else { deleteTake(take) }
+                requestDelete(take)
             },
             // Iris tap → bloom the Focus-ring fan at the tapped Iris (window coords
             // match RootView's full-screen overlay). No edit-in-place on the new
@@ -1219,14 +1226,16 @@ struct DailiesView: View {
                 // must NOT fly off on swipe (the row stays if "this occurrence" wins) —
                 // `.standard` triggers the dialog; a normal Take keeps the destructive
                 // slide-off (owner 2026-06-21).
-                style: take.timeReminder?.repeats == true ? .standard : .destructive,
+                // Neither a repeating reminder NOR a confirmed delete may fly the row off
+                // on the swipe: both put a question on screen first, and the row has to
+                // still be there if the answer is no (owner 2026-06-21, extended to the
+                // confirmation 2026-08-16). An unconfirmed delete keeps the destructive
+                // slide-off.
+                style: take.timeReminder?.repeats == true || confirmBeforeDelete
+                    ? .standard : .destructive,
                 perform: {
                     guard app.ensureEntitled() else { return }
-                    if take.timeReminder?.repeats == true {
-                        pendingRecurringDelete = take
-                    } else {
-                        deleteTake(take)
-                    }
+                    requestDelete(take)
                 }
             ),
             openRowID: $openSwipeRowID,
@@ -1435,6 +1444,23 @@ struct DailiesView: View {
         editFocusedBlockID = nil
         editDraft = nil
         ui.endEditingInPlace()
+    }
+
+    /// The way in to every delete on this screen (owner 2026-08-16). Decides WHETHER to
+    /// ask, then hands over to `deleteTake`:
+    ///
+    ///   • a repeating reminder goes to its own "this occurrence or the series?" dialog,
+    ///     which already asks — and asks something more specific than this would;
+    ///   • otherwise the "Confirm before deleting" setting decides (default ON);
+    ///   • with it off, the delete goes straight through, exactly as it always did.
+    ///
+    /// Deliberately in FRONT of `deleteTake` rather than inside it: "Delete Series" and the
+    /// editor's own teardown path have already been confirmed by the time they call it, and
+    /// putting the gate inside would ask them a second time.
+    private func requestDelete(_ take: Take) {
+        if take.timeReminder?.repeats == true { pendingRecurringDelete = take; return }
+        if confirmBeforeDelete { pendingDeleteConfirm = take; return }
+        deleteTake(take)
     }
 
     /// Delete a Take from ANY entry point (swipe, context menu, recurring "Delete series"),
@@ -1647,7 +1673,7 @@ struct DailiesView: View {
                 },
             onDelete: {
                 guard app.ensureEntitled() else { return }
-                deleteTake(take)
+                requestDelete(take)
             },
             // Export this one Take (owner 2026-06-27). Exports what's on screen — the live
             // draft while editing, otherwise the stored Take — through the share sheet.
