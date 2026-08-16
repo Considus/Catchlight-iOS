@@ -274,6 +274,85 @@ extension Color {
         dark: UIColor(red: 0.86, green: 0.32, blue: 0.32, alpha: 1.0),
         light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
     ))
+
+    // MARK: Iris depth (owner 2026-08-16)
+    //
+    // One light for the whole timeline: from the TOP LEFT, warm. Every round thing
+    // obeys it. Before this pass nothing did — the blades were six flat fills and the
+    // spine one flat tint, which is why the timeline read as a diagram rather than as
+    // objects. See `IrisDepth` below for the geometry that goes with these.
+
+    /// The shadow the Iris drops onto the card it sits on.
+    ///
+    /// 🚨 This is a DELIBERATE exception to DS §4 "no shadows in Night", owner-approved
+    /// 2026-08-16, and the reasoning is the part to keep: §4 forbids shadows against the
+    /// DARK GROUND, where they cannot be seen and only muddy the page. This shadow lands
+    /// on the CARD (Dusk #1C1A16), which is lighter than the page (Ink #0F0E0C), so it
+    /// registers. Where it falls past the card onto Ink it is near-black on near-black
+    /// and disappears on its own — no clipping needed, the tones do it.
+    static let ckIrisShade = Color(uiColor: .adaptive(
+        dark: UIColor(red: 0.02, green: 0.016, blue: 0.012, alpha: 0.62),
+        light: UIColor(hex: 0x0F0E0C).withAlphaComponent(0.20)
+    ))
+
+    /// The mark the WIRE leaves on the blades it crosses — a shadow for a solid wire,
+    /// warm spill for a beam (see `ckBeamSpill`). Halved in Daylight: the same weight
+    /// that reads as depth on Ink reads as a grey rectangle laid over near-white blades.
+    static let ckIrisWireShadow = Color(uiColor: .adaptive(
+        dark: UIColor.black.withAlphaComponent(0.30),
+        light: UIColor(hex: 0x0F0E0C).withAlphaComponent(0.085)
+    ))
+
+    /// Light spilling from the beam onto the blades it passes — the inverse of
+    /// `ckIrisWireShadow`, because a beam does not cast a shadow, it casts light.
+    static let ckBeamSpill = Color(uiColor: .adaptive(
+        dark: UIColor(hex: 0xEDD9A3).withAlphaComponent(0.26),
+        light: UIColor(hex: 0xC9A96E).withAlphaComponent(0.22)
+    ))
+}
+
+// MARK: - Iris depth geometry (owner 2026-08-16)
+
+/// The numbers behind the Iris's third dimension. Tokenised rather than inlined
+/// because they are tuned against each other: change the tilt and the cast shadow
+/// must follow it, or the shutter leans while its shadow does not.
+enum IrisDepth {
+    /// Backward tilt off the card plane. Owner settled on 24° from 18/24/30 on
+    /// 2026-08-16. Drives the foreshortening AND the cast shadow below.
+    static let tiltDegrees: CGFloat = 24
+    /// Perspective distance for the tilt. Small enough that the near rim genuinely
+    /// widens rather than the shutter simply squashing.
+    static let perspective: CGFloat = 200
+
+    /// Vertical squash from the tilt: the shutter's projected height factor.
+    static var foreshorten: CGFloat { cos(tiltDegrees * .pi / 180) }
+    /// How far the near (lower) rim stands off the card once tilted, in points.
+    /// This is what lengthens and softens the shadow as the angle opens.
+    static func standoff(diameter: CGFloat) -> CGFloat {
+        (diameter / 2) * sin(tiltDegrees * .pi / 180)
+    }
+
+    /// Blade shading strength. An INACTIVE blade takes `inactiveFactor` of it: all six
+    /// are the same metal, but an off blade shaded as hard as a lit one stops reading
+    /// as empty, which is the entire job of the off tone. Worst on Paper, where the
+    /// fills are already pale — hence the much lower Daylight figure.
+    static func leafShade(_ scheme: ColorScheme) -> (dark: CGFloat, light: CGFloat) {
+        scheme == .dark ? (0.34, 0.10) : (0.12, 0.10)
+    }
+    static let inactiveFactor: CGFloat = 0.45
+
+    /// How far the rim catchlight swings between the top of the screen and the bottom,
+    /// in degrees either side of the resting ten-o'clock position.
+    ///
+    /// The DIRECTION is the physics and is easy to get backwards (it was, first time).
+    /// The light sits off the top-left of the SCREEN, so a Take high up is roughly level
+    /// with it and is lit from the SIDE — its highlight sits at its most WESTERLY. The
+    /// further down the screen a Take is, the more the light is above it rather than
+    /// beside it, so the highlight swings NORTH. West at the top, north at the bottom.
+    ///
+    /// Kept well short of due west and due north at both ends: the light is off the
+    /// corner, not at infinity in either axis.
+    static let specularTravelDegrees: Double = 26
 }
 
 // MARK: - Quadrant / mark fills (mode-dependent — resolved by the caller)
@@ -567,6 +646,21 @@ enum CatchlightLayout {
     /// never matched the dock — ~26pt left of the + on a 393pt screen.)
     static func spineX(containerWidth: CGFloat) -> CGFloat {
         dockHorizontalPadding + (containerWidth - 2 * dockHorizontalPadding) / 8
+    }
+
+    /// Snap a coordinate to the device's pixel grid.
+    ///
+    /// `spineX` divides the screen by 8, so on most widths it lands part-way into a
+    /// device pixel. A big shape absorbs that — the Add button's 44pt ring reads as
+    /// centred regardless — but a NARROW symmetric shape does not: a 2.8pt beam core
+    /// centred on a fractional pixel rasterises with more energy on one side, and the
+    /// eye reads the whole shaft as sitting a pixel off the button it points at (owner,
+    /// on device 2026-08-16). Measured concentric on a 402pt simulator, where the same
+    /// arithmetic happens to land on a clean half-pixel — which is exactly why this
+    /// needs snapping rather than trusting one screen width.
+    static func snappedToPixel(_ x: CGFloat) -> CGFloat {
+        let scale = max(1, UIScreen.main.scale)
+        return (x * scale).rounded() / scale
     }
     /// Minimum touch target per HIG / accessibility.
     static let minTouchTarget: CGFloat = 44

@@ -113,7 +113,6 @@ struct DailiesView: View {
     // its fade — owner 2026-07-04), a per-device constant, so the dots are naturally
     // screen-static. Phase = the frame's top so a dot lands on the same global-Y grid
     // as the through-Iris wire (which phases off its own screen minY).
-    private var dottedSpinePhase: CGFloat { deviceTopInset }
     /// The row currently showing its swipe actions (Delete / Mark done), if any.
     /// Shared across rows so opening one closes the rest (`SwipeActionRow`).
     @State private var openSwipeRowID: UUID?
@@ -305,19 +304,24 @@ struct DailiesView: View {
             // gutter spine and the through-Iris segments (TakeRowView, "rings on a
             // wire") never drift. Strokes `SpineLine` so it draws the same THREE
             // tracks as the dotted overlay (owner 2026-07-04).
-            SpineLine()
-                .stroke(Color.ckSpineWire, lineWidth: CatchlightLayout.spineWidth)
+            // THE BEAM (owner 2026-08-16) — supersedes D-112's three dotted tracks.
+            // One view for the gutter run and the segment crossing each Iris, exactly
+            // as `ckSpineWire` single-sourced the old spine, so the two cannot drift.
+            // The dotted overlay is gone with the line: the dots were the old wire's
+            // only texture, and a beam carries its own (the dust, next pass).
+            TimelineBeam()
                 // Fully hidden while editing in place (owner 2026-06-17): a thin line
                 // reads as a "remnant" even at the 0.12 row-mask — especially once the
                 // Obie card (which used to cover it) goes invisible, exposing the spine
                 // at the empty Obie position. The faint masked CARDS carry the
                 // "part of the timeline" feel; the connecting wire isn't needed in focus.
                 .opacity(ui.isEditingInPlace ? 0 : 1)
-                .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
-                // Start up behind the heading so the wire always dissolves into the
-                // top fade rather than beginning at the first Iris (owner 2026-07-04).
-                .padding(.top, deviceTopInset)
+                // Runs to the very top of the container so the beam carries on NORTH and
+                // dissolves into the heading fade, rather than starting at the device
+                // inset with a visible end (owner 2026-08-16; extends the 2026-07-04
+                // intent, which stopped short of it).
+                .padding(.top, 0)
                 // Terminate the spine at the TOP EDGE of the Add button's ring rather
                 // than running full-bleed under the dock (owner 2026-06-16: it was
                 // visible through the +'s hollow ring). At rest the ring's top sits
@@ -329,29 +333,23 @@ struct DailiesView: View {
                 // the new-Take card uses, so the wire glides onto the search bar rather
                 // than snapping (owner 2026-07-10).
                 .animation(.easeOut(duration: 0.56), value: keyboardTopY)
-                .offset(x: spineX - CatchlightLayout.spineWidth / 2)
+                // Placed by its CENTRE: the container is `.topLeading`, so a bare
+                // `spineX` would put the beam's left edge on the spine and hang the
+                // whole shaft to the right of the Iris it is meant to pass through.
+                .offset(x: CatchlightLayout.snappedToPixel(spineX) - TimelineBeam.width / 2)
                 .accessibilityHidden(true)
 
-            // Owner idea 2026-06-16 — a STATIC dotted line laid OVER the solid spine.
-            // The dots never move; because this whole spine layer sits BEHIND the
-            // scrolling cards, the rings scroll past the fixed dots and the eye reads
-            // them sliding over a marked wire. Same x + z + footprint as the solid
-            // spine (behind the cards, visible only in the gaps), so it never paints
-            // over a card; brighter than the 35% base so the dots read. Anchored to
-            // `spineTopInset` (begins at the top Take, like the solid spine) with the
-            // dash phase compensating so the dots stay screen-static (see
-            // `dottedSpinePhase`).
-            DottedSpine(dashPhase: dottedSpinePhase)
-                // Fully hidden while editing in place (with the solid spine, above).
+            // The dust in the beam. It belongs HERE, in the screen-fixed spine layer
+            // behind the cards, and nowhere else: dust hangs in the room, so it must
+            // hold still while the timeline scrolls past it. Same footprint and terminus
+            // as the beam it lives in.
+            BeamDust()
                 .opacity(ui.isEditingInPlace ? 0 : 1)
-                .frame(width: CatchlightLayout.spineWidth)
                 .frame(maxHeight: .infinity)
-                // Same top as the solid spine — up into the heading fade (owner 2026-07-04).
-                .padding(.top, deviceTopInset)
-                // Same bottom terminus + keyboard-follow as the solid spine.
+                .padding(.top, 0)                 // north with the beam it lives in
                 .padding(.bottom, spineBottomInset)
                 .animation(.easeOut(duration: 0.56), value: keyboardTopY)
-                .offset(x: spineX - CatchlightLayout.spineWidth / 2)
+                .offset(x: CatchlightLayout.snappedToPixel(spineX) - TimelineBeam.width / 2)
                 .accessibilityHidden(true)
 
             // A first-launch-empty store shows the Fog line; but when a dock
@@ -1825,24 +1823,6 @@ private struct SpineContainerBottomKey: PreferenceKey {
 
 // MARK: - UIScrollView capture (caret pin)
 
-// MARK: - Rings-on-a-wire texture (static dotted spine overlay)
-
-/// The static dotted line laid over the solid spine. A plain vertical line stroked
-/// with a fixed dash pattern — no phase, no animation. It sits in the screen-fixed
-/// spine layer behind the scrolling cards, so the rings glide past the fixed dots and
-/// read as sliding over a marked wire. Brighter than the 35% solid base so the dots
-/// read; tune tone/spacing on device.
-private struct DottedSpine: View {
-    /// Offsets the dash pattern so the dots stay screen-static even as the frame top
-    /// is anchored to the (sometimes moving) top Take. See `dottedSpinePhase`.
-    var dashPhase: CGFloat = 0
-
-    var body: some View {
-        SpineLine()
-            .stroke(SpineDots.color, style: SpineDots.style(phase: dashPhase))
-    }
-}
-
 /// A vertical line down the centre of its frame — the path the dotted overlay strokes.
 /// Internal (not private) so the in-front-of-Iris crown overlay in `TakeRowView` can
 /// stroke the same dotted pattern.
@@ -1862,8 +1842,9 @@ struct SpineLine: Shape {
     }
 }
 
-/// The wire's dot pattern — shared by the gutter overlay (`DottedSpine`) and the
-/// in-front-of-Iris crown overlay (`TakeRowView`) so they read as one dotted wire.
+/// The wire's dot pattern. The timeline itself no longer uses it — the beam replaced
+/// the dotted spine (owner 2026-08-16) — but the retired SwiftUI `TakeRowView` still
+/// draws it, so it stays until that view goes.
 enum SpineDots {
     // 1 on / 3 off (owner 2026-06-16): denser than the original 1/7 so the dotted
     // spine reads as a more robust, present wire.

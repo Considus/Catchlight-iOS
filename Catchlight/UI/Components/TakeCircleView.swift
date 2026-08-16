@@ -66,11 +66,44 @@ private struct IrisBlade: Shape {
     }
 }
 
+/// The hexagonal aperture. Its six corners are the INNER vertices already present in
+/// `irisBladeData` — read off it rather than re-derived, so a regenerated blade set
+/// cannot leave the hex behind.
+private struct IrisAperture: Shape {
+    /// (x, y) in the same unit space as the blades.
+    static let corners: [(CGFloat, CGFloat)] = [
+        (0.0000, -0.5102), (0.4418, -0.2549), (0.4418, 0.2553),
+        (0.0000,  0.5102), (-0.4418, 0.2549), (-0.4418, -0.2549)
+    ]
+    func path(in rect: CGRect) -> Path {
+        let r = min(rect.width, rect.height) / 2
+        let cx = rect.midX, cy = rect.midY
+        var p = Path()
+        for (i, c) in Self.corners.enumerated() {
+            let pt = CGPoint(x: cx + c.0 * r, y: cy + c.1 * r)
+            if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+        }
+        p.closeSubpath()
+        return p
+    }
+}
+
 // MARK: - View
 
 struct TakeCircleView: View {
     let take: Take
     var diameter: CGFloat = CatchlightLayout.circleDiameter
+    /// Degrees to turn the rim catchlight by. The light is fixed in the WORLD, not on
+    /// the Iris, so as a Take travels up the screen its highlight arcs round the rim —
+    /// which is what makes the timeline read as a lit space rather than a scrolling
+    /// list of stickers (owner 2026-08-16). The timeline feeds this from the row's
+    /// position on screen; everywhere else it stays 0 and the light sits at ten
+    /// o'clock. Gated on Reduce Motion by the caller, not here.
+    var specularOffset: Double = 0
+    /// Whether the beam is currently lighting the aperture from inside. Changes only the
+    /// barrel wall: a beam through the hole lights it all the way round, where the
+    /// ambient case lights it from the top left like everything else.
+    var apertureLitFromWithin: Bool = false
 
     @Environment(\.colorScheme) private var scheme
 
@@ -117,6 +150,45 @@ struct TakeCircleView: View {
     /// the bolder outer ring), the WCAG-raised graphite otherwise.
     private var edge: Color { take.isObie ? Quadrant.obieRing(scheme) : .ckIrisRing }
 
+    /// The shading that turns blade `index` into a leaf: dark along the edge it tucks
+    /// under, a whisper of sheen along the edge that stands proud. The gradient runs
+    /// across the blade, rotated to its own bearing, so the six shade consistently
+    /// clockwise rather than all being lit from the same side like flat cut-outs.
+    private func leafShading(for index: Int) -> LinearGradient {
+        let shade = IrisDepth.leafShade(scheme)
+        let k = isActive(bladeSegments[index]) ? 1 : IrisDepth.inactiveFactor
+        let a = (Double(index) * 60 - 90 - 40) * .pi / 180
+        let ux = cos(a), uy = sin(a)
+        // UnitPoint space is 0…1 with y DOWN, matching the blade unit space.
+        let start = UnitPoint(x: 0.5 + ux * 0.49, y: 0.5 + uy * 0.49)
+        let end   = UnitPoint(x: 0.5 - ux * 0.40, y: 0.5 - uy * 0.40)
+        return LinearGradient(stops: [
+            .init(color: .black.opacity(shade.dark * k),        location: 0.00),
+            .init(color: .black.opacity(shade.dark * k * 0.20), location: 0.40),
+            .init(color: .white.opacity(shade.light * k * 0.45), location: 0.84),
+            .init(color: .white.opacity(shade.light * k),        location: 1.00)
+        ], startPoint: start, endPoint: end)
+    }
+
+    /// The inner wall of the aperture. Ambient: near wall (top-left) in shadow, far wall
+    /// picking up the same warm light. Beam: lit from within, all the way round.
+    private var apertureWall: LinearGradient {
+        if apertureLitFromWithin {
+            // Kept deliberately quiet. The beam is drawn OVER this, so the wall only has
+            // to say the hole has depth; at full strength the two together read as a
+            // thick gold hexagon competing with the shutter for attention.
+            let g = Quadrant.obieRing(scheme)
+            return LinearGradient(colors: [g.opacity(0.30), g.opacity(0.07)],
+                                  startPoint: .center, endPoint: .bottom)
+        }
+        return LinearGradient(stops: [
+            .init(color: .black.opacity(0.70),                        location: 0.00),
+            .init(color: .black.opacity(0.24),                        location: 0.42),
+            .init(color: Quadrant.obieRing(scheme).opacity(0.20),     location: 0.80),
+            .init(color: Quadrant.obieRing(scheme).opacity(0.45),     location: 1.00)
+        ], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
     private var bladeLine: CGFloat { max(0.6, diameter * 0.017) }        // ~0.75 at 44 pt
     // Standard-width rim for EVERY Take (owner 2026-07-04): a thick gold rim on an
     // Obie read as a second thick gold ring next to the outer one. The bolder Obie
@@ -126,16 +198,78 @@ struct TakeCircleView: View {
     /// obieRingGap 3 (ring at `diameter + 6`). Tunable.
     private var obieRingGap: CGFloat { 3 }
 
+    /// Where the light is, in RADIANS round the rim. Top-left, matching the single light
+    /// every other depth cue in the timeline obeys. `specularOffset` turns it as the Iris
+    /// travels up the screen (see `TakeCircleView.specularOffset`).
+    ///
+    /// NOT `SwiftUI.Angle`: `Angle` in this module is Catchlight's own domain type (the
+    /// per-Take presentation layer, D-033), so the unqualified name resolves to that and
+    /// the code will not build. Radians sidestep the clash rather than papering over it
+    /// with `SwiftUI.Angle` everywhere.
+    private var lightRadians: Double { (225 + specularOffset) * .pi / 180 }
+
+    /// A point of light sitting ON a ring of the given unit radius: hot core, tight
+    /// bloom, and the dim bounce opposite. A catchlight is the light SOURCE reflected,
+    /// so it is a point — an arc swept along the rim reads as a smear of chrome.
+    @ViewBuilder
+    private func glint(unitRadius: Double, core: CGFloat, bloom: CGFloat, bounce: CGFloat) -> some View {
+        let r = diameter / 2
+        let a = lightRadians
+        let p = CGPoint(x: cos(a) * unitRadius * r, y: sin(a) * unitRadius * r)
+        // 🚨 The bounce is a SIBLING with its own offset, not an overlay on the glint.
+        // As an overlay it inherited the glint's `.offset(p)` and its own `-p` then
+        // cancelled it, landing the bounce at the Iris CENTRE — quietly reinstating the
+        // centre catchlight removed on 2026-07-04 for reading as a stray flare where the
+        // timeline meets the card. Worst on an Obie, which has two glints and so stacked
+        // two bounces on the same spot (owner spotted it on device 2026-08-16).
+        return ZStack {
+            Circle()
+                .fill(RadialGradient(colors: [Quadrant.obieRing(scheme).opacity(0.30),
+                                              Quadrant.obieRing(scheme).opacity(0)],
+                                     center: .center, startRadius: 0, endRadius: bounce * r))
+                .frame(width: bounce * r * 2, height: bounce * r * 2)
+                .offset(x: -p.x, y: -p.y)
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(colors: [Color(hex: 0xFFF3D2).opacity(0.85),
+                                                  Color(hex: 0xFFF3D2).opacity(0)],
+                                         center: .center, startRadius: 0, endRadius: bloom * r))
+                    .frame(width: bloom * r * 2, height: bloom * r * 2)
+                Circle()
+                    .fill(Color(hex: 0xFFFEF8))
+                    .frame(width: core * r * 2, height: core * r * 2)
+            }
+            .offset(x: p.x, y: p.y)
+        }
+    }
+
     var body: some View {
         ZStack {
             // The hex aperture is left hollow (owner 2026-07-04): the earlier centre
             // catchlight sat at the Iris centre, which straddles the card's top edge,
-            // so it read as a stray flare where the timeline meets the card.
+            // so it read as a stray flare where the timeline meets the card. The 2026-08
+            // catchlight is on the RIM instead, which is why it can come back at all.
 
             // Blade fills.
             ForEach(0..<6, id: \.self) { i in
                 IrisBlade(index: i).fill(fill(for: i))
             }
+
+            // Six LEAVES, not six wedges: each blade darkens along the edge it tucks
+            // under, so the shutter reads as thin overlapping metal rather than a pie
+            // chart. An inactive blade takes `inactiveFactor` of the shading — see
+            // `IrisDepth.leafShade` for why that is not merely cosmetic.
+            ForEach(0..<6, id: \.self) { i in
+                IrisBlade(index: i).fill(leafShading(for: i))
+            }
+
+            // The aperture is a HOLE, so give it an inner wall: near side (top-left) in
+            // shadow, far side catching the same light. Stroked from inside the hex and
+            // clipped to it, so the centre stays genuinely open and whatever is behind —
+            // the wire, or the card — still reads through it.
+            IrisAperture()
+                .stroke(apertureWall, lineWidth: diameter * 0.09)
+                .clipShape(IrisAperture())
 
             // Shared outline on every blade — traces the blade edges AND the hex.
             ForEach(0..<6, id: \.self) { i in
@@ -153,6 +287,19 @@ struct TakeCircleView: View {
                 Circle()
                     .stroke(Quadrant.obieRing(scheme), lineWidth: 2)
                     .frame(width: diameter + obieRingGap * 2, height: diameter + obieRingGap * 2)
+            }
+        }
+        // The catchlights go on LAST so they sit on the metal rather than under it.
+        // An Obie has TWO concentric rings, so it catches the same light twice, on the
+        // same radius (owner 2026-08-16). One highlight spanning both would read as a
+        // smear across a single band; two aligned points are what say these are two
+        // separate pieces of metal. The outer ring is the thinner, so its glint is the
+        // smaller. Both live in the same overlay, so they turn together.
+        .overlay {
+            glint(unitRadius: 0.976, core: 0.052, bloom: 0.235, bounce: 0.150)
+            if take.isObie {
+                glint(unitRadius: (diameter + obieRingGap * 2) / diameter * 0.976,
+                      core: 0.040, bloom: 0.180, bounce: 0.115)
             }
         }
         .accessibilityHidden(true)   // the row exposes a combined label; the disc is decorative there
