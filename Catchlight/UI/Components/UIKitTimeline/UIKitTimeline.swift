@@ -233,15 +233,168 @@ struct TimelineReadCell: View {
     var showsDragHandle: Bool = false
     /// VoiceOver move: -1 up, +1 down, in DISPLAY order.
     var onNudge: (Take, Int) -> Void = { _, _ in }
+    /// Degrees to turn this row's rim catchlight by, so the light stays fixed in the
+    /// world while the Take travels past it. Fed by the timeline from the row's
+    /// position on screen; 0 until that lands, which simply leaves the light at ten
+    /// o'clock on every row.
+    var specularOffset: Double = 0
 
     @Environment(\.colorScheme) private var scheme
     private let inset = CatchlightLayout.cardSpineInset
     private let d = CatchlightLayout.circleDiameter
-    private let w = CatchlightLayout.spineWidth
-    private var occW: CGFloat { CatchlightLayout.spineWidth + CatchlightLayout.spineTrackOffset * 2 }
+
+    // MARK: Iris depth (owner 2026-08-16) — see the paint-order note in `body`
+
+    /// The shutter leans back off the card plane, which is what lets a straight wire
+    /// pass behind its far rim and in front of its near one.
+    ///
+    /// The tilt lives HERE and not in `TakeCircleView`, deliberately: that view is also
+    /// the Iris in the Focus-ring fan, the edit footer, the conflict view and search,
+    /// and none of those has a wire threading it, so a lean there would be a squashed
+    /// mark for no reason. On the timeline it is load-bearing.
+    private var tiltTransform: some ViewModifier { IrisTilt() }
+
+    private struct IrisTilt: ViewModifier {
+        func body(content: Content) -> some View {
+            content.rotation3DEffect(.degrees(-IrisDepth.tiltDegrees),
+                                     axis: (x: 1, y: 0, z: 0),
+                                     perspective: 1 / IrisDepth.perspective)
+        }
+    }
+
+    private enum IrisHalf { case far, near }
+
+    /// One half of the shutter, clipped and tilted. Both halves are the SAME drawing —
+    /// the beam is simply painted between them — and they overlap by 4% rather than
+    /// meeting exactly, because a hairline cut lands on fractional pixels once tilted
+    /// and opens a seam onto the card behind.
+    @ViewBuilder
+    private func irisHalf(_ half: IrisHalf) -> some View {
+        TakeCircleView(take: take,
+                       specularOffset: specularOffset,
+                       apertureLitFromWithin: true)
+            .frame(width: d, height: d)
+            .modifier(tiltTransform)
+            .clipShape(IrisHalfShape(half: half))
+            .offset(x: inset - d / 2, y: -d / 2)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    private struct IrisHalfShape: Shape {
+        let half: IrisHalf
+        func path(in rect: CGRect) -> Path {
+            // Generous horizontally so the Obie's outer ring and the catchlight bloom,
+            // which both sit proud of the 44pt frame, are never clipped.
+            let pad = rect.width
+            let y = half == .far ? rect.minY - pad : rect.midY - rect.height * 0.04
+            let h = half == .far ? (rect.height * 0.46 + pad) : (rect.height * 0.54 + pad)
+            return Path(CGRect(x: rect.minX - pad, y: y, width: rect.width + pad * 2, height: h))
+        }
+    }
+
+    /// The shutter's shadow, cast onto the card.
+    ///
+    /// Its own flat ellipse rather than a `.shadow` on the tilted Iris, because a
+    /// shadow lies on the CARD and must not be foreshortened with the object throwing
+    /// it — a filter riding the tilt squashes exactly when it should be lengthening.
+    /// Leaning back stands the near rim off the card by `standoff`, so the shadow drops
+    /// and softens as the angle opens.
+    ///
+    /// 🚨 Drawn in BOTH modes. This is the DS §4 exception the owner approved on
+    /// 2026-08-16, and his reasoning is the part worth keeping: §4 forbids shadows
+    /// against the dark GROUND, where they cannot be seen. This one lands on the CARD
+    /// (Dusk), which is lighter than the page (Ink), so it registers; where it falls
+    /// past the card onto Ink it is near-black on near-black and vanishes on its own.
+    /// No clipping — the tones do it. Supersedes the Daylight-only `.shadow` that sat
+    /// on the Iris here (owner 2026-07-13).
+    private var irisShadow: some View {
+        let standoff = IrisDepth.standoff(diameter: d)
+        return Ellipse()
+            .fill(Color.ckIrisShade)
+            .frame(width: d, height: d * IrisDepth.foreshorten)
+            .blur(radius: 7 + standoff * 0.34)
+            .offset(x: inset - d / 2 + 1 + standoff * 0.20,
+                    y: -d / 2 + (d - d * IrisDepth.foreshorten) / 2 + 2 + standoff * 0.42)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    /// Hides the GUTTER beam across the shutter's upper half, so the cell can draw that
+    /// stretch itself.
+    ///
+    /// This is the old crown occluder back again, and it is worth being clear that its
+    /// reason has changed completely. It used to stop the dotted spine bleeding through
+    /// the hollow aperture — cosmetic, and at odds with threading. It is here now for a
+    /// compositing reason: the gutter beam runs behind the whole collection and shows
+    /// through the open aperture, while the cell must ALSO paint the beam in front of
+    /// the far blades to thread it. Both at once, under `.plusLighter`, is two beams
+    /// added together — a blown-out white bar over every Iris and nowhere else. Masking
+    /// the gutter run here leaves exactly one beam.
+    ///
+    /// Sized to the beam, not to the old three-track span, and entirely ABOVE the card
+    /// (the shutter's upper half is), so it never paints background over a card.
+    private var beamOccluder: some View {
+        let top = (d - d * IrisDepth.foreshorten) / 2
+        return Rectangle()
+            .fill(Color.ckBackground)
+            .frame(width: TimelineBeam.width, height: d / 2 - top)
+            .offset(x: inset - TimelineBeam.width / 2, y: -d / 2 + top)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    /// The run of beam that crosses the shutter: from the top of the LEANED shutter
+    /// (the tilt moves it down) to the card's top edge, where the card takes over the
+    /// occluding. Starting it at the untilted top let it leak onto the page above the
+    /// leaned ellipse.
+    ///
+    /// No separate spill layer: the beam is drawn OVER the far blades, so it lights them
+    /// itself. A spill band on top of that was the same light counted twice.
+    private var beamOverIris: some View {
+        let top = (d - d * IrisDepth.foreshorten) / 2
+        return TimelineBeam()
+            .frame(height: d / 2 - top)
+            .offset(x: inset - TimelineBeam.width / 2, y: -d / 2 + top)
+            .allowsHitTesting(false)
+    }
+
+    /// The Iris's touch and VoiceOver surface, kept separate from the two drawn halves
+    /// so the split cannot produce two accessibility elements or swallow the gesture.
+    private var irisHitTarget: some View {
+        Color.clear
+            .frame(width: d, height: d)
+            .contentShape(Rectangle())
+            // Tap → Focus-ring fan, long-press (0.45s, .began) → toggle Obie. Same
+            // recognizer the SwiftUI row uses; `convert(_:to: nil)` yields the Iris
+            // centre in window coords.
+            .overlay(
+                TapAndLongPressRecognizer(
+                    minimumDuration: 0.45,
+                    onTap: { onTapCircle(take, $0) },
+                    onLongPress: { onLongPressCircle(take) }
+                )
+            )
+            .accessibilityElement()
+            .accessibilityIdentifier("take-iris")
+            .accessibilityLabel(TakeRowView.irisAccessibilityLabel(for: take))
+            .accessibilityHint(take.isObie
+                ? "Double-tap to open actions. Long press to turn this back into a standard Take."
+                : "Double-tap to open actions. Long press to make this your Obie.")
+            // VoiceOver intercepts long-press, so the Obie toggle needs a named action too.
+            .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") {
+                onLongPressCircle(take)
+            }
+            .offset(x: inset - d / 2, y: -d / 2)
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
+            // FIRST, under everything — including the card, whose own shadow reaches up
+            // past its top edge into this strip. Painted after the card it cut a clean
+            // rectangle out of that shadow, which on Paper read as a pale block hanging
+            // above every Iris.
+            beamOccluder
             TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: false,
                             // Manual mode: hold the body text clear of the drag handle
                             // drawn over this card's trailing edge. Surface unaffected.
@@ -285,52 +438,28 @@ struct TimelineReadCell: View {
                         Button("Move Down") { onNudge(take, 1) }
                     }
                 }
-            Rectangle().fill(Color.ckBackground)                                       // occluder
-                .frame(width: occW, height: d / 2)
-                .offset(x: inset - occW / 2, y: -d / 2)
-                .allowsHitTesting(false)
-            TakeCircleView(take: take)                                                 // Iris
-                .frame(width: d, height: d)
-                // Lift the Iris off the background (owner 2026-07-13) — raised but still
-                // attached to the card. Stronger than the card's default shadow because
-                // the Iris is smaller + partly hollow, so it casts less. `caretBottomGap`-
-                // style single tunable: bump/soften via the opacity/radius here.
-                .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.16),
-                        radius: 5, y: 2)
-                .contentShape(Rectangle())
-                // Tap → Focus-ring fan, long-press (0.45s, .began) → toggle Obie. Same
-                // recognizer the SwiftUI row uses; `convert(_:to: nil)` yields the Iris
-                // centre in window coords. The overloccluding wire/dots are hit-testing-
-                // off, so touches reach this overlay.
-                .overlay(
-                    TapAndLongPressRecognizer(
-                        minimumDuration: 0.45,
-                        onTap: { onTapCircle(take, $0) },
-                        onLongPress: { onLongPressCircle(take) }
-                    )
-                )
-                .accessibilityElement()
-                .accessibilityIdentifier("take-iris")
-                .accessibilityLabel(TakeRowView.irisAccessibilityLabel(for: take))
-                .accessibilityHint(take.isObie
-                    ? "Double-tap to open actions. Long press to turn this back into a standard Take."
-                    : "Double-tap to open actions. Long press to make this your Obie.")
-                // VoiceOver intercepts long-press, so the Obie toggle needs a named action too.
-                .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") {
-                    onLongPressCircle(take)
-                }
-                .offset(x: inset - d / 2, y: -d / 2)
-            SpineLine().stroke(Color.ckSpineWire, lineWidth: w)                        // wire over Iris top
-                .frame(width: w, height: d / 2)
-                .offset(x: inset - w / 2, y: -d / 2)
-                .allowsHitTesting(false)
-            GeometryReader { geo in                                                    // dots over Iris top
-                SpineLine().stroke(SpineDots.color,
-                                   style: SpineDots.style(phase: geo.frame(in: .global).minY))
-            }
-            .frame(width: w, height: d / 2)
-            .offset(x: inset - w / 2, y: -d / 2)
-            .allowsHitTesting(false)
+            // ── The shutter, threaded ────────────────────────────────────────────
+            //
+            // 🚨 THE PAINT ORDER IS THE WHOLE FIX (owner 2026-08-16). What shipped
+            // before was card → Iris → wire, while the card ALSO hid the wire below
+            // its top edge: the wire in front of the Iris, the Iris in front of the
+            // card, the card in front of the wire. That is a Penrose triangle. The eye
+            // cannot build a solid out of it, so it stops trying and reads the whole
+            // timeline as a diagram — which is why no amount of shading had ever made
+            // it feel like anything. The order below is a real one, and the shading
+            // only started to pay once it was.
+            //
+            //   card → shadow → shutter FAR half → beam → shutter NEAR half
+            //
+            // The old background-coloured occluder is GONE with it. Its job was to stop
+            // the dotted spine bleeding up through the hollow aperture — but seeing the
+            // wire through the hole is precisely what threading means. Putting it back
+            // re-breaks the order.
+            irisShadow                                                                 // onto the card
+            irisHalf(.far)                                                             // behind the beam
+            beamOverIris                                                               // through the hole
+            irisHalf(.near)                                                            // in front of it
+            irisHitTarget                                                              // gestures + VoiceOver
         }
         .padding(.leading, spineX - inset)
         .padding(.trailing, 20)

@@ -174,8 +174,11 @@ struct TakeCircleView: View {
     /// picking up the same warm light. Beam: lit from within, all the way round.
     private var apertureWall: LinearGradient {
         if apertureLitFromWithin {
+            // Kept deliberately quiet. The beam is drawn OVER this, so the wall only has
+            // to say the hole has depth; at full strength the two together read as a
+            // thick gold hexagon competing with the shutter for attention.
             let g = Quadrant.obieRing(scheme)
-            return LinearGradient(colors: [g.opacity(0.50), g.opacity(0.16)],
+            return LinearGradient(colors: [g.opacity(0.30), g.opacity(0.07)],
                                   startPoint: .center, endPoint: .bottom)
         }
         return LinearGradient(stops: [
@@ -259,7 +262,7 @@ struct TakeCircleView: View {
             // clipped to it, so the centre stays genuinely open and whatever is behind —
             // the wire, or the card — still reads through it.
             IrisAperture()
-                .stroke(apertureWall, lineWidth: diameter * 0.15)
+                .stroke(apertureWall, lineWidth: diameter * 0.09)
                 .clipShape(IrisAperture())
 
             // Shared outline on every blade — traces the blade edges AND the hex.
