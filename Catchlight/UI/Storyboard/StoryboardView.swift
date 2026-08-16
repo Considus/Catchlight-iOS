@@ -356,15 +356,19 @@ struct StoryboardView: View {
         t.removeEmptyTextBlocks()
         // The Shot List can empty a Take (delete the last check item → one blank
         // text row), so the "every Storyboard Take has content" assumption no
-        // longer holds at commit (2026-07-01). Same rule as the timeline:
-        // a blank draft over a stored copy that also had no content is
-        // discarded, never saved as an empty Note.
+        // longer holds at commit (2026-07-01). Same rule as the timeline: a draft
+        // left with nothing in it is discarded, never saved as an empty Note —
+        // and since 2026-08-16 that holds whether or not the stored copy had text,
+        // so an emptied Take cannot come back reading "Untitled Take".
+        //
+        // NOTE: this copy still carries `!t.isObie`, which the timeline dropped on
+        // 2026-07-20. The two paths therefore disagree about an emptied Obie: the
+        // timeline discards it, the Storyboard keeps it. Left as-is deliberately —
+        // it predates this change and is the owner's call, not a drive-by fix.
         let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !t.isTask && t.timeReminder == nil && !t.isObie
             && t.attachments.isEmpty && t.locationReminder == nil
-        let storedCopy = try? vm.store.take(id: t.id)
-        let storedHadContent = (storedCopy?.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
-        if isBlank && !storedHadContent {
+        if isBlank {
             vm.discardIfPresent(t)
             return
         }
