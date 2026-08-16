@@ -43,10 +43,17 @@ struct EditorToolbarConfig {
     var onReminder: (() -> Void)? = nil
     /// Mark the whole Take done / not-done (all checklist items + the reminder).
     var onToggleDone: () -> Void
-    /// The keyboard ⌄/× — commit the edit and EXIT (owner 2026-06-19): the host
-    /// saves and drops the focused-edit overlay in one step, back to the timeline
-    /// (or Storyboard), rather than just lowering the keyboard onto a still-focused
-    /// Take. Default no-op (the keyboard still resigns).
+    /// The keyboard ⌄/× — DISCARD the edit and exit: the host drops the draft and the
+    /// focused-edit overlay in one step, back to the timeline (or Storyboard), leaving the
+    /// stored Take exactly as it was. The row's long-press "Discard changes" is the
+    /// accessibility route to the same thing.
+    ///
+    /// It began as commit-and-exit (owner 2026-06-19) — save and drop the overlay, rather
+    /// than just lowering the keyboard onto a still-focused Take — and was repurposed to
+    /// discard-and-close later. This note said "saves" until 2026-08-16, describing the
+    /// original job rather than the current one.
+    ///
+    /// Default no-op (the keyboard still resigns).
     var onDismiss: () -> Void = {}
 }
 

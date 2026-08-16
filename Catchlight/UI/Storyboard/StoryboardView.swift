@@ -361,12 +361,13 @@ struct StoryboardView: View {
         // and since 2026-08-16 that holds whether or not the stored copy had text,
         // so an emptied Take cannot come back reading "Untitled Take".
         //
-        // NOTE: this copy still carries `!t.isObie`, which the timeline dropped on
-        // 2026-07-20. The two paths therefore disagree about an emptied Obie: the
-        // timeline discards it, the Storyboard keeps it. Left as-is deliberately —
-        // it predates this change and is the owner's call, not a drive-by fix.
+        // The Obie takes no exception here either (owner 2026-08-16). This copy kept the
+        // `!t.isObie` term after the timeline dropped it on 2026-07-20, so the two screens
+        // disagreed: emptying your Obie deleted it on the timeline and left it reading
+        // "Untitled Take" here. Removing it applies the July decision to the copy that
+        // missed it, and the two rules are now identical.
         let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !t.isTask && t.timeReminder == nil && !t.isObie
+            && !t.isTask && t.timeReminder == nil
             && t.attachments.isEmpty && t.locationReminder == nil
         if isBlank {
             vm.discardIfPresent(t)
