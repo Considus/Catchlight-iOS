@@ -55,21 +55,23 @@ struct BeamStyle {
                     bloom: Color(hex: 0xE9CB8C).opacity(0.55),
                     haze:  Color(hex: 0xC9A96E).opacity(0.10),
                     additive: true)
-        // Daylight is now the SAME KIND of thing as Night — light added to the ground,
-        // brightest at the core — rather than a dark shape drawn on it (owner
-        // 2026-08-16). A white core inside a DARKER warm halo was the odd hybrid: half
-        // glow, half drawn rod.
+        // 🚨 DAYLIGHT CANNOT BE AN ADDITIVE GLOW. It was tried (owner request, 2026-08-16)
+        // and it blows out: Paper is #F7F4EF, so adding light clips to white almost at
+        // once, and everything the beam crosses — blades, card, text — loses its detail
+        // rather than gaining light. Measuring CONTRAST AGAINST THE GROUND missed it
+        // (peak read 10.7, which looks like "too faint"); the fault was clipping, not
+        // weakness, and the owner's eye caught what that measurement could not.
         //
-        // The trade is honest and worth knowing. Paper is #F7F4EF, so an additive beam
-        // has about eight steps of luminance headroom before it clips to white — the
-        // glow is real but it is subtle, and the warmth mostly survives as the blue
-        // channel lagging rather than as visible amber. That is what a bright warm light
-        // on white paper actually looks like; it is not a tuning failure.
+        // So Daylight keeps the glow's SHAPE — densest at the core, falling away through
+        // bloom to haze — and renders it in the only currency Paper has: WARMTH. No white
+        // anywhere. A white core inside a warm halo was the earlier hybrid and read as
+        // half glow, half drawn rod; an all-warm shaft reads as light seen through air,
+        // and it survives being looked at.
         : BeamStyle(coreWidth: 4.1, bloomWidth: 12.8, hazeWidth: 30,
-                    core:  Color(hex: 0xFFFFFF).opacity(0.98),
-                    bloom: Color(hex: 0xE9CB8C).opacity(0.42),
-                    haze:  Color(hex: 0xC9A96E).opacity(0.12),
-                    additive: true)
+                    core:  Color(hex: 0xA07C3C).opacity(0.94),
+                    bloom: Color(hex: 0xB89552).opacity(0.74),
+                    haze:  Color(hex: 0xC9A96E).opacity(0.28),
+                    additive: false)
     }
 }
 
