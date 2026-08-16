@@ -55,16 +55,21 @@ struct BeamStyle {
                     bloom: Color(hex: 0xE9CB8C).opacity(0.55),
                     haze:  Color(hex: 0xC9A96E).opacity(0.10),
                     additive: true)
+        // Daylight is now the SAME KIND of thing as Night — light added to the ground,
+        // brightest at the core — rather than a dark shape drawn on it (owner
+        // 2026-08-16). A white core inside a DARKER warm halo was the odd hybrid: half
+        // glow, half drawn rod.
+        //
+        // The trade is honest and worth knowing. Paper is #F7F4EF, so an additive beam
+        // has about eight steps of luminance headroom before it clips to white — the
+        // glow is real but it is subtle, and the warmth mostly survives as the blue
+        // channel lagging rather than as visible amber. That is what a bright warm light
+        // on white paper actually looks like; it is not a tuning failure.
         : BeamStyle(coreWidth: 4.1, bloomWidth: 12.8, hazeWidth: 30,
-                    // Pure white (owner 2026-08-16). It cannot out-brighten Paper, so it
-                    // does not carry the beam's WIDTH — the warm bloom around it does
-                    // that. What it does is invert the contrast at the centre: a bright
-                    // line inside a dark warm halo reads as a hot core, where a dark core
-                    // read as a drawn rod.
                     core:  Color(hex: 0xFFFFFF).opacity(0.98),
-                    bloom: Color(hex: 0x967434).opacity(0.72),
-                    haze:  Color(hex: 0x8C6C3A).opacity(0.20),
-                    additive: false)
+                    bloom: Color(hex: 0xE9CB8C).opacity(0.42),
+                    haze:  Color(hex: 0xC9A96E).opacity(0.12),
+                    additive: true)
     }
 }
 
@@ -80,6 +85,16 @@ struct BeamStyle {
 struct TimelineBeam: View {
     @Environment(\.colorScheme) private var scheme
 
+    /// The haze is the light in the AIR. It belongs in the open gutter and NOT over the
+    /// shutter: 36pt of additive warmth is as wide as the Iris itself, so crossing one it
+    /// stopped reading as a beam passing in front and started washing the whole upper
+    /// half of the blades (owner, on device 2026-08-16 — "right on the light-beam").
+    /// Daylight never showed it because that beam is not additive.
+    ///
+    /// Core and bloom still cross the Iris: those are the beam itself, and a beam in
+    /// front of metal does light it.
+    var includesHaze: Bool = true
+
     /// The beam's footprint, the SAME in both modes even though the haze inside it is
     /// not. Callers place it by its centre (`x - TimelineBeam.width / 2`), and a width
     /// that changed with the colour scheme would shift the beam sideways on a
@@ -89,7 +104,7 @@ struct TimelineBeam: View {
     var body: some View {
         let s = BeamStyle.resolve(scheme)
         ZStack {
-            band(s.hazeWidth, s.haze)
+            if includesHaze { band(s.hazeWidth, s.haze) }
             band(s.bloomWidth, s.bloom)
             band(s.coreWidth, s.core)
         }
@@ -325,7 +340,7 @@ struct ThreadedIris: View {
     /// No separate spill layer — the beam is drawn OVER the far blades, so it lights
     /// them itself. A spill band on top of that was the same light counted twice.
     private var beam: some View {
-        TimelineBeam()
+        TimelineBeam(includesHaze: false)
             .frame(height: diameter / 2 - leanTop)
             .offset(x: diameter / 2 - TimelineBeam.width / 2, y: leanTop)
     }
