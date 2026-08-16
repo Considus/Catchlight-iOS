@@ -149,15 +149,6 @@ extension Color {
         light: Palette.ink.withAlphaComponent(0.13)
     ))
 
-    /// The live "wire" colour of the timeline spine — Ember @ 35%, matching the
-    /// dock buttons' ring (`dockRing()`) so the wire and toolbar read as one family
-    /// (owner 2026-06-16). Single-sourced because the wire is now drawn in TWO
-    /// places that MUST stay identical: the gutter spine (`DailiesView`, behind the
-    /// cards) and the short segment that threads each Iris aperture (`TakeRowView`,
-    /// above the card / behind the ring — "rings on a wire"). (`ckSpine` above is
-    /// the older, fainter tint still used by onboarding + the conflict view.)
-    static var ckSpineWire: Color { ckAccent.opacity(0.35) }
-
     /// The Add button — Ember (both).
     static let ckAdd = Color(uiColor: UITheme.add)
 
@@ -295,20 +286,6 @@ extension Color {
         light: UIColor(hex: 0x0F0E0C).withAlphaComponent(0.20)
     ))
 
-    /// The mark the WIRE leaves on the blades it crosses — a shadow for a solid wire,
-    /// warm spill for a beam (see `ckBeamSpill`). Halved in Daylight: the same weight
-    /// that reads as depth on Ink reads as a grey rectangle laid over near-white blades.
-    static let ckIrisWireShadow = Color(uiColor: .adaptive(
-        dark: UIColor.black.withAlphaComponent(0.30),
-        light: UIColor(hex: 0x0F0E0C).withAlphaComponent(0.085)
-    ))
-
-    /// Light spilling from the beam onto the blades it passes — the inverse of
-    /// `ckIrisWireShadow`, because a beam does not cast a shadow, it casts light.
-    static let ckBeamSpill = Color(uiColor: .adaptive(
-        dark: UIColor(hex: 0xEDD9A3).withAlphaComponent(0.26),
-        light: UIColor(hex: 0xC9A96E).withAlphaComponent(0.22)
-    ))
 }
 
 // MARK: - Iris depth geometry (owner 2026-08-16)
@@ -604,13 +581,6 @@ enum CatchlightLayout {
     /// (Search/sequence results reuse the timeline row; the edit footer, conflict
     /// view, and focus-ring fan pass their own explicit diameters and are unaffected.)
     static let circleDiameter: CGFloat = 44
-    /// Width of the timeline spine (each individual dotted track).
-    static let spineWidth: CGFloat = 2
-    /// The timeline reads as THREE parallel dotted tracks — a centre line plus one
-    /// either side, each `spineWidth` wide (owner 2026-07-04). Offset from the centre
-    /// to each side track; `= spineWidth` makes the three tracks ABUT with no gap
-    /// (owner 2026-07-04), i.e. a solid triple-width wire. Tune on device.
-    static let spineTrackOffset: CGFloat = spineWidth
     /// The Take card's leading edge sits this far LEFT of the spine. Two things ride
     /// on it together (which is what keeps the Iris ON the spine): the row's leading
     /// padding is `spineX − cardSpineInset` (the card's left edge), and TakeRowView

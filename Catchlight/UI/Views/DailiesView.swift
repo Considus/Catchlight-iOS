@@ -293,22 +293,14 @@ struct DailiesView: View {
 
             // The spine: a hairline behind the rows, at the circle centre. It
             // STARTS at the first Iris's top edge (HiFi §1 "the spine terminates at
-            // the first Take") rather than the screen top — a full-height line poked
-            // up into the gap below the DAILIES heading. First Iris centre = the
-            // timeline's top content pad (deviceTopInset + headingClearance) + the
-            // row's 6pt vertical pad; the top edge is one Iris radius higher. The
-            // bottom runs on toward the Add button, covered by the dock fade (HiFi).
-            // Owner 2026-06-16: the spine takes the dock buttons' ring colour
-            // (Ember @ 35% — `dockRing()` in BottomDockView) so the wire and the
-            // toolbar read as one family. Single-sourced via `ckSpineWire` so the
-            // gutter spine and the through-Iris segments (TakeRowView, "rings on a
-            // wire") never drift. Strokes `SpineLine` so it draws the same THREE
-            // tracks as the dotted overlay (owner 2026-07-04).
-            // THE BEAM (owner 2026-08-16) — supersedes D-112's three dotted tracks.
-            // One view for the gutter run and the segment crossing each Iris, exactly
-            // as `ckSpineWire` single-sourced the old spine, so the two cannot drift.
-            // The dotted overlay is gone with the line: the dots were the old wire's
-            // only texture, and a beam carries its own (the dust, next pass).
+            // THE BEAM (owner 2026-08-16, D-207) — supersedes D-112's three dotted
+            // tracks, and the single Ember-tinted line before those. ONE view serves the
+            // gutter run and the segment crossing each Iris, for the same reason the old
+            // spine single-sourced its colour: the two must not drift.
+            //
+            // Runs the full height of the container, so it carries north into the
+            // heading fade rather than ending at the device inset, and terminates on the
+            // Add button's ring at the bottom.
             TimelineBeam()
                 // Fully hidden while editing in place (owner 2026-06-17): a thin line
                 // reads as a "remnant" even at the 0.12 row-mask — especially once the
@@ -1822,38 +1814,6 @@ private struct SpineContainerBottomKey: PreferenceKey {
 }
 
 // MARK: - UIScrollView capture (caret pin)
-
-/// A vertical line down the centre of its frame — the path the dotted overlay strokes.
-/// Internal (not private) so the in-front-of-Iris crown overlay in `TakeRowView` can
-/// stroke the same dotted pattern.
-struct SpineLine: Shape {
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        // Three parallel tracks — centre + one either side (owner 2026-07-04). Every
-        // spine element strokes this one shape, so the gutter and the through-Iris
-        // wire stay one triple-tracked wire. Side lines fall outside the 2pt frame;
-        // Shapes aren't clipped to their frame, so they render and the enclosing
-        // `.offset` keeps all three centred on the spine.
-        for dx in [-CatchlightLayout.spineTrackOffset, 0, CatchlightLayout.spineTrackOffset] {
-            p.move(to: CGPoint(x: rect.midX + dx, y: rect.minY))
-            p.addLine(to: CGPoint(x: rect.midX + dx, y: rect.maxY))
-        }
-        return p
-    }
-}
-
-/// The wire's dot pattern. The timeline itself no longer uses it — the beam replaced
-/// the dotted spine (owner 2026-08-16) — but the retired SwiftUI `TakeRowView` still
-/// draws it, so it stays until that view goes.
-enum SpineDots {
-    // 1 on / 3 off (owner 2026-06-16): denser than the original 1/7 so the dotted
-    // spine reads as a more robust, present wire.
-    static let dash: [CGFloat] = [1, 3]
-    static var color: Color { Color.ckAccent.opacity(0.9) }
-    static func style(phase: CGFloat) -> StrokeStyle {
-        StrokeStyle(lineWidth: CatchlightLayout.spineWidth, lineCap: .round, dash: dash, dashPhase: phase)
-    }
-}
 
 #Preview("Dailies — Night (populated)") {
     let store = InMemoryTakeStore()
