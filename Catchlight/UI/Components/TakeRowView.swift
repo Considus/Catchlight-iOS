@@ -168,71 +168,29 @@ struct TakeRowView: View {
                 // position so the wire stays threaded through it.
                 .offset(x: cardSwipeOffset)
                 .zIndex(0)
-            // Crown occluder (owner 2026-06-16): the static dotted spine runs BEHIND
-            // the whole row, so its bright dots were bleeding up through the Iris's
-            // hollow aperture and making the crown look translucent. This page-coloured
-            // 2pt segment sits at the wire column BEHIND the Iris: the opaque ring band
-            // covers it (no notch), but in the aperture it reads as plain background —
-            // blocking the dots behind, so the wire on top reads as clearly above the
-            // ring. Same crown geometry as the visible wire segment below.
-            Rectangle()
-                .fill(Color.ckBackground)
-                // Widened to the full THREE-track span so all three dotted tracks are
-                // occluded behind the Iris, not just the centre one (owner 2026-07-04).
-                .frame(width: CatchlightLayout.spineWidth + CatchlightLayout.spineTrackOffset * 2,
-                       height: CatchlightLayout.circleDiameter / 2)
-                .offset(x: CatchlightLayout.cardSpineInset
-                        - (CatchlightLayout.spineWidth + CatchlightLayout.spineTrackOffset * 2) / 2,
+            // The threaded shutter — shadow, far half, beam, near half — in ONE view
+            // shared with the recycling timeline cell (owner 2026-08-16). The Iris keeps
+            // its spine position (no `cardSwipeOffset`) so the beam stays threaded while
+            // the card swipes out from under it.
+            //
+            // 🚨 THIS ROW IS THE PINNED OBIE. It is easy to read as dead code — nothing
+            // but its own previews constructs it directly — but `DailiesView.rowContent`
+            // builds it for the Obie, which is why the Obie was left with a flat Iris and
+            // the old dotted wire when the timeline cell alone was rebuilt.
+            TimelineBeamOccluder()
+                .offset(x: CatchlightLayout.cardSpineInset - TimelineBeam.width / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
                 .zIndex(1)
-            irisColumn
+            ThreadedIris(take: take)
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
                 .zIndex(2)
-            // Rings on a wire (owner spec 2026-06-16): the spine lies ON TOP of the
-            // Iris's upper half — from the ring's crown down to the card's top edge
-            // — then ducks BEHIND the card, which (being opaque) hides it for the
-            // rest of the card's height. Drawn AFTER `irisColumn` so it sits in
-            // FRONT of the ring; its height is exactly the Iris RADIUS and its
-            // bottom lands on the card's top edge (the ZStack origin, y = 0), so
-            // the wire is never drawn over the card surface — only over the Iris.
-            // The rule: visible over the Iris OR hidden behind the card, never both.
-            // Between Takes the gutter spine (DailiesView, behind the cards) carries
-            // the wire through the gaps, reappearing above the next ring's crown.
-            // Stays on the spine (no `cardSwipeOffset`) so the wire holds while the
-            // card swipes. Same `ckSpineWire` fill + `spineWidth` as the gutter so
-            // the two read as one continuous wire.
-            SpineLine()
-                .stroke(Color.ckSpineWire, lineWidth: CatchlightLayout.spineWidth)
-                .frame(width: CatchlightLayout.spineWidth,
-                       height: CatchlightLayout.circleDiameter / 2)
-                .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.spineWidth / 2,
+            // Gestures sit above the drawing, in their own 44pt frame, so splitting the
+            // shutter in two cannot swallow the tap or produce two VoiceOver elements.
+            irisColumn
+                .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
                 .zIndex(3)
-            // …and the DOTS pass IN FRONT of the ring too, so the dotted spine reads
-            // as convincingly ABOVE the Iris (owner 2026-06-16) — not behind it. The
-            // GeometryReader anchors the dash phase to the segment's live SCREEN Y
-            // (`+minY`), so the dots hold fixed screen positions as the row scrolls:
-            // the ring slides UNDER a static dotted wire, matching the gutter dots
-            // above and below. Same `SpineDots` pattern as the gutter. The sign MUST
-            // be `+`: `−minY` advances the phase the wrong way, sliding these dots at
-            // ~2× and OPPOSITE the gutter (the "two wires" bug).
-            GeometryReader { geo in
-                SpineLine()
-                    .stroke(SpineDots.color,
-                            style: SpineDots.style(phase: geo.frame(in: .global).minY))
-            }
-            .frame(width: CatchlightLayout.spineWidth,
-                   height: CatchlightLayout.circleDiameter / 2)
-            .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.spineWidth / 2,
-                    y: -CatchlightLayout.circleDiameter / 2)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-            .zIndex(4)
         }
         .padding(.vertical, 6)
     }
@@ -246,7 +204,10 @@ struct TakeRowView: View {
     /// original exclusive semantics.
     private var irisColumn: some View {
         ZStack {
-            TakeCircleView(take: take)
+            // Touch + VoiceOver only. `ThreadedIris` above draws the shutter, because
+            // the drawing has to be split in two with the beam between the halves —
+            // which a single view carrying the gesture could not be.
+            Color.clear
         }
         .frame(width: CatchlightLayout.circleDiameter,
                height: CatchlightLayout.circleDiameter)

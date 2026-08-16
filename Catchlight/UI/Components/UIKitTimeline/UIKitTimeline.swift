@@ -237,8 +237,43 @@ struct TimelineReadCell: View {
     @Environment(\.colorScheme) private var scheme
     private let inset = CatchlightLayout.cardSpineInset
     private let d = CatchlightLayout.circleDiameter
-    private let w = CatchlightLayout.spineWidth
-    private var occW: CGFloat { CatchlightLayout.spineWidth + CatchlightLayout.spineTrackOffset * 2 }
+
+    // MARK: Iris depth (owner 2026-08-16) — see the paint-order note in `body`
+    //
+    // The drawing lives in `ThreadedIris` and `TimelineBeamOccluder`, NOT here: the
+    // pinned Obie is drawn by a different view (`TakeRowView`) and needs exactly the
+    // same treatment. Keeping it in one place is what stops the two rows drifting —
+    // they already did once, leaving the Obie flat while every scrolling row was
+    // rebuilt.
+
+    /// The Iris's touch and VoiceOver surface, kept separate from the two drawn halves
+    /// so the split cannot produce two accessibility elements or swallow the gesture.
+    private var irisHitTarget: some View {
+        Color.clear
+            .frame(width: d, height: d)
+            .contentShape(Rectangle())
+            // Tap → Focus-ring fan, long-press (0.45s, .began) → toggle Obie. Same
+            // recognizer the SwiftUI row uses; `convert(_:to: nil)` yields the Iris
+            // centre in window coords.
+            .overlay(
+                TapAndLongPressRecognizer(
+                    minimumDuration: 0.45,
+                    onTap: { onTapCircle(take, $0) },
+                    onLongPress: { onLongPressCircle(take) }
+                )
+            )
+            .accessibilityElement()
+            .accessibilityIdentifier("take-iris")
+            .accessibilityLabel(TakeRowView.irisAccessibilityLabel(for: take))
+            .accessibilityHint(take.isObie
+                ? "Double-tap to open actions. Long press to turn this back into a standard Take."
+                : "Double-tap to open actions. Long press to make this your Obie.")
+            // VoiceOver intercepts long-press, so the Obie toggle needs a named action too.
+            .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") {
+                onLongPressCircle(take)
+            }
+            .offset(x: inset - d / 2, y: -d / 2)
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -285,52 +320,28 @@ struct TimelineReadCell: View {
                         Button("Move Down") { onNudge(take, 1) }
                     }
                 }
-            Rectangle().fill(Color.ckBackground)                                       // occluder
-                .frame(width: occW, height: d / 2)
-                .offset(x: inset - occW / 2, y: -d / 2)
-                .allowsHitTesting(false)
-            TakeCircleView(take: take)                                                 // Iris
-                .frame(width: d, height: d)
-                // Lift the Iris off the background (owner 2026-07-13) — raised but still
-                // attached to the card. Stronger than the card's default shadow because
-                // the Iris is smaller + partly hollow, so it casts less. `caretBottomGap`-
-                // style single tunable: bump/soften via the opacity/radius here.
-                .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(0.16),
-                        radius: 5, y: 2)
-                .contentShape(Rectangle())
-                // Tap → Focus-ring fan, long-press (0.45s, .began) → toggle Obie. Same
-                // recognizer the SwiftUI row uses; `convert(_:to: nil)` yields the Iris
-                // centre in window coords. The overloccluding wire/dots are hit-testing-
-                // off, so touches reach this overlay.
-                .overlay(
-                    TapAndLongPressRecognizer(
-                        minimumDuration: 0.45,
-                        onTap: { onTapCircle(take, $0) },
-                        onLongPress: { onLongPressCircle(take) }
-                    )
-                )
-                .accessibilityElement()
-                .accessibilityIdentifier("take-iris")
-                .accessibilityLabel(TakeRowView.irisAccessibilityLabel(for: take))
-                .accessibilityHint(take.isObie
-                    ? "Double-tap to open actions. Long press to turn this back into a standard Take."
-                    : "Double-tap to open actions. Long press to make this your Obie.")
-                // VoiceOver intercepts long-press, so the Obie toggle needs a named action too.
-                .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") {
-                    onLongPressCircle(take)
-                }
+            // ── The shutter, threaded ────────────────────────────────────────────
+            //
+            // 🚨 THE PAINT ORDER IS THE WHOLE FIX (owner 2026-08-16). What shipped
+            // before was card → Iris → wire, while the card ALSO hid the wire below
+            // its top edge: the wire in front of the Iris, the Iris in front of the
+            // card, the card in front of the wire. That is a Penrose triangle. The eye
+            // cannot build a solid out of it, so it stops trying and reads the whole
+            // timeline as a diagram — which is why no amount of shading had ever made
+            // it feel like anything. The order below is a real one, and the shading
+            // only started to pay once it was.
+            //
+            //   card → shadow → shutter FAR half → beam → shutter NEAR half
+            //
+            // The old background-coloured occluder is GONE with it. Its job was to stop
+            // the dotted spine bleeding up through the hollow aperture — but seeing the
+            // wire through the hole is precisely what threading means. Putting it back
+            // re-breaks the order.
+            TimelineBeamOccluder()                                                     // one beam, not two
+                .offset(x: inset - TimelineBeam.width / 2, y: -d / 2)
+            ThreadedIris(take: take)                                                   // shadow, halves, beam
                 .offset(x: inset - d / 2, y: -d / 2)
-            SpineLine().stroke(Color.ckSpineWire, lineWidth: w)                        // wire over Iris top
-                .frame(width: w, height: d / 2)
-                .offset(x: inset - w / 2, y: -d / 2)
-                .allowsHitTesting(false)
-            GeometryReader { geo in                                                    // dots over Iris top
-                SpineLine().stroke(SpineDots.color,
-                                   style: SpineDots.style(phase: geo.frame(in: .global).minY))
-            }
-            .frame(width: w, height: d / 2)
-            .offset(x: inset - w / 2, y: -d / 2)
-            .allowsHitTesting(false)
+            irisHitTarget                                                              // gestures + VoiceOver
         }
         .padding(.leading, spineX - inset)
         .padding(.trailing, 20)
