@@ -29,8 +29,9 @@ struct EditorToolbarConfig {
     /// The Done (tick) button is enabled only for a task or reminder Take —
     /// a pure note can't be "done"; greyed otherwise.
     var doneEnabled: Bool
-    /// Whether the Take already carries a reminder — drives the reminder button's
-    /// "Edit reminder" vs "Add reminder" affordance (owner 2026-06-21).
+    /// Whether the Take already carries a reminder — a "when" OR a "where" (place/time
+    /// parity, 2026-07-01). Drives the reminder button's "Edit reminder" vs "Add reminder"
+    /// affordance (owner 2026-06-21) and, since 2026-08-16, its Ember vs accent tint.
     var hasReminder: Bool = false
     var onToggleImportant: () -> Void
     var onOpenAngle: () -> Void
@@ -87,7 +88,16 @@ struct EditorKeyboardBar: View {
                 slot(enabled: true, identifier: "reminder-button",
                      label: config.hasReminder ? "Edit reminder" : "Add reminder",
                      action: onReminder) {
-                    dockSymbol("bell", tint: .ckAccent, enabled: true, size: 22)
+                    // Ember when the Take already carries a reminder, Ember accent when
+                    // it doesn't (owner 2026-08-16) — so the bell SHOWS which of its two
+                    // jobs it will do, not just says it to VoiceOver. Colour, not a second
+                    // glyph: the Done tick two slots along already signals "this state is
+                    // set" exactly this way, and a badged or filled bell would give the
+                    // same bar two vocabularies for one idea. `bell.fill` is spoken for
+                    // besides — it means "Notify is on" inside the picker this opens.
+                    dockSymbol("bell",
+                               tint: config.hasReminder ? .ckEmber : .ckAccent,
+                               enabled: true, size: 22)
                 }
                 .frame(maxWidth: .infinity)
             } else {
