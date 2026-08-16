@@ -76,6 +76,13 @@ struct StoryboardView: View {
         max(0, takeSpacing.gap - CatchlightLayout.circleDiameter / 2)
     }
 
+    /// The Take a delete confirmation is currently asking about (owner 2026-08-16). The
+    /// Storyboard's menu reaches `vm.delete` directly and never passes through DailiesView,
+    /// so the gate has to exist here too — see `DeleteConfirmation`.
+    @State private var pendingDeleteConfirm: Take?
+    @AppStorage(SettingsViewModel.ConfirmBeforeDelete.defaultsKey)
+    private var confirmBeforeDelete: Bool = SettingsViewModel.ConfirmBeforeDelete.default
+
     // MARK: - Edit-in-place state (LOCAL to the Storyboard)
 
     @State private var editDraft: Take?
@@ -151,6 +158,10 @@ struct StoryboardView: View {
             .safeAreaInset(edge: .top, spacing: 0) { topChrome }
             // The keyboard toolbar's bag → the full-screen Shot List on the draft.
             .fullScreenCover(isPresented: $anglePresented) { angleCover }
+            // Confirm before deleting (owner 2026-08-16) — the same alert the timeline
+            // raises, presented from THIS screen because the Storyboard is a full-screen
+            // cover: an alert owned by the view underneath would never reach the front.
+            .deleteConfirmation(pending: $pendingDeleteConfirm) { vm.delete($0) }
     }
 
     // MARK: - The floating editor (M5b)
@@ -430,7 +441,10 @@ struct StoryboardView: View {
         }
         Button(role: .destructive) {
             guard app.ensureEntitled() else { return }
-            vm.delete(take)
+            // Same question, same words, as the timeline (owner 2026-08-16). No
+            // repeating-reminder branch here: this menu has no "Delete Series" dialog,
+            // so the plain confirmation is the only one on offer.
+            if confirmBeforeDelete { pendingDeleteConfirm = take } else { vm.delete(take) }
         } label: {
             Label("Delete Take", systemImage: "trash")
         }
