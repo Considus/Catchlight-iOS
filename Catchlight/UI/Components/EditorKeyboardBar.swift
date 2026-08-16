@@ -70,8 +70,11 @@ struct EditorKeyboardBar: View {
         // 2026-06-19: spacing must match the bottom toolbar).
         HStack(spacing: 0) {
             // 1 — Dismiss: the dock's Add button with its "+" rotated 45° so it
-            // reads as an × (owner: "the add button rotates to an X").
-            slot(enabled: true, label: "Close keyboard", action: onDismiss) {
+            // reads as an × (owner: "the add button rotates to an X"). Spoken as
+            // "Discard changes" (owner 2026-08-16), matching the row's long-press item
+            // word for word — the button throws the edit away, and "Close keyboard"
+            // announced a dismissal while performing a discard.
+            slot(enabled: true, label: "Discard changes", action: onDismiss) {
                 dockSymbol("plus", tint: .ckAccent, enabled: true).rotationEffect(.degrees(45))
             }
             .frame(maxWidth: .infinity)
