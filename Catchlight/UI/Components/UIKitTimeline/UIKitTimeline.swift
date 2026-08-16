@@ -277,12 +277,6 @@ struct TimelineReadCell: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // FIRST, under everything — including the card, whose own shadow reaches up
-            // past its top edge into this strip. Painted after the card it cut a clean
-            // rectangle out of that shadow, which on Paper read as a pale block hanging
-            // above every Iris.
-            TimelineBeamOccluder()
-                .offset(x: inset - TimelineBeam.width / 2, y: -d / 2)
             TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: false,
                             // Manual mode: hold the body text clear of the drag handle
                             // drawn over this card's trailing edge. Surface unaffected.
@@ -343,6 +337,8 @@ struct TimelineReadCell: View {
             // the dotted spine bleeding up through the hollow aperture — but seeing the
             // wire through the hole is precisely what threading means. Putting it back
             // re-breaks the order.
+            TimelineBeamOccluder()                                                     // one beam, not two
+                .offset(x: inset - TimelineBeam.opaqueWidth / 2, y: -d / 2)
             ThreadedIris(take: take)                                                   // shadow, halves, beam
                 .offset(x: inset - d / 2, y: -d / 2)
             irisHitTarget                                                              // gestures + VoiceOver

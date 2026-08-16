@@ -163,13 +163,6 @@ struct TakeRowView: View {
             // `cardSpineInset` + `circleDiameter`, so the card stays put when the
             // Iris is resized (previously the card was padded by the Iris diameter,
             // so enlarging the Iris pushed it right and narrowed it).
-            // Under the card, deliberately: it masks the gutter beam so this row's own
-            // threaded beam is not added to it, and painting it over the card instead
-            // cuts a rectangle out of the card's shadow.
-            TimelineBeamOccluder()
-                .offset(x: CatchlightLayout.cardSpineInset - TimelineBeam.width / 2,
-                        y: -CatchlightLayout.circleDiameter / 2)
-                .zIndex(-1)
             cardColumn
                 // Only the card slides on swipe; the Iris (below) keeps its spine
                 // position so the wire stays threaded through it.
@@ -184,6 +177,10 @@ struct TakeRowView: View {
             // but its own previews constructs it directly — but `DailiesView.rowContent`
             // builds it for the Obie, which is why the Obie was left with a flat Iris and
             // the old dotted wire when the timeline cell alone was rebuilt.
+            TimelineBeamOccluder()
+                .offset(x: CatchlightLayout.cardSpineInset - TimelineBeam.opaqueWidth / 2,
+                        y: -CatchlightLayout.circleDiameter / 2)
+                .zIndex(1)
             ThreadedIris(take: take)
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
