@@ -216,24 +216,30 @@ struct TakeCircleView: View {
         let r = diameter / 2
         let a = lightRadians
         let p = CGPoint(x: cos(a) * unitRadius * r, y: sin(a) * unitRadius * r)
-        ZStack {
-            Circle()
-                .fill(RadialGradient(colors: [Color(hex: 0xFFF3D2).opacity(0.85),
-                                              Color(hex: 0xFFF3D2).opacity(0)],
-                                     center: .center, startRadius: 0, endRadius: bloom * r))
-                .frame(width: bloom * r * 2, height: bloom * r * 2)
-            Circle()
-                .fill(Color(hex: 0xFFFEF8))
-                .frame(width: core * r * 2, height: core * r * 2)
-        }
-        .offset(x: p.x, y: p.y)
-        .overlay {
+        // 🚨 The bounce is a SIBLING with its own offset, not an overlay on the glint.
+        // As an overlay it inherited the glint's `.offset(p)` and its own `-p` then
+        // cancelled it, landing the bounce at the Iris CENTRE — quietly reinstating the
+        // centre catchlight removed on 2026-07-04 for reading as a stray flare where the
+        // timeline meets the card. Worst on an Obie, which has two glints and so stacked
+        // two bounces on the same spot (owner spotted it on device 2026-08-16).
+        return ZStack {
             Circle()
                 .fill(RadialGradient(colors: [Quadrant.obieRing(scheme).opacity(0.30),
                                               Quadrant.obieRing(scheme).opacity(0)],
                                      center: .center, startRadius: 0, endRadius: bounce * r))
                 .frame(width: bounce * r * 2, height: bounce * r * 2)
                 .offset(x: -p.x, y: -p.y)
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(colors: [Color(hex: 0xFFF3D2).opacity(0.85),
+                                                  Color(hex: 0xFFF3D2).opacity(0)],
+                                         center: .center, startRadius: 0, endRadius: bloom * r))
+                    .frame(width: bloom * r * 2, height: bloom * r * 2)
+                Circle()
+                    .fill(Color(hex: 0xFFFEF8))
+                    .frame(width: core * r * 2, height: core * r * 2)
+            }
+            .offset(x: p.x, y: p.y)
         }
     }
 

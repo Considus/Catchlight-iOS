@@ -340,6 +340,19 @@ enum IrisDepth {
         scheme == .dark ? (0.34, 0.10) : (0.12, 0.10)
     }
     static let inactiveFactor: CGFloat = 0.45
+
+    /// How far the rim catchlight swings between the top of the screen and the bottom,
+    /// in degrees either side of the resting ten-o'clock position.
+    ///
+    /// The DIRECTION is the physics and is easy to get backwards (it was, first time).
+    /// The light sits off the top-left of the SCREEN, so a Take high up is roughly level
+    /// with it and is lit from the SIDE — its highlight sits at its most WESTERLY. The
+    /// further down the screen a Take is, the more the light is above it rather than
+    /// beside it, so the highlight swings NORTH. West at the top, north at the bottom.
+    ///
+    /// Kept well short of due west and due north at both ends: the light is off the
+    /// corner, not at infinity in either axis.
+    static let specularTravelDegrees: Double = 26
 }
 
 // MARK: - Quadrant / mark fills (mode-dependent — resolved by the caller)
@@ -633,6 +646,21 @@ enum CatchlightLayout {
     /// never matched the dock — ~26pt left of the + on a 393pt screen.)
     static func spineX(containerWidth: CGFloat) -> CGFloat {
         dockHorizontalPadding + (containerWidth - 2 * dockHorizontalPadding) / 8
+    }
+
+    /// Snap a coordinate to the device's pixel grid.
+    ///
+    /// `spineX` divides the screen by 8, so on most widths it lands part-way into a
+    /// device pixel. A big shape absorbs that — the Add button's 44pt ring reads as
+    /// centred regardless — but a NARROW symmetric shape does not: a 2.8pt beam core
+    /// centred on a fractional pixel rasterises with more energy on one side, and the
+    /// eye reads the whole shaft as sitting a pixel off the button it points at (owner,
+    /// on device 2026-08-16). Measured concentric on a 402pt simulator, where the same
+    /// arithmetic happens to land on a clean half-pixel — which is exactly why this
+    /// needs snapping rather than trusting one screen width.
+    static func snappedToPixel(_ x: CGFloat) -> CGFloat {
+        let scale = max(1, UIScreen.main.scale)
+        return (x * scale).rounded() / scale
     }
     /// Minimum touch target per HIG / accessibility.
     static let minTouchTarget: CGFloat = 44

@@ -56,7 +56,12 @@ struct BeamStyle {
                     haze:  Color(hex: 0xC9A96E).opacity(0.10),
                     additive: true)
         : BeamStyle(coreWidth: 4.1, bloomWidth: 12.8, hazeWidth: 30,
-                    core:  Color(hex: 0x654C21).opacity(0.98),
+                    // Pure white (owner 2026-08-16). It cannot out-brighten Paper, so it
+                    // does not carry the beam's WIDTH — the warm bloom around it does
+                    // that. What it does is invert the contrast at the centre: a bright
+                    // line inside a dark warm halo reads as a hot core, where a dark core
+                    // read as a drawn rod.
+                    core:  Color(hex: 0xFFFFFF).opacity(0.98),
                     bloom: Color(hex: 0x967434).opacity(0.72),
                     haze:  Color(hex: 0x8C6C3A).opacity(0.20),
                     additive: false)
@@ -237,7 +242,8 @@ struct ThreadedIris: View {
         // as a lit space rather than a list of stickers (owner 2026-08-16). The reader
         // is inside the shared view on purpose: computed at either call site, one of the
         // two rows would eventually be left without it, exactly as the Obie was left
-        // without the tilt.
+        // without the tilt. Direction: WEST at the top of the screen, NORTH at the
+        // bottom — see `IrisDepth.specularTravelDegrees`.
         GeometryReader { geo in
             ZStack(alignment: .topLeading) {
                 shadow
@@ -258,8 +264,9 @@ struct ThreadedIris: View {
         let screen = UIScreen.main.bounds.height
         guard screen > 0 else { return 0 }
         let t = min(1, max(0, geo.frame(in: .global).midY / screen))
-        // ±26°, so a Take crosses about a fifth of the rim on its way up the screen.
-        return (0.5 - Double(t)) * 52
+        // Positive turns the light clockwise from ten o'clock, i.e. towards north. So
+        // the sign is + as t grows: low on the screen means lit from above.
+        return (Double(t) - 0.5) * 2 * IrisDepth.specularTravelDegrees
     }
 
     // MARK: Parts
