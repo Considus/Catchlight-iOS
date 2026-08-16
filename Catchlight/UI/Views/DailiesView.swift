@@ -317,9 +317,11 @@ struct DailiesView: View {
                 // "part of the timeline" feel; the connecting wire isn't needed in focus.
                 .opacity(ui.isEditingInPlace ? 0 : 1)
                 .frame(maxHeight: .infinity)
-                // Start up behind the heading so the wire always dissolves into the
-                // top fade rather than beginning at the first Iris (owner 2026-07-04).
-                .padding(.top, deviceTopInset)
+                // Runs to the very top of the container so the beam carries on NORTH and
+                // dissolves into the heading fade, rather than starting at the device
+                // inset with a visible end (owner 2026-08-16; extends the 2026-07-04
+                // intent, which stopped short of it).
+                .padding(.top, 0)
                 // Terminate the spine at the TOP EDGE of the Add button's ring rather
                 // than running full-bleed under the dock (owner 2026-06-16: it was
                 // visible through the +'s hollow ring). At rest the ring's top sits
@@ -344,7 +346,7 @@ struct DailiesView: View {
             BeamDust()
                 .opacity(ui.isEditingInPlace ? 0 : 1)
                 .frame(maxHeight: .infinity)
-                .padding(.top, deviceTopInset)
+                .padding(.top, 0)                 // north with the beam it lives in
                 .padding(.bottom, spineBottomInset)
                 .animation(.easeOut(duration: 0.56), value: keyboardTopY)
                 .offset(x: CatchlightLayout.snappedToPixel(spineX) - TimelineBeam.width / 2)
