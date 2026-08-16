@@ -110,45 +110,37 @@ struct TimelineBeam: View {
 
     // MARK: Daylight — opaque, over its own ground
 
-    /// 🚨 WHITE ALL THE WAY OUT, NOT WARM. Warm shoulders are DARKER than the white core
-    /// AND darker than Paper, so they framed the core instead of fading from it — the
-    /// owner read them as "two stripes", which is exactly what they were. White at
-    /// graded alpha over the beam's own Paper ground ramps smoothly from white to Paper
-    /// and reads as a glow.
+    /// 🚨 WHITE, AT GRADED ALPHA, STRAIGHT ONTO WHATEVER IS THERE. No warm shoulders and
+    /// no substituted ground — both were tried and both failed in ways worth recording:
     ///
-    /// This is also the only way to get a gradient at all on Paper. Additive light
-    /// clips there almost at once — Paper plus any warm tint is white within a few
-    /// percent of alpha — so an additive glow has no ramp to give. Compositing white
-    /// over a known Paper ground has the full range, because the distance from Paper to
-    /// white IS the gradient.
+    ///   • WARM shoulders are darker than the white core AND darker than Paper, so they
+    ///     framed the core instead of fading from it. The owner read them as "two
+    ///     stripes", which is exactly what they were.
+    ///
+    ///   • Compositing over the beam's OWN Paper ground made it uniform, but Paper is
+    ///     lighter than the shutter's blades — so across the feather the beam swapped a
+    ///     grey blade for near-Paper and that showed, making the beam look like it
+    ///     WIDENED as it crossed an Iris. Tightening the feather removed the widening and
+    ///     gave it hard edges instead: a bar, not a glow.
+    ///
+    /// White at graded alpha has neither fault. It always lightens toward white and
+    /// always falls off to whatever it crosses, so it reads as one glow everywhere — a
+    /// whisper over Paper, plainer over a blade, which is what light actually does.
     private static let daylightLight: [Gradient.Stop] = [
         .init(color: .white.opacity(0),    location: 0.00),
-        .init(color: .white.opacity(0.22), location: 0.20),
-        .init(color: .white.opacity(0.58), location: 0.34),
-        .init(color: .white,               location: 0.455),
-        .init(color: .white,               location: 0.545),
-        .init(color: .white.opacity(0.58), location: 0.66),
-        .init(color: .white.opacity(0.22), location: 0.80),
+        .init(color: .white.opacity(0.18), location: 0.18),
+        .init(color: .white.opacity(0.55), location: 0.33),
+        .init(color: .white.opacity(0.92), location: 0.44),
+        .init(color: .white,               location: 0.50),
+        .init(color: .white.opacity(0.92), location: 0.56),
+        .init(color: .white.opacity(0.55), location: 0.67),
+        .init(color: .white.opacity(0.18), location: 0.82),
         .init(color: .white.opacity(0),    location: 1.00)
     ]
 
-    /// Opaque across the middle, feathering to nothing at the two edges. The feather is
-    /// the ONLY part that sees the real backdrop.
-    private static let feather: [Gradient.Stop] = [
-        .init(color: .black.opacity(0), location: 0.00),
-        .init(color: .black,            location: 0.14),
-        .init(color: .black,            location: 0.86),
-        .init(color: .black.opacity(0), location: 1.00)
-    ]
-
     private var daylight: some View {
-        ZStack {
-            Color.ckBackground                                   // the beam's own ground
-            LinearGradient(stops: Self.daylightLight, startPoint: .leading, endPoint: .trailing)
-        }
-        .compositingGroup()                                      // flatten before masking
-        .mask(LinearGradient(stops: Self.feather, startPoint: .leading, endPoint: .trailing))
-        .frame(width: Self.daylightWidth)
+        LinearGradient(stops: Self.daylightLight, startPoint: .leading, endPoint: .trailing)
+            .frame(width: Self.daylightWidth)
     }
 }
 
@@ -199,7 +191,10 @@ struct BeamDust: View {
         guard size.height > 0 else { return }
         var gc = context
         gc.blendMode = scheme == .dark ? .plusLighter : .normal
-        let colour = scheme == .dark ? Color(hex: 0xFFF4D6) : Color(hex: 0x654C21)
+        // White in BOTH modes (owner 2026-08-16). Dark specks inside a white glow read as
+        // holes in the light rather than dust lit by it; the beam is white on Paper now,
+        // so the dust in it has to be too.
+        let colour = scheme == .dark ? Color(hex: 0xFFF4D6) : Color(hex: 0xFFFFFF)
         let cx = size.width / 2
 
         for m in Mote.all {
