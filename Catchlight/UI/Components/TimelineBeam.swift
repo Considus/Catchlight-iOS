@@ -34,94 +34,72 @@
 import SwiftUI
 import CatchlightCore
 
-// MARK: - Style
-
-/// The beam's per-mode geometry and colour. Widths are FULL widths in points.
-struct BeamStyle {
-    let coreWidth: CGFloat
-    let bloomWidth: CGFloat
-    let hazeWidth: CGFloat
-    let core: Color
-    let bloom: Color
-    let haze: Color
-    /// Night composites additively so the layers bloom into one another. Daylight
-    /// cannot — additive on Paper is invisible — so it paints normally.
-    let additive: Bool
-
-    static func resolve(_ scheme: ColorScheme) -> BeamStyle {
-        scheme == .dark
-        ? BeamStyle(coreWidth: 2.8, bloomWidth: 12, hazeWidth: 36,
-                    core:  Color(white: 1.0).opacity(0.95),
-                    bloom: Color(hex: 0xE9CB8C).opacity(0.55),
-                    haze:  Color(hex: 0xC9A96E).opacity(0.10),
-                    additive: true)
-        // 🚨 DAYLIGHT CANNOT BE AN ADDITIVE GLOW. It was tried (owner request, 2026-08-16)
-        // and it blows out: Paper is #F7F4EF, so adding light clips to white almost at
-        // once, and everything the beam crosses — blades, card, text — loses its detail
-        // rather than gaining light. Measuring CONTRAST AGAINST THE GROUND missed it
-        // (peak read 10.7, which looks like "too faint"); the fault was clipping, not
-        // weakness, and the owner's eye caught what that measurement could not.
-        //
-        // So Daylight keeps the glow's SHAPE — densest at the core, falling away through
-        // bloom to haze — and renders it in the only currency Paper has: WARMTH. No white
-        // anywhere. A white core inside a warm halo was the earlier hybrid and read as
-        // half glow, half drawn rod; an all-warm shaft reads as light seen through air,
-        // and it survives being looked at.
-        : BeamStyle(coreWidth: 4.1, bloomWidth: 12.8, hazeWidth: 30,
-                    core:  Color(hex: 0xA07C3C).opacity(0.94),
-                    bloom: Color(hex: 0xB89552).opacity(0.74),
-                    haze:  Color(hex: 0xC9A96E).opacity(0.28),
-                    additive: false)
-    }
-}
-
 // MARK: - The beam
 
-/// A vertical shaft of light, centred in its frame. Give it the full `hazeWidth` to
-/// draw in; the narrower layers centre themselves inside that.
+/// A vertical shaft of light, centred in its frame.
 ///
-/// Used in TWO places that must stay identical, exactly as the old spine was: the
-/// gutter run behind the cards (`DailiesView`) and the short segment that crosses
-/// each Iris (`UIKitTimeline`). Both build it from this one view, so they cannot
-/// drift into two different beams.
+/// 🚨 THE BEAM CARRIES ITS OWN GROUND. Earlier cuts blended straight onto whatever lay
+/// behind — additive on Ink, drawn on Paper — so the beam was never the same thing
+/// twice: one appearance over the page, another over the shutter, a different beam
+/// again per colour scheme. Crossing an Iris it visibly changed, because it was partly
+/// made of the Iris.
+///
+/// An opaque core fixes the centre but not the bloom, and a bloom needs transparency to
+/// be a bloom (owner 2026-08-16). The way to have both is to composite the light over
+/// its OWN copy of the page colour, flatten that, and then feather only the outermost
+/// edge:
+///
+///     ground (ckBackground) + light gradient  ->  compositingGroup  ->  soft-edge mask
+///
+/// Everything inside the feather is therefore independent of what the beam passes over
+/// — the bloom keeps its transparency, but it is transparent to the beam's own ground,
+/// not to the timeline. Only the last ~2.5pt each side touches the real backdrop, at an
+/// alpha low enough that no backdrop can visibly change it.
+///
+/// This is also what lets the white core work on Paper. As an additive glow it clipped
+/// everything it covered to white — the "blown out" look — because on a near-white
+/// ground additive light has nowhere to go. Over its own ground, the warm shoulders give
+/// the white something to be white against, on either ground.
 struct TimelineBeam: View {
-    @Environment(\.colorScheme) private var scheme
+    /// The beam's footprint. Callers place it by its centre (`x - TimelineBeam.width / 2`).
+    /// Narrowed 36 -> 18 (owner 2026-08-16: the white was right, the width was not).
+    static let width: CGFloat = 18
+    /// The middle of the beam, where the feather is fully opaque — see the mask stops.
+    static let opaqueWidth: CGFloat = width * 0.72
 
-    /// The haze is the light in the AIR. It belongs in the open gutter and NOT over the
-    /// shutter: 36pt of additive warmth is as wide as the Iris itself, so crossing one it
-    /// stopped reading as a beam passing in front and started washing the whole upper
-    /// half of the blades (owner, on device 2026-08-16 — "right on the light-beam").
-    /// Daylight never showed it because that beam is not additive.
-    ///
-    /// Core and bloom still cross the Iris: those are the beam itself, and a beam in
-    /// front of metal does light it.
-    var includesHaze: Bool = true
+    /// The light itself, laid over the beam's own ground. Symmetric, so the centre of
+    /// the frame is the centre of the light — see `snappedToPixel` for why that has to
+    /// land on the pixel grid.
+    private static let light: [Gradient.Stop] = [
+        .init(color: Color(hex: 0xC9A96E).opacity(0),    location: 0.00),
+        .init(color: Color(hex: 0xC9A96E).opacity(0.40), location: 0.20),
+        .init(color: Color(hex: 0xEDD9A3).opacity(0.90), location: 0.36),
+        .init(color: Color(hex: 0xFFFFFF),               location: 0.455),
+        .init(color: Color(hex: 0xFFFFFF),               location: 0.545),
+        .init(color: Color(hex: 0xEDD9A3).opacity(0.90), location: 0.64),
+        .init(color: Color(hex: 0xC9A96E).opacity(0.40), location: 0.80),
+        .init(color: Color(hex: 0xC9A96E).opacity(0),    location: 1.00)
+    ]
 
-    /// The beam's footprint, the SAME in both modes even though the haze inside it is
-    /// not. Callers place it by its centre (`x - TimelineBeam.width / 2`), and a width
-    /// that changed with the colour scheme would shift the beam sideways on a
-    /// light/dark switch — off the spine, and away from the Add button it plugs into.
-    static let width: CGFloat = 36
+    /// Opaque across the middle, feathering to nothing at the two edges. The feather is
+    /// the ONLY part that sees the real backdrop.
+    private static let feather: [Gradient.Stop] = [
+        .init(color: .black.opacity(0), location: 0.00),
+        .init(color: .black,            location: 0.14),
+        .init(color: .black,            location: 0.86),
+        .init(color: .black.opacity(0), location: 1.00)
+    ]
 
     var body: some View {
-        let s = BeamStyle.resolve(scheme)
         ZStack {
-            if includesHaze { band(s.hazeWidth, s.haze) }
-            band(s.bloomWidth, s.bloom)
-            band(s.coreWidth, s.core)
+            Color.ckBackground                                   // the beam's own ground
+            LinearGradient(stops: Self.light, startPoint: .leading, endPoint: .trailing)
         }
+        .compositingGroup()                                      // flatten before masking
+        .mask(LinearGradient(stops: Self.feather, startPoint: .leading, endPoint: .trailing))
         .frame(width: Self.width)
-        .blendMode(s.additive ? .plusLighter : .normal)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-    }
-
-    /// One layer: transparent at both edges, full strength down the middle, so the
-    /// layers stack into a single soft-edged shaft rather than three hard bands.
-    private func band(_ width: CGFloat, _ colour: Color) -> some View {
-        LinearGradient(colors: [colour.opacity(0), colour, colour.opacity(0)],
-                       startPoint: .leading, endPoint: .trailing)
-            .frame(width: width)
     }
 }
 
@@ -342,25 +320,24 @@ struct ThreadedIris: View {
     /// No separate spill layer — the beam is drawn OVER the far blades, so it lights
     /// them itself. A spill band on top of that was the same light counted twice.
     private var beam: some View {
-        TimelineBeam(includesHaze: false)
+        TimelineBeam()
             .frame(height: diameter / 2 - leanTop)
             .offset(x: diameter / 2 - TimelineBeam.width / 2, y: leanTop)
     }
 }
 
-/// Masks the GUTTER beam across the shutter, so a row can paint its own threaded beam
-/// without the two adding up.
+/// Hides the GUTTER beam directly behind a shutter, so the row's own threaded beam is
+/// the only one there.
 ///
-/// 🚨 Place this UNDER the card, as the row's first element. Two reasons, both learned
-/// the hard way: the gutter beam runs behind the whole timeline and shows through the
-/// open aperture, so with the row's own beam on top, `.plusLighter` adds them into a
-/// blown-out bar over every Iris and nowhere else; and painted OVER the card instead of
-/// under it, this cuts a clean rectangle out of the card's own shadow — which on Paper
-/// reads as a pale block hanging above every Iris.
+/// Both runs are the same feathered shaft, and where they overlap — through the open
+/// aperture — their soft edges composite twice and the beam reads slightly wider and
+/// stronger across each Iris than it does anywhere else. Exactly the inconsistency the
+/// opaque beam exists to remove.
 ///
-/// This is the old crown occluder, reinstated for a completely different reason. It
-/// used to hide the dotted spine bleeding through the aperture, which threading makes
-/// desirable rather than a fault.
+/// Sized to the beam's OPAQUE middle rather than its full width, and hard-edged: a
+/// full-width block showed as a page-coloured rectangle against the blades, because the
+/// beam's own edges are feathered and could not cover it. At this width the block hides
+/// under the solid part of the beam.
 struct TimelineBeamOccluder: View {
     var diameter: CGFloat = CatchlightLayout.circleDiameter
 
@@ -368,7 +345,7 @@ struct TimelineBeamOccluder: View {
         let leanTop = (diameter - diameter * IrisDepth.foreshorten) / 2
         Rectangle()
             .fill(Color.ckBackground)
-            .frame(width: TimelineBeam.width, height: diameter / 2 - leanTop)
+            .frame(width: TimelineBeam.opaqueWidth, height: diameter / 2 - leanTop)
             .offset(y: leanTop)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
