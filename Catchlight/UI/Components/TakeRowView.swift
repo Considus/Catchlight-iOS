@@ -178,7 +178,7 @@ struct TakeRowView: View {
             // builds it for the Obie, which is why the Obie was left with a flat Iris and
             // the old dotted wire when the timeline cell alone was rebuilt.
             TimelineBeamOccluder()
-                .offset(x: CatchlightLayout.cardSpineInset - TimelineBeam.opaqueWidth / 2,
+                .offset(x: CatchlightLayout.cardSpineInset - TimelineBeam.width / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
                 .zIndex(1)
             ThreadedIris(take: take)

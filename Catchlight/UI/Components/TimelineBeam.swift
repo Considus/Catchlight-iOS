@@ -38,58 +38,98 @@ import CatchlightCore
 
 /// A vertical shaft of light, centred in its frame.
 ///
-/// 🚨 THE BEAM CARRIES ITS OWN GROUND. Earlier cuts blended straight onto whatever lay
-/// behind — additive on Ink, drawn on Paper — so the beam was never the same thing
-/// twice: one appearance over the page, another over the shutter, a different beam
-/// again per colour scheme. Crossing an Iris it visibly changed, because it was partly
-/// made of the Iris.
+/// 🚨 THE TWO MODES USE DIFFERENT TECHNIQUES ON PURPOSE, AND THAT IS THE WHOLE LESSON
+/// OF THIS FILE. One shared treatment was tried and it cost Night its beam: fixing
+/// Daylight dragged Night along with it until the owner's verdict went from "perfect"
+/// to "it looks like a pole, not light". Light on a dark ground and light on a light
+/// ground are not the same problem and do not have the same answer.
 ///
-/// An opaque core fixes the centre but not the bloom, and a bloom needs transparency to
-/// be a bloom (owner 2026-08-16). The way to have both is to composite the light over
-/// its OWN copy of the page colour, flatten that, and then feather only the outermost
-/// edge:
+/// NIGHT — ADDITIVE. Core, bloom and haze composited with `.plusLighter` so the layers
+/// bloom into one another and into the page. This is what makes it read as LIGHT rather
+/// than as an object, and it is the version the owner approved. Do not "unify" it.
 ///
-///     ground (ckBackground) + light gradient  ->  compositingGroup  ->  soft-edge mask
+/// DAYLIGHT — OPAQUE, OVER ITS OWN GROUND. Additive cannot work on Paper: there are
+/// about ten steps of luminance between #F7F4EF and white, so adding light clips
+/// everything it covers to flat white — the "blown out" look. Instead the light is
+/// composited over its OWN copy of the page colour, flattened, and feathered only at
+/// the very edge:
 ///
-/// Everything inside the feather is therefore independent of what the beam passes over
-/// — the bloom keeps its transparency, but it is transparent to the beam's own ground,
-/// not to the timeline. Only the last ~2.5pt each side touches the real backdrop, at an
-/// alpha low enough that no backdrop can visibly change it.
+///     ground (ckBackground) + light  ->  compositingGroup  ->  soft-edge mask
 ///
-/// This is also what lets the white core work on Paper. As an additive glow it clipped
-/// everything it covered to white — the "blown out" look — because on a near-white
-/// ground additive light has nowhere to go. Over its own ground, the warm shoulders give
-/// the white something to be white against, on either ground.
+/// so the shaft is the same wherever it goes, the bloom keeps its transparency (to the
+/// beam's own ground rather than to the timeline), and the white core has warm shoulders
+/// to be white against.
 struct TimelineBeam: View {
-    /// The beam's footprint, and what callers place it by (`x - width / 2`).
-    ///
-    /// 36 -> 18 -> 9 (owner 2026-08-16). The white was always right; the width was not.
-    /// The last halving is not only taste: the beam passes IN FRONT of the shutter, and
-    /// IMPORTANT is blade 0 at twelve o'clock, so a wide beam runs straight down the one
-    /// marker it must not hide. At 9pt it crosses the crown without covering it.
-    static let width: CGFloat = 9
-    /// The middle of the beam, where the feather is fully opaque — see the mask stops.
-    /// What the occluder has to cover, and no more.
-    static let opaqueWidth: CGFloat = width * 0.72
+    @Environment(\.colorScheme) private var scheme
 
-    /// The light itself, laid over the beam's own ground. Symmetric, so the centre of
-    /// the frame is the centre of the light — see `snappedToPixel` for why that has to
-    /// land on the pixel grid.
-    /// 🚨 THE SHOULDERS MUST NOT BE DARKER THAN THE LIGHTEST BLADE. The beam carries its
-    /// own ground so that it looks the same wherever it goes — but that ground is Ink in
-    /// Night, so warm shoulders laid over it came out darker than a lit blade and read as
-    /// "a dark shadow behind the beam" wherever the beam crossed one (owner, on device
-    /// 2026-08-16). Raised to Catchlight cream at full strength, which sits above even
-    /// the Stone of an Important blade, so the beam can only ever lighten what it covers.
-    private static let light: [Gradient.Stop] = [
-        .init(color: Color(hex: 0xEDD9A3).opacity(0),    location: 0.00),
-        .init(color: Color(hex: 0xEDD9A3).opacity(0.55), location: 0.18),
-        .init(color: Color(hex: 0xF5EDD8).opacity(0.96), location: 0.34),
-        .init(color: Color(hex: 0xFFFFFF),               location: 0.44),
-        .init(color: Color(hex: 0xFFFFFF),               location: 0.56),
-        .init(color: Color(hex: 0xF5EDD8).opacity(0.96), location: 0.66),
-        .init(color: Color(hex: 0xEDD9A3).opacity(0.55), location: 0.82),
-        .init(color: Color(hex: 0xEDD9A3).opacity(0),    location: 1.00)
+    /// The LAYOUT footprint, constant in both modes even though Daylight draws a much
+    /// narrower shaft inside it. Callers place the beam by its centre
+    /// (`x - width / 2`); a footprint that changed with the colour scheme would shift
+    /// the beam sideways on a light/dark switch, off the spine and away from the Add
+    /// button it plugs into.
+    static let width: CGFloat = 36
+
+    /// What Daylight actually fills. Halved twice at the owner's request (18 -> 9): the
+    /// beam passes IN FRONT of the shutter, and IMPORTANT is blade 0 at twelve o'clock,
+    /// so a wide beam runs straight down the one marker it must not hide.
+    static let daylightWidth: CGFloat = 11
+
+    /// Night's haze is the light in the AIR. It belongs in the open gutter and NOT over
+    /// the shutter: 36pt of additive warmth is as wide as the Iris itself, so crossing
+    /// one it stopped reading as a beam passing in front and washed the whole upper half
+    /// of the blades.
+    var includesHaze: Bool = true
+
+    var body: some View {
+        Group {
+            if scheme == .dark { night } else { daylight }
+        }
+        .frame(width: Self.width)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    // MARK: Night — additive
+
+    private var night: some View {
+        ZStack {
+            if includesHaze { band(36, Color(hex: 0xC9A96E).opacity(0.10)) }
+            band(12, Color(hex: 0xE9CB8C).opacity(0.55))
+            band(2.8, Color(white: 1.0).opacity(0.95))
+        }
+        .blendMode(.plusLighter)
+    }
+
+    /// One layer: transparent at both edges, full strength down the middle, so the
+    /// layers stack into a single soft-edged shaft rather than three hard bands.
+    private func band(_ width: CGFloat, _ colour: Color) -> some View {
+        LinearGradient(colors: [colour.opacity(0), colour, colour.opacity(0)],
+                       startPoint: .leading, endPoint: .trailing)
+            .frame(width: width)
+    }
+
+    // MARK: Daylight — opaque, over its own ground
+
+    /// 🚨 WHITE ALL THE WAY OUT, NOT WARM. Warm shoulders are DARKER than the white core
+    /// AND darker than Paper, so they framed the core instead of fading from it — the
+    /// owner read them as "two stripes", which is exactly what they were. White at
+    /// graded alpha over the beam's own Paper ground ramps smoothly from white to Paper
+    /// and reads as a glow.
+    ///
+    /// This is also the only way to get a gradient at all on Paper. Additive light
+    /// clips there almost at once — Paper plus any warm tint is white within a few
+    /// percent of alpha — so an additive glow has no ramp to give. Compositing white
+    /// over a known Paper ground has the full range, because the distance from Paper to
+    /// white IS the gradient.
+    private static let daylightLight: [Gradient.Stop] = [
+        .init(color: .white.opacity(0),    location: 0.00),
+        .init(color: .white.opacity(0.22), location: 0.20),
+        .init(color: .white.opacity(0.58), location: 0.34),
+        .init(color: .white,               location: 0.455),
+        .init(color: .white,               location: 0.545),
+        .init(color: .white.opacity(0.58), location: 0.66),
+        .init(color: .white.opacity(0.22), location: 0.80),
+        .init(color: .white.opacity(0),    location: 1.00)
     ]
 
     /// Opaque across the middle, feathering to nothing at the two edges. The feather is
@@ -101,16 +141,14 @@ struct TimelineBeam: View {
         .init(color: .black.opacity(0), location: 1.00)
     ]
 
-    var body: some View {
+    private var daylight: some View {
         ZStack {
             Color.ckBackground                                   // the beam's own ground
-            LinearGradient(stops: Self.light, startPoint: .leading, endPoint: .trailing)
+            LinearGradient(stops: Self.daylightLight, startPoint: .leading, endPoint: .trailing)
         }
         .compositingGroup()                                      // flatten before masking
         .mask(LinearGradient(stops: Self.feather, startPoint: .leading, endPoint: .trailing))
-        .frame(width: Self.width)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+        .frame(width: Self.daylightWidth)
     }
 }
 
@@ -331,7 +369,7 @@ struct ThreadedIris: View {
     /// No separate spill layer — the beam is drawn OVER the far blades, so it lights
     /// them itself. A spill band on top of that was the same light counted twice.
     private var beam: some View {
-        TimelineBeam()
+        TimelineBeam(includesHaze: false)
             .frame(height: diameter / 2 - leanTop)
             .offset(x: diameter / 2 - TimelineBeam.width / 2, y: leanTop)
     }
@@ -356,7 +394,7 @@ struct TimelineBeamOccluder: View {
         let leanTop = (diameter - diameter * IrisDepth.foreshorten) / 2
         Rectangle()
             .fill(Color.ckBackground)
-            .frame(width: TimelineBeam.opaqueWidth, height: diameter / 2 - leanTop)
+            .frame(width: TimelineBeam.width, height: diameter / 2 - leanTop)
             .offset(y: leanTop)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
