@@ -61,6 +61,12 @@ struct RootView: View {
         // background, mid-screen floating button, clipped ScrollView).
         ZStack {
             Color.ckBackground.ignoresSafeArea()
+            // Wrapped in a Group so the WHOLE destination — whichever branch is
+            // live — goes accessibility-hidden AND inert while the splash holds
+            // (audit 2026-08, V6): the splash only sits visually on top (zIndex
+            // 100), so VoiceOver could reach and ACT on the screen below it.
+            // Conditional on `showSplash`, so everything returns at the crossfade.
+            Group {
             if app.needsOnboarding {
                 if let onboardingVM = app.onboardingVM {
                     OnboardingView()
@@ -101,6 +107,9 @@ struct RootView: View {
                 mainApp
                     .transition(.opacity)
             }
+            }
+            .accessibilityHidden(showSplash)
+            .allowsHitTesting(!showSplash)
 
             if showSplash {
                 // The splash shares the Welcome screen's exact layout (brand mark
@@ -301,8 +310,17 @@ struct RootView: View {
 
     /// The ONE surface — the timeline. The dock's filtering/searching states
     /// narrow it live via `ui.activeTimelineFilter` (read inside DailiesView).
+    ///
+    /// AX-hidden while the Focus-ring fan is up (audit 2026-08, V5 — Blocker):
+    /// the fan's veil only DIMS the surface, and neither opacity nor
+    /// `allowsHitTesting(false)` removes it from the accessibility tree, so
+    /// VoiceOver could escape the open ring and create a Take underneath it.
+    /// Conditional, so everything returns the moment the fan closes. The
+    /// while-EDITING row hiding lives inside DailiesView (the editor and its
+    /// save catcher are its children and must stay reachable — RV-4/VC3).
     private var timeline: some View {
         DailiesView().environment(app.dailiesVM)
+            .accessibilityHidden(ui.isFocusRingFanPresented)
     }
 
     /// The persistent bottom dock (morphs between resting / filtering / searching).
@@ -314,6 +332,10 @@ struct RootView: View {
             // AND while the search keyboard is up (so its swipe-up Settings gesture
             // doesn't hijack the timeline scroll — owner 2026-06-20).
             .allowsHitTesting(!ui.isEditingInPlace && !searchKeyboardUp)
+            // AX-hidden behind BOTH overlays (V5 + RV-4/VC3): visually it dims to
+            // 18% behind the fan and 0 while editing, but stayed fully present in
+            // the accessibility tree — the escape hatch V5 walked through.
+            .accessibilityHidden(ui.isFocusRingFanPresented || ui.isEditingInPlace)
     }
 
     // MARK: - Overlays
@@ -380,6 +402,10 @@ struct RootView: View {
             }
             .ignoresSafeArea()
             .transition(.opacity)
+            // Modal to assistive technologies (V5): VoiceOver keeps focus inside
+            // the open ring instead of flicking out to the surface behind it.
+            // Belt to the braces of the timeline/dock AX-hiding above.
+            .accessibilityAddTraits(.isModal)
         }
     }
 
