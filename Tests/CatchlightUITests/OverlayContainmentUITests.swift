@@ -99,10 +99,16 @@ final class OverlayContainmentUITests: XCTestCase {
 
         XCTAssertTrue(anyElement(in: app, id: "storyboard-save").waitForExistence(timeout: 5),
                       "The save catcher must stay reachable while the Storyboard editor is open")
-
-        // Tap-away commit near the top, clear of the edit panel; the rows'
-        // return proves the overlay state fully unwound.
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+        // Tap-away commit near the top, clear of the edit panel — RETRIED like
+        // the suite's other synthesized-tap sites: a single swallowed tap left
+        // the editor open, which reads as "rows never returned" below.
+        let editorBody = app.textViews["take-edit-body"]
+        for _ in 0..<3 where editorBody.exists {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+            if editorBody.waitForNonExistence(timeout: 4) { break }
+        }
+        XCTAssertTrue(editorBody.waitForNonExistence(timeout: 4),
+                      "Storyboard editor did not close on tap-away commit")
         XCTAssertTrue(row.waitForExistence(timeout: 5),
                       "Storyboard rows did not return after the editor closed")
     }
