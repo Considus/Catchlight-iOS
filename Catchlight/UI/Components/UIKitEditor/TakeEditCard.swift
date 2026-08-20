@@ -193,6 +193,9 @@ struct TakeEditCard: View {
                     .accessibilityIdentifier("editor-shape")
                     .accessibilityLabel("Take shape")
                     .accessibilityHint("Opens the Focus ring to change what this Take is.")
+                    // V10 (audit 2026-08): announce as a button like the Obie row's
+                    // Iris — the same control must not read differently per host.
+                    .accessibilityAddTraits(.isButton)
                     .offset(x: inset - d / 2, y: -d / 2)
             }
         }

@@ -45,4 +45,46 @@ final class TakeRowViewTests: XCTestCase {
         let status = TakeRowView.statusDescription(for: take)
         XCTAssertTrue(status.contains("Obie, your pinned Take"))
     }
+
+    // MARK: - V4 (audit 2026-08): overdue / snoozed spoken state
+
+    private func reminderTake(offset: TimeInterval, now: Date,
+                              recurrence: TimeReminder.Recurrence = .none) -> Take {
+        var take = Take(blocks: [.textLine("call the framer")])
+        take.timeReminder = TimeReminder(scheduledDate: now.addingTimeInterval(offset),
+                                         notificationIdentifier: take.id.uuidString,
+                                         recurrence: recurrence)
+        return take
+    }
+
+    func testStatus_overdueReminder_speaksOverdue() {
+        let now = Date(timeIntervalSince1970: 1_780_000_000)
+        let status = TakeRowView.statusDescription(for: reminderTake(offset: -3600, now: now), now: now)
+        XCTAssertTrue(status.contains("Overdue"), "got: \(status)")
+    }
+
+    func testStatus_snoozedOverdueReminder_speaksSnoozedNotOverdue() {
+        let now = Date(timeIntervalSince1970: 1_780_000_000)
+        let status = TakeRowView.statusDescription(for: reminderTake(offset: -3600, now: now),
+                                                   now: now, isSnoozed: true)
+        XCTAssertTrue(status.contains("Snoozed"), "got: \(status)")
+        XCTAssertFalse(status.contains("Overdue"), "got: \(status)")
+    }
+
+    func testStatus_futureReminder_speaksNeither() {
+        let now = Date(timeIntervalSince1970: 1_780_000_000)
+        let status = TakeRowView.statusDescription(for: reminderTake(offset: 3600, now: now), now: now)
+        XCTAssertFalse(status.contains("Overdue"), "got: \(status)")
+        XCTAssertFalse(status.contains("Snoozed"), "got: \(status)")
+    }
+
+    func testStatus_repeatingReminderWithPastAnchor_isNeverOverdue() {
+        // A repeating reminder's anchor sits in the past by design yet it always
+        // has a next occurrence — isOverdue(now:) returns false when repeats is
+        // true, so the row must not speak "Overdue".
+        let now = Date(timeIntervalSince1970: 1_780_000_000)
+        let status = TakeRowView.statusDescription(
+            for: reminderTake(offset: -3600, now: now, recurrence: .daily), now: now)
+        XCTAssertFalse(status.contains("Overdue"), "got: \(status)")
+    }
 }
