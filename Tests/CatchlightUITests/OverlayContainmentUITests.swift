@@ -6,13 +6,15 @@
 //  content behind an overlay must leave the accessibility tree while the
 //  overlay is up, and return when it closes.
 //
-//  INSTRUMENT LIMIT, measured 2026-08-20: XCUITest is NOT affected by
-//  SwiftUI accessibility-tree modifiers — a subtree under a SwiftUI
-//  `.accessibilityHidden(true)` (even hardcoded) still resolves in element
-//  queries, because XCUITest snapshots the raw element tree that assistive
-//  technologies then filter. So these tests assert only the UIKIT-level
-//  containment (`accessibilityElementsHidden` on the timeline collection,
-//  which XCUITest does honour) plus the must-stay-reachable guarantees.
+//  INSTRUMENT LIMIT, measured 2026-08-20 (container AND leaf, hardcoded
+//  true): SwiftUI `.accessibilityHidden` is invisible to XCUITest — the
+//  hidden element still resolves and can even be tapped. This is SPECIFIC
+//  to the hidden channel: SwiftUI labels, values and traits ARE readable
+//  (A11yStateUITests proves it), and UIKit-level
+//  `accessibilityElementsHidden` IS honoured (asserted below). `.isModal`
+//  and custom-action enumeration are also unobservable, by design. So these
+//  tests assert only the UIKIT-level containment (the timeline collection)
+//  plus the must-stay-reachable guarantees.
 //  The SwiftUI-level halves — the dock, the Storyboard's SwiftUI rows, and
 //  the splash — are covered by the same conditional pattern and verified by
 //  the owner's device pass (VoiceOver flick-through; Voice Control

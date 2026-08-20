@@ -301,11 +301,6 @@ struct StoryboardView: View {
     private func row(for take: Take) -> some View {
         TakeCardSurface(take: take, linksInteractive: !isEditing)
             .opacity(isEditing ? 0.12 : 1)
-            // AX-hidden while the Storyboard editor is open (audit 2026-08,
-            // RV-4/VC3): the dimmed rows stayed in the accessibility tree behind
-            // the editor. The `storyboard-save` catcher and the edit panel are
-            // in the overlay, not here, so they stay reachable.
-            .accessibilityHidden(isEditing)
             .contentShape(Rectangle())
             // While editing, the full-screen catcher above absorbs taps first; this remains
             // as the not-editing path (and a harmless fallback).
@@ -322,6 +317,15 @@ struct StoryboardView: View {
             .accessibilityIdentifier("storyboard-row")
             .accessibilityHint("Double-tap to edit this Take.")
             .accessibilityActions { rowMenu(for: take) }
+            // AX-hidden while the Storyboard editor is open (audit 2026-08,
+            // RV-4/VC3): the dimmed rows must leave the accessibility tree. LAST
+            // in the chain, AFTER the .combine element is created — placed before
+            // it, the hide binds to the pre-combine view and the combined element
+            // escapes it (the same ordering class as D-214's element-before-label
+            // rule). NOTE: SwiftUI .accessibilityHidden is invisible to XCUITest
+            // at any position (measured 2026-08-20, leaf and container), so this
+            // is device-verified, not machine-asserted.
+            .accessibilityHidden(isEditing)
     }
 
     private var emptyState: some View {
