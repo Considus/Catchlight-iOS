@@ -208,6 +208,14 @@ enum Wiring {
             // UI-test runs start with the tour complete; the orientation flow
             // itself is covered by FirstRunOrientationTests (unit).
             model.orientation.step = 5
+            // `--uitesting-restore` lands the run on the second-device restore
+            // sheet (audit 2026-08, V8/T7): the phrase grid is otherwise
+            // unreachable under test — onboarding is skipped and Settings opens
+            // by a gesture. Same test-seam rationale as `--uitesting-locked-capture`
+            // (D-214). SettingsView reads the same argument to raise its sheet.
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-restore") {
+                model.ui.isSettingsPresented = true
+            }
             return model
         }
         #endif
