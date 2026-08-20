@@ -52,7 +52,17 @@ struct SettingsView: View {
     /// entry sheet. Two bools so the warning always precedes entry and each dismisses
     /// independently.
     @State private var showSecondDeviceWarning = false
-    @State private var showSecondDeviceEntry = false
+    @State private var showSecondDeviceEntry: Bool = {
+        // DEBUG test seam (V8/T7): present the restore sheet directly under
+        // `--uitesting-restore` — Wiring raises Settings, this raises the sheet.
+        // The destructive-warning alert gate is a UI affordance, not a data
+        // guard: entry itself destroys nothing (the wipe happens on Restore).
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("--uitesting-restore")
+        #else
+        return false
+        #endif
+    }()
     /// Presents the Files document picker for the offline "Import from a file" path (D-104).
     @State private var showFileImporter = false
     /// Confirm gate for the folder "Import notes" path: re-scanning the Import folder
