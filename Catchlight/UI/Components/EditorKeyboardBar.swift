@@ -121,7 +121,10 @@ struct EditorKeyboardBar: View {
 
             // 3 — Important: the app's Important glyph, an exclamation "!".
             // Ember when flagged, else Ember accent.
-            slot(enabled: true, label: "Important", action: config.onToggleImportant) {
+            slot(enabled: true, label: "Important",
+                 value: config.isImportant ? "on" : "off",
+                 selected: config.isImportant,
+                 action: config.onToggleImportant) {
                 ImportantGlyph(size: 24)
                     .foregroundStyle(config.isImportant ? Color.ckEmber : Color.ckAccent)
             }
@@ -163,9 +166,16 @@ struct EditorKeyboardBar: View {
     /// `BottomDockView.dockRing`, owner 2026-06-19) with a centred glyph, in a
     /// 44pt button.
     @ViewBuilder
+    /// `value`/`selected` (V11, audit 2026-08): a STATE toggle keeps its fixed
+    /// label and speaks its state as a value + the selected trait — the dock
+    /// filters' pattern. (The bell and the tick change their LABEL instead,
+    /// deliberately: a changing label says what the button will DO next; a value
+    /// says what the state IS. Important is a state.)
     private func slot<Glyph: View>(enabled: Bool,
                                    identifier: String? = nil,
                                    label: String,
+                                   value: String? = nil,
+                                   selected: Bool = false,
                                    action: @escaping () -> Void,
                                    @ViewBuilder glyph: () -> Glyph) -> some View {
         Button(action: action) {
@@ -182,5 +192,7 @@ struct EditorKeyboardBar: View {
         .disabled(!enabled)
         .accessibilityIdentifier(identifier ?? "")
         .accessibilityLabel(label)
+        .accessibilityValue(value ?? "")
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }

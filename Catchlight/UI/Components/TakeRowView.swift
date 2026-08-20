@@ -90,16 +90,18 @@ struct TakeRowView: View {
     /// Composed VoiceOver label: text + status (+ progress) + reminder date.
     /// Example: "Buy milk. Task, 3 of 5 complete." or "The north star. Obie, your
     /// pinned Take. Note. Reminder set. Tomorrow at 3 PM."
-    private var rowAccessibilityLabel: String { Self.accessibilityLabel(for: take) }
+    private var rowAccessibilityLabel: String { Self.accessibilityLabel(for: take, isSnoozed: isSnoozed) }
 
     /// STATIC so the UIKit timeline's cell (`TimelineReadCell`) speaks a row identically — it
     /// draws `TakeCardSurface` directly rather than going through this view, so without a shared
     /// helper the two would drift (as the checkbox glyph did once this stopped being one view).
-    static func accessibilityLabel(for take: Take) -> String {
+    static func accessibilityLabel(for take: Take,
+                                   now: Date = Date(),
+                                   isSnoozed: Bool = false) -> String {
         let line = take.plainText
             .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
             .first.map(String.init) ?? ""
-        var parts: [String] = [line, statusDescription(for: take)]
+        var parts: [String] = [line, statusDescription(for: take, now: now, isSnoozed: isSnoozed)]
         if let when = TakeCardSurface.reminderString(for: take) { parts.append(when) }
         return parts.filter { !$0.isEmpty }.joined(separator: ". ")
     }
@@ -114,7 +116,9 @@ struct TakeRowView: View {
     /// The spoken status (Obie / Task + progress / Note / reminder-set) portion of
     /// the row label, without the first line or the formatted reminder date.
     /// Internal + static so the progress/completed wording is unit-testable.
-    static func statusDescription(for take: Take) -> String {
+    static func statusDescription(for take: Take,
+                                  now: Date = Date(),
+                                  isSnoozed: Bool = false) -> String {
         var parts: [String] = []
         if take.isObie { parts.append("Obie, your pinned Take") }
         if take.isTask {
@@ -124,7 +128,20 @@ struct TakeRowView: View {
                 parts.append(take.isComplete ? "Task, complete" : "Task")
             }
         }
-        if take.timeReminder != nil { parts.append("Reminder set") }
+        if let reminder = take.timeReminder {
+            parts.append("Reminder set")
+            // V4 (audit 2026-08): the visible ruby "OVERDUE"/"SNOOZED" lane is
+            // accessibility-hidden on the promise that the row label speaks the
+            // state — this is that promise. Snoozed wins over Overdue (D-058/D-060:
+            // a snoozed overdue reminder reads SNOOZED). `isOverdue(now:)` is the
+            // single overdue rule (the card edge uses the same one); a repeating
+            // reminder is never overdue by that rule.
+            if isSnoozed {
+                parts.append("Snoozed")
+            } else if reminder.isOverdue(now: now) {
+                parts.append("Overdue")
+            }
+        }
         if let loc = take.locationReminder {
             // A silent place tag (alarm off) doesn't remind — say so for VoiceOver.
             if loc.alarmEnabled {
