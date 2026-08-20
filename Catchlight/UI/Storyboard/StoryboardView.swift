@@ -173,12 +173,23 @@ struct StoryboardView: View {
                 // Transparent catcher: a tap ANYWHERE off the editor commits. It sits above the
                 // dimmed list, so the read cards' own tap handlers no longer have to serve as
                 // commit targets (they still do, harmlessly, if one ever gets through).
+                // D-214 pattern (audit 2026-08, V2). Measured 2026-08-20 before this
+                // change: the bare label DID surface as an element on iOS 18.6 — the
+                // "label without .accessibilityElement() is a no-op" caution did not
+                // reproduce. `.accessibilityElement()` is added anyway so the element
+                // is explicit, matching the other two editors, with the button trait,
+                // the test identifier, and a negative sort priority so the full-screen
+                // catcher never leads the reading order.
                 Color.clear
                     .contentShape(Rectangle())
                     .ignoresSafeArea()
                     .onTapGesture { commitEdit() }
+                    .accessibilityElement()
                     .accessibilityLabel("Save and close")
                     .accessibilityHint("Double-tap to save this Take and stop editing.")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityIdentifier("storyboard-save")
+                    .accessibilitySortPriority(-1)
                 editPanel
             }
             .transition(.opacity)
@@ -295,7 +306,12 @@ struct StoryboardView: View {
             }
             .contextMenu { rowMenu(for: take) }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel(TakeRowView.statusDescription(for: take))
+            // V1 (audit 2026-08): `statusDescription` speaks status alone, so every
+            // row announced identically ("Task, 0 of 1 complete"). Use the SAME
+            // composed label as the timeline rows — text + status + reminder time —
+            // so rows are distinguishable by ear. Shared static, per the drift rule.
+            .accessibilityLabel(TakeRowView.accessibilityLabel(for: take))
+            .accessibilityIdentifier("storyboard-row")
             .accessibilityHint("Double-tap to edit this Take.")
             .accessibilityActions { rowMenu(for: take) }
     }
