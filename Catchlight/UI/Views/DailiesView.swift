@@ -353,7 +353,13 @@ struct DailiesView: View {
                 // while `restoreAwaitingFolder`), not an overlay here (owner 2026-07-02).
                 emptyState
             } else {
+                // AX-hidden while editing in place (audit 2026-08, RV-4/VC3): the rows
+                // dim visually but stayed in the accessibility tree, so VoiceOver could
+                // reach a background Take mid-edit and Voice Control still spoke its
+                // name. Rows only — the editor and its `dailies-save` catcher are
+                // siblings below and stay reachable. Returns when the edit closes.
                 timeline
+                    .accessibilityHidden(ui.isEditingInPlace)
             }
 
             // New-Take editor, anchored above the keyboard (owner 2026-06-22): it rises
@@ -1109,6 +1115,11 @@ struct DailiesView: View {
             // M4.6 — fade + disable the collection while editing (cards recede, taps fall
             // through to the save catcher). Covers both existing-edit and new-Take.
             isEditing: ui.isEditingInPlace,
+            // Rows leave the accessibility tree behind EITHER overlay (audit
+            // 2026-08: RV-4/VC3 for the editor, V5 for the Focus-ring fan) —
+            // set at the UIKit level, where the row elements are actually
+            // vended; the SwiftUI wrapper modifier was measured not to reach them.
+            axHidden: ui.isEditingInPlace || ui.isFocusRingFanPresented,
             // Task 6.19 (re-wired 2026-07-23): the Spotlight deep-link target. The
             // pinned Obie never enters the collection — its flash rides rowContent's
             // background and is cleared by the onChange below — so it's filtered out
