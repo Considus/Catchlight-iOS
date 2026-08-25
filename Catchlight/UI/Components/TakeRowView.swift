@@ -116,15 +116,21 @@ struct TakeRowView: View {
     ///
     /// Tier 2 of D-217 (the page title) is deliberately NOT built: the title is never
     /// saved, and re-fetching it is ruled out — a data change behind a separate feature.
-    /// Emails are left exactly as written (a `mailto:` match is not a web link and its
-    /// spoken form is a separate finding). A line with no web link returns unchanged.
+    ///
+    /// VC4 (D-227): an email takes the same shape as a link — the address leaves the
+    /// spoken words and "Email to bob at example.com" is appended. The spoken "at"
+    /// (never "@") is the point: it survives Voice Control's punctuation stripping,
+    /// so the utterance stays sayable. A line with no link and no email returns
+    /// unchanged, byte for byte.
     static func spokenLine(for line: String) -> String {
-        let webLinks = LinkDetector.detect(in: line).filter { $0.url.scheme != "mailto" }
-        guard !webLinks.isEmpty else { return line }
+        let matches = LinkDetector.detect(in: line)
+        guard !matches.isEmpty else { return line }
+        let webLinks = matches.filter { $0.url.scheme != "mailto" }
+        let emails = matches.filter { $0.url.scheme == "mailto" }
 
         var kept: [Substring] = []
         var cursor = line.startIndex
-        for match in webLinks {
+        for match in matches.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
             kept.append(line[cursor..<match.range.lowerBound])
             cursor = match.range.upperBound
         }
@@ -132,16 +138,37 @@ struct TakeRowView: View {
         let words = kept.joined()
             .split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
 
+        var phrases: [String] = []
+
         let domains = webLinks.compactMap { match in
             match.url.host.map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 }
         }
-        guard let first = domains.first else { return words.isEmpty ? line : words }
-        var phrase = "Link to \(first)"
-        if webLinks.count > 1 {
-            phrase += webLinks.count == 2 ? " and 1 more link"
-                                          : " and \(webLinks.count - 1) more links"
+        if let first = domains.first {
+            var phrase = "Link to \(first)"
+            if webLinks.count > 1 {
+                phrase += webLinks.count == 2 ? " and 1 more link"
+                                              : " and \(webLinks.count - 1) more links"
+            }
+            phrases.append(phrase)
         }
-        return words.isEmpty ? phrase : "\(words). \(phrase)"
+
+        let addresses = emails.map { match -> String in
+            let absolute = match.url.absoluteString
+            let raw = absolute.hasPrefix("mailto:") ? String(absolute.dropFirst(7)) : absolute
+            let halves = raw.split(separator: "@", maxSplits: 1)
+            return halves.count == 2 ? "\(halves[0]) at \(halves[1])" : raw
+        }
+        if let first = addresses.first {
+            var phrase = "Email to \(first)"
+            if emails.count > 1 {
+                phrase += emails.count == 2 ? " and 1 more email"
+                                            : " and \(emails.count - 1) more emails"
+            }
+            phrases.append(phrase)
+        }
+
+        let spoken = ([words] + phrases).filter { !$0.isEmpty }.joined(separator: ". ")
+        return spoken.isEmpty ? line : spoken
     }
 
     /// The Iris's spoken label — shared with the UIKit cell for the same reason.
