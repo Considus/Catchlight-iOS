@@ -220,10 +220,11 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         let fireAt = Date().addingTimeInterval(SettingsViewModel.SnoozeDuration.current.seconds)
         // The ORIGINAL "when" text, stamped at first schedule and carried across snoozes,
         // so the re-nudge reads "Originally due …" rather than the (redundant) re-fire
-        // time. Fall back to the current subtitle for notifications scheduled before this
-        // existed (only true for ones already pending at upgrade).
-        let dueText = (request.content.userInfo[ReminderScheduler.dueTextKey] as? String)
-            ?? request.content.subtitle
+        // time. S1 (audit 2026-08): ONLY a stamped value may be templated — the old
+        // subtitle fallback pushed a geofence's "When you arrive at ⟨place⟩" (which
+        // stamps no due text, having no due date) through the "Originally due ⟨date⟩"
+        // template. Unstamped notifications now read plain "Snoozed", which is true.
+        let dueText = (request.content.userInfo[ReminderScheduler.dueTextKey] as? String) ?? ""
         // Snoozing replaces the automatic follow-up chain with the user's chosen re-nudge —
         // clear the pending follow-ups so they don't double up (owner 2026-06-28).
         UNUserNotificationCenter.current()

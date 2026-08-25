@@ -533,7 +533,7 @@ public final class ReminderScheduler {
             guard delay > 0 else { continue }   // never schedule a past trigger
             let request = UNNotificationRequest(
                 identifier: Self.followUpIdentifier(base: take.id.uuidString, index: index),
-                content: followUpContent(for: take),
+                content: followUpContent(for: take, originallyDue: afterFire),
                 trigger: UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false))
             center.add(request)
         }
@@ -542,14 +542,20 @@ public final class ReminderScheduler {
     /// Content for a follow-up nudge — the Take's text as title (the same single
     /// boundary-crossing as the reminder), a "still not done" subtitle, grouped under the
     /// reminder's thread and snoozable/dismissable like the original.
-    private func followUpContent(for take: Take) -> UNMutableNotificationContent {
+    ///
+    /// S1 (audit 2026-08): the `dueTextKey` slot is what a later Snooze templates as
+    /// "Originally due ⟨…⟩", so it must carry the reminder's WHEN — never this
+    /// subtitle. Stamping the subtitle here produced "Snoozed — Originally due
+    /// Reminder — still not done".
+    private func followUpContent(for take: Take, originallyDue: Date) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = Self.notificationTitle(for: take)
         content.subtitle = "Reminder — still not done"
         content.sound = .default
         content.categoryIdentifier = Self.category(for: take)
         content.threadIdentifier = take.id.uuidString
-        content.userInfo[Self.dueTextKey] = content.subtitle
+        content.userInfo[Self.dueTextKey] = Self.subtitle(for: originallyDue,
+                                                          isAllDay: take.timeReminder?.isAllDay ?? false)
         content.interruptionLevel = .timeSensitive
         return content
     }

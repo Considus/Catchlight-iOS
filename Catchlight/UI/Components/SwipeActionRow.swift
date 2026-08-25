@@ -39,6 +39,12 @@ struct SwipeAction {
     var title: String
     var systemImage: String
     var tint: Color
+    /// Colour of the glyph + label drawn ON the fill. Defaults to white (the
+    /// ruby Delete fill keeps it); the Ember "Done" fills pass `.ckOnAccent`
+    /// (audit 2026-08, C1) — white on Ember is 2.24:1, Ink on Ember is 8.62:1,
+    /// per the theme's own rule that raw Ember is only ever a fill BEHIND
+    /// `ckOnAccent` content.
+    var contentColor: Color = .white
     var style: Style
     var perform: () -> Void
 }
@@ -163,7 +169,7 @@ struct SwipeActionRow<Content: View>: View {
                 Text(action.title)
                     .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(action.contentColor)
             .padding(centersActionLabel ? .horizontal : (edge == .leading ? .leading : .trailing), 8)
         }
         .frame(width: max(0, width))
