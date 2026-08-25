@@ -25,6 +25,7 @@
 //
 
 import SwiftUI
+import UIKit
 import CatchlightCore
 
 @Observable
@@ -317,6 +318,17 @@ final class UIState {
     /// views to a value-observing modifier (which tripped SwiftUI's type-checker).
     static let fanFade: Animation = .easeInOut(duration: 0.2)
 
+    /// M1 (audit 2026-08): the same fade, gated on Reduce Motion — nil (instant)
+    /// when the user asked for less movement, exactly as StoryboardView gates the
+    /// identical transitions. This class is not a View, so the gate reads the
+    /// UIKit global rather than the environment key; both reflect the same
+    /// setting, and it is read LIVE on every call rather than captured. Views
+    /// with environment access (DailiesView, StoryboardView) gate with
+    /// `reduceMotion ? nil : UIState.fanFade` instead — same truth, same result.
+    static var gatedFanFade: Animation? {
+        UIAccessibility.isReduceMotionEnabled ? nil : fanFade
+    }
+
     /// Whether the fan lifts the tapped Take's card back LIT above the veil (owner 2026-06-16).
     /// True from a timeline Iris — the spotlight is what keeps that one Take readable while the
     /// rest dims. FALSE whenever the EDITOR is the context: the editor already IS the context, and
@@ -331,7 +343,7 @@ final class UIState {
     func openFocusRingFan(for take: Take, origin: CGPoint = .zero, showsCard: Bool = true) {
         focusRingFanOrigin = origin
         focusRingFanShowsCard = showsCard && origin != .zero
-        withAnimation(Self.fanFade) { focusRingFanTake = take }
+        withAnimation(Self.gatedFanFade) { focusRingFanTake = take }
     }
 
     /// Dismiss the focus-ring fan. `animated: false` removes the overlay WITHOUT the
@@ -342,7 +354,7 @@ final class UIState {
     /// (owner 2026-07-11). With no transition there is nothing to strand.
     func closeFocusRingFan(animated: Bool = true) {
         if animated {
-            withAnimation(Self.fanFade) { focusRingFanTake = nil }
+            withAnimation(Self.gatedFanFade) { focusRingFanTake = nil }
         } else {
             var tx = Transaction()
             tx.disablesAnimations = true
@@ -360,10 +372,10 @@ final class UIState {
         // floating toolbar and a stuck "search bar, no keyboard" state. Opening a Take
         // to edit now exits search first, handing the keyboard cleanly to the editor.
         if dockMode == .searching { exitToResting() }
-        withAnimation(Self.fanFade) { editingTakeID = take.id }
+        withAnimation(Self.gatedFanFade) { editingTakeID = take.id }
     }
 
     func endEditingInPlace() {
-        withAnimation(Self.fanFade) { editingTakeID = nil }
+        withAnimation(Self.gatedFanFade) { editingTakeID = nil }
     }
 }
