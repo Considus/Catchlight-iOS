@@ -91,7 +91,15 @@ struct AboutView: View {
                         Label("Copy version and device info", systemImage: "doc.on.doc")
                     }
                 }
-                .accessibilityHint("Long press to copy version and device info.")
+                // V28 (audit 2026-08): a SwiftUI `.contextMenu` is invisible to
+                // VoiceOver on iOS 18.6, so the copy had NO assistive route and the
+                // old hint recommended a long press — a gesture VoiceOver takes for
+                // itself. The named action IS the route; the hint names it in the
+                // V27 wording. The context menu stays for sighted long-pressers.
+                .accessibilityAction(named: "Copy version and device info") {
+                    UIPasteboard.general.string = Self.supportInfoString
+                }
+                .accessibilityHint("Use the actions rotor to copy version and device info.")
         }
         .frame(maxWidth: .infinity, alignment: .center)
     }
