@@ -110,13 +110,17 @@ struct StoryboardView: View {
     // MARK: - The planned Takes
 
     /// Every task-bearing Take that still has work to do, in plain timeline Order — NO
-    /// reordering (owner 2026-06-19: "they sit in timeline order"). Excluded: the Obie
-    /// (its own pinned home is Dailies; `vm.takes` already omits it) and any Take whose
-    /// tasks are ALL complete (`isComplete` — nothing left to plan, owner 2026-06-19).
+    /// reordering (owner 2026-06-19: "they sit in timeline order"). Excluded: any Take
+    /// whose tasks are ALL complete (`isComplete` — nothing left to plan, owner
+    /// 2026-06-19). The Obie is INCLUDED under the same rule (D-226, owner 2026-08-25):
+    /// an Obie with an open task appears here like any other Take — `vm.takes` omits it
+    /// (its pinned home is Dailies), so it joins the candidates from `vm.obie`. No
+    /// pinned position here: it sorts with everything else.
     /// Sort newest-first with an id tie-break (matching the VM's deterministic order),
     /// reversed for Oldest-first.
     private var storyboardTakes: [Take] {
-        let open = vm.takes.filter { $0.isTask && !$0.isComplete }
+        let candidates = vm.takes + [vm.obie].compactMap { $0 }
+        let open = candidates.filter { $0.isTask && !$0.isComplete }
         // MANUAL arrangement (D-195): the Storyboard is a filter over the same Takes and
         // has always sat "in timeline order", so it honours a hand-arranged timeline too —
         // reverting to date order here would read as a bug. There is no drag on this
