@@ -985,6 +985,7 @@ struct ReminderPickerSheet: View {
     /// Shown only when `weekdays` is non-empty (i.e. not plain "Weekly").
     private var weekdaySection: some View {
         let symbols = Calendar.current.veryShortWeekdaySymbols          // index 0 = Sunday
+        let fullNames = Calendar.current.weekdaySymbols                 // index 0 = Sunday
         return HStack(spacing: 6) {
             ForEach(0..<7, id: \.self) { idx in                        // 0 = Sun … 6 = Sat
                 let weekday = idx + 1                                   // Calendar weekday number
@@ -1000,6 +1001,13 @@ struct ReminderPickerSheet: View {
                         .foregroundStyle(isOn ? Color.ckBackground : Color.ckTextPrimary)
                 }
                 .buttonStyle(.plain)
+                // T6 (audit 2026-08): the drawn 38pt circle stays; the hit area
+                // grows to the 44pt floor (inset −3). The expansions meet at the
+                // midline of the 6pt gutter, so neighbours never overlap.
+                .contentShape(Rectangle().inset(by: -3))
+                // T6, VO half: a single letter ("S", "T") is ambiguous spoken.
+                // The full day name is the label; the letter stays the visual.
+                .accessibilityLabel(fullNames[idx])
                 .accessibilityIdentifier("reminder-weekday-\(weekday)")
                 .accessibilityAddTraits(isOn ? [.isSelected] : [])
             }
