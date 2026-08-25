@@ -235,6 +235,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         for block in blocks {
             textViews[block.id]?.accessibilityIdentifier = axIdentifier(for: block, in: blocks)
         }
+        refreshMoveActions(blocks)   // V3: availability follows position, like the ids above
         updateCheckVisuals(blocks)
 
         desiredFocus = focusedBlockID
@@ -384,7 +385,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         }, for: .touchUpInside)
         checkButtons[id] = button
 
-        let handle = UIImageView(image: UIImage(systemName: "line.3.horizontal",
+        let handle = ReorderHandleView(image: UIImage(systemName: "line.3.horizontal",
             withConfiguration: UIImage.SymbolConfiguration(pointSize: 15, weight: .regular)))
         handle.tintColor = UIColor(Color.ckTextSecondary).withAlphaComponent(0.55)
         handle.contentMode = .center
@@ -412,6 +413,66 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         }
         checkButtons[id] = nil
         reorderRowID = reorderRowID.filter { $0.value != id }
+        // V3: a row that stops being a check row stops offering move actions.
+        textViews[id]?.accessibilityCustomActions = nil
+    }
+
+    /// V3 (audit 2026-08, D-224): every check row carries "Move up" / "Move down" as
+    /// custom accessibility actions — the spoken route to reorder, matching the Shot
+    /// List's actions and its sentence case. They live on the row's TEXT VIEW, the
+    /// element VoiceOver lands on (the handle image is not an element and must not
+    /// become one). Recomputed from `apply` on every reconcile rather than set once
+    /// in `addCheckChrome`: availability depends on the row's position among the
+    /// CHECK rows, which changes with every edit, insert or move — the first check
+    /// row offers no "Move up" and the last no "Move down", because an action that
+    /// cannot apply is not offered.
+    private func refreshMoveActions(_ blocks: [TakeBlock]) {
+        let checkIDs = blocks.filter(\.isCheck).map(\.id)
+        for (position, id) in checkIDs.enumerated() {
+            guard let tv = textViews[id] else { continue }
+            var actions: [UIAccessibilityCustomAction] = []
+            if position > 0 {
+                actions.append(UIAccessibilityCustomAction(name: "Move up") { [weak self] _ in
+                    self?.moveCheckRow(id: id, direction: -1) ?? false
+                })
+            }
+            if position < checkIDs.count - 1 {
+                actions.append(UIAccessibilityCustomAction(name: "Move down") { [weak self] _ in
+                    self?.moveCheckRow(id: id, direction: +1) ?? false
+                })
+            }
+            tv.accessibilityCustomActions = actions.isEmpty ? nil : actions
+        }
+    }
+
+    /// Perform a spoken move: place the row directly before (up) or after (down) its
+    /// neighbouring CHECK row — a plain text block between two check rows is stepped
+    /// over, the checklist reorders among itself. Commits through the SAME delegate
+    /// path as `endDrag` (no second reorder route), then posts `.layoutChanged` with
+    /// the row's text view so VoiceOver focus stays on the moved row and the change
+    /// is announced.
+    private func moveCheckRow(id: UUID, direction: Int) -> Bool {
+        guard let row = rowContainers[id], let tv = textViews[id] else { return false }
+        // The stack's arranged order IS the block order (`apply` reconciles it).
+        let orderedIDs = stack.arrangedSubviews.compactMap { v in
+            rowContainers.first(where: { $0.value === v })?.key
+        }
+        let checkOrder = orderedIDs.filter { checkRowIDs.contains($0) }
+        guard let position = checkOrder.firstIndex(of: id),
+              (0..<checkOrder.count).contains(position + direction),
+              let neighbourRow = rowContainers[checkOrder[position + direction]],
+              let neighbourIndex = stack.arrangedSubviews.firstIndex(of: neighbourRow)
+        else { return false }
+        // `insertArrangedSubview` moves an already-arranged view: after the implicit
+        // removal the neighbour sits one slot earlier when moving down, so inserting
+        // at its ORIGINAL index lands the row directly after it; moving up, the
+        // neighbour keeps its index and the row lands directly before it. Same index
+        // semantics as `endDrag`'s placeholder slot.
+        stack.insertArrangedSubview(row, at: neighbourIndex)
+        UIView.animate(withDuration: 0.15) { self.stack.layoutIfNeeded() }
+        delegate?.blockEditor(self, didMoveBlock: id, toIndex: neighbourIndex)
+        UIAccessibility.post(notification: .layoutChanged, argument: tv)
+        return true
     }
 
     // MARK: - Drag-to-reorder
@@ -697,5 +758,22 @@ private extension UITextView {
         guard let start = position(from: beginningOfDocument, offset: range.location),
               let end = position(from: start, offset: range.length) else { return nil }
         return textRange(from: start, to: end)
+    }
+}
+
+/// T1 (audit 2026-08): a 44×44pt touch target on the reorder handle WITHOUT moving a
+/// pixel — the drawn glyph, its 36pt layout width and the row layout are untouched;
+/// only the hit test grows beyond the view's bounds (asymmetrically left/vertically,
+/// since the handle sits at the row's trailing edge). The pan recognizer lives on
+/// this view, so the expanded area feeds the drag directly. NOT an accessibility
+/// element (V3 puts the spoken route on the text view), and no `.accessibilityHidden`
+/// here — on a bare image view that modifier MATERIALISES an element (D-221).
+private final class ReorderHandleView: UIImageView {
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        let dx = max(0, 44 - bounds.width)        // all growth to the LEADING side
+        let dy = max(0, (44 - bounds.height) / 2) // centred vertically
+        return CGRect(x: -dx, y: -dy,
+                      width: bounds.width + dx,
+                      height: bounds.height + dy * 2).contains(point)
     }
 }
