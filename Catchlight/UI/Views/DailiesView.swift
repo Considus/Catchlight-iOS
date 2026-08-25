@@ -329,7 +329,6 @@ struct DailiesView: View {
                 // `spineX` would put the beam's left edge on the spine and hang the
                 // whole shaft to the right of the Iris it is meant to pass through.
                 .offset(x: CatchlightLayout.snappedToPixel(spineX) - TimelineBeam.width / 2)
-                .accessibilityHidden(true)
 
             // The dust in the beam. It belongs HERE, in the screen-fixed spine layer
             // behind the cards, and nowhere else: dust hangs in the room, so it must
@@ -342,7 +341,6 @@ struct DailiesView: View {
                 .padding(.bottom, spineBottomInset)
                 .animation(.easeOut(duration: 0.56), value: keyboardTopY)
                 .offset(x: CatchlightLayout.snappedToPixel(spineX) - TimelineBeam.width / 2)
-                .accessibilityHidden(true)
 
             // A first-launch-empty store shows the Fog line; but when a dock
             // filter is active the timeline (with its own filter-empty line)

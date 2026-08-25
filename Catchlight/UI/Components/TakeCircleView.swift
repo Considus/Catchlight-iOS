@@ -302,7 +302,12 @@ struct TakeCircleView: View {
                       core: 0.040, bloom: 0.180, bounce: 0.115)
             }
         }
-        .accessibilityHidden(true)   // the row exposes a combined label; the disc is decorative there
+        // Decorative in every host: rows expose a combined label, and the callers that
+        // want the disc to speak (editor footer) label their own wrapper. 🚨 Do NOT add
+        // `.accessibilityHidden(true)` here — on iOS 18.6/26.3 the modifier MATERIALIZES
+        // an anonymous, selectable VoiceOver element for this non-textual view instead of
+        // hiding it (measured by AX-tree dump, audit 2026-08 §15; removing it removes the
+        // element). Shape/gradient/canvas content vends nothing by itself.
     }
 
     /// A spoken description of the active types, for callers that DO want the circle
