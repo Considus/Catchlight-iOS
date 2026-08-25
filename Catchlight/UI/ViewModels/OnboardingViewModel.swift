@@ -170,6 +170,22 @@ final class OnboardingViewModel {
         tapBankWord(at: index)
     }
 
+    /// V7 (audit 2026-08, D-228): tapping a filled slot deselects it — the slot's
+    /// label promised this to everyone and did nothing for anyone. The word goes
+    /// BACK TO THE BANK (one used tile showing it is freed), never lost; the freed
+    /// slot is the next to fill, so a mis-placed word is fixed in place. The
+    /// bank's by-index usage tracking is preserved: with a duplicate word placed
+    /// twice, one deselect frees exactly one tile. Inert while the error flash is
+    /// resetting the row, exactly as the bank tiles are.
+    func deselectSlot(at slotIndex: Int) {
+        guard !flashError else { return }
+        guard slots.indices.contains(slotIndex), let word = slots[slotIndex] else { return }
+        slots[slotIndex] = nil
+        if let bankIndex = bank.indices.first(where: { bank[$0] == word && usedBankIndices.contains($0) }) {
+            usedBankIndices.remove(bankIndex)
+        }
+    }
+
     private func validateSlots() {
         let expected = targetPositions.map { mnemonic[$0] }
         let got = slots.compactMap { $0 }
