@@ -107,10 +107,22 @@ struct TakeRowView: View {
     }
 
     /// The Iris's spoken label — shared with the UIKit cell for the same reason.
+    /// The intro already says "Obie — your pinned Take", so the activity list is
+    /// asked to leave the word out (fix 6, audit 2026-08 §15i: it spoke twice).
     static func irisAccessibilityLabel(for take: Take) -> String {
+        let intro = take.isObie ? "Iris. Obie — your pinned Take" : "Iris"
+        let activity = TakeCircleView.activityDescription(for: take, includesObie: false)
+        return activity.isEmpty ? intro : "\(intro). \(activity)"
+    }
+
+    /// The Iris's spoken hint — shared for the same one-string-one-place reason.
+    /// Names the route that works under VoiceOver (the named actions bound on both
+    /// Iris sites); never names long-press, a gesture VoiceOver takes for itself
+    /// (same class as the V27 swipe-up hint).
+    static func irisAccessibilityHint(for take: Take) -> String {
         take.isObie
-            ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
-            : "Iris. \(TakeCircleView.activityDescription(for: take))"
+            ? "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take."
+            : "Opens the Focus ring. Use the actions rotor to make this your Obie."
     }
 
     /// The spoken status (Obie / Task + progress / Note / reminder-set) portion of
@@ -240,12 +252,10 @@ struct TakeRowView: View {
         )
         .accessibilityElement()
         .accessibilityIdentifier(irisIdentifier)
-        .accessibilityLabel(take.isObie
-            ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
-            : "Iris. \(TakeCircleView.activityDescription(for: take))")
-        .accessibilityHint(take.isObie
-            ? "Double-tap to open actions. Long press to turn this back into a standard Take."
-            : "Double-tap to open actions. Long press to make this your Obie.")
+        // Through the shared helpers — this site carried the same two strings
+        // inline, which is exactly how the two copies drifted (fix 6).
+        .accessibilityLabel(Self.irisAccessibilityLabel(for: take))
+        .accessibilityHint(Self.irisAccessibilityHint(for: take))
         // VoiceOver intercepts long-press, so expose the Obie toggle as a named
         // action too. VO activation lands as a tap on the recognizer.
         .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") { onLongPressCircle() }
