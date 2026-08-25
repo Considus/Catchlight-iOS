@@ -68,6 +68,13 @@ struct LockedCaptureView: View {
                     .ignoresSafeArea()
                     .onTapGesture { commit() }
                     .accessibilityElement()
+                    // The DEFAULT activation (what VoiceOver's double-tap invokes) must
+                    // be bound to THIS element explicitly: `.accessibilityElement()`
+                    // synthesises a fresh element, and the tap gesture below it does
+                    // NOT carry over — owner device test 2026-08-21: the button
+                    // announced but double-tap only re-announced. Not a NAMED custom
+                    // action (V27 stands); this is the activate every user reaches.
+                    .accessibilityAction { commit() }
                     .accessibilityLabel("Save and close")
                     .accessibilityHint("Double-tap to save this Take.")
                     .accessibilityAddTraits(.isButton)
