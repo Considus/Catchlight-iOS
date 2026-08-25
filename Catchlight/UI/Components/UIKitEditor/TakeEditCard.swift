@@ -191,7 +191,11 @@ struct TakeEditCard: View {
                     // others — but the IDENTIFIER must survive.
                     .accessibilityElement()
                     .accessibilityIdentifier("editor-shape")
-                    .accessibilityLabel("Take shape")
+                    // The shared Iris label (D-223): the same control must not carry a
+                    // name of its own per host — and this was the only Iris that never
+                    // said what the Take is. Reads the DRAFT, so it follows the shape
+                    // as the user changes it.
+                    .accessibilityLabel(TakeRowView.irisAccessibilityLabel(for: draft))
                     .accessibilityHint("Opens the Focus ring to change what this Take is.")
                     // V10 (audit 2026-08): announce as a button like the Obie row's
                     // Iris — the same control must not read differently per host.
