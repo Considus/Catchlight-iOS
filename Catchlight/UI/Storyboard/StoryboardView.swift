@@ -185,6 +185,9 @@ struct StoryboardView: View {
                     .ignoresSafeArea()
                     .onTapGesture { commitEdit() }
                     .accessibilityElement()
+                    // Default activation bound explicitly — same dead-activation as the
+                    // other two hosts (owner device test 2026-08-21; see DailiesView).
+                    .accessibilityAction { commitEdit() }
                     .accessibilityLabel("Save and close")
                     .accessibilityHint("Double-tap to save this Take and stop editing.")
                     .accessibilityAddTraits(.isButton)

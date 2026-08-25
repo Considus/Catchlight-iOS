@@ -380,6 +380,11 @@ struct DailiesView: View {
                     .ignoresSafeArea()
                     .onTapGesture { saveInlineEdit() }
                     .accessibilityElement()
+                    // The DEFAULT activation must be bound to the synthesised element
+                    // explicitly — the tap gesture below does not carry over, so the
+                    // element announced but double-tap did nothing (owner device test
+                    // 2026-08-21). Not a named custom action (V27 stands).
+                    .accessibilityAction { saveInlineEdit() }
                     .accessibilityLabel("Save and close")
                     .accessibilityHint("Double-tap to save this Take.")
                     .accessibilityAddTraits(.isButton)
