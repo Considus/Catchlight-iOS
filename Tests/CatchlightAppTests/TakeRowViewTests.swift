@@ -129,6 +129,53 @@ final class TakeRowViewTests: XCTestCase {
         XCTAssertFalse(TakeRowView.irisAccessibilityHint(for: standard).contains("Long press"))
     }
 
+    // MARK: - VC1 (audit 2026-08, D-217): a link Take must be addressable by voice
+
+    func testLabel_noLink_byteIdenticalToToday() {
+        // The case that must not move: a linkless Take announces exactly as before.
+        XCTAssertEqual(TakeRowView.accessibilityLabel(for: Take(blocks: [.textLine("Call the framer back")])),
+                       "Call the framer back. Note")
+    }
+
+    func testLabel_textAndLink_speaksWordsThenDomain() {
+        let take = Take(blocks: [.textLine("Watch this later https://www.youtube.com/watch?v=oKd6dpJspQ")])
+        XCTAssertEqual(TakeRowView.accessibilityLabel(for: take),
+                       "Watch this later. Link to youtube.com. Note")
+    }
+
+    func testLabel_linkOnly_speaksDomainAlone() {
+        let take = Take(blocks: [.textLine("https://www.youtube.com/watch?v=oKd6dpJspQ")])
+        XCTAssertEqual(TakeRowView.accessibilityLabel(for: take),
+                       "Link to youtube.com. Note")
+    }
+
+    func testLabel_linkTake_containsNoUrlPunctuation() {
+        // ":", "/" and "?" are what Voice Control mangles into an unsayable name.
+        for text in ["Watch this later https://www.youtube.com/watch?v=oKd6dpJspQ",
+                     "https://www.photobox.co.uk/prints"] {
+            let label = TakeRowView.accessibilityLabel(for: Take(blocks: [.textLine(text)]))
+            XCTAssertFalse(label.contains(":"), "got: \(label)")
+            XCTAssertFalse(label.contains("/"), "got: \(label)")
+            XCTAssertFalse(label.contains("?"), "got: \(label)")
+        }
+    }
+
+    func testLabel_twoLinks_speaksFirstDomainAndCount() {
+        // The multi-link wording is claude-4e's default, flagged changeable —
+        // the owner settles the phrasing (fix-8 step 4).
+        let take = Take(blocks: [.textLine("compare https://a.com/x and https://b.org/y")])
+        XCTAssertEqual(TakeRowView.accessibilityLabel(for: take),
+                       "compare and. Link to a.com and 1 more link. Note")
+    }
+
+    func testLabel_email_unchangedAsToday() {
+        // Step-4 measurement, behaviour deliberately left: an email announces as
+        // written (and Voice Control will mangle it) — a separate finding, not
+        // part of VC1. A mailto match is not stripped and gains no "Link to".
+        XCTAssertEqual(TakeRowView.accessibilityLabel(for: Take(blocks: [.textLine("Email bob@example.com")])),
+                       "Email bob@example.com. Note")
+    }
+
     func testStatus_repeatingReminderWithPastAnchor_isNeverOverdue() {
         // A repeating reminder's anchor sits in the past by design yet it always
         // has a next occurrence — isOverdue(now:) returns false when repeats is
