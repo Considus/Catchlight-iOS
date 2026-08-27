@@ -284,7 +284,14 @@ struct TimelineReadCell: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: false,
+            // Links are LIVE at rest (fix 10, owner 2026-08-25 — "I can't click a link
+            // in a take anymore"). The rewrite shipped `false` with no recorded reason;
+            // measured on 18.6: a tap on the link glyphs opens the link, a tap anywhere
+            // else still opens the editor, and swipe / long-press / context menu are
+            // untouched. The dim-veil case the flag guards elsewhere cannot happen here:
+            // during edit-in-place the save catcher sits ABOVE the collection, so a
+            // dimmed cell's link can never receive the tap (measured — the tap saves).
+            TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: true,
                             // Manual mode: hold the body text clear of the drag handle
                             // drawn over this card's trailing edge. Surface unaffected.
                             trailingContentInset: showsDragHandle ? TimelineDragHandle.contentInset : 0)  // card
