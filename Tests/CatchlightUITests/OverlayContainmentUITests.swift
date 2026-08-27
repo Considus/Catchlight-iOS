@@ -99,12 +99,17 @@ final class OverlayContainmentUITests: XCTestCase {
 
         XCTAssertTrue(anyElement(in: app, id: "storyboard-save").waitForExistence(timeout: 5),
                       "The save catcher must stay reachable while the Storyboard editor is open")
-        // Tap-away commit near the top, clear of the edit panel — RETRIED like
-        // the suite's other synthesized-tap sites: a single swallowed tap left
-        // the editor open, which reads as "rows never returned" below.
+        // Tap-away commit on the DIMMED ROWS region — mid-screen, above the edit
+        // panel and BELOW the top chrome. The old dy 0.08 landed on the opaque
+        // STORYBOARD chrome, which sits above the catcher BY DESIGN (the × must
+        // stay tappable mid-edit), so the tap was swallowed and the assert flaked
+        // (bisected 2026-08-27: fails at the pre-merge SHA too — never a code
+        // regression). The catcher covers the dimmed list, so this point commits.
+        // Dailies' twin test keeps dy 0.08 because ITS heading is inert. RETRIED
+        // like the suite's other synthesized-tap sites.
         let editorBody = app.textViews["take-edit-body"]
         for _ in 0..<3 where editorBody.exists {
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
             if editorBody.waitForNonExistence(timeout: 4) { break }
         }
         XCTAssertTrue(editorBody.waitForNonExistence(timeout: 4),
