@@ -52,10 +52,34 @@ struct LockedCaptureView: View {
                 // "tap the masked area" idiom. BEHIND the editor so the editor stays editable;
                 // it can no longer be a spacer inside a ScrollView because `BlockEditor` does
                 // its own scrolling (nesting it in one is the fight Pillar 1 exists to kill).
+                //
+                // Exposed as a real accessibility element (audit 2026-08, V2): before this,
+                // the only control VoiceOver / Voice Control could reach was the toolbar ×,
+                // which DISCARDS — an assistive-technology user could not save their text.
+                // `.accessibilityElement()` must come first — a label on a `Color.clear`
+                // without it can be a no-op (the StoryboardView pattern). NOT a custom
+                // accessibility action (V27: too hard to find); VoiceOver's double-tap
+                // activation drives the tap gesture directly. The negative sort priority
+                // keeps this full-screen catcher OUT of first place in the reading order —
+                // the user must land on the editor before the save control. The identifier
+                // and label are contract: the XCUITest suite and Voice Control both read them.
                 Color.clear
                     .contentShape(Rectangle())
                     .ignoresSafeArea()
                     .onTapGesture { commit() }
+                    .accessibilityElement()
+                    // The DEFAULT activation (what VoiceOver's double-tap invokes) must
+                    // be bound to THIS element explicitly: `.accessibilityElement()`
+                    // synthesises a fresh element, and the tap gesture below it does
+                    // NOT carry over — owner device test 2026-08-21: the button
+                    // announced but double-tap only re-announced. Not a NAMED custom
+                    // action (V27 stands); this is the activate every user reaches.
+                    .accessibilityAction { commit() }
+                    .accessibilityLabel("Save and close")
+                    .accessibilityHint("Double-tap to save this Take.")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityIdentifier("locked-capture-save")
+                    .accessibilitySortPriority(-1)
 
                 VStack(spacing: 0) {
                     header(isObie: draft.wrappedValue.isObie)
