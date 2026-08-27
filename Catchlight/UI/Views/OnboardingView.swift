@@ -842,11 +842,15 @@ private struct ConfirmStep: View {
                     ? "\(vm.targetPositionsForDisplay[i])"
                     : ""
                 ZStack {
+                    // C5 (audit 2026-08): the error state used raw ckEmber on the
+                    // light surface (~2:1) — the exact pattern D-027/D-028 replaced
+                    // with ckAccent elsewhere and never propagated here. ckAccent
+                    // keeps Night identical (Ember) and gives Daylight #856539.
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(vm.flashError ? Color.ckEmber : Color.ckSpine, lineWidth: 1.5)
+                        .stroke(vm.flashError ? Color.ckAccent : Color.ckSpine, lineWidth: 1.5)
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(vm.flashError ? Color.ckEmber.opacity(0.18) : Color.ckSurface.opacity(0.6))
+                                .fill(vm.flashError ? Color.ckAccent.opacity(0.18) : Color.ckSurface.opacity(0.6))
                         )
                     // Number INLINE, to the left of the word — same arrangement as
                     // the reveal cells (owner 2026-06-15), so the slot reads as a

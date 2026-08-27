@@ -537,6 +537,30 @@ final class ReminderSchedulerTests: XCTestCase {
         }
     }
 
+    /// S1 (audit 2026-08): a follow-up's `dueTextKey` slot is what a later Snooze
+    /// templates as "Originally due ⟨…⟩" — it must carry the reminder's WHEN, never
+    /// the follow-up's own subtitle. The old stamp produced the spoken sentence
+    /// "Snoozed — Originally due Reminder — still not done".
+    func testFollowUps_stampTheDueDateNotTheirSubtitle() throws {
+        UserDefaults.standard.set(true, forKey: SettingsViewModel.FollowUpReminders.defaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: SettingsViewModel.FollowUpReminders.defaultsKey) }
+        let fireDate = now.addingTimeInterval(3600)
+        let take = takeWithReminder(at: fireDate)
+        scheduler.scheduleReminder(for: take)
+
+        let expected = ReminderScheduler.subtitle(for: fireDate, isAllDay: false)
+        let base = take.id.uuidString
+        for index in 1...ReminderScheduler.followUpCount {
+            let id = ReminderScheduler.followUpIdentifier(base: base, index: index)
+            let req = try XCTUnwrap(center.added.first { $0.identifier == id })
+            let stamped = req.content.userInfo[ReminderScheduler.dueTextKey] as? String
+            XCTAssertEqual(stamped, expected,
+                           "follow-up \(index) must stamp the original WHEN")
+            XCTAssertNotEqual(stamped, req.content.subtitle,
+                              "the subtitle must never ride the due-text slot")
+        }
+    }
+
     /// With follow-ups OFF, scheduling a reminder arms NO follow-up nudges.
     func testSchedule_followUpsDisabled_armsNone() {
         UserDefaults.standard.set(false, forKey: SettingsViewModel.FollowUpReminders.defaultsKey)

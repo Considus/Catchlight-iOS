@@ -477,7 +477,9 @@ struct TimelineSwipeCell: View {
             leading: take.canBeMarkedDone
                 ? SwipeAction(title: take.isMarkedDone ? "Not done" : "Done",
                               systemImage: take.isMarkedDone ? "arrow.uturn.left" : "checkmark",
-                              tint: .ckEmber, style: .standard,
+                              // C1 (audit 2026-08): Ember fill BEHIND ckOnAccent
+                              // content — white on Ember was 2.24:1.
+                              tint: .ckEmber, contentColor: .ckOnAccent, style: .standard,
                               perform: { onToggleDone(take) })
                 : nil,
             // Neither a repeating reminder NOR a confirmed delete may fly the row off on

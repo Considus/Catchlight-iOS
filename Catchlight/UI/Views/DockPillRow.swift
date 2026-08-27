@@ -47,7 +47,12 @@ struct DockPill: View {
                        maxHeight: dynamicSize > .large ? nil : .infinity)
                 .background {
                     if secondary {
-                        Capsule().stroke(Color.ckTextPrimary.opacity(0.4), lineWidth: 1)
+                        // C4 (audit 2026-08): the outline is the secondary pill's
+                        // ONLY button affordance. At 0.4 it was 2.62:1 on Paper
+                        // (Night passed at 3.42:1). 0.5 clears the 3:1 UI floor in
+                        // Daylight (3.54:1) and lifts Night to 4.76:1 — same token,
+                        // one alpha, both schemes shown to the owner.
+                        Capsule().stroke(Color.ckTextPrimary.opacity(0.5), lineWidth: 1)
                     } else {
                         Capsule().fill(Color.ckAdd)
                     }

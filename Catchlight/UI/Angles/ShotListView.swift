@@ -172,7 +172,11 @@ struct ShotListView: View {
                 leading: SwipeAction(
                     title: item.isComplete ? "Not done" : "Done",
                     systemImage: item.isComplete ? "circle" : "checkmark.circle",
-                    tint: .ckAccent,
+                    // C1 (audit 2026-08): the fill is raw Ember — the FILL token,
+                    // matching the timeline (`.ckAccent` is a FOREGROUND token and
+                    // was wrong here) — with ckOnAccent content on it.
+                    tint: .ckEmber,
+                    contentColor: .ckOnAccent,
                     style: .standard,
                     perform: { toggle(item.id) }
                 ),
