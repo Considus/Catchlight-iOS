@@ -278,6 +278,9 @@ struct TimelineReadCell: View {
             .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") {
                 onLongPressCircle(take)
             }
+            // V10 (audit 2026-08): the pinned Obie row's Iris carries .isButton; this
+            // one didn't, so the same control announced differently on one screen.
+            .accessibilityAddTraits(.isButton)
             .offset(x: inset - d / 2, y: -d / 2)
     }
 
@@ -317,7 +320,9 @@ struct TimelineReadCell: View {
                 // two rows can't drift apart again.
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("take-row")
-                .accessibilityLabel(TakeRowView.accessibilityLabel(for: take))
+                // isSnoozed threaded through (V4) so a snoozed overdue reminder
+                // speaks "Snoozed" — the cell already holds the flag for the lane.
+                .accessibilityLabel(TakeRowView.accessibilityLabel(for: take, isSnoozed: isSnoozed))
                 .accessibilityHint("Double-tap to edit this Take.")
                 .accessibilityActions {
                     menuItems
