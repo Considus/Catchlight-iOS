@@ -90,31 +90,85 @@ struct TakeRowView: View {
     /// Composed VoiceOver label: text + status (+ progress) + reminder date.
     /// Example: "Buy milk. Task, 3 of 5 complete." or "The north star. Obie, your
     /// pinned Take. Note. Reminder set. Tomorrow at 3 PM."
-    private var rowAccessibilityLabel: String { Self.accessibilityLabel(for: take) }
+    private var rowAccessibilityLabel: String { Self.accessibilityLabel(for: take, isSnoozed: isSnoozed) }
 
     /// STATIC so the UIKit timeline's cell (`TimelineReadCell`) speaks a row identically — it
     /// draws `TakeCardSurface` directly rather than going through this view, so without a shared
     /// helper the two would drift (as the checkbox glyph did once this stopped being one view).
-    static func accessibilityLabel(for take: Take) -> String {
+    static func accessibilityLabel(for take: Take,
+                                   now: Date = Date(),
+                                   isSnoozed: Bool = false) -> String {
         let line = take.plainText
             .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
             .first.map(String.init) ?? ""
-        var parts: [String] = [line, statusDescription(for: take)]
+        var parts: [String] = [spokenLine(for: line),
+                               statusDescription(for: take, now: now, isSnoozed: isSnoozed)]
         if let when = TakeCardSurface.reminderString(for: take) { parts.append(when) }
         return parts.filter { !$0.isEmpty }.joined(separator: ". ")
     }
 
+    /// VC1 (audit 2026-08, D-217): Voice Control builds a row's spoken name from this
+    /// label and strips the punctuation out of it, so a raw URL becomes an utterance
+    /// no person can say — the Take cannot be addressed by voice at all. The spoken
+    /// line is the user's own words with the web links removed, then
+    /// "Link to <domain>" (`www.` stripped) — his words first, then the domain.
+    /// The visible card is untouched; this is the spoken label only.
+    ///
+    /// Tier 2 of D-217 (the page title) is deliberately NOT built: the title is never
+    /// saved, and re-fetching it is ruled out — a data change behind a separate feature.
+    /// Emails are left exactly as written (a `mailto:` match is not a web link and its
+    /// spoken form is a separate finding). A line with no web link returns unchanged.
+    static func spokenLine(for line: String) -> String {
+        let webLinks = LinkDetector.detect(in: line).filter { $0.url.scheme != "mailto" }
+        guard !webLinks.isEmpty else { return line }
+
+        var kept: [Substring] = []
+        var cursor = line.startIndex
+        for match in webLinks {
+            kept.append(line[cursor..<match.range.lowerBound])
+            cursor = match.range.upperBound
+        }
+        kept.append(line[cursor...])
+        let words = kept.joined()
+            .split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+
+        let domains = webLinks.compactMap { match in
+            match.url.host.map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 }
+        }
+        guard let first = domains.first else { return words.isEmpty ? line : words }
+        var phrase = "Link to \(first)"
+        if webLinks.count > 1 {
+            phrase += webLinks.count == 2 ? " and 1 more link"
+                                          : " and \(webLinks.count - 1) more links"
+        }
+        return words.isEmpty ? phrase : "\(words). \(phrase)"
+    }
+
     /// The Iris's spoken label — shared with the UIKit cell for the same reason.
+    /// The intro already says "Obie — your pinned Take", so the activity list is
+    /// asked to leave the word out (fix 6, audit 2026-08 §15i: it spoke twice).
     static func irisAccessibilityLabel(for take: Take) -> String {
+        let intro = take.isObie ? "Iris. Obie — your pinned Take" : "Iris"
+        let activity = TakeCircleView.activityDescription(for: take, includesObie: false)
+        return activity.isEmpty ? intro : "\(intro). \(activity)"
+    }
+
+    /// The Iris's spoken hint — shared for the same one-string-one-place reason.
+    /// Names the route that works under VoiceOver (the named actions bound on both
+    /// Iris sites); never names long-press, a gesture VoiceOver takes for itself
+    /// (same class as the V27 swipe-up hint).
+    static func irisAccessibilityHint(for take: Take) -> String {
         take.isObie
-            ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
-            : "Iris. \(TakeCircleView.activityDescription(for: take))"
+            ? "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take."
+            : "Opens the Focus ring. Use the actions rotor to make this your Obie."
     }
 
     /// The spoken status (Obie / Task + progress / Note / reminder-set) portion of
     /// the row label, without the first line or the formatted reminder date.
     /// Internal + static so the progress/completed wording is unit-testable.
-    static func statusDescription(for take: Take) -> String {
+    static func statusDescription(for take: Take,
+                                  now: Date = Date(),
+                                  isSnoozed: Bool = false) -> String {
         var parts: [String] = []
         if take.isObie { parts.append("Obie, your pinned Take") }
         if take.isTask {
@@ -124,7 +178,20 @@ struct TakeRowView: View {
                 parts.append(take.isComplete ? "Task, complete" : "Task")
             }
         }
-        if take.timeReminder != nil { parts.append("Reminder set") }
+        if let reminder = take.timeReminder {
+            parts.append("Reminder set")
+            // V4 (audit 2026-08): the visible ruby "OVERDUE"/"SNOOZED" lane is
+            // accessibility-hidden on the promise that the row label speaks the
+            // state — this is that promise. Snoozed wins over Overdue (D-058/D-060:
+            // a snoozed overdue reminder reads SNOOZED). `isOverdue(now:)` is the
+            // single overdue rule (the card edge uses the same one); a repeating
+            // reminder is never overdue by that rule.
+            if isSnoozed {
+                parts.append("Snoozed")
+            } else if reminder.isOverdue(now: now) {
+                parts.append("Overdue")
+            }
+        }
         if let loc = take.locationReminder {
             // A silent place tag (alarm off) doesn't remind — say so for VoiceOver.
             if loc.alarmEnabled {
@@ -223,12 +290,10 @@ struct TakeRowView: View {
         )
         .accessibilityElement()
         .accessibilityIdentifier(irisIdentifier)
-        .accessibilityLabel(take.isObie
-            ? "Iris. Obie — your pinned Take. \(TakeCircleView.activityDescription(for: take))"
-            : "Iris. \(TakeCircleView.activityDescription(for: take))")
-        .accessibilityHint(take.isObie
-            ? "Double-tap to open actions. Long press to turn this back into a standard Take."
-            : "Double-tap to open actions. Long press to make this your Obie.")
+        // Through the shared helpers — this site carried the same two strings
+        // inline, which is exactly how the two copies drifted (fix 6).
+        .accessibilityLabel(Self.irisAccessibilityLabel(for: take))
+        .accessibilityHint(Self.irisAccessibilityHint(for: take))
         // VoiceOver intercepts long-press, so expose the Obie toggle as a named
         // action too. VO activation lands as a tap on the recognizer.
         .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") { onLongPressCircle() }

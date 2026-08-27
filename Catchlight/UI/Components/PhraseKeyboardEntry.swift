@@ -177,6 +177,10 @@ struct PhraseTextField: UIViewRepresentable {
         tf.tintColor = UIColor(Color.ckTextObie)          // accent caret
         tf.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
         tf.accessibilityIdentifier = "restore-word-\(index + 1)"
+        // V8 (audit 2026-08): the twelve fields announced as identical unlabelled
+        // text boxes. The label carries the position; the field speaks its own
+        // contents as the value (UITextField default — no explicit value).
+        tf.accessibilityLabel = "Word \(index + 1) of 12"
         return tf
     }
 

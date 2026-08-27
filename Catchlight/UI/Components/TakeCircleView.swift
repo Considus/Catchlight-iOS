@@ -302,19 +302,31 @@ struct TakeCircleView: View {
                       core: 0.040, bloom: 0.180, bounce: 0.115)
             }
         }
-        .accessibilityHidden(true)   // the row exposes a combined label; the disc is decorative there
+        // Decorative in every host: rows expose a combined label, and the callers that
+        // want the disc to speak (editor footer) label their own wrapper. 🚨 Do NOT add
+        // `.accessibilityHidden(true)` here — on iOS 18.6/26.3 the modifier MATERIALIZES
+        // an anonymous, selectable VoiceOver element for this non-textual view instead of
+        // hiding it (measured by AX-tree dump, audit 2026-08 §15; removing it removes the
+        // element). Shape/gradient/canvas content vends nothing by itself.
     }
 
     /// A spoken description of the active types, for callers that DO want the circle
     /// to announce itself (e.g. the edit footer).
-    static func activityDescription(for take: Take) -> String {
+    ///
+    /// `includesObie: false` is for callers whose own label already says "Obie"
+    /// (the Iris label helper) — the word must not be spoken twice in one breath
+    /// (owner device pass, audit 2026-08 §15i). On that path an empty list returns
+    /// "" rather than the "Note" fallback: an Obie carrying no other quality is not
+    /// a Note, and the caller's intro stands alone.
+    static func activityDescription(for take: Take, includesObie: Bool = true) -> String {
         var parts: [String] = []
-        if take.isObie { parts.append("Obie") }
+        if take.isObie && includesObie { parts.append("Obie") }
         if take.isImportant { parts.append("Important") }
         if take.isNote { parts.append("Note") }
         if take.isTask { parts.append(take.isComplete ? "completed Task" : "Task") }
         if take.timeReminder != nil || take.locationReminder != nil { parts.append("Reminder") }
-        return parts.isEmpty ? "Note" : parts.joined(separator: ", ")
+        if parts.isEmpty { return includesObie ? "Note" : "" }
+        return parts.joined(separator: ", ")
     }
 }
 
