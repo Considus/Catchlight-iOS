@@ -861,7 +861,17 @@ private struct ConfirmStep: View {
                 .frame(minHeight: 44)
                 .frame(maxWidth: .infinity)
                 .animation(.easeInOut(duration: 0.18), value: vm.flashError)
+                // V7 (audit 2026-08, D-228): the label below promised "Double-tap to
+                // deselect" with no behaviour behind it — for anyone, not only
+                // VoiceOver. The tap gesture serves sighted fingers; the explicit
+                // `.accessibilityAction` serves VoiceOver's double-tap, because a
+                // gesture does NOT carry onto the synthesised element (the V2
+                // lesson, owner device test 2026-08-21). Both routes are no-ops on
+                // an empty slot and while the error flash is resetting the row.
+                .contentShape(Rectangle())
+                .onTapGesture { vm.deselectSlot(at: i) }
                 .accessibilityElement(children: .ignore)
+                .accessibilityAction { vm.deselectSlot(at: i) }
                 .accessibilityLabel(
                     value.map { "Slot \(positionLabel): \($0). Double-tap to deselect." }
                     ?? "Slot \(positionLabel), empty"
