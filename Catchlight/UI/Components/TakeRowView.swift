@@ -101,9 +101,47 @@ struct TakeRowView: View {
         let line = take.plainText
             .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
             .first.map(String.init) ?? ""
-        var parts: [String] = [line, statusDescription(for: take, now: now, isSnoozed: isSnoozed)]
+        var parts: [String] = [spokenLine(for: line),
+                               statusDescription(for: take, now: now, isSnoozed: isSnoozed)]
         if let when = TakeCardSurface.reminderString(for: take) { parts.append(when) }
         return parts.filter { !$0.isEmpty }.joined(separator: ". ")
+    }
+
+    /// VC1 (audit 2026-08, D-217): Voice Control builds a row's spoken name from this
+    /// label and strips the punctuation out of it, so a raw URL becomes an utterance
+    /// no person can say — the Take cannot be addressed by voice at all. The spoken
+    /// line is the user's own words with the web links removed, then
+    /// "Link to <domain>" (`www.` stripped) — his words first, then the domain.
+    /// The visible card is untouched; this is the spoken label only.
+    ///
+    /// Tier 2 of D-217 (the page title) is deliberately NOT built: the title is never
+    /// saved, and re-fetching it is ruled out — a data change behind a separate feature.
+    /// Emails are left exactly as written (a `mailto:` match is not a web link and its
+    /// spoken form is a separate finding). A line with no web link returns unchanged.
+    static func spokenLine(for line: String) -> String {
+        let webLinks = LinkDetector.detect(in: line).filter { $0.url.scheme != "mailto" }
+        guard !webLinks.isEmpty else { return line }
+
+        var kept: [Substring] = []
+        var cursor = line.startIndex
+        for match in webLinks {
+            kept.append(line[cursor..<match.range.lowerBound])
+            cursor = match.range.upperBound
+        }
+        kept.append(line[cursor...])
+        let words = kept.joined()
+            .split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+
+        let domains = webLinks.compactMap { match in
+            match.url.host.map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 }
+        }
+        guard let first = domains.first else { return words.isEmpty ? line : words }
+        var phrase = "Link to \(first)"
+        if webLinks.count > 1 {
+            phrase += webLinks.count == 2 ? " and 1 more link"
+                                          : " and \(webLinks.count - 1) more links"
+        }
+        return words.isEmpty ? phrase : "\(words). \(phrase)"
     }
 
     /// The Iris's spoken label — shared with the UIKit cell for the same reason.
