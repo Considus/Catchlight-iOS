@@ -370,39 +370,53 @@ struct DailiesView: View {
             // editing, so a tap off the card lands here and commits (tap-away-to-save). Before
             // the card below, so the card stays editable above it.
             if ui.isEditingInPlace {
-                // Exposed as a real accessibility element (audit 2026-08, V2 — the
-                // D-214 pattern from LockedCaptureView): before this, the only
-                // VoiceOver save route was the accidental heading tap, which
-                // announces as a plain header. `.accessibilityElement()` must come
-                // first — a label on a bare `Color.clear` is a no-op without it.
-                // The negative sort priority keeps this full-screen catcher OUT of
-                // first place in the reading order, so the user reaches the editor
-                // before the save control. Label and identifier are contract
-                // (Voice Control + XCUITest).
-                Color.clear
-                    .contentShape(Rectangle())
-                    .ignoresSafeArea()
-                    .onTapGesture { saveInlineEdit() }
-                    .accessibilityElement()
-                    // The DEFAULT activation must be bound to the synthesised element
-                    // explicitly — the tap gesture below does not carry over, so the
-                    // element announced but double-tap did nothing (owner device test
-                    // 2026-08-21). Not a named custom action (V27 stands).
-                    .accessibilityAction { saveInlineEdit() }
-                    .accessibilityLabel("Save and close")
-                    .accessibilityHint("Double-tap to save this Take.")
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityIdentifier("dailies-save")
-                    .accessibilitySortPriority(-1)
-            }
+                // One wrapper around the catcher and the card — the SAME containment
+                // mechanism the Focus-ring fan uses (`.isModal`, RootView). Both
+                // children are full-size, so the ZStack is layout-neutral; it exists
+                // so the modal trait covers the whole editing ensemble and nothing
+                // outside it. See the fix-12 measurement before changing this.
+                ZStack {
+                    // Exposed as a real accessibility element (audit 2026-08, V2 — the
+                    // D-214 pattern from LockedCaptureView): before this, the only
+                    // VoiceOver save route was the accidental heading tap, which
+                    // announces as a plain header. `.accessibilityElement()` must come
+                    // first — a label on a bare `Color.clear` is a no-op without it.
+                    // The negative sort priority keeps this full-screen catcher OUT of
+                    // first place in the reading order, so the user reaches the editor
+                    // before the save control. Label and identifier are contract
+                    // (Voice Control + XCUITest). Drawn before the card below, so the
+                    // card stays editable above it.
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture { saveInlineEdit() }
+                        .accessibilityElement()
+                        // The DEFAULT activation must be bound to the synthesised element
+                        // explicitly — the tap gesture below does not carry over, so the
+                        // element announced but double-tap did nothing (owner device test
+                        // 2026-08-21). Not a named custom action (V27 stands).
+                        .accessibilityAction { saveInlineEdit() }
+                        .accessibilityLabel("Save and close")
+                        .accessibilityHint("Double-tap to save this Take.")
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityIdentifier("dailies-save")
+                        .accessibilitySortPriority(-1)
 
-            // BOTH new-Take and existing-Take edits ride the SAME bottom-anchored `TakeEditCard`
-            // that grows UP from the dockbar (owner consistency pass 2026-07-15), drawn BELOW the
-            // heading so its top dissolves under the heading fade and its bottom always sits above
-            // the dockbar (the top-anchored editPanel ran its bottom off-screen under the keyboard
-            // — "the edit-Take card has no bottom").
-            if ui.isEditingInPlace {
-                newTakeBlockCard
+                    // BOTH new-Take and existing-Take edits ride the SAME bottom-anchored
+                    // `TakeEditCard` that grows UP from the dockbar (owner consistency pass
+                    // 2026-07-15), drawn BELOW the heading so its top dissolves under the
+                    // heading fade and its bottom always sits above the dockbar (the
+                    // top-anchored editPanel ran its bottom off-screen under the keyboard
+                    // — "the edit-Take card has no bottom").
+                    newTakeBlockCard
+                }
+                // Modal to assistive technologies while editing (audit 2026-08, fix 12:
+                // RV-4 dock half / VC3 / §15p). The `.accessibilityHidden` route was
+                // MEASURED inert on this transition — the dock and the background rows
+                // stayed in the tree through a keystroke re-vend — so containment uses
+                // the fan's `.isModal` instead, which is the mechanism the runtime dump
+                // proved seals (V5). Assistive tech stays inside the catcher + card.
+                .accessibilityAddTraits(.isModal)
             }
 
             // Pinned page heading + top fade (cosmetic baseline 2026-06-11):
