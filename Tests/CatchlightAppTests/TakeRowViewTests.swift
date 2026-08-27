@@ -168,12 +168,35 @@ final class TakeRowViewTests: XCTestCase {
                        "compare and. Link to a.com and 1 more link. Note")
     }
 
-    func testLabel_email_unchangedAsToday() {
-        // Step-4 measurement, behaviour deliberately left: an email announces as
-        // written (and Voice Control will mangle it) — a separate finding, not
-        // part of VC1. A mailto match is not stripped and gains no "Link to".
-        XCTAssertEqual(TakeRowView.accessibilityLabel(for: Take(blocks: [.textLine("Email bob@example.com")])),
-                       "Email bob@example.com. Note")
+    // MARK: - VC4 (audit 2026-08, D-227): an email speaks as "Email to bob at example.com"
+
+    func testLabel_email_speaksAtNotSymbol() {
+        // The spoken "at" survives Voice Control's punctuation stripping; the raw
+        // address does not. Same shape as the link rule: the user's words first,
+        // then the phrase. (Supersedes the fix-8 "unchanged as today" pin — the
+        // behaviour was deliberately left then, and decided now.)
+        let label = TakeRowView.accessibilityLabel(for: Take(blocks: [.textLine("Email bob@example.com")]))
+        XCTAssertEqual(label, "Email. Email to bob at example.com. Note")
+        XCTAssertFalse(label.contains("@"), "got: \(label)")
+    }
+
+    func testLabel_emailOnly_speaksPhraseAlone() {
+        XCTAssertEqual(TakeRowView.accessibilityLabel(for: Take(blocks: [.textLine("bob@example.com")])),
+                       "Email to bob at example.com. Note")
+    }
+
+    func testLabel_linkAndEmail_linkPhraseThenEmailPhrase() {
+        let take = Take(blocks: [.textLine("send https://a.com/x to bob@example.com")])
+        XCTAssertEqual(TakeRowView.accessibilityLabel(for: take),
+                       "send to. Link to a.com. Email to bob at example.com. Note")
+    }
+
+    func testLabel_twoEmails_collapseLikeLinks() {
+        // The same shape as the link rule's multi collapse (D-227 "same shape");
+        // the exact multi-email wording is the owner's to overrule.
+        let take = Take(blocks: [.textLine("ask bob@example.com or sue@example.org")])
+        XCTAssertEqual(TakeRowView.accessibilityLabel(for: take),
+                       "ask or. Email to bob at example.com and 1 more email. Note")
     }
 
     func testStatus_repeatingReminderWithPastAnchor_isNeverOverdue() {
