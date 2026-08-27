@@ -106,6 +106,13 @@ struct PrivacyPhraseView: View {
             }
             .dockFadeBackground()
         }
+        // Announce the auth error (audit 2026-08, V14): it appears silently, so a
+        // VoiceOver user whose Face ID was dismissed heard nothing happen.
+        .onChange(of: errorText) { _, error in
+            if let error {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
+        }
     }
 
     private func revealViaDeviceAuth() {
