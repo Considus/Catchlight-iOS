@@ -332,8 +332,11 @@ struct TimelineReadCell: View {
                 .accessibilityActions {
                     menuItems
                     if showsDragHandle {
-                        Button("Move Up") { onNudge(take, -1) }
-                        Button("Move Down") { onNudge(take, 1) }
+                        // Sentence case, matching every other named action in the
+                        // app (the editor checklist and Shot List both say
+                        // "Move up" / "Move down" — audit 2026-08, fix 15).
+                        Button("Move up") { onNudge(take, -1) }
+                        Button("Move down") { onNudge(take, 1) }
                     }
                 }
             // ── The shutter, threaded ────────────────────────────────────────────

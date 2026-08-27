@@ -502,8 +502,10 @@ struct BottomDockView: View {
         .accessibilityIdentifier("filter-tasks")
         .accessibilityLabel("Tasks filter")
         .accessibilityValue(ui.filterTasksDone ? "done only" : (ui.filterTasks ? "on" : "off"))
-        .accessibilityHint("Double-tap to toggle. Long press for completed tasks only.")
-        // Long-press is VoiceOver-incompatible — expose the modifier as a named action.
+        // The hint names the route VoiceOver can actually take (the named action,
+        // via the rotor — V27 wording); long-press is a gesture VoiceOver keeps
+        // for itself. The gesture stays for sighted fingers.
+        .accessibilityHint("Double-tap to toggle. Use the actions rotor for completed tasks only.")
         .accessibilityAction(named: "Completed tasks only") { ui.longPressTasksFilter() }
         .accessibilityAddTraits(ui.filterTasks ? [.isSelected, .isButton] : [.isButton])
     }
@@ -528,7 +530,9 @@ struct BottomDockView: View {
         .accessibilityIdentifier("filter-reminders")
         .accessibilityLabel("Reminders filter")
         .accessibilityValue(ui.filterRemindersExpired ? "expired only" : (ui.filterReminders ? "on" : "off"))
-        .accessibilityHint("Double-tap to toggle. Long press for expired reminders only.")
+        // Same V27 wording as the Tasks toggle above: name the rotor route, keep
+        // the long-press for sighted fingers.
+        .accessibilityHint("Double-tap to toggle. Use the actions rotor for expired reminders only.")
         .accessibilityAction(named: "Expired reminders only") { ui.longPressRemindersFilter() }
         .accessibilityAddTraits(ui.filterReminders ? [.isSelected, .isButton] : [.isButton])
     }
