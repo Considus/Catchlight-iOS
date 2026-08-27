@@ -1179,7 +1179,7 @@ struct DailiesView: View {
         vm.moveTake(movedID, to: destination)
     }
 
-    /// VoiceOver's "Move Up" / "Move Down": one place in DISPLAY order, then through the same
+    /// VoiceOver's "Move up" / "Move down": one place in DISPLAY order, then through the same
     /// commit path as a drag, so both routes can't disagree about what a move means.
     private func nudge(_ take: Take, by delta: Int) {
         var ids = displayedTakes.map(\.id)
