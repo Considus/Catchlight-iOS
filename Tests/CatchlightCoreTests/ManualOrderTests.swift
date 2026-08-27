@@ -48,6 +48,31 @@ final class ManualOrderTests: XCTestCase {
                        "newest-first manual must equal newest-first date order")
     }
 
+    // D-226 (the Storyboard's Obie): `arranged` is handed a Take that has never been
+    // in a manual arrangement — the Obie is not on the timeline's arrangeable list.
+    // It must be PRESENT (a drop here silently reproduces the invisible-Obie bug in
+    // Manual mode only) and sit at its date position among dragged Takes, per the
+    // number-line rule: an undragged Take's effective order IS its createdAt.
+    func testTakeWithNoManualPosition_isKeptAndSitsAtItsDatePosition() {
+        var takes = makeTakes(5)
+        // Drag three of them to explicit positions far below any epoch (a renumbered
+        // arrangement); leave takes[1] (the "Obie") and takes[4] undragged.
+        takes[0].manualOrder = 1.0
+        takes[2].manualOrder = 2.0
+        takes[3].manualOrder = 3.0
+
+        let canonical = ManualOrder.arranged(takes)
+        XCTAssertEqual(canonical.count, takes.count, "arranged must never drop a Take")
+        XCTAssertTrue(canonical.contains { $0.id == takes[1].id },
+                      "a Take with no manual position must still be present")
+        // Undragged Takes carry epoch-scale effective orders, so they sort AFTER the
+        // renumbered ones (the "now" end) and by date between themselves — the same
+        // rule as a new or synced Take, not an arbitrary landing.
+        XCTAssertEqual(canonical.map(\.id),
+                       [takes[0].id, takes[2].id, takes[3].id, takes[1].id, takes[4].id],
+                       "undragged Takes sort to the now end, in date order between themselves")
+    }
+
     // Same-instant creations tie on createdAt, and Swift's sort is not stable — the id
     // tie-break is what stops tied rows shuffling between reloads.
     func testSameInstantTakesOrderDeterministically() {
