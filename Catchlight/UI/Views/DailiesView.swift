@@ -31,6 +31,9 @@ import CatchlightCore
 struct DailiesView: View {
     @Environment(DailiesViewModel.self) private var vm
     @Environment(UIState.self) private var ui
+    /// M1 (audit 2026-08): gates the fan/editor fade and the new-Take bloom, the
+    /// same way StoryboardView gates the identical transitions.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppModel.self) private var app
     @Environment(FirstRunOrientationState.self) private var orientation
     @Environment(ConflictQueue.self) private var conflicts
@@ -1398,9 +1401,12 @@ struct DailiesView: View {
         // Insert the row COLLAPSED (bloom 0.3 → scale 0.92) as the rest masks back, then
         // bloom it in explicitly so the "appear" is visible wherever it lands (owner
         // 2026-06-17 — should feel organic; LazyVStack swallows insertion transitions).
-        newTakeBloom = 0
+        // M1: under Reduce Motion the row simply appears at full size — no
+        // bloom spring, no fade — matching StoryboardView's gating.
+        newTakeBloom = reduceMotion ? 1 : 0
         editDraft = t
-        withAnimation(UIState.fanFade) { ui.editingTakeID = take.id }
+        withAnimation(reduceMotion ? nil : UIState.fanFade) { ui.editingTakeID = take.id }
+        guard !reduceMotion else { return }
         DispatchQueue.main.async {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { newTakeBloom = 1 }
         }
