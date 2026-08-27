@@ -301,6 +301,11 @@ struct StoryboardView: View {
     private func row(for take: Take) -> some View {
         TakeCardSurface(take: take, linksInteractive: !isEditing)
             .opacity(isEditing ? 0.12 : 1)
+            // AX-hidden while the Storyboard editor is open (audit 2026-08,
+            // RV-4/VC3): the dimmed rows stayed in the accessibility tree behind
+            // the editor. The `storyboard-save` catcher and the edit panel are
+            // in the overlay, not here, so they stay reachable.
+            .accessibilityHidden(isEditing)
             .contentShape(Rectangle())
             // While editing, the full-screen catcher above absorbs taps first; this remains
             // as the not-editing path (and a harmless fallback).
