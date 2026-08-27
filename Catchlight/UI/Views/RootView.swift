@@ -430,6 +430,14 @@ struct RootView: View {
                 .padding(.top, 80)
                 .padding(.horizontal, 24)
                 .onTapGesture { orientation.didDismissObieIntro() }
+                // Audit 2026-08, V13: the tap-anywhere dismissal is HID-level — the
+                // catcher above is not an accessibility element and this tap gesture
+                // does not carry onto the tooltip's element — so VoiceOver could
+                // read the hint but never dismiss it. Bind the DEFAULT activation
+                // explicitly (the V2/D-214 lesson: an announced element's double-tap
+                // does nothing without it).
+                .accessibilityAction { orientation.didDismissObieIntro() }
+                .accessibilityHint("Double-tap to dismiss.")
             }
             .transition(.opacity)
             .animation(.easeInOut(duration: 0.2), value: orientation.showObieIntro)
