@@ -35,7 +35,7 @@ struct SecondDeviceRestoreView: View {
                     warningCard
 
                     Text("Enter your privacy phrase")
-                        .font(CatchlightFont.displayFixed(size: 28))
+                        .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                         .foregroundStyle(Color.ckTextPrimary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .accessibilityAddTraits(.isHeader)

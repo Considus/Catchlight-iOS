@@ -93,7 +93,7 @@ struct CloudStorageView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Choose from iCloud Drive or Dropbox")
-                .font(CatchlightFont.displayFixed(size: 28))
+                .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
