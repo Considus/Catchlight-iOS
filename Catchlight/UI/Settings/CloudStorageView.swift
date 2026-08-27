@@ -149,6 +149,10 @@ struct CloudStorageView: View {
                     Button("Remove") { removeFolder() }
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
                         .foregroundStyle(Color.ckRuby)
+                        // T4 (audit 2026-08): a destructive control tapped at its
+                        // ~19pt line. Inset −13 reaches the 44pt hit floor; the
+                        // Spacers either side make the overspill safe.
+                        .contentShape(Rectangle().inset(by: -13))
                         .accessibilityIdentifier("cloud-remove-folder")
                         .accessibilityHint("Return to local-only mode.")
                     Spacer()
@@ -211,6 +215,8 @@ struct CloudStorageView: View {
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
                         .foregroundStyle(hasFolderConfigured ? Color.ckTextObie : Color.ckTextSecondary)
                 }
+                // T4: same 44pt hit floor as Remove above.
+                .contentShape(Rectangle().inset(by: -13))
                 .disabled(!hasFolderConfigured || syncFeedback != nil)
                 .accessibilityIdentifier("cloud-sync-now")
                 .accessibilityHint("Run a sync pass now.")

@@ -233,6 +233,12 @@ struct PaywallView: View {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
             }
+            // T2 (audit 2026-08): bare-text controls tapped at their ~20pt line
+            // height. The inset content shape grows the HIT area to the 44pt
+            // floor (20 + 2×12) with the drawn text untouched — the same
+            // hit-only expansion as T1's point(inside:). Neighbours are the
+            // Spacer gap and the non-interactive terms paragraph, so the
+            // invisible overspill lands on nothing tappable.
             HStack {
                 Button("Restore Purchases") {
                     // A successful restore now confirms itself by dismissing
@@ -241,11 +247,13 @@ struct PaywallView: View {
                     // above — previously success and failure looked identical.
                     Task { if await manager.restore() { dismiss() } }
                 }
+                .contentShape(Rectangle().inset(by: -12))
                 .accessibilityIdentifier("paywall-restore")
                 Spacer()
                 Button("Redeem Code") {
                     redeemOfferCode()
                 }
+                .contentShape(Rectangle().inset(by: -12))
                 .accessibilityIdentifier("paywall-redeem")
             }
             .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
@@ -281,13 +289,18 @@ struct PaywallView: View {
             // (owner 2026-06-12, HiFi v1.11.3). Safe URL construction
             // (2026-07-01): constants today, but a typo in a future edit becomes
             // a missing link rather than a crash.
+            // T2: the 12pt links were the smallest targets in the app (~16pt
+            // line). Inset −14 lifts the hit area to the 44pt floor; the
+            // paragraph above is not tappable, so the overspill is safe.
             HStack {
                 if let privacy = URL(string: "https://catchlight.app/privacy/") {
                     Link("Privacy Policy", destination: privacy)
+                        .contentShape(Rectangle().inset(by: -14))
                 }
                 Spacer()
                 if let terms = URL(string: "https://catchlight.app/terms/") {
                     Link("Terms of Service", destination: terms)
+                        .contentShape(Rectangle().inset(by: -14))
                 }
             }
             .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .footnote))
