@@ -189,13 +189,23 @@ enum Wiring {
             } else {
                 manager.forceStatusForTesting(.lapsed)
             }
+            // `--uitesting-locked-capture` lands the run on `LockedCaptureView` directly
+            // (audit 2026-08, V2): that screen is otherwise unreachable under test — it
+            // needs a LOCKED model AND a pending capture, which only a widget/intent
+            // hand-off produces. Seeds both, so `LockedCaptureUITests` can assert the
+            // save catcher is a real accessibility element. `RootView` never auto-raises
+            // the unlock while a capture is pending, so the run stays on the screen.
+            let startOnLockedCapture =
+                ProcessInfo.processInfo.arguments.contains("--uitesting-locked-capture")
             let model = AppModel(
                 needsOnboarding: false,
                 initialStore: store,
                 session: session,
                 makeStoreFromKeys: { _ in nil },
-                unlockKeys: { throw KeychainError.notFound },   // never invoked: starts unlocked
-                lockState: .unlocked,     // UI tests bypass the lock screen entirely
+                unlockKeys: { throw KeychainError.notFound },   // an attempted save just re-arms the retry hint
+                // UI tests bypass the lock screen — EXCEPT the locked-capture fixture,
+                // which exists to show it.
+                lockState: startOnLockedCapture ? .locked : .unlocked,
                 subscription: manager,
                 // UI tests must not touch the real Spotlight index — keep the
                 // user's device search results clean across runs.
@@ -216,6 +226,9 @@ enum Wiring {
             if ProcessInfo.processInfo.arguments.contains("--uitesting-restore") {
                 model.ui.isSettingsPresented = true
             }
+            // The same blank one-block draft `makeCaptureDraft` builds for a blank
+            // launcher — the editor needs a focusable block for the caret/keyboard.
+            if startOnLockedCapture { model.lockedCapture = Take(blocks: [.textLine("")]) }
             return model
         }
         #endif
