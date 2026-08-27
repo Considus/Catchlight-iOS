@@ -110,6 +110,11 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// catcher behind. This avoids fighting the representable's compositing (the collection
     /// otherwise sits above the SwiftUI veil for hit-testing — tap-between-Takes was dead).
     var isEditing: Bool = false
+    /// Audit 2026-08 (V5 + RV-4/VC3): remove the rows from the accessibility tree
+    /// while an overlay covers them (in-place editor OR the Focus-ring fan).
+    /// Distinct from `isEditing`, which also dims — the fan case hides without
+    /// the editing dim (its own veil does the visual recede).
+    var axHidden: Bool = false
     /// Task 6.19 — the Spotlight deep-link target (nil when none). The VC scrolls the row
     /// into view, pulses it, then fires `onRevealHandled` so the host clears the state.
     var revealTargetID: UUID? = nil
@@ -175,6 +180,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onNudge = onNudge
         vc.apply(groups: groups)
         vc.updateEditing(isEditing)
+        vc.updateAXHidden(axHidden)
         // After apply, so a target set while the data was still loading (e.g. a
         // Spotlight tap on the locked app) can resolve against the fresh rows.
         vc.requestReveal(revealTargetID)
@@ -265,13 +271,14 @@ struct TimelineReadCell: View {
             .accessibilityElement()
             .accessibilityIdentifier("take-iris")
             .accessibilityLabel(TakeRowView.irisAccessibilityLabel(for: take))
-            .accessibilityHint(take.isObie
-                ? "Double-tap to open actions. Long press to turn this back into a standard Take."
-                : "Double-tap to open actions. Long press to make this your Obie.")
+            .accessibilityHint(TakeRowView.irisAccessibilityHint(for: take))
             // VoiceOver intercepts long-press, so the Obie toggle needs a named action too.
             .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") {
                 onLongPressCircle(take)
             }
+            // V10 (audit 2026-08): the pinned Obie row's Iris carries .isButton; this
+            // one didn't, so the same control announced differently on one screen.
+            .accessibilityAddTraits(.isButton)
             .offset(x: inset - d / 2, y: -d / 2)
     }
 
@@ -311,7 +318,9 @@ struct TimelineReadCell: View {
                 // two rows can't drift apart again.
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("take-row")
-                .accessibilityLabel(TakeRowView.accessibilityLabel(for: take))
+                // isSnoozed threaded through (V4) so a snoozed overdue reminder
+                // speaks "Snoozed" — the cell already holds the flag for the lane.
+                .accessibilityLabel(TakeRowView.accessibilityLabel(for: take, isSnoozed: isSnoozed))
                 .accessibilityHint("Double-tap to edit this Take.")
                 .accessibilityActions {
                     menuItems
@@ -942,6 +951,18 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         editingActive = editing
         collectionView.isUserInteractionEnabled = !editing
         UIView.animate(withDuration: 0.22) { self.collectionView.alpha = editing ? 0.14 : 1 }
+    }
+
+    /// Audit 2026-08, V5 + RV-4/VC3: while an overlay (the in-place editor or the
+    /// Focus-ring fan) is up, the rows must LEAVE the accessibility tree, not just
+    /// dim — `alpha` and `isUserInteractionEnabled` do not remove elements, so
+    /// VoiceOver could still reach a background Take and Voice Control still spoke
+    /// its name. Set at the UIKit level because the row elements are vended by
+    /// UIKit: a SwiftUI `.accessibilityHidden` wrapped around the representable
+    /// was measured NOT to reach them (2026-08-20). Separate from `updateEditing`
+    /// because the fan case hides elements WITHOUT the editing dim.
+    func updateAXHidden(_ hidden: Bool) {
+        collectionView.accessibilityElementsHidden = hidden
     }
 
 }

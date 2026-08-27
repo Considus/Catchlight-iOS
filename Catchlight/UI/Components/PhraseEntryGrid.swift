@@ -40,6 +40,9 @@ struct PhraseEntryGrid: View {
                     Text("\(index + 1)")
                         .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
                         .foregroundStyle(Color.ckTextSecondary)
+                        // V8: the field's own label now says the position, so the
+                        // loose visible number is noise to assistive technology.
+                        .accessibilityHidden(true)
                     PhraseTextField(text: $fields[index],
                                     index: index,
                                     focusedIndex: $focusedIndex,
@@ -50,6 +53,12 @@ struct PhraseEntryGrid: View {
                 }
                 .padding(.vertical, 10)
                 .padding(.horizontal, 8)
+                // T7 (audit 2026-08): the cell measured ~42pt and only the inner
+                // field took a touch. Floor the whole cell at 44 (adds 2pt per
+                // row) and make ALL of it a target that focuses its field.
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+                .onTapGesture { focusedIndex = index }
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Color.ckSurface)
