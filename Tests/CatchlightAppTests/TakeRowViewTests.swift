@@ -78,6 +78,57 @@ final class TakeRowViewTests: XCTestCase {
         XCTAssertFalse(status.contains("Snoozed"), "got: \(status)")
     }
 
+    // MARK: - Fix 6 (audit 2026-08 §15i): the Obie Iris said "Obie" twice
+
+    private func occurrences(of word: String, in text: String) -> Int {
+        text.components(separatedBy: word).count - 1
+    }
+
+    func testIrisLabel_obieNote_saysObieExactlyOnce() {
+        let take = Take(blocks: [.textLine("the star")], isObie: true)
+        let label = TakeRowView.irisAccessibilityLabel(for: take)
+        XCTAssertEqual(label, "Iris. Obie — your pinned Take. Important, Note", "got: \(label)")
+        XCTAssertEqual(occurrences(of: "Obie", in: label), 1, "got: \(label)")
+    }
+
+    func testIrisLabel_obieWithNoOtherQuality_speaksImportantNotNote() {
+        // The CAUTION case: could dropping the Obie token leave the activity list
+        // empty and fall it to the "Note" fallback? No — measured: `isObie`'s
+        // didSet forces `isImportant = true` (sticky, by design), so an Obie's
+        // list always carries at least "Important". The fallback is structurally
+        // unreachable for an Obie; the helper still guards it by returning ""
+        // (never a fake "Note") should the model ever decouple the two.
+        let take = Take(blocks: [], isNote: false, isObie: true)
+        XCTAssertTrue(take.isImportant, "isObie must imply isImportant")
+        let label = TakeRowView.irisAccessibilityLabel(for: take)
+        XCTAssertEqual(label, "Iris. Obie — your pinned Take. Important", "got: \(label)")
+        XCTAssertEqual(occurrences(of: "Obie", in: label), 1)
+        XCTAssertFalse(label.contains("Note"), "got: \(label)")
+    }
+
+    func testIrisLabel_standardTake_unchanged() {
+        XCTAssertEqual(TakeRowView.irisAccessibilityLabel(for: Take(blocks: [.textLine("a")])),
+                       "Iris. Note")
+    }
+
+    func testActivityDescription_defaultStillIncludesObie() {
+        // Every existing caller (editor footer included) uses the default and
+        // must not change.
+        let take = Take(blocks: [.textLine("the star")], isObie: true)
+        XCTAssertEqual(TakeCircleView.activityDescription(for: take), "Obie, Important, Note")
+    }
+
+    func testIrisHint_namesTheRotorRoute_neverTheGesture() {
+        let obie = Take(blocks: [.textLine("x")], isObie: true)
+        let standard = Take(blocks: [.textLine("x")])
+        XCTAssertEqual(TakeRowView.irisAccessibilityHint(for: standard),
+                       "Opens the Focus ring. Use the actions rotor to make this your Obie.")
+        XCTAssertEqual(TakeRowView.irisAccessibilityHint(for: obie),
+                       "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take.")
+        XCTAssertFalse(TakeRowView.irisAccessibilityHint(for: obie).contains("Long press"))
+        XCTAssertFalse(TakeRowView.irisAccessibilityHint(for: standard).contains("Long press"))
+    }
+
     func testStatus_repeatingReminderWithPastAnchor_isNeverOverdue() {
         // A repeating reminder's anchor sits in the past by design yet it always
         // has a next occurrence — isOverdue(now:) returns false when repeats is
