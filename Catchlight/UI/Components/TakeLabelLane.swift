@@ -56,7 +56,8 @@ struct TakeLabelLane: View {
                 .rotationEffect(.degrees(-90))     // reads bottom-to-top, glanceable
                 .frame(width: width)
                 .frame(maxHeight: .infinity)
-                .accessibilityHidden(true)         // the row label already speaks the state
+                .accessibilityHidden(true)         // the row label speaks the state (V4:
+                                                   // "Overdue"/"Snoozed" via statusDescription)
         case .colourChip(let colour):
             // FUTURE user label (DEMO render): a slim coloured pill hugging the left
             // edge with an EQUAL gap on left/top/bottom, card-radius corners mirrored,

@@ -332,7 +332,13 @@ struct BottomDockView: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("angle-tab")
         .accessibilityLabel("Storyboard")
-        .accessibilityHint("Opens the Storyboard — every Take with a task. Swipe up on the toolbar to open Settings.")
+        // V27 (audit 2026-08): the hint used to say "Swipe up on the toolbar to
+        // open Settings" — a gesture VoiceOver takes for itself, so the hint
+        // named a route its own listener could never use. Name the route that
+        // works instead: the named action, reached through the actions rotor.
+        // Runtime-verified 2026-08-19 (AX dump, iOS 26.3.1): the "Open Settings"
+        // action IS present on this element — the defect is discoverability.
+        .accessibilityHint("Opens the Storyboard — every Take with a task. Use the actions rotor to open Settings.")
         // The swipe is a VoiceOver-incompatible gesture, so expose Settings as
         // an explicit named action too.
         .accessibilityAction(named: "Open Settings") { ui.isSettingsPresented = true }

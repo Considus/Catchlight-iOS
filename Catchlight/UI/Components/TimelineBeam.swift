@@ -34,6 +34,14 @@
 import SwiftUI
 import CatchlightCore
 
+// 🚨 NO `.accessibilityHidden(true)` ON THE VIEWS IN THIS FILE — NOT ON THEIR BODIES
+// AND NOT AT THEIR CALL SITES. Every struct here (beam, dust, threaded Iris, occluder)
+// is pure shape/gradient/canvas drawing, which vends NO VoiceOver element by itself.
+// On iOS 18.6/26.3 the hide modifier does the opposite of its name on such views: it
+// MATERIALIZES an anonymous, selectable element and then fails to hide it (measured by
+// in-process AX-tree dump, audit 2026-08 §15 — each hidden site vended an element; each
+// removal removed it). The owner's device pass photographed exactly these leaks.
+
 // MARK: - The beam
 
 /// A vertical shaft of light, centred in its frame.
@@ -86,7 +94,6 @@ struct TimelineBeam: View {
         }
         .frame(width: Self.width)
         .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 
     // MARK: Night — additive
@@ -180,7 +187,6 @@ struct BeamDust: View {
         }
         .frame(width: TimelineBeam.width)
         .allowsHitTesting(false)
-        .accessibilityHidden(true)
         .onReceive(NotificationCenter.default.publisher(
             for: .NSProcessInfoPowerStateDidChange).receive(on: RunLoop.main)) { _ in
             lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
@@ -301,7 +307,6 @@ struct ThreadedIris: View {
         }
         .frame(width: diameter, height: diameter, alignment: .topLeading)
         .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 
     /// Degrees to turn this row's catchlight by, from where the Iris sits on SCREEN.
@@ -400,7 +405,6 @@ struct TimelineBeamOccluder: View {
             .frame(width: TimelineBeam.width, height: diameter / 2 - leanTop)
             .offset(y: leanTop)
             .allowsHitTesting(false)
-            .accessibilityHidden(true)
     }
 }
 
