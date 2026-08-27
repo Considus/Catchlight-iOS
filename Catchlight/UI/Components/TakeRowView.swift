@@ -175,9 +175,31 @@ struct TakeRowView: View {
     /// The intro already says "Obie — your pinned Take", so the activity list is
     /// asked to leave the word out (fix 6, audit 2026-08 §15i: it spoke twice).
     static func irisAccessibilityLabel(for take: Take) -> String {
-        let intro = take.isObie ? "Iris. Obie — your pinned Take" : "Iris"
+        // VC2 (audit 2026-08, D-231): the Iris is named for its Take — "Iris, Buy
+        // film" — so Voice Control can address ONE Iris on a timeline where every
+        // Iris otherwise announces identically. The borrowed text is the row's own
+        // spoken first line (VC1's link-safe form), truncated hard: this label
+        // already carries the Obie intro and the activity list.
+        let firstLine = take.plainText
+            .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+            .first.map(String.init) ?? ""
+        let name = irisNameTruncated(spokenLine(for: firstLine))
+        let head = name.isEmpty ? "Iris" : "Iris, \(name)"
+        var parts = [head]
+        if take.isObie { parts.append("Obie — your pinned Take") }
         let activity = TakeCircleView.activityDescription(for: take, includesObie: false)
-        return activity.isEmpty ? intro : "\(intro). \(activity)"
+        if !activity.isEmpty { parts.append(activity) }
+        return parts.joined(separator: ". ")
+    }
+
+    /// D-231's length guard: the borrowed first line is cut word-safe at 40
+    /// characters so the Iris label stays sayable next to the Obie intro and the
+    /// activity list.
+    static func irisNameTruncated(_ text: String, limit: Int = 40) -> String {
+        guard text.count > limit else { return text }
+        let cut = text.prefix(limit)
+        let wordSafe = cut.lastIndex(of: " ").map { cut[..<$0] } ?? cut
+        return String(wordSafe) + "…"
     }
 
     /// The Iris's spoken hint — shared for the same one-string-one-place reason.
