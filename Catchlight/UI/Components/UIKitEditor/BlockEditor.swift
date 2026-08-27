@@ -33,6 +33,13 @@ struct BlockEditor: UIViewControllerRepresentable {
     /// editor must NOT scroll to follow the caret — an overflow there is just the frame lagging the
     /// content by a layout pass, and scrolling jumps the text instead of letting the card grow.
     var atMaxHeight: Bool = false
+
+    /// Audit 2026-08, V31: while the Focus-ring fan is up over this editor, the text
+    /// view must LEAVE the accessibility tree. The host's SwiftUI `.accessibilityHidden`
+    /// does not reach UIKit-vended elements (measured 2026-08-20, same limit as the
+    /// timeline rows), so VoiceOver focus landed on the text behind the fan's veil.
+    /// Set at the UIKit level, the channel the timeline's rows already use.
+    var axHidden: Bool = false
     /// Reports the editor's intrinsic content height, so a host can size a card to
     /// the content (up to an available max, then the editor scrolls internally).
     var onContentHeightChange: ((CGFloat) -> Void)? = nil
@@ -47,6 +54,7 @@ struct BlockEditor: UIViewControllerRepresentable {
         context.coordinator.parent = self
         vc.onContentHeight = onContentHeightChange
         vc.frameAtMax = atMaxHeight
+        vc.updateAXHidden(axHidden)
         vc.setToolbar(context.coordinator.makeToolbarConfig())
         vc.apply(blocks: draft.blocks, focusedBlockID: focusedBlockID)
     }
