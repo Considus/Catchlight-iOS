@@ -134,13 +134,31 @@ struct ShotListView: View {
 
     // MARK: - Rows
 
+    /// Fix 10 (owner 2026-08-25): Shot List text renders its links LIVE, styled as on
+    /// the cards (accent + underline). Detection reuses `LinkDetector.detect` — the
+    /// one URL rule — and mirrors `TakeCardSurface.displayBody`'s treatment.
+    static func linkedText(_ text: String, base: Color) -> AttributedString {
+        var attr = AttributedString(text)
+        attr.foregroundColor = base
+        for match in LinkDetector.detect(in: text) {
+            guard let lo = AttributedString.Index(match.range.lowerBound, within: attr),
+                  let hi = AttributedString.Index(match.range.upperBound, within: attr) else { continue }
+            attr[lo..<hi].link = match.url
+            attr[lo..<hi].foregroundColor = .ckAccent
+            attr[lo..<hi].underlineStyle = .single
+        }
+        return attr
+    }
+
     @ViewBuilder
     private func rowContainer(for block: TakeBlock) -> some View {
         switch block {
         case .text(let textBlock):
-            // Prose is quiet context: smaller, muted, non-interactive (no tick /
-            // reorder / swipe — only checklist items are units).
-            Text(textBlock.text)
+            // Prose is quiet context: smaller, muted, no tick / reorder / swipe —
+            // only checklist items are units. Links ARE live (owner 2026-08-25,
+            // fix 10): they never were here, and there is nothing for them to
+            // collide with — prose has no tap target of its own.
+            Text(Self.linkedText(textBlock.text, base: Color.ckTextSecondary))
                 .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
                 .foregroundStyle(Color.ckTextSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -223,11 +241,15 @@ struct ShotListView: View {
             .accessibilityAction(named: "Move down") { moveItem(item.id, by: 1) }
             .accessibilityAction(named: "Delete item") { deleteItem(item.id) }
 
-            // Item text — non-interactive; completed recedes by COLOUR only (no
-            // strikethrough), matching the normal Take view (`ckTextComplete`).
-            Text(item.text.isEmpty ? " " : item.text)
+            // Item text — completed recedes by COLOUR only (no strikethrough),
+            // matching the normal Take view (`ckTextComplete`). Links are live
+            // (owner 2026-08-25, fix 10): the row's tap target is the CHECKBOX
+            // only (owner 2026-06-18), so a link here collides with nothing —
+            // the swipe still owns horizontal drags (measured).
+            Text(item.text.isEmpty ? AttributedString(" ")
+                 : Self.linkedText(item.text,
+                                   base: item.isComplete ? Color.ckTextComplete : Color.ckTextPrimary))
                 .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .title3))
-                .foregroundStyle(item.isComplete ? Color.ckTextComplete : Color.ckTextPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .lineLimit(1)
                 .accessibilityHidden(true)
