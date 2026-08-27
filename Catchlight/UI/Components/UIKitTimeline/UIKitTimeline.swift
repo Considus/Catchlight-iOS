@@ -271,9 +271,7 @@ struct TimelineReadCell: View {
             .accessibilityElement()
             .accessibilityIdentifier("take-iris")
             .accessibilityLabel(TakeRowView.irisAccessibilityLabel(for: take))
-            .accessibilityHint(take.isObie
-                ? "Double-tap to open actions. Long press to turn this back into a standard Take."
-                : "Double-tap to open actions. Long press to make this your Obie.")
+            .accessibilityHint(TakeRowView.irisAccessibilityHint(for: take))
             // VoiceOver intercepts long-press, so the Obie toggle needs a named action too.
             .accessibilityAction(named: take.isObie ? "Make standard Take" : "Make Obie") {
                 onLongPressCircle(take)

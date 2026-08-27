@@ -312,14 +312,21 @@ struct TakeCircleView: View {
 
     /// A spoken description of the active types, for callers that DO want the circle
     /// to announce itself (e.g. the edit footer).
-    static func activityDescription(for take: Take) -> String {
+    ///
+    /// `includesObie: false` is for callers whose own label already says "Obie"
+    /// (the Iris label helper) — the word must not be spoken twice in one breath
+    /// (owner device pass, audit 2026-08 §15i). On that path an empty list returns
+    /// "" rather than the "Note" fallback: an Obie carrying no other quality is not
+    /// a Note, and the caller's intro stands alone.
+    static func activityDescription(for take: Take, includesObie: Bool = true) -> String {
         var parts: [String] = []
-        if take.isObie { parts.append("Obie") }
+        if take.isObie && includesObie { parts.append("Obie") }
         if take.isImportant { parts.append("Important") }
         if take.isNote { parts.append("Note") }
         if take.isTask { parts.append(take.isComplete ? "completed Task" : "Task") }
         if take.timeReminder != nil || take.locationReminder != nil { parts.append("Reminder") }
-        return parts.isEmpty ? "Note" : parts.joined(separator: ", ")
+        if parts.isEmpty { return includesObie ? "Note" : "" }
+        return parts.joined(separator: ", ")
     }
 }
 
