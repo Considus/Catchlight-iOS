@@ -62,9 +62,15 @@ struct LockView: View {
         // because nothing moves — only the status text changes.
         .onChange(of: app.lockState) { _, state in
             switch state {
-            case .unlocking, .failed:
+            case .failed:
                 UIAccessibility.post(notification: .announcement, argument: message)
             default:
+                // Audit 2026-08, V34: the `.unlocking` announcement is NOT posted —
+                // on a successful Face ID the screen swaps before the words finish
+                // and VoiceOver clipped it to "Authenticate" (owner device report).
+                // The transition itself is announced by RootView's `.screenChanged`
+                // post on unlock; only the FAILURE — where the lock screen stays —
+                // gets a spoken announcement here (V14's real value).
                 break
             }
         }
