@@ -87,7 +87,8 @@ final class TakeRowViewTests: XCTestCase {
     func testIrisLabel_obieNote_saysObieExactlyOnce() {
         let take = Take(blocks: [.textLine("the star")], isObie: true)
         let label = TakeRowView.irisAccessibilityLabel(for: take)
-        XCTAssertEqual(label, "Iris. Obie — your pinned Take. Important, Note", "got: \(label)")
+        // D-231 (VC2): the Iris is named for its Take, name first.
+        XCTAssertEqual(label, "Iris, the star. Obie — your pinned Take. Important, Note", "got: \(label)")
         XCTAssertEqual(occurrences(of: "Obie", in: label), 1, "got: \(label)")
     }
 
@@ -106,9 +107,26 @@ final class TakeRowViewTests: XCTestCase {
         XCTAssertFalse(label.contains("Note"), "got: \(label)")
     }
 
-    func testIrisLabel_standardTake_unchanged() {
+    func testIrisLabel_standardTake_namedForItsTake() {
+        // D-231 (VC2): "Iris, <first line>" so Voice Control can address one Iris.
         XCTAssertEqual(TakeRowView.irisAccessibilityLabel(for: Take(blocks: [.textLine("a")])),
+                       "Iris, a. Note")
+    }
+
+    func testIrisLabel_emptyTake_staysBareIris() {
+        XCTAssertEqual(TakeRowView.irisAccessibilityLabel(for: Take(blocks: [.textLine("")])),
                        "Iris. Note")
+    }
+
+    func testIrisName_truncatesWordSafeAtLimit() {
+        // D-231's length guard: cut word-safe at 40 characters, ellipsis appended.
+        let long = "Pick up the developed rolls from the lab on Thursday afternoon"
+        let name = TakeRowView.irisNameTruncated(long)
+        XCTAssertTrue(name.count <= 41, "got \(name.count): \(name)")
+        XCTAssertTrue(name.hasSuffix("…"), "got: \(name)")
+        XCTAssertEqual(name, "Pick up the developed rolls from the…", "got: \(name)")
+        // Short lines pass through untouched.
+        XCTAssertEqual(TakeRowView.irisNameTruncated("Buy film"), "Buy film")
     }
 
     func testActivityDescription_defaultStillIncludesObie() {
