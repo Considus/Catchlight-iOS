@@ -40,12 +40,49 @@ struct CloudStorageView: View {
 
     private let appGroupDefaults = UserDefaults(suiteName: AppGroup.identifier)
 
+    // Audit 2026-08, DT13: above the default sizes the static content OVERFLOWS —
+    // the body ran over the nav title, the primary button truncated, and the only
+    // vertical gesture DISMISSED the sheet, so cloud setup could not be completed
+    // at accessibility sizes at all (owner device report, bench-reproduced). Gate
+    // matches DockPillRow's D-030 threshold (> .large), like the onboarding
+    // scaffold (DT6): at default sizes the layout is byte-identical to before.
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
     var body: some View {
         NavigationStack {
-            // Static, non-scrolling layout (owner 2026-06-21) — the content fits the
-            // sheet, so it sits still like the About sheet rather than bouncing in a
-            // ScrollView. No Done button either; dismiss by swiping down (the drag
-            // indicator shows the affordance), matching About.
+            Group {
+                if dynamicSize > .large {
+                    // A ScrollView also absorbs the vertical drag, so scrolling
+                    // reaches the content instead of dismissing the sheet.
+                    ScrollView {
+                        sheetContent
+                    }
+                    .scrollIndicators(.hidden)
+                } else {
+                    sheetContent
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(Color.ckBackground)
+            // System inline nav title, matching the other Settings sub-pages
+            // (About / Notice History / Privacy Phrase) — owner 2026-06-29; the
+            // bespoke cloud-glyph hero was the only sub-page that differed.
+            .navigationTitle("Cloud Storage")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDragIndicator(.visible)
+        .sheet(isPresented: $pickerPresented) {
+            FolderPicker { url in
+                handlePickedFolder(url)
+            }
+            .ignoresSafeArea()
+        }
+    }
+
+    /// The sheet's content column — static at default sizes (owner 2026-06-21:
+    /// the content fits, so it sits still like About), scrolled above `.large`
+    /// (DT13).
+    private var sheetContent: some View {
             VStack(alignment: .leading, spacing: 24) {
                 intro
 
@@ -69,21 +106,6 @@ struct CloudStorageView: View {
             .padding(.horizontal, 22)
             .padding(.top, 16)
             .padding(.bottom, 16)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(Color.ckBackground)
-            // System inline nav title, matching the other Settings sub-pages
-            // (About / Notice History / Privacy Phrase) — owner 2026-06-29; the
-            // bespoke cloud-glyph hero was the only sub-page that differed.
-            .navigationTitle("Cloud Storage")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-        .presentationDragIndicator(.visible)
-        .sheet(isPresented: $pickerPresented) {
-            FolderPicker { url in
-                handlePickedFolder(url)
-            }
-            .ignoresSafeArea()
-        }
     }
 
     // MARK: - Sections
