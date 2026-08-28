@@ -171,6 +171,9 @@ struct AboutView: View {
                 }
                 .padding(.vertical, 13)
                 .padding(.horizontal, 16)
+                // Audit 2026-08, T8: the 44pt came out of 13+13+line-box
+                // arithmetic — a constraint holds it regardless of the line box.
+                .frame(minHeight: CatchlightLayout.minTouchTarget)
                 .contentShape(Rectangle())
             }
             .accessibilityLabel(title)
