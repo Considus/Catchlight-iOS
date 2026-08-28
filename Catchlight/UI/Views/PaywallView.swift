@@ -223,6 +223,10 @@ struct PaywallView: View {
         // VoiceOver reads "Subscribe now, purchase in progress" mid-purchase.
         .accessibilityLabel(ctaText)
         .accessibilityValue(manager.isWorking ? "Purchase in progress" : "")
+        // Audit 2026-08, C7: the disabled state had NO visual expression — a
+        // failed product load looked like a live button that does nothing. The
+        // house disabled-dim (ConflictResolution's confirm uses the same 0.38).
+        .opacity(manager.isWorking || manager.annual == nil ? 0.38 : 1)
         .accessibilityIdentifier("paywall-subscribe")
     }
 
