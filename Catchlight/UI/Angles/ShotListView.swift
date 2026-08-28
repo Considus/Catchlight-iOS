@@ -55,7 +55,12 @@ struct ShotListView: View {
     // (the old maxHeight:.infinity fill drove the row taller on first layout, then
     // shrank — the "double-height then jumps the neighbours" report, owner 2026-06-18)
     // and makes the reorder step maths exact.
-    private let rowHeight: CGFloat = 56
+    // Audit 2026-08, DT3: a FIXED 56 clipped the `relativeTo`-scaling 17pt text
+    // at accessibility sizes. Scaled with the same style the item text uses, so
+    // the slot grows with its content — and stays UNIFORM per size, which is
+    // what the reorder step maths and the "double-height then jumps" fix above
+    // actually require (they need equal rows, not 56pt rows).
+    @ScaledMetric(relativeTo: .title3) private var rowHeight: CGFloat = 56
     private let rowLeadingInset: CGFloat = 16
     private let rowTrailingInset: CGFloat = 16
 

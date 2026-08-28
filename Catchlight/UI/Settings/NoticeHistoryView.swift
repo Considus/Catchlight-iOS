@@ -27,7 +27,7 @@ struct NoticeHistoryView: View {
                             .foregroundStyle(Color.ckTextSecondary)
                             .accessibilityHidden(true)
                         Text("No notices yet")
-                            .font(CatchlightFont.displayFixed(size: 28))
+                            .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                         Text("Sync, storage and conflict notices will appear here.")

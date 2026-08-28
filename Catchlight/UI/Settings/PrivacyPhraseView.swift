@@ -82,7 +82,7 @@ struct PrivacyPhraseView: View {
                 // Audit 2026-08, V21: decorative — the heading below carries the meaning.
                 .accessibilityHidden(true)
             Text("Reveal your privacy phrase")
-                .font(CatchlightFont.displayFixed(size: 28))
+                .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
                 // Audit 2026-08, V23: the screen's hero is a heading.
@@ -145,7 +145,7 @@ struct PrivacyPhraseView: View {
                 // Audit 2026-08, V21: decorative — the title below carries the meaning.
                 .accessibilityHidden(true)
             Text(title)
-                .font(CatchlightFont.displayFixed(size: 28))
+                .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
             Text(body)

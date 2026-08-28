@@ -343,6 +343,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         tv.textContainerInset = UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
         tv.textContainer.lineFragmentPadding = 0
         tv.font = CatchlightFont.uiBody(size: 14)
+        // Audit 2026-08, DT9: the scaled font must also FOLLOW a live size
+        // change — rows are reused across the editor's lifetime.
+        tv.adjustsFontForContentSizeCategory = true
         tv.textColor = UIColor(isComplete ? Color.ckTextComplete : Color.ckTextPrimary)
         tv.tintColor = UIColor(Color.ckAccent)
         tv.delegate = self
