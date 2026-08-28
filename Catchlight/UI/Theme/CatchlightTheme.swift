@@ -111,6 +111,15 @@ enum UITheme {
     static let accent        = UIColor.adaptive(dark: Palette.ember, light: Palette.emberText)
     /// Foreground drawn ON an Ember fill — Ink in both modes.
     static let onAccent      = UIColor.adaptive(dark: Palette.ink, light: Palette.ink)
+    /// Placeholder text on an input surface (audit C6 re-tune, owner 2026-08-28):
+    /// EQUAL ratio in both schemes, passing small-text AA with a little margin,
+    /// and deliberately receded — "equal and passing, not maximal". Derived from
+    /// the fog family: Daylight = fog darkened toward Ink to 4.62:1 on the white
+    /// capsule; Night = fog dimmed toward Dusk to 4.62:1 on the dusk capsule.
+    /// (The first C6 fix used textSecondary — 7.24:1/8.09:1 — which the owner
+    /// read as too prominent for a placeholder.)
+    static let placeholder   = UIColor.adaptive(dark: UIColor(hex: 0x898378),
+                                                light: UIColor(hex: 0x7A746C))
 }
 
 // MARK: - Semantic, adaptive colours (Night / Daylight)

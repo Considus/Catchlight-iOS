@@ -127,12 +127,11 @@ final class SearchBarAccessory: UIView {
     private static let surface = UITheme.surface         // ckSurface
     private static let textPrimary = UITheme.textPrimary
     private static let pageBackground = UITheme.background
-    /// Audit 2026-08, C6: the receded "done" tone (owner 2026-06-20) measured
-    /// 1.84:1 on the Daylight capsule and 3.58:1 in Night — under 4.5 in both.
-    /// The SECONDARY text tone passes both (7.24:1 Daylight / 8.09:1 Night) and
-    /// is the nearest legible grey in the palette; still visually receded next
-    /// to the typed query (textPrimary).
-    private static let placeholderGrey = UITheme.textSecondary
+    /// Audit C6, re-tuned (owner 2026-08-28): the dedicated placeholder tone —
+    /// EQUAL 4.62:1 in both schemes, passing small-text AA, receded next to the
+    /// typed query. The first fix's textSecondary (7.24/8.09) read too
+    /// prominent; the original "done" tone (1.84/3.58) failed both schemes.
+    private static let placeholderGrey = UITheme.placeholder
 
     /// The dock's soft fade (HiFi v1.11.5 / `dockFadeBackground`): scrolling content
     /// dissolves UNDER the bar instead of meeting a hard edge. A solid fill here
