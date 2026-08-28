@@ -207,6 +207,17 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         scrollActiveCaretToVisible(animated: false)
     }
 
+    /// Audit 2026-08, V31: while an overlay (the Focus-ring fan) covers this editor,
+    /// its text views must LEAVE the accessibility tree. Set on the INTERIOR scroll
+    /// view, not `view`: the representable's root is managed by SwiftUI's hosting
+    /// layer, which re-applies its own accessibility state over an out-of-band write
+    /// (measured 2026-08-27 — the flag set in `updateUIViewController` read back
+    /// false by the next dump round). Same channel and shape as the timeline's
+    /// `updateAXHidden`.
+    func updateAXHidden(_ hidden: Bool) {
+        scrollView.accessibilityElementsHidden = hidden
+    }
+
     // MARK: - Data
 
     /// Reconcile the block list into the stack INCREMENTALLY: reuse existing rows,
