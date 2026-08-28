@@ -91,7 +91,9 @@ struct PrivacyPhraseView: View {
             if let errorText {
                 Text(errorText)
                     .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
-                    .foregroundStyle(Color.ckTextObie)
+                    // Audit 2026-08, C9: every sibling error speaks Ruby — the
+                    // accent token here cost "error" its colour semantics.
+                    .foregroundStyle(Color.ckRuby)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
