@@ -45,6 +45,15 @@ struct LockedCaptureView: View {
     var body: some View {
         ZStack(alignment: .top) {
             Color.ckBackground.ignoresSafeArea()
+                // Announce the failed unlock (audit 2026-08, V14): the header's
+                // "Couldn't unlock" line appears silently, so a VoiceOver user who
+                // tapped away to save heard nothing happen at all.
+                .onChange(of: unlockFailed) { _, failed in
+                    if failed {
+                        UIAccessibility.post(notification: .announcement,
+                                             argument: "Couldn't unlock — tap to save again.")
+                    }
+                }
 
             if app.lockedCapture != nil {
                 let draft = lockedDraftBinding
