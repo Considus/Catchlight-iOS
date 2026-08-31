@@ -2,7 +2,7 @@
 
 A zero-knowledge notes and reminders app for iPhone. Everything is encrypted on the device, there is no backend, and the whole thing works with the network switched off.
 
-This started as the Phase 5 work, so the project setup, data model, encryption layer, local storage, sync engine, notifications, search and background tasks. It now carries the complete Phase 6 product UI as well, Dailies, Dial, Sequences, Search, Settings, onboarding and the paywall, all of it done as of 2026-06-09.
+This started as the Phase 5 work, so the project setup, data model, encryption layer, local storage, sync engine, notifications, search and background tasks. It now carries the complete Phase 6 product UI as well, Dailies, the Focus-ring, Sequences, Search, Settings, onboarding and the paywall, all of it done as of 2026-06-09.
 
 The detailed design and encryption-architecture documents are kept separately by Considus. There is a public overview of the security model in [`SECURITY.md`](SECURITY.md).
 
