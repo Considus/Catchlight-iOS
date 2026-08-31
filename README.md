@@ -63,9 +63,9 @@ swift build            # builds CatchlightCore (pure Swift + CryptoKit)
 swift run coreverify   # runs the runtime verification harness
 ```
 
-`coreverify` exists because XCTest is not bundled with the Command Line Tools. It re-runs the same scenarios as the XCTest suite against a tiny assert harness, so the core can be proven green without a full Xcode. All the checks pass.
+`coreverify` exists because XCTest is not bundled with the Command Line Tools. It re-runs the same scenarios as the XCTest suite against a tiny assert harness, so the core can be proven green without a full Xcode.
 
-The harness prints its own count when it finishes, and this page does not repeat it, because a number written down here goes stale the day somebody adds a check. Which is exactly what happened.
+The harness prints its own count when it finishes, and its result along with it, and this page repeats neither. Anything written down here goes stale the day somebody adds a check. Which is exactly what happened.
 
 ### The full XCTest suite and the iOS app, which need full Xcode
 
