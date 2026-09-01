@@ -72,7 +72,7 @@ struct CloudStorageView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
             // System inline nav title, matching the other Settings sub-pages
-            // (About / Notice History / Privacy Phrase) — owner 2026-06-29; the
+            // (About / Notice History / Privacy phrase) — owner 2026-06-29; the
             // bespoke cloud-glyph hero was the only sub-page that differed.
             .navigationTitle("Cloud Storage")
             .navigationBarTitleDisplayMode(.inline)
