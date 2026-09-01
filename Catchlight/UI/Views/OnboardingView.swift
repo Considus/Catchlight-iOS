@@ -601,7 +601,7 @@ private struct LocalWarningStep: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 24)
-                Text("Your Takes will live on this device and nowhere else. Your iPhone backup won't contain them, because we deliberately keep them out of it, and that's the same choice that keeps them out of iCloud. Lose this phone or wipe it, and there's nothing to restore from.")
+                Text("Your Takes will live on this device and nowhere else. Your iPhone backup won't contain them, because we deliberately keep them out of it, and that's the same choice that keeps them out of iCloud Backup. Lose this phone or wipe it, and there's nothing to restore from.")
                     .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
