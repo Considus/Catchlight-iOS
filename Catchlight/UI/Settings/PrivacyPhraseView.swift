@@ -44,7 +44,7 @@ struct PrivacyPhraseView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Privacy Phrase")
+                .navigationTitle("Privacy phrase")
                 .navigationBarTitleDisplayMode(.inline)
                 // No Done button — dismiss by swiping down (owner 2026-06-29),
                 // matching About / Cloud Storage. The drag indicator shows it.
