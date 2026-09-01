@@ -528,12 +528,12 @@ private struct StorageChoiceStep: View {
                 VStack(spacing: 16) {
                     StorageOptionCard(
                         title: "Local — on this device only",
-                        description: "Your Takes stay on this device. If you lose it without a backup, they're gone."
+                        description: "Your Takes stay on this device and nowhere else. Your iPhone backup won't contain them, so if the phone goes, they go with it."
                     ) { vm.chooseStorage(.local) }
 
                     StorageOptionCard(
                         title: "Cloud — backed up and restorable",
-                        description: "Connect a cloud folder you control. Your Takes remain encrypted — we never see them."
+                        description: "Connect a cloud folder you control. Your Takes stay encrypted, we never see them, and your 12 words are what open them again on a new phone."
                     ) { vm.chooseStorage(.cloud) }
                 }
 
@@ -601,7 +601,7 @@ private struct LocalWarningStep: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 24)
-                Text("Without cloud backup, your Takes exist only on this device. If you lose access to it and haven't set up a second device, your data cannot be recovered.")
+                Text("Your Takes will live on this device and nowhere else. Your iPhone backup won't contain them, because we deliberately keep them out of it, and that's the same choice that keeps them out of iCloud. Lose this phone or wipe it, and there's nothing to restore from.")
                     .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
@@ -628,7 +628,7 @@ private struct RevealStep: View {
         case .local:
             return "Write these 12 words down and keep them somewhere safe. They encrypt your Takes and enable a second device."
         case .cloud:
-            return "Write these 12 words down and keep them somewhere safe. They're needed in order to decrypt your Takes on a new device."
+            return "Write these 12 words down and keep them somewhere safe. They're needed in order to decrypt your Takes on a new device, and they don't travel in an iPhone backup, so the copy you write down is the copy that counts."
         }
     }
 
