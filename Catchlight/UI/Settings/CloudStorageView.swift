@@ -72,7 +72,7 @@ struct CloudStorageView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
             // System inline nav title, matching the other Settings sub-pages
-            // (About / Notice History / Privacy Phrase) — owner 2026-06-29; the
+            // (About / Notice History / Privacy phrase) — owner 2026-06-29; the
             // bespoke cloud-glyph hero was the only sub-page that differed.
             .navigationTitle("Cloud Storage")
             .navigationBarTitleDisplayMode(.inline)
@@ -83,6 +83,19 @@ struct CloudStorageView: View {
                 handlePickedFolder(url)
             }
             .ignoresSafeArea()
+        }
+        // Announce the async state changes (audit 2026-08, V14): the transient
+        // "Syncing…" line and the connect error both appear silently. The error
+        // is the same class, enumerated with the row's named site.
+        .onChange(of: syncFeedback) { _, feedback in
+            if let feedback {
+                UIAccessibility.post(notification: .announcement, argument: feedback)
+            }
+        }
+        .onChange(of: errorText) { _, error in
+            if let error {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
         }
     }
 
