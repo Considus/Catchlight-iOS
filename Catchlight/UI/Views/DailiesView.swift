@@ -1210,6 +1210,11 @@ struct DailiesView: View {
             draft: editDraftBinding,
             focusedBlockID: $editFocusedBlockID,
             leadingInset: spineX - CatchlightLayout.cardSpineInset,
+            // Seal the UIKit text view while the fan is up (audit 2026-08, V31): the
+            // fan's RootView-level hide covers this card's SwiftUI elements but does
+            // not reach the UIKit-vended text, so VoiceOver focus landed on the text
+            // behind the veil. Same channel as the timeline rows.
+            axHidden: ui.isFocusRingFanPresented,
             onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
             onEditReminder: { presentReminderEditor() },
             onDiscard: { discardInlineEdit() },
