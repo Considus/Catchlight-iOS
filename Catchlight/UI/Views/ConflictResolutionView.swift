@@ -59,6 +59,9 @@ struct ConflictResolutionView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Audit 2026-08, V17: a label on a non-combined container is a no-op —
+        // combine first so the label lands on a real element.
+        .accessibilityElement(children: .combine)
         .accessibilityLabel("All conflicts resolved.")
     }
 
@@ -219,7 +222,9 @@ struct ConflictResolutionView: View {
         }
         // Match the onboarding pill size/shape (44pt capsules) — the pills fill
         // this height; kept inline, NOT docked at the toolbar (owner 2026-07-02).
-        .frame(height: CatchlightLayout.minTouchTarget)
+        // Audit 2026-08, DT5: a MINIMUM, not a fixed height — the pills grow with
+        // Dynamic Type (D-030) and a fixed slot made them overflow it.
+        .frame(minHeight: CatchlightLayout.minTouchTarget)
     }
 
     // MARK: - Formatting

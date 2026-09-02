@@ -217,6 +217,12 @@ struct PaywallView: View {
         }
         .buttonStyle(.plain)
         .disabled(manager.isWorking || manager.annual == nil)
+        // Audit 2026-08, V9: while a purchase runs, the ProgressView replaces the
+        // Text and the button loses its accessible name entirely. The label must
+        // not depend on which child is showing; the busy state rides the value so
+        // VoiceOver reads "Subscribe now, purchase in progress" mid-purchase.
+        .accessibilityLabel(ctaText)
+        .accessibilityValue(manager.isWorking ? "Purchase in progress" : "")
         .accessibilityIdentifier("paywall-subscribe")
     }
 
