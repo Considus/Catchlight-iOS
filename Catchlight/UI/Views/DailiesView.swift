@@ -742,6 +742,12 @@ struct DailiesView: View {
             .padding(.top, deviceTopInset + 14)
             .padding(.bottom, 2)
             .background(Color.ckBackground)
+            // Audit 2026-08, V32: the reading order STARTED on the Obie's Iris —
+            // the pinned Obie vends before the heading in the flattened container
+            // (the V30 dumps show the same order). The page heading reads first;
+            // with the dock already last (V30), the order is heading → Obie →
+            // Takes → dock, the owner's settled visual order.
+            .accessibilitySortPriority(1)
             if vm.obie != nil && !ui.isEditingInPlace {
                 // With a pinned Obie: SOLID right down to the Obie's card top (no fade
                 // — the gradient is semi-transparent and lets a scrolling Take peek).
@@ -1224,6 +1230,11 @@ struct DailiesView: View {
             draft: editDraftBinding,
             focusedBlockID: $editFocusedBlockID,
             leadingInset: spineX - CatchlightLayout.cardSpineInset,
+            // Seal the UIKit text view while the fan is up (audit 2026-08, V31): the
+            // fan's RootView-level hide covers this card's SwiftUI elements but does
+            // not reach the UIKit-vended text, so VoiceOver focus landed on the text
+            // behind the veil. Same channel as the timeline rows.
+            axHidden: ui.isFocusRingFanPresented,
             onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
             onEditReminder: { presentReminderEditor() },
             onDiscard: { discardInlineEdit() },

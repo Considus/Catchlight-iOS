@@ -212,6 +212,17 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         scrollActiveCaretToVisible(animated: false)
     }
 
+    /// Audit 2026-08, V31: while an overlay (the Focus-ring fan) covers this editor,
+    /// its text views must LEAVE the accessibility tree. Set on the INTERIOR scroll
+    /// view, not `view`: the representable's root is managed by SwiftUI's hosting
+    /// layer, which re-applies its own accessibility state over an out-of-band write
+    /// (measured 2026-08-27 — the flag set in `updateUIViewController` read back
+    /// false by the next dump round). Same channel and shape as the timeline's
+    /// `updateAXHidden`.
+    func updateAXHidden(_ hidden: Bool) {
+        scrollView.accessibilityElementsHidden = hidden
+    }
+
     // MARK: - Data
 
     /// Reconcile the block list into the stack INCREMENTALLY: reuse existing rows,
@@ -345,6 +356,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         tv.textContainerInset = UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
         tv.textContainer.lineFragmentPadding = 0
         tv.font = CatchlightFont.uiBody(size: 14)
+        // Audit 2026-08, DT9: the scaled font must also FOLLOW a live size
+        // change — rows are reused across the editor's lifetime.
+        tv.adjustsFontForContentSizeCategory = true
         tv.textColor = UIColor(isComplete ? Color.ckTextComplete : Color.ckTextPrimary)
         tv.tintColor = UIColor(Color.ckAccent)
         tv.delegate = self

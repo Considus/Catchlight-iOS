@@ -72,7 +72,7 @@ struct CloudStorageView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
             // System inline nav title, matching the other Settings sub-pages
-            // (About / Notice History / Privacy Phrase) — owner 2026-06-29; the
+            // (About / Notice History / Privacy phrase) — owner 2026-06-29; the
             // bespoke cloud-glyph hero was the only sub-page that differed.
             .navigationTitle("Cloud Storage")
             .navigationBarTitleDisplayMode(.inline)
@@ -84,6 +84,19 @@ struct CloudStorageView: View {
             }
             .ignoresSafeArea()
         }
+        // Announce the async state changes (audit 2026-08, V14): the transient
+        // "Syncing…" line and the connect error both appear silently. The error
+        // is the same class, enumerated with the row's named site.
+        .onChange(of: syncFeedback) { _, feedback in
+            if let feedback {
+                UIAccessibility.post(notification: .announcement, argument: feedback)
+            }
+        }
+        .onChange(of: errorText) { _, error in
+            if let error {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
+        }
     }
 
     // MARK: - Sections
@@ -93,7 +106,7 @@ struct CloudStorageView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Choose from iCloud Drive or Dropbox")
-                .font(CatchlightFont.displayFixed(size: 28))
+                .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -140,6 +153,10 @@ struct CloudStorageView: View {
                         .truncationMode(.middle)
                 }
                 .padding(.top, 2)
+                // Audit 2026-08, V17: a label on a non-combined container is a
+                // no-op — combine first so the label lands on a real element.
+                // The checkmark glyph folds in with it (V21's inconsistency).
+                .accessibilityElement(children: .combine)
                 .accessibilityLabel(String(localized: "Current folder: \(folderDisplayPath)"))
 
                 // Remove clears the bookmark and returns the app to local-only mode.

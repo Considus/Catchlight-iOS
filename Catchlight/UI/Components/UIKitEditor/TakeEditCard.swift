@@ -60,6 +60,9 @@ struct TakeEditCard: View {
     var onTapIris: ((CGPoint) -> Void)? = nil
     /// Reports the RAW (uncapped) content height, for a host that sizes itself off it.
     var onContentHeightChange: ((CGFloat) -> Void)? = nil
+    /// Seals the UIKit text view out of the accessibility tree while an overlay covers this
+    /// card (audit 2026-08, V31 — the Focus-ring fan opened from the Iris). See `BlockEditor`.
+    var axHidden: Bool = false
 
     @Environment(\.colorScheme) private var scheme
 
@@ -113,6 +116,7 @@ struct TakeEditCard: View {
                     // settles, wrongly telling the editor it can still grow and pinning a long
                     // Take's caret off-screen (device 2026-07-15).
                     atMaxHeight: effectiveContent + Self.editorLineLead >= maxHeight,
+                    axHidden: axHidden,
                     onContentHeightChange: { h in
                         editorContentHeight = h
                         onContentHeightChange?(h)
@@ -232,6 +236,8 @@ struct KeyboardTakeEditor: View {
     var showsIris: Bool = true
     /// The card's left edge — the host's spine column (`spineX - cardSpineInset`).
     var leadingInset: CGFloat
+    /// Passed through to the card's `BlockEditor` (audit 2026-08, V31).
+    var axHidden: Bool = false
     var trailingInset: CGFloat = 20
 
     var onOpenAngle: (() -> Void)? = nil
@@ -329,7 +335,8 @@ struct KeyboardTakeEditor: View {
                 onEditReminder: onEditReminder,
                 onDiscard: onDiscard,
                 onTapIris: onTapIris,
-                onContentHeightChange: { editorContentHeight = $0 }
+                onContentHeightChange: { editorContentHeight = $0 },
+                axHidden: axHidden
             )
             .padding(.leading, leadingInset)
             .padding(.trailing, trailingInset)
