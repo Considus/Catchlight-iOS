@@ -35,7 +35,7 @@ struct SecondDeviceRestoreView: View {
                     warningCard
 
                     Text("Enter your privacy phrase")
-                        .font(CatchlightFont.displayFixed(size: 28))
+                        .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                         .foregroundStyle(Color.ckTextPrimary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .accessibilityAddTraits(.isHeader)
@@ -63,6 +63,13 @@ struct SecondDeviceRestoreView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDragIndicator(.visible)
+        // Announce the restore error (audit 2026-08, V14): the status line turns
+        // Ruby silently — a VoiceOver user submitting a bad phrase heard nothing.
+        .onChange(of: errorText) { _, error in
+            if let error {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
+        }
     }
 
     /// Restates the destructive consequence at the point of action (the Security row

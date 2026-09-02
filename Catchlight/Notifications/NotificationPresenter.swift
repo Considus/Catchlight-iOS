@@ -70,17 +70,21 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
     /// for a notification action; its position + the button's shape/colour/font are
     /// system-styled and can't be changed (owner 2026-06-20).
     static func registerReminderCategory() {
+        // All titles are `String(localized:)` (audit 2026-08, S7): notification
+        // strings were plain Swift strings while the intents localize.
         let snooze = UNNotificationAction(
             identifier: snoozeActionIdentifier,
-            title: "Snooze for \(SettingsViewModel.SnoozeDuration.current.label)",
+            title: String(localized: "Snooze for \(SettingsViewModel.SnoozeDuration.current.label)"),
             options: [],
             icon: UNNotificationActionIcon(systemImageName: "zzz"))
-        // "Dismiss" — bell.slash reads as "stop reminding me". A plain (non-destructive)
-        // background action: it silences the reminder but keeps the Take, so it isn't a
-        // delete. Placed after Snooze, the existing primary action.
+        // A plain (non-destructive) background action: it silences the reminder but
+        // keeps the Take, so it isn't a delete. Placed after Snooze, the existing
+        // primary action. (The earlier comment claimed bell.slash reads as "stop
+        // reminding me" — the audit's S3 showed the opposite: on a repeating
+        // reminder the icon carried a distinction the titles didn't.)
         let dismiss = UNNotificationAction(
             identifier: dismissActionIdentifier,
-            title: "Dismiss",
+            title: String(localized: "Dismiss"),
             options: [],
             icon: UNNotificationActionIcon(systemImageName: "bell.slash"))
         let category = UNNotificationCategory(
@@ -88,17 +92,27 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
             actions: [snooze, dismiss],
             intentIdentifiers: [],
             options: [])
-        // A REPEATING reminder gets a third action. Last in the list because it is the most
-        // final of the three, and `.destructive` so the system styles it as the one that ends
-        // something — it stops the series without deleting the Take or its date.
+        // A REPEATING reminder's actions name the this-occurrence / whole-series
+        // difference in WORDS (audit 2026-08, S3 — owner decision D-232): "Dismiss
+        // this one" and "Turn off reminder". Same identifiers, so the handler is
+        // untouched; the one-shot category above keeps the plain "Dismiss" (it has
+        // no series to distinguish).
+        let dismissThisOne = UNNotificationAction(
+            identifier: dismissActionIdentifier,
+            title: String(localized: "Dismiss this one"),
+            options: [],
+            icon: UNNotificationActionIcon(systemImageName: "bell.slash"))
+        // Last in the list because it is the most final of the three, and
+        // `.destructive` so the system styles it as the one that ends something —
+        // it stops the series without deleting the Take or its date.
         let stopReminding = UNNotificationAction(
             identifier: stopRemindingActionIdentifier,
-            title: "Stop reminding",
+            title: String(localized: "Turn off reminder"),
             options: [.destructive],
             icon: UNNotificationActionIcon(systemImageName: "bell.slash.fill"))
         let repeatingCategory = UNNotificationCategory(
             identifier: ReminderScheduler.repeatingCategoryIdentifier,
-            actions: [snooze, dismiss, stopReminding],
+            actions: [snooze, dismissThisOne, stopReminding],
             intentIdentifiers: [],
             options: [])
         UNUserNotificationCenter.current().setNotificationCategories([category, repeatingCategory])

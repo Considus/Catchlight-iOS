@@ -336,6 +336,14 @@ struct RootView: View {
             // 18% behind the fan and 0 while editing, but stayed fully present in
             // the accessibility tree — the escape hatch V5 walked through.
             .accessibilityHidden(ui.isFocusRingFanPresented || ui.isEditingInPlace)
+            // Read LAST (audit 2026-08, V30): the dock vends in the same flattened
+            // container as DailiesView's heading + pinned Obie, BEFORE the nested
+            // timeline collection — so VoiceOver read Obie, then the dock, then the
+            // Takes, cutting the content in half. The reading order must follow the
+            // visual order (owner 2026-08-27): heading, Obie, Takes, dock at the
+            // bottom. One priority on the whole dock keeps its four buttons
+            // contiguous in their own left-to-right order.
+            .accessibilitySortPriority(-1)
     }
 
     // MARK: - Overlays
@@ -430,6 +438,14 @@ struct RootView: View {
                 .padding(.top, 80)
                 .padding(.horizontal, 24)
                 .onTapGesture { orientation.didDismissObieIntro() }
+                // Audit 2026-08, V13: the tap-anywhere dismissal is HID-level — the
+                // catcher above is not an accessibility element and this tap gesture
+                // does not carry onto the tooltip's element — so VoiceOver could
+                // read the hint but never dismiss it. Bind the DEFAULT activation
+                // explicitly (the V2/D-214 lesson: an announced element's double-tap
+                // does nothing without it).
+                .accessibilityAction { orientation.didDismissObieIntro() }
+                .accessibilityHint("Double-tap to dismiss.")
             }
             .transition(.opacity)
             .animation(.easeInOut(duration: 0.2), value: orientation.showObieIntro)
