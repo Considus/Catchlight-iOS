@@ -245,7 +245,11 @@ public final class ReminderScheduler {
     /// capped at 100 characters — a banner truncates anyway, and the cap bounds what leaves the
     /// boundary.
     static func notificationTitle(for take: Take) -> String {
-        String(take.outstandingText.prefix(100))
+        let title = String(take.outstandingText.prefix(100))
+        // Audit 2026-08, S4: a reminder on a text-less Take produced an EMPTY
+        // notification title. The house fallback (the row and the conflict panel
+        // both use it) rather than a new string.
+        return title.isEmpty ? String(localized: "Untitled Take") : title
     }
 
     /// Whether this reminder's occurrence should be SKIPPED because there is genuinely nothing

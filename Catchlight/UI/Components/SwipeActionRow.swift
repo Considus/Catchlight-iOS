@@ -50,6 +50,8 @@ struct SwipeAction {
 }
 
 struct SwipeActionRow<Content: View>: View {
+    /// C2 (audit 2026-08): the destructive label's colour is scheme-conditional.
+    @Environment(\.colorScheme) private var scheme
     let id: UUID
     var leading: SwipeAction? = nil     // revealed by a rightward swipe
     var trailing: SwipeAction? = nil    // revealed by a leftward swipe
@@ -169,7 +171,13 @@ struct SwipeActionRow<Content: View>: View {
                 Text(action.title)
                     .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
             }
-            .foregroundStyle(action.contentColor)
+            // Audit 2026-08, C2: white 11pt on the NIGHT ruby fill measured 3.93:1
+            // (small text needs 4.5). Ink on that fill measures 4.91:1; Daylight's
+            // white-on-ruby already passes (6.05:1) and is unchanged. Destructive
+            // fills only — the other tints were not flagged.
+            .foregroundStyle(action.style == .destructive && scheme == .dark
+                             ? Color.ckOnAccent
+                             : action.contentColor)
             .padding(centersActionLabel ? .horizontal : (edge == .leading ? .leading : .trailing), 8)
         }
         .frame(width: max(0, width))

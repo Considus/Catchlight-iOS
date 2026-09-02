@@ -301,6 +301,11 @@ struct StoryboardView: View {
                 Text("STORYBOARD")
                     .pageHeadingStyle()
                     .accessibilityAddTraits(.isHeader)
+                    // Audit 2026-08, DT12: at large text the full-width centred
+                    // heading scaled INTO the floated ×. Reserve the ×'s slot on
+                    // BOTH sides (so centring holds); at default sizes the heading
+                    // is far narrower than this bound and nothing changes.
+                    .padding(.horizontal, CatchlightLayout.minTouchTarget + 12)
                 HStack {
                     Spacer()
                     Button(action: closeStoryboard) {
@@ -396,7 +401,7 @@ struct StoryboardView: View {
     private var emptyState: some View {
         VStack(spacing: 8) {
             Text("Nothing planned yet")
-                .font(CatchlightFont.displayFixed(size: 28))
+                .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
             Text("Takes with a task appear here.")

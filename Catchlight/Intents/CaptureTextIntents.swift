@@ -134,6 +134,12 @@ struct CaptureTakeIntent: AppIntent {
     )
     var text: String
 
+    /// Audit 2026-08, S2: one readable sentence in Shortcuts instead of a title
+    /// plus a detached parameter row.
+    static var parameterSummary: some ParameterSummary {
+        Summary("Capture \(\.$text)")
+    }
+
     @MainActor
     func perform() async throws -> some IntentResult {
         await queueDictatedCapture(text: text, isObie: false)
@@ -163,6 +169,11 @@ struct CaptureObieIntent: AppIntent {
         requestValueDialog: "What's your Obie?"
     )
     var text: String
+
+    /// Audit 2026-08, S2 — see CaptureTakeIntent.
+    static var parameterSummary: some ParameterSummary {
+        Summary("Capture \(\.$text) as your Obie")
+    }
 
     @MainActor
     func perform() async throws -> some IntentResult {

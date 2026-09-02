@@ -550,9 +550,13 @@ struct TimelineMonthDivider: View {
             .onTapGesture(perform: onTap)
             .accessibilityElement(children: .ignore)
             .accessibilityAddTraits(.isButton)
-            .accessibilityLabel(isActive
-                ? "\(title), filtering. Double-tap to clear."
-                : "\(title). Double-tap to show only Takes created this month.")
+            // Audit 2026-08, V23: instructions live in the HINT, not the label —
+            // a user who disables hints chose not to hear them, and the label
+            // stays short for the rotor.
+            .accessibilityLabel(isActive ? "\(title), filtering" : title)
+            .accessibilityHint(isActive
+                ? "Double-tap to clear."
+                : "Double-tap to show only Takes created this month.")
             // The rest of the row reads as timeline background: tapping it exits a Sequence, the
             // same as tapping any empty space. `Color.clear` rather than `Spacer` — a Spacer has
             // no content to hit-test, so it can't carry the gesture. Fills the row's height (set
