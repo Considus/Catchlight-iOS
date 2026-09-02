@@ -20,7 +20,7 @@ struct NoticeHistoryView: View {
             Group {
                 if entries.isEmpty {
                     // Custom empty state (owner 2026-06-29) so the hero line can take
-                    // the onboarding hero face; mirrors the Privacy Phrase layout.
+                    // the onboarding hero face; mirrors the Privacy phrase layout.
                     VStack(spacing: 16) {
                         Image(systemName: "bell.slash")
                             .font(.system(size: 40, weight: .regular))
@@ -38,7 +38,7 @@ struct NoticeHistoryView: View {
                         Spacer()
                     }
                     // Pinned near the top (padding 60 + bottom Spacer) to match the
-                    // Privacy Phrase explainer, rather than vertically centred.
+                    // Privacy phrase explainer, rather than vertically centred.
                     .padding(.top, 60)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .accessibilityElement(children: .combine)

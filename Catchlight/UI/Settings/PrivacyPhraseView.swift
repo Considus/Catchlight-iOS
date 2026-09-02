@@ -44,7 +44,7 @@ struct PrivacyPhraseView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Privacy Phrase")
+                .navigationTitle("Privacy phrase")
                 .navigationBarTitleDisplayMode(.inline)
                 // No Done button — dismiss by swiping down (owner 2026-06-29),
                 // matching About / Cloud Storage. The drag indicator shows it.
@@ -87,7 +87,7 @@ struct PrivacyPhraseView: View {
                 .multilineTextAlignment(.center)
                 // Audit 2026-08, V23: the screen's hero is a heading.
                 .accessibilityAddTraits(.isHeader)
-            Text("Authenticate with Face ID or your device passcode to view the 12 words — they're the only way to recover your account, so reveal them somewhere private.")
+            Text("Authenticate with Face ID or your device passcode to view the 12 words. They're the only way to recover your account, so reveal them somewhere private.")
                 .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
@@ -109,6 +109,13 @@ struct PrivacyPhraseView: View {
                 DockPill(title: "Reveal phrase") { revealViaDeviceAuth() }
             }
             .dockFadeBackground()
+        }
+        // Announce the auth error (audit 2026-08, V14): it appears silently, so a
+        // VoiceOver user whose Face ID was dismissed heard nothing happen.
+        .onChange(of: errorText) { _, error in
+            if let error {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
         }
     }
 
@@ -174,7 +181,7 @@ private struct PhraseRevealGrid: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Text("Write these 12 words down somewhere safe. They are the only way to recover your account.")
+            Text("Write these 12 words down somewhere safe, on paper. They're the only way back into your Takes on a new phone. They don't travel in an iPhone backup, and neither do your Takes, so restoring a backup won't bring either of them back.")
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
