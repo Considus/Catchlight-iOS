@@ -225,7 +225,10 @@ final class SearchBarAccessory: UIView {
         // Ember — the exact low-contrast-on-Paper case ckAccent exists to avoid;
         // `Self.ember` already carries the Daylight-accessible pair.
         field.tintColor = Self.ember
-        field.font = .systemFont(ofSize: 14)
+        // Audit 2026-08, DT2: the query never scaled — fixed 14pt. The shared
+        // scaling face plus live adjustment, the same pair the editor rows use.
+        field.font = CatchlightFont.uiBody(size: 14)
+        field.adjustsFontForContentSizeCategory = true
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
         field.returnKeyType = .search
