@@ -40,18 +40,23 @@ struct CatchlightFocusFilter: SetFocusFilterIntent {
         "Choose what Catchlight focuses on while this Focus is on."
     )
 
-    @Parameter(title: "Show", default: .everything)
+    // Audit 2026-08, S7: the parameter had no description.
+    @Parameter(title: "Show",
+               description: "Which Takes Catchlight shows while this Focus is on.",
+               default: .everything)
     var scope: FocusScope
 
-    /// Shown on the Focus configuration row while active.
+    /// Audit 2026-08, S2: one readable sentence in the Focus configuration UI.
+    static var parameterSummary: some ParameterSummary {
+        Summary("Show \(\.$scope)")
+    }
+
+    /// Shown on the Focus configuration row while active. Reads the enum's own
+    /// display representation (audit 2026-08, S7 — this switch duplicated the
+    /// localized labels as hard-coded strings, a drift waiting to happen).
     var displayRepresentation: DisplayRepresentation {
-        let label: String
-        switch scope {
-        case .everything: label = "Everything"
-        case .important: label = "Important only"
-        case .tasks: label = "Tasks"
-        case .reminders: label = "Reminders"
-        }
+        let label = FocusScope.caseDisplayRepresentations[scope]?.title
+            ?? LocalizedStringResource(stringLiteral: "Everything")
         return DisplayRepresentation(title: "Catchlight: \(label)")
     }
 

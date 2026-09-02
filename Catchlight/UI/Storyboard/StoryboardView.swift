@@ -236,6 +236,11 @@ struct StoryboardView: View {
                 Text("STORYBOARD")
                     .pageHeadingStyle()
                     .accessibilityAddTraits(.isHeader)
+                    // Audit 2026-08, DT12: at large text the full-width centred
+                    // heading scaled INTO the floated ×. Reserve the ×'s slot on
+                    // BOTH sides (so centring holds); at default sizes the heading
+                    // is far narrower than this bound and nothing changes.
+                    .padding(.horizontal, CatchlightLayout.minTouchTarget + 12)
                 HStack {
                     Spacer()
                     Button(action: closeStoryboard) {
