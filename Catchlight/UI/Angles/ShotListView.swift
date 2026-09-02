@@ -270,6 +270,12 @@ struct ShotListView: View {
                 ))
                 .accessibilityIdentifier("angle-reorder")
                 .accessibilityLabel("Reorder item")
+                // Audit 2026-08, V24: a focusable element VoiceOver can do nothing
+                // with — the working Move up/Move down live as named actions on the
+                // checkbox. Hidden from readers; the drag gesture stays for sighted
+                // fingers, and XCUITest still resolves the id (the hidden channel is
+                // invisible to it — the campaign's measured instrument limit).
+                .accessibilityHidden(true)
         }
     }
 

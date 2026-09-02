@@ -153,6 +153,10 @@ struct CloudStorageView: View {
                         .truncationMode(.middle)
                 }
                 .padding(.top, 2)
+                // Audit 2026-08, V17: a label on a non-combined container is a
+                // no-op — combine first so the label lands on a real element.
+                // The checkmark glyph folds in with it (V21's inconsistency).
+                .accessibilityElement(children: .combine)
                 .accessibilityLabel(String(localized: "Current folder: \(folderDisplayPath)"))
 
                 // Remove clears the bookmark and returns the app to local-only mode.

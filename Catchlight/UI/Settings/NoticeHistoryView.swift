@@ -64,6 +64,10 @@ struct NoticeHistoryView: View {
                             .listRowBackground(Color.ckSurface)
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel("\(entry.category.displayName). \(entry.message)")
+                            // Audit 2026-08, V15: the explicit label overrides the
+                            // combine, dropping the relative time — carry it as the
+                            // value so VoiceOver still speaks it after the message.
+                            .accessibilityValue(entry.timestamp.formatted(.relative(presentation: .named)))
                         }
                     }
                     .scrollContentBackground(.hidden)
