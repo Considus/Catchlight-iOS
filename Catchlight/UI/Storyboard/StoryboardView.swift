@@ -91,6 +91,9 @@ struct StoryboardView: View {
     /// keyboard toolbar's bag button), bound to the live draft so its ticks ride
     /// the same save.
     @State private var anglePresented = false
+    /// D-239: the keyboard bell's reminder picker, mirroring DailiesView's pair.
+    @State private var editingReminder = false
+    @State private var reminderReturnFocus: UUID?
 
     private var isEditing: Bool { editDraft != nil }
     private var editingID: UUID? { editDraft?.id }
@@ -162,6 +165,11 @@ struct StoryboardView: View {
             .safeAreaInset(edge: .top, spacing: 0) { topChrome }
             // The keyboard toolbar's bag → the full-screen Shot List on the draft.
             .fullScreenCover(isPresented: $anglePresented) { angleCover }
+            // Reminder editor from the keyboard's slot-2 bell (D-239): the same
+            // picker Dailies presents, applied straight to this editor's draft —
+            // a task previously had NO route to edit its reminder from either
+            // toolbar, and the ring's blade toggles rather than edits.
+            .sheet(isPresented: $editingReminder) { reminderEditorSheet }
             // Confirm before deleting (owner 2026-08-16) — the same alert the timeline
             // raises, presented from THIS screen because the Storyboard is a full-screen
             // cover: an alert owned by the view underneath would never reach the front.
@@ -217,10 +225,67 @@ struct StoryboardView: View {
                 editFocusedBlockID = nil   // drop the keyboard before the cover
                 anglePresented = true
             },
+            // D-239: the task toolbar's slot-2 bell — same picker Dailies hosts,
+            // same focus park/restore around the sheet.
+            onEditReminder: { presentReminderEditor() },
             // The keyboard × DISCARDS (owner 2026-07-04, consistent with the timeline +
             // LockedCaptureView); tapping blank space commits (the catcher → commitEdit).
             onDiscard: { discardEdit() }
         )
+    }
+
+    /// The in-editor reminder picker, seeded from the draft's current reminder —
+    /// DailiesView's `reminderEditorSheet`, against THIS editor's draft (D-239).
+    @ViewBuilder
+    private var reminderEditorSheet: some View {
+        let existing = editDraft?.timeReminder
+        ReminderPickerSheet(
+            initialDate: existing?.scheduledDate ?? FocusRingFanView.defaultReminderDate,
+            initialAlarm: existing?.alarmEnabled ?? true,
+            initialAllDay: existing?.isAllDay ?? false,
+            initialRecurrence: existing?.recurrence ?? .none,
+            initialWeekdays: existing?.weekdays ?? [],
+            initialLocation: editDraft?.locationReminder,
+            onSave: { date, alarm, allDay, recurrence, weekdays, location in
+                if var d = editDraft {
+                    // Either/or (owner 2026-06-24): location takes precedence and
+                    // clears the time; otherwise the time "when" applies.
+                    if let location {
+                        d.locationReminder = location
+                        d.timeReminder = nil
+                    } else {
+                        d.locationReminder = nil
+                        d.timeReminder = TimeReminder(
+                            scheduledDate: date,
+                            notificationIdentifier: d.id.uuidString,
+                            alarmEnabled: alarm,
+                            isAllDay: allDay,
+                            recurrence: recurrence,
+                            weekdays: recurrence == .weekly ? weekdays : [])
+                    }
+                    d.normaliseActivityFloor()
+                    editDraft = d
+                }
+                closeReminderEditor()
+            },
+            onCancel: { closeReminderEditor() }
+        )
+    }
+
+    /// Open the reminder editor for the focused draft: park the focused block, drop
+    /// the keyboard (the proven overlay-vs-keyboard ordering), present the sheet.
+    private func presentReminderEditor() {
+        reminderReturnFocus = editFocusedBlockID
+        editFocusedBlockID = nil
+        editingReminder = true
+    }
+
+    /// Dismiss the reminder editor and restore the editor's focus, so the keyboard
+    /// returns and the editing state isn't left focus-desynced.
+    private func closeReminderEditor() {
+        editingReminder = false
+        editFocusedBlockID = reminderReturnFocus
+        reminderReturnFocus = nil
     }
 
     // MARK: - Chrome (X top-right)
@@ -236,6 +301,11 @@ struct StoryboardView: View {
                 Text("STORYBOARD")
                     .pageHeadingStyle()
                     .accessibilityAddTraits(.isHeader)
+                    // Audit 2026-08, DT12: at large text the full-width centred
+                    // heading scaled INTO the floated ×. Reserve the ×'s slot on
+                    // BOTH sides (so centring holds); at default sizes the heading
+                    // is far narrower than this bound and nothing changes.
+                    .padding(.horizontal, CatchlightLayout.minTouchTarget + 12)
                 HStack {
                     Spacer()
                     Button(action: closeStoryboard) {
@@ -331,7 +401,7 @@ struct StoryboardView: View {
     private var emptyState: some View {
         VStack(spacing: 8) {
             Text("Nothing planned yet")
-                .font(CatchlightFont.displayFixed(size: 28))
+                .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
             Text("Takes with a task appear here.")

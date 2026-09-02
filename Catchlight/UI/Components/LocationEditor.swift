@@ -121,6 +121,8 @@ struct LocationEditor: View {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(Color.ckTextSecondary)
                 }
                 .buttonStyle(.plain)
+                // Audit 2026-08, V26: icon-only control had no name.
+                .accessibilityLabel("Clear search")
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 10)

@@ -127,9 +127,11 @@ final class SearchBarAccessory: UIView {
     private static let surface = UITheme.surface         // ckSurface
     private static let textPrimary = UITheme.textPrimary
     private static let pageBackground = UITheme.background
-    /// The completed-Take grey — the placeholder uses this receded "done" tone
-    /// (owner 2026-06-20). Shared with `ckTextComplete`.
-    private static let placeholderGrey = UITheme.textComplete
+    /// Audit C6, re-tuned (owner 2026-08-28): the dedicated placeholder tone —
+    /// EQUAL 4.62:1 in both schemes, passing small-text AA, receded next to the
+    /// typed query. The first fix's textSecondary (7.24/8.09) read too
+    /// prominent; the original "done" tone (1.84/3.58) failed both schemes.
+    private static let placeholderGrey = UITheme.placeholder
 
     /// The dock's soft fade (HiFi v1.11.5 / `dockFadeBackground`): scrolling content
     /// dissolves UNDER the bar instead of meeting a hard edge. A solid fill here
@@ -223,7 +225,10 @@ final class SearchBarAccessory: UIView {
         // Ember — the exact low-contrast-on-Paper case ckAccent exists to avoid;
         // `Self.ember` already carries the Daylight-accessible pair.
         field.tintColor = Self.ember
-        field.font = .systemFont(ofSize: 14)
+        // Audit 2026-08, DT2: the query never scaled — fixed 14pt. The shared
+        // scaling face plus live adjustment, the same pair the editor rows use.
+        field.font = CatchlightFont.uiBody(size: 14)
+        field.adjustsFontForContentSizeCategory = true
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
         field.returnKeyType = .search

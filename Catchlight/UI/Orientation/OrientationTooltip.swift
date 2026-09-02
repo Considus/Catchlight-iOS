@@ -44,6 +44,14 @@ struct OrientationTooltip: View {
             .shadow(color: Color.black.opacity(0.18), radius: 8, y: 2)
             .accessibilityElement()
             .accessibilityLabel(text)
+            // Audit 2026-08, V25: the hints appear silently — a VoiceOver user
+            // gets no signal a tooltip arrived, and its element sits wherever the
+            // walk puts it. Announce the text on appearance, component-level so
+            // every hint site is covered. Placement in the VO order is the
+            // device-gated half of the finding and is not changed here.
+            .onAppear {
+                UIAccessibility.post(notification: .announcement, argument: text)
+            }
     }
 }
 

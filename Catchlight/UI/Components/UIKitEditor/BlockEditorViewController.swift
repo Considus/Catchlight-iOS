@@ -45,6 +45,11 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private var checkRowIDs: Set<UUID> = []
     private var desiredFocus: UUID?
     private var focusInFlight = false
+    /// The caret at the moment a nil `focusedBlockID` resigned the keyboard (D-240). When focus
+    /// returns to the SAME block, the caret goes back to this exact offset — not to the end of
+    /// the document, which is where a returning edit mid-sentence must never land. Cleared on
+    /// the next focus either way: a restore is only valid for the resign it was captured at.
+    private var caretToRestore: (id: UUID, range: NSRange)?
     /// The keyboard toolbar (Important / Angle / Reminder / Done / dismiss), hosted as
     /// the shared `inputAccessoryView` of every row — only the first responder shows it.
     private var toolbarHost: UIHostingController<EditorKeyboardBar>?
@@ -207,6 +212,17 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         scrollActiveCaretToVisible(animated: false)
     }
 
+    /// Audit 2026-08, V31: while an overlay (the Focus-ring fan) covers this editor,
+    /// its text views must LEAVE the accessibility tree. Set on the INTERIOR scroll
+    /// view, not `view`: the representable's root is managed by SwiftUI's hosting
+    /// layer, which re-applies its own accessibility state over an out-of-band write
+    /// (measured 2026-08-27 — the flag set in `updateUIViewController` read back
+    /// false by the next dump round). Same channel and shape as the timeline's
+    /// `updateAXHidden`.
+    func updateAXHidden(_ hidden: Bool) {
+        scrollView.accessibilityElementsHidden = hidden
+    }
+
     // MARK: - Data
 
     /// Reconcile the block list into the stack INCREMENTALLY: reuse existing rows,
@@ -239,6 +255,14 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         updateCheckVisuals(blocks)
 
         desiredFocus = focusedBlockID
+        // A nil focus target DROPS the keyboard (D-240). The guard in `applyFocusNow` returns on
+        // nil without resigning, so before this, clearing `focusedBlockID` moved nothing — the
+        // ring opened over a live keyboard (V33). Capture the caret first so the return trip can
+        // put it back where it was.
+        if focusedBlockID == nil, let tv = activeTextView() {
+            if let id = blockID(for: tv) { caretToRestore = (id, tv.selectedRange) }
+            tv.resignFirstResponder()
+        }
         let liveIDs = Set(blocks.map(\.id))
         // Defer focus + removal together, out of the SwiftUI update cycle: focus the
         // target first, THEN drop any vanished row — so the keyboard is never yanked
@@ -332,6 +356,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         tv.textContainerInset = UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
         tv.textContainer.lineFragmentPadding = 0
         tv.font = CatchlightFont.uiBody(size: 14)
+        // Audit 2026-08, DT9: the scaled font must also FOLLOW a live size
+        // change — rows are reused across the editor's lifetime.
+        tv.adjustsFontForContentSizeCategory = true
         tv.textColor = UIColor(isComplete ? Color.ckTextComplete : Color.ckTextPrimary)
         tv.tintColor = UIColor(Color.ckAccent)
         tv.delegate = self
@@ -608,12 +635,28 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private func applyFocusNow() {
         guard let id = desiredFocus, let tv = textViews[id], !tv.isFirstResponder else { return }
         if tv.window != nil, tv.becomeFirstResponder() {
-            let end = tv.endOfDocument
-            tv.selectedTextRange = tv.textRange(from: end, to: end)
+            placeCaret(in: tv, blockID: id)
             scrollActiveCaretToVisible(animated: false)
         } else if !focusInFlight {
             focusInFlight = true
             requestFocus(tv, attemptsLeft: 8)
+        }
+    }
+
+    /// Caret placement on focus: end of the document (the "continue / append" position, owner
+    /// 2026-06-17) — UNLESS this focus is the return trip of a resign that captured a caret for
+    /// this same block (D-240: ring closed, reminder sheet closed), in which case the caret goes
+    /// back to the exact offset it left, clamped in case the text changed underneath.
+    private func placeCaret(in tv: UITextView, blockID id: UUID) {
+        defer { caretToRestore = nil }
+        if let saved = caretToRestore, saved.id == id {
+            let length = (tv.text as NSString).length
+            let location = min(saved.range.location, length)
+            tv.selectedRange = NSRange(location: location,
+                                       length: min(saved.range.length, length - location))
+        } else {
+            let end = tv.endOfDocument
+            tv.selectedTextRange = tv.textRange(from: end, to: end)
         }
     }
 
@@ -623,8 +666,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         DispatchQueue.main.async { [weak self, weak tv] in
             guard let self, let tv else { return }
             if tv.window != nil, tv.becomeFirstResponder() {
-                let end = tv.endOfDocument
-                tv.selectedTextRange = tv.textRange(from: end, to: end)
+                if let id = self.blockID(for: tv) { self.placeCaret(in: tv, blockID: id) }
                 self.focusInFlight = false
                 self.scrollActiveCaretToVisible(animated: false)
                 return
