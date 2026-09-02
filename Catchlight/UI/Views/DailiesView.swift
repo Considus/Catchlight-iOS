@@ -134,6 +134,14 @@ struct DailiesView: View {
     /// through the same `vm.save` chokepoint the top-anchored editor uses.
     @State private var editDraft: Take?
     @State private var editFocusedBlockID: UUID?
+    /// Where the keyboard goes back to after the Focus ring (D-240). Opening the ring over a
+    /// live editor drops the keyboard — the ring is a decision you stop to make (owner) — and
+    /// this holds the focused block so closing the ring returns the edit. A COMMIT consumes it
+    /// in `applyInlineFanCommand` (which may prefer a freshly-added task entry); a plain
+    /// DISMISS restores it via the `isFocusRingFanPresented` watcher. The caret OFFSET is not
+    /// held here: `BlockEditorViewController` captures it at resign and restores it when focus
+    /// returns to the same block.
+    @State private var ringReturnFocus: UUID?
     /// DEBUG A/B: render the timeline with the new recycling UIKit `UICollectionView`
     /// (Pillar 2) instead of the SwiftUI `ScrollView`+`VStack`. Default off (old ships);
     /// toggled in Settings › Debug. Read-only for now — gestures + edit come on top.
@@ -489,6 +497,18 @@ struct DailiesView: View {
             guard let command, ui.editingTakeID != nil else { return }
             applyInlineFanCommand(command)
             ui.inlineFanCommand = nil
+        }
+        // The ring closed WITHOUT committing — give the keyboard back where it was (D-240).
+        // Deferred one runloop turn on purpose: a COMMIT closes the fan and posts its command
+        // in the same transaction, and `applyInlineFanCommand` (synchronous, above) consumes
+        // `ringReturnFocus` before this block runs — so this only ever fires for a dismiss.
+        .onChange(of: ui.isFocusRingFanPresented) { _, presented in
+            guard !presented else { return }
+            DispatchQueue.main.async {
+                guard let back = ringReturnFocus, editDraft != nil else { return }
+                ringReturnFocus = nil
+                editFocusedBlockID = back
+            }
         }
         // Dock + requested a new Take (Phase 2): create it in place at the
         // Order-appropriate end and focus it.
@@ -1223,6 +1243,7 @@ struct DailiesView: View {
             // (owner 2026-06-17; `RootView` keys that off `ui.editingTakeID`). Drop the keyboard
             // first, exactly as the old timeline's row does before blooming the fan.
             onTapIris: { irisCentre in
+                ringReturnFocus = editFocusedBlockID
                 editFocusedBlockID = nil
                 // No spotlight card — this IS the editor (owner 2026-07-16). The fan still blooms
                 // at the Iris; it just doesn't redraw the Take as a read card over the veil.
@@ -1582,9 +1603,16 @@ struct DailiesView: View {
         editDraft = d
 
         // Restore the editor keyboard after the ring (and its reminder picker) — the
-        // ring-open path cleared focus, so re-assert it here. A freshly-added task
-        // entry takes the caret; otherwise the first block does.
-        let refocus = newTaskEntryID ?? d.blocks.first?.id
+        // ring-open path dropped it (D-240), so re-assert it here. A freshly-added task
+        // entry takes the caret (it's empty and wants its first character); otherwise the
+        // block that held the keyboard when the ring opened takes it back — the editor's
+        // controller returns the caret to its saved offset within it. First block only as
+        // a last resort (the return block can vanish if the commit reshaped it away).
+        let returnBlock = ringReturnFocus.flatMap { r in
+            d.blocks.contains(where: { $0.id == r }) ? r : nil
+        }
+        ringReturnFocus = nil                       // consumed — the dismiss watcher must not re-fire it
+        let refocus = newTaskEntryID ?? returnBlock ?? d.blocks.first?.id
         editFocusedBlockID = nil
         if let refocus {
             DispatchQueue.main.async { editFocusedBlockID = refocus }
@@ -1641,7 +1669,7 @@ struct DailiesView: View {
                 // + reminder picker sit on top made the keyboard fight the overlay —
                 // Done re-raised it / needed a second tap. The ring owns the
                 // interaction; the commit re-focuses (applyInlineFanCommand).
-                if isEditingThis { editFocusedBlockID = nil }
+                if isEditingThis { ringReturnFocus = editFocusedBlockID; editFocusedBlockID = nil }
                 // Section 8 — bloom the fan in place at the tapped Iris (window
                 // coords match the full-screen overlay space). The .zero fallback
                 // (screen centre) only survives as a last resort. While editing THIS
