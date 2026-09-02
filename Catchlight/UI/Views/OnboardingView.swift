@@ -94,7 +94,10 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
 
     var body: some View {
         Group {
-            if dynamicSize.isAccessibilitySize {
+            // Audit 2026-08, DT6: gate on the SAME threshold as DockPillRow's
+            // D-030 pill growth (`> .large`) — the old `isAccessibilitySize`
+            // gate left xLarge–xxxLarge growing content with no scroll recovery.
+            if dynamicSize > .large {
                 ScrollView {
                     content()
                         .frame(maxWidth: .infinity)

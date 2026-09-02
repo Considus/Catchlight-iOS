@@ -108,8 +108,11 @@ enum WidgetFont {
         case .medium, .semibold, .bold: candidates = mediumCandidates
         default: candidates = regularCandidates
         }
+        // Audit 2026-08, DT8: scale with Dynamic Type (relative to body) — the
+        // home-screen families used `fixedSize` while the accessory families
+        // correctly used text styles.
         if let name = firstAvailable(candidates) {
-            return .custom(name, fixedSize: size)
+            return .custom(name, size: size)
         }
         return .system(size: size, weight: weight)
     }

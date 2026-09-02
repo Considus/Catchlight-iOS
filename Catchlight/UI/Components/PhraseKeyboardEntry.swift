@@ -126,6 +126,9 @@ final class RestoreKeyboardAccessory: UIView {
     private func configurePill(_ button: UIButton, title: String, filled: Bool) {
         button.setTitle(title, for: .normal)
         button.titleLabel?.font = CatchlightFont.uiBody(size: 15, weight: .medium)
+        // Audit 2026-08, DT7: this lazy view lives for the app's lifetime — the
+        // scaled font must also FOLLOW a size change, not just read it once.
+        button.titleLabel?.adjustsFontForContentSizeCategory = true
         button.layer.cornerRadius = Self.circle / 2
         button.layer.cornerCurve = .continuous
         button.layer.masksToBounds = true
@@ -173,6 +176,8 @@ struct PhraseTextField: UIViewRepresentable {
         tf.returnKeyType = isLast ? .done : .next
         tf.inputAccessoryView = accessory
         tf.font = CatchlightFont.uiBody(size: 16, weight: .light)
+        // Audit 2026-08, DT7: follow live size changes (see configurePill).
+        tf.adjustsFontForContentSizeCategory = true
         tf.textColor = UIColor(Color.ckTextPrimary)
         tf.tintColor = UIColor(Color.ckTextObie)          // accent caret
         tf.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
