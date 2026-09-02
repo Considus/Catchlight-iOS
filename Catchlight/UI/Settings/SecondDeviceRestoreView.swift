@@ -63,6 +63,13 @@ struct SecondDeviceRestoreView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDragIndicator(.visible)
+        // Announce the restore error (audit 2026-08, V14): the status line turns
+        // Ruby silently — a VoiceOver user submitting a bad phrase heard nothing.
+        .onChange(of: errorText) { _, error in
+            if let error {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
+        }
     }
 
     /// Restates the destructive consequence at the point of action (the Security row

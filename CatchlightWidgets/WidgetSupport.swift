@@ -230,7 +230,9 @@ struct WidgetGlyphMark: View {
     var inkOffsetFraction: CGFloat = 0.0
     var body: some View {
         let renderHeight = height * opticalScale
-        Image(asset)
+        // Audit 2026-08, V19: brand glyphs are decorative — `Image(asset)` let
+        // VoiceOver speak the asset name ("ObieGlyph"); `decorative:` vends none.
+        Image(decorative: asset)
             .renderingMode(.template)
             .resizable()
             .scaledToFit()

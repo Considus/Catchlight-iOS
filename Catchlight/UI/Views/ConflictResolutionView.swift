@@ -59,6 +59,9 @@ struct ConflictResolutionView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Audit 2026-08, V17: a label on a non-combined container is a no-op —
+        // combine first so the label lands on a real element.
+        .accessibilityElement(children: .combine)
         .accessibilityLabel("All conflicts resolved.")
     }
 

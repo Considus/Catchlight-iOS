@@ -44,7 +44,7 @@ struct PrivacyPhraseView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Privacy Phrase")
+                .navigationTitle("Privacy phrase")
                 .navigationBarTitleDisplayMode(.inline)
                 // No Done button — dismiss by swiping down (owner 2026-06-29),
                 // matching About / Cloud Storage. The drag indicator shows it.
@@ -79,11 +79,15 @@ struct PrivacyPhraseView: View {
             Image(systemName: "faceid")
                 .font(.system(size: 40, weight: .regular))
                 .foregroundStyle(Color.ckAccent)
+                // Audit 2026-08, V21: decorative — the heading below carries the meaning.
+                .accessibilityHidden(true)
             Text("Reveal your privacy phrase")
                 .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
-            Text("Authenticate with Face ID or your device passcode to view the 12 words — they're the only way to recover your account, so reveal them somewhere private.")
+                // Audit 2026-08, V23: the screen's hero is a heading.
+                .accessibilityAddTraits(.isHeader)
+            Text("Authenticate with Face ID or your device passcode to view the 12 words. They're the only way to recover your account, so reveal them somewhere private.")
                 .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
@@ -105,6 +109,13 @@ struct PrivacyPhraseView: View {
                 DockPill(title: "Reveal phrase") { revealViaDeviceAuth() }
             }
             .dockFadeBackground()
+        }
+        // Announce the auth error (audit 2026-08, V14): it appears silently, so a
+        // VoiceOver user whose Face ID was dismissed heard nothing happen.
+        .onChange(of: errorText) { _, error in
+            if let error {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
         }
     }
 
@@ -131,6 +142,8 @@ struct PrivacyPhraseView: View {
             Image(systemName: symbol)
                 .font(.system(size: 40, weight: .regular))
                 .foregroundStyle(Color.ckAccent)
+                // Audit 2026-08, V21: decorative — the title below carries the meaning.
+                .accessibilityHidden(true)
             Text(title)
                 .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                 .foregroundStyle(Color.ckTextPrimary)
@@ -168,7 +181,7 @@ private struct PhraseRevealGrid: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Text("Write these 12 words down somewhere safe. They are the only way to recover your account.")
+            Text("Write these 12 words down somewhere safe, on paper. They're the only way back into your Takes on a new phone. They don't travel in an iPhone backup, and neither do your Takes, so restoring a backup won't bring either of them back.")
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
@@ -181,9 +194,14 @@ private struct PhraseRevealGrid: View {
             }
             .padding(.horizontal, 16)
             .accessibilityElement(children: .ignore)
+            // Audit 2026-08, V18: the hidden-state instruction must match the route
+            // the reader can actually take — under VoiceOver the reveal control is
+            // a double-tap toggle, not a press-and-hold.
             .accessibilityLabel(revealed
                 ? "Phrase revealed: \(words.joined(separator: ", "))"
-                : "Phrase hidden. Press and hold the reveal button to view.")
+                : (voiceOverEnabled
+                    ? "Phrase hidden. Double-tap the reveal button to view."
+                    : "Phrase hidden. Press and hold the reveal button to view."))
 
             Spacer()
         }
@@ -261,6 +279,14 @@ private struct PhraseRevealGrid: View {
                                : "Press and hold to display the 12 words. Release to hide them.")
             .accessibilityAction(named: voRevealed ? "Hide phrase" : "Reveal phrase") {
                 voRevealed.toggle()
+            }
+            // Audit 2026-08, V18: the element announced as static text, and the
+            // promised double-tap toggle relied on the hold gesture, which does
+            // not carry onto the element (the V2/D-214 lesson). Button trait +
+            // an explicit default activation make the hint true.
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction {
+                if voiceOverEnabled { voRevealed.toggle() }
             }
     }
 }
