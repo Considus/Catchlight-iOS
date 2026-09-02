@@ -435,15 +435,41 @@ public final class SyncEngine {
     /// Convenience: pull then push (idempotent). Lock contention on the push
     /// half is a routine outcome and is reported via `pushDeferred`, not thrown
     /// — the pull half's results remain valid either way.
+    ///
+    /// Each half records a content-free diagnostics line (D-085). Counts and UUIDs are
+    /// deliberately EXCLUDED: the log is built to be attached to a bug report, and a Take
+    /// count would disclose in plain text exactly what the v3 encrypted manifest exists to
+    /// conceal — how many Takes the folder holds. Failures are logged by NSError domain and
+    /// code only, mirroring `BackgroundSync`, because a `SyncError` carries a Take UUID in
+    /// its associated value and interpolating its description would leak one.
+    ///
+    /// Successes alone would not be enough: without the failure lines, "sync never ran" and
+    /// "sync ran and threw" look identical in the log, which is the exact ambiguity these
+    /// entries exist to remove (2026-09-02 — a no-op-save conflict took hours to diagnose
+    /// because pushes left no trace at all).
     @discardableResult
     public func sync(isCancelled: () -> Bool = { false }) throws -> SyncReport {
-        var report = try pullInbound(isCancelled: isCancelled)
+        var report: SyncReport
+        do {
+            report = try pullInbound(isCancelled: isCancelled)
+        } catch {
+            let ns = error as NSError
+            DiagnosticsLog.shared.record(.lifecycle, "Sync: pull failed (\(ns.domain) \(ns.code))")
+            throw error
+        }
+        DiagnosticsLog.shared.record(.lifecycle, "Sync: pull ok")
         do {
             let out = try pushOutbound(isCancelled: isCancelled)
             report.uploaded = out.uploaded
             report.heldBack = out.heldBack
+            DiagnosticsLog.shared.record(.lifecycle, "Sync: push ok")
         } catch is SyncLockError {
             report.pushDeferred = true
+            DiagnosticsLog.shared.record(.lifecycle, "Sync: push deferred (lock held)")
+        } catch {
+            let ns = error as NSError
+            DiagnosticsLog.shared.record(.lifecycle, "Sync: push failed (\(ns.domain) \(ns.code))")
+            throw error
         }
         return report
     }
