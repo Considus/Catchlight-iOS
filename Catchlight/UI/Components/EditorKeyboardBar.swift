@@ -79,12 +79,39 @@ struct EditorKeyboardBar: View {
             }
             .frame(maxWidth: .infinity)
 
-            // 2 — Context button at the main dock's Angle position (owner 2026-06-19/21):
-            //   • a TASK → the Angle (Shot List), opening this Take's checklist;
-            //   • otherwise, where the Angle would be greyed, a REMINDER button — edit
-            //     the time on a reminder Take, or add one to a note, without the
-            //     Focus-ring detour (owner 2026-06-21). Falls back to the greyed Angle
-            //     only where the host can't present the picker (`onReminder == nil`).
+            // 2 — the REMINDER bell, on BOTH editors (audit round 9, D-239): edit
+            // the time on a reminder Take, or add one, without the Focus-ring
+            // detour. A task previously had NO route to its reminder at all — the
+            // Angle sat here, and the ring's Reminders blade TOGGLES (one tap turns
+            // the reminder off, a second creates a new one at the default offset,
+            // silently discarding the time the user set), so it never edited.
+            // Falls back to the greyed Angle only where the host can't present the
+            // picker (`onReminder == nil`).
+            //
+            // NO state tint (audit C10 / D-235, supersedes D-204): the
+            // Ember-vs-accent distinction never existed in Night — the two tokens
+            // are the SAME hex there (1.00:1, photographed). The LABEL still
+            // carries the state ("Add" vs "Edit"), per D-218.
+            if let onReminder = config.onReminder {
+                slot(enabled: true, identifier: "reminder-button",
+                     label: config.hasReminder ? "Edit reminder" : "Add reminder",
+                     action: onReminder) {
+                    dockSymbol("bell", tint: .ckAccent, enabled: true, size: 22)
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                // No picker host — keep the neutral, greyed Angle.
+                slot(enabled: false, identifier: "angle-button",
+                     label: "Open Shot List", action: config.onOpenAngle) {
+                    dockSymbol("angle", tint: .ckAccent, enabled: false, size: 24)
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            // 3 — a TASK gets the Shot List here (D-239: Discard · bell · Shot
+            // List · Done); a note keeps Important. Important LEAVES the task
+            // toolbar — it stays reachable from the Focus ring and the row's
+            // long-press menu, and the four-slot bar has no fifth slot to give.
             if config.angleEnabled {
                 slot(enabled: true, identifier: "angle-button",
                      label: "Open Shot List", action: config.onOpenAngle) {
@@ -94,40 +121,18 @@ struct EditorKeyboardBar: View {
                     dockSymbol("checklist", tint: .ckAccent, enabled: true, size: 22)
                 }
                 .frame(maxWidth: .infinity)
-            } else if let onReminder = config.onReminder {
-                slot(enabled: true, identifier: "reminder-button",
-                     label: config.hasReminder ? "Edit reminder" : "Add reminder",
-                     action: onReminder) {
-                    // NO state tint (audit C10 / D-235, supersedes D-204): the
-                    // Ember-vs-accent distinction never existed in Night — the two
-                    // tokens are the SAME hex there (1.00:1, photographed) — and
-                    // Daylight's difference was a side effect of the on-Paper
-                    // darkening, not a designed signal. One consistent toolbar
-                    // beats a cue that works in one scheme and not the other. The
-                    // LABEL above still carries the state ("Add" vs "Edit") — that
-                    // stays, per D-218.
-                    dockSymbol("bell", tint: .ckAccent, enabled: true, size: 22)
-                }
-                .frame(maxWidth: .infinity)
             } else {
-                // No task and no picker host — keep the neutral, greyed Angle.
-                slot(enabled: false, identifier: "angle-button",
-                     label: "Open Shot List", action: config.onOpenAngle) {
-                    dockSymbol("angle", tint: .ckAccent, enabled: false, size: 24)
+                // Important: the app's Important glyph, an exclamation "!".
+                // NO state tint (C10 / D-235) — the VALUE below carries on/off.
+                slot(enabled: true, label: "Important",
+                     value: config.isImportant ? "on" : "off",
+                     selected: config.isImportant,
+                     action: config.onToggleImportant) {
+                    ImportantGlyph(size: 24)
+                        .foregroundStyle(Color.ckAccent)
                 }
                 .frame(maxWidth: .infinity)
             }
-
-            // 3 — Important: the app's Important glyph, an exclamation "!".
-            // NO state tint (C10 / D-235) — the VALUE below carries on/off.
-            slot(enabled: true, label: "Important",
-                 value: config.isImportant ? "on" : "off",
-                 selected: config.isImportant,
-                 action: config.onToggleImportant) {
-                ImportantGlyph(size: 24)
-                    .foregroundStyle(Color.ckAccent)
-            }
-            .frame(maxWidth: .infinity)
 
             // 4 — Done: marks the whole Take done (all checklist items + the
             // reminder). Greyed for a pure note (nothing to complete). Was Search
