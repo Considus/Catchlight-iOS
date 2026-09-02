@@ -56,6 +56,18 @@ struct LockView: View {
             .frame(maxWidth: .infinity)
             .dockFadeBackground()
         }
+        // Announce the async state changes (audit 2026-08, V14): the message and
+        // button retitle silently — VoiceOver users got no "Authenticating…" and,
+        // worse, no failure. `.announcement` (not the dock's `.layoutChanged`)
+        // because nothing moves — only the status text changes.
+        .onChange(of: app.lockState) { _, state in
+            switch state {
+            case .unlocking, .failed:
+                UIAccessibility.post(notification: .announcement, argument: message)
+            default:
+                break
+            }
+        }
         // The auto-unlock is driven by RootView (after the splash has been seen, and
         // on a post-splash re-lock) rather than here — so the prompt never fires over
         // the splash. The Unlock / Try Again button below is the manual path.
