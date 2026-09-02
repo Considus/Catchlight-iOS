@@ -122,6 +122,9 @@ struct ShareSheetView: View {
                     .frame(maxWidth: .infinity)
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    // Audit 2026-08, V20: the page's own title text below carries
+                    // the meaning; the preview picture is decorative to a reader.
+                    .accessibilityHidden(true)
             }
             if let linkTitle {
                 Text(linkTitle)

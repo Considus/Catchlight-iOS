@@ -108,8 +108,11 @@ enum WidgetFont {
         case .medium, .semibold, .bold: candidates = mediumCandidates
         default: candidates = regularCandidates
         }
+        // Audit 2026-08, DT8: scale with Dynamic Type (relative to body) — the
+        // home-screen families used `fixedSize` while the accessory families
+        // correctly used text styles.
         if let name = firstAvailable(candidates) {
-            return .custom(name, fixedSize: size)
+            return .custom(name, size: size)
         }
         return .system(size: size, weight: weight)
     }
@@ -227,7 +230,9 @@ struct WidgetGlyphMark: View {
     var inkOffsetFraction: CGFloat = 0.0
     var body: some View {
         let renderHeight = height * opticalScale
-        Image(asset)
+        // Audit 2026-08, V19: brand glyphs are decorative — `Image(asset)` let
+        // VoiceOver speak the asset name ("ObieGlyph"); `decorative:` vends none.
+        Image(decorative: asset)
             .renderingMode(.template)
             .resizable()
             .scaledToFit()
