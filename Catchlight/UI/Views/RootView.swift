@@ -126,6 +126,17 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.4), value: app.needsOnboarding)
         .animation(.easeInOut(duration: 0.4), value: app.lockState)
         .animation(.easeInOut(duration: 0.4), value: app.restoreAwaitingFolder)
+        // Audit 2026-08, V34: after an unlock VoiceOver focus landed on the LAST
+        // Take — the lock screen's element died under focus and VO re-anchored at
+        // the nearest surviving element, which is the bottom of the new screen.
+        // `.screenChanged` re-anchors at the TOP of the new screen (with V32 that
+        // is the page heading) and announces the transition — which also replaces
+        // the clipped "Authenticating…" announcement (see LockView).
+        .onChange(of: app.lockState) { old, new in
+            if old != .unlocked && new == .unlocked {
+                UIAccessibility.post(notification: .screenChanged, argument: nil)
+            }
+        }
         .task {
             // Splash suppressed (UI testing): still drive the unlock if we somehow
             // launched locked, but skip the 2.5s branding hold entirely.
