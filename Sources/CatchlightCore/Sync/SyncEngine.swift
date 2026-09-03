@@ -217,13 +217,39 @@ public final class SyncEngine {
         let offlineTooLong = lastSync.map {
             now().timeIntervalSince($0) > Manifest.tombstoneRetention
         } ?? false
-        for take in localTakes where entries[take.id] == nil && !tombstonedIds.contains(take.id) {
+        //    STALE ENTRIES TOO (2026-09-03, D-250). This step used to require the entry to
+        //    be ABSENT. Step 1 selects by `modifiedAt > lastSync`, so a Take whose local
+        //    change survived one push cycle — a deferred lock, suspension mid-push, anything
+        //    that let `setLastSyncDate` advance past it — was selected by NEITHER path. Its
+        //    cloud copy then stayed wrong permanently and every pull re-raised it as a
+        //    conflict. Observed on device: 4 Takes stuck across 15 hours and three launches,
+        //    each immediately preceded by `Sync: push ok`.
+        //
+        //    A NEWER entry is deliberately left alone. If the cloud holds a more recent
+        //    version than we do, another device wrote it and we have not pulled it yet;
+        //    overwriting it here would silently discard their edit, which this engine must
+        //    never do (see this file's header contract).
+        //
+        //    The long-offline hold-back stays scoped to the ABSENT case, unchanged. It exists
+        //    because an unmatched Take may have been deleted fleet-wide with its tombstone
+        //    since pruned — but an entry that EXISTS is proof the fleet still lists the Take,
+        //    so there is no deletion to resurrect and nothing to hold back for.
+        for take in localTakes where !tombstonedIds.contains(take.id) {
             if isCancelled() { throw CancellationError() }
-            if offlineTooLong, let lastSync, take.modifiedAt <= lastSync {
-                report.heldBack.append(take.id)
-                continue
+            if let entry = entries[take.id] {
+                // Rewrite only when the cloud copy is demonstrably older. An unparseable
+                // date in a signed manifest makes the entry unusable, so local wins there
+                // too rather than the Take being stranded behind a value nothing can read.
+                let cloudModified = ISO8601.date(from: entry.modified)
+                if let cloudModified, take.modifiedAt <= cloudModified { continue }
+                try upload(take, to: cloud, entries: &entries, report: &report)
+            } else {
+                if offlineTooLong, let lastSync, take.modifiedAt <= lastSync {
+                    report.heldBack.append(take.id)
+                    continue
+                }
+                try upload(take, to: cloud, entries: &entries, report: &report)
             }
-            try upload(take, to: cloud, entries: &entries, report: &report)
         }
 
         // 5. Sign + atomic write.
