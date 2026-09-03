@@ -178,5 +178,66 @@ final class DailiesViewModelMutationTests: XCTestCase {
         XCTAssertEqual(stored.plainText, take.plainText, "the Take itself is untouched")
         XCTAssertNil(vm.tasksCompletedTakeID)
     }
+
+    // MARK: - No-op save (2026-09-03, D-250)
+
+    /// THE REPRODUCTION. Saving a Take that has not changed must NOT bump `modifiedAt`.
+    /// Opening a Take to read it and tapping away runs the same commit path, and the bump
+    /// desynchronised the Take from its cloud copy — the next pull then raised a conflict
+    /// between two versions with identical text and offered to delete one.
+    func testSave_unchangedTake_doesNotBumpModifiedAt() throws {
+        let original = Take(createdAt: Date(timeIntervalSince1970: 1_000),
+                            modifiedAt: Date(timeIntervalSince1970: 2_000),
+                            blocks: [.textLine("https://youtu.be/wt9N42GDdqM")])
+        let store = InMemoryTakeStore()
+        try store.upsert(original)
+        let vm = DailiesViewModel(store: store, reminders: ReminderScheduler(center: QuietCenter()))
+
+        vm.save(original)          // committed without a single character changing
+
+        let after = try store.take(id: original.id)
+        XCTAssertEqual(after?.modifiedAt, original.modifiedAt,
+            "A save that changed nothing bumped modifiedAt — that desynchronises the Take from its cloud copy and raises a conflict over two identical versions.")
+        XCTAssertEqual(after, original,
+            "An unchanged save must leave the stored Take byte-identical.")
+    }
+
+    /// The healthy path is untouched: a REAL edit still bumps `modifiedAt`, or the sync
+    /// engine would never push it (push selects on the watermark).
+    func testSave_editedTake_stillBumpsModifiedAt() throws {
+        let original = Take(createdAt: Date(timeIntervalSince1970: 1_000),
+                            modifiedAt: Date(timeIntervalSince1970: 2_000),
+                            blocks: [.textLine("before")])
+        let store = InMemoryTakeStore()
+        try store.upsert(original)
+        let vm = DailiesViewModel(store: store, reminders: ReminderScheduler(center: QuietCenter()))
+
+        var edited = original
+        edited.blocks = [.textLine("after")]
+        vm.save(edited)
+
+        let after = try store.take(id: original.id)
+        XCTAssertGreaterThan(after!.modifiedAt, original.modifiedAt,
+            "A real edit must bump modifiedAt — push selects by `modifiedAt > lastSync`, so an unbumped edit never leaves the device.")
+        XCTAssertEqual(after?.plainText, "after")
+    }
+
+    /// A seeded Take that is merely OPENED keeps its seed flag: opening is not a first
+    /// edit. The flag still clears when something actually changes.
+    func testSave_unchangedSeededTake_keepsSeedFlagAndDate() throws {
+        var seeded = Take(createdAt: Date(timeIntervalSince1970: 1_000),
+                          modifiedAt: Date(timeIntervalSince1970: 2_000),
+                          blocks: [.textLine("seed")])
+        seeded.isSeeded = true
+        let store = InMemoryTakeStore()
+        try store.upsert(seeded)
+        let vm = DailiesViewModel(store: store, reminders: ReminderScheduler(center: QuietCenter()))
+
+        vm.save(seeded)
+
+        let after = try store.take(id: seeded.id)
+        XCTAssertEqual(after?.isSeeded, true, "Opening a seeded Take is not a first edit; the flag must survive.")
+        XCTAssertEqual(after?.modifiedAt, seeded.modifiedAt)
+    }
 }
 #endif
