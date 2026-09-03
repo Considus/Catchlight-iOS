@@ -219,11 +219,35 @@ final class DailiesViewModel {
 
     /// Persist edits to an existing Take (or a new one). Bumps `modifiedAt` and
     /// clears the seed flag on first edit (UX §12).
+    ///
+    /// A SAVE THAT CHANGES NOTHING IS NOT A SAVE (2026-09-03, D-250). Every commit route
+    /// funnels here, and `saveInlineEdit` tests only whether the Take is BLANK — never
+    /// whether anything changed — so opening a Take to read it and tapping away wrote a
+    /// new `modifiedAt`. That desynchronised the Take from its cloud copy, and the next
+    /// pull raised "N Takes changed on another device" over two versions with identical
+    /// text, offering to delete one of them. Owner-reported: two Takes he had only looked
+    /// at while counting them.
+    ///
+    /// `modifiedAt` and `isSeeded` are neutralised for the comparison. Both are things
+    /// THIS method sets, so including them would make every save differ from its stored
+    /// copy and the check could never fire. Neutralising `isSeeded` also keeps the "clears
+    /// on first edit" semantics exact: merely opening a seeded Take is not a first edit, so
+    /// the flag stays until something genuinely changes.
+    ///
+    /// The early return skips the write entirely — not just the bump — because an identical
+    /// row rewritten costs a re-seal, a Spotlight re-index, a notification reconcile, a
+    /// timeline reload and a sync trigger, all to store bytes that were already there.
     func save(_ take: Take) {
         var updated = take
-        updated.modifiedAt = Date()
         if updated.isSeeded { updated.isSeeded = false }
         updated.normaliseActivityFloor()
+        if let stored = try? store.take(id: updated.id) {
+            var candidate = updated
+            candidate.modifiedAt = stored.modifiedAt
+            candidate.isSeeded = stored.isSeeded
+            if candidate == stored { return }
+        }
+        updated.modifiedAt = Date()
         do {
             try store.upsert(updated)
             DiagnosticsLog.shared.record(.lifecycle, "Take saved")
