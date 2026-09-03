@@ -191,4 +191,79 @@ final class SyncSelfHealAndVersionGuardTests: XCTestCase {
         XCTAssertFalse(manifest.takes.contains { $0.uuid == take.id })
         XCTAssertTrue(manifest.tombstones.contains { $0.uuid == take.id })
     }
+
+    // MARK: - Stale manifest entry (2026-09-03, D-250)
+
+    /// THE REPRODUCTION. A Take whose cloud copy is STALE — the manifest entry
+    /// records an older `modified` than the local Take carries — must be re-uploaded,
+    /// even when the last-sync watermark has already advanced past the local change.
+    ///
+    /// Push selects by `modifiedAt > lastSync` (step 1) and self-heals only Takes with
+    /// NO manifest entry (step 4). A Take with an entry AND a `modifiedAt` behind the
+    /// watermark is therefore selected by neither, so the stale cloud copy is never
+    /// corrected and every subsequent pull re-raises it as a conflict — indefinitely.
+    /// Observed on device: conflicts grew 1 → 4 and then stopped clearing across 15
+    /// hours and three launches, with `Sync: push ok` immediately before each one.
+    func testSelfHeal_reuploadsTake_whenManifestEntryIsStale() throws {
+        let k = keys()
+        let store = InMemoryTakeStore()
+        let cloud = InMemoryCloudFolder()
+        let take = TestFixtures.richTake()                     // modifiedAt 2026-05-02
+        try store.upsert(take)
+
+        // First push: cloud gains a blob and an entry recording the ORIGINAL modifiedAt.
+        let firstPush = ISO8601.date(from: "2026-06-01T12:00:00.000Z")!
+        store.setLastSyncDate(firstPush.addingTimeInterval(-3600))
+        _ = try TestFixtures.engine(store: store, cloud: cloud, keys: k,
+                                    now: { firstPush }).pushOutbound()
+        let entryBefore = try Manifest.readEncrypted(from: cloud, keys: k).takes.first { $0.uuid == take.id }
+        XCTAssertEqual(entryBefore?.modified, ISO8601.string(from: take.modifiedAt),
+                       "precondition: the first push recorded the original modifiedAt")
+
+        // The local Take diverges — its modifiedAt moves on, but the cloud is not updated.
+        // (On device this came from a no-op inline save; the cause does not matter here,
+        // only that push must converge the cloud to local whatever produced the gap.)
+        var diverged = take
+        diverged.modifiedAt = firstPush.addingTimeInterval(60)
+        try store.upsert(diverged)
+
+        // The watermark then advances PAST the local change, which is what strands it:
+        // step 1 will no longer select it and step 4 never looked at entries that exist.
+        store.setLastSyncDate(firstPush.addingTimeInterval(600))
+
+        let secondPush = firstPush.addingTimeInterval(1200)
+        let report = try TestFixtures.engine(store: store, cloud: cloud, keys: k,
+                                             now: { secondPush }).pushOutbound()
+
+        XCTAssertEqual(report.uploaded, [take.id],
+            "A Take whose manifest entry is stale must be re-uploaded regardless of the watermark; otherwise the cloud copy is permanently wrong and every pull raises a conflict.")
+
+        let entryAfter = try Manifest.readEncrypted(from: cloud, keys: k).takes.first { $0.uuid == take.id }
+        XCTAssertEqual(entryAfter?.modified, ISO8601.string(from: diverged.modifiedAt),
+            "The manifest still records the stale modifiedAt — the cloud has not converged on local.")
+    }
+
+    /// The healthy path must not become chattier: a Take whose manifest entry already
+    /// matches local is NOT re-uploaded, so the fix cannot turn every push into a full
+    /// re-upload of the store.
+    func testSelfHeal_doesNotReuploadTake_whenManifestEntryMatches() throws {
+        let k = keys()
+        let store = InMemoryTakeStore()
+        let cloud = InMemoryCloudFolder()
+        let take = TestFixtures.richTake()
+        try store.upsert(take)
+
+        let firstPush = ISO8601.date(from: "2026-06-01T12:00:00.000Z")!
+        store.setLastSyncDate(firstPush.addingTimeInterval(-3600))
+        _ = try TestFixtures.engine(store: store, cloud: cloud, keys: k,
+                                    now: { firstPush }).pushOutbound()
+
+        // Nothing changed locally; the watermark moves on.
+        store.setLastSyncDate(firstPush.addingTimeInterval(600))
+        let report = try TestFixtures.engine(store: store, cloud: cloud, keys: k,
+                                             now: { firstPush.addingTimeInterval(1200) }).pushOutbound()
+
+        XCTAssertTrue(report.uploaded.isEmpty,
+            "An unchanged Take was re-uploaded — the staleness check must compare against the manifest entry, not re-upload unconditionally.")
+    }
 }
