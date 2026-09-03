@@ -84,6 +84,21 @@ final class AppModel {
     var restoreAwaitingFolder: Bool = false
 
     private(set) var needsOnboarding: Bool
+
+    /// D-253: this install holds a master key but NO privacy phrase. The app works —
+    /// the master key still decrypts everything — but the Takes cannot be recovered
+    /// anywhere else, and until now nothing said so (D-249: "the app never said so").
+    /// `MnemonicKeychain.exists()` was consulted in exactly one place, Settings →
+    /// Privacy phrase, so only a user who happened to open that screen ever learned.
+    /// The two secrets are separate keychain items and can diverge after a correct
+    /// write, so the safe write order (D-253) does not make this check redundant.
+    private(set) var phraseMissing: Bool = false
+
+    /// Re-read the phrase/key pair. Cheap: `exists()` uses `SecItemCopyMatching` with
+    /// `kSecUseAuthenticationUISkip`, so it never prompts for Face ID.
+    func refreshPhrasePresence() {
+        phraseMissing = MasterKeyKeychain.exists() && !MnemonicKeychain.exists()
+    }
     private(set) var onboardingVM: OnboardingViewModel?
 
     /// App-entry lock state for an ONBOARDED user (D-042 lock screen). The
@@ -246,6 +261,9 @@ final class AppModel {
     private func completeOnboarding(with masterKeyData: Data, isRestore: Bool) {
         onboardingVM = nil
         needsOnboarding = false
+        // Both secrets have just been written (phrase first, D-253) — re-check rather
+        // than assume, so a partial write surfaces immediately instead of next launch.
+        refreshPhrasePresence()
         // A restoring user already knows the app — skip the first-run orientation tour
         // (owner 2026-07-02). step 5 = complete, so no hint ever arms.
         if isRestore { orientation.step = 5 }

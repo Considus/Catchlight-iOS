@@ -242,7 +242,7 @@ enum Wiring {
         let initialStore: TakeStore = InMemoryTakeStore()
         let lockState: AppModel.LockState = onboarded ? .locked : .unlocked
         let subscriptionDefaults = UserDefaults(suiteName: AppGroup.identifier) ?? .standard
-        return AppModel(
+        let model = AppModel(
             needsOnboarding: !onboarded,
             initialStore: initialStore,
             session: session,
@@ -255,6 +255,11 @@ enum Wiring {
             subscription: SubscriptionManager(defaults: subscriptionDefaults),
             spotlight: CoreSpotlightIndexer()
         )
+        // D-253: establish phrase presence at launch, so an install holding a master
+        // key but no phrase is told — without opening Settings → Privacy phrase, which
+        // is the only place that ever checked (D-249: "the app never said so").
+        model.refreshPhrasePresence()
+        return model
     }
 
     #if DEBUG
