@@ -181,8 +181,31 @@ public struct MasterKeyKeychain {
             kSecAttrAccount as String:     account,
             kSecAttrAccessGroup as String: accessGroup,
             kSecMatchLimit as String:      kSecMatchLimitOne,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+            kSecReturnAttributes as String: true
         ]
+        // 🚨 kSecUseAuthenticationUISkip is DELIBERATELY ABSENT (2026-09-04).
+        // Measured on the owner's iPhone: with that flag the query returns
+        // errSecItemNotFound (-25300) for an item that provably EXISTS — an
+        // authenticated read of the same item returned its 12 words. iOS answers
+        // "not found", not errSecInteractionNotAllowed, when it cannot evaluate an
+        // access control without UI, so accepting -25308 does not cover it.
+        // Measured alternatives against the real item: with the flag -25300; without
+        // it 0; without it plus kSecReturnAttributes 0. Neither prompts, because
+        // matching on attributes never decrypts the item.
+        //
+        // This is the THIRD distinct defect from this one flag: invalid in
+        // SecItemUpdate (MnemonicKeychain, fixed 2026-07-01), invalid in
+        // Keychain.upsertItem's update (the -50 that blocked onboarding), and here a
+        // silent FALSE NEGATIVE. Do not reintroduce it on a SecItemCopyMatching that
+        // may meet an access-controlled item.
+        //
+        // ⚠️ THIS ONE IS THE DANGEROUS INSTANCE. `Wiring` sets
+        // `onboarded = MasterKeyKeychain.exists()`, so a false negative sends a user
+        // with a healthy account into onboarding — and `finishOnboarding()` derives a
+        // NEW master key from a NEW phrase and overwrites the old one, making every
+        // existing Take permanently undecryptable. The Secure-Enclave path stores with
+        // `accessControl: nil` and so escapes it; the raw path stores with
+        // `.userPresence` and does not.
         let status = SecItemCopyMatching(query as CFDictionary, nil)
         return status == errSecSuccess || status == errSecInteractionNotAllowed
     }
