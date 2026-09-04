@@ -132,6 +132,8 @@ struct DailiesView: View {
     /// holds the keyboard. `ui.editingTakeID` is the matching focus flag (shared so
     /// RootView can mask the dock). Both clear on save/discard. The draft is committed
     /// through the same `vm.save` chokepoint the top-anchored editor uses.
+    /// D-253: gates the plaintext-export confirmation on the missing-phrase banner.
+    @State private var showMissingPhraseExportConfirm = false
     @State private var editDraft: Take?
     @State private var editFocusedBlockID: UUID?
     /// Where the keyboard goes back to after the Focus ring (D-240). Opening the ring over a
@@ -866,6 +868,7 @@ struct DailiesView: View {
     private var topStrips: some View {
         VStack(spacing: 0) {
             conflictBanner
+            missingPhraseBanner
             lapseBanner
             storageErrorStrip
             syncErrorStrip
@@ -887,10 +890,71 @@ struct DailiesView: View {
     /// quarantine); keep in sync if a strip's trigger changes.
     private var hasTopStrip: Bool {
         conflicts.pending.count > 0
+            || app.phraseMissing
             || app.subscriptionStatus == .lapsed
             || vm.lastError != nil
             || app.lastSyncError != nil
             || app.quarantinedCount > 0
+    }
+
+    /// D-253: this install holds a master key but NO privacy phrase, so its Takes
+    /// cannot be recovered anywhere else. The app WORKS — the master key still
+    /// decrypts everything — which is exactly why the state went unreported: nothing
+    /// is broken to the eye, and `MnemonicKeychain.exists()` was consulted only in
+    /// Settings → Privacy phrase. D-249's wording is the brief: **the product defect
+    /// is the SILENCE, not the missing phrase.**
+    ///
+    /// It offers Export because that is the ONLY mitigation that exists today, and it
+    /// round-trips losslessly through Import. Export is deliberately behind a
+    /// confirmation rather than one tap: the file is PLAINTEXT, which for an app whose
+    /// proposition is that nobody else can read your notes should never be handed out
+    /// silently; and an export is NOT a recovery phrase — importing re-creates Takes
+    /// as new entries rather than restoring this account.
+    ///
+    /// ⚠️ COPY IS A DRAFT — the wording of the banner and of both truths in the
+    /// confirmation is the owner's to settle (D-253).
+    @ViewBuilder
+    private var missingPhraseBanner: some View {
+        if app.phraseMissing {
+            HStack(spacing: 10) {
+                Image(systemName: "key.slash")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(Color.ckRuby)
+                    .accessibilityHidden(true)
+                Text("No privacy phrase on this device — your Takes can't be recovered elsewhere.")
+                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .lineLimit(3)
+                Spacer(minLength: 8)
+                Button { showMissingPhraseExportConfirm = true } label: {
+                    Text("Export")
+                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .foregroundStyle(Color.ckAccent)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("missing-phrase-banner-export")
+                .accessibilityLabel("Export your Takes")
+                .accessibilityHint("Saves a readable copy. Not a recovery phrase.")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .frame(minHeight: 44)
+            .frame(maxWidth: .infinity)
+            .background(Color.ckRuby.opacity(scheme == .dark ? 0.16 : 0.12))
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .accessibilityElement(children: .contain)
+            .confirmationDialog("Export a readable copy?",
+                                isPresented: $showMissingPhraseExportConfirm,
+                                titleVisibility: .visible) {
+                Button("Export anyway") {
+                    let takes = (try? vm.store.allTakes()) ?? []
+                    ExportCoordinator.presentShareSheet(takes: takes)
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("The file is not encrypted — anyone who opens it can read your Takes. It is also not a recovery phrase: importing it re-creates your Takes as new entries rather than restoring this account.")
+            }
+        }
     }
 
     /// Read-only banner shown while the user is `.lapsed` (Tasks 6.20 / 6.22).
