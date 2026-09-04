@@ -39,14 +39,26 @@ struct DailiesView: View {
     @Environment(ConflictQueue.self) private var conflicts
     @Environment(\.colorScheme) private var scheme
 
-    /// The heading's clearance, SCALED (owner device report 2026-09-04, item 5).
+    /// Measured height of the heading block (title + its paddings, INCLUDING `deviceTopInset`).
+    @State private var headingBlockHeight: CGFloat = 0
+
+    /// The heading's clearance (owner device report 2026-09-04, item 5).
+    ///
     /// `CatchlightLayout.headingClearance` is a constant tuned for the 24pt heading, but
-    /// `pageHeadingStyle` is `relativeTo: .title3` and so grows with the text size. The
-    /// constant did not, so above Large the heading grew down into the pinned Obie and the
-    /// two drew on top of each other. Scaling on the SAME text style keeps the gap the
-    /// proportion it was tuned to be at every size.
-    @ScaledMetric(relativeTo: .title3) private var headingClearance: CGFloat
-        = CatchlightLayout.headingClearance
+    /// `pageHeadingStyle` is `relativeTo: .title3` and grows with the text size — so above
+    /// Large the heading came down into the pinned Obie and the two overlapped.
+    ///
+    /// Round 2 first tried SCALING the constant on `.title3`, and it overshot badly: the whole
+    /// 68 scaled, including the fixed gap below the text, leaving a large empty band at max
+    /// size (owner: "the header mask is too low"). Only the TEXT grows, so the fix measures the
+    /// heading rather than reasoning about it — clearance is whatever the heading actually
+    /// occupies plus a constant gap. `max` with the original keeps the default size at exactly
+    /// its tuned value, so nothing moves below Large.
+    private var headingClearance: CGFloat {
+        guard headingBlockHeight > 0 else { return CatchlightLayout.headingClearance }
+        return max(CatchlightLayout.headingClearance,
+                   headingBlockHeight - deviceTopInset + CatchlightLayout.headingBelowGap)
+    }
 
     /// Container width, captured by the background GeometryReader on the body
     /// ZStack; drives `spineX`.
@@ -772,6 +784,15 @@ struct DailiesView: View {
             .padding(.top, deviceTopInset + 14)
             .padding(.bottom, 2)
             .background(Color.ckBackground)
+            // Feeds `headingClearance` — everything below the heading is positioned off the
+            // heading's REAL height, so a heading that grows pushes the Obie down with it.
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { headingBlockHeight = geo.size.height }
+                        .onChange(of: geo.size.height) { _, h in headingBlockHeight = h }
+                }
+            )
             // Audit 2026-08, V32: the reading order STARTED on the Obie's Iris —
             // the pinned Obie vends before the heading in the flattened container
             // (the V30 dumps show the same order). The page heading reads first;
@@ -846,28 +867,50 @@ struct DailiesView: View {
             // The Obie's own card is OPAQUE, so it alone hides Takes scrolling up
             // behind it — no solid backing and no fade (both read as a page-coloured
             // band obscuring the timeline + spine; owner 2026-06-16).
-            // The row sits inside a scroll capped at `pinnedObieZoneHeight`. Below the cap the
-            // frame is EXACTLY the row's natural height, so there is nothing to scroll and the
-            // geometry is identical to before. Only an Obie taller than the cap scrolls here.
-            ScrollView {
-                row(for: obie, isFirst: false)
-                    // Pin to natural height — the swipe fill is `maxHeight: .infinity`,
-                    // which would otherwise stretch this to fill the screen out here.
-                    .fixedSize(horizontal: false, vertical: true)
-                    .id(obie.id)
-                    // Measured INSIDE the scroll: the row lays out at its natural height here
-                    // regardless of the capped frame outside, so this never feeds back on itself.
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear
-                                .onAppear { pinnedObieNaturalHeight = geo.size.height }
-                                .onChange(of: geo.size.height) { _, h in pinnedObieNaturalHeight = h }
-                        }
-                    )
+            // 🚨 A ScrollView CLIPS to its bounds, and the Iris straddles the card's TOP edge
+            // (it hangs `circleDiameter/2` above it — see `spineTopInset`). Wrapping the row
+            // unconditionally sliced the glyph in half at EVERY text size (owner device report
+            // 2026-09-04, round 2). A ScrollView is also GREEDY: left unframed it takes the
+            // whole viewport, so "wrap it but disable the scroll" is not a no-op either.
+            //
+            // So the scroll must not EXIST unless the Obie actually overflows the cap. Below
+            // the cap — every ordinary Obie, at every text size — this is the original view,
+            // unwrapped and unclipped. Only an over-tall Obie takes the scrolling branch, and
+            // there the Iris overhang is padded back in so the clip edge falls above the glyph.
+            let irisOverhang = CatchlightLayout.circleDiameter / 2
+            let overflows = pinnedObieNaturalHeight > 0
+                && pinnedObieZoneHeight > 0
+                && pinnedObieNaturalHeight > pinnedObieZoneHeight + 0.5
+
+            // Pin to natural height — the swipe fill is `maxHeight: .infinity`, which would
+            // otherwise stretch this to fill the screen out here. Measured unconstrained (in
+            // the scrolling branch the content still lays out naturally), so the measurement
+            // never feeds back on the frame derived from it.
+            let measuredRow = row(for: obie, isFirst: false)
+                .fixedSize(horizontal: false, vertical: true)
+                .id(obie.id)
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear { pinnedObieNaturalHeight = geo.size.height }
+                            .onChange(of: geo.size.height) { _, h in pinnedObieNaturalHeight = h }
+                    }
+                )
+
+            // Grouped so the shared modifiers below apply to BOTH branches.
+            Group {
+                if overflows {
+                    ScrollView {
+                        measuredRow.padding(.top, irisOverhang)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .scrollIndicators(.hidden)
+                    .frame(height: pinnedObieZoneHeight + irisOverhang)
+                    .padding(.top, -irisOverhang)
+                } else {
+                    measuredRow
+                }
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollIndicators(.hidden)
-            .frame(height: pinnedObieZoneHeight > 0 ? pinnedObieZoneHeight : nil)
                 // Sit at the standard first-item position (matches a plain first Take).
                 .padding(.top, deviceTopInset + headingClearance)
                 // While editing ANOTHER Take, the pinned Obie goes fully invisible
