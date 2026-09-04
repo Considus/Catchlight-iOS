@@ -118,7 +118,7 @@ final class OnboardingViewModel {
             }
             step = .reveal
         } catch {
-            failure = "Couldn't generate a privacy phrase."
+            failure = "Couldn't generate a Privacy phrase."
             failureDetail = "\(error)"
             step = .failure
         }

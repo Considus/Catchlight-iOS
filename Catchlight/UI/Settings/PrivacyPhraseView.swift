@@ -62,7 +62,7 @@ struct PrivacyPhraseView: View {
             explainer(
                 symbol: "questionmark.key.filled",
                 title: "Phrase isn't on this device",
-                body: "Catchlight stores the privacy phrase only on the device where you set it up. If you onboarded on a different device, use that one to view it."
+                body: "Catchlight stores the Privacy phrase only on the device where you set it up. If you onboarded on a different device, use that one to view it."
             )
         case .revealed(let words):
             revealGrid(words: words)
@@ -81,7 +81,7 @@ struct PrivacyPhraseView: View {
                 .foregroundStyle(Color.ckAccent)
                 // Audit 2026-08, V21: decorative — the heading below carries the meaning.
                 .accessibilityHidden(true)
-            Text("Reveal your privacy phrase")
+            Text("Reveal your Privacy phrase")
                 .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)

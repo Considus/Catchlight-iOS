@@ -147,7 +147,7 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
             Button("Continue", role: .destructive) { showSecondDeviceEntry = true }
         } message: {
-            Text("Enter your privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed. To keep a copy first, cancel and use Export Takes (Markdown), or make sure they're already in your cloud folder.")
+            Text("Enter your Privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed. To keep a copy first, cancel and use Export Takes (Markdown), or make sure they're already in your cloud folder.")
         }
         // Offline "Import from a file" (D-104): pick any exported file from Files.
         .fileImporter(isPresented: $showFileImporter,
@@ -177,7 +177,7 @@ struct SettingsView: View {
                 DebugReset.wipeAndRelaunch()
             }
         } message: {
-            Text("Deletes the master key, privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
+            Text("Deletes the master key, Privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
         }
         #endif
     }
@@ -571,7 +571,7 @@ struct SettingsView: View {
                         chevron: true,
                         action: { showSecondDeviceWarning = true })
                 .accessibilityIdentifier("settings-second-device")
-                .accessibilityHint("Restore your Takes onto this device from your privacy phrase.")
+                .accessibilityHint("Restore your Takes onto this device from your Privacy phrase.")
 
             // Spotlight & Siri exposure (owner D-110): how much of each Take iOS may
             // index for system search. Default None; anything past the TYPE label puts
