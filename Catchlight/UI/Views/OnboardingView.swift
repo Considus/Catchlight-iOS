@@ -264,7 +264,7 @@ struct WelcomeContent: View {
                     .contentShape(Rectangle().inset(by: -12))
                     .accessibilityIdentifier("onboarding-restore-link")
                     DockPillRow {
-                        DockPill(title: "Create my privacy phrase", action: onPrimary)
+                        DockPill(title: "Create my Privacy phrase", action: onPrimary)
                     }
                 }
             } else {
@@ -301,7 +301,7 @@ struct WelcomeContent: View {
 
     private var bodyBlock: some View {
         VStack(spacing: 16) {
-            (Text("First, we'll create your privacy phrase — 12 words that are the ")
+            (Text("First, we'll create your Privacy phrase — 12 words that are the ")
              + Text("ONLY").bold()
              + Text(" key to your data."))
                 .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
@@ -405,7 +405,7 @@ private struct RestoreEntryStep: View {
                         Spacer().frame(height: introHeroTopGap)
 
                         VStack(spacing: 20) {
-                            Text("Enter your privacy phrase")
+                            Text("Enter your Privacy phrase")
                                 .font(CatchlightFont.displayFixed(size: 28))
                                 .foregroundStyle(Color.ckTextPrimary)
                                 .multilineTextAlignment(.center)
@@ -649,7 +649,7 @@ private struct RevealStep: View {
                     Spacer().frame(height: introHeroTopGap)
 
                     VStack(spacing: 20) {
-                        Text("Your privacy phrase")
+                        Text("Your Privacy phrase")
                             .font(CatchlightFont.displayFixed(size: 28))
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)

@@ -131,7 +131,7 @@ public enum MnemonicKeychain {
     /// Retrieve the stored mnemonic, or nil if none has ever been persisted (or
     /// the user cancelled / failed the user-presence prompt).
     /// - Parameter reason: shown on the system authentication sheet.
-    public static func retrieve(reason: String = "Reveal your privacy phrase") -> [String]? {
+    public static func retrieve(reason: String = "Reveal your Privacy phrase") -> [String]? {
         var query: [String: Any] = [
             kSecClass as String:              kSecClassGenericPassword,
             kSecAttrService as String:        configuration.service,

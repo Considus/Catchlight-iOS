@@ -34,7 +34,7 @@ struct SecondDeviceRestoreView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     warningCard
 
-                    Text("Enter your privacy phrase")
+                    Text("Enter your Privacy phrase")
                         .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                         .foregroundStyle(Color.ckTextPrimary)
                         .frame(maxWidth: .infinity, alignment: .center)
