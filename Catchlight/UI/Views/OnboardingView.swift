@@ -23,6 +23,7 @@ private let introHeroTopGap: CGFloat = CatchlightLayout.introHeroTopGap
 
 struct OnboardingView: View {
     @Environment(OnboardingViewModel.self) private var vm
+    @Environment(\.dynamicTypeSize) private var dynamicSize
 
     var body: some View {
         // Step changes CROSSFADE the whole content layer (owner motion rule
@@ -54,7 +55,15 @@ struct OnboardingView: View {
     /// escape-hatch and Restore. Restore draws its own mark inside its ScrollView so the
     /// mark scrolls away as the keyboard rises (owner 2026-07-02); a fixed mark there
     /// would hover over the entry fields.
+    ///
+    /// Above Large the mark is NOT hoisted (owner 2026-09-04). At those sizes the step
+    /// scrolls, and a hoisted mark cannot scroll — so growing text ran underneath it. Each
+    /// step's reserve copy becomes the real, scrolling mark instead. The owner's reasoning
+    /// for accepting the crossfade this reintroduces: the mark's start size and position are
+    /// identical on every screen, so a scrolling mark still reads as persistent. Below Large
+    /// nothing scrolls, so the hoisted mark is kept exactly as it was.
     private var showsBrandMark: Bool {
+        if dynamicSize > .large { return false }
         switch vm.step {
         case .failure, .restoreEntry: return false
         default: return true
@@ -180,6 +189,9 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
     /// crossfade in `OnboardingView`, and the scaffold just RESERVES its space with
     /// a hidden copy so the content still sits below it.
     var drawsBrandMark: Bool = false
+    /// Above Large the hoisted mark stands down (see `OnboardingView.showsBrandMark`), so the
+    /// reserve copy here is the ONLY mark — it must be visible and it scrolls with the content.
+    @Environment(\.dynamicTypeSize) private var dynamicSize
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
 
@@ -187,7 +199,7 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
         StepScaffold {
             VStack(spacing: 0) {
                 IntroBrandMark()
-                    .opacity(drawsBrandMark ? 1 : 0)
+                    .opacity(drawsBrandMark || dynamicSize > .large ? 1 : 0)
                 content()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -211,7 +223,13 @@ private struct SplashFooterPill: View {
             .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))   // button-label style
             .foregroundStyle(Color.ckTextSecondary)
             .lineLimit(1)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Round 2 (device, max size): `maxHeight: .infinity` made this a CIRCLE above
+            // Large. Below Large `DockPillRow` wraps the row in a fixed 44pt frame so the
+            // capsule could never grow; the D-030 full-width branch above Large sets only a
+            // minHeight, so an unbounded child took all the offered height and the capsule's
+            // corner radius (half the SHORTER side) grew until it met the width. A minimum,
+            // not a maximum: the pill hugs its text and never rounds into a circle.
+            .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
             .background(Capsule().strokeBorder(Color.ckTextSecondary.opacity(0.3), lineWidth: 1))
             .accessibilityElement()
             .accessibilityLabel(text)
@@ -662,7 +680,9 @@ private struct LocalWarningStep: View {
 /// 🚨 A lower `minimumScaleFactor` is NOT the fix: a smaller floor is still a floor, and
 /// shrinking a recovery word toward illegibility trades one failure for another. The
 /// COLUMN COUNT gives way instead, so eight characters always have room to render in full.
-private func phraseColumnCount(for size: DynamicTypeSize) -> Int {
+/// Shared with `PhraseEntryGrid` (the restore-entry screen), which had the identical
+/// hard-coded 3-column grid — owner device report 2026-09-04, item 4.
+func phraseColumnCount(for size: DynamicTypeSize) -> Int {
     if size >= .accessibility1 { return 1 }   // one word per row: widest possible
     if size > .large { return 2 }             // same threshold as DT6 / D-030
     return 3                                  // owner 2026-06-15 3×4 grid, unchanged
@@ -689,7 +709,8 @@ private struct RevealStep: View {
                     // non-fading mark is hoisted in OnboardingView so it doesn't flash
                     // between steps. `.opacity(0)` keeps the same Y/height here.
                     IntroBrandMark()
-                        .opacity(0)
+                        // Visible and scrolling above Large — the hoisted mark stands down there.
+                        .opacity(dynamicSize > .large ? 1 : 0)
                     // Hero line at the shared set position (consistent with the
                     // IntroChapterScaffold screens).
                     Spacer().frame(height: introHeroTopGap)
@@ -786,7 +807,8 @@ private struct ConfirmStep: View {
                 VStack(spacing: 0) {
                     // Reserve the brand-mark space (hoisted + non-fading, as Reveal).
                     IntroBrandMark()
-                        .opacity(0)
+                        // Visible and scrolling above Large — the hoisted mark stands down there.
+                        .opacity(dynamicSize > .large ? 1 : 0)
                     // The gap to the hero now also HOSTS the validation message: it
                     // floats as a card centred between the brand mark and the hero
                     // (owner 2026-06-15). Previously the error reserved a line down in

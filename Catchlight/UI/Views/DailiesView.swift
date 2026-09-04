@@ -39,9 +39,22 @@ struct DailiesView: View {
     @Environment(ConflictQueue.self) private var conflicts
     @Environment(\.colorScheme) private var scheme
 
+    /// The heading's clearance, SCALED (owner device report 2026-09-04, item 5).
+    /// `CatchlightLayout.headingClearance` is a constant tuned for the 24pt heading, but
+    /// `pageHeadingStyle` is `relativeTo: .title3` and so grows with the text size. The
+    /// constant did not, so above Large the heading grew down into the pinned Obie and the
+    /// two drew on top of each other. Scaling on the SAME text style keeps the gap the
+    /// proportion it was tuned to be at every size.
+    @ScaledMetric(relativeTo: .title3) private var headingClearance: CGFloat
+        = CatchlightLayout.headingClearance
+
     /// Container width, captured by the background GeometryReader on the body
     /// ZStack; drives `spineX`.
     @State private var containerWidth: CGFloat = 0
+
+    /// Container height, from the same reader. Bounds the pinned Obie so it can never
+    /// take the whole viewport (owner device report 2026-09-04, item 6).
+    @State private var containerHeight: CGFloat = 0
 
 
     /// Horizontal centre of the circles == x of the spine == the dock's Add
@@ -123,9 +136,23 @@ struct DailiesView: View {
     /// the spine starts exactly at the first Iris (handles the pinned-Obie vs
     /// invisible-month-marker offset). `nil` until the first layout pass.
     @State private var firstRowTop: CGFloat?
-    /// Measured height of the pinned Obie zone (the Obie row + its 12pt fade), used
-    /// to inset the scrolling Takes below it. 0 ⇒ no Obie / not yet measured.
-    @State private var pinnedObieZoneHeight: CGFloat = 0
+    /// The pinned Obie's NATURAL height — measured inside its scroll, so it is the row's
+    /// own height and never the capped frame's (no feedback loop). 0 ⇒ no Obie / not measured.
+    @State private var pinnedObieNaturalHeight: CGFloat = 0
+
+    /// Height the pinned Obie actually OCCUPIES, and so the inset the timeline sits below.
+    ///
+    /// Owner device report 2026-09-04, item 6: expanding the Obie at max text size made it
+    /// taller than the screen. The Obie is pinned OUTSIDE the scroll and the timeline's top
+    /// inset is derived from its height, so the whole timeline was pushed out of the viewport
+    /// and Dailies could not be scrolled at all. The cap keeps at least half the viewport for
+    /// the timeline; an Obie past it scrolls WITHIN its own zone, so nothing is lost or clipped
+    /// — the expanded text is still all there, it just no longer evicts everything else.
+    private var pinnedObieZoneHeight: CGFloat {
+        guard pinnedObieNaturalHeight > 0 else { return 0 }
+        guard containerHeight > 0 else { return pinnedObieNaturalHeight }
+        return min(pinnedObieNaturalHeight, containerHeight * 0.5)
+    }
 
     // MARK: - Edit-in-place (2026-06-17)
     /// The live draft of the Take being edited in position, and which of its blocks
@@ -209,12 +236,12 @@ struct DailiesView: View {
         // same formula as the no-row fallback. Without one, it starts at the first
         // scrolling row.
         if vm.obie != nil {
-            return deviceTopInset + CatchlightLayout.headingClearance + 6 - radius
+            return deviceTopInset + headingClearance + 6 - radius
         }
         if let t = firstRowTop, t.isFinite {
             return max(0, t + 6 - radius)
         }
-        return deviceTopInset + CatchlightLayout.headingClearance + 6 - radius
+        return deviceTopInset + headingClearance + 6 - radius
     }
 
     /// The scroll's top inset. Without an Obie it's the plain heading clearance.
@@ -222,7 +249,7 @@ struct DailiesView: View {
     /// "View" setting puts between two Takes — each card's 6pt top/bottom padding
     /// already accounts for ~12pt of that, so we add the remainder.
     private var timelineTopInset: CGFloat {
-        let base = deviceTopInset + CatchlightLayout.headingClearance
+        let base = deviceTopInset + headingClearance
         guard vm.obie != nil, pinnedObieZoneHeight > 0 else { return base }
         return base + pinnedObieZoneHeight + max(0, takeSpacing.gap - 12)
     }
@@ -462,8 +489,9 @@ struct DailiesView: View {
             // and the remaining top safe-area inset for the pinned heading.
             GeometryReader { geo in
                 Color.clear
-                    .onAppear { containerWidth = geo.size.width }
+                    .onAppear { containerWidth = geo.size.width; containerHeight = geo.size.height }
                     .onChange(of: geo.size.width) { _, width in containerWidth = width }
+                    .onChange(of: geo.size.height) { _, height in containerHeight = height }
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) { topStrips }
@@ -779,7 +807,7 @@ struct DailiesView: View {
         // up 12px from the true bottom (owner 2026-06-17: a 6px nudge up from the prior
         // −6 to clear a small scroll-edge ugliness). Natural height when there's no Obie.
         .frame(height: (vm.obie != nil && !ui.isEditingInPlace)
-                       ? deviceTopInset + CatchlightLayout.headingClearance + max(0, pinnedObieZoneHeight - 12)
+                       ? deviceTopInset + headingClearance + max(0, pinnedObieZoneHeight - 12)
                        : nil,
                alignment: .top)
         .animation(.easeInOut(duration: 0.18), value: headingTitle)
@@ -818,21 +846,30 @@ struct DailiesView: View {
             // The Obie's own card is OPAQUE, so it alone hides Takes scrolling up
             // behind it — no solid backing and no fade (both read as a page-coloured
             // band obscuring the timeline + spine; owner 2026-06-16).
-            row(for: obie, isFirst: false)
-                // Pin to natural height — the swipe fill is `maxHeight: .infinity`,
-                // which would otherwise stretch this to fill the screen out here.
-                .fixedSize(horizontal: false, vertical: true)
-                .id(obie.id)
-                // Measure the Obie row so the scrolling Takes inset below it.
-                .background(
-                    GeometryReader { geo in
-                        Color.clear
-                            .onAppear { pinnedObieZoneHeight = geo.size.height }
-                            .onChange(of: geo.size.height) { _, h in pinnedObieZoneHeight = h }
-                    }
-                )
+            // The row sits inside a scroll capped at `pinnedObieZoneHeight`. Below the cap the
+            // frame is EXACTLY the row's natural height, so there is nothing to scroll and the
+            // geometry is identical to before. Only an Obie taller than the cap scrolls here.
+            ScrollView {
+                row(for: obie, isFirst: false)
+                    // Pin to natural height — the swipe fill is `maxHeight: .infinity`,
+                    // which would otherwise stretch this to fill the screen out here.
+                    .fixedSize(horizontal: false, vertical: true)
+                    .id(obie.id)
+                    // Measured INSIDE the scroll: the row lays out at its natural height here
+                    // regardless of the capped frame outside, so this never feeds back on itself.
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear
+                                .onAppear { pinnedObieNaturalHeight = geo.size.height }
+                                .onChange(of: geo.size.height) { _, h in pinnedObieNaturalHeight = h }
+                        }
+                    )
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            .frame(height: pinnedObieZoneHeight > 0 ? pinnedObieZoneHeight : nil)
                 // Sit at the standard first-item position (matches a plain first Take).
-                .padding(.top, deviceTopInset + CatchlightLayout.headingClearance)
+                .padding(.top, deviceTopInset + headingClearance)
                 // While editing ANOTHER Take, the pinned Obie goes fully invisible
                 // (not just the row's 0.12 mask) — it sits ON TOP of the scroll, so at
                 // 12% a focused Take scrolling behind it reads as a ghost (owner

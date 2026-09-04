@@ -21,6 +21,7 @@ struct OrientationTooltip: View {
     /// (owner 2026-06-15). Ignored for `.leading`/`.trailing` arrow edges.
     var arrowAlignment: HorizontalAlignment = .center
     var maxWidth: CGFloat = 220
+    @ScaledMetric(relativeTo: .body) private var widthScale: CGFloat = 1
 
     var body: some View {
         Text(text)
@@ -28,7 +29,11 @@ struct OrientationTooltip: View {
             .foregroundStyle(Color.ckTextPrimary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: maxWidth)
+            // Round 2 (owner device report 2026-09-04, item 5): a FIXED 220 cap. Above Large
+            // a single word is wider than 220, so the text drew outside the bubble while the
+            // background stayed at 220. The cap scales with the text; the 320 ceiling keeps
+            // the bubble inside the narrowest supported screen.
+            .frame(maxWidth: min(maxWidth * widthScale, 320))
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(

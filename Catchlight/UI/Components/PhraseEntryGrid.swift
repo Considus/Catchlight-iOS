@@ -31,7 +31,16 @@ struct PhraseEntryGrid: View {
     /// three columns pack the 12 fields into four rows, and each cell reuses the Reveal
     /// chip's look — a `ckSurface` rounded rectangle with the daylight card shadow and a
     /// small leading number — so entry lines up with how the phrase was shown.
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+    /// Round 2 (owner device report 2026-09-04, items 3+4): this was a hard-coded 3, so a
+    /// typed word was clipped by its cell above Large — the SAME fault DT11 fixed for the
+    /// Reveal/Confirm grids, in a file that fix never touched. It now shares that helper, so
+    /// entry and display give way at the same thresholds and a word you cannot check against
+    /// the one you were shown never occurs.
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 8),
+              count: phraseColumnCount(for: dynamicSize))
+    }
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 10) {
