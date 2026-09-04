@@ -1,6 +1,6 @@
 # Security
 
-Catchlight is a zero-knowledge, end-to-end encrypted iOS app. Takes are encrypted on the device with standard cryptography (AES-256-GCM, HKDF and HMAC-SHA-256, all via Apple CryptoKit), and the key is derived from the user's Privacy Phrase and never leaves the device. There is no backend and there are no analytics, so if the encryption fails, there is nothing else standing between someone's notes and whoever is looking. If you have found a way past it, I want to hear about it.
+Catchlight is a zero-knowledge, end-to-end encrypted iOS app. Takes are encrypted on the device with standard cryptography (AES-256-GCM, HKDF and HMAC-SHA-256, all via Apple CryptoKit), and the key is derived from the user's Privacy phrase and never leaves the device. There is no backend and there are no analytics, so if the encryption fails, there is nothing else standing between someone's notes and whoever is looking. If you have found a way past it, I want to hear about it.
 
 ## Reporting a vulnerability
 
