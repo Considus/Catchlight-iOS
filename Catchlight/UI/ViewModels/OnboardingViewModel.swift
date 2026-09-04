@@ -243,8 +243,12 @@ final class OnboardingViewModel {
             return
         }
         do {
-            try MasterKeyKeychain.store(masterKeyData)
+            // D-253: phrase first, same reasoning as `finishOnboarding` — the
+            // `onboarded` gate keys off the master key alone, so the key must not
+            // land before the phrase. Less acute on this path (the user typed the
+            // phrase and still has it), but the resulting state is identical.
             try MnemonicKeychain.store(cleaned)
+            try MasterKeyKeychain.store(masterKeyData)
             onComplete(masterKeyData, /* isRestore: */ true)
         } catch let error as KeychainError {
             failure = "Couldn't secure your account on this device."
@@ -263,13 +267,24 @@ final class OnboardingViewModel {
     func finishOnboarding() {
         do {
             let masterKeyData = MasterKeyDerivation.deriveRaw(from: mnemonic)
-            try MasterKeyKeychain.store(masterKeyData)
-            // Persist the mnemonic so Settings → Privacy phrase can re-display it
+            // D-253: the PHRASE IS STORED FIRST, deliberately. `Wiring.swift` decides
+            // `onboarded` from `MasterKeyKeychain.exists()` ALONE, so the moment the
+            // master key lands this install counts as onboarded on the next launch.
+            // With the old order — key first, phrase second — any failure or kill
+            // between the two left a working app holding a master key, NO phrase, and
+            // no warning: exactly the condition recorded as D-249, and unrecoverable,
+            // because the phrase is the only key and this one has never been shown to
+            // anyone yet. Storing the phrase first means the app cannot come to believe
+            // it is onboarded until the phrase is already safe; a failure here simply
+            // leaves the user to onboard again.
+            //
+            // Persists the mnemonic so Settings → Privacy phrase can re-display it
             // (Task 3.12). Carries `.userPresence` access control — the fresh iOS
             // auth is the whole gate (the in-app PIN was removed by D-042). (The
             // Argon2 metadata salt is no longer written — HKDF derivation uses a
             // fixed domain salt.)
             try MnemonicKeychain.store(mnemonic)
+            try MasterKeyKeychain.store(masterKeyData)
             onComplete(masterKeyData, /* isRestore: */ false)
         } catch let error as KeychainError {
             failure = "Couldn't secure your account on this device."
