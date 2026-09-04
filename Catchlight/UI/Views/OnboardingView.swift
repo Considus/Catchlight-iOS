@@ -647,8 +647,30 @@ private struct LocalWarningStep: View {
 
 // MARK: - Screen 4: Reveal
 
+/// Audit 2026-08, DT11: the 12 words are a RECOVERY key the user transcribes BY HAND,
+/// so a truncated word is not a legibility problem — it is an AMBIGUITY one. Measured
+/// at AX5 on the bench: `exhibit` and `exhaust` BOTH render as `exh…`, so a careful and
+/// accurate transcription still produces an unusable phrase, and the user does not find
+/// out until their phone dies (D-249: the phrase is the only key; the master key is
+/// Secure-Enclave-wrapped, device-only and cannot be re-derived).
+///
+/// Measured against the app's own wordlist (`bip39-english.txt`, 2048 words): the longest
+/// word is EIGHT characters, and 46.3% are longer than the five-character survival
+/// threshold at AX5 — so 99.94% of twelve-word phrases lose at least one word. Not an
+/// edge case.
+///
+/// 🚨 A lower `minimumScaleFactor` is NOT the fix: a smaller floor is still a floor, and
+/// shrinking a recovery word toward illegibility trades one failure for another. The
+/// COLUMN COUNT gives way instead, so eight characters always have room to render in full.
+private func phraseColumnCount(for size: DynamicTypeSize) -> Int {
+    if size >= .accessibility1 { return 1 }   // one word per row: widest possible
+    if size > .large { return 2 }             // same threshold as DT6 / D-030
+    return 3                                  // owner 2026-06-15 3×4 grid, unchanged
+}
+
 private struct RevealStep: View {
     @Environment(OnboardingViewModel.self) private var vm
+    @Environment(\.dynamicTypeSize) private var dynamicSize
 
     private var bodyText: String {
         switch vm.storagePath {
@@ -719,7 +741,8 @@ private struct RevealStep: View {
         // 3×4 (owner 2026-06-15): three columns pack the 12 words into four rows
         // instead of six and remove the wide trailing gap the 2-column cards left
         // after each word — tighter on the page and quicker to scan.
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 8),
+                             count: phraseColumnCount(for: dynamicSize))   // DT11
         return LazyVGrid(columns: columns, spacing: 10) {
             ForEach(Array(words.enumerated()), id: \.offset) { idx, word in
                 HStack(spacing: 5) {
@@ -755,6 +778,7 @@ private struct RevealStep: View {
 
 private struct ConfirmStep: View {
     @Environment(OnboardingViewModel.self) private var vm
+    @Environment(\.dynamicTypeSize) private var dynamicSize
 
     var body: some View {
         StepScaffold {
@@ -862,7 +886,13 @@ private struct ConfirmStep: View {
         // Slots match the bank tiles below — same 44pt height, same 10pt gutters
         // (owner 2026-06-15): they read as one family of cells and the row no longer
         // costs the extra height that pushed the bank off-screen.
-        HStack(spacing: 10) {
+        // DT11: three slots side by side truncate exactly as the reveal grid does, and
+        // a slot the user cannot read is a slot they cannot verify. Above the accessibility
+        // threshold they stack, so each word gets the full width.
+        let slotLayout = dynamicSize >= .accessibility1
+            ? AnyLayout(VStackLayout(spacing: 10))
+            : AnyLayout(HStackLayout(spacing: 10))
+        return slotLayout {
             ForEach(0..<vm.slots.count, id: \.self) { i in
                 let value = vm.slots[i]
                 let positionLabel = vm.targetPositionsForDisplay.indices.contains(i)
@@ -924,7 +954,8 @@ private struct ConfirmStep: View {
     private var bankGrid: some View {
         // 3×4 — matches the reveal grid (owner 2026-06-15: both phrase grids moved
         // 2×6 → 3×4 to compact the cards), order preserved from the shuffle.
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 8),
+                             count: phraseColumnCount(for: dynamicSize))   // DT11
         return LazyVGrid(columns: columns, spacing: 10) {
             // Index-based identity + usage (2026-06-10): tracking by word value
             // greyed BOTH tiles when a phrase contained a duplicate word, and
