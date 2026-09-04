@@ -287,9 +287,19 @@ public struct MasterKeyKeychain {
             kSecAttrService as String:        service,
             kSecAttrAccount as String:        account,
             kSecAttrAccessGroup as String:    accessGroup,
-            kSecAttrSynchronizable as String: false,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+            kSecAttrSynchronizable as String: false
         ]
+        // NOTE (2026-09-02): `kSecUseAuthenticationUISkip` is valid ONLY for
+        // SecItemCopyMatching. In a SecItemUpdate query it returns errSecParam
+        // (-50), so this update NEVER succeeded once the item existed — and since
+        // the 2026-07-23 narrowing below, that -50 no longer falls through to
+        // delete-then-add, it THROWS. Owner-reported on device: "Keychain store
+        // failed (OSStatus -50)" on ordinary onboarding, because keychain items
+        // survive app deletion, so a reinstall takes the UPDATE path.
+        //
+        // This is the same defect `MnemonicKeychain.upsert` found and fixed on
+        // 2026-07-01 (see its note); the fix landed on that sibling and never here.
+        // The flag stays where it IS valid, at the SecItemCopyMatching on line ~184.
         var update: [String: Any] = [kSecValueData as String: data]
         if let accessControl { update[kSecAttrAccessControl as String] = accessControl }
 
