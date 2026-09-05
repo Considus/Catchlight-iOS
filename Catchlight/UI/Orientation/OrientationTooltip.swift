@@ -22,23 +22,34 @@ struct OrientationTooltip: View {
     var arrowAlignment: HorizontalAlignment = .center
     var maxWidth: CGFloat = 220
     @ScaledMetric(relativeTo: .body) private var widthScale: CGFloat = 1
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
+    /// The cap. Scales with the text so a single word above Large is never wider than the
+    /// bubble, with a ceiling that keeps it inside the narrowest supported screen.
+    private var bubbleWidth: CGFloat { min(maxWidth * widthScale, 320) }
 
     var body: some View {
         Text(text)
             .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
             .foregroundStyle(Color.ckTextPrimary)
             .multilineTextAlignment(.center)
-            // 🚨 ORDER IS THE BUG, not the width (owner device report 2026-09-04, round 3).
-            // `.fixedSize(vertical:)` pins the height to the text's IDEAL height, measured at
-            // its ideal — i.e. UNCONSTRAINED — width. Applied BEFORE the width cap that is one
-            // line, so the cap below then wrapped the text to two lines inside a bubble still
-            // only one line tall, and the second line hung out of the background. Invisible at
-            // default size, where the text fits one line inside the cap anyway.
+            // 🚨 The caller applies `.fixedSize()` — BOTH axes — to escape the 44pt dock
+            // button it overlays. That proposes nil×nil, and under a nil proposal
+            // `.frame(maxWidth:)` clamps the WIDTH to the cap but reports the child's ideal
+            // HEIGHT, which is the ONE-LINE height measured at the unclamped width. The text
+            // then wrapped to two lines inside a bubble one line tall and the second line hung
+            // outside the background (owner device report 2026-09-04, rounds 3 and 4).
             //
-            // Constrain the width FIRST; the ideal height is then computed for the width the
-            // text will really have. The cap itself scales so a single word above Large is not
-            // wider than the bubble, with a ceiling that keeps it on the narrowest screen.
-            .frame(maxWidth: min(maxWidth * widthScale, 320))
+            // Reordering `.fixedSize` and `.frame` does NOT fix it: the caller's `.fixedSize()`
+            // re-creates the same nil proposal one level up, which is why round 3's reorder
+            // changed nothing on the device.
+            //
+            // A DEFINITE width removes the negotiation: the text is laid out at exactly this
+            // width, so its height is computed for the width it will really have. Applied only
+            // above Large — below it the cap is never reached, the bubble hugs its text, and
+            // that tuned appearance is left exactly as it was.
+            .frame(width: dynamicSize > .large ? bubbleWidth : nil)
+            .frame(maxWidth: dynamicSize > .large ? nil : bubbleWidth)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
