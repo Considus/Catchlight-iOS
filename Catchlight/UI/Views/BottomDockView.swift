@@ -73,6 +73,12 @@ struct BottomDockView: View {
     var onNewTake: () -> Void
 
     private let buttonSize: CGFloat = CatchlightLayout.minTouchTarget
+
+    /// The Add hint's text, in ONE place. V36 (audit §15af, D-260) folds it into the Add
+    /// button's own accessibility label while the hint shows, and the label and the visible
+    /// bubble must never drift apart — two literals would let them.
+    private static let addHintText = "What's your first Take?"
+
     /// Visible dock-circle diameter. Owner 2026-06-15: enlarged 36 → 44 so the
     /// circle FILLS its 44pt touch frame (= `minTouchTarget`) — the buttons read
     /// larger and now match the onboarding/paywall pill, which already sizes to the
@@ -258,7 +264,7 @@ struct BottomDockView: View {
             // hold station on the button's ring while the bubble grows upward with the text.
             .overlay(alignment: .bottomLeading) {
                 if orientation.showAddPulse {
-                    OrientationTooltip(text: "What's your first Take?", arrowEdge: .bottom, arrowAlignment: .leading)
+                    OrientationTooltip(text: Self.addHintText, arrowEdge: .bottom, arrowAlignment: .leading)
                         .fixedSize()
                         .offset(y: -(buttonSize + 14))
                         .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
@@ -273,7 +279,20 @@ struct BottomDockView: View {
         // hint never had this: it overlays the entire dock row, after every button.
         .zIndex(orientation.showAddPulse ? 1 : 0)
         .accessibilityIdentifier("add-button")
-        .accessibilityLabel("Add Take")
+        // V36 (audit §15af, D-260): the tooltip is overlaid INSIDE this Button's `label:`
+        // closure, so it belongs to the button's accessibility subtree and this label
+        // REPLACES it — `OrientationTooltip`'s own `.accessibilityElement()` and label never
+        // survive. It read once only because the tooltip's `onAppear` posts an announcement
+        // (V25's fix), which fires on first mount and never again: ARRIVAL worked, and every
+        // later focus got the bare "Add button". V25 fixed the arrival and never checked the
+        // element the user then navigates to.
+        //
+        // Fold the hint into the label while it is showing. NOT `.accessibilityHidden(true)`
+        // on the tooltip — D-221: a hide on a shape-bearing view materialises an anonymous
+        // element rather than removing one.
+        .accessibilityLabel(orientation.showAddPulse
+                            ? "Add Take. \(Self.addHintText)"
+                            : "Add Take")
         .accessibilityHint("Double-tap to capture a new Take.")
         .accessibilityAddTraits(.isButton)
         .onChange(of: orientation.showAddPulse, initial: true) { _, showing in
