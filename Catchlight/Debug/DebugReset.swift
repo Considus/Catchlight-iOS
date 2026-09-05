@@ -33,57 +33,18 @@ enum DebugReset {
     ///     Database directory from the app-group container.
     @MainActor
     static func wipeAndRelaunch() {
-        wipeKeychain()
-        wipeDefaults()
-        wipeStore()
+        // One wipe, shared with the shipping "Start over" (see `AccountReset`). The DEBUG aid
+        // additionally clears the entitlement flag, so a reset here simulates a genuinely
+        // fresh install; the shipping path deliberately does not.
+        AccountReset.wipe(clearingEntitlement: true)
 
-        // Give the destructive writes a beat to flush, then terminate. The next
-        // cold launch re-derives `needsOnboarding` from the (now absent) master
-        // key. Terminating is acceptable for a DEBUG-only action and is the
-        // simplest reliable way to force a clean re-evaluation of launch state.
+        // Give the destructive writes a beat to flush, then terminate. The next cold launch
+        // re-derives `needsOnboarding` from the (now absent) master key. Quitting is against
+        // the HIG and the SHIPPING path must not do it — it is tolerable only because this
+        // whole file is `#if DEBUG` and cannot reach a user.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             exit(0)
         }
-    }
-
-    // MARK: - Keychain
-
-    private static func wipeKeychain() {
-        MasterKeyKeychain.delete()
-        MnemonicKeychain.delete()
-    }
-
-    // MARK: - User defaults
-
-    private static func wipeDefaults() {
-        // Standard defaults: onboarding/orientation step + all user preferences, so a
-        // reset truly returns to fresh-install defaults. (owner 2026-06-16: View/Order
-        // were persisting through a reset — they weren't listed here when added.)
-        let standard = UserDefaults.standard
-        standard.removeObject(forKey: FirstRunOrientationState.storageKey)
-        standard.removeObject(forKey: SettingsViewModel.appearanceDefaultsKey)
-        standard.removeObject(forKey: SettingsViewModel.TakeSpacing.defaultsKey)   // "View"
-        standard.removeObject(forKey: SettingsViewModel.TakeSort.defaultsKey)      // "Order"
-        standard.removeObject(forKey: SettingsViewModel.TimelineArrangement.defaultsKey) // "Arrangement"
-        standard.removeObject(forKey: SettingsViewModel.TakePreview.defaultsKey)   // "Preview"
-        standard.removeObject(forKey: SettingsViewModel.ExpandedTakes.defaultsKey) // per-Take "Expand Take"
-        standard.removeObject(forKey: SettingsViewModel.LockAfter.defaultsKey)     // "Lock after"
-
-        // App-group defaults: cloud-folder bookmark / URL fallback + the
-        // "ever entitled" subscription flag. `clearCloudFolderBookmark` removes
-        // both cloud keys via the same code the Settings sheet uses.
-        Wiring.clearCloudFolderBookmark()
-        UserDefaults(suiteName: AppGroup.identifier)?
-            .removeObject(forKey: SubscriptionManager.everEntitledDefaultsKey)
-    }
-
-    // MARK: - Store
-
-    /// Remove the entire encrypted store directory from the app-group container.
-    /// Delegates to the production `LocalStoreReset` primitive (shared with the
-    /// Settings → Second device wipe) so there is one deletion path.
-    private static func wipeStore() {
-        LocalStoreReset.wipeDatabaseFiles()
     }
 }
 #endif

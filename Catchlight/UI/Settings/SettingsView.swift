@@ -17,6 +17,7 @@
 //
 
 import SwiftUI
+import LocalAuthentication
 import UserNotifications
 import UniformTypeIdentifiers
 import CatchlightCore
@@ -73,6 +74,10 @@ struct SettingsView: View {
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
     @State private var showResetConfirm = false
+    /// Start over (D-253). Three deliberate steps: device-owner auth, an export off-ramp,
+    /// then the destructive confirmation.
+    @State private var showStartOverExportOffer = false
+    @State private var showStartOverConfirm = false
     #endif
 
     var body: some View {
@@ -85,6 +90,7 @@ struct SettingsView: View {
                 subscriptionSection
                 systemSection
                 supportSection
+                startOverSection
                 #if DEBUG
                 debugSection
                 #endif
@@ -180,6 +186,79 @@ struct SettingsView: View {
             Text("Deletes the master key, Privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
         }
         #endif
+    }
+
+    // MARK: - Start over (D-253)
+
+    /// ALWAYS visible (owner 2026-09-04), not gated on the missing-phrase state that prompted
+    /// it. Wanting a clean start is legitimate on its own — handing the device on, or starting
+    /// a fresh account — and a destructive action nobody can find when they need it is worse
+    /// than one that is properly guarded. The guarding is what carries the safety here: device
+    /// -owner authentication, the footer, an export off-ramp, and a final confirmation that
+    /// says what is actually lost.
+    private var startOverSection: some View {
+        Section {
+            SettingsRow(icon: "arrow.counterclockwise",
+                        label: "Start over",
+                        chevron: false,
+                        action: { beginStartOver() })
+                .accessibilityIdentifier("settings-start-over")
+                .accessibilityHint("Erases every Take on this device and creates a new Privacy phrase.")
+        } header: {
+            sectionHeader("Account")
+        } footer: {
+            sectionFooter("Erases every Take on this device and creates a new Privacy phrase. Takes already in your cloud folder are sealed with the old phrase and cannot be read again, so export first. An export is the only way to bring your Takes back.")
+        }
+        .confirmationDialog("Export your Takes first?",
+                            isPresented: $showStartOverExportOffer,
+                            titleVisibility: .visible) {
+            Button("Export Takes") { exportTakes() }
+            Button("Erase without exporting", role: .destructive) { showStartOverConfirm = true }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("An export is the only way to bring your Takes back. Exporting ends here, so start over again once you have the file.")
+        }
+        .alert("Erase everything on this device?", isPresented: $showStartOverConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Erase everything", role: .destructive) { performStartOver() }
+        } message: {
+            Text("This deletes every Take on this device and the Privacy phrase that unlocks them. Takes already in your cloud folder are sealed with the old phrase and cannot be read again. This cannot be undone.")
+        }
+    }
+
+    /// Gate on the device owner before anything destructive is even offered.
+    ///
+    /// `.deviceOwnerAuthentication` accepts biometry OR the passcode, so a user without Face
+    /// ID is not locked out of recovering their own account. It deliberately does NOT go
+    /// through `MasterKeyKeychain.retrieve()`, which is the app's usual prompt: that would
+    /// tie permission to erase to the readability of the very key being erased.
+    ///
+    /// A device with NO passcode cannot evaluate the policy at all. Erasing is then still
+    /// reachable — the two confirmations below are the guard — because refusing would strand
+    /// exactly the user this feature exists for.
+    private func beginStartOver() {
+        let context = LAContext()
+        context.localizedCancelTitle = "Cancel"
+        var policyError: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &policyError) else {
+            showStartOverExportOffer = true
+            return
+        }
+        context.evaluatePolicy(.deviceOwnerAuthentication,
+                               localizedReason: "Confirm it's you before erasing this device.") { success, _ in
+            guard success else { return }
+            DispatchQueue.main.async { showStartOverExportOffer = true }
+        }
+    }
+
+    /// Dismiss FIRST: `AppModel.startOver()` flips `RootView` to its terminal screen, and this
+    /// sheet is presented over it, so wiping while it is still up leaves the sheet floating
+    /// over a screen that no longer has anything behind it. Mirrors the paywall hand-off.
+    private func performStartOver() {
+        dismiss()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            app.startOver()
+        }
     }
 
     #if DEBUG
@@ -1009,6 +1088,17 @@ struct SettingsView: View {
     }
 
     // MARK: - Section headers
+
+    /// The explanatory line under a section. Same family as `sectionHeader`, but sentence
+    /// case and wrapping — it carries a warning, not a label.
+    private func sectionFooter(_ text: String) -> some View {
+        Text(text)
+            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+            .foregroundStyle(Color.ckTextSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, 4)
+            .padding(.top, 6)
+    }
 
     private func sectionHeader(_ text: String) -> some View {
         Text(text)
