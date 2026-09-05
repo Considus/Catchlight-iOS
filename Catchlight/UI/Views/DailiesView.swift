@@ -1001,7 +1001,7 @@ struct DailiesView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckRuby)
                     .accessibilityHidden(true)
-                Text("No privacy phrase on this device — your Takes can't be recovered elsewhere.")
+                Text("No privacy phrase on this device. Your Takes can't be recovered elsewhere.")
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(3)
@@ -1032,7 +1032,7 @@ struct DailiesView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("The file is not encrypted — anyone who opens it can read your Takes. It is also not a recovery phrase: importing it re-creates your Takes as new entries rather than restoring this account.")
+                Text("The file is not encrypted. Anyone who opens it can read your Takes. It is also not a recovery phrase: importing it re-creates your Takes as new entries rather than restoring this account.")
             }
         }
     }
