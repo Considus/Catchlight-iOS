@@ -194,7 +194,7 @@ final class OnboardingViewModel {
             step = .complete
         } else {
             flashError = true
-            failure = "Those aren't quite right — try again."
+            failure = "Those aren't quite right. Try again."
             Task { @MainActor [weak self] in
                 try? await Task.sleep(nanoseconds: 600_000_000)
                 guard let self else { return }
