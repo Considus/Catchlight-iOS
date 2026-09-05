@@ -71,13 +71,15 @@ struct SettingsView: View {
     /// no per-file "already imported" tracking), so warn before proceeding.
     @State private var showImportConfirm = false
 
-    #if DEBUG
-    /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
     /// Start over (D-253). Three deliberate steps: device-owner auth, an export off-ramp,
     /// then the destructive confirmation.
+    ///
+    /// 🚨 NOT inside `#if DEBUG`. These were added anchored to the DEBUG reset's own gate and
+    /// inherited its conditional, so they compiled in Debug and vanished in Release — caught
+    /// by CI's Release job, invisible to every local Debug build. The DEBUG reset that owned
+    /// that block is gone; Start over ships.
     @State private var showStartOverExportOffer = false
     @State private var showStartOverConfirm = false
-    #endif
 
     var body: some View {
         NavigationStack {
