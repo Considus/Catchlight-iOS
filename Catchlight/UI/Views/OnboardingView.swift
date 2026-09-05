@@ -85,19 +85,38 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
 
-    // At accessibility text sizes (AX1+) wrap the content in a ScrollView so tall
-    // onboarding screens (Welcome, Storage Choice, Cloud Reminder) don't clip
-    // behind the bottom safe-area inset. At default sizes the existing
-    // Spacer-centred ZStack is preserved so visuals are unchanged. Steps 4–5
-    // already contain their own ScrollView; SwiftUI nests these cleanly.
+    // Above the default text size, wrap the content in a ScrollView so tall onboarding
+    // screens (Welcome, Storage Choice, Cloud Reminder) don't clip behind the bottom
+    // safe-area inset. At default sizes the Spacer-centred ZStack is preserved so
+    // visuals are unchanged. Steps 4-5 already contain their own ScrollView.
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
     var body: some View {
-        Group {
-            // Audit 2026-08, DT6: gate on the SAME threshold as DockPillRow's
-            // D-030 pill growth (`> .large`) — the old `isAccessibilitySize`
-            // gate left xLarge–xxxLarge growing content with no scroll recovery.
-            if dynamicSize > .large {
+        // Audit 2026-08, DT6: gate on the SAME threshold as DockPillRow's D-030 pill
+        // growth (`> .large`) - the old `isAccessibilitySize` gate left xLarge-xxxLarge
+        // growing content with no scroll recovery.
+        if dynamicSize > .large {
+            // DT16: the bottom bar is composed as a SIBLING here, NOT via
+            // `.safeAreaInset(edge: .bottom)` as the default-size branch below does.
+            //
+            // With the inset, ENTERING a step at this size rendered the whole step at
+            // near-zero opacity - content laid out at correct on-screen frames, present
+            // in the accessibility tree, simply invisible. A VoiceOver user could
+            // complete the screen; a sighted user could not see it at all. First-run
+            // setup was unusable from the first step above Large.
+            //
+            // Established by experiment, measuring dark pixels in the content band
+            // (336 ghosted vs ~62,000 healthy). REFUTED as causes, each by removing it
+            // and re-measuring: `IntroChapterScaffold`'s `.frame(maxHeight: .infinity)`;
+            // the `.transition(.opacity)` crossfade; the per-step `.id(vm.step)`
+            // identity replacement. Removing the ScrollView fixed it, AND keeping the
+            // ScrollView while dropping the inset also fixed it - so the fault is the
+            // PAIR, not either alone. `DockPillRow` switches to a taller full-width
+            // layout at this same threshold, so two things grow at once.
+            //
+            // Do NOT "simplify" this back to one shared `.safeAreaInset` for both
+            // branches.
+            VStack(spacing: 0) {
                 ScrollView {
                     content()
                         .frame(maxWidth: .infinity)
@@ -105,25 +124,30 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
                         .padding(.vertical, 16)
                 }
                 .scrollIndicators(.hidden)   // app-wide: no scrollbars (Style Reference)
-            } else {
-                ZStack {
-                    content()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.horizontal, 24)
-                }
+
+                // No scaffold padding - DockPillRow carries the dock grid's own paddings.
+                bottom()
+                    .frame(maxWidth: .infinity)
+                    .dockFadeBackground()
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.ckBackground.ignoresSafeArea())
-        .safeAreaInset(edge: .bottom) {
-            // No scaffold padding here — DockPillRow carries the dock grid's
-            // own paddings so the pills land exactly on the dock positions.
-            // Background = the dock's soft edge (owner 2026-06-12, HiFi
-            // v1.11.5): scrolling content fades out beneath the button zone
-            // instead of meeting a hard edge.
-            bottom()
-                .frame(maxWidth: .infinity)
-                .dockFadeBackground()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.ckBackground.ignoresSafeArea())
+        } else {
+            ZStack {
+                content()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 24)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.ckBackground.ignoresSafeArea())
+            .safeAreaInset(edge: .bottom) {
+                // Background = the dock's soft edge (owner 2026-06-12, HiFi v1.11.5):
+                // scrolling content fades out beneath the button zone instead of
+                // meeting a hard edge.
+                bottom()
+                    .frame(maxWidth: .infinity)
+                    .dockFadeBackground()
+            }
         }
     }
 }
@@ -264,7 +288,7 @@ struct WelcomeContent: View {
                     .contentShape(Rectangle().inset(by: -12))
                     .accessibilityIdentifier("onboarding-restore-link")
                     DockPillRow {
-                        DockPill(title: "Create my privacy phrase", action: onPrimary)
+                        DockPill(title: "Create my Privacy phrase", action: onPrimary)
                     }
                 }
             } else {
@@ -301,7 +325,7 @@ struct WelcomeContent: View {
 
     private var bodyBlock: some View {
         VStack(spacing: 16) {
-            (Text("First, we'll create your privacy phrase — 12 words that are the ")
+            (Text("First, we'll create your Privacy phrase — 12 words that are the ")
              + Text("ONLY").bold()
              + Text(" key to your data."))
                 .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
@@ -405,7 +429,7 @@ private struct RestoreEntryStep: View {
                         Spacer().frame(height: introHeroTopGap)
 
                         VStack(spacing: 20) {
-                            Text("Enter your privacy phrase")
+                            Text("Enter your Privacy phrase")
                                 .font(CatchlightFont.displayFixed(size: 28))
                                 .foregroundStyle(Color.ckTextPrimary)
                                 .multilineTextAlignment(.center)
@@ -671,7 +695,7 @@ private struct RevealStep: View {
                     Spacer().frame(height: introHeroTopGap)
 
                     VStack(spacing: 20) {
-                        Text("Your privacy phrase")
+                        Text("Your Privacy phrase")
                             .font(CatchlightFont.displayFixed(size: 28))
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)

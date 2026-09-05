@@ -181,8 +181,31 @@ public struct MasterKeyKeychain {
             kSecAttrAccount as String:     account,
             kSecAttrAccessGroup as String: accessGroup,
             kSecMatchLimit as String:      kSecMatchLimitOne,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+            kSecReturnAttributes as String: true
         ]
+        // 🚨 kSecUseAuthenticationUISkip is DELIBERATELY ABSENT (2026-09-04).
+        // Measured on the owner's iPhone: with that flag the query returns
+        // errSecItemNotFound (-25300) for an item that provably EXISTS — an
+        // authenticated read of the same item returned its 12 words. iOS answers
+        // "not found", not errSecInteractionNotAllowed, when it cannot evaluate an
+        // access control without UI, so accepting -25308 does not cover it.
+        // Measured alternatives against the real item: with the flag -25300; without
+        // it 0; without it plus kSecReturnAttributes 0. Neither prompts, because
+        // matching on attributes never decrypts the item.
+        //
+        // This is the THIRD distinct defect from this one flag: invalid in
+        // SecItemUpdate (MnemonicKeychain, fixed 2026-07-01), invalid in
+        // Keychain.upsertItem's update (the -50 that blocked onboarding), and here a
+        // silent FALSE NEGATIVE. Do not reintroduce it on a SecItemCopyMatching that
+        // may meet an access-controlled item.
+        //
+        // ⚠️ THIS ONE IS THE DANGEROUS INSTANCE. `Wiring` sets
+        // `onboarded = MasterKeyKeychain.exists()`, so a false negative sends a user
+        // with a healthy account into onboarding — and `finishOnboarding()` derives a
+        // NEW master key from a NEW phrase and overwrites the old one, making every
+        // existing Take permanently undecryptable. The Secure-Enclave path stores with
+        // `accessControl: nil` and so escapes it; the raw path stores with
+        // `.userPresence` and does not.
         let status = SecItemCopyMatching(query as CFDictionary, nil)
         return status == errSecSuccess || status == errSecInteractionNotAllowed
     }
@@ -287,9 +310,19 @@ public struct MasterKeyKeychain {
             kSecAttrService as String:        service,
             kSecAttrAccount as String:        account,
             kSecAttrAccessGroup as String:    accessGroup,
-            kSecAttrSynchronizable as String: false,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+            kSecAttrSynchronizable as String: false
         ]
+        // NOTE (2026-09-02): `kSecUseAuthenticationUISkip` is valid ONLY for
+        // SecItemCopyMatching. In a SecItemUpdate query it returns errSecParam
+        // (-50), so this update NEVER succeeded once the item existed — and since
+        // the 2026-07-23 narrowing below, that -50 no longer falls through to
+        // delete-then-add, it THROWS. Owner-reported on device: "Keychain store
+        // failed (OSStatus -50)" on ordinary onboarding, because keychain items
+        // survive app deletion, so a reinstall takes the UPDATE path.
+        //
+        // This is the same defect `MnemonicKeychain.upsert` found and fixed on
+        // 2026-07-01 (see its note); the fix landed on that sibling and never here.
+        // The flag stays where it IS valid, at the SecItemCopyMatching on line ~184.
         var update: [String: Any] = [kSecValueData as String: data]
         if let accessControl { update[kSecAttrAccessControl as String] = accessControl }
 
