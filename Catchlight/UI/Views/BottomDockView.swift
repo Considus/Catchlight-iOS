@@ -159,11 +159,17 @@ struct BottomDockView: View {
         // The GeometryReader spans the full padded dock width, so `.top`-centre
         // alignment lands the bubble dead-centre; the same vertical offset as
         // before keeps it floating just above the toolbar.
-        .overlay(alignment: .top) {
+        // 🚨 Anchored on the BOTTOM, not the top (owner device report 2026-09-04).
+        // With `.top` the bubble's TOP was pinned and it grew DOWNWARD, so every step up in
+        // text size pushed the arrow further into the dock until it sat over the buttons. The
+        // arrow has to hold its position against the ring it points at, so pin the bubble's
+        // BOTTOM a fixed gap above the button and let it grow upward into free space.
+        // `buttonSize + 14` reproduces the old default-size position exactly.
+        .overlay(alignment: .bottom) {
             if orientation.showSettingsHint {
                 OrientationTooltip(text: "Swipe up here for settings.", arrowEdge: .bottom)
                     .fixedSize()
-                    .offset(y: -(buttonSize / 2 + 32))
+                    .offset(y: -(buttonSize + 14))
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
                     .allowsHitTesting(false)
             }
@@ -248,16 +254,24 @@ struct BottomDockView: View {
             // bubble's bottom-LEADING (over the +) and let the bubble extend RIGHT
             // (owner 2026-06-15): .topLeading lines the bubble's leading up with the
             // button's, the arrow sits 22pt in (the + centre), text spills right.
-            .overlay(alignment: .topLeading) {
+            // Bottom-anchored for the same reason as the settings hint above: the arrow must
+            // hold station on the button's ring while the bubble grows upward with the text.
+            .overlay(alignment: .bottomLeading) {
                 if orientation.showAddPulse {
                     OrientationTooltip(text: "What's your first Take?", arrowEdge: .bottom, arrowAlignment: .leading)
                         .fixedSize()
-                        .offset(y: -(buttonSize / 2 + 32))
+                        .offset(y: -(buttonSize + 14))
                         .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
                 }
             }
         }
         .buttonStyle(.plain)
+        // 🚨 This tooltip is an overlay on ONE dock button, so it draws with that button — and
+        // the three buttons AFTER it in the HStack drew on top of it (owner device report
+        // 2026-09-04: "the + button correctly sits behind it, but the other three toolbar
+        // buttons are sitting on top"). Lift the whole slot while the hint is up. The settings
+        // hint never had this: it overlays the entire dock row, after every button.
+        .zIndex(orientation.showAddPulse ? 1 : 0)
         .accessibilityIdentifier("add-button")
         .accessibilityLabel("Add Take")
         .accessibilityHint("Double-tap to capture a new Take.")
