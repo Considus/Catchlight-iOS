@@ -1012,7 +1012,7 @@ struct DailiesView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckRuby)
                     .accessibilityHidden(true)
-                Text("No privacy phrase on this device. Export now and go to Settings > Start over to generate a new key and import Takes via Settings > Import from a file")
+                Text("No privacy phrase on this device. Export now, then Settings > Start over.")
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                     .foregroundStyle(Color.ckTextPrimary)
                     // Stacked, the text owns the full width and must not be clipped: the
@@ -1047,7 +1047,7 @@ struct DailiesView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("The file is readable text and it does not contain a recovery phrase. Use Start over and Import from a file to re-import your Takes. Advice: Permanently delete export once Takes recovered.")
+                Text("The file is readable text and it does not contain a recovery phrase. Use Start over and Import from a file to re-import your Takes. Delete the export once your Takes are back.")
             }
         }
     }
