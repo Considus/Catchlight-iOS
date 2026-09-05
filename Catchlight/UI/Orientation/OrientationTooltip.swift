@@ -28,12 +28,18 @@ struct OrientationTooltip: View {
             .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
             .foregroundStyle(Color.ckTextPrimary)
             .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
-            // Round 2 (owner device report 2026-09-04, item 5): a FIXED 220 cap. Above Large
-            // a single word is wider than 220, so the text drew outside the bubble while the
-            // background stayed at 220. The cap scales with the text; the 320 ceiling keeps
-            // the bubble inside the narrowest supported screen.
+            // 🚨 ORDER IS THE BUG, not the width (owner device report 2026-09-04, round 3).
+            // `.fixedSize(vertical:)` pins the height to the text's IDEAL height, measured at
+            // its ideal — i.e. UNCONSTRAINED — width. Applied BEFORE the width cap that is one
+            // line, so the cap below then wrapped the text to two lines inside a bubble still
+            // only one line tall, and the second line hung out of the background. Invisible at
+            // default size, where the text fits one line inside the cap anyway.
+            //
+            // Constrain the width FIRST; the ideal height is then computed for the width the
+            // text will really have. The cap itself scales so a single word above Large is not
+            // wider than the bubble, with a ceiling that keeps it on the narrowest screen.
             .frame(maxWidth: min(maxWidth * widthScale, 320))
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(

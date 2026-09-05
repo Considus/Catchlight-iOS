@@ -247,6 +247,8 @@ struct KeyboardTakeEditor: View {
     var onTapIris: ((CGPoint) -> Void)? = nil
 
     @Environment(\.deviceTopInset) private var deviceTopInset
+    /// Measured, so the grow-up cap tracks a heading that has grown with the text size.
+    @Environment(\.headingClearance) private var headingClearance
 
     /// The "Creation date" setting — read here for the SAME reason `TakeEditCard` reads it: the
     /// stamp row is part of the card's height, so the grow-up cap has to know whether it's there.
@@ -310,7 +312,7 @@ struct KeyboardTakeEditor: View {
     /// The grow-UP cap: how tall the card may get before its TOP reaches the heading, past which
     /// `BlockEditor` scrolls internally.
     private var maxHeight: CGFloat {
-        let topLimit = deviceTopInset + CatchlightLayout.headingClearance + 12 + irisReserve
+        let topLimit = deviceTopInset + headingClearance + 12 + irisReserve
         // Use the live keyboard top; fall back to the static estimate before it settles.
         let kbTop = keyboardTopY < UIScreen.main.bounds.height
             ? keyboardTopY

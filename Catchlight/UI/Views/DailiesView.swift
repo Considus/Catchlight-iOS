@@ -317,6 +317,13 @@ struct DailiesView: View {
     }
 
     var body: some View {
+        // Publish the MEASURED clearance to everything below — the editor card positions itself
+        // against the heading too, and must not use a different number (2026-09-04).
+        rootStack
+            .environment(\.headingClearance, headingClearance)
+    }
+
+    private var rootStack: some View {
         ZStack(alignment: .topLeading) {
             Color.ckBackground.ignoresSafeArea()
                 // Track the keyboard top here (always present) — the old `timeline`'s copy
