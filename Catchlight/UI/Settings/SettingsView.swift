@@ -772,22 +772,22 @@ struct SettingsView: View {
         } header: {
             sectionHeader("System")
         } footer: {
-            sectionFooter("Start over erases every Take on this device and creates a new Privacy phrase. Takes already in your cloud folder are sealed with the old phrase and cannot be read again, so export first. An export is the only way to bring your Takes back.")
+            sectionFooter("Start over erases every Take on this device and creates a new Privacy phrase. Takes in your cloud folder become unreadable, so export first. An export is the only way to retain and bring your Takes back.")
         }
-        .confirmationDialog("Export your Takes first?",
+        .confirmationDialog("Export your Takes?",
                             isPresented: $showStartOverExportOffer,
                             titleVisibility: .visible) {
             Button("Export Takes") { exportTakes() }
-            Button("Erase without exporting", role: .destructive) { showStartOverConfirm = true }
+            Button("Erase. Takes exported", role: .destructive) { showStartOverConfirm = true }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("An export is the only way to bring your Takes back. Exporting ends here, so start over again once you have the file.")
+            Text("Export Takes now. This is the only way to preserve them. This will make cloud copies unreadable.")
         }
         .alert("Erase everything on this device?", isPresented: $showStartOverConfirm) {
             Button("Cancel", role: .cancel) { }
             Button("Erase everything", role: .destructive) { performStartOver() }
         } message: {
-            Text("This deletes every Take on this device and the Privacy phrase that unlocks them. Takes already in your cloud folder are sealed with the old phrase and cannot be read again. This cannot be undone.")
+            Text("This deletes every Take on this device and the Privacy phrase that unlocks them. Takes in your cloud folder will be unreadable. This cannot be undone.")
         }
     }
 
