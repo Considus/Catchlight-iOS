@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting a bug. **Do not include your Privacy Phrase, Take contents, or any
+        Thanks for reporting a bug. **Do not include your Privacy phrase, Take contents, or any
         personal data** — Catchlight is zero-knowledge and we never need it to help you.
   - type: textarea
     id: what-happened
@@ -43,5 +43,5 @@ body:
     attributes:
       label: Privacy check
       options:
-        - label: I have not included my Privacy Phrase, Take contents, or other personal data.
+        - label: I have not included my Privacy phrase, Take contents, or other personal data.
           required: true

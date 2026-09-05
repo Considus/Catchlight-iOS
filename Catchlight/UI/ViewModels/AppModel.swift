@@ -349,8 +349,11 @@ final class AppModel {
 
         // 2. Install the new secrets (overwrites the current account's key + mnemonic).
         do {
-            try MasterKeyKeychain.store(masterKeyData)
+            // D-253: phrase first — see `OnboardingViewModel.finishOnboarding`. The
+            // two secrets are separate keychain items and `onboarded` reads only the
+            // master key, so the key must never be the one that lands alone.
             try MnemonicKeychain.store(cleaned)
+            try MasterKeyKeychain.store(masterKeyData)
         } catch {
             return "Couldn't secure your account on this device."
         }
