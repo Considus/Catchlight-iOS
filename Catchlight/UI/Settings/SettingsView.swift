@@ -17,6 +17,7 @@
 //
 
 import SwiftUI
+import LocalAuthentication
 import UserNotifications
 import UniformTypeIdentifiers
 import CatchlightCore
@@ -70,10 +71,15 @@ struct SettingsView: View {
     /// no per-file "already imported" tracking), so warn before proceeding.
     @State private var showImportConfirm = false
 
-    #if DEBUG
-    /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
-    @State private var showResetConfirm = false
-    #endif
+    /// Start over (D-253). Three deliberate steps: device-owner auth, an export off-ramp,
+    /// then the destructive confirmation.
+    ///
+    /// 🚨 NOT inside `#if DEBUG`. These were added anchored to the DEBUG reset's own gate and
+    /// inherited its conditional, so they compiled in Debug and vanished in Release — caught
+    /// by CI's Release job, invisible to every local Debug build. The DEBUG reset that owned
+    /// that block is gone; Start over ships.
+    @State private var showStartOverExportOffer = false
+    @State private var showStartOverConfirm = false
 
     var body: some View {
         NavigationStack {
@@ -85,9 +91,6 @@ struct SettingsView: View {
                 subscriptionSection
                 systemSection
                 supportSection
-                #if DEBUG
-                debugSection
-                #endif
             }
             .listStyle(.insetGrouped)
             // Density pass (owner 2026-06-21): let rows sit below the system's
@@ -170,55 +173,42 @@ struct SettingsView: View {
         } message: {
             Text("Any items in the folder, that have previously been imported, will be imported again.")
         }
-        #if DEBUG
-        .alert("Reset Catchlight?", isPresented: $showResetConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Wipe & re-onboard", role: .destructive) {
-                DebugReset.wipeAndRelaunch()
-            }
-        } message: {
-            Text("Deletes the master key, Privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
-        }
-        #endif
     }
 
-    #if DEBUG
-    // MARK: - DEBUG (never compiled into Release / TestFlight)
-
-    /// Developer-only aids for on-device testing (fix pass 1, sections 2 / 2b).
-    /// The whole section is `#if DEBUG`, so it cannot ship.
-    private var debugSection: some View {
-        Section {
-            // Section 2 — one-tap re-onboarding on a real device. The Keychain
-            // survives app deletion, so this is the only way to re-trigger
-            // onboarding without a full device wipe.
-            Button(role: .destructive) {
-                showResetConfirm = true
-            } label: {
-                HStack(spacing: 14) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 20, weight: .regular))
-                        .frame(width: 26)
-                        .accessibilityHidden(true)
-                    Text("Reset Catchlight (wipe & re-onboard)")
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .multilineTextAlignment(.leading)
-                    Spacer(minLength: 8)
-                }
-                .frame(minHeight: 40)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.ckRuby)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityIdentifier("debug-reset")
-            .accessibilityHint("Wipes everything and returns to onboarding. Debug builds only.")
-
-        } header: {
-            sectionHeader("Debug")
+    /// Gate on the device owner before anything destructive is even offered.
+    ///
+    /// `.deviceOwnerAuthentication` accepts biometry OR the passcode, so a user without Face
+    /// ID is not locked out of recovering their own account. It deliberately does NOT go
+    /// through `MasterKeyKeychain.retrieve()`, which is the app's usual prompt: that would
+    /// tie permission to erase to the readability of the very key being erased.
+    ///
+    /// A device with NO passcode cannot evaluate the policy at all. Erasing is then still
+    /// reachable — the two confirmations below are the guard — because refusing would strand
+    /// exactly the user this feature exists for.
+    private func beginStartOver() {
+        let context = LAContext()
+        context.localizedCancelTitle = "Cancel"
+        var policyError: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &policyError) else {
+            showStartOverExportOffer = true
+            return
+        }
+        context.evaluatePolicy(.deviceOwnerAuthentication,
+                               localizedReason: "Confirm it's you before erasing this device.") { success, _ in
+            guard success else { return }
+            DispatchQueue.main.async { showStartOverExportOffer = true }
         }
     }
-    #endif
+
+    /// Dismiss FIRST: `AppModel.startOver()` flips `RootView` to its terminal screen, and this
+    /// sheet is presented over it, so wiping while it is still up leaves the sheet floating
+    /// over a screen that no longer has anything behind it. Mirrors the paywall hand-off.
+    private func performStartOver() {
+        dismiss()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            app.startOver()
+        }
+    }
 
     // MARK: - Title (scrolls with the list)
 
@@ -773,8 +763,33 @@ struct SettingsView: View {
                 SettingsDetailLabel(text: aboutString)
             }
             .accessibilityLabel("About. \(aboutString)")
+            // Start over lives here rather than in a section of its own (owner
+            // 2026-09-04). Kept LAST so the footer below reads as its warning.
+            SettingsRow(icon: "arrow.counterclockwise",
+                        label: "Start over",
+                        chevron: false,
+                        action: { beginStartOver() })
+                .accessibilityIdentifier("settings-start-over")
+                .accessibilityHint("Erases every Take on this device and creates a new Privacy phrase.")
         } header: {
             sectionHeader("System")
+        } footer: {
+            sectionFooter("Start over erases every Take on this device and creates a new Privacy phrase. Takes in your cloud folder become unreadable, so export first. An export is the only way to retain and bring your Takes back.")
+        }
+        .confirmationDialog("Export your Takes?",
+                            isPresented: $showStartOverExportOffer,
+                            titleVisibility: .visible) {
+            Button("Export Takes") { exportTakes() }
+            Button("Erase. Takes exported", role: .destructive) { showStartOverConfirm = true }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Export Takes now. This is the only way to preserve them. This will make cloud copies unreadable.")
+        }
+        .alert("Erase everything on this device?", isPresented: $showStartOverConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Erase everything", role: .destructive) { performStartOver() }
+        } message: {
+            Text("This deletes every Take on this device and the Privacy phrase that unlocks them. Takes in your cloud folder will be unreadable. This cannot be undone.")
         }
     }
 
@@ -1009,6 +1024,17 @@ struct SettingsView: View {
     }
 
     // MARK: - Section headers
+
+    /// The explanatory line under a section. Same family as `sectionHeader`, but sentence
+    /// case and wrapping — it carries a warning, not a label.
+    private func sectionFooter(_ text: String) -> some View {
+        Text(text)
+            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+            .foregroundStyle(Color.ckTextSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, 4)
+            .padding(.top, 6)
+    }
 
     private func sectionHeader(_ text: String) -> some View {
         Text(text)

@@ -159,7 +159,7 @@ public enum MnemonicKeychain {
     /// Whether a phrase is stored, WITHOUT triggering the user-presence prompt.
     /// `errSecInteractionNotAllowed` means the item exists but needs auth.
     public static func exists() -> Bool {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String:              kSecClassGenericPassword,
             kSecAttrService as String:        configuration.service,
             kSecAttrAccount as String:        configuration.account,
@@ -182,6 +182,22 @@ public enum MnemonicKeychain {
         // Keychain.upsertItem's update (the -50 that blocked onboarding), and here a
         // silent FALSE NEGATIVE. Do not reintroduce it on a SecItemCopyMatching that
         // may meet an access-controlled item.
+        //
+        // 🚨 BUT the note above measured the MASTER KEY item, and generalised. A SECOND Face
+        // ID on every launch, owner device report 2026-09-04: on device the master key is
+        // Secure-Enclave wrapped with `accessControl: nil` and so prompts for nothing, while
+        // THIS item carries `.userPresence`. `Wiring` calls `refreshPhrasePresence()` at
+        // launch, which reaches this check, so the user got the unlock prompt AND this one.
+        //
+        // `interactionNotAllowed` rather than the old flag: it asks the keychain to FAIL
+        // instead of showing UI, and an access-controlled item then reports
+        // errSecInteractionNotAllowed (-25308), which the caller below already reads as
+        // present. `kSecUseAuthenticationUISkip` instead reported -25300 "not found" for an
+        // item that provably existed. Do not swap it back in.
+        let context = LAContext()
+        context.interactionNotAllowed = true
+        query[kSecUseAuthenticationContext as String] = context
+
         let status = SecItemCopyMatching(query as CFDictionary, nil)
         return status == errSecSuccess || status == errSecInteractionNotAllowed
     }

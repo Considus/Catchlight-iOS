@@ -94,8 +94,29 @@ final class AppModel {
     /// write, so the safe write order (D-253) does not make this check redundant.
     private(set) var phraseMissing: Bool = false
 
-    /// Re-read the phrase/key pair. Cheap: `exists()` uses `SecItemCopyMatching` with
-    /// `kSecUseAuthenticationUISkip`, so it never prompts for Face ID.
+    /// Set once "Start over" has wiped the device (D-253, owner 2026-09-04). The app is then
+    /// holding no master key and no store, so it must not render its normal UI: every branch
+    /// below would be reading things that no longer exist. `RootView` shows a terminal screen
+    /// instead and the user relaunches.
+    ///
+    /// The alternative — resetting in process and routing live back to onboarding — needs
+    /// `Wiring`'s once-at-launch `onboarded` decision to become re-evaluable at runtime. The
+    /// owner chose the relaunch prompt over that surgery for a path taken at most once.
+    /// Deliberately NOT persisted: a relaunch must clear it.
+    private(set) var awaitingRelaunchAfterReset: Bool = false
+
+    /// Wipe this device and enter the terminal state. Irreversible.
+    @MainActor
+    func startOver() {
+        AccountReset.wipe()
+        awaitingRelaunchAfterReset = true
+    }
+
+    /// Re-read the phrase/key pair. Cheap, and it never prompts for Face ID: `exists()` asks
+    /// `SecItemCopyMatching` for ATTRIBUTES only, never the data, so nothing has to be
+    /// decrypted. (It used to pass `kSecUseAuthenticationUISkip` for this, which #222 removed:
+    /// on device that flag made an access-control-protected item report errSecItemNotFound,
+    /// so a healthy account read as having no key at all.)
     func refreshPhrasePresence() {
         phraseMissing = MasterKeyKeychain.exists() && !MnemonicKeychain.exists()
     }

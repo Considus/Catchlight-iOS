@@ -63,6 +63,19 @@ extension Color {
     static let ckPaper = Color(hex: 0xF7F4EF)
     /// Accessible amber for text on Paper — WCAG AA (4.5:1+). Matches website `--ember-text`.
     static let ckEmberText = Color(hex: 0x856539)
+    /// The first-run tooltip chip: a DEEP ember fill carrying WHITE text, in BOTH modes
+    /// (owner 2026-09-04). The hints used to be drawn on `ckSurface`, which is what every
+    /// card is, so a tooltip read as just another item on the timeline and was missed at a
+    /// glance. A saturated chip separates them from content instead of competing with it.
+    ///
+    /// 🚨 This is a DELIBERATE departure from `onAccent`, which is the house rule for a
+    /// foreground on an Ember fill and is Ink in both modes. White is owner-chosen here.
+    /// White on the BRAND Ember (#C9A96E) measures 2.24:1 and fails AA outright, so the fill
+    /// is the deep ember instead: 5.36:1, passing AA for normal text. Do not "restore" the
+    /// brand Ember here without changing the text off white at the same time.
+    static let ckTooltipFill = Color(hex: 0x856539)
+    static let ckTooltipText = Color.white
+
     /// Accessible warm-grey for secondary text on Paper — WCAG AA. Replaces Fog in Daylight.
     static let ckSlate = Color(hex: 0x5C5650)
     // "Stone" is the Daylight mark fill — and the Important quadrant / dock-toggle
@@ -651,6 +664,12 @@ enum CatchlightLayout {
     /// the first row always clears the heading and the fade on large-inset
     /// devices (iPhone 17 / iOS 26.5.1 — section 4 / D-041). The previous fixed
     /// `52` ignored the inset, tucking the first Take under the fade.
+    /// The gap between the heading block's bottom and the first Take / pinned Obie. Was
+    /// implicit inside the 68 above; named in round 2 (2026-09-04) so the clearance can be
+    /// derived from the heading's MEASURED height at large text sizes instead of a constant
+    /// that only ever suited the 24pt heading. 68 − (14 top pad + ~29 text + 2 bottom pad).
+    static let headingBelowGap: CGFloat = 23
+
     static let headingClearance: CGFloat = 68   // 52 → 58 → 66 → 68: drop the topmost Take/Obie lower so it clears the fade (owner 2026-06-16; +8 with the pinned-Obie header; +2 on 2026-06-29 when the heading grew 20 → 24, pushing the fade lower)
     /// Resting clearance the dock occupies above the timeline's bottom, BEFORE
     /// the device bottom inset is added. Last-row bottom padding is

@@ -21,22 +21,44 @@ struct OrientationTooltip: View {
     /// (owner 2026-06-15). Ignored for `.leading`/`.trailing` arrow edges.
     var arrowAlignment: HorizontalAlignment = .center
     var maxWidth: CGFloat = 220
+    @ScaledMetric(relativeTo: .body) private var widthScale: CGFloat = 1
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
+    /// The cap. Scales with the text so a single word above Large is never wider than the
+    /// bubble, with a ceiling that keeps it inside the narrowest supported screen.
+    private var bubbleWidth: CGFloat { min(maxWidth * widthScale, 320) }
 
     var body: some View {
         Text(text)
             .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
-            .foregroundStyle(Color.ckTextPrimary)
+            .foregroundStyle(Color.ckTooltipText)
             .multilineTextAlignment(.center)
+            // 🚨 The caller applies `.fixedSize()` — BOTH axes — to escape the 44pt dock
+            // button it overlays. That proposes nil×nil, and under a nil proposal
+            // `.frame(maxWidth:)` clamps the WIDTH to the cap but reports the child's ideal
+            // HEIGHT, which is the ONE-LINE height measured at the unclamped width. The text
+            // then wrapped to two lines inside a bubble one line tall and the second line hung
+            // outside the background (owner device report 2026-09-04, rounds 3 and 4).
+            //
+            // Reordering `.fixedSize` and `.frame` does NOT fix it: the caller's `.fixedSize()`
+            // re-creates the same nil proposal one level up, which is why round 3's reorder
+            // changed nothing on the device.
+            //
+            // A DEFINITE width removes the negotiation: the text is laid out at exactly this
+            // width, so its height is computed for the width it will really have. Applied only
+            // above Large — below it the cap is never reached, the bubble hugs its text, and
+            // that tuned appearance is left exactly as it was.
+            .frame(width: dynamicSize > .large ? bubbleWidth : nil)
+            .frame(maxWidth: dynamicSize > .large ? nil : bubbleWidth)
             .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: maxWidth)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.ckSurface)
+                        .fill(Color.ckTooltipFill)
                     OrientationTooltipArrow(edge: arrowEdge)
-                        .fill(Color.ckSurface)
+                        .fill(Color.ckTooltipFill)
                         .frame(width: 14, height: 8)
                         .modifier(ArrowPlacement(edge: arrowEdge, horizontal: arrowAlignment))
                 }

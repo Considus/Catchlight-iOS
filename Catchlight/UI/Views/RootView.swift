@@ -67,7 +67,13 @@ struct RootView: View {
             // 100), so VoiceOver could reach and ACT on the screen below it.
             // Conditional on `showSplash`, so everything returns at the crossfade.
             Group {
-            if app.needsOnboarding {
+            // FIRST, and before everything: after a Start over there is no master key and no
+            // store, so any other branch would be reading what has just been deleted. This is
+            // terminal by design — there is no way back into the app from here.
+            if app.awaitingRelaunchAfterReset {
+                ResetCompleteView()
+                    .transition(.opacity)
+            } else if app.needsOnboarding {
                 if let onboardingVM = app.onboardingVM {
                     OnboardingView()
                         .environment(onboardingVM)
