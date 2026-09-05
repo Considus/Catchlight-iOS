@@ -60,6 +60,8 @@ struct DailiesView: View {
                    headingBlockHeight - deviceTopInset + CatchlightLayout.headingBelowGap)
     }
 
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
     /// Container width, captured by the background GeometryReader on the body
     /// ZStack; drives `spineX`.
     @State private var containerWidth: CGFloat = 0
@@ -996,18 +998,31 @@ struct DailiesView: View {
     @ViewBuilder
     private var missingPhraseBanner: some View {
         if app.phraseMissing {
-            HStack(spacing: 10) {
+            // 🚨 Above Large the row STACKS (measured 2026-09-04). Side by side, the icon, the
+            // text and the Export button share one line, and the text column narrows until the
+            // banner read "No privacy phrase..." and nothing else at AX5 - the recovery route,
+            // which is the entire point of the banner, was gone. Same `> .large` threshold as
+            // the rest of the screen. Below it the row is unchanged.
+            let stacked = dynamicSize > .large
+            let layout = stacked
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(spacing: 10))
+            layout {
                 Image(systemName: "key.slash")
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckRuby)
                     .accessibilityHidden(true)
-                Text("No privacy phrase on this device. Your Takes can't be recovered elsewhere.")
+                Text("No privacy phrase on this device. Export now and go to Settings > Start over to generate a new key and import Takes via Settings > Import from a file")
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                     .foregroundStyle(Color.ckTextPrimary)
-                    .lineLimit(3)
-                Spacer(minLength: 8)
+                    // Stacked, the text owns the full width and must not be clipped: the
+                    // instruction IS the banner. Side by side it stays capped so the button
+                    // keeps its room.
+                    .lineLimit(stacked ? nil : 3)
+                    .fixedSize(horizontal: false, vertical: stacked)
+                if !stacked { Spacer(minLength: 8) }
                 Button { showMissingPhraseExportConfirm = true } label: {
-                    Text("Export")
+                    Text("Export now")
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
                         .foregroundStyle(Color.ckAccent)
                 }
@@ -1032,7 +1047,7 @@ struct DailiesView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("The file is not encrypted. Anyone who opens it can read your Takes. It is also not a recovery phrase: importing it re-creates your Takes as new entries rather than restoring this account.")
+                Text("The file is readable text and it does not contain a recovery phrase. Use Start over and Import from a file to re-import your Takes. Advice: Permanently delete export once Takes recovered.")
             }
         }
     }
