@@ -198,24 +198,7 @@ private struct DeviceBottomInsetKey: EnvironmentKey {
     static let defaultValue: CGFloat = 34
 }
 
-private struct HeadingClearanceKey: EnvironmentKey {
-    static let defaultValue: CGFloat = CatchlightLayout.headingClearance
-}
-
 extension EnvironmentValues {
-    /// The MEASURED heading clearance, published by `DailiesView` (2026-09-04).
-    ///
-    /// The heading scales with the text size but `CatchlightLayout.headingClearance` is a
-    /// constant tuned for the 24pt heading. Anything positioning itself below the heading has
-    /// to use the same number the heading actually occupies, or the two disagree: the editor
-    /// card kept the constant, so above Large it rose under a taller heading and hid its Iris
-    /// — the very fault `TakeEditCard.irisReserve` exists to prevent. Defaults to the constant,
-    /// so a view outside `DailiesView` behaves exactly as it did.
-    var headingClearance: CGFloat {
-        get { self[HeadingClearanceKey.self] }
-        set { self[HeadingClearanceKey.self] = newValue }
-    }
-
     var deviceTopInset: CGFloat {
         get { self[DeviceTopInsetKey.self] }
         set { self[DeviceTopInsetKey.self] = newValue }
