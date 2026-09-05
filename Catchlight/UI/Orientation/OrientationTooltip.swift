@@ -31,7 +31,7 @@ struct OrientationTooltip: View {
     var body: some View {
         Text(text)
             .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
-            .foregroundStyle(Color.ckTextPrimary)
+            .foregroundStyle(Color.ckTooltipText)
             .multilineTextAlignment(.center)
             // 🚨 The caller applies `.fixedSize()` — BOTH axes — to escape the 44pt dock
             // button it overlays. That proposes nil×nil, and under a nil proposal
@@ -56,9 +56,9 @@ struct OrientationTooltip: View {
             .background(
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.ckSurface)
+                        .fill(Color.ckTooltipFill)
                     OrientationTooltipArrow(edge: arrowEdge)
-                        .fill(Color.ckSurface)
+                        .fill(Color.ckTooltipFill)
                         .frame(width: 14, height: 8)
                         .modifier(ArrowPlacement(edge: arrowEdge, horizontal: arrowAlignment))
                 }
