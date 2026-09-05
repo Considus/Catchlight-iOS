@@ -73,7 +73,6 @@ struct SettingsView: View {
 
     #if DEBUG
     /// Gate for the destructive DEBUG reset's confirmation alert (section 2).
-    @State private var showResetConfirm = false
     /// Start over (D-253). Three deliberate steps: device-owner auth, an export off-ramp,
     /// then the destructive confirmation.
     @State private var showStartOverExportOffer = false
@@ -90,10 +89,6 @@ struct SettingsView: View {
                 subscriptionSection
                 systemSection
                 supportSection
-                startOverSection
-                #if DEBUG
-                debugSection
-                #endif
             }
             .listStyle(.insetGrouped)
             // Density pass (owner 2026-06-21): let rows sit below the system's
@@ -176,54 +171,6 @@ struct SettingsView: View {
         } message: {
             Text("Any items in the folder, that have previously been imported, will be imported again.")
         }
-        #if DEBUG
-        .alert("Reset Catchlight?", isPresented: $showResetConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Wipe & re-onboard", role: .destructive) {
-                DebugReset.wipeAndRelaunch()
-            }
-        } message: {
-            Text("Deletes the master key, Privacy phrase, all settings, and every Take, then quits the app so the next launch starts onboarding. DEBUG builds only.")
-        }
-        #endif
-    }
-
-    // MARK: - Start over (D-253)
-
-    /// ALWAYS visible (owner 2026-09-04), not gated on the missing-phrase state that prompted
-    /// it. Wanting a clean start is legitimate on its own — handing the device on, or starting
-    /// a fresh account — and a destructive action nobody can find when they need it is worse
-    /// than one that is properly guarded. The guarding is what carries the safety here: device
-    /// -owner authentication, the footer, an export off-ramp, and a final confirmation that
-    /// says what is actually lost.
-    private var startOverSection: some View {
-        Section {
-            SettingsRow(icon: "arrow.counterclockwise",
-                        label: "Start over",
-                        chevron: false,
-                        action: { beginStartOver() })
-                .accessibilityIdentifier("settings-start-over")
-                .accessibilityHint("Erases every Take on this device and creates a new Privacy phrase.")
-        } header: {
-            sectionHeader("Account")
-        } footer: {
-            sectionFooter("Erases every Take on this device and creates a new Privacy phrase. Takes already in your cloud folder are sealed with the old phrase and cannot be read again, so export first. An export is the only way to bring your Takes back.")
-        }
-        .confirmationDialog("Export your Takes first?",
-                            isPresented: $showStartOverExportOffer,
-                            titleVisibility: .visible) {
-            Button("Export Takes") { exportTakes() }
-            Button("Erase without exporting", role: .destructive) { showStartOverConfirm = true }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("An export is the only way to bring your Takes back. Exporting ends here, so start over again once you have the file.")
-        }
-        .alert("Erase everything on this device?", isPresented: $showStartOverConfirm) {
-            Button("Cancel", role: .cancel) { }
-            Button("Erase everything", role: .destructive) { performStartOver() }
-        } message: {
-            Text("This deletes every Take on this device and the Privacy phrase that unlocks them. Takes already in your cloud folder are sealed with the old phrase and cannot be read again. This cannot be undone.")
-        }
     }
 
     /// Gate on the device owner before anything destructive is even offered.
@@ -260,44 +207,6 @@ struct SettingsView: View {
             app.startOver()
         }
     }
-
-    #if DEBUG
-    // MARK: - DEBUG (never compiled into Release / TestFlight)
-
-    /// Developer-only aids for on-device testing (fix pass 1, sections 2 / 2b).
-    /// The whole section is `#if DEBUG`, so it cannot ship.
-    private var debugSection: some View {
-        Section {
-            // Section 2 — one-tap re-onboarding on a real device. The Keychain
-            // survives app deletion, so this is the only way to re-trigger
-            // onboarding without a full device wipe.
-            Button(role: .destructive) {
-                showResetConfirm = true
-            } label: {
-                HStack(spacing: 14) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 20, weight: .regular))
-                        .frame(width: 26)
-                        .accessibilityHidden(true)
-                    Text("Reset Catchlight (wipe & re-onboard)")
-                        .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
-                        .multilineTextAlignment(.leading)
-                    Spacer(minLength: 8)
-                }
-                .frame(minHeight: 40)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.ckRuby)
-            .listRowBackground(Color.ckSurface)
-            .accessibilityIdentifier("debug-reset")
-            .accessibilityHint("Wipes everything and returns to onboarding. Debug builds only.")
-
-        } header: {
-            sectionHeader("Debug")
-        }
-    }
-    #endif
 
     // MARK: - Title (scrolls with the list)
 
@@ -852,8 +761,33 @@ struct SettingsView: View {
                 SettingsDetailLabel(text: aboutString)
             }
             .accessibilityLabel("About. \(aboutString)")
+            // Start over lives here rather than in a section of its own (owner
+            // 2026-09-04). Kept LAST so the footer below reads as its warning.
+            SettingsRow(icon: "arrow.counterclockwise",
+                        label: "Start over",
+                        chevron: false,
+                        action: { beginStartOver() })
+                .accessibilityIdentifier("settings-start-over")
+                .accessibilityHint("Erases every Take on this device and creates a new Privacy phrase.")
         } header: {
             sectionHeader("System")
+        } footer: {
+            sectionFooter("Start over erases every Take on this device and creates a new Privacy phrase. Takes already in your cloud folder are sealed with the old phrase and cannot be read again, so export first. An export is the only way to bring your Takes back.")
+        }
+        .confirmationDialog("Export your Takes first?",
+                            isPresented: $showStartOverExportOffer,
+                            titleVisibility: .visible) {
+            Button("Export Takes") { exportTakes() }
+            Button("Erase without exporting", role: .destructive) { showStartOverConfirm = true }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("An export is the only way to bring your Takes back. Exporting ends here, so start over again once you have the file.")
+        }
+        .alert("Erase everything on this device?", isPresented: $showStartOverConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Erase everything", role: .destructive) { performStartOver() }
+        } message: {
+            Text("This deletes every Take on this device and the Privacy phrase that unlocks them. Takes already in your cloud folder are sealed with the old phrase and cannot be read again. This cannot be undone.")
         }
     }
 
