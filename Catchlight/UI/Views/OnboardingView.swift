@@ -1025,8 +1025,19 @@ private struct ConfirmStep: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(used || vm.isLocked)
-                .accessibilityLabel(used ? "\(word), already placed" : "Select \(word)")
-                .accessibilityHint(used ? "Already placed." : "Double-tap to place in the next slot.")
+                // V38 (audit §15ag): the label is the WORD and nothing else.
+                //
+                // 🚨 It used to say the state three times over. The label carried ", already
+                // placed"; `.disabled` above makes VoiceOver append "dimmed"; and the hint
+                // then repeated "Already placed." Read in order that is "exhibit, already
+                // placed, dimmed, button, already placed" — and the owner's report was that he
+                // could not make out the WORD, which is the only part that matters when you
+                // are transcribing a phrase you must get exactly right.
+                //
+                // Apple's criterion is explicit: labels must not carry control types or
+                // states, which belong to traits. `.disabled` already states it, once.
+                .accessibilityLabel(word)
+                .accessibilityHint(used ? "" : "Double-tap to place in the next slot.")
             }
         }
     }

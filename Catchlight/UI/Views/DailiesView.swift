@@ -72,6 +72,14 @@ struct DailiesView: View {
     /// cannot drift apart.
     private var irisHintLeadingGap: CGFloat { CatchlightLayout.circleDiameter / 2 + 5 }
 
+    /// Room an Iris-anchored tooltip has from its leading edge to the screen's trailing
+    /// margin (DT17). Falls back to the ceiling in `OrientationTooltip` before the container
+    /// has been measured.
+    private var irisHintAvailableWidth: CGFloat {
+        guard containerWidth > 0 else { return .infinity }
+        return max(120, containerWidth - (spineX + irisHintLeadingGap) - 12)
+    }
+
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
     /// Container width, captured by the background GeometryReader on the body
@@ -534,7 +542,9 @@ struct DailiesView: View {
                 // the Iris centre, however many lines it wraps to. The leading arrow then sits
                 // level with the Iris rather than hanging below it (owner 2026-06-16).
                 let irisCentreY = spineTopInset + CatchlightLayout.circleDiameter / 2
-                OrientationTooltip(text: "Tap the Iris to shape this Take.", arrowEdge: .leading)
+                OrientationTooltip(text: "Tap the Iris to shape this Take.",
+                                   arrowEdge: .leading,
+                                   availableWidth: irisHintAvailableWidth)
                     .fixedSize()
                     .alignmentGuide(.top) { d in d[VerticalAlignment.center] - irisCentreY }
                     .offset(x: spineX + irisHintLeadingGap)
@@ -566,7 +576,8 @@ struct DailiesView: View {
 
                 let obieIrisCentreY = spineTopInset + CatchlightLayout.circleDiameter / 2
                 OrientationTooltip(text: "Long-press here to make this your Obie.",
-                                   arrowEdge: .leading)
+                                   arrowEdge: .leading,
+                                   availableWidth: irisHintAvailableWidth)
                     .fixedSize()
                     .alignmentGuide(.top) { d in d[VerticalAlignment.center] - obieIrisCentreY }
                     .offset(x: spineX + irisHintLeadingGap)
