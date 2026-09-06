@@ -531,6 +531,43 @@ struct DailiesView: View {
                     .accessibilityIdentifier("orientation-iris-hint")
             }
 
+            // Hint 4, on the SAME anchor as hint 2 (owner device round 2026-09-06).
+            //
+            // It used to be screen-anchored in `RootView` at `.padding(.top, 80)` with a
+            // `.top` arrow, pointing at nothing. On device that put a four-line bubble over
+            // the first Take — covering the very Iris it was telling the user to long-press —
+            // and its copy restated what the seeded first Take already says. Owner: "the Obie
+            // instruction basically mirrors what's said in the first Take and is too long, so
+            // it covers the Iris."
+            //
+            // Anchored beside the Iris with a leading arrow, it points at the thing it names
+            // and sits clear of it, and the copy shrinks to the one instruction that is not
+            // already on screen.
+            if orientation.showObieIntro {
+                // Tap anywhere off the bubble dismisses. Not an accessibility element: the
+                // bubble below carries the activation (V13 / D-214).
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture { orientation.didDismissObieIntro() }
+                    .accessibilityHidden(true)
+
+                let obieIrisCentreY = spineTopInset + CatchlightLayout.circleDiameter / 2
+                OrientationTooltip(text: "Long-press here to make this your Obie.",
+                                   arrowEdge: .leading)
+                    .fixedSize()
+                    .alignmentGuide(.top) { d in d[VerticalAlignment.center] - obieIrisCentreY }
+                    .offset(x: spineX + CatchlightLayout.circleDiameter)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
+                    .onTapGesture { orientation.didDismissObieIntro() }
+                    // V13: the tap dismissal is HID-level and does not carry onto the
+                    // tooltip's own element, so VoiceOver could read the hint and never
+                    // dismiss it. Bind the DEFAULT activation explicitly.
+                    .accessibilityAction { orientation.didDismissObieIntro() }
+                    .accessibilityHint("Double-tap to dismiss.")
+                    .accessibilityIdentifier("orientation-obie-hint")
+            }
+
         }
         .background {
             // Capture the layout width (NOT UIScreen) so spineX matches the

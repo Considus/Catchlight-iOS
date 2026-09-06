@@ -37,6 +37,16 @@ final class FirstRunTourUITests: XCTestCase {
                       + "advance to a step with no render site — that is D-259.")
     }
 
+    /// Hint 4 must have a render site too. It moved out of `RootView` and onto the Iris
+    /// anchor in `DailiesView` (owner device round 2026-09-06), which is exactly the kind of
+    /// move that left hint 2 orphaned for months.
+    func testObieHintReachesTheScreen() {
+        let app = launch(atTourStep: 4)
+        let hint = app.descendants(matching: .any)["orientation-obie-hint"]
+        XCTAssertTrue(hint.waitForExistence(timeout: 15),
+                      "Tour step 4 is set but the Obie hint never rendered.")
+    }
+
     /// The seam must DISTINGUISH steps, or the test above proves nothing: a hint that
     /// rendered unconditionally would pass it. At step 1 the Iris hint must be absent.
     func testIrisHintIsAbsentAtTheStepBefore() {
