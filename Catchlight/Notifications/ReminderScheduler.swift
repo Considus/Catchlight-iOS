@@ -554,7 +554,7 @@ public final class ReminderScheduler {
     private func followUpContent(for take: Take, originallyDue: Date) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = Self.notificationTitle(for: take)
-        content.subtitle = "Reminder — still not done"
+        content.subtitle = "Reminder: still not done"
         content.sound = .default
         content.categoryIdentifier = Self.category(for: take)
         content.threadIdentifier = take.id.uuidString
@@ -655,7 +655,7 @@ public final class ReminderScheduler {
         guard interval > 0 else { return }
         let content = UNMutableNotificationContent()
         content.title = title
-        content.subtitle = dueText.isEmpty ? "Snoozed" : "Snoozed — Originally due \(dueText)"
+        content.subtitle = dueText.isEmpty ? "Snoozed" : "Snoozed. Originally due \(dueText)"
         content.sound = .default
         content.categoryIdentifier = categoryIdentifier        // snoozed nudge keeps the same actions
         // Same thread as the reminder's other notifications so the snooze stacks with

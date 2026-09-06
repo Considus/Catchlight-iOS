@@ -568,7 +568,7 @@ final class AppModel {
         if let sync = error as? SyncError {
             switch sync {
             case .manifestSignatureInvalid:
-                return "Sync paused — your cloud data looks unexpected. No changes were made locally."
+                return "Sync paused. Your cloud data looks unexpected. No changes were made locally."
             case .noCloudFolderConfigured:
                 // Expected in local-only mode — never surface to the user.
                 return nil

@@ -343,7 +343,7 @@ struct WelcomeContent: View {
 
     private var bodyBlock: some View {
         VStack(spacing: 16) {
-            (Text("First, we'll create your Privacy phrase — 12 words that are the ")
+            (Text("First, we'll create your Privacy phrase: 12 words that are the ")
              + Text("ONLY").bold()
              + Text(" key to your data."))
                 .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
@@ -572,12 +572,12 @@ private struct StorageChoiceStep: View {
 
                 VStack(spacing: 16) {
                     StorageOptionCard(
-                        title: "Local — on this device only",
+                        title: "Local: on this device only",
                         description: "Your Takes stay on this device and nowhere else. Your iPhone backup won't contain them, so if the phone goes, they go with it."
                     ) { vm.chooseStorage(.local) }
 
                     StorageOptionCard(
-                        title: "Cloud — backed up and restorable",
+                        title: "Cloud: backed up and restorable",
                         description: "Connect a cloud folder you control. Your Takes stay encrypted, we never see them, and your 12 words are what open them again on a new phone."
                     ) { vm.chooseStorage(.cloud) }
                 }

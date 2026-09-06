@@ -45,7 +45,7 @@ final class ErrorStateTests: XCTestCase {
         let message = AppModel.friendlySyncErrorMessage(for: SyncError.manifestSignatureInvalid)
         XCTAssertEqual(
             message,
-            "Sync paused — your cloud data looks unexpected. No changes were made locally."
+            "Sync paused. Your cloud data looks unexpected. No changes were made locally."
         )
     }
 

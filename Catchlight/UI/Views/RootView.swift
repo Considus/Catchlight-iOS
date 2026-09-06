@@ -287,7 +287,7 @@ struct RootView: View {
             // Owner copy 2026-06-17: frame it as the existing Obie returning to the
             // timeline (not "replaced"), since nothing is lost — only one Take can be
             // the Obie at a time.
-            Text("Your existing Obie returns to the timeline — only one Take can be your Obie.")
+            Text("Your existing Obie returns to the timeline. Only one Take can be your Obie.")
         }
     }
 

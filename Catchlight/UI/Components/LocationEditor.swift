@@ -209,7 +209,7 @@ struct LocationEditor: View {
             .accessibilityIdentifier("location-radius-picker")
 
             if radiusMetres <= ReminderScheduler.minGeofenceRadius {
-                Text("A tighter radius is more precise, but iOS may trigger it late or miss it — 100 m is the reliable minimum.")
+                Text("A tighter radius is more precise, but iOS may trigger it late or miss it. 100 m is the reliable minimum.")
                     .font(.caption)
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -231,7 +231,7 @@ struct LocationEditor: View {
             .accessibilityIdentifier("location-notify-toggle")
 
             if !alarmEnabled {
-                Text("Silent — keeps the place on the Take, with no alert when you arrive or leave.")
+                Text("Silent. Keeps the place on the Take, with no alert when you arrive or leave.")
                     .font(.caption)
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -75,7 +75,7 @@ struct SecondDeviceRestoreView: View {
     /// Restates the destructive consequence at the point of action (the Security row
     /// already warned once). Ruby-toned, matching the app's "state precedence" accent.
     private var warningCard: some View {
-        Text("This replaces the account on this device. Takes stored only here will be removed and can't be recovered — if you haven't already, close this and use Export Takes (Markdown) to keep a copy first.")
+        Text("This replaces the account on this device. Takes stored only here will be removed and can't be recovered. If you haven't already, close this and use Export Takes (Markdown) to keep a copy first.")
             .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .footnote))
             .foregroundStyle(Color.ckRuby)
             .fixedSize(horizontal: false, vertical: true)

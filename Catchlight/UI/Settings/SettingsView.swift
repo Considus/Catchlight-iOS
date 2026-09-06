@@ -755,7 +755,7 @@ struct SettingsView: View {
                         chevron: false,
                         action: { showFileImporter = true })
                 .accessibilityIdentifier("settings-import-file")
-                .accessibilityHint("Pick a .md, .txt or .rtf file from Files to import as Takes — no cloud folder needed.")
+                .accessibilityHint("Pick a .md, .txt or .rtf file from Files to import as Takes. No cloud folder needed.")
             SettingsRow(icon: "info.circle",
                         label: "About",
                         chevron: true,
@@ -877,7 +877,7 @@ struct SettingsView: View {
         // read-only user must not mint unlimited new Takes via the Import folder).
         guard app.ensureEntitled() else { return }
         guard let folder = ImportCoordinator.syncImportFolder() else {
-            importResultMessage = "Set up Cloud Storage first — the Import folder lives inside your sync folder."
+            importResultMessage = "Set up Cloud Storage first. The Import folder lives inside your sync folder."
             return
         }
         defer { folder.stopAccess() }

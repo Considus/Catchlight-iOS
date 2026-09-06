@@ -50,7 +50,9 @@ struct LockedCaptureView: View {
                 // tapped away to save heard nothing happen at all.
                 .onChange(of: unlockFailed) { _, failed in
                     if failed {
-                        A11yDiag.post(.announcement, argument: "Couldn't unlock — tap to save again.", from: "lockedCapture.unlockFailed")
+                        A11yDiag.post(.announcement,
+                                      argument: "Couldn't unlock. Tap to save again.",
+                                      from: "lockedCapture.unlockFailed")
                     }
                 }
 
@@ -148,7 +150,7 @@ struct LockedCaptureView: View {
                 .foregroundStyle(Color.ckTextPrimary)
 
             if unlockFailed {
-                Text("Couldn't unlock — tap to save again.")
+                Text("Couldn't unlock. Tap to save again.")
                     .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                     .foregroundStyle(Color.ckTextSecondary)
             }

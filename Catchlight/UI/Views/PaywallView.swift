@@ -128,7 +128,7 @@ struct PaywallView: View {
         VStack(spacing: 12) {
             valueRow("Unlimited Takes, tasks and reminders")
             valueRow("Encrypted cloud sync across your devices")
-            valueRow("Your data stays yours — readable, exportable")
+            valueRow("Your data stays yours: readable, exportable")
         }
     }
 
@@ -288,7 +288,7 @@ struct PaywallView: View {
     // onboarding composition; disclosure reads as a quiet footnote).
     private var legalBlock: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Your subscription auto-renews each year unless cancelled at least 24 hours before the period ends. Manage or cancel anytime in your App Store account. Catchlight is end-to-end encrypted — your Takes are never readable by us.")
+            Text("Your subscription auto-renews each year unless cancelled at least 24 hours before the period ends. Manage or cancel anytime in your App Store account. Catchlight is end-to-end encrypted. Your Takes are never readable by us.")
                 .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .footnote))
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.leading)
