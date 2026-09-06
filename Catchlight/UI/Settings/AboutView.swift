@@ -116,7 +116,7 @@ struct AboutView: View {
             Text("Catchlight uses only Apple system frameworks (CryptoKit, LocalAuthentication, Security, SQLite3). No third-party libraries are bundled.")
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextPrimary)
-            Text("The BIP-39 English wordlist is sourced from the Trezor project and bundled under the MIT licence — see Resources/bip39-english.txt.")
+            Text("The BIP-39 English wordlist is sourced from the Trezor project and bundled under the MIT licence. See Resources/bip39-english.txt.")
                 .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                 .foregroundStyle(Color.ckTextSecondary)
         }

@@ -51,7 +51,7 @@ struct LockedCaptureView: View {
                 .onChange(of: unlockFailed) { _, failed in
                     if failed {
                         UIAccessibility.post(notification: .announcement,
-                                             argument: "Couldn't unlock — tap to save again.")
+                                             argument: "Couldn't unlock. Tap to save again.")
                     }
                 }
 
@@ -149,7 +149,7 @@ struct LockedCaptureView: View {
                 .foregroundStyle(Color.ckTextPrimary)
 
             if unlockFailed {
-                Text("Couldn't unlock — tap to save again.")
+                Text("Couldn't unlock. Tap to save again.")
                     .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
                     .foregroundStyle(Color.ckTextSecondary)
             }

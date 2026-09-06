@@ -409,7 +409,7 @@ final class DailiesViewModel {
         if failed > 0 {
             // Cleanup is best-effort; surface a quiet note rather than fail silently. The
             // un-deleted Takes are still eligible, so the next sweep (next app open) retries.
-            lastError = "Some finished Takes couldn't be cleaned up — they'll be retried."
+            lastError = "Some finished Takes couldn't be cleaned up. They'll be retried."
         }
         if deleted > 0 { reload() }
         return deleted

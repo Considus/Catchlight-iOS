@@ -172,7 +172,7 @@ struct TakeRowView: View {
     }
 
     /// The Iris's spoken label — shared with the UIKit cell for the same reason.
-    /// The intro already says "Obie — your pinned Take", so the activity list is
+    /// The intro already says "Obie: your pinned Take", so the activity list is
     /// asked to leave the word out (fix 6, audit 2026-08 §15i: it spoke twice).
     static func irisAccessibilityLabel(for take: Take) -> String {
         // VC2 (audit 2026-08, D-231): the Iris is named for its Take — "Iris, Buy
@@ -186,7 +186,7 @@ struct TakeRowView: View {
         let name = irisNameTruncated(spokenLine(for: firstLine))
         let head = name.isEmpty ? "Iris" : "Iris, \(name)"
         var parts = [head]
-        if take.isObie { parts.append("Obie — your pinned Take") }
+        if take.isObie { parts.append("Obie: your pinned Take") }
         let activity = TakeCircleView.activityDescription(for: take, includesObie: false)
         if !activity.isEmpty { parts.append(activity) }
         return parts.joined(separator: ". ")

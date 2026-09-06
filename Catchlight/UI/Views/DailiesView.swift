@@ -722,7 +722,7 @@ struct DailiesView: View {
             Button("Make Obie") { confirmInlineObie() }
             Button("Cancel", role: .cancel) { cancelInlineObie() }
         } message: {
-            Text("Your existing Obie returns to the timeline — only one Take can be your Obie.")
+            Text("Your existing Obie returns to the timeline. Only one Take can be your Obie.")
         }
         // Confirm before deleting (owner 2026-08-16) — the shared alert, raised by
         // `requestDelete` when the setting is on and the Take is not a repeating reminder.
@@ -1160,7 +1160,7 @@ struct DailiesView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
-                Text("Read-only — your data is still yours.")
+                Text("Read-only. Your data is still yours.")
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(2)

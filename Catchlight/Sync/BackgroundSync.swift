@@ -286,7 +286,7 @@ public final class BackgroundSyncCoordinator {
         if !report.heldBack.isEmpty {
             let n = report.heldBack.count
             DiagnosticsLog.shared.record(.sync,
-                "\(n) Take\(n == 1 ? "" : "s") not re-uploaded — this device was away too long "
+                "\(n) Take\(n == 1 ? "" : "s") not re-uploaded. This device was away too long "
                 + "to rule out deletion elsewhere. Edit a Take to sync it again.")
         }
         if let onRemoteChanges, !report.applied.isEmpty || !report.deletedLocally.isEmpty {

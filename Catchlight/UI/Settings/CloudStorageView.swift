@@ -149,7 +149,7 @@ struct CloudStorageView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 18)   // 1 line break after "Select an empty…"
 
-            Text("Catchlight never sees your files — only you can read them.")
+            Text("Catchlight never sees your files. Only you can read them.")
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                 .foregroundStyle(Color.ckTextSecondary)
                 .fixedSize(horizontal: false, vertical: true)
