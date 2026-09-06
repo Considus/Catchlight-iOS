@@ -88,7 +88,7 @@ final class TakeRowViewTests: XCTestCase {
         let take = Take(blocks: [.textLine("the star")], isObie: true)
         let label = TakeRowView.irisAccessibilityLabel(for: take)
         // D-231 (VC2): the Iris is named for its Take, name first.
-        XCTAssertEqual(label, "Iris, the star. Obie — your pinned Take. Important, Note", "got: \(label)")
+        XCTAssertEqual(label, "Iris, the star. Obie: your pinned Take. Important, Note", "got: \(label)")
         XCTAssertEqual(occurrences(of: "Obie", in: label), 1, "got: \(label)")
     }
 
@@ -102,7 +102,7 @@ final class TakeRowViewTests: XCTestCase {
         let take = Take(blocks: [], isNote: false, isObie: true)
         XCTAssertTrue(take.isImportant, "isObie must imply isImportant")
         let label = TakeRowView.irisAccessibilityLabel(for: take)
-        XCTAssertEqual(label, "Iris. Obie — your pinned Take. Important", "got: \(label)")
+        XCTAssertEqual(label, "Iris. Obie: your pinned Take. Important", "got: \(label)")
         XCTAssertEqual(occurrences(of: "Obie", in: label), 1)
         XCTAssertFalse(label.contains("Note"), "got: \(label)")
     }

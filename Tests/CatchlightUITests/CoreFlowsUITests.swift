@@ -162,7 +162,7 @@ final class CoreFlowsUITests: XCTestCase {
     /// Long-press a Take's Iris (1) → Take is designated as Obie. With no
     /// pre-existing Obie there's no confirmation alert (designateObie commits
     /// directly), so the row visibly moves to the pinned position and the Iris
-    /// label includes "Obie — your pinned Take".
+    /// label includes "Obie: your pinned Take".
     func testFlow4_obieTake_longPressDesignatesAndPinsToTop() throws {
         let app = launchAppForUITesting()
 
