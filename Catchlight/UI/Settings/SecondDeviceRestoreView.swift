@@ -67,7 +67,7 @@ struct SecondDeviceRestoreView: View {
         // Ruby silently — a VoiceOver user submitting a bad phrase heard nothing.
         .onChange(of: errorText) { _, error in
             if let error {
-                UIAccessibility.post(notification: .announcement, argument: error)
+                A11yDiag.post(.announcement, argument: error, from: "secondDevice.error")
             }
         }
     }
