@@ -24,9 +24,28 @@ struct OrientationTooltip: View {
     @ScaledMetric(relativeTo: .body) private var widthScale: CGFloat = 1
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
+    /// Room actually available from this bubble's LEADING EDGE to the screen's trailing
+    /// margin. `.infinity` for a bubble laid out near x = 0, where the ceiling below is
+    /// sufficient on its own.
+    ///
+    /// 🚨 DT17: the cap below is absolute and silently assumed an origin near the left edge.
+    /// An Iris-anchored tooltip starts at `spineX + radius + 5`, roughly 87pt in, so a 320pt
+    /// bubble needed 407pt on a 393pt screen and was clipped mid-word at the largest text
+    /// sizes. A width cap is only meaningful together with where the thing starts.
+    var availableWidth: CGFloat = .infinity
+
     /// The cap. Scales with the text so a single word above Large is never wider than the
-    /// bubble, with a ceiling that keeps it inside the narrowest supported screen.
-    private var bubbleWidth: CGFloat { min(maxWidth * widthScale, 320) }
+    /// bubble, with a ceiling that keeps it inside the narrowest supported screen, and never
+    /// wider than the room its origin actually leaves.
+    private var bubbleWidth: CGFloat {
+        // `availableWidth` is room for the whole BUBBLE; this cap applies to the TEXT, which
+        // sits inside `horizontalPadding` on each side. Subtract it here rather than at the
+        // call site: the padding is this view's business and a caller cannot be expected to
+        // know it.
+        min(maxWidth * widthScale, 320, availableWidth - Self.horizontalPadding * 2)
+    }
+
+    private static let horizontalPadding: CGFloat = 14
 
     var body: some View {
         Text(text)
@@ -51,7 +70,7 @@ struct OrientationTooltip: View {
             .frame(width: dynamicSize > .large ? bubbleWidth : nil)
             .frame(maxWidth: dynamicSize > .large ? nil : bubbleWidth)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 14)
+            .padding(.horizontal, Self.horizontalPadding)
             .padding(.vertical, 10)
             .background(
                 ZStack {
