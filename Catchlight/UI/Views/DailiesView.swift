@@ -60,6 +60,18 @@ struct DailiesView: View {
                    headingBlockHeight - deviceTopInset + CatchlightLayout.headingBelowGap)
     }
 
+    /// Leading edge of an Iris-anchored tooltip, measured from the spine centre.
+    ///
+    /// The bubble used to start a full `circleDiameter` out, which left about 17pt of air
+    /// between the arrow tip and the Iris: the arrow protrudes only ~5pt past the bubble's
+    /// leading edge (a 14x8 frame rotated 90 degrees and offset -8), while the Iris's right
+    /// edge is just `circleDiameter / 2` from the spine. Owner 2026-09-06: "can the tooltip be
+    /// moved to the left a bit, so the pointer is touching the Iris?"
+    ///
+    /// `radius + 5` puts the tip on the Iris's edge. Shared by hint 2 and hint 4 so the two
+    /// cannot drift apart.
+    private var irisHintLeadingGap: CGFloat { CatchlightLayout.circleDiameter / 2 + 5 }
+
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
     /// Container width, captured by the background GeometryReader on the body
@@ -525,7 +537,7 @@ struct DailiesView: View {
                 OrientationTooltip(text: "Tap the Iris to shape this Take.", arrowEdge: .leading)
                     .fixedSize()
                     .alignmentGuide(.top) { d in d[VerticalAlignment.center] - irisCentreY }
-                    .offset(x: spineX + CatchlightLayout.circleDiameter)
+                    .offset(x: spineX + irisHintLeadingGap)
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
                     .allowsHitTesting(false)
                     .accessibilityIdentifier("orientation-iris-hint")
@@ -557,7 +569,7 @@ struct DailiesView: View {
                                    arrowEdge: .leading)
                     .fixedSize()
                     .alignmentGuide(.top) { d in d[VerticalAlignment.center] - obieIrisCentreY }
-                    .offset(x: spineX + CatchlightLayout.circleDiameter)
+                    .offset(x: spineX + irisHintLeadingGap)
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
                     .onTapGesture { orientation.didDismissObieIntro() }
                     // V13: the tap dismissal is HID-level and does not carry onto the
