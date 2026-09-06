@@ -38,7 +38,7 @@ final class FirstRunOrientationTests: XCTestCase {
         XCTAssertEqual(state.step, 1)
         XCTAssertTrue(state.showAddPulse)
 
-        state.didTapAdd()
+        state.didFinishFirstTake()
         XCTAssertEqual(state.step, 2)
         XCTAssertTrue(state.showIrisHint)
 
@@ -85,10 +85,10 @@ final class FirstRunOrientationTests: XCTestCase {
     func testRepeatedAdvanceMethodsAreNoOpsAfterAdvancing() {
         let (state, _, _) = makeState()
         state.beginIfNeeded()
-        state.didTapAdd()
+        state.didFinishFirstTake()
         XCTAssertEqual(state.step, 2)
-        // A second didTapAdd at step 2 must not push the state past where it should be.
-        state.didTapAdd()
+        // A second didFinishFirstTake at step 2 must not push the state past where it should be.
+        state.didFinishFirstTake()
         XCTAssertEqual(state.step, 2)
     }
 
@@ -97,7 +97,7 @@ final class FirstRunOrientationTests: XCTestCase {
     func testCompletedStateDoesNotRegress() {
         let (state, _, _) = makeState()
         state.beginIfNeeded()
-        state.didTapAdd()
+        state.didFinishFirstTake()
         state.didTapIris()
         state.didDismissSettingsHint()
         state.didDismissObieIntro()
@@ -105,7 +105,7 @@ final class FirstRunOrientationTests: XCTestCase {
 
         // None of these may roll the state back.
         state.beginIfNeeded()
-        state.didTapAdd()
+        state.didFinishFirstTake()
         state.didTapIris()
         state.didDismissSettingsHint()
         state.didDismissObieIntro()
@@ -118,7 +118,7 @@ final class FirstRunOrientationTests: XCTestCase {
     func testStepIsPersistedAcrossInstances() {
         let (first, defaults, suiteName) = makeState()
         first.beginIfNeeded()
-        first.didTapAdd()
+        first.didFinishFirstTake()
         first.didTapIris()
         XCTAssertEqual(first.step, 3)
 
@@ -134,7 +134,7 @@ final class FirstRunOrientationTests: XCTestCase {
     func testResetForDeveloperReturnsToStart() {
         let (state, _, _) = makeState()
         state.beginIfNeeded()
-        state.didTapAdd()
+        state.didFinishFirstTake()
         state.didTapIris()
         state.didDismissSettingsHint()
         XCTAssertTrue(state.showObieIntro)

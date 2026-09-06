@@ -74,13 +74,18 @@ final class FirstRunOrientationState {
         step = 1
     }
 
-    /// Hint 1 dismissal, and hint 2's arrival.
+    /// Hint 1 dismissal, and hint 2's arrival. Called when the first Take's editor CLOSES —
+    /// saved or discarded — not when Add is tapped.
     ///
-    /// 🚨 Called when the editor CLOSES, not when Add is tapped (owner 2026-09-06). Advancing
-    /// on the tap armed hint 2 while the editor was still open, so the Iris hint appeared the
-    /// instant the user pressed Add — pointing at an Iris they could not reach yet. The name
-    /// is kept because the state transition is the same one; only its trigger moved.
-    func didTapAdd() {
+    /// 🚨 Renamed from `didTapAdd()` (owner 2026-09-06). Advancing on the Add tap armed hint 2
+    /// while the editor was still open, so the Iris hint appeared the instant the user pressed
+    /// Add, pointing at an Iris behind the editor they had not finished with. Keeping the old
+    /// name would have left a method that says "tap Add" and fires on an editor close: this
+    /// campaign has twice been misled by code that reads as one thing and does another
+    /// (`row(for:isFirst:)` looking like a live call site through the whole UIKit rewrite, and
+    /// `triggerObieIntro()` surviving vestigial), and a name that lies is the same hazard with
+    /// better odds of surviving.
+    func didFinishFirstTake() {
         guard step == 1 else { return }
         step = 2
     }
@@ -91,8 +96,21 @@ final class FirstRunOrientationState {
         step = 3
     }
 
-    /// Hint 3 dismissal: long-pressing the Dailies button OR tapping elsewhere
-    /// while the settings hint is visible.
+    /// Hint 3 dismissal. Exactly two gestures, both targeted:
+    ///
+    ///   • a SWIPE UP on the dock — a drag of more than 30pt upward, under 60pt sideways,
+    ///     starting on the button row (`BottomDockView`, the dock's DragGesture). While the
+    ///     hint is up this dismisses WITHOUT opening Settings.
+    ///   • a TAP on `angleNavButton` — the ∠ button specifically, which otherwise opens the
+    ///     Storyboard.
+    ///
+    /// 🚨 A tap anywhere else does NOT dismiss it; measured on the bench 2026-09-06. This
+    /// comment previously read "long-pressing the Dailies button OR tapping elsewhere", which
+    /// was wrong in both halves — it is a swipe not a long-press, and one button not
+    /// anywhere. That was not merely unhelpful: a peer session reasoning from it produced a
+    /// plausible but false risk (that hint 4 would be consumed by the same tap that cleared
+    /// hint 3) which took a bench run to disprove. Keep this list in step with the two call
+    /// sites.
     func didDismissSettingsHint() {
         guard step == 3 else { return }
         step = 4

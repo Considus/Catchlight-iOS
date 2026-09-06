@@ -625,10 +625,10 @@ struct DailiesView: View {
         //
         // The transition is watched here rather than inside `saveInlineEdit()` because this
         // one signal covers BOTH ways out — saving and discarding — and cannot drift from
-        // them. `didTapAdd()` is a no-op outside step 1, so an ordinary edit never moves the
+        // them. `didFinishFirstTake()` is a no-op outside step 1, so an ordinary edit never moves the
         // tour.
         .onChange(of: ui.isEditingInPlace) { wasEditing, isEditing in
-            if wasEditing && !isEditing { orientation.didTapAdd() }
+            if wasEditing && !isEditing { orientation.didFinishFirstTake() }
         }
         // The Focus ring committed while a Take is edited in place — apply it to the
         // live draft (edit-in-place 2026-06-17). Guarded on `editingTakeID` so the
