@@ -48,10 +48,9 @@ final class FirstRunOrientationTests: XCTestCase {
 
         state.didDismissSettingsHint()
         XCTAssertEqual(state.step, 4)
-        // Step 4 is "armed" but the tooltip is not yet visible.
-        XCTAssertFalse(state.showObieIntro)
-
-        state.triggerObieIntro()
+        // Hint 4 arrives WITH its step now, like hints 1 to 3. It used to wait for the user
+        // to long-press an Iris — the very gesture it exists to teach — so a new user never
+        // saw it and the tour ended silently at three hints (owner 2026-09-06).
         XCTAssertTrue(state.showObieIntro)
 
         state.didDismissObieIntro()
@@ -71,9 +70,8 @@ final class FirstRunOrientationTests: XCTestCase {
         state.didTapIris()
         state.didDismissSettingsHint()
         state.didDismissObieIntro()
-        state.triggerObieIntro()
         XCTAssertEqual(state.step, 1, "Out-of-order methods must not advance the step")
-        XCTAssertFalse(state.obieIntroTriggered)
+        XCTAssertFalse(state.showObieIntro, "Hint 4 must not show outside step 4")
     }
 
     func testBeginIfNeededIsIdempotent() {
@@ -102,7 +100,6 @@ final class FirstRunOrientationTests: XCTestCase {
         state.didTapAdd()
         state.didTapIris()
         state.didDismissSettingsHint()
-        state.triggerObieIntro()
         state.didDismissObieIntro()
         XCTAssertEqual(state.step, 5)
 
@@ -111,7 +108,6 @@ final class FirstRunOrientationTests: XCTestCase {
         state.didTapAdd()
         state.didTapIris()
         state.didDismissSettingsHint()
-        state.triggerObieIntro()
         state.didDismissObieIntro()
         XCTAssertEqual(state.step, 5)
         XCTAssertTrue(state.isComplete)
@@ -135,14 +131,13 @@ final class FirstRunOrientationTests: XCTestCase {
 
     // MARK: - Developer reset
 
-    func testResetForDeveloperReturnsToStartButObieFlagClears() {
+    func testResetForDeveloperReturnsToStart() {
         let (state, _, _) = makeState()
         state.beginIfNeeded()
         state.didTapAdd()
         state.didTapIris()
         state.didDismissSettingsHint()
-        state.triggerObieIntro()
-        XCTAssertTrue(state.obieIntroTriggered)
+        XCTAssertTrue(state.showObieIntro)
 
         state.resetForDeveloper()
         XCTAssertEqual(state.step, 0)

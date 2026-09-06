@@ -448,7 +448,7 @@ struct RootView: View {
                     .onTapGesture { orientation.didDismissObieIntro() }
 
                 OrientationTooltip(
-                    text: "This is your Obie — your one most important Take. It stays at the top of everything until it's done. Long press the Iris to instantly make any Take an Obie.",
+                    text: "Your Obie is your one most important Take. It stays at the top of everything until it's done. Long press any Take's Iris to make it your Obie.",
                     arrowEdge: .top,
                     maxWidth: 300
                 )

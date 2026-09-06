@@ -234,8 +234,9 @@ struct BottomDockView: View {
 
     private var addButton: some View {
         Button {
-            // Tapping Add dismisses Hint 1 (state machine ignores if not active).
-            orientation.didTapAdd()
+            // The tour advance used to fire HERE, which armed hint 2 while the editor was
+            // still opening. `DailiesView` now advances when the editor closes instead
+            // (owner 2026-09-06). Hint 1 hides on the same signal, below.
             // Redesign 2026-06-10: no bloom — Add creates the Take and opens
             // the editor directly (capture is two taps incl. the typing commit).
             onNewTake()
@@ -263,7 +264,9 @@ struct BottomDockView: View {
             // Bottom-anchored for the same reason as the settings hint above: the arrow must
             // hold station on the button's ring while the bubble grows upward with the text.
             .overlay(alignment: .bottomLeading) {
-                if orientation.showAddPulse {
+                // `&& !ui.isEditingInPlace`: the tour no longer advances on the Add tap, so
+                // without this hint 1 would sit over the editor it just opened.
+                if orientation.showAddPulse && !ui.isEditingInPlace {
                     OrientationTooltip(text: Self.addHintText, arrowEdge: .bottom, arrowAlignment: .leading)
                         .fixedSize()
                         .offset(y: -(buttonSize + 14))

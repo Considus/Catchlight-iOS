@@ -569,6 +569,18 @@ struct DailiesView: View {
             ui.commitInlineEdit = { saveInlineEdit() }
         }
         .onDisappear { ui.commitInlineEdit = nil }
+        // Hint 1 -> hint 2 advances when the EDITOR CLOSES, not when Add is tapped (owner
+        // 2026-09-06). Advancing on the tap armed the Iris hint while the editor was still
+        // open, so it appeared the instant the user pressed Add, pointing at an Iris behind
+        // the editor they had not finished with.
+        //
+        // The transition is watched here rather than inside `saveInlineEdit()` because this
+        // one signal covers BOTH ways out — saving and discarding — and cannot drift from
+        // them. `didTapAdd()` is a no-op outside step 1, so an ordinary edit never moves the
+        // tour.
+        .onChange(of: ui.isEditingInPlace) { wasEditing, isEditing in
+            if wasEditing && !isEditing { orientation.didTapAdd() }
+        }
         // The Focus ring committed while a Take is edited in place — apply it to the
         // live draft (edit-in-place 2026-06-17). Guarded on `editingTakeID` so the
         // (behind) timeline ignores commits meant for the top-anchored new-Take editor.
@@ -1317,7 +1329,6 @@ struct DailiesView: View {
             // designate is. Mirrors DailiesView.rowContent's onLongPressCircle.
             onLongPressCircle: { take in
                 if take.isObie { vm.demoteObie(take); return }
-                orientation.triggerObieIntro()
                 guard app.ensureEntitled() else { return }
                 vm.designateObie(take, replaceExisting: false)
             },
@@ -1868,11 +1879,9 @@ struct DailiesView: View {
                 // entitlement-gated — removing a designation is always allowed, even on
                 // a lapsed trial.
                 if take.isObie { vm.demoteObie(take); return }
-                // Hint 4: arm the Obie introduction tooltip on the first long-press.
-                // The actual designation still proceeds — the tooltip provides
-                // context "before the action takes effect" (and persists over the
-                // confirmation alert when one Obie already exists).
-                orientation.triggerObieIntro()
+                // Hint 4 no longer arms here: it shows on arrival at step 4, because gating
+                // the tip that teaches the long-press behind that long-press meant a new user
+                // never saw it (owner 2026-09-06).
                 // Task 6.20: Obie designation is a mutation — gate it.
                 guard app.ensureEntitled() else { return }
                 vm.designateObie(take, replaceExisting: false)

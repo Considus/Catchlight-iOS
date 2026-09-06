@@ -36,11 +36,6 @@ final class FirstRunOrientationState {
         }
     }
 
-    /// Hint 4 differs from 1–3: step == 4 means "armed and waiting for the user to
-    /// trigger the Obie action"; the tooltip only becomes visible once they do. This
-    /// flag flips on the first long-press / Obie-tap and clears on dismissal.
-    private(set) var obieIntroTriggered = false
-
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -58,9 +53,14 @@ final class FirstRunOrientationState {
     var showIrisHint: Bool { step == 2 }
     /// Show the dashed ring + "Swipe up here for settings." tooltip on the Dailies button.
     var showSettingsHint: Bool { step == 3 }
-    /// Show the Obie introduction tooltip — only once the user has actually
-    /// long-pressed an Iris (or tapped the Obie) while step 4 is armed.
-    var showObieIntro: Bool { step == 4 && obieIntroTriggered }
+    /// Show the Obie introduction tooltip.
+    ///
+    /// 🚨 Was `step == 4 && obieIntroTriggered`, which was circular: this is the tip that
+    /// TEACHES the Iris long-press, and it was gated on the user already performing that
+    /// long-press. A new user could not discover the gesture, so they never saw the tip that
+    /// explains it — and the tour ended silently at three hints (owner 2026-09-06). It now
+    /// arrives with its step, like hints 1 to 3.
+    var showObieIntro: Bool { step == 4 }
 
     /// True once every hint has been seen — the orientation has finished.
     var isComplete: Bool { step >= 5 }
@@ -74,7 +74,12 @@ final class FirstRunOrientationState {
         step = 1
     }
 
-    /// Hint 1 dismissal: tapping the Add button.
+    /// Hint 1 dismissal, and hint 2's arrival.
+    ///
+    /// 🚨 Called when the editor CLOSES, not when Add is tapped (owner 2026-09-06). Advancing
+    /// on the tap armed hint 2 while the editor was still open, so the Iris hint appeared the
+    /// instant the user pressed Add — pointing at an Iris they could not reach yet. The name
+    /// is kept because the state transition is the same one; only its trigger moved.
     func didTapAdd() {
         guard step == 1 else { return }
         step = 2
@@ -93,18 +98,10 @@ final class FirstRunOrientationState {
         step = 4
     }
 
-    /// Arm the Obie intro tooltip — called on the user's first Obie-bound gesture
-    /// (Iris long-press or Obie tap) while step 4 is waiting. No-op outside step 4.
-    func triggerObieIntro() {
-        guard step == 4 else { return }
-        obieIntroTriggered = true
-    }
-
     /// Hint 4 dismissal: confirming the Obie designation OR tapping elsewhere
     /// while the Obie intro is visible.
     func didDismissObieIntro() {
         guard step == 4 else { return }
-        obieIntroTriggered = false
         step = 5
     }
 
