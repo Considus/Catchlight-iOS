@@ -894,6 +894,24 @@ private struct ConfirmStep: View {
                 }
             }
         }
+        // V34 (audit §15af, D-260): the failure card carries `.accessibilityLabel(failure)`
+        // and nothing focuses it, so a VoiceOver user got SILENCE — and 600ms later
+        // `validateSlots()` clears the slots and the bank underneath them, also unannounced.
+        //
+        // 🚨 Triggered on `flashError`, NOT on `failure`. `failure` is assigned the SAME
+        // string on every wrong attempt and is never cleared in that path (the async block
+        // resets slots, usedBankIndices and flashError, but not it), so `.onChange(of:
+        // vm.failure)` fires once and never again — the exact defect shape V36 has.
+        // `flashError` goes false→true per attempt and back on reset.
+        //
+        // The announcement carries two things the visible copy does not: that the slots are
+        // about to clear, and that the wanted positions have not changed. `promptCopy` is
+        // reused rather than restated so the positions cannot drift apart.
+        .onChange(of: vm.flashError) { _, flashing in
+            guard flashing, let failure = vm.failure else { return }
+            UIAccessibility.post(notification: .announcement,
+                                 argument: "\(failure) The three words have cleared. \(promptCopy)")
+        }
     }
 
     private var promptCopy: String {
@@ -964,10 +982,18 @@ private struct ConfirmStep: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityAction { vm.deselectSlot(at: i) }
                 .accessibilityLabel(
-                    value.map { "Slot \(positionLabel): \($0). Double-tap to deselect." }
-                    ?? "Slot \(positionLabel), empty"
+                    // V35 (audit §15af, D-260): `positionLabel` is NOT a slot index — it comes
+                    // from `targetPositionsForDisplay`, so it is the word's position in the
+                    // twelve-word phrase. "Slot 3" contradicted the prompt directly above it
+                    // ("Tap words 3, 7 and 11 from your phrase, in order"). Wording only: the
+                    // visible UI was already correct and is unchanged.
+                    //
+                    // "Double-tap to deselect." stays in the LABEL, not the hint — D-228:
+                    // hints can be switched off and the promise must not be.
+                    value.map { "Word \(positionLabel) of your phrase: \($0). Double-tap to deselect." }
+                    ?? "Word \(positionLabel) of your phrase, empty"
                 )
-                .accessibilityHint(value == nil ? "Pick a word from the bank below." : "")
+                .accessibilityHint(value == nil ? "Pick word \(positionLabel) from the bank below." : "")
                 .accessibilityAddTraits(value != nil ? [.isButton] : [])
             }
         }
