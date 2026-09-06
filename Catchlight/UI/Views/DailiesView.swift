@@ -496,6 +496,41 @@ struct DailiesView: View {
             // Drawn after the heading so it owns its hit region (the heading is inert).
             pinnedObie
 
+            // D-259 / audit §15af — first-run tour hint 2, re-homed here.
+            //
+            // 🚨 This is a FIRST-RUN regression, not an accessibility one: the tour has been
+            // dead after hint 1 for every user since the UIKit timeline rewrite. The hint used
+            // to live inside `row(for:isFirst:)`, gated on `isFirst`. That function is called
+            // exactly ONCE in this file — the pinned-Obie slot, with `isFirst: false` — because
+            // the scrolling timeline is `UIKitTimeline` and has no tooltip site. So `isFirst`
+            // was never true, the hint had no render site, and hints 3 and 4 sat unreachable
+            // behind it: advancing to step 3 needs an Iris tap nothing ever prompts.
+            //
+            // It belongs on this screen-fixed layer (where the beam and dust already live)
+            // rather than on a row, so it no longer depends on a SwiftUI row existing at all.
+            // `spineTopInset` already resolves the FIRST IRIS'S TOP EDGE in these coordinates
+            // for both the pinned-Obie and first-scrolling-row cases, and `spineX` gives the
+            // column, so the anchor survives the timeline being UIKit.
+            //
+            // 📌 Without an Obie, `firstRowTop` is published only by the now-dead SwiftUI row,
+            // so `spineTopInset` falls back to its constant estimate. That estimate is the
+            // CORRECT value for a first-run user with one Take and no Obie, which is the only
+            // state in which this hint ever shows. Known, accepted, do not "fix".
+            if orientation.showIrisHint {
+                // The same height-independent trick the old site used: redefining the `.top`
+                // guide as `center - irisCentreY` makes the ZStack place the bubble's CENTRE at
+                // the Iris centre, however many lines it wraps to. The leading arrow then sits
+                // level with the Iris rather than hanging below it (owner 2026-06-16).
+                let irisCentreY = spineTopInset + CatchlightLayout.circleDiameter / 2
+                OrientationTooltip(text: "Tap the Iris to shape this Take.", arrowEdge: .leading)
+                    .fixedSize()
+                    .alignmentGuide(.top) { d in d[VerticalAlignment.center] - irisCentreY }
+                    .offset(x: spineX + CatchlightLayout.circleDiameter)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
+                    .allowsHitTesting(false)
+                    .accessibilityIdentifier("orientation-iris-hint")
+            }
+
         }
         .background {
             // Capture the layout width (NOT UIScreen) so spineX matches the
@@ -1490,23 +1525,6 @@ struct DailiesView: View {
                         value: geo.frame(in: .named("dailies")).minY
                     )
                 }
-            }
-        }
-        .overlay(alignment: .topLeading) {
-            if isFirst && orientation.showIrisHint {
-                OrientationTooltip(text: "Tap the Iris to shape this Take.", arrowEdge: .leading)
-                    .fixedSize()
-                    // Raise the bubble so its leading arrow — which sits at the
-                    // bubble's vertical centre — lines up with the Iris centre
-                    // rather than hanging below it (owner 2026-06-16). The Iris
-                    // centre sits on the card's top edge, which is TakeRowView's
-                    // own 6pt vertical pad below this overlay's top. Redefining
-                    // the .top guide as `center − 6` lands the bubble's centre at
-                    // y = 6 no matter how many lines it wraps to (height-independent).
-                    .alignmentGuide(.top) { d in d[VerticalAlignment.center] - 6 }
-                    .offset(x: spineX + CatchlightLayout.circleDiameter)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
-                    .allowsHitTesting(false)
             }
         }
         // Edit-in-place (owner 2026-06-17): mask every row except the one under

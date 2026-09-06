@@ -215,9 +215,25 @@ enum Wiring {
             // across simulator launches, so whichever hint a PREVIOUS run left
             // armed leaked into the next test (e.g. an armed settings hint
             // swallows the first dailies-tab long-press, breaking Flow 6).
-            // UI-test runs start with the tour complete; the orientation flow
-            // itself is covered by FirstRunOrientationTests (unit).
-            model.orientation.step = 5
+            // UI-test runs start with the tour complete, UNLESS a test asks for a specific
+            // step with `--uitesting-orientation-step <n>`.
+            //
+            // 🚨 D-259: this line used to justify itself with "the orientation flow itself is
+            // covered by FirstRunOrientationTests (unit)". Those cover the state MACHINE —
+            // advance, persist, idempotence — and not one of them asserts that a hint RENDERS.
+            // So the tour could be dead after hint 1 for every user, sighted or not, with the
+            // whole suite green: hint 2's render site was gated on `isFirst` inside a SwiftUI
+            // row that the UIKit timeline rewrite left called once, with `isFirst: false`.
+            // Forcing the tour complete for every UI test is what made that unobservable.
+            // The opt-in below is how `FirstRunTourUITests` can assert a step reaches the
+            // screen; the default stays 5, so no existing test changes behaviour.
+            let tourArgs = ProcessInfo.processInfo.arguments
+            if let i = tourArgs.firstIndex(of: "--uitesting-orientation-step"),
+               i + 1 < tourArgs.count, let requested = Int(tourArgs[i + 1]) {
+                model.orientation.step = requested
+            } else {
+                model.orientation.step = 5
+            }
             // `--uitesting-restore` lands the run on the second-device restore
             // sheet (audit 2026-08, V8/T7): the phrase grid is otherwise
             // unreachable under test — onboarding is skipped and Settings opens
