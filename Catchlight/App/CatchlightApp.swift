@@ -34,6 +34,11 @@ struct CatchlightApp: App {
     private let backgroundSync: BackgroundSyncCoordinator
 
     init() {
+        // V40 instrumentation (audit §15ag). No-op unless VoiceOver is running; records focus
+        // moves and the app's own accessibility posts to the `.lifecycle` channel so the two
+        // streams can be compared. Reaches the owner via Settings → Export diagnostics.
+        A11yDiag.start()
+
         // Create the crypto session first so it can be shared: AppModel drives
         // unlock through it imperatively, while this view observes its `isObscured`
         // for the privacy overlay (hence the @StateObject wrapper over the SAME

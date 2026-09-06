@@ -540,7 +540,7 @@ final class ReminderSchedulerTests: XCTestCase {
     /// S1 (audit 2026-08): a follow-up's `dueTextKey` slot is what a later Snooze
     /// templates as "Originally due ⟨…⟩" — it must carry the reminder's WHEN, never
     /// the follow-up's own subtitle. The old stamp produced the spoken sentence
-    /// "Snoozed — Originally due Reminder — still not done".
+    /// "Snoozed. Originally due Reminder: still not done".
     func testFollowUps_stampTheDueDateNotTheirSubtitle() throws {
         UserDefaults.standard.set(true, forKey: SettingsViewModel.FollowUpReminders.defaultsKey)
         defer { UserDefaults.standard.removeObject(forKey: SettingsViewModel.FollowUpReminders.defaultsKey) }

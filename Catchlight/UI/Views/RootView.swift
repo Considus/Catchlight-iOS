@@ -140,7 +140,7 @@ struct RootView: View {
         // the clipped "Authenticating…" announcement (see LockView).
         .onChange(of: app.lockState) { old, new in
             if old != .unlocked && new == .unlocked {
-                UIAccessibility.post(notification: .screenChanged, argument: nil)
+                A11yDiag.post(.screenChanged, argument: nil, from: "root.unlocked")
             }
         }
         .task {

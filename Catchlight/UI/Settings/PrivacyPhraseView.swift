@@ -116,7 +116,7 @@ struct PrivacyPhraseView: View {
         // VoiceOver user whose Face ID was dismissed heard nothing happen.
         .onChange(of: errorText) { _, error in
             if let error {
-                UIAccessibility.post(notification: .announcement, argument: error)
+                A11yDiag.post(.announcement, argument: error, from: "privacyPhrase.error")
             }
         }
     }

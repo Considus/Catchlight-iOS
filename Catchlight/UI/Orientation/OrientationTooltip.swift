@@ -91,7 +91,7 @@ struct OrientationTooltip: View {
             // every hint site is covered. Placement in the VO order is the
             // device-gated half of the finding and is not changed here.
             .onAppear {
-                UIAccessibility.post(notification: .announcement, argument: text)
+                A11yDiag.post(.announcement, argument: text, from: "tooltip.onAppear")
             }
     }
 }

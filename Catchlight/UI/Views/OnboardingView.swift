@@ -909,8 +909,9 @@ private struct ConfirmStep: View {
         // reused rather than restated so the positions cannot drift apart.
         .onChange(of: vm.flashError) { _, flashing in
             guard flashing, let failure = vm.failure else { return }
-            UIAccessibility.post(notification: .announcement,
-                                 argument: "\(failure) The three words have cleared. \(promptCopy)")
+            A11yDiag.post(.announcement,
+                          argument: "\(failure) The three words have cleared. \(promptCopy)",
+                          from: "confirm.flashError")
         }
     }
 

@@ -63,7 +63,7 @@ struct LockView: View {
         .onChange(of: app.lockState) { _, state in
             switch state {
             case .failed:
-                UIAccessibility.post(notification: .announcement, argument: message)
+                A11yDiag.post(.announcement, argument: message, from: "lock.message")
             default:
                 // Audit 2026-08, V34: the `.unlocking` announcement is NOT posted —
                 // on a successful Face ID the screen swaps before the words finish

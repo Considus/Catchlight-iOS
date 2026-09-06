@@ -90,12 +90,12 @@ struct CloudStorageView: View {
         // which is what V14 assumed when it was written against the flat layout.
         .onChange(of: syncFeedback) { _, feedback in
             if let feedback {
-                UIAccessibility.post(notification: .announcement, argument: feedback)
+                A11yDiag.post(.announcement, argument: feedback, from: "cloudStorage")
             }
         }
         .onChange(of: errorText) { _, error in
             if let error {
-                UIAccessibility.post(notification: .announcement, argument: error)
+                A11yDiag.post(.announcement, argument: error, from: "cloudStorage")
             }
         }
     }
