@@ -63,12 +63,25 @@ public final class DiagnosticsLog: @unchecked Sendable {
 
     /// Breadcrumbs get their own budget so they can never starve the notices above. Bigger, because
     /// they're the diagnostic history behind a crash report, and cheap (short, content-free lines).
-    public static let maxLifecycleEntries = 400
+    ///
+    /// 🚨 A `var`, and raised while accessibility instrumentation is recording. Measured
+    /// 2026-09-07: the owner's V40 capture came back at 399 lines against this 400 ceiling,
+    /// i.e. already truncated. Under VoiceOver EVERY SWIPE is a focus move, so a few minutes
+    /// of navigation fills the budget on its own — and eviction is oldest-first while the
+    /// event under investigation ("as Dailies appear") happens in the first seconds. The
+    /// instrument was quietly discarding the exact evidence it existed to collect, and a
+    /// capture that has thrown away its own beginning looks identical to one that found
+    /// nothing. See `A11yDiag`.
+    public static var maxLifecycleEntries = 400
 
     /// Hard byte ceiling for the whole file. `maxEntries` bounds the COUNT, not the SIZE — one
     /// chatty breadcrumb or an interpolated string and the file grows unbounded. The export leaves
     /// by email/share, so it must stay small; oldest entries are dropped until it fits.
-    public static let maxBytes = 256 * 1024
+    /// Also a `var` for the same reason: 5000 short focus lines exceed 256KB, and the byte
+    /// ceiling would evict oldest-first underneath the raised count budget, reintroducing the
+    /// very truncation the count fix removes. Both ceilings have to move together or neither
+    /// moves.
+    public static var maxBytes = 256 * 1024
 
     /// Retention ceiling, regardless of count (owner 2026-07-16). Nothing older than this survives
     /// — a light user's 200 entries could otherwise span MONTHS, which is exposure with no upside.

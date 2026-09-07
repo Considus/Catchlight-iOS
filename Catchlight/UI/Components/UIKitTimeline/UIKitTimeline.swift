@@ -849,6 +849,12 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         // many times during the new-Take bloom animation; re-applying an identical snapshot each
         // time churned collection layout and thrashed the keyboard placement (caps-flash, attempt 1).
         if items != lastItems {
+            // V40 instrumentation: a diffable APPLY is the strongest candidate for the focus
+            // jump. The owner's capture shows focus leaving the Add button within a second,
+            // five times out of five, landing on the FIRST COLLECTION CELL — and with no
+            // accessibility post anywhere near it. Something re-anchors the cursor without
+            // the app asking; a snapshot apply on this collection would do exactly that.
+            A11yDiag.note("TIMELINE apply items \(lastItems.count) -> \(items.count)")
             lastItems = items
             var snapshot = NSDiffableDataSourceSnapshot<Int, TimelineRow>()
             snapshot.appendSections([0])
@@ -888,6 +894,13 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         }
         previousTakes = takesByID
         if !toApply.isEmpty {
+            // Reconfigure is the other candidate, and `layoutChanged` reconfigures EVERY cell.
+            // `spineX` is derived from a MEASURED container width, so anything that perturbs
+            // layout — a tooltip mounting, for instance — can move it and reconfigure the whole
+            // collection. Record the reason, because the reasons need different fixes.
+            let why = layoutChanged ? "layout(spineX/cardGap)"
+                : (monthFilterChanged ? "monthFilter" : (snoozeChanged ? "snooze" : "content"))
+            A11yDiag.note("TIMELINE reconfigure \(toApply.count) reason=\(why)")
             var reconfigured = current
             reconfigured.reconfigureItems(toApply)
             dataSource.apply(reconfigured, animatingDifferences: false)
