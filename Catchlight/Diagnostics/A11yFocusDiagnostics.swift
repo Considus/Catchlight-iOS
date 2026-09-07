@@ -65,6 +65,14 @@ enum A11yDiag {
         UIAccessibility.post(notification: notification, argument: argument)
     }
 
+    /// Record a line only while instrumentation is recording. For call sites that are not
+    /// accessibility posts but whose TIMING needs to sit in the same stream — a collection
+    /// reload against a focus move is only meaningful if both are on one clock.
+    static func note(_ message: String) {
+        guard isRecording else { return }
+        DiagnosticsLog.shared.record(.lifecycle, "A11Y \(message)")
+    }
+
     // MARK: - Focus observer
 
     private static var started = false
@@ -74,6 +82,17 @@ enum A11yDiag {
     static func start() {
         guard !started else { return }
         started = true
+
+        // 🚨 Raise the log's ceilings BEFORE anything is recorded. The first capture came back
+        // at 399 lines against a 400 budget: truncated, oldest-first, and the event under
+        // investigation happens in the first seconds of the walk. Both the count and the byte
+        // ceiling move, because either one alone still evicts oldest-first. Only while
+        // recording, so ordinary users keep the small, shareable export.
+        if isRecording {
+            DiagnosticsLog.maxLifecycleEntries = 20_000
+            DiagnosticsLog.maxBytes = 8 * 1024 * 1024
+            DiagnosticsLog.shared.record(.lifecycle, "A11Y DIAG budgets raised for capture")
+        }
 
         NotificationCenter.default.addObserver(
             forName: UIAccessibility.elementFocusedNotification, object: nil, queue: .main
