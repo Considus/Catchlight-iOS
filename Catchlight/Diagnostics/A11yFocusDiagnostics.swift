@@ -73,6 +73,17 @@ enum A11yDiag {
         DiagnosticsLog.shared.record(.lifecycle, "A11Y \(message)")
     }
 
+    private static var budgetsRaised = false
+
+    /// Idempotent, and called from BOTH launch and the VoiceOver status change.
+    private static func raiseBudgetsIfRecording() {
+        guard isRecording, !budgetsRaised else { return }
+        budgetsRaised = true
+        DiagnosticsLog.maxLifecycleEntries = 20_000
+        DiagnosticsLog.maxBytes = 8 * 1024 * 1024
+        DiagnosticsLog.shared.record(.lifecycle, "A11Y DIAG budgets raised for capture")
+    }
+
     // MARK: - Focus observer
 
     private static var started = false
@@ -88,11 +99,7 @@ enum A11yDiag {
         // investigation happens in the first seconds of the walk. Both the count and the byte
         // ceiling move, because either one alone still evicts oldest-first. Only while
         // recording, so ordinary users keep the small, shareable export.
-        if isRecording {
-            DiagnosticsLog.maxLifecycleEntries = 20_000
-            DiagnosticsLog.maxBytes = 8 * 1024 * 1024
-            DiagnosticsLog.shared.record(.lifecycle, "A11Y DIAG budgets raised for capture")
-        }
+        raiseBudgetsIfRecording()
 
         NotificationCenter.default.addObserver(
             forName: UIAccessibility.elementFocusedNotification, object: nil, queue: .main
@@ -109,6 +116,13 @@ enum A11yDiag {
             forName: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil, queue: .main
         ) { _ in
             MainActor.assumeIsolated {
+                // 🚨 Raise the budgets HERE as well, not only at launch. Measured on the
+                // owner's second capture: it came back at 399 lines against the 400 ceiling
+                // AGAIN, with no "budgets raised" line at all — because he turns VoiceOver on
+                // AFTER opening the app, so `isRecording` was false when `start()` ran and the
+                // raise never happened. A fix that only takes effect on a path the user does
+                // not use is not a fix.
+                raiseBudgetsIfRecording()
                 DiagnosticsLog.shared.record(
                     .lifecycle,
                     "A11Y VOICEOVER \(UIAccessibility.isVoiceOverRunning ? "ON" : "OFF")")
