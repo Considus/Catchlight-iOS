@@ -1119,6 +1119,7 @@ struct DailiesView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckRuby)
                     .accessibilityHidden(true)
+<<<<<<< Updated upstream
                 Text("No privacy phrase on this device. Export now, then Settings > Start over.")
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                     .foregroundStyle(Color.ckTextPrimary)
@@ -1128,6 +1129,13 @@ struct DailiesView: View {
                     .lineLimit(stacked ? nil : 3)
                     .fixedSize(horizontal: false, vertical: stacked)
                 if !stacked { Spacer(minLength: 8) }
+=======
+                Text("No privacy phrase on this device.\n" + app.phraseProbe)
+                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .lineLimit(8)
+                Spacer(minLength: 8)
+>>>>>>> Stashed changes
                 Button { showMissingPhraseExportConfirm = true } label: {
                     Text("Export now")
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
