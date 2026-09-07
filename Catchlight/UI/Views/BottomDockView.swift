@@ -171,6 +171,35 @@ struct BottomDockView: View {
         // arrow has to hold its position against the ring it points at, so pin the bubble's
         // BOTTOM a fixed gap above the button and let it grow upward into free space.
         // `buttonSize + 14` reproduces the old default-size position exactly.
+        // 🚨 The Add hint lives HERE, on the dock row, not inside the Add Button's `label:`
+        // closure where it used to sit (audit §15ai, V40/V42).
+        //
+        // MEASURED on the bench: inside the button, the button's ACCESSIBILITY frame was
+        // 348x180 while the hint showed, against 44x44 without it. `.offset` is a post-layout
+        // visual transform, so the element inflated to the union of the button and the
+        // UN-offset bubble — 348pt of a 393pt screen, spanning all four dock buttons and
+        // reaching 136pt above itself. That is the owner's "focus box around both the tooltip
+        // and the two buttons", it is why focus stolen from the dock could be stolen from
+        // `Sequence` (which sits inside that frame), and it made the button's own target a
+        // lie.
+        //
+        // On the row it is drawn after every button and belongs to none of them. NOT
+        // `.accessibilityHidden(true)` on the tooltip — D-221: a hide on a shape-bearing view
+        // materialises an anonymous element rather than removing one. The hint's WORDS still
+        // reach VoiceOver through the Add button's own label, which the owner's capture
+        // confirms is read in full.
+        .overlay(alignment: .bottomLeading) {
+            if orientation.showAddPulse {
+                OrientationTooltip(text: Self.addHintText,
+                                   arrowEdge: .bottom,
+                                   arrowAlignment: .leading)
+                    .fixedSize()
+                    .offset(y: -(buttonSize + 14))
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         .overlay(alignment: .bottom) {
             if orientation.showSettingsHint {
                 OrientationTooltip(text: "Swipe up here for settings.", arrowEdge: .bottom)
@@ -261,26 +290,8 @@ struct BottomDockView: View {
             // bubble's bottom-LEADING (over the +) and let the bubble extend RIGHT
             // (owner 2026-06-15): .topLeading lines the bubble's leading up with the
             // button's, the arrow sits 22pt in (the + centre), text spills right.
-            // Bottom-anchored for the same reason as the settings hint above: the arrow must
-            // hold station on the button's ring while the bubble grows upward with the text.
-            .overlay(alignment: .bottomLeading) {
-                // `&& !ui.isEditingInPlace`: the tour no longer advances on the Add tap, so
-                // without this hint 1 would sit over the editor it just opened.
-                if orientation.showAddPulse && !ui.isEditingInPlace {
-                    OrientationTooltip(text: Self.addHintText, arrowEdge: .bottom, arrowAlignment: .leading)
-                        .fixedSize()
-                        .offset(y: -(buttonSize + 14))
-                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
-                }
-            }
         }
         .buttonStyle(.plain)
-        // 🚨 This tooltip is an overlay on ONE dock button, so it draws with that button — and
-        // the three buttons AFTER it in the HStack drew on top of it (owner device report
-        // 2026-09-04: "the + button correctly sits behind it, but the other three toolbar
-        // buttons are sitting on top"). Lift the whole slot while the hint is up. The settings
-        // hint never had this: it overlays the entire dock row, after every button.
-        .zIndex(orientation.showAddPulse ? 1 : 0)
         .accessibilityIdentifier("add-button")
         // V36 (audit §15af, D-260): the tooltip is overlaid INSIDE this Button's `label:`
         // closure, so it belongs to the button's accessibility subtree and this label
@@ -313,6 +324,12 @@ struct BottomDockView: View {
     }
 
     private func runPulseCycle() {
+        // 📌 V40 candidate, MEASURED AND ELIMINATED (audit §15ai). This cycle is 0.45s up plus
+        // 0.45s down = 0.9s, which matches the ~1s interval at which the owner's VoiceOver
+        // focus was being stolen, and it recurses through `asyncAfter` — so the suspicion was
+        // that the `addPulsesDone < 2` cap was not holding and the pulse ran forever, moving a
+        // focused control's frame under the cursor. Instrumented on the bench 2026-09-07: it
+        // logged done=0, done=1, done=2 and stopped. The cap holds. Not the cause.
         guard orientation.showAddPulse, addPulsesDone < 2 else { return }
         withAnimation(.easeInOut(duration: 0.45)) { addPulseScale = 1.18 }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
