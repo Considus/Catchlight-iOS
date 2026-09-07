@@ -94,7 +94,6 @@ final class AppModel {
     /// write, so the safe write order (D-253) does not make this check redundant.
     private(set) var phraseMissing: Bool = false
 
-<<<<<<< Updated upstream
     /// Set once "Start over" has wiped the device (D-253, owner 2026-09-04). The app is then
     /// holding no master key and no store, so it must not render its normal UI: every branch
     /// below would be reading things that no longer exist. `RootView` shows a terminal screen
@@ -118,16 +117,8 @@ final class AppModel {
     /// decrypted. (It used to pass `kSecUseAuthenticationUISkip` for this, which #222 removed:
     /// on device that flag made an access-control-protected item report errSecItemNotFound,
     /// so a healthy account read as having no key at all.)
-=======
-    /// TEMP DIAGNOSTIC (D-253) — raw keychain probe output, surfaced in the banner.
-    private(set) var phraseProbe: String = ""
-
-    /// Re-read the phrase/key pair. Cheap: `exists()` uses `SecItemCopyMatching` with
-    /// `kSecUseAuthenticationUISkip`, so it never prompts for Face ID.
->>>>>>> Stashed changes
     func refreshPhrasePresence() {
         phraseMissing = MasterKeyKeychain.exists() && !MnemonicKeychain.exists()
-        phraseProbe = PhraseProbe.run()
     }
     private(set) var onboardingVM: OnboardingViewModel?
 
