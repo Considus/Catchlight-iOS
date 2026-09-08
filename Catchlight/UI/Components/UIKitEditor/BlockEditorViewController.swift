@@ -362,6 +362,11 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         tv.textColor = UIColor(isComplete ? Color.ckTextComplete : Color.ckTextPrimary)
         tv.tintColor = UIColor(Color.ckAccent)
         tv.delegate = self
+        // Writing Tools (D-246). The editor is a plain `UITextView`, so with this
+        // unset iOS applies `.complete` BY INHERITANCE and a Take can be sent to
+        // Private Cloud Compute — nobody added that, and nobody chose it. The user's
+        // Settings choice decides; the default is Off.
+        tv.writingToolsBehavior = WritingToolsBehaviour.current().uiBehavior
         tv.text = text
         tv.setContentCompressionResistancePriority(.required, for: .vertical)
         tv.setContentHuggingPriority(.required, for: .vertical)

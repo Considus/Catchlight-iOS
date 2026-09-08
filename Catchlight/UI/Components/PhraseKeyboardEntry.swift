@@ -172,6 +172,18 @@ struct PhraseTextField: UIViewRepresentable {
         tf.autocapitalizationType = .none
         tf.autocorrectionType = .no
         tf.spellCheckingType = .no
+        // 🚨 HARD OFF, and deliberately NOT wired to the D-246 Settings switch.
+        //
+        // D-246 specifies the switch for "the editor's text views". This field is not
+        // one of them and must never follow it: the twelve words ARE the key. Handing
+        // them to a writing service — remote or on-device — is not a trade-off a user
+        // could sensibly opt into, so there is no lever to offer.
+        //
+        // The two lines above show the author was already alert to text services here;
+        // `writingToolsBehavior` was simply not a thing that existed when they were
+        // written, and an unset value inherits `.complete`. Same inheritance fault as
+        // the editor, on the one field where it matters most.
+        tf.writingToolsBehavior = .none
         tf.keyboardType = .asciiCapable
         tf.returnKeyType = isLast ? .done : .next
         tf.inputAccessoryView = accessory
