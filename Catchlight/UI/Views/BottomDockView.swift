@@ -304,9 +304,11 @@ struct BottomDockView: View {
         // Fold the hint into the label while it is showing. NOT `.accessibilityHidden(true)`
         // on the tooltip — D-221: a hide on a shape-bearing view materialises an anonymous
         // element rather than removing one.
-        .accessibilityLabel(orientation.showAddPulse
-                            ? "Add Take. \(Self.addHintText)"
-                            : "Add Take")
+        // Plain "Add Take". The fold from #225 existed because the tooltip was swallowed by
+        // this button's element and its words reached nobody. Since #235 moved the hint onto
+        // the dock row it is its OWN focusable node — measured in the owner's capture, the
+        // first time in any log — so folding it in here reads it TWICE.
+        .accessibilityLabel("Add Take")
         .accessibilityHint("Double-tap to capture a new Take.")
         .accessibilityAddTraits(.isButton)
         .onChange(of: orientation.showAddPulse, initial: true) { _, showing in
