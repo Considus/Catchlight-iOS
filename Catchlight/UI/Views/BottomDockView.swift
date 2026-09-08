@@ -197,7 +197,21 @@ struct BottomDockView: View {
                     .offset(y: -(buttonSize + 14))
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
                     .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+                    // 🚨 NO `.accessibilityHidden(true)` here. It was applied and it did NOT
+                    // work: `TooltipFrameProbeTests` finds this element by label and passes,
+                    // and the owner's capture shows "What's your first Take?" as a focusable
+                    // node in its own right. `OrientationTooltip` calls `.accessibilityElement()`
+                    // on itself, and hiding a shape-bearing view that has made itself an element
+                    // leaves the element in place (D-221, in reverse).
+                    //
+                    // So the tree carried a node marked hidden while still being reachable. An
+                    // element in that inconsistent state, sitting next to the dock, is the last
+                    // candidate standing for V40's focus steal, which measurement has shown is
+                    // conditional on this tooltip being mounted and is caused by none of: an
+                    // accessibility post, a timeline reload, or a frame overlap.
+                    //
+                    // It should be a HONEST element instead: reachable, labelled, announced
+                    // once. That is also what V43 wants — the tooltips being read at all.
             }
         }
         .overlay(alignment: .bottom) {
