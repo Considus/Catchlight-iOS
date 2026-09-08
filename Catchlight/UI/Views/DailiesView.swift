@@ -42,6 +42,14 @@ struct DailiesView: View {
     /// Measured height of the heading block (title + its paddings, INCLUDING `deviceTopInset`).
     @State private var headingBlockHeight: CGFloat = 0
 
+    /// Audit 2026-08, V44: the Take to hand the VoiceOver cursor back to once the
+    /// in-place editor has closed. One-shot — the timeline clears it through
+    /// `onFocusHandled` as soon as it has acted, so a later re-edit re-targets.
+    /// Set on the two paths that CLOSE the editor over a Take that still exists;
+    /// deliberately not set by `deleteTake`, where the row is gone and there is
+    /// nothing to return to.
+    @State private var focusReturnTakeID: UUID?
+
     /// The heading's clearance (owner device report 2026-09-04, item 5).
     ///
     /// `CatchlightLayout.headingClearance` is a constant tuned for the 24pt heading, but
@@ -1459,6 +1467,9 @@ struct DailiesView: View {
             // here rather than left pending in the VC forever.
             revealTargetID: ui.revealTargetTakeID == vm.obie?.id ? nil : ui.revealTargetTakeID,
             onRevealHandled: { ui.revealTargetTakeID = nil },
+            // V44: focus-only return after the editor closes (see `focusReturnTakeID`).
+            focusTargetID: focusReturnTakeID,
+            onFocusHandled: { focusReturnTakeID = nil },
             // Manual arrangement (D-195) — the drag handle and interactive move.
             isReorderable: canReorder,
             onReorder: { movedID, displayOrder in
@@ -1744,6 +1755,10 @@ struct DailiesView: View {
 
     private func saveInlineEdit() {
         editFocusedBlockID = nil            // release the keyboard first
+        // V44: captured BEFORE the defer clears the editing state, so the cursor
+        // returns to the Take that was edited rather than to whatever the closing
+        // card happened to be covering.
+        focusReturnTakeID = ui.editingTakeID
         defer { editDraft = nil; ui.endEditingInPlace() }
         guard var t = editDraft else { return }
         t.removeEmptyTextBlocks()
@@ -1789,6 +1804,7 @@ struct DailiesView: View {
     private func discardInlineEdit() {
         editFocusedBlockID = nil
         editDraft = nil
+        focusReturnTakeID = ui.editingTakeID   // V44, as in `saveInlineEdit`
         ui.endEditingInPlace()
     }
 
