@@ -566,13 +566,20 @@ struct DailiesView: View {
             // and sits clear of it, and the copy shrinks to the one instruction that is not
             // already on screen.
             if orientation.showObieIntro {
-                // Tap anywhere off the bubble dismisses. Not an accessibility element: the
-                // bubble below carries the activation (V13 / D-214).
+                // Tap anywhere off the bubble dismisses. The bubble below carries the
+                // VoiceOver activation (V13 / D-214), so this catcher must not be an element.
+                //
+                // 🚨 NO `.accessibilityHidden(true)`, which is what it had. This view is
+                // SHAPE-BEARING — `.contentShape(Rectangle())` over the whole screen — and a
+                // hide on a shape-bearing view MATERIALISES an anonymous element rather than
+                // removing one (D-221; the same trap is annotated in `TakeCircleView` and
+                // `TimelineBeam`). A full-screen anonymous element is about the worst shape
+                // that trap can take. Proved on the Add hint, where the identical hide left
+                // the tooltip focusable in the owner's own capture.
                 Color.clear
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Rectangle())
                     .onTapGesture { orientation.didDismissObieIntro() }
-                    .accessibilityHidden(true)
 
                 let obieIrisCentreY = spineTopInset + CatchlightLayout.circleDiameter / 2
                 OrientationTooltip(text: "Long-press here to make this your Obie.",
