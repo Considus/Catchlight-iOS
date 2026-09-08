@@ -41,6 +41,7 @@ struct SettingsView: View {
     @AppStorage(SettingsViewModel.FollowUpReminders.defaultsKey) private var followUpRemindersOn: Bool = SettingsViewModel.FollowUpReminders.default
     @AppStorage(SettingsViewModel.ConfirmBeforeDelete.defaultsKey) private var confirmBeforeDeleteOn: Bool = SettingsViewModel.ConfirmBeforeDelete.default
     @AppStorage(SpotlightExposure.defaultsKey) private var spotlightExposureRaw: String = SpotlightExposure.default.rawValue
+    @AppStorage(WritingToolsBehaviour.defaultsKey) private var writingToolsRaw: String = WritingToolsBehaviour.default.rawValue
 
     @State private var vm = SettingsViewModel()
     /// The Import-result message; non-nil presents the confirmation alert (owner 2026-06-22).
@@ -614,9 +615,62 @@ struct SettingsView: View {
                     .accessibilityIdentifier("spotlight-exposure-description")
             }
             .listRowBackground(Color.ckSurface)
+
+            // Writing Tools (D-246). The direct sibling of the selector above:
+            // same section, same shape, private option as the default.
+            //
+            // 🚨 This was never a feature anyone added. The editor is a plain
+            // `UITextView` with `writingToolsBehavior` unset, so iOS applied
+            // `.complete` by inheritance and a Take could be sent to Private Cloud
+            // Compute. Found only because a published paper claimed three things
+            // cross the encryption boundary and "nothing else does" — the count had
+            // been re-derived from the paths the APP opens, and missed the one the
+            // OS opens on its behalf.
+            //
+            // Off is the default because the app's promise is why people chose it.
+            // It is a lever, not a prohibition: the user decides.
+            VStack(alignment: .leading, spacing: 6) {
+                Menu {
+                    ForEach(WritingToolsBehaviour.allCases) { option in
+                        Button {
+                            writingToolsBinding.wrappedValue = option
+                        } label: {
+                            if option == writingToolsBinding.wrappedValue {
+                                Label(option.label, systemImage: "checkmark")
+                            } else {
+                                Text(option.label)
+                            }
+                        }
+                    }
+                } label: {
+                    SelectorRow(icon: "wand.and.sparkles",
+                                label: "Writing Tools",
+                                value: writingToolsBinding.wrappedValue.label)
+                }
+                .tint(Color.ckTextSecondary)
+                .accessibilityElement(children: .combine)
+                // V16: the value belongs in `accessibilityValue`, not welded into
+                // the label — otherwise changing it announces nothing.
+                .accessibilityLabel("Writing Tools")
+                .accessibilityValue(writingToolsBinding.wrappedValue.label)
+
+                Text("Apple's writing help can rewrite and proofread your Takes. Using it sends that Take's text to Apple, which may process it on their servers. Off by default. Your Privacy phrase is never offered to it, whatever you choose here.")
+                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("writing-tools-description")
+            }
+            .listRowBackground(Color.ckSurface)
         } header: {
             sectionHeader("Security")
         }
+    }
+
+    private var writingToolsBinding: Binding<WritingToolsBehaviour> {
+        Binding(
+            get: { WritingToolsBehaviour(rawValue: writingToolsRaw) ?? .default },
+            set: { writingToolsRaw = $0.rawValue }
+        )
     }
 
     private var lockAfterBinding: Binding<SettingsViewModel.LockAfter> {
