@@ -48,6 +48,23 @@ struct OnboardingView: View {
             }
         }
         .animation(.easeInOut(duration: 0.18), value: vm.step)
+        // Audit §15aj: a step change set NO focus, so VoiceOver kept the cursor at the
+        // dead element's screen position and read whatever the next step drew there.
+        // The owner heard the TAIL of the previous screen's button as the storage step
+        // opened ("starts by partially reading the button from the previous screen";
+        // his capture, lines 163-164: focus leaves "Create my Privacy phrase" and lands
+        // on the first storage CARD, never the heading).
+        //
+        // 🚨 It was never a storage-step fault. NO step sets focus, so every one of the
+        // eight transitions has this — storage is simply where the previous button's
+        // label is long enough to hear. Fixing it per-step would have left seven.
+        //
+        // `.screenChanged` with a nil argument re-anchors at the TOP of the new screen,
+        // which V32 made the page heading. Same call, same reasoning, as the unlock
+        // transition in `RootView` — the precedent this follows rather than invents.
+        .onChange(of: vm.step) { _, _ in
+            UIAccessibility.post(notification: .screenChanged, argument: nil)
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -801,6 +818,11 @@ private struct ConfirmStep: View {
     @Environment(OnboardingViewModel.self) private var vm
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
+    /// Drives the wrong-words warning under VoiceOver. Set true when `flashError` rises,
+    /// which both READS the warning and LEAVES the cursor on it — see the handler below
+    /// for why this replaced an announcement rather than joining it.
+    @AccessibilityFocusState private var failureFocused: Bool
+
     var body: some View {
         StepScaffold {
             ScrollView {
@@ -846,6 +868,7 @@ private struct ConfirmStep: View {
                                     .offset(y: 16)
                                     .transition(.opacity)
                                     .accessibilityLabel(failure)
+                                    .accessibilityFocused($failureFocused)
                             }
                         }
                         .animation(.easeInOut(duration: 0.18), value: vm.failure)
@@ -904,14 +927,22 @@ private struct ConfirmStep: View {
         // vm.failure)` fires once and never again — the exact defect shape V36 has.
         // `flashError` goes false→true per attempt and back on reset.
         //
-        // The announcement carries two things the visible copy does not: that the slots are
-        // about to clear, and that the wanted positions have not changed. `promptCopy` is
-        // reused rather than restated so the positions cannot drift apart.
+        // 🚨 MOVE FOCUS, do not announce (owner 2026-09-07, audit §15ah). The announcement
+        // shipped, fired correctly — it is in his captures at lines 111, 184 and 289 — and
+        // he still heard nothing. His own prescription: "after wrong input the next item
+        // highlighted should move to the warning directly, with no user input."
+        //
+        // He is right, and for a reason beyond preference: an announcement COMPETES with
+        // speech already in flight and loses, which is exactly what was happening as the
+        // bank tile spoke on the third placement. A focus move interrupts and re-reads, so
+        // it cannot be swallowed. It also leaves him ON the warning rather than hunting for
+        // it — he had to scroll to find out what had happened.
+        //
+        // The warning stays mounted after the 600ms reset (`failure` is not cleared there),
+        // so focus does not land on a dying element.
         .onChange(of: vm.flashError) { _, flashing in
-            guard flashing, let failure = vm.failure else { return }
-            A11yDiag.post(.announcement,
-                          argument: "\(failure) The three words have cleared. \(promptCopy)",
-                          from: "confirm.flashError")
+            guard flashing else { return }
+            failureFocused = true
         }
     }
 
