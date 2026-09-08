@@ -119,6 +119,11 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// into view, pulses it, then fires `onRevealHandled` so the host clears the state.
     var revealTargetID: UUID? = nil
     var onRevealHandled: () -> Void = {}
+    /// Audit 2026-08, V44: the Take the VoiceOver cursor should return to when the
+    /// in-place editor closes. Focus ONLY — never scrolls — so a sighted user sees
+    /// no change, and the whole path is inert unless VoiceOver is running.
+    var focusTargetID: UUID? = nil
+    var onFocusHandled: () -> Void = {}
     /// MANUAL arrangement (D-195): show the drag handle and allow interactive moves. False
     /// in date order, and false whenever the timeline is filtered or searched — you cannot
     /// honestly arrange a list whose middle is hidden (see `DailiesView.canReorder`).
@@ -151,6 +156,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onTapText = onTapText
         vc.onTapBackground = onTapBackground
         vc.onRevealHandled = onRevealHandled
+        vc.onFocusHandled = onFocusHandled
         vc.isReorderable = isReorderable
         vc.onReorder = onReorder
         vc.onNudge = onNudge
@@ -175,6 +181,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.onTapText = onTapText
         vc.onTapBackground = onTapBackground
         vc.onRevealHandled = onRevealHandled
+        vc.onFocusHandled = onFocusHandled
         vc.isReorderable = isReorderable
         vc.onReorder = onReorder
         vc.onNudge = onNudge
@@ -184,6 +191,11 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         // After apply, so a target set while the data was still loading (e.g. a
         // Spotlight tap on the locked app) can resolve against the fresh rows.
         vc.requestReveal(revealTargetID)
+        // AFTER requestReveal, and after this pass has already pushed `axHidden`
+        // false: the rows are out of the accessibility tree while the editor is up
+        // (V5/RV-4), so a focus post any earlier would target an element that is
+        // not yet back in the tree.
+        vc.requestFocus(focusTargetID)
     }
 }
 
@@ -933,6 +945,34 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     /// passes (the one-shot state clears asynchronously) don't re-trigger the
     /// scroll. Reset when the host's target clears to nil.
     private var lastRequestedRevealID: UUID?
+
+    /// The last focus target accepted, so the host's repeated update passes (the
+    /// one-shot clears asynchronously) don't re-post and yank the cursor back from
+    /// wherever the user has since moved it.
+    private var lastRequestedFocusID: UUID?
+    var onFocusHandled: () -> Void = {}
+
+    /// V44: put the VoiceOver cursor back on the Take that was being edited.
+    ///
+    /// Closing the in-place editor left the cursor on whatever happened to be under
+    /// the closing card — a screen position rather than a thing — so a user who
+    /// edited a Take was returned to a different one.
+    ///
+    /// Focus only. It never scrolls, so nothing changes for a sighted user, and it
+    /// returns immediately unless VoiceOver is actually running. A row that is not
+    /// currently realised (scrolled far offscreen) yields no cell, in which case
+    /// this does nothing rather than guessing at a neighbour.
+    func requestFocus(_ id: UUID?) {
+        guard let id else { lastRequestedFocusID = nil; return }
+        guard id != lastRequestedFocusID else { return }
+        lastRequestedFocusID = id
+        defer { DispatchQueue.main.async { [weak self] in self?.onFocusHandled() } }
+        guard UIAccessibility.isVoiceOverRunning,
+              dataSource != nil,
+              let indexPath = dataSource.indexPath(for: .take(id)),
+              let cell = collectionView.cellForItem(at: indexPath) else { return }
+        UIAccessibility.post(notification: .layoutChanged, argument: cell)
+    }
 
     func requestReveal(_ id: UUID?) {
         guard let id else { lastRequestedRevealID = nil; return }

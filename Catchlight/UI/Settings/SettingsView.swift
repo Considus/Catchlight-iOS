@@ -337,7 +337,14 @@ struct SettingsView: View {
         .tint(Color.ckTextSecondary)
         .listRowBackground(Color.ckSurface)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(accessibilityLabel) \(selectionLabel)")
+        // V16 (audit 2026-08): the selection used to be welded into the LABEL, so a
+        // picker's name and its current setting were one string. VoiceOver re-reads
+        // only the VALUE when a control changes, so a welded label announced nothing
+        // on change and the row read as a different control each time. This helper
+        // serves every menu picker in Settings, so the split fixes all of them at
+        // once — matching `cloudStorageRow`, which already did it this way.
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(selectionLabel)
     }
 
     /// The scheme to FORCE on the Settings sheet. Night/Daylight map directly; System
@@ -507,7 +514,7 @@ struct SettingsView: View {
             // done, note-free Takes are ever eligible (see Take.isAutoCleanupEligible).
             menuPickerRow(icon: "trash",
                           label: "Auto-Delete (exc. notes)",
-                          accessibilityLabel: "Auto-delete completed Takes, excluding notes,",
+                          accessibilityLabel: "Auto-delete completed Takes, excluding notes",
                           selectionLabel: autoCleanupBinding.wrappedValue.label) {
                 Picker("Auto-delete", selection: autoCleanupBinding) {
                     ForEach(SettingsViewModel.AutoCleanup.allCases) { option in
@@ -595,7 +602,10 @@ struct SettingsView: View {
                 }
                 .tint(Color.ckTextSecondary)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Spotlight and Siri indexing \(spotlightExposureBinding.wrappedValue.label)")
+                // V16: hand-rolled Menu rather than `menuPickerRow`, so it needs the
+                // same label/value split applied at the helper.
+                .accessibilityLabel("Spotlight and Siri indexing")
+                .accessibilityValue(spotlightExposureBinding.wrappedValue.label)
 
                 Text("Considus can never read your Takes. This only affects on-device search. The text options are unavailable for now. iOS does not currently show app text in search results, so Catchlight only offers the levels that work. They will return when Apple resolves this.")
                     .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
