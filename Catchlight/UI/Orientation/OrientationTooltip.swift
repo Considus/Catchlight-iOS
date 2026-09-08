@@ -83,7 +83,18 @@ struct OrientationTooltip: View {
                 }
             )
             .shadow(color: Color.black.opacity(0.18), radius: 8, y: 2)
-            .accessibilityElement()
+            // 🚨 `.combine`, not the bare `.accessibilityElement()` this used to call.
+            // MEASURED (DockOrderProbeTests, 2026-09-08): the bare form created the
+            // container but did NOT suppress the Text inside it, so one tooltip vended
+            // TWO elements with the same words — an `.other` at the bubble's frame
+            // (12, 713.7) 173x46.3 and a `.staticText` at the text's own inset frame
+            // (26, 723.7) 145x18.3. Every other element on that screen vends once.
+            //
+            // Two adjacent stops reading the identical sentence is what "I can't get
+            // past the tooltip" is from the inside, and it is V43's double utterance.
+            // `.combine` merges the subtree into a single element instead of laying a
+            // container over a child that is still vending.
+            .accessibilityElement(children: .combine)
             .accessibilityLabel(text)
             // Audit 2026-08, V25: the hints appear silently — a VoiceOver user
             // gets no signal a tooltip arrived, and its element sits wherever the
