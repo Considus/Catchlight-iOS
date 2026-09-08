@@ -894,6 +894,26 @@ struct DailiesView: View {
                     // Recede the title while editing in place; the mask stays opaque so
                     // scrolled-up content still dissolves under the top.
                     .opacity(ui.isEditingInPlace ? 0.12 : 1)
+                    // Audit 2026-08, V12: SEQUENCE and SEARCH were modes a VoiceOver
+                    // user could enter but not leave. Both sighted exits are invisible
+                    // to it — the empty-timeline tap is a UIKit gesture recogniser
+                    // rather than an element, and the month divider's strip is hidden —
+                    // so the only route back to the full timeline was to guess.
+                    //
+                    // It hangs on the heading because that is the one element that is
+                    // always present and always names the mode you are in, so the way
+                    // out sits on the thing that says where you are. `exitToResting()`
+                    // is the same call the background tap makes, so the sighted and
+                    // spoken exits cannot drift apart.
+                    //
+                    // `accessibilityActions` (plural) rather than the singular form:
+                    // it takes a ViewBuilder, so resting mode offers NO action at all
+                    // instead of one that silently does nothing.
+                    .accessibilityActions {
+                        if ui.dockMode != .resting {
+                            Button("Show all Takes") { ui.exitToResting() }
+                        }
+                    }
                     .id(headingTitle)
                     .transition(.opacity)
             }
