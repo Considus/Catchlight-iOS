@@ -180,6 +180,31 @@ enum Wiring {
             try? store.upsert(Take(createdAt: base.addingTimeInterval(-1),
                                    blocks: [.textLine("Buy film for the weekend shoot")]))
             try? store.upsert(Take(createdAt: base, blocks: [.textLine("Call the framer back")]))
+            // `--uitesting-obie` pins an Obie (V40, 2026-09-09). The bench had no Obie
+            // and the owner's device always does, and that is not a cosmetic difference:
+            // the pinned Obie is rendered OUTSIDE the UIKitTimeline collection, as a
+            // sibling of it, so it is the one structural element standing between the
+            // heading and the collection on his tree and absent from ours — and the
+            // collection's first cell is exactly where his focus keeps landing.
+            // `--uitesting-many <n>` seeds a timeline long enough to SCROLL, so the
+            // collection recycles cells (V40, 2026-09-09). The bench's two Takes never
+            // recycle; his timeline always does, and cell reuse is the other named
+            // difference between the tree that shows the fault and the tree that does
+            // not. Seeded oldest-first so the two fixture Takes stay on top and the
+            // existing flow tests are untouched.
+            if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "--uitesting-many"),
+               i + 1 < ProcessInfo.processInfo.arguments.count,
+               let extra = Int(ProcessInfo.processInfo.arguments[i + 1]) {
+                for n in 0..<extra {
+                    try? store.upsert(Take(createdAt: base.addingTimeInterval(-100 - Double(n)),
+                                           blocks: [.textLine("Filler Take number \(n + 1)")]))
+                }
+            }
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-obie") {
+                try? store.upsert(Take(createdAt: base.addingTimeInterval(-2),
+                                       blocks: [.textLine("A Take is like memory")],
+                                       isObie: true))
+            }
             // UI-test build is treated as fully entitled by default so existing
             // flow tests aren't gated by the paywall. Pass `--uitesting-lapsed`
             // alongside to exercise the paywall path explicitly.

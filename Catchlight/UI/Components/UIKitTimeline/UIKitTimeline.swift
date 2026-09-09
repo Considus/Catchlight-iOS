@@ -693,6 +693,9 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         var snapshot = dataSource.snapshot()
         guard !snapshot.itemIdentifiers.isEmpty else { return }
         snapshot.reconfigureItems(snapshot.itemIdentifiers)
+        // The one apply path that was NOT instrumented, so an elimination that read
+        // "only two TIMELINE events" could not have seen it (V40, 2026-09-09).
+        A11yDiag.note("TIMELINE reconfigureAll \(snapshot.itemIdentifiers.count) reason=isReorderable")
         dataSource.apply(snapshot, animatingDifferences: false)
     }
 

@@ -130,6 +130,163 @@ enum A11yDiag {
         }
     }
 
+    // MARK: - Body-evaluation counter (V40, §15ar)
+
+    /// Count how often a view's `body` is evaluated.
+    ///
+    /// 🚨 The owner's restatement moved the question: *"I can get everywhere, it just
+    /// doesn't hold focus to where I put it."* Every instrument in this investigation
+    /// measured ORDER — what follows what, whether it wraps, what container holds it —
+    /// and the order was never the fault. A control DESTROYED and rebuilt under the
+    /// cursor loses focus without any traversal move, and would be invisible to all of
+    /// them.
+    ///
+    /// This needs no assistive client and no device: park the app and count. A view
+    /// that rebuilds while nothing is happening is a control that cannot hold focus.
+    /// A stable count eliminates the whole family.
+    private static var bodyCounts: [String: Int] = [:]
+    private static var lastBodyReport = Date.distantPast
+
+    @MainActor
+    static func countBody(_ name: String) {
+        guard isRecording else { return }
+        bodyCounts[name, default: 0] += 1
+        // Report on a timer rather than per evaluation: the log is the instrument and a
+        // line per body would itself perturb what it measures.
+        let now = Date()
+        guard now.timeIntervalSince(lastBodyReport) >= 1.0 else { return }
+        lastBodyReport = now
+        let summary = bodyCounts.sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }.joined(separator: " ")
+        DiagnosticsLog.shared.record(.lifecycle, "BODY \(summary)")
+        print("BODY \(summary)")
+    }
+
+    // MARK: - Sorted-order dump (V40)
+
+    /// Walk the key window's accessibility tree IN THE ORDER VOICEOVER WALKS IT and log it.
+    ///
+    /// 🚨 Why this exists when two probes already dump trees: XCUITest reads the VIEW
+    /// HIERARCHY from outside the process, which is NOT VoiceOver's traversal order — the
+    /// hierarchy dumps show the dock ahead of the timeline despite V30 sorting it last, so
+    /// they demonstrate their own blind spot. `accessibilityElements` /
+    /// `accessibilityElementCount()` are the UIAccessibility container protocol, which IS
+    /// what an assistive technology enumerates, so sort priority is already applied here.
+    ///
+    /// This is the only instrument that can see the remaining half of V40 — whether every
+    /// dock element is the end of its own run — WITHOUT the owner's device.
+    ///
+    /// Runs only under `--a11y-order-dump`, and reads the tree rather than changing it.
+    /// Prints to stdout rather than NSLog: the unified log REDACTS dynamic values, so every
+    /// label came back as "" through `log stream` (measured 2026-09-08).
+    @MainActor
+    static func dumpSortedOrderIfRequested() {
+        guard ProcessInfo.processInfo.arguments.contains("--a11y-order-dump") else { return }
+        // After the first layout has settled; the dock and the timeline both mount async.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            MainActor.assumeIsolated {
+                guard let window = UIApplication.shared.connectedScenes
+                        .compactMap({ $0 as? UIWindowScene }).first?
+                        .windows.first(where: \.isKeyWindow) else {
+                    emit("A11Y ORDER: no key window")
+                    return
+                }
+                // Type-level, as `raiseBudgetsIfRecording` does — these are static.
+                DiagnosticsLog.maxLifecycleEntries = max(DiagnosticsLog.maxLifecycleEntries, 2_000)
+                DiagnosticsLog.maxBytes = max(DiagnosticsLog.maxBytes, 4 * 1024 * 1024)
+                emit("A11Y ORDER BEGIN")
+                var index = 0
+                walk(window, depth: 0, index: &index)
+                emit("A11Y ORDER END (\(index) elements)")
+            }
+        }
+    }
+
+    /// What KIND of container this is. A `.semanticGroup` or `.list` is a boundary
+    /// VoiceOver can cycle inside, which is the shape the owner's fourth capture has:
+    /// the traversal returns to the collection's first cell ten times and never once
+    /// reaches the heading or the pinned Obie above it.
+    private static func containerType(_ object: NSObject) -> String {
+        switch object.accessibilityContainerType {
+        case .none: return "none"
+        case .dataTable: return "dataTable"
+        case .list: return "LIST"
+        case .landmark: return "landmark"
+        case .semanticGroup: return "SEMANTIC_GROUP"
+        @unknown default: return "unknown"
+        }
+    }
+
+    /// The chain of containers an element reports itself as belonging to. If the
+    /// timeline cells, the hint and the dock name a common ancestor that the heading
+    /// and the Obie do not, that ancestor is the boundary being cycled within.
+    private static func containerChain(_ object: NSObject) -> String {
+        // `accessibilityContainer` lives on UIAccessibilityElement, not NSObject; a
+        // UIView reports its place through the view tree instead. Ask whichever applies.
+        var names: [String] = []
+        // SwiftUI's `AccessibilityNode` is neither a UIView nor a UIAccessibilityElement,
+        // so the typed routes both return nil for it and the chain reads "(none)" for the
+        // whole tree — an instrument failure that could be mistaken for "no container".
+        // `accessibilityContainer` is an ObjC property, so ask the runtime directly.
+        func parent(_ o: NSObject) -> NSObject? {
+            if let el = o as? UIAccessibilityElement { return el.accessibilityContainer as? NSObject }
+            let sel = NSSelectorFromString("accessibilityContainer")
+            if o.responds(to: sel), let got = o.perform(sel)?.takeUnretainedValue() as? NSObject { return got }
+            if let v = o as? UIView { return v.superview }
+            return nil
+        }
+        var current: NSObject? = parent(object)
+        var hops = 0
+        while let c = current, hops < 6 {
+            names.append("\(type(of: c))")
+            current = parent(c)
+            hops += 1
+        }
+        return names.isEmpty ? "(none)" : names.joined(separator: "<-")
+    }
+
+    /// stdout AND the persisted log. `simctl launch --console` proved unreliable to
+    /// capture (three attempts returned only the PID line), so the log file — readable
+    /// from the app container with `simctl get_app_container` — is the dependable
+    /// channel. The budget raise below keeps a ~100-line dump from evicting itself.
+    private static func emit(_ line: String) {
+        print(line)
+        DiagnosticsLog.shared.record(.lifecycle, line)
+    }
+
+    /// Depth-first in container order — the same walk VoiceOver's next/previous performs.
+    @MainActor
+    private static func walk(_ node: Any, depth: Int, index: inout Int) {
+        guard depth < 40, index < 400 else { return }
+        let pad = String(repeating: "  ", count: depth)
+
+        // A container vends children through EITHER the array or the indexed pair; UIKit
+        // classes commonly implement only the latter, so both are asked.
+        if let object = node as? NSObject {
+            if let children = object.accessibilityElements, !children.isEmpty {
+                emit("A11Y ORDER \(pad)[container \(type(of: object)) n=\(children.count) ctype=\(containerType(object))]")
+                for child in children { walk(child, depth: depth + 1, index: &index) }
+                return
+            }
+            let count = object.accessibilityElementCount()
+            if count != NSNotFound && count > 0 {
+                emit("A11Y ORDER \(pad)[container \(type(of: object)) n=\(count) ctype=\(containerType(object))]")
+                for i in 0..<count {
+                    if let child = object.accessibilityElement(at: i) { walk(child, depth: depth + 1, index: &index) }
+                }
+                return
+            }
+            if object.isAccessibilityElement {
+                index += 1
+                emit("A11Y ORDER \(pad)\(index) \(object.accessibilityLabel ?? "(no label)") | \(type(of: object)) | in=\(containerChain(object))")
+                return
+            }
+            if let view = object as? UIView {
+                for sub in view.subviews { walk(sub, depth: depth + 1, index: &index) }
+            }
+        }
+    }
+
     /// Label first — it is what identifies the element in the owner's report ("jumps up to an
     /// Iris") — then the type, which says whether it is a real control or a synthesised element.
     private static func describe(_ element: Any?) -> String {
