@@ -170,6 +170,49 @@ enum A11yDiag {
         }
     }
 
+    /// What KIND of container this is. A `.semanticGroup` or `.list` is a boundary
+    /// VoiceOver can cycle inside, which is the shape the owner's fourth capture has:
+    /// the traversal returns to the collection's first cell ten times and never once
+    /// reaches the heading or the pinned Obie above it.
+    private static func containerType(_ object: NSObject) -> String {
+        switch object.accessibilityContainerType {
+        case .none: return "none"
+        case .dataTable: return "dataTable"
+        case .list: return "LIST"
+        case .landmark: return "landmark"
+        case .semanticGroup: return "SEMANTIC_GROUP"
+        @unknown default: return "unknown"
+        }
+    }
+
+    /// The chain of containers an element reports itself as belonging to. If the
+    /// timeline cells, the hint and the dock name a common ancestor that the heading
+    /// and the Obie do not, that ancestor is the boundary being cycled within.
+    private static func containerChain(_ object: NSObject) -> String {
+        // `accessibilityContainer` lives on UIAccessibilityElement, not NSObject; a
+        // UIView reports its place through the view tree instead. Ask whichever applies.
+        var names: [String] = []
+        // SwiftUI's `AccessibilityNode` is neither a UIView nor a UIAccessibilityElement,
+        // so the typed routes both return nil for it and the chain reads "(none)" for the
+        // whole tree — an instrument failure that could be mistaken for "no container".
+        // `accessibilityContainer` is an ObjC property, so ask the runtime directly.
+        func parent(_ o: NSObject) -> NSObject? {
+            if let el = o as? UIAccessibilityElement { return el.accessibilityContainer as? NSObject }
+            let sel = NSSelectorFromString("accessibilityContainer")
+            if o.responds(to: sel), let got = o.perform(sel)?.takeUnretainedValue() as? NSObject { return got }
+            if let v = o as? UIView { return v.superview }
+            return nil
+        }
+        var current: NSObject? = parent(object)
+        var hops = 0
+        while let c = current, hops < 6 {
+            names.append("\(type(of: c))")
+            current = parent(c)
+            hops += 1
+        }
+        return names.isEmpty ? "(none)" : names.joined(separator: "<-")
+    }
+
     /// stdout AND the persisted log. `simctl launch --console` proved unreliable to
     /// capture (three attempts returned only the PID line), so the log file — readable
     /// from the app container with `simctl get_app_container` — is the dependable
@@ -189,13 +232,13 @@ enum A11yDiag {
         // classes commonly implement only the latter, so both are asked.
         if let object = node as? NSObject {
             if let children = object.accessibilityElements, !children.isEmpty {
-                emit("A11Y ORDER \(pad)[container \(type(of: object)) n=\(children.count)]")
+                emit("A11Y ORDER \(pad)[container \(type(of: object)) n=\(children.count) ctype=\(containerType(object))]")
                 for child in children { walk(child, depth: depth + 1, index: &index) }
                 return
             }
             let count = object.accessibilityElementCount()
             if count != NSNotFound && count > 0 {
-                emit("A11Y ORDER \(pad)[container \(type(of: object)) n=\(count)]")
+                emit("A11Y ORDER \(pad)[container \(type(of: object)) n=\(count) ctype=\(containerType(object))]")
                 for i in 0..<count {
                     if let child = object.accessibilityElement(at: i) { walk(child, depth: depth + 1, index: &index) }
                 }
@@ -203,7 +246,7 @@ enum A11yDiag {
             }
             if object.isAccessibilityElement {
                 index += 1
-                emit("A11Y ORDER \(pad)\(index) \(object.accessibilityLabel ?? "(no label)") | \(type(of: object))")
+                emit("A11Y ORDER \(pad)\(index) \(object.accessibilityLabel ?? "(no label)") | \(type(of: object)) | in=\(containerChain(object))")
                 return
             }
             if let view = object as? UIView {
