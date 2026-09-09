@@ -130,6 +130,38 @@ enum A11yDiag {
         }
     }
 
+    // MARK: - Body-evaluation counter (V40, §15ar)
+
+    /// Count how often a view's `body` is evaluated.
+    ///
+    /// 🚨 The owner's restatement moved the question: *"I can get everywhere, it just
+    /// doesn't hold focus to where I put it."* Every instrument in this investigation
+    /// measured ORDER — what follows what, whether it wraps, what container holds it —
+    /// and the order was never the fault. A control DESTROYED and rebuilt under the
+    /// cursor loses focus without any traversal move, and would be invisible to all of
+    /// them.
+    ///
+    /// This needs no assistive client and no device: park the app and count. A view
+    /// that rebuilds while nothing is happening is a control that cannot hold focus.
+    /// A stable count eliminates the whole family.
+    private static var bodyCounts: [String: Int] = [:]
+    private static var lastBodyReport = Date.distantPast
+
+    @MainActor
+    static func countBody(_ name: String) {
+        guard isRecording else { return }
+        bodyCounts[name, default: 0] += 1
+        // Report on a timer rather than per evaluation: the log is the instrument and a
+        // line per body would itself perturb what it measures.
+        let now = Date()
+        guard now.timeIntervalSince(lastBodyReport) >= 1.0 else { return }
+        lastBodyReport = now
+        let summary = bodyCounts.sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }.joined(separator: " ")
+        DiagnosticsLog.shared.record(.lifecycle, "BODY \(summary)")
+        print("BODY \(summary)")
+    }
+
     // MARK: - Sorted-order dump (V40)
 
     /// Walk the key window's accessibility tree IN THE ORDER VOICEOVER WALKS IT and log it.

@@ -347,6 +347,7 @@ struct DailiesView: View {
     }
 
     var body: some View {
+        let _ = A11yDiag.countBody("DailiesView")
         ZStack(alignment: .topLeading) {
             Color.ckBackground.ignoresSafeArea()
                 // Track the keyboard top here (always present) — the old `timeline`'s copy
