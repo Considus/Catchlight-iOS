@@ -29,6 +29,14 @@ import XCTest
 
 final class DockIdleRebuildProbeTests: XCTestCase {
 
+    /// 🚨 DIAGNOSTIC, NOT A REGRESSION TEST. It asserts nothing and it sleeps, so in CI
+    /// it would cost every future PR time on both matrices and return no signal. Run it
+    /// deliberately:  A11Y_PROBES=1 xcodebuild test -only-testing:...
+    override func setUpWithError() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["A11Y_PROBES"] == "1",
+                          "Diagnostic probe. Set A11Y_PROBES=1 to run it.")
+    }
+
     /// Control: the SAME idle window with the tour complete, so no hint and no pulse.
     /// The difference between the two counts is what the pulse costs the dock. The
     /// pulse's `addPulseScale` is `@State` on `BottomDockView`, so every change

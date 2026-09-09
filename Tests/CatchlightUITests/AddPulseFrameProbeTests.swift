@@ -40,7 +40,7 @@ final class AddPulseFrameProbeTests: XCTestCase {
         app.launchArguments = ["--uitesting", "--uitesting-orientation-step", "1", "--a11y-diag",
                                // Hold the pulse until the probe is sampling. Without this
                                // the window opens a second AFTER the pulse has finished.
-                               "--uitesting-pulse-delay", "12"]
+                               "--uitesting-pulse-delay", "4"]
         app.launch()
 
         let add = app.buttons["add-button"].firstMatch
@@ -51,7 +51,7 @@ final class AddPulseFrameProbeTests: XCTestCase {
         // this runtime (the same trap A11yStateUITests records for the Important value).
         var frames: [CGRect] = []
         let started = Date()
-        let deadline = started.addingTimeInterval(18)   // spans the delayed pulse
+        let deadline = started.addingTimeInterval(9)    // spans the delayed pulse
         while Date() < deadline {
             frames.append(app.buttons["add-button"].firstMatch.frame)
         }

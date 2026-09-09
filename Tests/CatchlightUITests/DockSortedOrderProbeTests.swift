@@ -22,6 +22,14 @@ import XCTest
 
 final class DockSortedOrderProbeTests: XCTestCase {
 
+    /// 🚨 DIAGNOSTIC, NOT A REGRESSION TEST. It asserts nothing and it sleeps, so in CI
+    /// it would cost every future PR time on both matrices and return no signal. Run it
+    /// deliberately:  A11Y_PROBES=1 xcodebuild test -only-testing:...
+    override func setUpWithError() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["A11Y_PROBES"] == "1",
+                          "Diagnostic probe. Set A11Y_PROBES=1 to run it.")
+    }
+
     private func run(step: String) {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting", "--uitesting-orientation-step", step,
