@@ -38,6 +38,8 @@ struct CatchlightApp: App {
         // moves and the app's own accessibility posts to the `.lifecycle` channel so the two
         // streams can be compared. Reaches the owner via Settings → Export diagnostics.
         A11yDiag.start()
+        // V40: dump the tree in VoiceOver's own traversal order (--a11y-order-dump).
+        A11yDiag.dumpSortedOrderIfRequested()
 
         // Create the crypto session first so it can be shared: AppModel drives
         // unlock through it imperatively, while this view observes its `isObscured`

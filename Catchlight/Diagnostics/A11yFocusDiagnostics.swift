@@ -130,6 +130,76 @@ enum A11yDiag {
         }
     }
 
+    // MARK: - Sorted-order dump (V40)
+
+    /// Walk the key window's accessibility tree IN THE ORDER VOICEOVER WALKS IT and log it.
+    ///
+    /// 🚨 Why this exists when two probes already dump trees: XCUITest reads the VIEW
+    /// HIERARCHY from outside the process, which is NOT VoiceOver's traversal order — the
+    /// hierarchy dumps show the dock ahead of the timeline despite V30 sorting it last, so
+    /// they demonstrate their own blind spot. `accessibilityElements` /
+    /// `accessibilityElementCount()` are the UIAccessibility container protocol, which IS
+    /// what an assistive technology enumerates, so sort priority is already applied here.
+    ///
+    /// This is the only instrument that can see the remaining half of V40 — whether every
+    /// dock element is the end of its own run — WITHOUT the owner's device.
+    ///
+    /// Runs only under `--a11y-order-dump`, and reads the tree rather than changing it.
+    /// Prints to stdout rather than NSLog: the unified log REDACTS dynamic values, so every
+    /// label came back as "" through `log stream` (measured 2026-09-08).
+    @MainActor
+    static func dumpSortedOrderIfRequested() {
+        guard ProcessInfo.processInfo.arguments.contains("--a11y-order-dump") else { return }
+        // After the first layout has settled; the dock and the timeline both mount async.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            MainActor.assumeIsolated {
+                guard let window = UIApplication.shared.connectedScenes
+                        .compactMap({ $0 as? UIWindowScene }).first?
+                        .windows.first(where: \.isKeyWindow) else {
+                    print("A11Y ORDER: no key window")
+                    return
+                }
+                print("A11Y ORDER BEGIN")
+                var index = 0
+                walk(window, depth: 0, index: &index)
+                print("A11Y ORDER END (\(index) elements)")
+            }
+        }
+    }
+
+    /// Depth-first in container order — the same walk VoiceOver's next/previous performs.
+    @MainActor
+    private static func walk(_ node: Any, depth: Int, index: inout Int) {
+        guard depth < 40, index < 400 else { return }
+        let pad = String(repeating: "  ", count: depth)
+
+        // A container vends children through EITHER the array or the indexed pair; UIKit
+        // classes commonly implement only the latter, so both are asked.
+        if let object = node as? NSObject {
+            if let children = object.accessibilityElements, !children.isEmpty {
+                print("A11Y ORDER \(pad)[container \(type(of: object)) n=\(children.count)]")
+                for child in children { walk(child, depth: depth + 1, index: &index) }
+                return
+            }
+            let count = object.accessibilityElementCount()
+            if count != NSNotFound && count > 0 {
+                print("A11Y ORDER \(pad)[container \(type(of: object)) n=\(count)]")
+                for i in 0..<count {
+                    if let child = object.accessibilityElement(at: i) { walk(child, depth: depth + 1, index: &index) }
+                }
+                return
+            }
+            if object.isAccessibilityElement {
+                index += 1
+                print("A11Y ORDER \(pad)\(index) \(object.accessibilityLabel ?? "(no label)") | \(type(of: object))")
+                return
+            }
+            if let view = object as? UIView {
+                for sub in view.subviews { walk(sub, depth: depth + 1, index: &index) }
+            }
+        }
+    }
+
     /// Label first — it is what identifies the element in the owner's report ("jumps up to an
     /// Iris") — then the type, which says whether it is a real control or a synthesised element.
     private static func describe(_ element: Any?) -> String {
