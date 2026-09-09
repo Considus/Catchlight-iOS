@@ -180,6 +180,17 @@ enum Wiring {
             try? store.upsert(Take(createdAt: base.addingTimeInterval(-1),
                                    blocks: [.textLine("Buy film for the weekend shoot")]))
             try? store.upsert(Take(createdAt: base, blocks: [.textLine("Call the framer back")]))
+            // `--uitesting-obie` pins an Obie (V40, 2026-09-09). The bench had no Obie
+            // and the owner's device always does, and that is not a cosmetic difference:
+            // the pinned Obie is rendered OUTSIDE the UIKitTimeline collection, as a
+            // sibling of it, so it is the one structural element standing between the
+            // heading and the collection on his tree and absent from ours — and the
+            // collection's first cell is exactly where his focus keeps landing.
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-obie") {
+                try? store.upsert(Take(createdAt: base.addingTimeInterval(-2),
+                                       blocks: [.textLine("A Take is like memory")],
+                                       isObie: true))
+            }
             // UI-test build is treated as fully entitled by default so existing
             // flow tests aren't gated by the paywall. Pass `--uitesting-lapsed`
             // alongside to exercise the paywall path explicitly.

@@ -38,3 +38,23 @@ final class DockSortedOrderProbeTests: XCTestCase {
     func testDumpSortedOrderWithAddHint()    { run(step: "1") }
     func testDumpSortedOrderWithoutAddHint() { run(step: "5") }
 }
+
+extension DockSortedOrderProbeTests {
+
+    /// V40: the same dump WITH a pinned Obie. The bench had none and the owner's
+    /// device always does. The Obie renders outside the `UIKitTimeline` collection,
+    /// as a sibling — so it is the one named structural difference between the tree
+    /// that shows the wrap and the tree that does not, and the collection's first
+    /// cell is where his focus keeps landing.
+    func testDumpSortedOrderWithObieAndAddHint() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting", "--uitesting-orientation-step", "1",
+                               "--uitesting-obie", "--a11y-order-dump"]
+        app.launch()
+        XCTAssertTrue(app.buttons["add-button"].firstMatch.waitForExistence(timeout: 20),
+                      "Dock did not load")
+        _ = app.descendants(matching: .any).allElementsBoundByIndex.count
+        Thread.sleep(forTimeInterval: 6)
+        _ = app.descendants(matching: .any).allElementsBoundByIndex.count
+    }
+}
