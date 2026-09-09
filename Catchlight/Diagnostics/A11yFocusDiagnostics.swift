@@ -156,15 +156,27 @@ enum A11yDiag {
                 guard let window = UIApplication.shared.connectedScenes
                         .compactMap({ $0 as? UIWindowScene }).first?
                         .windows.first(where: \.isKeyWindow) else {
-                    print("A11Y ORDER: no key window")
+                    emit("A11Y ORDER: no key window")
                     return
                 }
-                print("A11Y ORDER BEGIN")
+                // Type-level, as `raiseBudgetsIfRecording` does — these are static.
+                DiagnosticsLog.maxLifecycleEntries = max(DiagnosticsLog.maxLifecycleEntries, 2_000)
+                DiagnosticsLog.maxBytes = max(DiagnosticsLog.maxBytes, 4 * 1024 * 1024)
+                emit("A11Y ORDER BEGIN")
                 var index = 0
                 walk(window, depth: 0, index: &index)
-                print("A11Y ORDER END (\(index) elements)")
+                emit("A11Y ORDER END (\(index) elements)")
             }
         }
+    }
+
+    /// stdout AND the persisted log. `simctl launch --console` proved unreliable to
+    /// capture (three attempts returned only the PID line), so the log file — readable
+    /// from the app container with `simctl get_app_container` — is the dependable
+    /// channel. The budget raise below keeps a ~100-line dump from evicting itself.
+    private static func emit(_ line: String) {
+        print(line)
+        DiagnosticsLog.shared.record(.lifecycle, line)
     }
 
     /// Depth-first in container order — the same walk VoiceOver's next/previous performs.
@@ -177,13 +189,13 @@ enum A11yDiag {
         // classes commonly implement only the latter, so both are asked.
         if let object = node as? NSObject {
             if let children = object.accessibilityElements, !children.isEmpty {
-                print("A11Y ORDER \(pad)[container \(type(of: object)) n=\(children.count)]")
+                emit("A11Y ORDER \(pad)[container \(type(of: object)) n=\(children.count)]")
                 for child in children { walk(child, depth: depth + 1, index: &index) }
                 return
             }
             let count = object.accessibilityElementCount()
             if count != NSNotFound && count > 0 {
-                print("A11Y ORDER \(pad)[container \(type(of: object)) n=\(count)]")
+                emit("A11Y ORDER \(pad)[container \(type(of: object)) n=\(count)]")
                 for i in 0..<count {
                     if let child = object.accessibilityElement(at: i) { walk(child, depth: depth + 1, index: &index) }
                 }
@@ -191,7 +203,7 @@ enum A11yDiag {
             }
             if object.isAccessibilityElement {
                 index += 1
-                print("A11Y ORDER \(pad)\(index) \(object.accessibilityLabel ?? "(no label)") | \(type(of: object))")
+                emit("A11Y ORDER \(pad)\(index) \(object.accessibilityLabel ?? "(no label)") | \(type(of: object))")
                 return
             }
             if let view = object as? UIView {
