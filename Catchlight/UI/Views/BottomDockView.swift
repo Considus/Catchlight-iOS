@@ -297,8 +297,29 @@ struct BottomDockView: View {
                     .font(.system(size: 24, weight: .regular))
                     .foregroundStyle(Color.ckAccent)   // #856539 glyph (Option A), like the siblings
             }
-            .frame(width: buttonSize, height: buttonSize)
+            // 🚨 ORDER IS LOAD-BEARING (V40, measured 2026-09-09). `.scaleEffect` AFTER
+            // `.frame` scales the button's LAYOUT, and the accessibility frame follows:
+            // sampled across the pulse, this element went 44x44 at (36, 766) to
+            // 51.62x51.62 at (32.19, 762.19) and back, twice. `.offset` was already
+            // measured to move an accessibility frame in this campaign; a scale does too.
+            //
+            // The Add button is the ONLY dock control that pulses, and it is the only one
+            // the owner's cursor jumps out of — twice, against a pulse that fires exactly
+            // twice. §15ai had recorded the pulse as eliminated, but it had tested whether
+            // the pulse ran FOREVER, not whether the frame moved.
+            //
+            // Scaling INSIDE the frame keeps the visual pulse and leaves the layout — and
+            // so the accessibility target — a fixed 44x44 with a fixed origin. The glyph
+            // still overflows the frame as it grows, which is what it did before, because
+            // `.frame` does not clip.
             .scaleEffect(addPulseScale)
+            .frame(width: buttonSize, height: buttonSize)
+            // Reordering alone did NOT fix it (measured): SwiftUI carries the render
+            // transform into the accessibility frame whatever the layout says, so the
+            // element still grew to 51.06 at (32.47, 762.47). `.contentShape` with the
+            // `.accessibility` kind is the API that actually pins it — it defines the
+            // accessibility shape independently of the transform above it.
+            .contentShape(.accessibility, Rectangle())
             // Add is the LEFTMOST dock slot (≈58pt from the screen edge), so a
             // centred bubble clipped off-screen left. Anchor the arrow at the
             // bubble's bottom-LEADING (over the +) and let the bubble extend RIGHT
