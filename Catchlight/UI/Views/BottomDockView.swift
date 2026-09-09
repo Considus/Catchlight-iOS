@@ -336,6 +336,17 @@ struct BottomDockView: View {
         addPulsesDone = 0
         addPulseScale = 1.0
         if reduceMotion { return }
+        // TEST SEAM (V40, 2026-09-09). The pulse fires on mount and is over in ~2.5s,
+        // which is before XCUITest can finish launching and start querying: a first
+        // attempt to measure the frame across the pulse sampled a window that opened
+        // ONE SECOND after the pulse had stopped, and read "the frame never changes".
+        // A delay lets the probe open its window first and PROVE the overlap.
+        if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "--uitesting-pulse-delay"),
+           i + 1 < ProcessInfo.processInfo.arguments.count,
+           let seconds = Double(ProcessInfo.processInfo.arguments[i + 1]) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { runPulseCycle() }
+            return
+        }
         runPulseCycle()
     }
 
@@ -346,12 +357,17 @@ struct BottomDockView: View {
         // that the `addPulsesDone < 2` cap was not holding and the pulse ran forever, moving a
         // focused control's frame under the cursor. Instrumented on the bench 2026-09-07: it
         // logged done=0, done=1, done=2 and stopped. The cap holds. Not the cause.
-        guard orientation.showAddPulse, addPulsesDone < 2 else { return }
+        guard orientation.showAddPulse, addPulsesDone < 2 else {
+            A11yDiag.note("PULSE stop done=\(addPulsesDone) showing=\(orientation.showAddPulse)")
+            return
+        }
+        A11yDiag.note("PULSE up done=\(addPulsesDone)")
         withAnimation(.easeInOut(duration: 0.45)) { addPulseScale = 1.18 }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
             withAnimation(.easeInOut(duration: 0.45)) { addPulseScale = 1.0 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                 addPulsesDone += 1
+                A11yDiag.note("PULSE down done=\(addPulsesDone)")
                 runPulseCycle()
             }
         }
