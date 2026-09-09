@@ -58,3 +58,24 @@ extension DockSortedOrderProbeTests {
         _ = app.descendants(matching: .any).allElementsBoundByIndex.count
     }
 }
+
+extension DockSortedOrderProbeTests {
+
+    /// V40: a timeline long enough to SCROLL, so the collection recycles cells. The
+    /// bench's two Takes never recycle; his always does. Cell reuse is the other
+    /// named difference between the tree that shows the fault and the one that does
+    /// not — and the destination is always the collection's FIRST cell, which is
+    /// exactly where a recycled collection puts a reset cursor.
+    func testDumpSortedOrderWithLongTimeline() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting", "--uitesting-orientation-step", "1",
+                               "--uitesting-obie", "--uitesting-many", "30",
+                               "--a11y-order-dump"]
+        app.launch()
+        XCTAssertTrue(app.buttons["add-button"].firstMatch.waitForExistence(timeout: 20),
+                      "Dock did not load")
+        _ = app.descendants(matching: .any).allElementsBoundByIndex.count
+        Thread.sleep(forTimeInterval: 6)
+        _ = app.descendants(matching: .any).allElementsBoundByIndex.count
+    }
+}
