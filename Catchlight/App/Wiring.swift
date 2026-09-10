@@ -180,31 +180,6 @@ enum Wiring {
             try? store.upsert(Take(createdAt: base.addingTimeInterval(-1),
                                    blocks: [.textLine("Buy film for the weekend shoot")]))
             try? store.upsert(Take(createdAt: base, blocks: [.textLine("Call the framer back")]))
-            // `--uitesting-obie` pins an Obie (V40, 2026-09-09). The bench had no Obie
-            // and the owner's device always does, and that is not a cosmetic difference:
-            // the pinned Obie is rendered OUTSIDE the UIKitTimeline collection, as a
-            // sibling of it, so it is the one structural element standing between the
-            // heading and the collection on his tree and absent from ours — and the
-            // collection's first cell is exactly where his focus keeps landing.
-            // `--uitesting-many <n>` seeds a timeline long enough to SCROLL, so the
-            // collection recycles cells (V40, 2026-09-09). The bench's two Takes never
-            // recycle; his timeline always does, and cell reuse is the other named
-            // difference between the tree that shows the fault and the tree that does
-            // not. Seeded oldest-first so the two fixture Takes stay on top and the
-            // existing flow tests are untouched.
-            if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "--uitesting-many"),
-               i + 1 < ProcessInfo.processInfo.arguments.count,
-               let extra = Int(ProcessInfo.processInfo.arguments[i + 1]) {
-                for n in 0..<extra {
-                    try? store.upsert(Take(createdAt: base.addingTimeInterval(-100 - Double(n)),
-                                           blocks: [.textLine("Filler Take number \(n + 1)")]))
-                }
-            }
-            if ProcessInfo.processInfo.arguments.contains("--uitesting-obie") {
-                try? store.upsert(Take(createdAt: base.addingTimeInterval(-2),
-                                       blocks: [.textLine("A Take is like memory")],
-                                       isObie: true))
-            }
             // UI-test build is treated as fully entitled by default so existing
             // flow tests aren't gated by the paywall. Pass `--uitesting-lapsed`
             // alongside to exercise the paywall path explicitly.
@@ -256,26 +231,6 @@ enum Wiring {
             if let i = tourArgs.firstIndex(of: "--uitesting-orientation-step"),
                i + 1 < tourArgs.count, let requested = Int(tourArgs[i + 1]) {
                 model.orientation.step = requested
-                // 🚨 V45/V40 SEAM (2026-09-10). `--uitesting-orientation-step` sets the step
-                // AT LAUNCH, which only ever produces the state the owner is in AFTER a
-                // relaunch — and that state vends the cells normally on the bench. His fault
-                // appears in the OTHER state: the tour completed by USING it, in a process
-                // that has not restarted since a hint was mounted.
-                //
-                // Those two states differ on both axes in his captures — same build, no hints
-                // either time, Takes absent with zero jumps in one and present with four jumps
-                // in the other — and the only difference between them is the relaunch. This
-                // advances the step through its own setter, in-process, so a hint is mounted
-                // and then removed WITHOUT a restart. That is the state no fixture has reached.
-                if let j = tourArgs.firstIndex(of: "--uitesting-orientation-advance-to"),
-                   j + 2 < tourArgs.count,
-                   let target = Int(tourArgs[j + 1]),
-                   let after = Double(tourArgs[j + 2]) {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + after) {
-                        A11yDiag.note("TOUR advance \(requested) -> \(target) (in-process)")
-                        model.orientation.step = target
-                    }
-                }
             } else {
                 model.orientation.step = 5
             }
