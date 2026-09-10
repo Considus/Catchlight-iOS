@@ -118,7 +118,6 @@ struct BottomDockView: View {
     @State private var mergeProgress: CGFloat = 0
 
     var body: some View {
-        let _ = A11yDiag.countBody("BottomDockView")
         @Bindable var ui = ui
         GeometryReader { geo in
             // Four equal slots inside the horizontal padding — the same grid
