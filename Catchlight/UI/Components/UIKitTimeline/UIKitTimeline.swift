@@ -484,6 +484,7 @@ struct TimelineSwipeCell: View {
     private var confirmBeforeDelete: Bool = SettingsViewModel.ConfirmBeforeDelete.default
 
     var body: some View {
+        let _ = A11yDiag.countBody("TimelineSwipeCell")
         SwipeActionRow(
             id: take.id,
             leading: take.canBeMarkedDone
