@@ -975,7 +975,13 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
               dataSource != nil,
               let indexPath = dataSource.indexPath(for: .take(id)),
               let cell = collectionView.cellForItem(at: indexPath) else { return }
-        UIAccessibility.post(notification: .layoutChanged, argument: cell)
+        // 🚨 Routed through `A11yDiag.post`, NOT raw. This is the only place in the app
+        // that moves the VoiceOver cursor to a timeline CELL, and as a raw call it was
+        // invisible to every capture — including the census that concluded "no
+        // accessibility post precedes a steal". That census could not have seen this.
+        // The owner's jumps land on the collection's first cell, which is exactly what
+        // this notification does, so it must be visible before it can be ruled in or out.
+        A11yDiag.post(.layoutChanged, argument: cell, from: "timeline.requestFocus")
     }
 
     func requestReveal(_ id: UUID?) {
