@@ -89,3 +89,28 @@ extension DockSortedOrderProbeTests {
         _ = app.descendants(matching: .any).allElementsBoundByIndex.count
     }
 }
+
+extension DockSortedOrderProbeTests {
+
+    /// V40 §15at. The seventh capture falsified the condition every framing rested on:
+    /// the ADD hint is not mounted at all. The owner is on tour step 2, and the hint up
+    /// is "Tap the Iris to shape this Take." — so neither the pulse nor Add's frame
+    /// could have been the cause, and the surviving condition is only "a hint is
+    /// mounted".
+    ///
+    /// His focus log shows that hint sitting BETWEEN the Obie's Iris and the Obie's own
+    /// card text, splitting one row's two elements apart. This asks whether that
+    /// interleaving is real in VoiceOver's own order or only in the focus log —
+    /// the distinction that has caught us four times.
+    func testDumpSortedOrderAtStepTwoWithObie() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting", "--uitesting-orientation-step", "2",
+                               "--uitesting-obie", "--a11y-order-dump"]
+        app.launch()
+        XCTAssertTrue(app.buttons["add-button"].firstMatch.waitForExistence(timeout: 20),
+                      "Dock did not load")
+        _ = app.descendants(matching: .any).allElementsBoundByIndex.count
+        Thread.sleep(forTimeInterval: 6)
+        _ = app.descendants(matching: .any).allElementsBoundByIndex.count
+    }
+}
