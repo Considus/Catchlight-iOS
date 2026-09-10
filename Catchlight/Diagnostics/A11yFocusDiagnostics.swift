@@ -84,6 +84,28 @@ enum A11yDiag {
         DiagnosticsLog.shared.record(.lifecycle, "A11Y DIAG budgets raised for capture")
     }
 
+    // MARK: - V40 dock-sort toggle
+
+    /// Whether the dock keeps V30's `accessibilitySortPriority(-1)`.
+    ///
+    /// The owner's recollection is that the reading order worked when it ran heading ->
+    /// buttons -> Takes, and that is the order V30 replaced on 2026-08-27 (`a8fd291`):
+    /// before it, the dock vended BEFORE the timeline collection. Every jump lands on
+    /// the collection's FIRST CELL — the element that used to follow the dock.
+    ///
+    /// Set once with `--a11y-dock-sort off` and it PERSISTS, because the two states that
+    /// differ in his captures are separated by a relaunch and a launch argument would not
+    /// survive one. `--a11y-dock-sort on` restores the default.
+    static var dockSortsLast: Bool {
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "--a11y-dock-sort"), i + 1 < args.count {
+            let wanted = args[i + 1] != "off"
+            UserDefaults.standard.set(wanted, forKey: "a11y.dockSortsLast")
+            return wanted
+        }
+        return UserDefaults.standard.object(forKey: "a11y.dockSortsLast") as? Bool ?? true
+    }
+
     // MARK: - Focus observer
 
     private static var started = false

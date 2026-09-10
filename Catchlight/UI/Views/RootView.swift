@@ -359,7 +359,20 @@ struct RootView: View {
             // visual order (owner 2026-08-27): heading, Obie, Takes, dock at the
             // bottom. One priority on the whole dock keeps its four buttons
             // contiguous in their own left-to-right order.
-            .accessibilitySortPriority(-1)
+            // 🚨 V40 REGRESSION TEST (2026-09-10, owner's lead). He remembers the reading
+            // order working when it went heading -> BUTTONS -> Takes, which is exactly the
+            // order this line replaced: before it, the dock vended BEFORE the timeline
+            // collection. And the jump's destination is always the collection's FIRST CELL
+            // — precisely the element that used to follow the dock.
+            //
+            // This is the only sort priority live on the resting Dailies screen; the other
+            // three sit on save-catchers that exist only while editing. So it is the only
+            // candidate that is present exactly where the jumps start and nowhere else.
+            //
+            // Toggleable so ONE build answers it, and PERSISTED because his post-relaunch
+            // session is one of the two states that differ. Default is the current
+            // behaviour, so nothing changes unless the flag is passed.
+            .accessibilitySortPriority(A11yDiag.dockSortsLast ? -1 : 0)
     }
 
     // MARK: - Overlays
