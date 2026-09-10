@@ -359,7 +359,25 @@ struct RootView: View {
             // visual order (owner 2026-08-27): heading, Obie, Takes, dock at the
             // bottom. One priority on the whole dock keeps its four buttons
             // contiguous in their own left-to-right order.
-            .accessibilitySortPriority(-1)
+            // 🚨 NO SORT PRIORITY ON THE DOCK — deliberately, and do not add one back.
+            //
+            // V30 (`a8fd291`, 2026-08-27) added `.accessibilitySortPriority(-1)` here to
+            // read the dock LAST. That was a mistake twice over. The owner had REPORTED
+            // the order he was hearing — heading, Obie, dock, then the Takes — as an
+            // observation; the decision to move the dock to the end was ours, justified
+            // by "a screen's chrome should come before or after its content", and the
+            // commit then attributed it to him. He has since confirmed he never asked
+            // for it and that the pre-V30 order is the one he wants.
+            //
+            // It also introduced the V40 focus regression. With the priority on, focus
+            // jumped out of dock elements to the timeline's FIRST CELL — the element that
+            // followed the dock BEFORE the sort moved it. Measured across his captures:
+            // 4 and 9 jumps with it on, 1 and 2 with it off, and swipes that actually
+            // advanced went from 19 to 35.
+            //
+            // Without it the dock vends in its natural position, which is the order he
+            // asked for: heading, Obie Iris, Obie card, Add, Storyboard, Sequence, Search,
+            // then the Takes.
     }
 
     // MARK: - Overlays
