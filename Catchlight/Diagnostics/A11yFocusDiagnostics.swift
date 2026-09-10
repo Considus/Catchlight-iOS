@@ -182,8 +182,11 @@ enum A11yDiag {
     @MainActor
     static func dumpSortedOrderIfRequested() {
         guard ProcessInfo.processInfo.arguments.contains("--a11y-order-dump") else { return }
-        // After the first layout has settled; the dock and the timeline both mount async.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+        // Dump REPEATEDLY, not once. V45 needs the tree read AFTER an interaction — the
+        // question is whether a flag stays set once an overlay closes — and a single
+        // dump three seconds after launch can only ever describe the resting state.
+        for tick in 0..<7 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0 + Double(tick) * 5.0) {
             MainActor.assumeIsolated {
                 guard let window = UIApplication.shared.connectedScenes
                         .compactMap({ $0 as? UIWindowScene }).first?
@@ -194,10 +197,11 @@ enum A11yDiag {
                 // Type-level, as `raiseBudgetsIfRecording` does — these are static.
                 DiagnosticsLog.maxLifecycleEntries = max(DiagnosticsLog.maxLifecycleEntries, 2_000)
                 DiagnosticsLog.maxBytes = max(DiagnosticsLog.maxBytes, 4 * 1024 * 1024)
-                emit("A11Y ORDER BEGIN")
+                emit("A11Y ORDER BEGIN tick=\(tick)")
                 var index = 0
                 walk(window, depth: 0, index: &index)
-                emit("A11Y ORDER END (\(index) elements)")
+                emit("A11Y ORDER END tick=\(tick) (\(index) elements)")
+            }
             }
         }
     }
