@@ -209,3 +209,31 @@ extension DockSortedOrderProbeTests {
         _ = app.buttons["add-button"].firstMatch.exists
     }
 }
+
+extension DockSortedOrderProbeTests {
+
+    /// 🚨 V45. The state no fixture has ever reached: a hint mounted and then REMOVED,
+    /// in a process that has not restarted.
+    ///
+    /// `--uitesting-orientation-step` sets the step at launch, which reproduces only the
+    /// owner's post-relaunch state — and that vends the cells normally here. His two
+    /// no-hint sessions differ on both axes with the relaunch as the only difference:
+    ///
+    ///     tour completed in-session   Takes ABSENT   0 jumps
+    ///     after a relaunch            Takes PRESENT  4 jumps
+    ///
+    /// This starts at step 1 with the hint up, then advances to complete in-process at
+    /// 8s. The repeating dump brackets it: ticks before show the cells, ticks after say
+    /// whether they survive the transition.
+    func testTourCompletedInProcess_doTheCellsSurvive() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting", "--uitesting-orientation-step", "1",
+                               "--uitesting-orientation-advance-to", "5", "8",
+                               "--uitesting-obie", "--a11y-order-dump"]
+        app.launch()
+        XCTAssertTrue(app.buttons["add-button"].firstMatch.waitForExistence(timeout: 20),
+                      "Dock did not load")
+        Thread.sleep(forTimeInterval: 30)      // spans ticks either side of the advance
+        _ = app.buttons["add-button"].firstMatch.exists
+    }
+}

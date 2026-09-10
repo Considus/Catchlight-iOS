@@ -256,6 +256,26 @@ enum Wiring {
             if let i = tourArgs.firstIndex(of: "--uitesting-orientation-step"),
                i + 1 < tourArgs.count, let requested = Int(tourArgs[i + 1]) {
                 model.orientation.step = requested
+                // 🚨 V45/V40 SEAM (2026-09-10). `--uitesting-orientation-step` sets the step
+                // AT LAUNCH, which only ever produces the state the owner is in AFTER a
+                // relaunch — and that state vends the cells normally on the bench. His fault
+                // appears in the OTHER state: the tour completed by USING it, in a process
+                // that has not restarted since a hint was mounted.
+                //
+                // Those two states differ on both axes in his captures — same build, no hints
+                // either time, Takes absent with zero jumps in one and present with four jumps
+                // in the other — and the only difference between them is the relaunch. This
+                // advances the step through its own setter, in-process, so a hint is mounted
+                // and then removed WITHOUT a restart. That is the state no fixture has reached.
+                if let j = tourArgs.firstIndex(of: "--uitesting-orientation-advance-to"),
+                   j + 2 < tourArgs.count,
+                   let target = Int(tourArgs[j + 1]),
+                   let after = Double(tourArgs[j + 2]) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + after) {
+                        A11yDiag.note("TOUR advance \(requested) -> \(target) (in-process)")
+                        model.orientation.step = target
+                    }
+                }
             } else {
                 model.orientation.step = 5
             }
