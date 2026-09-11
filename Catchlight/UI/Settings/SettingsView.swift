@@ -608,7 +608,7 @@ struct SettingsView: View {
                 .accessibilityLabel("Spotlight and Siri indexing")
                 .accessibilityValue(spotlightExposureBinding.wrappedValue.label)
 
-                Text("Considus can never read your Takes. This only affects on-device search. The text options are unavailable for now. iOS does not currently show app text in search results, so Catchlight only offers the levels that work. They will return when Apple resolves this.")
+                Text("On-device search only. Considus can never read your Takes. Text levels are greyed out by an iOS limitation.")
                     .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -654,7 +654,7 @@ struct SettingsView: View {
                 .accessibilityLabel("Writing Tools")
                 .accessibilityValue(writingToolsBinding.wrappedValue.label)
 
-                Text("Apple's writing help can rewrite and proofread your Takes. Using it sends that Take's text to Apple, which may process it on their servers. Off by default. Your Privacy phrase is never offered to it, whatever you choose here.")
+                Text("Panel suggests, you accept. Inline rewrites in place. Both send that Take to Apple. Your Privacy phrase never goes.")
                     .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -838,7 +838,7 @@ struct SettingsView: View {
         } header: {
             sectionHeader("System")
         } footer: {
-            sectionFooter("Start over erases every Take on this device and creates a new Privacy phrase. Takes in your cloud folder become unreadable, so export first. An export is the only way to retain and bring your Takes back.")
+            sectionFooter("Erases every Take here and creates a new Privacy phrase. Cloud copies become unreadable too. Export first, it is the only way back.")
         }
         .confirmationDialog("Export your Takes?",
                             isPresented: $showStartOverExportOffer,
