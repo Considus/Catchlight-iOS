@@ -32,13 +32,28 @@ struct IntroBrandMark: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 72, height: 72)
-                .accessibilityHidden(true)
             Image("catchlight-wordmark")
                 .resizable()
                 .scaledToFit()
                 .frame(height: 44)
-                .accessibilityLabel("Catchlight")
         }
         .padding(.top, deviceTopInset + 114)
+        // 🚨 ONE element, ONE label, set on the CONTAINER. The owner heard
+        // "Catchlight image Catchlight" (2026-09-11) — the name twice, with the
+        // trait between.
+        //
+        // The pieces were labelled individually: a hide on the icon and a label
+        // on the wordmark. Labelling a CHILD leaves the parent free to vend as
+        // well, and the mark is two images in a stack, so the tree could carry
+        // both. `.ignore` ends the argument — the children stop being elements
+        // at all and this label is the only thing left to read.
+        //
+        // Same shape as the tour tooltip, which vended twice for the same reason
+        // (#241). ⚠️ And D-221 in reverse: the icon's `.accessibilityHidden(true)`
+        // is REMOVED rather than kept, because a hide on a shape-bearing view has
+        // twice in this codebase materialised an element instead of removing one.
+        // With `.ignore` above it there is nothing left for it to do.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Catchlight")
     }
 }
