@@ -79,6 +79,13 @@ struct BottomDockView: View {
     /// bubble must never drift apart — two literals would let them.
     private static let addHintText = "What's your first Take?"
 
+    /// One dock slot. The row divides its padded width into four, so this is also how
+    /// far in the + button's centre sits — which is what the Add hint's arrow has to
+    /// reach. Derived rather than measured so it holds on every screen width.
+    private var dockSlotWidth: CGFloat {
+        (UIScreen.main.bounds.width - CatchlightLayout.dockHorizontalPadding * 2) / 4
+    }
+
     /// Visible dock-circle diameter. Owner 2026-06-15: enlarged 36 → 44 so the
     /// circle FILLS its 44pt touch frame (= `minTouchTarget`) — the buttons read
     /// larger and now match the onboarding/paywall pill, which already sizes to the
@@ -189,10 +196,26 @@ struct BottomDockView: View {
         .overlay(alignment: .bottomLeading) {
             if orientation.showAddPulse {
                 OrientationTooltip(text: Self.addHintText,
+                                   voiceOverText: "Double-tap Add Take to write your first Take.",
                                    arrowEdge: .bottom,
                                    arrowAlignment: .leading)
                     .fixedSize()
-                    .offset(y: -(buttonSize + 14))
+                    // 🚨 THE ARROW MUST LAND ON THE + BUTTON, NOT THE ROW'S EDGE.
+                    // MEASURED 2026-09-10: button (36, 766, 44, 44) so its centre is
+                    // x=58; bubble (12, 713.7, 173, 46.3) with its arrow 22pt in, so the
+                    // arrow sat at x=34 — 24pt to the LEFT of the button, pointing at
+                    // nothing. The owner's screenshot shows exactly that.
+                    //
+                    // Cause: #235 moved this hint OUT of the Add Button's label (where it
+                    // was positioned relative to the BUTTON) and onto the dock row, to fix
+                    // the button's inflated accessibility frame. The frame was fixed and
+                    // the visual attachment broke with it, and the two measurements are
+                    // byte-identical two days apart, so it has been wrong since.
+                    //
+                    // The bubble aligns to the row's leading edge; the + is CENTRED in its
+                    // quarter-slot, `slotW / 2` in. The arrow already sits `arrowEdgeInset`
+                    // (22) from the bubble's leading, so the shortfall is exactly the rest.
+                    .offset(x: dockSlotWidth / 2 - 22, y: -(buttonSize + 14))
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
                     .allowsHitTesting(false)
                     // 🚨 NO `.accessibilityHidden(true)` here. It was applied and it did NOT
@@ -214,7 +237,10 @@ struct BottomDockView: View {
         }
         .overlay(alignment: .bottom) {
             if orientation.showSettingsHint {
-                OrientationTooltip(text: "Swipe up here for settings.", arrowEdge: .bottom)
+                OrientationTooltip(text: "Swipe up here for settings.",
+                                   voiceOverText: "Select Storyboard, then use the rotor to select "
+                                                + "Actions and double-tap to open Settings.",
+                                   arrowEdge: .bottom)
                     .fixedSize()
                     .offset(y: -(buttonSize + 14))
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
@@ -400,7 +426,14 @@ struct BottomDockView: View {
         .accessibilityHint("Opens the Storyboard: every Take with a task. Use the actions rotor to open Settings.")
         // The swipe is a VoiceOver-incompatible gesture, so expose Settings as
         // an explicit named action too.
-        .accessibilityAction(named: "Open Settings") { ui.isSettingsPresented = true }
+        // 🚨 Dismiss the hint here too. The swipe-up path and a Storyboard double-tap
+        // both call `didDismissSettingsHint()`; this one did not, so a VoiceOver user
+        // following the hint's own advice opened Settings and the hint stayed up
+        // forever, with no way to reach step 4 (owner, device, 2026-09-10).
+        .accessibilityAction(named: "Open Settings") {
+            orientation.didDismissSettingsHint()
+            ui.isSettingsPresented = true
+        }
         .accessibilityAddTraits(.isButton)
     }
 

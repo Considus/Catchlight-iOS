@@ -551,6 +551,7 @@ struct DailiesView: View {
                 // level with the Iris rather than hanging below it (owner 2026-06-16).
                 let irisCentreY = spineTopInset + CatchlightLayout.circleDiameter / 2
                 OrientationTooltip(text: "Tap the Iris to shape this Take.",
+                                   voiceOverText: "Double-tap an Iris to shape your Take.",
                                    arrowEdge: .leading,
                                    availableWidth: irisHintAvailableWidth)
                     .fixedSize()
@@ -591,6 +592,9 @@ struct DailiesView: View {
 
                 let obieIrisCentreY = spineTopInset + CatchlightLayout.circleDiameter / 2
                 OrientationTooltip(text: "Long-press here to make this your Obie.",
+                                   voiceOverText: "Select an Iris and use the rotor to select "
+                                                + "Actions, swipe up to select Make Obie, then "
+                                                + "double-tap to confirm.",
                                    arrowEdge: .leading,
                                    availableWidth: irisHintAvailableWidth)
                     .fixedSize()
@@ -602,7 +606,11 @@ struct DailiesView: View {
                     // tooltip's own element, so VoiceOver could read the hint and never
                     // dismiss it. Bind the DEFAULT activation explicitly.
                     .accessibilityAction { orientation.didDismissObieIntro() }
-                    .accessibilityHint("Double-tap to dismiss.")
+                    // The spoken label now carries the INSTRUCTION ("use the rotor,
+                    // Make Obie"), so a hint saying "Double-tap to dismiss" competes with
+                    // it — VoiceOver reads label then hint, and the two would ask for
+                    // different things in one breath. The dismiss ACTION stays as the way
+                    // out; it is simply no longer announced over the instruction.
                     .accessibilityIdentifier("orientation-obie-hint")
             }
 

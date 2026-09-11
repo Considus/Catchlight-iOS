@@ -13,6 +13,18 @@ import SwiftUI
 struct OrientationTooltip: View {
 
     let text: String
+    /// What VoiceOver says instead of `text`, where the two must differ.
+    ///
+    /// 🚨 The drawn hints name TOUCH gestures that do not exist for a VoiceOver user:
+    /// "Tap the Iris", "Swipe up here", "Long-press here". A swipe up is swallowed by
+    /// VoiceOver entirely, and a long-press never reaches the app. So the visible text
+    /// is right for a finger and wrong for the cursor, and the two need different words
+    /// (owner, 2026-09-10).
+    ///
+    /// Naming the real route also makes dismissal less pressing: the hint stops being
+    /// something to get rid of and becomes the instruction for reaching the next step.
+    /// Nil means the drawn text is already correct for both.
+    var voiceOverText: String?
     var arrowEdge: Edge = .bottom
     /// Where the arrow sits ALONG a top/bottom edge. `.center` (default) is the
     /// classic centred arrow. `.leading` parks it near the bubble's left so the
@@ -95,14 +107,15 @@ struct OrientationTooltip: View {
             // `.combine` merges the subtree into a single element instead of laying a
             // container over a child that is still vending.
             .accessibilityElement(children: .combine)
-            .accessibilityLabel(text)
+            .accessibilityLabel(voiceOverText ?? text)
             // Audit 2026-08, V25: the hints appear silently — a VoiceOver user
             // gets no signal a tooltip arrived, and its element sits wherever the
             // walk puts it. Announce the text on appearance, component-level so
             // every hint site is covered. Placement in the VO order is the
             // device-gated half of the finding and is not changed here.
             .onAppear {
-                A11yDiag.post(.announcement, argument: text, from: "tooltip.onAppear")
+                A11yDiag.post(.announcement, argument: voiceOverText ?? text,
+                              from: "tooltip.onAppear")
             }
     }
 }
