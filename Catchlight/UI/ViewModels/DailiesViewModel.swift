@@ -532,6 +532,15 @@ final class DailiesViewModel {
         reload()
     }
 
+    /// Drop pending alarms whose Take no longer exists. Runs on unlock, beside the
+    /// re-arm, because that is the first moment the store can say which Takes are real.
+    /// A no-op on a healthy install; it exists for the ones already carrying orphans,
+    /// which no reinstall-free path would otherwise reach.
+    func sweepOrphanedReminders() async {
+        guard let all = try? store.allTakes() else { return }
+        await reminders.sweepOrphanedRequests(liveTakeIDs: Set(all.map(\.id)))
+    }
+
     func refreshRecurringSchedules() {
         guard let all = try? store.allTakes() else { return }
         // Global rebuild (owner 2026-06-21): re-arms recurring windows AND keeps the whole

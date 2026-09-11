@@ -515,6 +515,12 @@ struct CatchlightApp: App {
                 // readable (keys cached) — they don't auto-extend, so opening the app is
                 // when we re-arm the next batch (owner 2026-06-21).
                 app.dailiesVM.refreshRecurringSchedules()
+                // …and drop alarms whose Take no longer exists. Separate from the re-arm
+                // above because that one CANNOT reach them: it clears identifiers derived
+                // from the takes it is handed, so an orphan is never in its clear list.
+                // The owner met this through Start over, which wipes the store and leaves
+                // the alarms it scheduled still registered with iOS (2026-09-11).
+                Task { await app.dailiesVM.sweepOrphanedReminders() }
                 // Anything shared while locked now has a readable store to land in (2026-08-11).
                 // Before the widget capture, for the reload-under-an-open-editor reason above.
                 drainSharedCaptures()

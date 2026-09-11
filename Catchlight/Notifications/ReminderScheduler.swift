@@ -37,9 +37,24 @@ public protocol NotificationScheduling: AnyObject {
     /// satisfies this natively.
     func removeDeliveredNotifications(withIdentifiers identifiers: [String])
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
+
+    /// Every not-yet-fired request's identifier. Needed to find ORPHANS — requests whose
+    /// Take no longer exists — which no per-Take path can reach, because every cancellation
+    /// in this app is derived from a Take that is still in the store.
+    func pendingIdentifiers() async -> [String]
+}
+
+public extension NotificationScheduling {
+    /// Default: report none. Test doubles that do not model the pending set inherit this, so
+    /// the orphan sweep is a no-op for them rather than a compile break across four files.
+    func pendingIdentifiers() async -> [String] { [] }
 }
 
 extension UNUserNotificationCenter: NotificationScheduling {
+    public func pendingIdentifiers() async -> [String] {
+        await pendingNotificationRequests().map(\.identifier)
+    }
+
     public func add(_ request: UNNotificationRequest) {
         // Errors are logged (no content!) rather than silently dropped — an
         // identifier or trigger problem previously left the model holding a
@@ -415,6 +430,41 @@ public final class ReminderScheduler {
     /// catch-up ids, so a pending snooze survives the rebuild. Then plans every alarm across
     /// all reminders, keeps only the soonest `maxPendingAlarms`, and registers them — so a
     /// large fleet can never silently overflow iOS's 64-pending cap.
+    /// Remove every pending request whose Take no longer exists.
+    ///
+    /// 🚨 `rescheduleAll` CANNOT do this and never could. It clears identifiers derived from
+    /// the takes it is handed, so a request belonging to a Take that has been deleted is never
+    /// in `toClear` and survives every reschedule, forever. Every other cancellation path in
+    /// the app has the same shape: it starts from a Take that is still in the store.
+    ///
+    /// 🚨 The owner met it through Start over (2026-09-11): the wipe clears the keychain, the
+    /// defaults and the store, and nothing cancels the alarms those Takes had scheduled. They
+    /// keep firing — recurring ones indefinitely — for notes that no longer exist. And
+    /// `notificationTitle(for:)` puts up to 100 characters of the TAKE'S OWN TEXT in the title,
+    /// so erased content keeps appearing on the lock screen, held in iOS's notification store
+    /// outside this app's encryption. Start over's own caption promises it "erases every Take
+    /// here"; the copies iOS holds were not part of that.
+    ///
+    /// 📌 It is the closed-set fault again. `AccountReset.wipeDefaults` even carries the
+    /// warning — "anything new that persists a user choice belongs in this list" — but that
+    /// list is of UserDefaults keys, and scheduled notifications are state held OUTSIDE the
+    /// app. No list inside it could have caught them.
+    ///
+    /// Identifiers are a base UUID or `<uuid>#suffix`, so the base is everything before the
+    /// first `#`. Anything unparseable is LEFT ALONE: this deletes user-visible alarms, and a
+    /// sweep that cannot name what it is removing should remove nothing.
+    public func sweepOrphanedRequests(liveTakeIDs: Set<UUID>) async {
+        let pending = await center.pendingIdentifiers()
+        let orphans = pending.filter { identifier in
+            let base = identifier.split(separator: "#", maxSplits: 1).first.map(String.init) ?? identifier
+            guard let id = UUID(uuidString: base) else { return false }
+            return !liveTakeIDs.contains(id)
+        }
+        guard !orphans.isEmpty else { return }
+        center.removePendingNotificationRequests(withIdentifiers: orphans)
+        center.removeDeliveredNotifications(withIdentifiers: orphans)
+    }
+
     public func rescheduleAll(takes: [Take]) {
         let n = now()
         // Clear by the Take UUID (== every reminder's notification identifier) so a

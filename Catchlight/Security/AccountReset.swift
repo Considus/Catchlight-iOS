@@ -23,6 +23,7 @@
 //
 
 import Foundation
+import UserNotifications
 import CatchlightCore
 
 enum AccountReset {
@@ -42,6 +43,31 @@ enum AccountReset {
         wipeKeychain()
         wipeDefaults(clearingEntitlement: clearingEntitlement)
         wipeStore()
+        wipeNotifications()
+    }
+
+    // MARK: - Scheduled notifications
+
+    /// 🚨 Every alarm this account scheduled, pending and already delivered.
+    ///
+    /// Without this the wipe erases the Takes and leaves their alarms registered with iOS.
+    /// They keep firing — recurring ones indefinitely — for notes that no longer exist, and
+    /// `ReminderScheduler.notificationTitle(for:)` puts up to 100 characters of the TAKE'S OWN
+    /// TEXT in the title. So erased content kept appearing on the lock screen, held in iOS's
+    /// notification store outside this app's encryption, after a reset whose own caption
+    /// promises it "erases every Take here" (owner 2026-09-11).
+    ///
+    /// 📌 The closed-set fault. `wipeDefaults` carries the warning "anything new that persists
+    /// a user choice belongs in this list" — but that list is of UserDefaults keys, and this is
+    /// state held OUTSIDE the app. No list inside it could have caught it. **The question to ask
+    /// of a wipe is not "what do we store", it is "what did we hand to something else".**
+    ///
+    /// `removeAll…` rather than an identifier list: after a wipe there is no Take left to derive
+    /// identifiers from, and nothing of this app's is meant to survive it.
+    private static func wipeNotifications() {
+        let center = UNUserNotificationCenter.current()
+        center.removeAllPendingNotificationRequests()
+        center.removeAllDeliveredNotifications()
     }
 
     // MARK: - Keychain
