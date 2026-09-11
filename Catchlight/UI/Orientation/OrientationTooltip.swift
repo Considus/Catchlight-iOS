@@ -33,6 +33,7 @@ struct OrientationTooltip: View {
     /// (owner 2026-06-15). Ignored for `.leading`/`.trailing` arrow edges.
     var arrowAlignment: HorizontalAlignment = .center
     var maxWidth: CGFloat = 220
+    @AccessibilityFocusState private var isFocused: Bool
     @ScaledMetric(relativeTo: .body) private var widthScale: CGFloat = 1
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
@@ -113,7 +114,24 @@ struct OrientationTooltip: View {
             // walk puts it. Announce the text on appearance, component-level so
             // every hint site is covered. Placement in the VO order is the
             // device-gated half of the finding and is not changed here.
+            .accessibilityFocused($isFocused)
             .onAppear {
+                // 🚨 TAKE THE CURSOR, do not merely announce (owner 2026-09-11: "the tips
+                // are the task, so let's fix it for all"). A hint that only announces
+                // leaves the user to go and find it, and these hints ARE the next step
+                // rather than commentary on it.
+                //
+                // Deferred through `VoiceOverFocus`: setting focus in the same update
+                // that creates the element races it into the accessibility tree, and
+                // SwiftUI reports nothing when the request lands early.
+                //
+                // 📌 That race is very likely why this tooltip's announcement has looked
+                // unreliable all along. It spoke on arrival and then never again on
+                // re-focus, and a day went into attributing that to the Add Button
+                // swallowing its label. The post is kept as well as the focus move:
+                // focus makes VoiceOver read the element, and the announcement covers the
+                // case where the cursor is already somewhere the user chose to be.
+                VoiceOverFocus.takeFocus { isFocused = true }
                 A11yDiag.post(.announcement, argument: voiceOverText ?? text,
                               from: "tooltip.onAppear")
             }
