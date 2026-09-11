@@ -1766,7 +1766,19 @@ struct DailiesView: View {
         // V44: captured BEFORE the defer clears the editing state, so the cursor
         // returns to the Take that was edited rather than to whatever the closing
         // card happened to be covering.
-        focusReturnTakeID = ui.editingTakeID
+        // 🚨 YIELD TO A FIRST-RUN HINT. V44 returns the cursor to the edited Take when
+        // the editor closes; hint 2's trigger was retimed in #227 to fire on exactly
+        // that event. Both then claim the cursor in the same instant, and the owner's
+        // capture caught them at the same timestamp:
+        //
+        //   22:53:48  POST layoutChanged  arg=UICollectionViewListCell  from=timeline.requestFocus
+        //   22:53:48  POST announcement   arg="Double-tap an Iris..."   from=tooltip.onAppear
+        //
+        // The two were built five days apart and neither knew the other existed. While
+        // the tour is running the HINT is the task, so it outranks a focus return —
+        // stated here as precedence rather than settled by whose delay is longer, which
+        // would only make one win by accident until the next thing claims the cursor.
+        focusReturnTakeID = orientation.isComplete ? ui.editingTakeID : nil
         defer { editDraft = nil; ui.endEditingInPlace() }
         guard var t = editDraft else { return }
         t.removeEmptyTextBlocks()
@@ -1812,7 +1824,8 @@ struct DailiesView: View {
     private func discardInlineEdit() {
         editFocusedBlockID = nil
         editDraft = nil
-        focusReturnTakeID = ui.editingTakeID   // V44, as in `saveInlineEdit`
+        // Same precedence as `saveInlineEdit`: a running tour owns the cursor.
+        focusReturnTakeID = orientation.isComplete ? ui.editingTakeID : nil
         ui.endEditingInPlace()
     }
 
