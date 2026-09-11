@@ -22,6 +22,23 @@
 //  running and never moves a cursor (audit §15aw). It stands or falls on his
 //  next pass.
 //
+//  🚨 EVERY CLAIM IS LOGGED, and that is not decoration. The first device round with
+//  this mechanism found hints 2, 3 and 4 announcing but not taking the cursor, and
+//  nothing in the capture said a focus claim had even been made — so "the claim never
+//  fired" and "the claim fired and lost" were indistinguishable, and two of the three
+//  are still losing to competitors nobody can name. Hint 2's was identifiable only
+//  because it collided with a post that WAS logged.
+//
+//  📌 That is the campaign's own repeated lesson pointed at this file: an invisible
+//  mechanism cannot be eliminated. `timeline.requestFocus` posted raw for six days
+//  while both sessions concluded "no post precedes the fault" from a log that could
+//  not contain it. This was the same shape, in newer code, written by the session that
+//  recorded the lesson.
+//
+//  With the claim in the stream, the focus events that follow it name the winner — and
+//  a named competitor gets fixed at source, as V44 was, rather than by tuning the delay
+//  below until the symptom goes.
+//
 
 import SwiftUI
 import UIKit
@@ -41,9 +58,31 @@ enum VoiceOverFocus {
     /// focus is right only when there IS a cursor to seize. With VoiceOver off
     /// the call is meaningless, and running it anyway would make the behaviour
     /// harder to reason about later.
-    static func takeFocus(after delay: TimeInterval = settleDelay,
-                          _ assign: @escaping () -> Void) {
-        guard UIAccessibility.isVoiceOverRunning else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: assign)
+    /// - Parameter site: where the claim came from, e.g. `"tooltip.onAppear"`. Required,
+    ///   not defaulted: a claim that cannot say who made it is the thing this logging exists
+    ///   to stop.
+    /// `@MainActor` because it reads VoiceOver's state, writes focus state and records to the
+    /// diagnostics log, all of which belong on the main actor. Every caller is a SwiftUI
+    /// `onAppear` / `onChange` closure, which is already there.
+    @MainActor
+    static func takeFocus(from site: String,
+                          after delay: TimeInterval = settleDelay,
+                          _ assign: @escaping @MainActor () -> Void) {
+        guard UIAccessibility.isVoiceOverRunning else {
+            // Logged rather than silent. Under `--a11y-diag` the recorder runs with VoiceOver
+            // off, and "the claim was skipped" and "the claim was made and lost" look identical
+            // in a capture that shows neither.
+            A11yDiag.note("FOCUS CLAIM SKIPPED (VoiceOver off) from=\(site)")
+            return
+        }
+        A11yDiag.note("FOCUS CLAIM from=\(site) in=\(String(format: "%.2f", delay))s")
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            // Already on main by construction; `assumeIsolated` states that to the compiler
+            // rather than hopping again and moving the timing this whole type exists to control.
+            MainActor.assumeIsolated {
+                A11yDiag.note("FOCUS CLAIM APPLIED from=\(site)")
+                assign()
+            }
+        }
     }
 }

@@ -950,7 +950,7 @@ private struct ConfirmStep: View {
             // eight device captures the automatic move was never once recorded.
             // See `VoiceOverFocus` for why the history could not be settled and
             // why the fix is the same either way.
-            VoiceOverFocus.takeFocus { failureFocused = true }
+            VoiceOverFocus.takeFocus(from: "confirm.flashError") { failureFocused = true }
         }
     }
 

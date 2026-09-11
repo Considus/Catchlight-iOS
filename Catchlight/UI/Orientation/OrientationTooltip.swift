@@ -131,7 +131,7 @@ struct OrientationTooltip: View {
                 // swallowing its label. The post is kept as well as the focus move:
                 // focus makes VoiceOver read the element, and the announcement covers the
                 // case where the cursor is already somewhere the user chose to be.
-                VoiceOverFocus.takeFocus { isFocused = true }
+                VoiceOverFocus.takeFocus(from: "tooltip.onAppear") { isFocused = true }
                 A11yDiag.post(.announcement, argument: voiceOverText ?? text,
                               from: "tooltip.onAppear")
             }
