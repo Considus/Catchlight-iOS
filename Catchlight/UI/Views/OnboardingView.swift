@@ -944,7 +944,13 @@ private struct ConfirmStep: View {
         // so focus does not land on a dying element.
         .onChange(of: vm.flashError) { _, flashing in
             guard flashing else { return }
-            failureFocused = true
+            // 🚨 Deferred, not immediate. Setting this in the same update that
+            // creates the warning raced the element into the accessibility tree:
+            // it announced on some attempts and was silent on others, and across
+            // eight device captures the automatic move was never once recorded.
+            // See `VoiceOverFocus` for why the history could not be settled and
+            // why the fix is the same either way.
+            VoiceOverFocus.takeFocus { failureFocused = true }
         }
     }
 
