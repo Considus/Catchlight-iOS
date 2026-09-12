@@ -79,6 +79,14 @@ struct BottomDockView: View {
     /// bubble must never drift apart — two literals would let them.
     private static let addHintText = "What's your first Take?"
 
+    /// Cursor focus for the two hints this view hosts. Owned HERE, not inside
+    /// `OrientationTooltip`: a view that owns the focus state for its own element
+    /// rebuilds that element when the state flips, and the owner's captures show the
+    /// hint dying about a second after the cursor lands on it. The confirm-step warning
+    /// keeps its state in the parent and works.
+    @AccessibilityFocusState private var addHintFocused: Bool
+    @AccessibilityFocusState private var settingsHintFocused: Bool
+
     /// One dock slot. The row divides its padded width into four, so this is also how
     /// far in the + button's centre sits — which is what the Add hint's arrow has to
     /// reach. Derived rather than measured so it holds on every screen width.
@@ -218,6 +226,7 @@ struct BottomDockView: View {
                     .offset(x: dockSlotWidth / 2 - 22, y: -(buttonSize + 14))
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
                     .allowsHitTesting(false)
+                    .accessibilityFocused($addHintFocused)
                     // 🚨 NO `.accessibilityHidden(true)` here. It was applied and it did NOT
                     // work: `TooltipFrameProbeTests` finds this element by label and passes,
                     // and the owner's capture shows "What's your first Take?" as a focusable
@@ -241,6 +250,7 @@ struct BottomDockView: View {
                                    voiceOverText: "Select Storyboard, then use the rotor to select "
                                                 + "Actions and double-tap to open Settings.",
                                    arrowEdge: .bottom)
+                    .accessibilityFocused($settingsHintFocused)
                     .fixedSize()
                     .offset(y: -(buttonSize + 14))
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
@@ -248,6 +258,16 @@ struct BottomDockView: View {
             }
         }
         .frame(height: buttonSize)
+        // Claim the cursor from HERE — the parent — when a hint becomes visible, which is
+        // the shape the confirm-step warning uses and the tooltip's own `onAppear` did not.
+        .onChange(of: orientation.showAddPulse) { _, showing in
+            guard showing else { return }
+            VoiceOverFocus.takeFocus(from: "dock.addHint") { addHintFocused = true }
+        }
+        .onChange(of: orientation.showSettingsHint) { _, showing in
+            guard showing else { return }
+            VoiceOverFocus.takeFocus(from: "dock.settingsHint") { settingsHintFocused = true }
+        }
         .animation(.easeInOut(duration: 0.2), value: ui.dockMode)
         .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
         .padding(.top, 10)

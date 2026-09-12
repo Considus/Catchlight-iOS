@@ -33,7 +33,6 @@ struct OrientationTooltip: View {
     /// (owner 2026-06-15). Ignored for `.leading`/`.trailing` arrow edges.
     var arrowAlignment: HorizontalAlignment = .center
     var maxWidth: CGFloat = 220
-    @AccessibilityFocusState private var isFocused: Bool
     @ScaledMetric(relativeTo: .body) private var widthScale: CGFloat = 1
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
@@ -114,34 +113,22 @@ struct OrientationTooltip: View {
             // walk puts it. Announce the text on appearance, component-level so
             // every hint site is covered. Placement in the VO order is the
             // device-gated half of the finding and is not changed here.
-            .accessibilityFocused($isFocused)
-            .onAppear {
-                // 🚨 TAKE THE CURSOR, do not merely announce (owner 2026-09-11: "the tips
-                // are the task, so let's fix it for all"). A hint that only announces
-                // leaves the user to go and find it, and these hints ARE the next step
-                // rather than commentary on it.
-                //
-                // Deferred through `VoiceOverFocus`: setting focus in the same update
-                // that creates the element races it into the accessibility tree, and
-                // SwiftUI reports nothing when the request lands early.
-                //
-                // 📌 That race is very likely why this tooltip's announcement has looked
-                // unreliable all along. It spoke on arrival and then never again on
-                // re-focus, and a day went into attributing that to the Add Button
-                // swallowing its label.
-                //
-                // 🚨 NO ANNOUNCEMENT ALONGSIDE THE FOCUS MOVE. Moving the cursor onto an
-                // element makes VoiceOver read that element, so posting an announcement
-                // with the same words guarantees it is spoken twice. The owner heard hint
-                // 1 three times over (2026-09-12).
-                //
-                // The announcement was kept when the focus move went in, on the reasoning
-                // that the cursor might be somewhere the user deliberately put it. That
-                // reasoning was wrong: `takeFocus` moves the cursor whenever VoiceOver is
-                // running, which is the only time an announcement would be heard at all,
-                // so the two can never be alternatives — only duplicates.
-                VoiceOverFocus.takeFocus(from: "tooltip.onAppear") { isFocused = true }
-            }
+            // 🚨 NO FOCUS STATE HERE, deliberately. It used to own an
+            // `@AccessibilityFocusState` and claim the cursor from its own `onAppear`.
+            // Measured on the owner's device: the cursor landed, and about a second later
+            // the element died and VoiceOver fell back to the heading — with the pulse,
+            // the announcement and the unlock re-anchor all already removed, so none of
+            // those was it.
+            //
+            // The element is STABLE on the bench (88 samples, no flips), so it only dies
+            // when a real cursor is on it. That is the shape of a view rebuilding its own
+            // accessibility node when the focus state it owns flips.
+            //
+            // The confirm-step warning uses the same `VoiceOverFocus` and works. Its
+            // structure differs in exactly one way: the focus state lives in the PARENT
+            // and is applied to the child. So the caller owns it here too — see the hint
+            // sites, which declare the state and call `takeFocus` from their own
+            // `onChange`.
     }
 }
 
