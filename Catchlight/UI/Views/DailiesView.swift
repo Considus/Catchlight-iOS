@@ -50,6 +50,21 @@ struct DailiesView: View {
     /// nothing to return to.
     @State private var focusReturnTakeID: UUID?
 
+    /// Move the VoiceOver cursor onto whichever hint this step shows.
+    private func claimCursorForHint(atStep step: Int) {
+        if step == 2 {
+            VoiceOverFocus.takeFocus(from: "dailies.irisHint") { irisHintFocused = true }
+        } else if step == 4 {
+            VoiceOverFocus.takeFocus(from: "dailies.obieHint") { obieHintFocused = true }
+        }
+    }
+
+    /// Cursor focus for the two hints this view hosts. Owned HERE rather than inside
+    /// `OrientationTooltip` — see the note there: a view that owns the focus state for
+    /// its own element rebuilds that element when the state flips.
+    @AccessibilityFocusState private var irisHintFocused: Bool
+    @AccessibilityFocusState private var obieHintFocused: Bool
+
     /// The heading's clearance (owner device report 2026-09-04, item 5).
     ///
     /// `CatchlightLayout.headingClearance` is a constant tuned for the 24pt heading, but
@@ -560,6 +575,7 @@ struct DailiesView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
                     .allowsHitTesting(false)
                     .accessibilityIdentifier("orientation-iris-hint")
+                    .accessibilityFocused($irisHintFocused)
             }
 
             // Hint 4, on the SAME anchor as hint 2 (owner device round 2026-09-06).
@@ -612,6 +628,7 @@ struct DailiesView: View {
                     // different things in one breath. The dismiss ACTION stays as the way
                     // out; it is simply no longer announced over the instruction.
                     .accessibilityIdentifier("orientation-obie-hint")
+                    .accessibilityFocused($obieHintFocused)
             }
 
         }
@@ -951,6 +968,15 @@ struct DailiesView: View {
             // with the dock already last (V30), the order is heading → Obie →
             // Takes → dock, the owner's settled visual order.
             .accessibilitySortPriority(1)
+            // Claim the cursor from the PARENT when a hint appears — the shape the
+            // confirm-step warning uses, and the one the tooltip's own `onAppear` did not.
+            //
+            // Attached to the HEADING rather than the body: `DailiesView`'s body is at the
+            // type-checker's limit and even one more modifier there fails to compile. The
+            // heading is small, always present, and re-renders no more often than the body.
+            .onChange(of: orientation.step) { _, step in
+                claimCursorForHint(atStep: step)
+            }
             if vm.obie != nil && !ui.isEditingInPlace {
                 // With a pinned Obie: SOLID right down to the Obie's card top (no fade
                 // — the gradient is semi-transparent and lets a scrolling Take peek).
