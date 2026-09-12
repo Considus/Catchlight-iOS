@@ -128,12 +128,19 @@ struct OrientationTooltip: View {
                 // 📌 That race is very likely why this tooltip's announcement has looked
                 // unreliable all along. It spoke on arrival and then never again on
                 // re-focus, and a day went into attributing that to the Add Button
-                // swallowing its label. The post is kept as well as the focus move:
-                // focus makes VoiceOver read the element, and the announcement covers the
-                // case where the cursor is already somewhere the user chose to be.
+                // swallowing its label.
+                //
+                // 🚨 NO ANNOUNCEMENT ALONGSIDE THE FOCUS MOVE. Moving the cursor onto an
+                // element makes VoiceOver read that element, so posting an announcement
+                // with the same words guarantees it is spoken twice. The owner heard hint
+                // 1 three times over (2026-09-12).
+                //
+                // The announcement was kept when the focus move went in, on the reasoning
+                // that the cursor might be somewhere the user deliberately put it. That
+                // reasoning was wrong: `takeFocus` moves the cursor whenever VoiceOver is
+                // running, which is the only time an announcement would be heard at all,
+                // so the two can never be alternatives — only duplicates.
                 VoiceOverFocus.takeFocus(from: "tooltip.onAppear") { isFocused = true }
-                A11yDiag.post(.announcement, argument: voiceOverText ?? text,
-                              from: "tooltip.onAppear")
             }
     }
 }
