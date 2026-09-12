@@ -308,7 +308,6 @@ struct BottomDockView: View {
             // the editor directly (capture is two taps incl. the typing commit).
             onNewTake()
         } label: {
-            AddPulseGlyph(isPulsing: orientation.showAddPulse, size: buttonSize) {
             ZStack {
                 // HiFi `.db.add` is an OUTLINE button — a stronger Ember border,
                 // NOT a fill (D-042 follow-up, owner 2026-06-14). The only filled
@@ -322,27 +321,24 @@ struct BottomDockView: View {
                     .font(.system(size: 24, weight: .regular))
                     .foregroundStyle(Color.ckAccent)   // #856539 glyph (Option A), like the siblings
             }
-            // 🚨 ORDER IS LOAD-BEARING (V40, measured 2026-09-09). `.scaleEffect` AFTER
-            // `.frame` scales the button's LAYOUT, and the accessibility frame follows:
-            // sampled across the pulse, this element went 44x44 at (36, 766) to
-            // 51.62x51.62 at (32.19, 762.19) and back, twice. `.offset` was already
-            // measured to move an accessibility frame in this campaign; a scale does too.
+            // 🚨 NO PULSE HERE, deliberately. The Add button used to scale 1.0 -> 1.18 ->
+            // 1.0 twice when hint 1 appeared. Removed at the owner's word (2026-09-12):
+            // "the pulse isn't important, I'm happy if we lose any visual things that fire
+            // once then never again" and "the tooltip itself does the heavy lifting".
             //
-            // The Add button is the ONLY dock control that pulses, and it is the only one
-            // the owner's cursor jumps out of — twice, against a pulse that fires exactly
-            // twice. §15ai had recorded the pulse as eliminated, but it had tested whether
-            // the pulse ran FOREVER, not whether the frame moved.
+            // It also cost more than it was worth. Its `.scaleEffect` carried into the
+            // ACCESSIBILITY frame (measured: 44x44 at (36, 766) growing to 51.62x51.62 at
+            // (32.19, 762.19) and back), so the button's target moved under a resting
+            // cursor. And in his capture the hint's element died mid-sentence at the exact
+            // second the pulse stopped, cutting "Double-tap Add Take..." off after three
+            // syllables.
             //
-            // Scaling INSIDE the frame keeps the visual pulse and leaves the layout — and
-            // so the accessibility target — a fixed 44x44 with a fixed origin. The glyph
-            // still overflows the frame as it grows, which is what it did before, because
-            // `.frame` does not clip.
-            }
-            // Reordering alone did NOT fix it (measured): SwiftUI carries the render
-            // transform into the accessibility frame whatever the layout says, so the
-            // element still grew to 51.06 at (32.47, 762.47). `.contentShape` with the
-            // `.accessibility` kind is the API that actually pins it — it defines the
-            // accessibility shape independently of the transform above it.
+            // ⚠️ The tooltip does NOT remount when the pulse ends — measured on the bench,
+            // one appear and no disappear across the whole cycle. So the pulse was
+            // disturbing the accessibility element rather than the view, which is a thing
+            // the simulator cannot show. Removing the animation removes the disturbance;
+            // that it FIXES his cut-off speech is not proven and is his to confirm.
+            .frame(width: buttonSize, height: buttonSize)
 
             // Add is the LEFTMOST dock slot (≈58pt from the screen edge), so a
             // centred bubble clipped off-screen left. Anchor the arrow at the
@@ -750,77 +746,3 @@ struct BottomDockView: View {
     .preferredColorScheme(.light)
 }
 
-/// The Add button's first-run pulse, isolated in its OWN view so it owns its state.
-///
-/// 🚨 WHY THIS IS A SEPARATE VIEW (V40, §15ar, measured 2026-09-09). `addPulseScale`
-/// used to be `@State` on `BottomDockView`, so every step of the pulse re-evaluated the
-/// WHOLE dock body — all four buttons and the tooltip, not just Add. Counted on the
-/// bench: 1 dock body evaluation with the tour complete against 7 with the hint mounted.
-///
-/// The owner's restatement is what makes that matter: *"I can get everywhere, it just
-/// doesn't hold focus to where I put it"*, and *"it jumps from any of the toolbar
-/// buttons and the tooltip"* — every dock element, not only the one that pulses. A fix
-/// aimed at Add's own frame could never have covered that. State that lives on a parent
-/// rebuilds every child; state that lives here rebuilds only this.
-private struct AddPulseGlyph<Content: View>: View {
-
-    let isPulsing: Bool
-    let size: CGFloat
-    @ViewBuilder var content: Content
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var scale: CGFloat = 1.0
-    @State private var done = 0
-
-    var body: some View {
-        content
-            .scaleEffect(scale)
-            .frame(width: size, height: size)
-            // 🚨 `.contentShape(.accessibility,)` pins the ACCESSIBILITY frame against the
-            // scale above it. Measured: without it the element went 44x44 at (36, 766) to
-            // 51.62x51.62 at (32.19, 762.19) and back, twice, moving the target under a
-            // resting cursor. Reordering `.scaleEffect` and `.frame` does NOT fix that —
-            // SwiftUI carries a render transform into the accessibility frame whatever the
-            // layout says (still grew to 51.06). Do not "simplify" this away.
-            .contentShape(.accessibility, Rectangle())
-            .onChange(of: isPulsing, initial: true) { _, showing in
-                if showing { start() } else { done = 2; scale = 1.0 }
-            }
-    }
-
-    /// Two-cycle pulse for first-run Hint 1. Respects Reduce Motion (skips the animation
-    /// but leaves the tooltip visible).
-    private func start() {
-        done = 0
-        scale = 1.0
-        if reduceMotion { return }
-        // TEST SEAM: the pulse fires on mount and is over in ~2.5s, before XCUITest can
-        // start querying — a first attempt to measure the frame across it sampled a window
-        // that opened one second AFTER the pulse stopped, and read "the frame never
-        // changes". A delay lets a probe open its window first and prove the overlap.
-        if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "--uitesting-pulse-delay"),
-           i + 1 < ProcessInfo.processInfo.arguments.count,
-           let seconds = Double(ProcessInfo.processInfo.arguments[i + 1]) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { cycle() }
-            return
-        }
-        cycle()
-    }
-
-    private func cycle() {
-        guard isPulsing, done < 2 else {
-            A11yDiag.note("PULSE stop done=\(done) showing=\(isPulsing)")
-            return
-        }
-        A11yDiag.note("PULSE up done=\(done)")
-        withAnimation(.easeInOut(duration: 0.45)) { scale = 1.18 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            withAnimation(.easeInOut(duration: 0.45)) { scale = 1.0 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                done += 1
-                A11yDiag.note("PULSE down done=\(done)")
-                cycle()
-            }
-        }
-    }
-}
