@@ -260,11 +260,16 @@ struct BottomDockView: View {
         .frame(height: buttonSize)
         // Claim the cursor from HERE — the parent — when a hint becomes visible, which is
         // the shape the confirm-step warning uses and the tooltip's own `onAppear` did not.
-        .onChange(of: orientation.showAddPulse) { _, showing in
+        // 🚨 `initial: true` IS LOAD-BEARING. Without it the claim never fires when the
+        // hint is already visible as the view appears — which is every launch armed at a
+        // step, and the owner's captures on 662fbbe carry NO `FOCUS CLAIM` line at all.
+        // `onChange` fires on a CHANGE; the step is set before the dock exists, so there
+        // is none. The `onAppear` this replaced fired on mount and had no such hole.
+        .onChange(of: orientation.showAddPulse, initial: true) { _, showing in
             guard showing else { return }
             VoiceOverFocus.takeFocus(from: "dock.addHint") { addHintFocused = true }
         }
-        .onChange(of: orientation.showSettingsHint) { _, showing in
+        .onChange(of: orientation.showSettingsHint, initial: true) { _, showing in
             guard showing else { return }
             VoiceOverFocus.takeFocus(from: "dock.settingsHint") { settingsHintFocused = true }
         }
