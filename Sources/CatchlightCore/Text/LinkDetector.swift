@@ -6,11 +6,36 @@
 //  host app. Two passes:
 //    1. `NSDataDetector` — schemed URLs and `www.` links (the reliable path).
 //    2. Bare domains with NO scheme (e.g. "catchlight.app") — matched by a
-//       conservative regex and accepted ONLY when the TLD is in a curated
-//       common set, then linked with an assumed `https://`. The TLD gate is what
-//       keeps "readme.md", "config.json", "e.g.", or "Mr.Smith" from becoming
-//       links — precision over recall, since a false link in a personal note is
-//       worse than missing a niche TLD (which still works if typed with https://).
+//       conservative regex and accepted ONLY when the TLD is one IANA publishes
+//       (`TLDList`), then linked with an assumed `https://`.
+//
+//  🚨 PASS 2 IS NOT A FALLBACK FOR EXOTIC CASES — it is what makes the modern
+//  web link at all. Measured 2026-09-12: `NSDataDetector` recognises 44 of 47
+//  country codes but only 5 of 33 gTLDs created from 2013 onward, missing
+//  `.app`, `.dev` and `.ai`. Apple's table is real (no fabricated TLD matches
+//  it) but has not kept pace, and there is no sign it will, so every modern
+//  bare domain links because of this pass and not because of Apple.
+//
+//  The list REPLACED a hand-curated set of 53 (owner, 2026-09-12). That set
+//  covered 1,434 minus 1,381 of what exists, and 39 of its 53 entries were
+//  redundant because Apple already caught them. It was found by the owner
+//  pasting a real reference list of 51 sites, of which three did not link:
+//  `cleanup.pictures`, `radio.garden`, `apinex.bond`.
+//
+//  Two gates keep precision, since a false link in a personal note is worse
+//  than a missed one (a missed domain still works if typed with `https://`):
+//    a. Four TLDs are never linked — `.md`, `.zip`, `.mov`, `.java` — because
+//       each is far more often a filename here than a domain. `.app`, `.ai` and
+//       `.sh` are extensions too and are deliberately KEPT, being real domains
+//       in daily use. The set lives in `Scripts/generate_tld_list.py`.
+//    b. The TLD must be written in lower case. This is what stops a missing
+//       space after a full stop — "I went home.It was late", "Call Bob.No
+//       answer" — from linking, `.it` and `.no` being Italy and Norway. A
+//       domain someone means is typed "considus.com" or, with iOS
+//       auto-capitalisation, "Considus.app"; nobody types "home.It". An
+//       ALL-CAPS domain ("SQUOOSH.APP") is the deliberate exception, because
+//       shouting a URL is a real thing people do — the MIXED case is what
+//       carries the signal, not the capitals themselves.
 //
 
 import Foundation
@@ -28,22 +53,22 @@ public enum LinkDetector {
         types: NSTextCheckingResult.CheckingType.link.rawValue)
 
     // A bare domain: labels separated by dots, a 2–24 letter TLD (captured for the
-    // curated-set check), and an optional path. Case-insensitive so an auto-capitalised
-    // first letter ("Considus.app", common when a URL is typed first) still links; the
-    // curated-TLD gate below — not the casing — is what keeps "Mr.Smith" inert. The
-    // lookbehind avoids matching inside an email's domain or a longer token.
+    // lookup), and an optional path. Matching stays case-insensitive; the casing
+    // GATE is applied in Swift below, where it can be read and tested rather than
+    // hidden inside a character class. The lookbehind avoids matching inside an
+    // email's domain or a longer token.
     private static let bareDomain = try? NSRegularExpression(
         pattern: #"(?<![@./\w-])((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+([a-zA-Z]{2,24}))(/[^\s]*)?"#)
 
-    /// Curated common TLDs we'll auto-link without a scheme. Generous but bounded —
-    /// expand as needed (owner can add niche TLDs). NOT exhaustive by design.
-    static let commonTLDs: Set<String> = [
-        "com", "org", "net", "io", "co", "app", "dev", "ai", "me", "info", "biz",
-        "xyz", "online", "site", "store", "tech", "blog", "page", "link", "cloud",
-        "email", "news", "tv", "fm", "gg", "so", "to", "ly", "sh", "st", "design",
-        "studio", "agency", "uk", "us", "ca", "au", "de", "fr", "nl", "es", "it",
-        "eu", "ie", "nz", "in", "jp", "cn", "br", "za", "ch", "se", "no",
-    ]
+    /// Gate (b): does this bare domain's CASING read as somebody meaning a domain?
+    /// A lower-case TLD is the normal case and covers "considus.com" and the
+    /// auto-capitalised "Considus.app". An all-caps match is the exception for
+    /// "SQUOOSH.APP". Everything else is a missing space after a full stop —
+    /// "home.It", "Bob.No" — and stays inert.
+    static func casingAllowsLink(match: String, tld: String) -> Bool {
+        if tld == tld.lowercased() { return true }
+        return match == match.uppercased()
+    }
 
     /// All links in `text`, ordered by position, non-overlapping (schemed/www links
     /// win over a bare-domain match in the same span).
@@ -89,10 +114,11 @@ public enum LinkDetector {
                 if taken.contains(where: { NSIntersectionRange($0, m.range).length > 0 }) { continue }
                 let tldRange = m.range(at: 2)
                 guard tldRange.location != NSNotFound else { continue }
-                let tld = ns.substring(with: tldRange).lowercased()
-                guard commonTLDs.contains(tld) else { continue }
-                guard let r = Range(m.range, in: text) else { continue }
+                let tldRaw = ns.substring(with: tldRange)
                 let raw = ns.substring(with: m.range)
+                guard casingAllowsLink(match: raw, tld: tldRaw) else { continue }
+                guard TLDList.all.contains(tldRaw.lowercased()) else { continue }
+                guard let r = Range(m.range, in: text) else { continue }
                 guard let url = URL(string: "https://\(raw)") else { continue }
                 matches.append(Match(range: r, url: url))
             }
