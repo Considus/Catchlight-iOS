@@ -138,8 +138,26 @@ struct RootView: View {
         // `.screenChanged` re-anchors at the TOP of the new screen (with V32 that
         // is the page heading) and announces the transition — which also replaces
         // the clipped "Authenticating…" announcement (see LockView).
+        //
+        // 🚨 BUT NOT WHILE THE FIRST-RUN TOUR IS RUNNING. This re-anchor puts the cursor
+        // on the heading, and at launch it fires at the same moment hint 1 claims the
+        // cursor for itself — so the hint spoke and focus immediately left it for the
+        // heading (owner, device, 2026-09-12: "focus moved to the heading", within a
+        // second).
+        //
+        // Same precedence as V44 and stated the same way: while the tour runs the HINT is
+        // the task, so it outranks a re-anchor. Fixed at the source rather than by making
+        // one claim later than the other, which would only settle it by accident until
+        // something else claims the cursor.
+        //
+        // V34's own purpose is unaffected outside the tour: after an ordinary unlock there
+        // is no hint, and focus still moves to the top instead of the last Take.
         .onChange(of: app.lockState) { old, new in
             if old != .unlocked && new == .unlocked {
+                guard orientation.isComplete else {
+                    A11yDiag.note("root.unlocked re-anchor SKIPPED — tour step \(orientation.step) owns the cursor")
+                    return
+                }
                 A11yDiag.post(.screenChanged, argument: nil, from: "root.unlocked")
             }
         }
