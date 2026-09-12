@@ -23,10 +23,23 @@ therefore link only because this list says they may.
 
 import re
 import sys
+import urllib.parse
 import urllib.request
 
 SOURCE = "https://data.iana.org/TLD/tlds-alpha-by-domain.txt"
 OUT = "Sources/CatchlightCore/Text/TLDList.swift"
+
+# 🚨 `urllib` honours `file://` and `ftp://` as happily as `https://`, so a URL that
+# ever becomes dynamic could be pointed at the local disk and this script would
+# cheerfully "download" a local file into the generated Swift. `SOURCE` is a constant
+# today and nothing user-supplied reaches it, so this guard changes no behaviour —
+# it exists so that the day someone parameterises the source, the failure is a loud
+# refusal here rather than a silent local read.
+#
+# Raised by a Semgrep `dynamic-urllib-use-detected` finding, 2026-09-12. The finding
+# was a false positive in substance and a fair point in principle, which is the kind
+# worth fixing rather than arguing with.
+ALLOWED_SCHEMES = ("https",)
 
 # 🚨 Never auto-linked, however live the TLD. Each of these is overwhelmingly a
 # FILE EXTENSION in a notes app and vanishingly rare as a domain someone types
@@ -77,6 +90,12 @@ enum TLDList {{
 
 
 def main() -> int:
+    scheme = urllib.parse.urlparse(SOURCE).scheme.lower()
+    if scheme not in ALLOWED_SCHEMES:
+        print(f"refusing to fetch over {scheme!r}: only {ALLOWED_SCHEMES} are allowed",
+              file=sys.stderr)
+        return 1
+
     try:
         with urllib.request.urlopen(SOURCE, timeout=30) as response:
             text = response.read().decode("utf-8")
