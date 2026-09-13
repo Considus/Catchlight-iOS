@@ -263,6 +263,20 @@ struct BottomDockView: View {
         // step, and the owner's captures on 662fbbe carry NO `FOCUS CLAIM` line at all.
         // `onChange` fires on a CHANGE; the step is set before the dock exists, so there
         // is none. The `onAppear` this replaced fired on mount and had no such hole.
+        // 🚨 DOES THE BINDING FLIP BACK? The cursor now lands on the Add button — a
+        // permanent control that is never rebuilt — and loses focus about a second later
+        // anyway (owner, 0d051a1). So this was never about the tooltip's element dying.
+        //
+        // `@AccessibilityFocusState` is a two-way binding: if SwiftUI writes it back to
+        // false, that actively REMOVES focus and VoiceOver falls back to the first element,
+        // which is what "then it goes to Dailies" looks like. If instead focus moves while
+        // the binding stays true, something outside our code moved the cursor.
+        //
+        // Those need opposite fixes and nothing in any capture distinguishes them. One
+        // line does.
+        .onChange(of: addHintFocused) { was, now in
+            A11yDiag.note("BINDING addHintFocused \(was) -> \(now)")
+        }
         .onChange(of: orientation.showAddPulse, initial: true) { _, showing in
             guard showing else { return }
             // ANNOUNCE the instruction, because the cursor now lands on the Add button and
