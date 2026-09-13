@@ -974,7 +974,10 @@ struct DailiesView: View {
             // Attached to the HEADING rather than the body: `DailiesView`'s body is at the
             // type-checker's limit and even one more modifier there fails to compile. The
             // heading is small, always present, and re-renders no more often than the body.
-            .onChange(of: orientation.step) { _, step in
+            // `initial: true` for the same reason as the dock's — see the note there. A
+            // launch armed at a step has nothing to CHANGE, so without it the claim never
+            // fires at all.
+            .onChange(of: orientation.step, initial: true) { _, step in
                 claimCursorForHint(atStep: step)
             }
             if vm.obie != nil && !ui.isEditingInPlace {
