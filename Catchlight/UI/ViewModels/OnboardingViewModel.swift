@@ -32,6 +32,10 @@ final class OnboardingViewModel {
         case localWarning
         case reveal
         case confirm
+        /// The four things the first-run tooltips used to teach, as one page.
+        /// Replaces them outright: a screen reader reads text natively, where a
+        /// floating bubble needed focus machinery that never worked.
+        case basics
         case complete
         case failure
     }
@@ -190,8 +194,9 @@ final class OnboardingViewModel {
         let expected = targetPositions.map { mnemonic[$0] }
         let got = slots.compactMap { $0 }
         if got == expected {
-            // Screen 5 → Screen 6 (the user taps through Screen 6 to finalize).
-            step = .complete
+            // Screen 5 → the basics page → Screen 6 (the user taps through Screen 6 to
+            // finalize). The basics page replaces the first-run tooltips, which are gone.
+            step = .basics
         } else {
             flashError = true
             failure = "Those aren't quite right. Try again."
@@ -264,6 +269,12 @@ final class OnboardingViewModel {
     // MARK: - Completion
 
     /// Screen 6 "Start using Catchlight" — derive + store master key.
+    /// The basics page has been read. Move on to the closing screen.
+    func acknowledgeBasics() {
+        guard step == .basics else { return }
+        step = .complete
+    }
+
     func finishOnboarding() {
         do {
             let masterKeyData = MasterKeyDerivation.deriveRaw(from: mnemonic)
