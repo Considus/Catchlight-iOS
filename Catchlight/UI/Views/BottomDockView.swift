@@ -226,7 +226,6 @@ struct BottomDockView: View {
                     .offset(x: dockSlotWidth / 2 - 22, y: -(buttonSize + 14))
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
                     .allowsHitTesting(false)
-                    .accessibilityFocused($addHintFocused)
                     // 🚨 NO `.accessibilityHidden(true)` here. It was applied and it did NOT
                     // work: `TooltipFrameProbeTests` finds this element by label and passes,
                     // and the owner's capture shows "What's your first Take?" as a focusable
@@ -250,7 +249,6 @@ struct BottomDockView: View {
                                    voiceOverText: "Select Storyboard, then use the rotor to select "
                                                 + "Actions and double-tap to open Settings.",
                                    arrowEdge: .bottom)
-                    .accessibilityFocused($settingsHintFocused)
                     .fixedSize()
                     .offset(y: -(buttonSize + 14))
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
@@ -267,10 +265,22 @@ struct BottomDockView: View {
         // is none. The `onAppear` this replaced fired on mount and had no such hole.
         .onChange(of: orientation.showAddPulse, initial: true) { _, showing in
             guard showing else { return }
+            // ANNOUNCE the instruction, because the cursor now lands on the Add button and
+            // VoiceOver will read "Add Take" — not the hint's words. This is not the
+            // duplicate that was removed earlier: then, focus landed on the hint itself and
+            // the announcement said the same thing twice. Here the two carry different
+            // information, and both are needed.
+            A11yDiag.post(.announcement,
+                          argument: "Double-tap Add Take to write your first Take.",
+                          from: "dock.addHint")
             VoiceOverFocus.takeFocus(from: "dock.addHint") { addHintFocused = true }
         }
         .onChange(of: orientation.showSettingsHint, initial: true) { _, showing in
             guard showing else { return }
+            A11yDiag.post(.announcement,
+                          argument: "Select Storyboard, then use the rotor to select "
+                                  + "Actions and double-tap to open Settings.",
+                          from: "dock.settingsHint")
             VoiceOverFocus.takeFocus(from: "dock.settingsHint") { settingsHintFocused = true }
         }
         .animation(.easeInOut(duration: 0.2), value: ui.dockMode)
@@ -373,6 +383,15 @@ struct BottomDockView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("add-button")
+        // 🚨 THE CURSOR LANDS HERE, not on the hint (owner 2026-09-13: "if it's going to
+        // move, be best if it moved to the add button").
+        //
+        // The hint's own element dies about a second after the cursor reaches it and we
+        // could not establish why — it is stable on the bench across 88 samples, the view
+        // never remounts, and three separate causes were removed without changing it. This
+        // stops fighting that: the Add button is a permanent control, it is what the hint
+        // tells you to double-tap, and the cursor arrives ready to do it.
+        .accessibilityFocused($addHintFocused)
         // V36 (audit §15af, D-260): the tooltip is overlaid INSIDE this Button's `label:`
         // closure, so it belongs to the button's accessibility subtree and this label
         // REPLACES it — `OrientationTooltip`'s own `.accessibilityElement()` and label never
@@ -437,6 +456,8 @@ struct BottomDockView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("angle-tab")
+        // Hint 3's cursor lands here for the same reason — this is the control it names.
+        .accessibilityFocused($settingsHintFocused)
         .accessibilityLabel("Storyboard")
         // V27 (audit 2026-08): the hint used to say "Swipe up on the toolbar to
         // open Settings" — a gesture VoiceOver takes for itself, so the hint
