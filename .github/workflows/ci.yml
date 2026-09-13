@@ -21,6 +21,22 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege for the GITHUB_TOKEN, declared once at the top so it applies to
+# every job (2026-09-12). Without this block the token inherits the repository
+# default, which on an older repo can include WRITE across contents, issues,
+# packages and more — handed to every third-party action in the run.
+#
+# Nothing in this workflow writes to the repo: the jobs check out, build and test.
+# `contents: read` is therefore the whole requirement, and a future job that needs
+# more should ask for it at the JOB level rather than widening this.
+#
+# Raised by an OpenSSF Scorecard "Token Permissions" score of 0. It is the one
+# finding in that scan that describes a real exposure rather than a project-maturity
+# metric — the supply-chain risk is not this repo's code but what a compromised
+# action could do with an over-scoped token.
+permissions:
+  contents: read
+
 # Cancel an in-flight run for the same branch / PR when a new commit arrives —
 # saves runner minutes without losing the final-commit signal.
 concurrency:
