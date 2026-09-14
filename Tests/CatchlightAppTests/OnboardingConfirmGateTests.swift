@@ -118,4 +118,27 @@ final class OnboardingConfirmGateTests: XCTestCase {
         XCTAssertEqual(vm.step, .basics,
                        "the gate must pass after a deselect-corrected mistake")
     }
+
+    /// The basics pages run first → second → complete. Two pages because four points
+    /// overflow one screen on the shared intro layout (owner 2026-09-14); each
+    /// acknowledgement is guarded on its own step, so a stale call can't skip a page.
+    func testBasicsPagesRunInOrderToComplete() {
+        let vm = makeConfirmVM()
+        for word in expectedWords(vm) { vm.tapBankWord(word) }
+        XCTAssertEqual(vm.step, .basics)
+
+        // A second-page acknowledgement on the FIRST page does nothing.
+        vm.acknowledgeBasicsMore()
+        XCTAssertEqual(vm.step, .basics, "the guard must hold the first page")
+
+        vm.acknowledgeBasics()
+        XCTAssertEqual(vm.step, .basicsMore)
+
+        // And the first-page acknowledgement is spent.
+        vm.acknowledgeBasics()
+        XCTAssertEqual(vm.step, .basicsMore, "the guard must hold the second page")
+
+        vm.acknowledgeBasicsMore()
+        XCTAssertEqual(vm.step, .complete)
+    }
 }

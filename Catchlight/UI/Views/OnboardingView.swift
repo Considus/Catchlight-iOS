@@ -84,13 +84,7 @@ struct OnboardingView: View {
     private var showsBrandMark: Bool {
         if dynamicSize > .large { return false }
         switch vm.step {
-        // Basics joins Restore in drawing its OWN mark inside its scroll. Its four
-        // points are taller than the viewport at every text size, and a hoisted mark
-        // cannot scroll — measured on the simulator 2026-09-14, the heading slid up
-        // underneath the fixed mark and the two drew on top of each other. Same
-        // reasoning as Restore's keyboard case: a fixed mark hovers over content that
-        // has to move.
-        case .failure, .restoreEntry, .basics: return false
+        case .failure, .restoreEntry: return false
         default: return true
         }
     }
@@ -104,7 +98,8 @@ struct OnboardingView: View {
         case .localWarning:   LocalWarningStep()
         case .reveal:         RevealStep()
         case .confirm:        ConfirmStep()
-        case .basics:         BasicsStep()
+        case .basics:         BasicsStep(page: .first)
+        case .basicsMore:     BasicsStep(page: .second)
         case .complete:       CompleteStep()
         case .failure:        FailureStep()
         }
@@ -1170,102 +1165,95 @@ private struct CompleteStep: View {
 /// VoiceOver entirely and a press-and-hold never reaches the app. Same pattern as
 /// `PrivacyPhraseView`'s reveal control (V18).
 private struct BasicsStep: View {
+    /// Which half of the four points this screen carries.
+    enum Page { case first, second }
+    let page: Page
+
     @Environment(OnboardingViewModel.self) private var vm
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
 
     private var points: [(String, String)] {
-        voiceOverEnabled
-        ? [("Add a Take",
-            "Double-tap Add Take in the toolbar. To save, double-tap Save and close. "
-            + "That's the whole capture flow."),
-           ("Shape your Take with the Iris",
-            "Double-tap an Iris to make that Take a task, set a reminder, or make it "
-            + "important."),
-           ("Your Obie",
-            "Select an Iris, use the rotor to select Actions, swipe up to select Make "
-            + "Obie, then double-tap. Only one is ever your Obie, because there can only "
-            + "be one that's most important."),
-           ("Settings",
-            "Select Storyboard, then use the rotor to select Actions and double-tap to "
-            + "open Settings.")]
-        : [("Add a Take",
-            "Tap the + button. Tap anywhere outside the Take to save. That's the whole "
-            + "capture flow."),
-           ("Shape your Take with the Iris",
-            "Tap the circle beside any Take to make it a task, set a reminder, or make it "
-            + "important."),
-           ("Your Obie",
-            "Press and hold an Iris to pin one above the rest. Only one is ever your Obie, "
-            + "because there can only be one that's most important."),
-           ("Settings",
-            "Simply swipe up from the toolbar.")]
+        switch (page, voiceOverEnabled) {
+        case (.first, true):
+            return [("Add a Take",
+                     "Double-tap Add Take in the toolbar. To save, double-tap Save and "
+                     + "close. That's the whole capture flow."),
+                    ("Shape your Take with the Iris",
+                     "Double-tap an Iris to make that Take a task, set a reminder, or "
+                     + "make it important.")]
+        case (.first, false):
+            return [("Add a Take",
+                     "Tap the + button. Tap anywhere outside the Take to save. That's "
+                     + "the whole capture flow."),
+                    ("Shape your Take with the Iris",
+                     "Tap the circle beside any Take to make it a task, set a reminder, "
+                     + "or make it important.")]
+        case (.second, true):
+            return [("Your Obie",
+                     "Select an Iris, use the rotor to select Actions, swipe up to "
+                     + "select Make Obie, then double-tap. Only one is ever your Obie, "
+                     + "because there can only be one that's most important."),
+                    ("Settings",
+                     "Select Storyboard, then use the rotor to select Actions and "
+                     + "double-tap to open Settings.")]
+        case (.second, false):
+            return [("Your Obie",
+                     "Press and hold an Iris to pin one above the rest. Only one is ever "
+                     + "your Obie, because there can only be one that's most important."),
+                    ("Settings",
+                     "Simply swipe up from the toolbar.")]
+        }
+    }
+
+    private var heading: String {
+        page == .first ? "A few things worth knowing" : "And two more"
     }
 
     var body: some View {
-        // Same shape as `RevealStep`, the other step whose content scrolls: the brand
-        // mark leads the scroll (reserving the hoisted mark's space below Large, and
-        // BECOMING the visible mark above it), then the hero sits at the shared
-        // `introHeroTopGap`. Without the reserve copy this page started at the very
-        // top of the screen, so the heading ran under the status bar and the hoisted
-        // mark — which `showsBrandMark` draws on this step like every other — landed
-        // on top of the body text (owner device screenshot 2026-09-14).
-        StepScaffold {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Drawn here at full opacity, not reserved: `showsBrandMark`
-                    // excludes this step, so this IS the mark and it scrolls with the
-                    // content (as Restore's does). Same mark, same Y as every other
-                    // screen at rest.
-                    IntroBrandMark()
-                    Spacer().frame(height: introHeroTopGap)
-
-                    Text("A few things worth knowing")
-                        .font(CatchlightFont.displayFixed(size: 28))
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-
-                    // The hero→body gap every other step uses. `StorageChoiceStep`
-                    // eases its to 48 to keep two cards above the pill line; here the
-                    // shorter gap buys a line of the fourth point instead.
-                    Spacer().frame(height: 24)
-
-                    VStack(alignment: .leading, spacing: 20) {
-                        ForEach(points, id: \.0) { title, body in
-                            // Type ramp copied from `StorageOptionCard`: 17 medium
-                            // Primary over 16 light Secondary, leading-aligned, 8
-                            // apart. No card surface — these four aren't tappable and
-                            // every carded block in onboarding is a button.
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(title)
-                                    .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
-                                    .foregroundStyle(Color.ckTextPrimary)
-                                    .multilineTextAlignment(.leading)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text(body)
-                                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                                    .foregroundStyle(Color.ckTextSecondary)
-                                    .multilineTextAlignment(.leading)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            // One element per point, so the cursor steps heading-and-all
-                            // rather than splitting each into two stops.
-                            .accessibilityElement(children: .combine)
+        // The shared intro layout (Welcome · Storage · Local warning · Complete): brand
+        // mark at its set position, the Cormorant hero at `introHeroTopGap`, body centred
+        // beneath it, pill in the dock. The first cut of this page was built on the bare
+        // `StepScaffold` instead — left-aligned, flush to the top of the screen, with the
+        // hoisted mark drawing straight over the body text (owner device screenshot
+        // 2026-09-14).
+        IntroChapterScaffold {
+            VStack(spacing: 0) {
+                Spacer().frame(height: introHeroTopGap)
+                Text(heading)
+                    .font(CatchlightFont.displayFixed(size: 28))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 24)
+                VStack(spacing: 20) {
+                    ForEach(points, id: \.0) { title, body in
+                        VStack(spacing: 6) {
+                            Text(title)
+                                .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
+                                .foregroundStyle(Color.ckTextPrimary)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text(body)
+                                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                                .foregroundStyle(Color.ckTextSecondary)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
+                        // One element per point, so the cursor steps heading-and-all
+                        // rather than splitting each into two stops.
+                        .accessibilityElement(children: .combine)
                     }
-
-                    Spacer(minLength: 24)
                 }
-                // No manual bottom padding: the dock's `safeAreaInset` already insets
-                // the scroll content above the pinned pill (same note as RevealStep).
+                Spacer().frame(height: 24)
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollIndicators(.hidden)
         } bottom: {
             DockPillRow {
-                DockPill(title: "Got it") { vm.acknowledgeBasics() }
+                if page == .first {
+                    DockPill(title: "Next") { vm.acknowledgeBasics() }
+                } else {
+                    DockPill(title: "Got it") { vm.acknowledgeBasicsMore() }
+                }
             }
         }
     }
