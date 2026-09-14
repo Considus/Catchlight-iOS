@@ -84,7 +84,13 @@ struct OnboardingView: View {
     private var showsBrandMark: Bool {
         if dynamicSize > .large { return false }
         switch vm.step {
-        case .failure, .restoreEntry: return false
+        // Basics joins Restore in drawing its OWN mark inside its scroll. Its four
+        // points are taller than the viewport at every text size, and a hoisted mark
+        // cannot scroll — measured on the simulator 2026-09-14, the heading slid up
+        // underneath the fixed mark and the two drew on top of each other. Same
+        // reasoning as Restore's keyboard case: a fixed mark hovers over content that
+        // has to move.
+        case .failure, .restoreEntry, .basics: return false
         default: return true
         }
     }
@@ -1196,32 +1202,67 @@ private struct BasicsStep: View {
     }
 
     var body: some View {
+        // Same shape as `RevealStep`, the other step whose content scrolls: the brand
+        // mark leads the scroll (reserving the hoisted mark's space below Large, and
+        // BECOMING the visible mark above it), then the hero sits at the shared
+        // `introHeroTopGap`. Without the reserve copy this page started at the very
+        // top of the screen, so the heading ran under the status bar and the hoisted
+        // mark — which `showsBrandMark` draws on this step like every other — landed
+        // on top of the body text (owner device screenshot 2026-09-14).
         StepScaffold {
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(spacing: 0) {
+                    // Drawn here at full opacity, not reserved: `showsBrandMark`
+                    // excludes this step, so this IS the mark and it scrolls with the
+                    // content (as Restore's does). Same mark, same Y as every other
+                    // screen at rest.
+                    IntroBrandMark()
+                    Spacer().frame(height: introHeroTopGap)
+
                     Text("A few things worth knowing")
                         .font(CatchlightFont.displayFixed(size: 28))
                         .foregroundStyle(Color.ckTextPrimary)
+                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
-                    ForEach(points, id: \.0) { title, body in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(title)
-                                .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
-                                .foregroundStyle(Color.ckTextPrimary)
-                            Text(body)
-                                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                                .foregroundStyle(Color.ckTextSecondary)
+
+                    // The hero→body gap every other step uses. `StorageChoiceStep`
+                    // eases its to 48 to keep two cards above the pill line; here the
+                    // shorter gap buys a line of the fourth point instead.
+                    Spacer().frame(height: 24)
+
+                    VStack(alignment: .leading, spacing: 20) {
+                        ForEach(points, id: \.0) { title, body in
+                            // Type ramp copied from `StorageOptionCard`: 17 medium
+                            // Primary over 16 light Secondary, leading-aligned, 8
+                            // apart. No card surface — these four aren't tappable and
+                            // every carded block in onboarding is a button.
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(title)
+                                    .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
+                                    .foregroundStyle(Color.ckTextPrimary)
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(body)
+                                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                                    .foregroundStyle(Color.ckTextSecondary)
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            // One element per point, so the cursor steps heading-and-all
+                            // rather than splitting each into two stops.
+                            .accessibilityElement(children: .combine)
                         }
-                        .fixedSize(horizontal: false, vertical: true)
-                        // One element per point, so the cursor steps heading-and-all
-                        // rather than splitting each into two stops.
-                        .accessibilityElement(children: .combine)
                     }
+
+                    Spacer(minLength: 24)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 24)
+                // No manual bottom padding: the dock's `safeAreaInset` already insets
+                // the scroll content above the pinned pill (same note as RevealStep).
             }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
         } bottom: {
             DockPillRow {
                 DockPill(title: "Got it") { vm.acknowledgeBasics() }
