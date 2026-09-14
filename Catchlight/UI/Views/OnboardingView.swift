@@ -1216,9 +1216,10 @@ private struct BasicsStep: View {
         }
     }
 
-    private var heading: String {
-        page == .first ? "A few things worth knowing" : "And two more"
-    }
+    /// Both pages carry the SAME hero (owner 2026-09-14). The two screens are one
+    /// thought split for height, and the mark and hero sit at identical positions on
+    /// each, so the unchanged line reads as one page continuing rather than two.
+    private let heading = "A few things worth knowing"
 
     var body: some View {
         // The shared intro layout (Welcome · Storage · Local warning · Complete): brand
