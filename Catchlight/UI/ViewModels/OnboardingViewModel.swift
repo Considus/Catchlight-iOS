@@ -32,10 +32,18 @@ final class OnboardingViewModel {
         case localWarning
         case reveal
         case confirm
-        /// The four things the first-run tooltips used to teach, as one page.
+        /// The four things the first-run tooltips used to teach, across two pages.
         /// Replaces them outright: a screen reader reads text natively, where a
         /// floating bubble needed focus machinery that never worked.
-        case basics
+        ///
+        /// TWO pages, not one (owner 2026-09-14): on the shared intro layout — brand
+        /// mark and Cormorant hero at their set positions, body centred — four points
+        /// overflow a single screen and push the dock pill off the bottom edge.
+        /// Splitting them keeps every screen's furniture where it belongs and needs no
+        /// scrolling, which is the same one-idea-per-screen rhythm the rest of
+        /// onboarding already has.
+        case basics           // Add a Take · the Iris
+        case basicsMore       // Your Obie · Settings
         case complete
         case failure
     }
@@ -269,9 +277,15 @@ final class OnboardingViewModel {
     // MARK: - Completion
 
     /// Screen 6 "Start using Catchlight" — derive + store master key.
-    /// The basics page has been read. Move on to the closing screen.
+    /// First basics page read — on to the second.
     func acknowledgeBasics() {
         guard step == .basics else { return }
+        step = .basicsMore
+    }
+
+    /// Second basics page read. Move on to the closing screen.
+    func acknowledgeBasicsMore() {
+        guard step == .basicsMore else { return }
         step = .complete
     }
 

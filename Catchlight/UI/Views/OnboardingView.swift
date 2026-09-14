@@ -98,7 +98,8 @@ struct OnboardingView: View {
         case .localWarning:   LocalWarningStep()
         case .reveal:         RevealStep()
         case .confirm:        ConfirmStep()
-        case .basics:         BasicsStep()
+        case .basics:         BasicsStep(page: .first)
+        case .basicsMore:     BasicsStep(page: .second)
         case .complete:       CompleteStep()
         case .failure:        FailureStep()
         }
@@ -1164,67 +1165,95 @@ private struct CompleteStep: View {
 /// VoiceOver entirely and a press-and-hold never reaches the app. Same pattern as
 /// `PrivacyPhraseView`'s reveal control (V18).
 private struct BasicsStep: View {
+    /// Which half of the four points this screen carries.
+    enum Page { case first, second }
+    let page: Page
+
     @Environment(OnboardingViewModel.self) private var vm
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
 
     private var points: [(String, String)] {
-        voiceOverEnabled
-        ? [("Add a Take",
-            "Double-tap Add Take in the toolbar. To save, double-tap Save and close. "
-            + "That's the whole capture flow."),
-           ("Shape your Take with the Iris",
-            "Double-tap an Iris to make that Take a task, set a reminder, or make it "
-            + "important."),
-           ("Your Obie",
-            "Select an Iris, use the rotor to select Actions, swipe up to select Make "
-            + "Obie, then double-tap. Only one is ever your Obie, because there can only "
-            + "be one that's most important."),
-           ("Settings",
-            "Select Storyboard, then use the rotor to select Actions and double-tap to "
-            + "open Settings.")]
-        : [("Add a Take",
-            "Tap the + button. Tap anywhere outside the Take to save. That's the whole "
-            + "capture flow."),
-           ("Shape your Take with the Iris",
-            "Tap the circle beside any Take to make it a task, set a reminder, or make it "
-            + "important."),
-           ("Your Obie",
-            "Press and hold an Iris to pin one above the rest. Only one is ever your Obie, "
-            + "because there can only be one that's most important."),
-           ("Settings",
-            "Simply swipe up from the toolbar.")]
+        switch (page, voiceOverEnabled) {
+        case (.first, true):
+            return [("Add a Take",
+                     "Double-tap Add Take in the toolbar. To save, double-tap Save and "
+                     + "close. That's the whole capture flow."),
+                    ("Shape your Take with the Iris",
+                     "Double-tap an Iris to make that Take a task, set a reminder, or "
+                     + "make it important.")]
+        case (.first, false):
+            return [("Add a Take",
+                     "Tap the + button. Tap anywhere outside the Take to save. That's "
+                     + "the whole capture flow."),
+                    ("Shape your Take with the Iris",
+                     "Tap the circle beside any Take to make it a task, set a reminder, "
+                     + "or make it important.")]
+        case (.second, true):
+            return [("Your Obie",
+                     "Select an Iris, use the rotor to select Actions, swipe up to "
+                     + "select Make Obie, then double-tap. Only one is ever your Obie, "
+                     + "because there can only be one that's most important."),
+                    ("Settings",
+                     "Select Storyboard, then use the rotor to select Actions and "
+                     + "double-tap to open Settings.")]
+        case (.second, false):
+            return [("Your Obie",
+                     "Press and hold an Iris to pin one above the rest. Only one is ever "
+                     + "your Obie, because there can only be one that's most important."),
+                    ("Settings",
+                     "Simply swipe up from the toolbar.")]
+        }
+    }
+
+    private var heading: String {
+        page == .first ? "A few things worth knowing" : "And two more"
     }
 
     var body: some View {
-        StepScaffold {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    Text("A few things worth knowing")
-                        .font(CatchlightFont.displayFixed(size: 28))
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
+        // The shared intro layout (Welcome · Storage · Local warning · Complete): brand
+        // mark at its set position, the Cormorant hero at `introHeroTopGap`, body centred
+        // beneath it, pill in the dock. The first cut of this page was built on the bare
+        // `StepScaffold` instead — left-aligned, flush to the top of the screen, with the
+        // hoisted mark drawing straight over the body text (owner device screenshot
+        // 2026-09-14).
+        IntroChapterScaffold {
+            VStack(spacing: 0) {
+                Spacer().frame(height: introHeroTopGap)
+                Text(heading)
+                    .font(CatchlightFont.displayFixed(size: 28))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 24)
+                VStack(spacing: 20) {
                     ForEach(points, id: \.0) { title, body in
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(spacing: 6) {
                             Text(title)
                                 .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
                                 .foregroundStyle(Color.ckTextPrimary)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
                             Text(body)
                                 .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                                 .foregroundStyle(Color.ckTextSecondary)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .fixedSize(horizontal: false, vertical: true)
                         // One element per point, so the cursor steps heading-and-all
                         // rather than splitting each into two stops.
                         .accessibilityElement(children: .combine)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 24)
+                Spacer().frame(height: 24)
             }
         } bottom: {
             DockPillRow {
-                DockPill(title: "Got it") { vm.acknowledgeBasics() }
+                if page == .first {
+                    DockPill(title: "Next") { vm.acknowledgeBasics() }
+                } else {
+                    DockPill(title: "Got it") { vm.acknowledgeBasicsMore() }
+                }
             }
         }
     }
