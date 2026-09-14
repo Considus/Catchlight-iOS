@@ -50,20 +50,10 @@ struct DailiesView: View {
     /// nothing to return to.
     @State private var focusReturnTakeID: UUID?
 
-    /// Move the VoiceOver cursor onto whichever hint this step shows.
-    private func claimCursorForHint(atStep step: Int) {
-        if step == 2 {
-            VoiceOverFocus.takeFocus(from: "dailies.irisHint") { irisHintFocused = true }
-        } else if step == 4 {
-            VoiceOverFocus.takeFocus(from: "dailies.obieHint") { obieHintFocused = true }
-        }
-    }
 
     /// Cursor focus for the two hints this view hosts. Owned HERE rather than inside
     /// `OrientationTooltip` — see the note there: a view that owns the focus state for
     /// its own element rebuilds that element when the state flips.
-    @AccessibilityFocusState private var irisHintFocused: Bool
-    @AccessibilityFocusState private var obieHintFocused: Bool
 
     /// The heading's clearance (owner device report 2026-09-04, item 5).
     ///
@@ -559,24 +549,6 @@ struct DailiesView: View {
             // so `spineTopInset` falls back to its constant estimate. That estimate is the
             // CORRECT value for a first-run user with one Take and no Obie, which is the only
             // state in which this hint ever shows. Known, accepted, do not "fix".
-            if orientation.showIrisHint {
-                // The same height-independent trick the old site used: redefining the `.top`
-                // guide as `center - irisCentreY` makes the ZStack place the bubble's CENTRE at
-                // the Iris centre, however many lines it wraps to. The leading arrow then sits
-                // level with the Iris rather than hanging below it (owner 2026-06-16).
-                let irisCentreY = spineTopInset + CatchlightLayout.circleDiameter / 2
-                OrientationTooltip(text: "Tap the Iris to shape this Take.",
-                                   voiceOverText: "Double-tap an Iris to shape your Take.",
-                                   arrowEdge: .leading,
-                                   availableWidth: irisHintAvailableWidth)
-                    .fixedSize()
-                    .alignmentGuide(.top) { d in d[VerticalAlignment.center] - irisCentreY }
-                    .offset(x: spineX + irisHintLeadingGap)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
-                    .allowsHitTesting(false)
-                    .accessibilityIdentifier("orientation-iris-hint")
-                    .accessibilityFocused($irisHintFocused)
-            }
 
             // Hint 4, on the SAME anchor as hint 2 (owner device round 2026-09-06).
             //
@@ -590,46 +562,6 @@ struct DailiesView: View {
             // Anchored beside the Iris with a leading arrow, it points at the thing it names
             // and sits clear of it, and the copy shrinks to the one instruction that is not
             // already on screen.
-            if orientation.showObieIntro {
-                // Tap anywhere off the bubble dismisses. The bubble below carries the
-                // VoiceOver activation (V13 / D-214), so this catcher must not be an element.
-                //
-                // 🚨 NO `.accessibilityHidden(true)`, which is what it had. This view is
-                // SHAPE-BEARING — `.contentShape(Rectangle())` over the whole screen — and a
-                // hide on a shape-bearing view MATERIALISES an anonymous element rather than
-                // removing one (D-221; the same trap is annotated in `TakeCircleView` and
-                // `TimelineBeam`). A full-screen anonymous element is about the worst shape
-                // that trap can take. Proved on the Add hint, where the identical hide left
-                // the tooltip focusable in the owner's own capture.
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .onTapGesture { orientation.didDismissObieIntro() }
-
-                let obieIrisCentreY = spineTopInset + CatchlightLayout.circleDiameter / 2
-                OrientationTooltip(text: "Long-press here to make this your Obie.",
-                                   voiceOverText: "Select an Iris and use the rotor to select "
-                                                + "Actions, swipe up to select Make Obie, then "
-                                                + "double-tap to confirm.",
-                                   arrowEdge: .leading,
-                                   availableWidth: irisHintAvailableWidth)
-                    .fixedSize()
-                    .alignmentGuide(.top) { d in d[VerticalAlignment.center] - obieIrisCentreY }
-                    .offset(x: spineX + irisHintLeadingGap)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
-                    .onTapGesture { orientation.didDismissObieIntro() }
-                    // V13: the tap dismissal is HID-level and does not carry onto the
-                    // tooltip's own element, so VoiceOver could read the hint and never
-                    // dismiss it. Bind the DEFAULT activation explicitly.
-                    .accessibilityAction { orientation.didDismissObieIntro() }
-                    // The spoken label now carries the INSTRUCTION ("use the rotor,
-                    // Make Obie"), so a hint saying "Double-tap to dismiss" competes with
-                    // it — VoiceOver reads label then hint, and the two would ask for
-                    // different things in one breath. The dismiss ACTION stays as the way
-                    // out; it is simply no longer announced over the instruction.
-                    .accessibilityIdentifier("orientation-obie-hint")
-                    .accessibilityFocused($obieHintFocused)
-            }
 
         }
         .background {
@@ -968,18 +900,6 @@ struct DailiesView: View {
             // with the dock already last (V30), the order is heading → Obie →
             // Takes → dock, the owner's settled visual order.
             .accessibilitySortPriority(1)
-            // Claim the cursor from the PARENT when a hint appears — the shape the
-            // confirm-step warning uses, and the one the tooltip's own `onAppear` did not.
-            //
-            // Attached to the HEADING rather than the body: `DailiesView`'s body is at the
-            // type-checker's limit and even one more modifier there fails to compile. The
-            // heading is small, always present, and re-renders no more often than the body.
-            // `initial: true` for the same reason as the dock's — see the note there. A
-            // launch armed at a step has nothing to CHANGE, so without it the claim never
-            // fires at all.
-            .onChange(of: orientation.step, initial: true) { _, step in
-                claimCursorForHint(atStep: step)
-            }
             if vm.obie != nil && !ui.isEditingInPlace {
                 // With a pinned Obie: SOLID right down to the Obie's card top (no fade
                 // — the gradient is semi-transparent and lets a scrolling Take peek).
