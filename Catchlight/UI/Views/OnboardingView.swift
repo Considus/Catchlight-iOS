@@ -98,6 +98,7 @@ struct OnboardingView: View {
         case .localWarning:   LocalWarningStep()
         case .reveal:         RevealStep()
         case .confirm:        ConfirmStep()
+        case .basics:         BasicsStep()
         case .complete:       CompleteStep()
         case .failure:        FailureStep()
         }
@@ -1144,6 +1145,86 @@ private struct CompleteStep: View {
         } bottom: {
             DockPillRow {
                 DockPill(title: "Start using Catchlight") { vm.finishOnboarding() }
+            }
+        }
+    }
+}
+
+/// The four things the first-run tooltips used to teach, on one page.
+///
+/// 🚨 WHY THIS REPLACED THE TOOLTIPS (owner 2026-09-13: "might as well lose the hints
+/// completely"). The hints were a sighted affordance — a bubble pointing at a control —
+/// and every attempt to make them work for a VoiceOver cursor failed. Something outside
+/// the app takes the cursor about a second after any programmatic claim, measured across
+/// eleven device captures. A page of text needs none of that: a screen reader reads it
+/// natively, in order, at the reader's own pace.
+///
+/// 📌 The wording SPLITS by input method, because the gestures genuinely differ. "Tap the
+/// + button" is right for a finger and wrong for the cursor: a swipe up is swallowed by
+/// VoiceOver entirely and a press-and-hold never reaches the app. Same pattern as
+/// `PrivacyPhraseView`'s reveal control (V18).
+private struct BasicsStep: View {
+    @Environment(OnboardingViewModel.self) private var vm
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+
+    private var points: [(String, String)] {
+        voiceOverEnabled
+        ? [("Add a Take",
+            "Double-tap Add Take in the toolbar. To save, double-tap Save and close. "
+            + "That's the whole capture flow."),
+           ("Shape your Take with the Iris",
+            "Double-tap an Iris to make that Take a task, set a reminder, or make it "
+            + "important."),
+           ("Your Obie",
+            "Select an Iris, use the rotor to select Actions, swipe up to select Make "
+            + "Obie, then double-tap. Only one is ever your Obie, because there can only "
+            + "be one that's most important."),
+           ("Settings",
+            "Select Storyboard, then use the rotor to select Actions and double-tap to "
+            + "open Settings.")]
+        : [("Add a Take",
+            "Tap the + button. Tap anywhere outside the Take to save. That's the whole "
+            + "capture flow."),
+           ("Shape your Take with the Iris",
+            "Tap the circle beside any Take to make it a task, set a reminder, or make it "
+            + "important."),
+           ("Your Obie",
+            "Press and hold an Iris to pin one above the rest. Only one is ever your Obie, "
+            + "because there can only be one that's most important."),
+           ("Settings",
+            "Simply swipe up from the toolbar.")]
+    }
+
+    var body: some View {
+        StepScaffold {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    Text("A few things worth knowing")
+                        .font(CatchlightFont.displayFixed(size: 28))
+                        .foregroundStyle(Color.ckTextPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    ForEach(points, id: \.0) { title, body in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(title)
+                                .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
+                                .foregroundStyle(Color.ckTextPrimary)
+                            Text(body)
+                                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                                .foregroundStyle(Color.ckTextSecondary)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                        // One element per point, so the cursor steps heading-and-all
+                        // rather than splitting each into two stops.
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 24)
+            }
+        } bottom: {
+            DockPillRow {
+                DockPill(title: "Got it") { vm.acknowledgeBasics() }
             }
         }
     }

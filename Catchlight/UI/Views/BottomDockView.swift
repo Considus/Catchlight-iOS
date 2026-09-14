@@ -77,15 +77,7 @@ struct BottomDockView: View {
     /// The Add hint's text, in ONE place. V36 (audit §15af, D-260) folds it into the Add
     /// button's own accessibility label while the hint shows, and the label and the visible
     /// bubble must never drift apart — two literals would let them.
-    private static let addHintText = "What's your first Take?"
 
-    /// Cursor focus for the two hints this view hosts. Owned HERE, not inside
-    /// `OrientationTooltip`: a view that owns the focus state for its own element
-    /// rebuilds that element when the state flips, and the owner's captures show the
-    /// hint dying about a second after the cursor lands on it. The confirm-step warning
-    /// keeps its state in the parent and works.
-    @AccessibilityFocusState private var addHintFocused: Bool
-    @AccessibilityFocusState private var settingsHintFocused: Bool
 
     /// One dock slot. The row divides its padded width into four, so this is also how
     /// far in the + button's centre sits — which is what the Add hint's arrow has to
@@ -173,130 +165,7 @@ struct BottomDockView: View {
                 }
             }
         }
-        // First-run Hint 3 — centred on the dock's x-axis (= screen centre),
-        // not the off-centre Dailies slot it used to hang over (owner 2026-06-16).
-        // The GeometryReader spans the full padded dock width, so `.top`-centre
-        // alignment lands the bubble dead-centre; the same vertical offset as
-        // before keeps it floating just above the toolbar.
-        // 🚨 Anchored on the BOTTOM, not the top (owner device report 2026-09-04).
-        // With `.top` the bubble's TOP was pinned and it grew DOWNWARD, so every step up in
-        // text size pushed the arrow further into the dock until it sat over the buttons. The
-        // arrow has to hold its position against the ring it points at, so pin the bubble's
-        // BOTTOM a fixed gap above the button and let it grow upward into free space.
-        // `buttonSize + 14` reproduces the old default-size position exactly.
-        // 🚨 The Add hint lives HERE, on the dock row, not inside the Add Button's `label:`
-        // closure where it used to sit (audit §15ai, V40/V42).
-        //
-        // MEASURED on the bench: inside the button, the button's ACCESSIBILITY frame was
-        // 348x180 while the hint showed, against 44x44 without it. `.offset` is a post-layout
-        // visual transform, so the element inflated to the union of the button and the
-        // UN-offset bubble — 348pt of a 393pt screen, spanning all four dock buttons and
-        // reaching 136pt above itself. That is the owner's "focus box around both the tooltip
-        // and the two buttons", it is why focus stolen from the dock could be stolen from
-        // `Sequence` (which sits inside that frame), and it made the button's own target a
-        // lie.
-        //
-        // On the row it is drawn after every button and belongs to none of them. NOT
-        // `.accessibilityHidden(true)` on the tooltip — D-221: a hide on a shape-bearing view
-        // materialises an anonymous element rather than removing one. The hint's WORDS still
-        // reach VoiceOver through the Add button's own label, which the owner's capture
-        // confirms is read in full.
-        .overlay(alignment: .bottomLeading) {
-            if orientation.showAddPulse {
-                OrientationTooltip(text: Self.addHintText,
-                                   voiceOverText: "Double-tap Add Take to write your first Take.",
-                                   arrowEdge: .bottom,
-                                   arrowAlignment: .leading)
-                    .fixedSize()
-                    // 🚨 THE ARROW MUST LAND ON THE + BUTTON, NOT THE ROW'S EDGE.
-                    // MEASURED 2026-09-10: button (36, 766, 44, 44) so its centre is
-                    // x=58; bubble (12, 713.7, 173, 46.3) with its arrow 22pt in, so the
-                    // arrow sat at x=34 — 24pt to the LEFT of the button, pointing at
-                    // nothing. The owner's screenshot shows exactly that.
-                    //
-                    // Cause: #235 moved this hint OUT of the Add Button's label (where it
-                    // was positioned relative to the BUTTON) and onto the dock row, to fix
-                    // the button's inflated accessibility frame. The frame was fixed and
-                    // the visual attachment broke with it, and the two measurements are
-                    // byte-identical two days apart, so it has been wrong since.
-                    //
-                    // The bubble aligns to the row's leading edge; the + is CENTRED in its
-                    // quarter-slot, `slotW / 2` in. The arrow already sits `arrowEdgeInset`
-                    // (22) from the bubble's leading, so the shortfall is exactly the rest.
-                    .offset(x: dockSlotWidth / 2 - 22, y: -(buttonSize + 14))
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomLeading)))
-                    .allowsHitTesting(false)
-                    // 🚨 NO `.accessibilityHidden(true)` here. It was applied and it did NOT
-                    // work: `TooltipFrameProbeTests` finds this element by label and passes,
-                    // and the owner's capture shows "What's your first Take?" as a focusable
-                    // node in its own right. `OrientationTooltip` calls `.accessibilityElement()`
-                    // on itself, and hiding a shape-bearing view that has made itself an element
-                    // leaves the element in place (D-221, in reverse).
-                    //
-                    // So the tree carried a node marked hidden while still being reachable. An
-                    // element in that inconsistent state, sitting next to the dock, is the last
-                    // candidate standing for V40's focus steal, which measurement has shown is
-                    // conditional on this tooltip being mounted and is caused by none of: an
-                    // accessibility post, a timeline reload, or a frame overlap.
-                    //
-                    // It should be a HONEST element instead: reachable, labelled, announced
-                    // once. That is also what V43 wants — the tooltips being read at all.
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if orientation.showSettingsHint {
-                OrientationTooltip(text: "Swipe up here for settings.",
-                                   voiceOverText: "Select Storyboard, then use the rotor to select "
-                                                + "Actions and double-tap to open Settings.",
-                                   arrowEdge: .bottom)
-                    .fixedSize()
-                    .offset(y: -(buttonSize + 14))
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottom)))
-                    .allowsHitTesting(false)
-            }
-        }
         .frame(height: buttonSize)
-        // Claim the cursor from HERE — the parent — when a hint becomes visible, which is
-        // the shape the confirm-step warning uses and the tooltip's own `onAppear` did not.
-        // 🚨 `initial: true` IS LOAD-BEARING. Without it the claim never fires when the
-        // hint is already visible as the view appears — which is every launch armed at a
-        // step, and the owner's captures on 662fbbe carry NO `FOCUS CLAIM` line at all.
-        // `onChange` fires on a CHANGE; the step is set before the dock exists, so there
-        // is none. The `onAppear` this replaced fired on mount and had no such hole.
-        // 🚨 DOES THE BINDING FLIP BACK? The cursor now lands on the Add button — a
-        // permanent control that is never rebuilt — and loses focus about a second later
-        // anyway (owner, 0d051a1). So this was never about the tooltip's element dying.
-        //
-        // `@AccessibilityFocusState` is a two-way binding: if SwiftUI writes it back to
-        // false, that actively REMOVES focus and VoiceOver falls back to the first element,
-        // which is what "then it goes to Dailies" looks like. If instead focus moves while
-        // the binding stays true, something outside our code moved the cursor.
-        //
-        // Those need opposite fixes and nothing in any capture distinguishes them. One
-        // line does.
-        .onChange(of: addHintFocused) { was, now in
-            A11yDiag.note("BINDING addHintFocused \(was) -> \(now)")
-        }
-        .onChange(of: orientation.showAddPulse, initial: true) { _, showing in
-            guard showing else { return }
-            // ANNOUNCE the instruction, because the cursor now lands on the Add button and
-            // VoiceOver will read "Add Take" — not the hint's words. This is not the
-            // duplicate that was removed earlier: then, focus landed on the hint itself and
-            // the announcement said the same thing twice. Here the two carry different
-            // information, and both are needed.
-            A11yDiag.post(.announcement,
-                          argument: "Double-tap Add Take to write your first Take.",
-                          from: "dock.addHint")
-            VoiceOverFocus.takeFocus(from: "dock.addHint") { addHintFocused = true }
-        }
-        .onChange(of: orientation.showSettingsHint, initial: true) { _, showing in
-            guard showing else { return }
-            A11yDiag.post(.announcement,
-                          argument: "Select Storyboard, then use the rotor to select "
-                                  + "Actions and double-tap to open Settings.",
-                          from: "dock.settingsHint")
-            VoiceOverFocus.takeFocus(from: "dock.settingsHint") { settingsHintFocused = true }
-        }
         .animation(.easeInOut(duration: 0.2), value: ui.dockMode)
         .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
         .padding(.top, 10)
@@ -324,13 +193,7 @@ struct BottomDockView: View {
                     guard value.startLocation.y < buttonSize + 10 else { return }
                     guard value.translation.height < -30,
                           abs(value.translation.width) < 60 else { return }
-                    if orientation.showSettingsHint {
-                        // Hint 3 still up — dismiss the hint without opening
-                        // (spec: visual only during the hint).
-                        orientation.didDismissSettingsHint()
-                    } else {
-                        ui.isSettingsPresented = true
-                    }
+                    ui.isSettingsPresented = true
                 }
         )
         .onChange(of: ui.dockMode) { _, mode in
@@ -405,7 +268,6 @@ struct BottomDockView: View {
         // never remounts, and three separate causes were removed without changing it. This
         // stops fighting that: the Add button is a permanent control, it is what the hint
         // tells you to double-tap, and the cursor arrives ready to do it.
-        .accessibilityFocused($addHintFocused)
         // V36 (audit §15af, D-260): the tooltip is overlaid INSIDE this Button's `label:`
         // closure, so it belongs to the button's accessibility subtree and this label
         // REPLACES it — `OrientationTooltip`'s own `.accessibilityElement()` and label never
@@ -440,22 +302,9 @@ struct BottomDockView: View {
     /// (the Storyboard vs a single Take's list).
     private var angleNavButton: some View {
         Button {
-            if orientation.showSettingsHint {
-                orientation.didDismissSettingsHint()
-            } else {
-                ui.isStoryboardPresented = true
-            }
+            ui.isStoryboardPresented = true
         } label: {
             ZStack {
-                if orientation.showSettingsHint {
-                    Circle()
-                        .strokeBorder(
-                            Color.ckAdd.opacity(0.6),
-                            style: StrokeStyle(lineWidth: 2, dash: [5, 4])
-                        )
-                        .frame(width: buttonSize, height: buttonSize)
-                        .transition(.opacity)
-                }
                 dockRing()
                 Image(systemName: "angle")
                     .font(.system(size: 24, weight: .light))
@@ -471,7 +320,6 @@ struct BottomDockView: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("angle-tab")
         // Hint 3's cursor lands here for the same reason — this is the control it names.
-        .accessibilityFocused($settingsHintFocused)
         .accessibilityLabel("Storyboard")
         // V27 (audit 2026-08): the hint used to say "Swipe up on the toolbar to
         // open Settings" — a gesture VoiceOver takes for itself, so the hint

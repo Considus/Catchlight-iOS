@@ -112,7 +112,10 @@ final class OnboardingConfirmGateTests: XCTestCase {
         // Recover in place, then answer correctly.
         vm.deselectSlot(at: 0)
         for word in expected { vm.tapBankWord(word) }
-        XCTAssertEqual(vm.step, .complete,
+        // `.basics` now, not `.complete`: the confirm step routes through the basics
+        // page (which replaced the first-run tooltips) before the closing screen. The
+        // GATE is what this asserts, and it still passes — only the next screen changed.
+        XCTAssertEqual(vm.step, .basics,
                        "the gate must pass after a deselect-corrected mistake")
     }
 }
