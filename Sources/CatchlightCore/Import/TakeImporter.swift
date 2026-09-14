@@ -12,7 +12,7 @@
 //    • `parseDocument` — recognises Catchlight's OWN Markdown export and SPLITS it back
 //      into the individual Takes (D-104). When the export carries the trailing
 //      `<!-- catchlight:data -->` block (enriched exports), every field round-trips
-//      losslessly — exact timestamps, Obie, and full reminders. An older export
+//      losslessly — exact timestamps, Obie, Important, manual order, and full reminders. An older export
 //      without that block still splits on its `## …` headings, recovering body, type,
 //      date, and reminder time from the heading alone. Anything that isn't a
 //      Catchlight export falls through to `parse` (one Take), unchanged.
@@ -151,6 +151,14 @@ public enum TakeImporter {
             reminder.isDelivered = false
             take.timeReminder = reminder
         }
+        // Added 2026-09-14 alongside the two new metadata keys. `?? false` is the
+        // BACK-COMPAT path, not a default worth arguing about: an export written
+        // before that date carries no `isImportant`, and an unflagged Take is the
+        // honest reading of a file that never recorded the flag.
+        take.isImportant = meta.isImportant ?? false
+        // nil is meaningful here and is passed through unchanged: it means the Take
+        // had no manual position, which is what every Take has until somebody drags one.
+        take.manualOrder = meta.manualOrder
         take.normaliseActivityFloor()
         return take
     }
