@@ -1170,38 +1170,49 @@ private struct BasicsStep: View {
     let page: Page
 
     @Environment(OnboardingViewModel.self) private var vm
-    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
 
-    private var points: [(String, String)] {
-        switch (page, voiceOverEnabled) {
-        case (.first, true):
-            return [("Add a Take",
-                     "Double-tap Add Take in the toolbar. To save, double-tap Save and "
-                     + "close. That's the whole capture flow."),
-                    ("Shape your Take with the Iris",
-                     "Double-tap an Iris to make that Take a task, set a reminder, or "
-                     + "make it important.")]
-        case (.first, false):
-            return [("Add a Take",
-                     "Tap the + button. Tap anywhere outside the Take to save. That's "
-                     + "the whole capture flow."),
-                    ("Shape your Take with the Iris",
-                     "Tap the circle beside any Take to make it a task, set a reminder, "
-                     + "or make it important.")]
-        case (.second, true):
-            return [("Your Obie",
-                     "Select an Iris, use the rotor to select Actions, swipe up to "
-                     + "select Make Obie, then double-tap. Only one is ever your Obie, "
-                     + "because there can only be one that's most important."),
-                    ("Settings",
-                     "Select Storyboard, then use the rotor to select Actions and "
-                     + "double-tap to open Settings.")]
-        case (.second, false):
-            return [("Your Obie",
-                     "Press and hold an Iris to pin one above the rest. Only one is ever "
-                     + "your Obie, because there can only be one that's most important."),
-                    ("Settings",
-                     "Simply swipe up from the toolbar.")]
+    /// One point: the title, the sentence PRINTED on the page, and the sentence
+    /// VoiceOver SPEAKS in its place.
+    ///
+    /// 🚨 The two are not alternatives on screen (owner 2026-09-14). The printed copy is
+    /// his, written for a sighted reader, and it is what everybody sees — a VoiceOver
+    /// user included. Only the SPOKEN label swaps, because the gestures genuinely differ:
+    /// "Tap the + button" is right for a finger and wrong for the cursor, where a swipe
+    /// up is swallowed by VoiceOver and a press-and-hold never reaches the app. Rotors
+    /// and double-taps are spoken instruction, never page text. The first cut swapped the
+    /// visible `Text` instead, which printed the rotor wording on screen.
+    private struct Point {
+        let title: String
+        let shown: String
+        let spoken: String
+    }
+
+    private var points: [Point] {
+        switch page {
+        case .first:
+            return [Point(title: "Add a Take",
+                          shown: "Tap the + button. Tap anywhere outside the Take to "
+                          + "save. That's the whole capture flow.",
+                          spoken: "Double-tap Add Take in the toolbar. To save, "
+                          + "double-tap Save and close. That's the whole capture flow."),
+                    Point(title: "Shape your Take with the Iris",
+                          shown: "Tap the circle beside any Take to make it a task, set "
+                          + "a reminder, or make it important.",
+                          spoken: "Double-tap an Iris to make that Take a task, set a "
+                          + "reminder, or make it important.")]
+        case .second:
+            return [Point(title: "Your Obie",
+                          shown: "Press and hold an Iris to pin one above the rest. Only "
+                          + "one is ever your Obie, because there can only be one that's "
+                          + "most important.",
+                          spoken: "Select an Iris, use the rotor to select Actions, "
+                          + "swipe up to select Make Obie, then double-tap. Only one is "
+                          + "ever your Obie, because there can only be one that's most "
+                          + "important."),
+                    Point(title: "Settings",
+                          shown: "Simply swipe up from the toolbar.",
+                          spoken: "Select Storyboard, then use the rotor to select "
+                          + "Actions and double-tap to open Settings.")]
         }
     }
 
@@ -1227,22 +1238,24 @@ private struct BasicsStep: View {
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 24)
                 VStack(spacing: 20) {
-                    ForEach(points, id: \.0) { title, body in
+                    ForEach(points, id: \.title) { point in
                         VStack(spacing: 6) {
-                            Text(title)
+                            Text(point.title)
                                 .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
                                 .foregroundStyle(Color.ckTextPrimary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
-                            Text(body)
+                            Text(point.shown)
                                 .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                                 .foregroundStyle(Color.ckTextSecondary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         // One element per point, so the cursor steps heading-and-all
-                        // rather than splitting each into two stops.
+                        // rather than splitting each into two stops — and an explicit
+                        // label, which REPLACES the printed sentence with the spoken one.
                         .accessibilityElement(children: .combine)
+                        .accessibilityLabel("\(point.title). \(point.spoken)")
                     }
                 }
                 Spacer().frame(height: 24)
