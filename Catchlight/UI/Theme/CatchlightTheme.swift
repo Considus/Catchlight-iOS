@@ -516,16 +516,6 @@ enum CatchlightFont {
         return .system(style, design: .serif)
     }
 
-    /// Fixed-size roman counterpart of `displayRoman` for callers that must NOT
-    /// scale with Dynamic Type (brand display chrome). Falls back to the upright
-    /// system serif.
-    static func displayRomanFixed(size: CGFloat) -> Font {
-        if let name = firstAvailable(displayRomanCandidates) {
-            return .custom(name, fixedSize: size)
-        }
-        return .system(size: size, weight: .regular, design: .serif)
-    }
-
     /// Display / brand headings — Cormorant Garamond Italic at a FIXED point size
     /// that does NOT respond to Dynamic Type. Use ONLY for brand display: the
     /// wordmark, onboarding headings, the Obie title treatment, BIP-39 word chips.
