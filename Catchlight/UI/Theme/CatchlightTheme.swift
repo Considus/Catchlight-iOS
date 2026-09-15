@@ -217,7 +217,7 @@ extension Color {
     //
     // The Take card surface is `ckSurface` (White Daylight / Dusk Night). These
     // tokens cover the two variant treatments v1.7 layers on top. Added 2026-06-14
-    // (fix pass 1, D-040) — record in the Design System.
+    // (fix pass 1, D-040).
 
     /// Obie card BACKGROUND — a warm tint distinct from the plain surface so the
     /// pinned Take reads as special. Daylight #FBF8F3 (Ember @8% blended onto
