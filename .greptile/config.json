@@ -1,0 +1,14 @@
+{
+  "labels": ["greptile"],
+  "triggerOnUpdates": false,
+  "triggerOnDrafts": false,
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax"],
+  "fileChangeLimit": 80,
+  "excludeAuthors": ["dependabot[bot]", "renovate[bot]"],
+  "ignorePatterns": "*.xcodeproj/**\n.build/**\nDerivedData/**\n*.xcassets/**\n*.png\n*.jpg",
+  "statusCheck": true,
+  "fixWithAI": true,
+  "includeConfidenceScore": true,
+  "instructions": "A SwiftUI-first iOS app holding private notes under a key only the user has. Reviews cost a credit from a 30-a-month budget, so spend the comments on correctness, security and broken contracts rather than taste. Weight the review towards the non-negotiables in README.md: zero knowledge with nothing transmitted off the device, encryption always on, kSecAttrSynchronizable false on every Keychain item, and offline-first. The organisation-level custom context carries the standing rules: the frozen crypto contract bytes, the iOS 18.0 floor against the iOS 26 SDK, sync round-tripping, and accessibility identifiers as a test contract. The Xcode project is generated from project.yml by XcodeGen and is not committed."
+}
