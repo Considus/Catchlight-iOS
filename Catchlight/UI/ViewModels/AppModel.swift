@@ -332,6 +332,11 @@ final class AppModel {
             UserDefaults(suiteName: AppGroup.identifier)?
                 .set(bookmark, forKey: Wiring.bookmarkDefaultsKey)
             restoreAwaitingFolder = false   // guidance served its purpose
+            // The folder itself is never named: a path identifies the provider and can
+            // carry an account handle. The BOUNDARY is the whole point — a diagnostics
+            // log spanning several providers is otherwise unsegmentable from its own
+            // contents, and the tester writes the provider against this timestamp.
+            DiagnosticsLog.shared.record(.lifecycle, "Cloud folder connected")
             performManualSync?()
             return nil
         } catch {

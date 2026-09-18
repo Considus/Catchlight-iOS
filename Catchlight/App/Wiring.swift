@@ -56,6 +56,7 @@ enum Wiring {
         let defaults = UserDefaults(suiteName: AppGroup.identifier)
         defaults?.removeObject(forKey: bookmarkDefaultsKey)
         defaults?.removeObject(forKey: legacyCloudFolderURLStringKey)
+        DiagnosticsLog.shared.record(.lifecycle, "Cloud folder disconnected (local-only)")
     }
 
     /// Structured cloud-bookmark error so the UI layer can map to a user-
@@ -360,6 +361,10 @@ enum Wiring {
         if cloud.bookmarkWasStale,
            let fresh = try? FileCloudFolder.makeBookmark(for: cloud.folderURL) {
             defaults?.set(fresh, forKey: bookmarkDefaultsKey)
+            // A silent self-heal until now. It is not a folder CHANGE and must not be
+            // read as one, but it is the moment access would otherwise have degraded,
+            // so a run that later goes wrong can be lined up against it.
+            DiagnosticsLog.shared.record(.lifecycle, "Cloud folder bookmark re-minted (was stale)")
         }
         return cloud
     }
