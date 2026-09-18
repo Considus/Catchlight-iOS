@@ -1,0 +1,14 @@
+{
+  "labels": ["greptile"],
+  "triggerOnUpdates": false,
+  "triggerOnDrafts": false,
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax"],
+  "fileChangeLimit": 60,
+  "excludeAuthors": ["dependabot[bot]", "renovate[bot]"],
+  "ignorePatterns": "DerivedData/**\nbuild/**\n*.xcodeproj/**\n*.xcworkspace/**\nCatchlight/Resources/Fonts/**\n**/*.png\n**/*.jpg\n**/*.webp",
+  "statusCheck": true,
+  "fixWithAI": true,
+  "includeConfidenceScore": true,
+  "instructions": "A SwiftUI iOS app with UIKit at the editor and timeline seams, holding the owner's real daily notes under zero-knowledge encryption. Reviews cost a credit from a 30-a-month budget, so spend the comments on correctness, security and broken contracts rather than taste. Weight the review towards anything that can lose or expose a note: key derivation and the keychain, sync round-trips where every field must survive, and destructive paths. Accessibility changes carry their own history — an unrequested VoiceOver fix once cost six days (D-263) — so flag behaviour changes to accessibility posts and focus claims rather than style. AGENTS.md is the source of truth for the ground rules, the build chain and what can only be tested on a device."
+}

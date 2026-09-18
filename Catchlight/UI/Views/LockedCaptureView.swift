@@ -50,9 +50,7 @@ struct LockedCaptureView: View {
                 // tapped away to save heard nothing happen at all.
                 .onChange(of: unlockFailed) { _, failed in
                     if failed {
-                        A11yDiag.post(.announcement,
-                                      argument: "Couldn't unlock. Tap to save again.",
-                                      from: "lockedCapture.unlockFailed")
+                        UIAccessibility.post(notification: .announcement, argument: "Couldn't unlock. Tap to save again.")
                     }
                 }
 

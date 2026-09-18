@@ -58,29 +58,17 @@ enum VoiceOverFocus {
     /// focus is right only when there IS a cursor to seize. With VoiceOver off
     /// the call is meaningless, and running it anyway would make the behaviour
     /// harder to reason about later.
-    /// - Parameter site: where the claim came from, e.g. `"tooltip.onAppear"`. Required,
-    ///   not defaulted: a claim that cannot say who made it is the thing this logging exists
-    ///   to stop.
-    /// `@MainActor` because it reads VoiceOver's state, writes focus state and records to the
-    /// diagnostics log, all of which belong on the main actor. Every caller is a SwiftUI
+    /// `@MainActor` because it reads VoiceOver's state and writes focus state, both of which
+    /// belong on the main actor. Every caller is a SwiftUI
     /// `onAppear` / `onChange` closure, which is already there.
     @MainActor
-    static func takeFocus(from site: String,
-                          after delay: TimeInterval = settleDelay,
+    static func takeFocus(after delay: TimeInterval = settleDelay,
                           _ assign: @escaping @MainActor () -> Void) {
-        guard UIAccessibility.isVoiceOverRunning else {
-            // Logged rather than silent. Under `--a11y-diag` the recorder runs with VoiceOver
-            // off, and "the claim was skipped" and "the claim was made and lost" look identical
-            // in a capture that shows neither.
-            A11yDiag.note("FOCUS CLAIM SKIPPED (VoiceOver off) from=\(site)")
-            return
-        }
-        A11yDiag.note("FOCUS CLAIM from=\(site) in=\(String(format: "%.2f", delay))s")
+        guard UIAccessibility.isVoiceOverRunning else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             // Already on main by construction; `assumeIsolated` states that to the compiler
             // rather than hopping again and moving the timing this whole type exists to control.
             MainActor.assumeIsolated {
-                A11yDiag.note("FOCUS CLAIM APPLIED from=\(site)")
                 assign()
             }
         }

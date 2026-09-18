@@ -71,7 +71,7 @@ public final class DiagnosticsLog: @unchecked Sendable {
     /// event under investigation ("as Dailies appear") happens in the first seconds. The
     /// instrument was quietly discarding the exact evidence it existed to collect, and a
     /// capture that has thrown away its own beginning looks identical to one that found
-    /// nothing. See `A11yDiag`.
+    /// nothing.
     public static var maxLifecycleEntries = 400
 
     /// Hard byte ceiling for the whole file. `maxEntries` bounds the COUNT, not the SIZE — one

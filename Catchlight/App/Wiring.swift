@@ -282,8 +282,7 @@ enum Wiring {
         // Takes instead of the owner's own, which is not what "launch it at hint 1" means
         // when he has data.
         //
-        // 🚨 Logged UNCONDITIONALLY, not through `A11yDiag.note`, which only records while
-        // VoiceOver is running. An unrecognised launch argument is silently ignored by
+        // 🚨 Logged UNCONDITIONALLY. An unrecognised launch argument is silently ignored by
         // iOS, so a flag that is absent and a flag that did nothing look identical from
         // the outside — this shipped once, was lost in a branch rebuild, and two launches
         // were reported as "armed at hint 1" when the app had no such flag. The line below

@@ -205,7 +205,7 @@ struct BottomDockView: View {
             case .filtering: announcement = "Dock showing timeline filters."
             case .searching: announcement = "Dock showing search."
             }
-            A11yDiag.post(.layoutChanged, argument: announcement, from: "dock.dockModeChanged")
+            UIAccessibility.post(notification: .layoutChanged, argument: announcement)
         }
     }
 

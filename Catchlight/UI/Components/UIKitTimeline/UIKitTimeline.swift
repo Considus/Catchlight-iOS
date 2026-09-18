@@ -693,9 +693,6 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         var snapshot = dataSource.snapshot()
         guard !snapshot.itemIdentifiers.isEmpty else { return }
         snapshot.reconfigureItems(snapshot.itemIdentifiers)
-        // The one apply path that was NOT instrumented, so an elimination that read
-        // "only two TIMELINE events" could not have seen it (V40, 2026-09-09).
-        A11yDiag.note("TIMELINE reconfigureAll \(snapshot.itemIdentifiers.count) reason=isReorderable")
         dataSource.apply(snapshot, animatingDifferences: false)
     }
 
@@ -864,12 +861,11 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         // many times during the new-Take bloom animation; re-applying an identical snapshot each
         // time churned collection layout and thrashed the keyboard placement (caps-flash, attempt 1).
         if items != lastItems {
-            // V40 instrumentation: a diffable APPLY is the strongest candidate for the focus
-            // jump. The owner's capture shows focus leaving the Add button within a second,
-            // five times out of five, landing on the FIRST COLLECTION CELL — and with no
-            // accessibility post anywhere near it. Something re-anchors the cursor without
-            // the app asking; a snapshot apply on this collection would do exactly that.
-            A11yDiag.note("TIMELINE apply items \(lastItems.count) -> \(items.count)")
+            // During V40 a diffable APPLY was the leading candidate for the focus jump:
+            // focus left the Add button within a second, five times out of five, landing
+            // on the FIRST COLLECTION CELL with no accessibility post anywhere near it.
+            // The actual cause turned out to be V30's sort priority on the dock (D-263),
+            // so this is kept as the next place to look if the jumps are ever seen again.
             lastItems = items
             var snapshot = NSDiffableDataSourceSnapshot<Int, TimelineRow>()
             snapshot.appendSections([0])
@@ -915,7 +911,6 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
             // collection. Record the reason, because the reasons need different fixes.
             let why = layoutChanged ? "layout(spineX/cardGap)"
                 : (monthFilterChanged ? "monthFilter" : (snoozeChanged ? "snooze" : "content"))
-            A11yDiag.note("TIMELINE reconfigure \(toApply.count) reason=\(why)")
             var reconfigured = current
             reconfigured.reconfigureItems(toApply)
             dataSource.apply(reconfigured, animatingDifferences: false)
@@ -974,13 +969,11 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
               dataSource != nil,
               let indexPath = dataSource.indexPath(for: .take(id)),
               let cell = collectionView.cellForItem(at: indexPath) else { return }
-        // 🚨 Routed through `A11yDiag.post`, NOT raw. This is the only place in the app
-        // that moves the VoiceOver cursor to a timeline CELL, and as a raw call it was
-        // invisible to every capture — including the census that concluded "no
-        // accessibility post precedes a steal". That census could not have seen this.
-        // The owner's jumps land on the collection's first cell, which is exactly what
-        // this notification does, so it must be visible before it can be ruled in or out.
-        A11yDiag.post(.layoutChanged, argument: cell, from: "timeline.requestFocus")
+        // 🚨 This is the only place in the app that moves the VoiceOver cursor to a
+        // timeline CELL. The owner's V40 jumps landed on the collection's first cell,
+        // which is exactly what this notification does — so if cursor jumps are ever
+        // reported again, this line is the first thing to rule in or out.
+        UIAccessibility.post(notification: .layoutChanged, argument: cell)
     }
 
     func requestReveal(_ id: UUID?) {
