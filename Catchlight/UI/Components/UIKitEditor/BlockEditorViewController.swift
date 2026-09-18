@@ -503,7 +503,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         stack.insertArrangedSubview(row, at: neighbourIndex)
         UIView.animate(withDuration: 0.15) { self.stack.layoutIfNeeded() }
         delegate?.blockEditor(self, didMoveBlock: id, toIndex: neighbourIndex)
-        A11yDiag.post(.layoutChanged, argument: tv, from: "blockEditor.focusTextView")
+        UIAccessibility.post(notification: .layoutChanged, argument: tv)
         return true
     }
 

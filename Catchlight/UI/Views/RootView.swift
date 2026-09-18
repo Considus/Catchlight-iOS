@@ -155,10 +155,9 @@ struct RootView: View {
         .onChange(of: app.lockState) { old, new in
             if old != .unlocked && new == .unlocked {
                 guard orientation.isComplete else {
-                    A11yDiag.note("root.unlocked re-anchor SKIPPED — tour step \(orientation.step) owns the cursor")
                     return
                 }
-                A11yDiag.post(.screenChanged, argument: nil, from: "root.unlocked")
+                UIAccessibility.post(notification: .screenChanged, argument: nil)
             }
         }
         .task {
