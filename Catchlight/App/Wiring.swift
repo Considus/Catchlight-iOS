@@ -25,7 +25,7 @@ enum Wiring {
     /// the background sync engine reads from below.
     static let bookmarkDefaultsKey = "catchlight.cloudFolderBookmark"
     /// Legacy paste-a-URL slot, retired 2026-06-22 (a typed path can never gain
-    /// iOS write access — only iCloud + Dropbox folder-picks work). Kept private
+    /// iOS write access — only a folder picked through Files works). Kept private
     /// solely to purge any value an earlier build persisted; nothing reads it.
     private static let legacyCloudFolderURLStringKey = "catchlight.cloudFolderURLString"
     private static let deviceIdDefaultsKey = "catchlight.deviceId"
