@@ -693,8 +693,6 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         var snapshot = dataSource.snapshot()
         guard !snapshot.itemIdentifiers.isEmpty else { return }
         snapshot.reconfigureItems(snapshot.itemIdentifiers)
-        // The one apply path that was NOT instrumented, so an elimination that read
-        // "only two TIMELINE events" could not have seen it (V40, 2026-09-09).
         dataSource.apply(snapshot, animatingDifferences: false)
     }
 
@@ -863,11 +861,11 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         // many times during the new-Take bloom animation; re-applying an identical snapshot each
         // time churned collection layout and thrashed the keyboard placement (caps-flash, attempt 1).
         if items != lastItems {
-            // V40 instrumentation: a diffable APPLY is the strongest candidate for the focus
-            // jump. The owner's capture shows focus leaving the Add button within a second,
-            // five times out of five, landing on the FIRST COLLECTION CELL — and with no
-            // accessibility post anywhere near it. Something re-anchors the cursor without
-            // the app asking; a snapshot apply on this collection would do exactly that.
+            // During V40 a diffable APPLY was the leading candidate for the focus jump:
+            // focus left the Add button within a second, five times out of five, landing
+            // on the FIRST COLLECTION CELL with no accessibility post anywhere near it.
+            // The actual cause turned out to be V30's sort priority on the dock (D-263),
+            // so this is kept as the next place to look if the jumps are ever seen again.
             lastItems = items
             var snapshot = NSDiffableDataSourceSnapshot<Int, TimelineRow>()
             snapshot.appendSections([0])

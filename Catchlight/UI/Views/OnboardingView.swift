@@ -63,8 +63,6 @@ struct OnboardingView: View {
         // which V32 made the page heading. Same call, same reasoning, as the unlock
         // transition in `RootView` — the precedent this follows rather than invents.
         .onChange(of: vm.step) { _, _ in
-            // Instrumented for the same reason as the timeline's: a raw post is invisible
-            // to every capture, and an invisible post cannot be eliminated.
             UIAccessibility.post(notification: .screenChanged, argument: nil)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
