@@ -10,7 +10,7 @@
 //  `catchlight.cloudFolderBookmark` UserDefaults key that `Wiring.makeSyncEngine`
 //  and `FileCloudFolder(bookmark:)` resolve at sync time.
 //
-//  Supported providers = iCloud Drive + Dropbox only (device-verified
+//  Tested providers = iCloud Drive, Dropbox, Internxt, Koofr, Filen (device-verified
 //  2026-06-22): folder-in-place selection requires NSFileProviderReplicatedExtension,
 //  which only those two implement — every other cloud greys out in the picker.
 //  The paste-a-URL fallback was removed 2026-06-22; a typed path can never gain
@@ -135,7 +135,7 @@ struct CloudStorageView: View {
     /// (owner 2026-06-22), plus the privacy reassurance underneath.
     private var intro: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Choose from iCloud Drive or Dropbox")
+            Text("Choose a cloud folder you own")
                 .font(CatchlightFont.display(size: 28, relativeTo: .title2))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
@@ -208,15 +208,22 @@ struct CloudStorageView: View {
         }
     }
 
-    /// Dropbox needs its app present to expose the folder through Files; iCloud is
-    /// always there, so this only matters for the Dropbox path.
+    /// Every provider except iCloud needs its own app present to expose the folder
+    /// through Files, so the install-and-sign-in note applies to all of them.
+    ///
+    /// The tested list is named here rather than in the heading, and it is phrased as
+    /// "tested with" rather than "works with" on purpose (D-064): it is a dated
+    /// observation, not a guarantee, and the enumeration has already been wrong twice.
+    /// A provider greys out in the picker when its Files extension cannot hand an app
+    /// a whole folder, which is the provider's decision and not ours, so saying so
+    /// turns a dead end into an explanation.
     private var finePrint: some View {
         HStack(alignment: .top, spacing: 7) {
             Image(systemName: "info.circle")
                 .font(.system(size: 12))
                 .foregroundStyle(Color.ckTextSecondary)
                 .accessibilityHidden(true)
-            Text("You'll need to have the Dropbox app installed, and signed-in, on your device to access via Catchlight.")
+            Text("Tested with iCloud Drive, Dropbox, Internxt, Koofr and Filen. Others may work, and a provider that greys out in the picker can't hand an app a whole folder. You'll need its app installed and signed in.")
                 .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
                 .foregroundStyle(Color.ckTextSecondary)
                 .fixedSize(horizontal: false, vertical: true)
