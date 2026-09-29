@@ -44,7 +44,7 @@ xcodegen generate
 
 Prefer a shared component or a token over a per-screen implementation. Extract shared logic only when two callers need it; one caller is a layer for nothing.
 
-Product nouns are Capitalised in UI copy only, never in code identifiers. When the subject is what the app holds, the noun is a **Take**.
+Product nouns are Capitalised in UI copy only, never in code identifiers. When the subject is what the app holds, the noun is a **Take**. The product lexicon is `https://catchlight.app/glossary/`: name new types, tests and PR prose after its concepts rather than inventing synonyms.
 
 ⚠️ **Leave the vestigial `SessionController` state alone.** It has been reviewed and deliberately kept. Do not re-flag it.
 
@@ -62,6 +62,12 @@ xcodebuild test -scheme Catchlight -derivedDataPath "$BUILD_DIR/DerivedData" \
   -destination '<a simulator from `xcrun simctl list devices available`>'
 ```
 
+**Agree the seams before writing tests.** Name the public interface each new test will cross, and confirm it before writing the test. Tests live at seams, never against internals: not private methods, not the database behind a store's back, not a mocked internal collaborator. A test that breaks on a refactor that did not change behaviour was testing the implementation.
+
+**An expected value comes from outside the code under test**: a known-good literal, a worked example, the spec, or a fixture captured from a real run. An assertion that recomputes the answer the way the code does passes by construction and can never disagree with it.
+
+**One slice at a time.** One test, the least code that passes it, then the next. Writing every test first tests an imagined shape. Watch each new test fail before making it pass.
+
 🚨 **Read the test count, never the word "passed".** The `Catchlight` scheme runs both `CatchlightTests` and the UI tests, and a scheme that silently stops running one of them still reports success.
 
 🚨 **Accessibility identifiers are a contract with XCUITest.** Renaming or removing one breaks a test that queries it. An identifier on a container is not exposed on iOS 17. Query type-agnostically rather than through a concrete element type.
@@ -76,8 +82,8 @@ Capture the **before** while you are still reproducing the problem, which is whe
 
 ## Ship
 
-Open the PR with the evidence in the body: what changed, how it was tested, the risks. Run the title and body through the anti-slop pass before posting. No AI attribution footer, ever.
+Open the PR with the evidence in the body: what changed, how it was tested, the risks, and whether the change can be walked back. The `pr` skill carries the shape. A PR body is technical writing and takes no voice or anti-slop pass. No AI attribution footer, ever.
 
 **Greptile costs a credit and the account has 30 a month.** A review runs only on a PR carrying the `greptile` label, and that needs TWO settings to agree ([[D-287]]): `labels: ["greptile"]` in `.greptile/config.json`, which decides which PRs qualify, and the dashboard's auto-review trigger, which decides whether anything starts at all. A filter with the trigger off reviews nothing; the trigger on with no filter reviews everything, which is how this repo spent credits on unlabelled PRs until 2026-09-18. Label anything touching crypto, the Keychain, sync round-tripping, the subscription path or an availability guard. Leave a copy fix, a version bump or a design-note tidy unlabelled. Do not run a loop that re-reviews until it scores 5/5; each pass is another credit.
 
-Present the PR URL and stop. Merging is a separate decision, and the worktree stays until the PR is merged or closed.
+Present the PR URL. Once Mark has approved the work and CI is green, merge it. The worktree stays until the PR is merged or closed.
