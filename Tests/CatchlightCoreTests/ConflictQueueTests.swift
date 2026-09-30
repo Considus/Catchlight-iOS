@@ -158,5 +158,69 @@ final class ConflictQueueTests: XCTestCase {
         XCTAssertTrue(queue.pending.isEmpty)
         XCTAssertTrue(try store.allTakes().isEmpty)
     }
+
+    // MARK: - Unverified cloud copies (2026-09-30)
+
+    private func makeUnverified(local: Bool, cloud: Bool) -> UnverifiedCopy {
+        let id = UUID()
+        let old = Date(timeIntervalSince1970: 1_700_000_000)
+        return UnverifiedCopy(
+            id: id,
+            local: local ? Take(id: id, modifiedAt: old, blocks: [.textLine("on this phone")]) : nil,
+            cloud: cloud ? Take(id: id, modifiedAt: old, blocks: [.textLine("cloud copy")]) : nil)
+    }
+
+    func testUnverified_enqueueDeduplicatesByID_andCountsTowardsAttention() {
+        let queue = ConflictQueue()
+        let item = makeUnverified(local: true, cloud: true)
+        queue.enqueueUnverified([item])
+        queue.enqueueUnverified([item])
+        XCTAssertEqual(queue.unverified.count, 1)
+        queue.enqueue([makePair()])
+        XCTAssertEqual(queue.attentionCount, 2, "the banner counts both kinds")
+    }
+
+    func testUnverified_keepPhone_writesLocalAsAFreshEdit() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: true, cloud: true)
+        try store.upsert(item.local!)
+        queue.enqueueUnverified([item])
+        try queue.keepPhone(id: item.id, store: store)
+        let saved = try XCTUnwrap(store.take(id: item.id))
+        XCTAssertEqual(saved.blocks, item.local!.blocks)
+        XCTAssertGreaterThan(saved.modifiedAt, item.local!.modifiedAt,
+                             "a fresh edit, so the next push makes it the newest version")
+        XCTAssertTrue(queue.unverified.isEmpty)
+    }
+
+    func testUnverified_keepCloud_recoversTheCopyAsAFreshEdit() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: false, cloud: true)
+        queue.enqueueUnverified([item])
+        try queue.keepCloud(id: item.id, store: store)
+        let saved = try XCTUnwrap(store.take(id: item.id))
+        XCTAssertEqual(saved.blocks, item.cloud!.blocks)
+        XCTAssertGreaterThan(saved.modifiedAt, item.cloud!.modifiedAt)
+        XCTAssertTrue(queue.unverified.isEmpty)
+    }
+
+    func testUnverified_keepCloud_withNothingReadable_isANoOp() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: true, cloud: false)
+        try store.upsert(item.local!)
+        queue.enqueueUnverified([item])
+        try queue.keepCloud(id: item.id, store: store)
+        XCTAssertEqual(try store.take(id: item.id), item.local, "no cloud copy to keep")
+        XCTAssertEqual(queue.unverified.count, 1, "still waiting for a real choice")
+    }
+
+    func testUnverified_skip_leavesTheStoreAlone() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: false, cloud: true)
+        queue.enqueueUnverified([item])
+        queue.skipUnverified(id: item.id)
+        XCTAssertTrue(queue.unverified.isEmpty)
+        XCTAssertNil(try store.take(id: item.id))
+    }
 }
 #endif

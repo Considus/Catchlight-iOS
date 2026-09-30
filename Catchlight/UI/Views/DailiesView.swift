@@ -591,7 +591,7 @@ struct DailiesView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             if !topStripsStandDown { topStrips }
         }
-        .animation(.easeInOut(duration: 0.2), value: conflicts.pending.isEmpty)
+        .animation(.easeInOut(duration: 0.2), value: conflicts.attentionCount == 0)
         .animation(.easeInOut(duration: 0.2), value: vm.lastError)
         .animation(.easeInOut(duration: 0.2), value: app.lastSyncError)
         .animation(.easeInOut(duration: 0.2), value: app.quarantinedCount)
@@ -1099,7 +1099,7 @@ struct DailiesView: View {
     /// individual strips' own visibility conditions (conflict / lapse / storage / sync /
     /// quarantine); keep in sync if a strip's trigger changes.
     private var hasTopStrip: Bool {
-        conflicts.pending.count > 0
+        conflicts.attentionCount > 0
             || app.phraseMissing
             || app.subscriptionStatus == .lapsed
             || vm.lastError != nil
@@ -1235,7 +1235,12 @@ struct DailiesView: View {
     /// shift down cleanly rather than overlapping. (Task 6.15)
     @ViewBuilder
     private var conflictBanner: some View {
-        let count = conflicts.pending.count
+        let count = conflicts.attentionCount
+        // Two-version conflicts keep their wording; once an unverified copy is in the mix the
+        // accurate thing to say is only that a choice is waiting (2026-09-30).
+        let message = conflicts.unverified.isEmpty
+            ? "\(count) Take\(count == 1 ? "" : "s") changed on another device."
+            : "\(count) Take\(count == 1 ? " needs" : "s need") a decision."
         if count > 0 {
             HStack(spacing: 10) {
                 Image(systemName: "arrow.triangle.2.circlepath")
@@ -1246,7 +1251,7 @@ struct DailiesView: View {
                 // pass should move to a Stringsdict / .xcstrings plural rule
                 // — many locales don't pluralise on the singular/plural axis
                 // alone (e.g. Polish, Arabic). Tracked but not blocking.
-                Text("\(count) Take\(count == 1 ? "" : "s") changed on another device.")
+                Text(message)
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(2)
@@ -1259,7 +1264,7 @@ struct DailiesView: View {
                         .foregroundStyle(Color.ckAccent)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(count) Take\(count == 1 ? "" : "s") changed on another device. Double-tap to review.")
+                .accessibilityLabel("\(message) Double-tap to review.")
             }
             .padding(.horizontal, 16)
             .frame(minHeight: 44)

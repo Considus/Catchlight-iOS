@@ -31,7 +31,7 @@ struct ConflictResolutionView: View {
 
     var body: some View {
         Group {
-            if queue.pending.isEmpty {
+            if queue.attentionCount == 0 {
                 emptyState
             } else {
                 list
@@ -39,7 +39,7 @@ struct ConflictResolutionView: View {
         }
         .background(Color.ckBackground)
         .presentationDragIndicator(.visible)
-        .onChange(of: queue.pending.isEmpty) { _, isEmpty in
+        .onChange(of: queue.attentionCount == 0) { _, isEmpty in
             if isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + autoDismissDelay) {
                     dismiss()
@@ -75,6 +75,15 @@ struct ConflictResolutionView: View {
                     conflictCard(pair)
                         .padding(.horizontal, 20)
                 }
+                if !queue.unverified.isEmpty {
+                    guidance("The copies of these Takes in your cloud folder didn't pass their check. Nothing changes on this phone until you choose.")
+                        .padding(.horizontal, 20)
+                        .padding(.top, queue.pending.isEmpty ? 0 : 8)
+                    ForEach(queue.unverified, id: \.id) { item in
+                        unverifiedCard(item)
+                            .padding(.horizontal, 20)
+                    }
+                }
             }
             .padding(.bottom, 24)
         }
@@ -89,16 +98,107 @@ struct ConflictResolutionView: View {
             Text("SYNC CONFLICTS")
                 .pageHeadingStyle()
                 .accessibilityAddTraits(.isHeader)
-            Text("These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed.")
-                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
-                .foregroundStyle(Color.ckTextSecondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+            if !queue.pending.isEmpty {
+                guidance("These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed.")
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
         .padding(.top, 24)
         .padding(.bottom, 4)
+    }
+
+    private func guidance(_ text: String) -> some View {
+        Text(text)
+            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+            .foregroundStyle(Color.ckTextSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Unverified cloud copies (2026-09-30)
+
+    private static let unverifiedNote = "Didn't pass its check, and may be an older version."
+    private static let replacesNewerEdit = "Whichever you keep replaces the newer edit on the other device when it next syncs."
+
+    /// Three shapes, one per owner rule: both versions (pick one), only this phone's (the newer
+    /// version elsewhere can't be read), or only the cloud copy (recover a Take not on this phone).
+    @ViewBuilder
+    private func unverifiedCard(_ item: UnverifiedCopy) -> some View {
+        VStack(spacing: 12) {
+            switch (item.local, item.cloud) {
+            case let (local?, cloud?):
+                let chosenPhone = selection[item.id]
+                HStack(alignment: .top, spacing: 12) {
+                    versionPanel(.mine, take: local, selected: chosenPhone == true,
+                                 tap: { selection[item.id] = true })
+                    versionPanel(.theirs, take: cloud, selected: chosenPhone == false,
+                                 note: Self.unverifiedNote,
+                                 tap: { selection[item.id] = false })
+                }
+                footnote(Self.replacesNewerEdit)
+                pillRow(primary: "Keep this version", enabled: chosenPhone != nil, id: item.id) {
+                    if chosenPhone == true { try queue.keepPhone(id: item.id, store: dailies.store) }
+                    else { try queue.keepCloud(id: item.id, store: dailies.store) }
+                }
+            case let (local?, nil):
+                versionPanel(.mine, take: local, selected: false,
+                             note: "The newer version from another device can't be read.",
+                             tap: {})
+                    .allowsHitTesting(false)
+                footnote("Keeping it replaces the newer edit on the other device when it next syncs.")
+                pillRow(primary: "Keep this phone's version", enabled: true, id: item.id) {
+                    try queue.keepPhone(id: item.id, store: dailies.store)
+                }
+            case let (nil, cloud?):
+                Text("Recover this Take?")
+                    .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .headline))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                versionPanel(.theirs, take: cloud, selected: false,
+                             note: "It's in your cloud folder but not on this phone. It didn't pass its check, so it may be an older version.",
+                             tap: {})
+                    .allowsHitTesting(false)
+                pillRow(primary: "Recover", enabled: true, id: item.id) {
+                    try queue.keepCloud(id: item.id, store: dailies.store)
+                }
+            case (nil, nil):
+                EmptyView()   // never produced: the engine quarantines these instead
+            }
+        }
+        .padding(14)
+    }
+
+    private func footnote(_ text: String) -> some View {
+        Text(text)
+            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+            .foregroundStyle(Color.ckTextSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func pillRow(primary: String, enabled: Bool, id: UUID,
+                         action: @escaping () throws -> Void) -> some View {
+        HStack(spacing: 12) {
+            DockPill(title: primary) {
+                guard enabled else { return }
+                do {
+                    try action()
+                    selection.removeValue(forKey: id)
+                    dailies.reload()
+                } catch {
+                    dailies.reportStorageError("Couldn't save that choice. Please try again.")
+                }
+            }
+            .disabled(!enabled)
+            .opacity(enabled ? 1 : 0.38)
+            DockPill(title: "Skip for now", secondary: true) {
+                queue.skipUnverified(id: id)
+                selection.removeValue(forKey: id)
+            }
+        }
+        .frame(minHeight: CatchlightLayout.minTouchTarget)
     }
 
     @ViewBuilder
@@ -144,6 +244,7 @@ struct ConflictResolutionView: View {
     private func versionPanel(_ side: Side,
                               take: Take,
                               selected: Bool,
+                              note: String? = nil,
                               tap: @escaping () -> Void) -> some View {
         let body = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
         let displayBody = body.isEmpty ? "Untitled Take" : body
@@ -160,6 +261,12 @@ struct ConflictResolutionView: View {
                 Text(relativeDate(take.modifiedAt))
                     .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
                     .foregroundStyle(Color.ckTextSecondary)
+                if let note {
+                    Text(note)
+                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                        .foregroundStyle(Color.ckAccent)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Text(displayBody)
                     .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
                     .foregroundStyle(Color.ckTextPrimary)
@@ -187,7 +294,7 @@ struct ConflictResolutionView: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(side.label). \(displayBody). Modified \(relativeDate(take.modifiedAt)).")
+        .accessibilityLabel("\(side.label). \(note.map { "\($0) " } ?? "")\(displayBody). Modified \(relativeDate(take.modifiedAt)).")
         .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 

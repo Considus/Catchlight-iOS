@@ -36,10 +36,36 @@
 import Foundation
 import CryptoKit
 
+/// A Take whose cloud copy failed verification (its bytes no longer match the manifest's HMAC)
+/// and which only the user can settle: the manifest names a newer version than this device holds,
+/// or the Take is not on this device at all. Never written locally by the engine.
+public struct UnverifiedCopy: Sendable {
+    public let id: UUID
+    /// This device's version; nil when the Take is not on this device.
+    public let local: Take?
+    /// The cloud copy as it decrypted, which may be an OLDER version than the manifest names;
+    /// nil when it does not decrypt at all.
+    public let cloud: Take?
+
+    public init(id: UUID, local: Take?, cloud: Take?) {
+        self.id = id
+        self.local = local
+        self.cloud = cloud
+    }
+}
+
 public struct SyncReport: Equatable, Sendable {
     public var applied: [UUID] = []          // remote versions written to local
     public var conflicts: [(local: Take, remote: Take)] = []
     public var quarantined: [UUID] = []      // failed HMAC / undecryptable; not shown
+    /// Cloud copies re-uploaded because they failed verification while this device held the very
+    /// version the manifest names. Silent: there is nothing for the user to decide.
+    public var repaired: [UUID] = []
+    /// Cloud copies that failed verification and need the user (see `UnverifiedCopy`).
+    public var unverified: [UnverifiedCopy] = []
+    /// Pull → push hand-off inside `sync()`: copies this device can repair (it holds the exact
+    /// version the manifest names). Push re-checks the version before it writes.
+    var repairCandidates: [UUID] = []
     /// Declared in the manifest but not yet readable from the folder — almost
     /// always provider propagation lag or an evicted file. NOT an integrity
     /// signal; retried implicitly on the next sync pass.
@@ -61,6 +87,8 @@ public struct SyncReport: Equatable, Sendable {
     public static func == (a: SyncReport, b: SyncReport) -> Bool {
         a.applied == b.applied &&
         a.quarantined == b.quarantined &&
+        a.repaired == b.repaired &&
+        a.unverified.map(\.id) == b.unverified.map(\.id) &&
         a.skipped == b.skipped &&
         a.deletedLocally == b.deletedLocally &&
         a.uploaded == b.uploaded &&
@@ -116,7 +144,8 @@ public final class SyncEngine {
     /// re-sign the manifest.
     /// - Parameter isCancelled: cooperative cancellation seam (BGTask expiry).
     @discardableResult
-    public func pushOutbound(isCancelled: () -> Bool = { false }) throws -> SyncReport {
+    public func pushOutbound(isCancelled: () -> Bool = { false },
+                             repairing repairIDs: Set<UUID> = []) throws -> SyncReport {
         guard let cloud else { throw SyncError.noCloudFolderConfigured }
         try acquireLock(on: cloud)
         // Release on success OR failure — never leave a lock behind.
@@ -237,6 +266,15 @@ public final class SyncEngine {
         for take in localTakes where !tombstonedIds.contains(take.id) {
             if isCancelled() { throw CancellationError() }
             if let entry = entries[take.id] {
+                // REPAIR (2026-09-30): the pull found this Take's cloud copy failing verification
+                // while this device holds the very version the manifest names. Re-uploading it
+                // restores exactly what the manifest promises. Re-checked here, not trusted from
+                // the pull: if the entry moved on in between, this is no longer the same version.
+                if repairIDs.contains(take.id), ISO8601.string(from: take.modifiedAt) == entry.modified {
+                    try upload(take, to: cloud, entries: &entries, report: &report)
+                    report.repaired.append(take.id)
+                    continue
+                }
                 // Rewrite only when the cloud copy is demonstrably older. An unparseable
                 // date in a signed manifest makes the entry unusable, so local wins there
                 // too rather than the Take being stranded behind a value nothing can read.
@@ -398,7 +436,8 @@ public final class SyncEngine {
             }
             // Per-blob HMAC verification.
             guard signer.verifyBlob(blobBytes, expectedHex: entry.hmac) else {
-                report.quarantined.append(entry.uuid)    // tampered/corrupted
+                try classifyUnverified(entry, blobBytes: blobBytes,
+                                       pendingTombstones: pendingTombstoneByID, into: &report)
                 continue
             }
             let blob: CloudBlob
@@ -458,6 +497,56 @@ public final class SyncEngine {
         return report
     }
 
+    /// A cloud copy whose bytes no longer match the manifest's HMAC — most often a provider that
+    /// kept an older file after two writes to the same path collided. It used to be quarantined on
+    /// every pull, forever, unless the user happened to edit the Take (the owner's rules for what
+    /// happens instead, 2026-09-30):
+    ///
+    ///   • this device holds the version the manifest names → repair: push re-uploads it on the
+    ///     same sync, silently;
+    ///   • this device holds a NEWER version → nothing to do: push uploads it anyway;
+    ///   • the manifest names a newer version than this device holds, or the Take is not here →
+    ///     `unverified`, for the user to decide, with the cloud copy attached when it decrypts;
+    ///   • not here and unreadable, or written by a newer envelope version → quarantined.
+    ///
+    /// Nothing unverified is ever written locally here. AES-GCM authenticates the ciphertext, so
+    /// a copy that decrypts is this user's own content; it may still be an older version.
+    private func classifyUnverified(_ entry: ManifestEntry, blobBytes: Data,
+                                    pendingTombstones: [UUID: Date],
+                                    into report: inout SyncReport) throws {
+        let local = try store.take(id: entry.uuid)
+        // Deleted here and not yet pushed: push propagates the deletion; never offer it back.
+        if local == nil, pendingTombstones[entry.uuid] != nil { return }
+
+        let cloudTake: Take?
+        if let blob = try? CloudBlob.parse(blobBytes) {
+            // A newer client's envelope may carry semantics this one cannot read; routing it to
+            // the user could overwrite that client's data, so it stays quarantined as before.
+            guard CloudBlob.supportedVersions.contains(blob.version) else {
+                report.quarantined.append(entry.uuid)
+                return
+            }
+            cloudTake = blob.ciphertext.flatMap { try? crypto.open($0, takeUUID: entry.uuid) }
+        } else {
+            cloudTake = nil
+        }
+
+        if let local {
+            if ISO8601.string(from: local.modifiedAt) == entry.modified {
+                report.repairCandidates.append(entry.uuid)
+                return
+            }
+            if let entryModified = ISO8601.date(from: entry.modified), local.modifiedAt > entryModified {
+                return   // a newer local edit: push step 1 or 4 uploads it
+            }
+            report.unverified.append(UnverifiedCopy(id: entry.uuid, local: local, cloud: cloudTake))
+        } else if let cloudTake {
+            report.unverified.append(UnverifiedCopy(id: entry.uuid, local: nil, cloud: cloudTake))
+        } else {
+            report.quarantined.append(entry.uuid)
+        }
+    }
+
     /// Convenience: pull then push (idempotent). Lock contention on the push
     /// half is a routine outcome and is reported via `pushDeferred`, not thrown
     /// — the pull half's results remain valid either way.
@@ -485,9 +574,15 @@ public final class SyncEngine {
         }
         DiagnosticsLog.shared.record(.lifecycle, "Sync: pull ok")
         do {
-            let out = try pushOutbound(isCancelled: isCancelled)
+            let out = try pushOutbound(isCancelled: isCancelled,
+                                       repairing: Set(report.repairCandidates))
             report.uploaded = out.uploaded
             report.heldBack = out.heldBack
+            report.repaired = out.repaired
+            // Content-free, like the lines above: no count, no UUID.
+            if !out.repaired.isEmpty {
+                DiagnosticsLog.shared.record(.lifecycle, "Sync: repaired a cloud copy that failed verification")
+            }
             DiagnosticsLog.shared.record(.lifecycle, "Sync: push ok")
         } catch is SyncLockError {
             report.pushDeferred = true

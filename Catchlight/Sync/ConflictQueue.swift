@@ -74,5 +74,65 @@ final class ConflictQueue {
 
     /// Clear every pending conflict without writing anything. Used by the empty-state
     /// auto-dismiss and by tests.
-    func dismissAll() { pending.removeAll() }
+    func dismissAll() {
+        pending.removeAll()
+        unverified.removeAll()
+    }
+
+    // MARK: - Unverified cloud copies (2026-09-30)
+    //
+    // A cloud copy that failed verification where only the user can settle it: the manifest
+    // names a newer version than this device holds, or the Take is not on this device. The
+    // engine never writes these locally; the user keeps this phone's version, keeps (recovers)
+    // the cloud copy when it decrypted, or skips. Same not-persisted, re-detected-next-sync
+    // model as `pending`.
+
+    private(set) var unverified: [UnverifiedCopy] = []
+
+    /// What the banner counts: two-version conflicts plus unverified copies.
+    var attentionCount: Int { pending.count + unverified.count }
+
+    /// Add unverified copies; an incoming item replaces a pending one for the same id.
+    func enqueueUnverified(_ items: [UnverifiedCopy]) {
+        var added = 0
+        for item in items {
+            if let idx = unverified.firstIndex(where: { $0.id == item.id }) {
+                unverified[idx] = item
+            } else {
+                unverified.append(item)
+                added += 1
+            }
+        }
+        if added > 0 {
+            DiagnosticsLog.shared.record(.conflict,
+                "\(added) Take\(added == 1 ? "" : "s") couldn't be verified and \(added == 1 ? "needs" : "need") a choice.")
+        }
+    }
+
+    /// Keep this phone's version. Stamped as a fresh edit, like `resolve`, so the next push makes
+    /// it the newest version and replaces the cloud copy; a newer edit on another device that
+    /// could not be read is replaced when that device syncs.
+    func keepPhone(id: UUID, store: TakeStore) throws {
+        guard let idx = unverified.firstIndex(where: { $0.id == id }),
+              var winner = unverified[idx].local else { return }
+        winner.modifiedAt = Date()
+        try store.upsert(winner)
+        unverified.remove(at: idx)
+    }
+
+    /// Keep the cloud copy that decrypted: on the conflict screen beside this phone's version, or
+    /// "Recover" for a Take not on this device. Stamped as a fresh edit so the next push re-uploads
+    /// it and the cloud verifies again. No-op when nothing decrypted.
+    func keepCloud(id: UUID, store: TakeStore) throws {
+        guard let idx = unverified.firstIndex(where: { $0.id == id }),
+              var winner = unverified[idx].cloud else { return }
+        winner.modifiedAt = Date()
+        try store.upsert(winner)
+        unverified.remove(at: idx)
+    }
+
+    /// Skip for now: nothing written; the next sync re-surfaces it if still unresolved.
+    func skipUnverified(id: UUID) {
+        unverified.removeAll { $0.id == id }
+    }
 }

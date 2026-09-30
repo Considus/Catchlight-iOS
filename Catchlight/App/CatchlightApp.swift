@@ -49,6 +49,10 @@ struct CatchlightApp: App {
             onConflicts: { conflicts in
                 app.conflictQueue.enqueue(conflicts)
             },
+            // 2026-09-30 — cloud copies that failed verification and need a choice.
+            onUnverified: { items in
+                app.conflictQueue.enqueueUnverified(items)
+            },
             // Task 3.9 — non-blocking sync error strip.
             onSyncError: { error in
                 app.reportSyncError(error)
