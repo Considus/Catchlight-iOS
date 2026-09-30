@@ -53,7 +53,7 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
     /// down; the editor card has to stop below where they actually are.
     func testEditorIris_isVisible_atMaxTextSize_withKeyboardUp_onLongExistingTake_withNoticeStrip() throws {
         try runScenario(lineCount: 14, name: "long-stamp-notice", stamp: "editor", expectStamp: false,
-                        notice: true, expectNotice: false)
+                        notice: true, expectNotice: false, maxIrisY: 250)
     }
 
     /// At the default size the notice strip stays up while typing, and the card stops below it.
@@ -70,7 +70,8 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
 
     private func runScenario(lineCount: Int, name: String, size: String = maxSize,
                              stamp: String = "off", expectStamp: Bool? = nil,
-                             notice: Bool = false, expectNotice: Bool? = nil) throws {
+                             notice: Bool = false, expectNotice: Bool? = nil,
+                             maxIrisY: CGFloat? = nil) throws {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting",
                                "-UIPreferredContentSizeCategoryName",
@@ -123,6 +124,12 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
         note.lifetime = .keepAlways
         add(note)
 
+        // A long Take should fill the room once the strip stands down. Measured: the Iris sits at
+        // 169-172pt when the card is full height, and at 323pt when the card stayed at its floor.
+        if let maxIrisY {
+            XCTAssertLessThan(frame.minY, maxIrisY,
+                              "Card did not grow into the room the strip left (Iris at \(frame.minY)pt)")
+        }
         if let expectNotice {
             XCTAssertEqual(app.buttons["Dismiss quarantine notice"].exists, expectNotice,
                            "Notice strip \(expectNotice ? "should" : "should not") show while typing at this size")

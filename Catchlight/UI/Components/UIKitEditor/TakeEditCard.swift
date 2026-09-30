@@ -85,6 +85,8 @@ struct TakeEditCard: View {
     /// (which would make `BlockEditor` scroll). Kept tiny — the owner wants the caret to sit right
     /// ON the "Created on" line, not a line above it.
     static let editorLineLead: CGFloat = 4
+    /// A cap change bigger than this re-applies the editor height; smaller is keyboard settling.
+    static let capJumpThreshold: CGFloat = 12
 
     /// The card's own chrome above and below the `BlockEditor` frame: the 24pt top pad (which
     /// clears the overlapping Iris) + the 14pt bottom pad, PLUS the "Created on" stamp row when
@@ -135,6 +137,20 @@ struct TakeEditCard: View {
                         }
                     })
                     .frame(height: editorHeight)
+                    // The cap can change with no content change: a notice strip standing down as the
+                    // keyboard rises lifts the cap from the floor to the real room. Re-apply it, or the
+                    // frame keeps the height it took under the old cap (ISSUE-005, measured: a card left
+                    // at the 60pt floor under a 211pt cap). Only for a real jump: the cap also drifts a
+                    // few points while the keyboard settles, and following that moved the default-size
+                    // card 3pt, where the owner's resting layout must stay exactly as it is.
+                    .onChange(of: maxHeight) { old, cap in
+                        guard abs(cap - old) > Self.capJumpThreshold else { return }
+                        let effective = max(editorContentHeight, minContent) + Self.editorLineLead
+                        var t = Transaction(); t.disablesAnimations = true
+                        withTransaction(t) {
+                            editorHeight = min(max(effective, minEditorHeight), cap)
+                        }
+                    }
 
                 // Created-at stamp, gated by the setting — Editor-only + Always both show it while
                 // editing (matches `InlineTakeEditCard` so all three options stay consistent).
@@ -333,8 +349,15 @@ struct KeyboardTakeEditor: View {
         let kbTop = keyboardTopY < UIScreen.main.bounds.height
             ? keyboardTopY
             : UIScreen.main.bounds.height - Self.keyboardReserveFallback
-        return max(160, kbTop - topLimit - TakeEditCard.chrome(showsStamp: showsStamp))
+        // The floor is small on purpose. It used to be 160, and a fixed floor larger than the room
+        // pushes the card past its own cap and its Iris under the heading fade (ISSUE-005: a notice
+        // strip on an iPhone 16 left 114pt of room). With ample room, the usual case, the cap is
+        // the room itself and the floor never applies.
+        return max(Self.editorFloor, kbTop - topLimit - TakeEditCard.chrome(showsStamp: showsStamp))
     }
+
+    /// The least the editor frame ever shrinks to while typing: about two lines at the default size.
+    private static let editorFloor: CGFloat = 60
 
     /// Bottom-anchored, riding the system keyboard. NO custom keyboard animation — it rides in sync
     /// with `BlockEditor`'s own handling (a custom rise desynced and scrolled the text off-screen,
