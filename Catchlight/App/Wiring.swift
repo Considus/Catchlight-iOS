@@ -253,6 +253,20 @@ enum Wiring {
             if ProcessInfo.processInfo.arguments.contains("--uitesting-notice") {
                 model.reportQuarantined([UUID()])
             }
+            // `--uitesting-unverified` seeds one of each unverified-copy shape into the conflict
+            // queue (2026-09-30), so the review sheet can be exercised and screenshotted: it is
+            // otherwise unreachable under test, since it needs a cloud copy failing verification.
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-unverified"),
+               let seeded = try? store.allTakes(), seeded.count >= 2 {
+                let older = Date().addingTimeInterval(-3 * 24 * 3600)
+                var both = seeded[0]; both.blocks = [.textLine("Buy film for the weekend")]; both.modifiedAt = older
+                let lost = Take(createdAt: older, modifiedAt: older, blocks: [.textLine("Ideas for the spring shoot")])
+                model.conflictQueue.enqueueUnverified([
+                    UnverifiedCopy(id: seeded[0].id, local: seeded[0], cloud: both),
+                    UnverifiedCopy(id: seeded[1].id, local: seeded[1], cloud: nil),
+                    UnverifiedCopy(id: lost.id, local: nil, cloud: lost),
+                ])
+            }
             return model
         }
         #endif

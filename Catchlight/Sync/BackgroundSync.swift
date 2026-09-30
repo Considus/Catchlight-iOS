@@ -31,6 +31,8 @@ public final class BackgroundSyncCoordinator {
     /// coordinator continues to work for background-only callers that don't have
     /// (or want) a conflict queue.
     private let onConflicts: (@MainActor ([(local: Take, remote: Take)]) -> Void)?
+    /// Cloud copies that failed verification and need the user (2026-09-30).
+    private let onUnverified: (@MainActor ([UnverifiedCopy]) -> Void)?
 
     /// Invoked on the main actor when `SyncEngine.sync()` throws (Task 3.9). The
     /// caller maps the error to a friendly string and surfaces a non-blocking
@@ -58,11 +60,13 @@ public final class BackgroundSyncCoordinator {
     /// - Parameter onQuarantined: hand-off for per-blob quarantine ids (Task 3.9).
     public init(makeEngine: @escaping () -> SyncEngine?,
                 onConflicts: (@MainActor ([(local: Take, remote: Take)]) -> Void)? = nil,
+                onUnverified: (@MainActor ([UnverifiedCopy]) -> Void)? = nil,
                 onSyncError: (@MainActor (Error) -> Void)? = nil,
                 onQuarantined: (@MainActor ([UUID]) -> Void)? = nil,
                 onRemoteChanges: (@MainActor (SyncReport) -> Void)? = nil) {
         self.makeEngine = makeEngine
         self.onConflicts = onConflicts
+        self.onUnverified = onUnverified
         self.onSyncError = onSyncError
         self.onQuarantined = onQuarantined
         self.onRemoteChanges = onRemoteChanges
@@ -243,6 +247,7 @@ public final class BackgroundSyncCoordinator {
         }
 
         let onConflicts = self.onConflicts
+        let onUnverified = self.onUnverified
         let onSyncError = self.onSyncError
         let onQuarantined = self.onQuarantined
         let onRemoteChanges = self.onRemoteChanges
@@ -253,6 +258,7 @@ public final class BackgroundSyncCoordinator {
                 let report = try engine.sync(isCancelled: { cancel.isCancelled })
                 Self.deliver(report,
                              onConflicts: onConflicts,
+                             onUnverified: onUnverified,
                              onQuarantined: onQuarantined,
                              onRemoteChanges: onRemoteChanges)
             } catch is CancellationError {
@@ -268,11 +274,16 @@ public final class BackgroundSyncCoordinator {
     /// Shared report fan-out for both the BGTask and foreground paths.
     private static func deliver(_ report: SyncReport,
                                 onConflicts: (@MainActor ([(local: Take, remote: Take)]) -> Void)?,
+                                onUnverified: (@MainActor ([UnverifiedCopy]) -> Void)?,
                                 onQuarantined: (@MainActor ([UUID]) -> Void)?,
                                 onRemoteChanges: (@MainActor (SyncReport) -> Void)?) {
         if let onConflicts, !report.conflicts.isEmpty {
             let conflicts = report.conflicts
             Task { @MainActor in onConflicts(conflicts) }
+        }
+        if let onUnverified, !report.unverified.isEmpty {
+            let unverified = report.unverified
+            Task { @MainActor in onUnverified(unverified) }
         }
         if let onQuarantined, !report.quarantined.isEmpty {
             let quarantined = report.quarantined
@@ -304,6 +315,7 @@ public final class BackgroundSyncCoordinator {
         scheduleNext()   // always reschedule (auto-only, guarded above)
 
         let onConflicts = self.onConflicts
+        let onUnverified = self.onUnverified
         let onSyncError = self.onSyncError
         let onQuarantined = self.onQuarantined
         let onRemoteChanges = self.onRemoteChanges
@@ -337,6 +349,7 @@ public final class BackgroundSyncCoordinator {
                     let report = try engine.sync(isCancelled: { cancel.isCancelled })
                     Self.deliver(report,
                                  onConflicts: onConflicts,
+                                 onUnverified: onUnverified,
                                  onQuarantined: onQuarantined,
                                  onRemoteChanges: onRemoteChanges)
                     completion.complete(task, success: true)
