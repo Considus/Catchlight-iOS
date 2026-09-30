@@ -618,14 +618,25 @@ final class AppModel {
     }
 
     /// Add to the running quarantine count from the latest sync pass.
+    ///
+    /// Counts DISTINCT Takes: every pull re-reports a Take whose cloud copy still fails, so adding
+    /// the pass's count double-counted the same Take (observed: "3 Takes" then "6 Takes" a minute
+    /// later, with three Takes in the store).
     func reportQuarantined(_ ids: [UUID]) {
         guard !ids.isEmpty else { return }
-        quarantinedCount += ids.count
+        quarantinedIDs.formUnion(ids)
+        quarantinedCount = quarantinedIDs.count
     }
+
+    /// The Takes behind `quarantinedCount`, until the notice is dismissed.
+    private var quarantinedIDs: Set<UUID> = []
 
     /// Strip-side actions — clear the matching state.
     func clearSyncError() { lastSyncError = nil }
-    func clearQuarantineNotice() { quarantinedCount = 0 }
+    func clearQuarantineNotice() {
+        quarantinedIDs.removeAll()
+        quarantinedCount = 0
+    }
 
     // MARK: - Task 6.20 / 6.21 — subscription gating
 

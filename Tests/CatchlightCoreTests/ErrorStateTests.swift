@@ -7,7 +7,7 @@
 //    • DailiesViewModel.clearError() clears the surfaced storage error
 //    • AppModel.friendlySyncErrorMessage(for:) maps the small set of known errors
 //      to the expected user-facing strings (and drops the "local-only" case)
-//    • AppModel.reportQuarantined(_:) increments the count by id count
+//    • AppModel.reportQuarantined(_:) counts distinct Takes
 //
 //  These tests reach into the iOS app target, so the file is gated by
 //  `#if canImport(Catchlight)` and runs inside the iOS test bundle only.
@@ -93,8 +93,8 @@ final class ErrorStateTests: XCTestCase {
         app.reportQuarantined([UUID(), UUID(), UUID()])
         XCTAssertEqual(app.quarantinedCount, 3)
 
-        // A subsequent pass adds to the running total — strips should reflect
-        // every Take the user hasn't dismissed yet.
+        // A subsequent pass adds any NEW Takes — strips reflect every distinct
+        // Take the user hasn't dismissed yet.
         app.reportQuarantined([UUID()])
         XCTAssertEqual(app.quarantinedCount, 4)
 
@@ -104,6 +104,27 @@ final class ErrorStateTests: XCTestCase {
 
         app.clearQuarantineNotice()
         XCTAssertEqual(app.quarantinedCount, 0)
+    }
+
+    /// Every pull re-reports a Take whose cloud copy still fails, so the same Take must not be
+    /// counted again. Observed on device: one sync pass after another took the strip from
+    /// "3 Takes" to "6 Takes" within a minute, with three Takes in the store.
+    func testQuarantineCount_sameTakeReportedAgain_isNotCountedTwice() {
+        let app = AppModel.preview(store: InMemoryTakeStore(), onboarded: true)
+        let a = UUID(), b = UUID(), c = UUID()
+
+        app.reportQuarantined([a, b, c])
+        app.reportQuarantined([a, b, c])
+        XCTAssertEqual(app.quarantinedCount, 3)
+
+        // A new Take joining the set still counts.
+        app.reportQuarantined([a, UUID()])
+        XCTAssertEqual(app.quarantinedCount, 4)
+
+        // Dismissing clears the set, so a Take that is still failing raises the strip again.
+        app.clearQuarantineNotice()
+        app.reportQuarantined([a])
+        XCTAssertEqual(app.quarantinedCount, 1)
     }
 }
 #endif
