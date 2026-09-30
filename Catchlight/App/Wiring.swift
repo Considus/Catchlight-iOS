@@ -246,6 +246,13 @@ enum Wiring {
             // The same blank one-block draft `makeCaptureDraft` builds for a blank
             // launcher — the editor needs a focusable block for the caret/keyboard.
             if startOnLockedCapture { model.lockedCapture = Take(blocks: [.textLine("")]) }
+            // `--uitesting-notice` raises the quarantine notice strip above the page (ISSUE-005):
+            // the strip pushes the heading and its fade down, and the editor card must stop below
+            // where they actually are. Otherwise unreachable under test, since it needs a cloud
+            // copy that fails verification.
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-notice") {
+                model.reportQuarantined([UUID()])
+            }
             return model
         }
         #endif

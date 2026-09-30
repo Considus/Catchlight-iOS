@@ -41,6 +41,9 @@ struct DailiesView: View {
 
     /// Measured height of the heading block (title + its paddings, INCLUDING `deviceTopInset`).
     @State private var headingBlockHeight: CGFloat = 0
+    /// Where the heading block starts on SCREEN. 0 normally; a notice strip (sync error,
+    /// quarantine, conflict) inserted above the page pushes it, and the heading's fade, down.
+    @State private var headingBlockScreenY: CGFloat = 0
 
     /// Audit 2026-08, V44: the Take to hand the VoiceOver cursor back to once the
     /// in-place editor has closed. One-shot — the timeline clears it through
@@ -352,6 +355,16 @@ struct DailiesView: View {
     }
 
     var body: some View {
+        // Publish the MEASURED clearance to everything below — the editor card positions itself
+        // against the heading too, and must not use a different number (2026-09-04). The editor
+        // measures from the top of the SCREEN, so the heading's own screen offset rides along: a
+        // notice strip above the page moves the heading and its fade down, and the card has to
+        // stop below where they actually are (ISSUE-005). 0 without a strip, so nothing moves.
+        rootStack
+            .environment(\.headingClearance, headingClearance + max(0, headingBlockScreenY))
+    }
+
+    private var rootStack: some View {
         ZStack(alignment: .topLeading) {
             Color.ckBackground.ignoresSafeArea()
                 // Track the keyboard top here (always present) — the old `timeline`'s copy
@@ -575,7 +588,9 @@ struct DailiesView: View {
                     .onChange(of: geo.size.height) { _, height in containerHeight = height }
             }
         }
-        .safeAreaInset(edge: .top, spacing: 0) { topStrips }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if !topStripsStandDown { topStrips }
+        }
         .animation(.easeInOut(duration: 0.2), value: conflicts.pending.isEmpty)
         .animation(.easeInOut(duration: 0.2), value: vm.lastError)
         .animation(.easeInOut(duration: 0.2), value: app.lastSyncError)
@@ -890,8 +905,12 @@ struct DailiesView: View {
             .background(
                 GeometryReader { geo in
                     Color.clear
-                        .onAppear { headingBlockHeight = geo.size.height }
+                        .onAppear {
+                            headingBlockHeight = geo.size.height
+                            headingBlockScreenY = geo.frame(in: .global).minY
+                        }
                         .onChange(of: geo.size.height) { _, h in headingBlockHeight = h }
+                        .onChange(of: geo.frame(in: .global).minY) { _, y in headingBlockScreenY = y }
                 }
             )
             // Audit 2026-08, V32: the reading order STARTED on the Obie's Iris —
@@ -1063,6 +1082,16 @@ struct DailiesView: View {
         // actually showing, so an empty stack reserves no height and the timeline isn't
         // pushed down at rest.
         .padding(.top, hasTopStrip ? deviceTopInset : 0)
+    }
+
+    /// At accessibility text sizes a notice strip wraps to several large lines, and with the
+    /// keyboard up there is no room for it AND the editor below the heading: the card's minimum
+    /// height wins and it grows under the fade, hiding its Iris (ISSUE-005, measured: a 169pt strip
+    /// leaving 42pt of room). So the strips stand down while typing at those sizes and return when
+    /// the keyboard goes (owner's choice 2026-09-30). Default sizes keep them while typing.
+    private var topStripsStandDown: Bool {
+        ui.isEditingInPlace && dynamicSize.isAccessibilitySize
+            && keyboardTopY < UIScreen.main.bounds.height
     }
 
     /// Whether ANY top notice strip is currently visible — gates the status-bar dodge
