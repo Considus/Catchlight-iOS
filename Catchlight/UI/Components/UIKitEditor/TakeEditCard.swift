@@ -63,6 +63,9 @@ struct TakeEditCard: View {
     /// Seals the UIKit text view out of the accessibility tree while an overlay covers this
     /// card (audit 2026-08, V31 — the Focus-ring fan opened from the Iris). See `BlockEditor`.
     var axHidden: Bool = false
+    /// Hides the "Created on" stamp even when the setting shows it. `KeyboardTakeEditor` sets this
+    /// at accessibility text sizes while the keyboard is up (ISSUE-005, owner 2026-09-30).
+    var hidesStamp: Bool = false
 
     @Environment(\.colorScheme) private var scheme
 
@@ -135,7 +138,7 @@ struct TakeEditCard: View {
 
                 // Created-at stamp, gated by the setting — Editor-only + Always both show it while
                 // editing (matches `InlineTakeEditCard` so all three options stay consistent).
-                if creationStamp != .off {
+                if creationStamp != .off && !hidesStamp {
                     CreationStampLabel(date: draft.createdAt)
                         .padding(.top, 6)
                 }
@@ -247,6 +250,8 @@ struct KeyboardTakeEditor: View {
     var onTapIris: ((CGPoint) -> Void)? = nil
 
     @Environment(\.deviceTopInset) private var deviceTopInset
+    /// Measured, so the grow-up cap tracks a heading that has grown with the text size.
+    @Environment(\.headingClearance) private var headingClearance
 
     /// The "Creation date" setting — read here for the SAME reason `TakeEditCard` reads it: the
     /// stamp row is part of the card's height, so the grow-up cap has to know whether it's there.
@@ -254,6 +259,19 @@ struct KeyboardTakeEditor: View {
     private var creationStampRaw: String = SettingsViewModel.CreationStamp.default.rawValue
     private var showsStamp: Bool {
         (SettingsViewModel.CreationStamp(rawValue: creationStampRaw) ?? .default) != .off
+            && !hidesStampForRoom
+    }
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// At accessibility text sizes the stamp wraps onto several large lines, and with the keyboard
+    /// up there is no room for it: the heading, the editor's minimum height, the stamp and the
+    /// keyboard do not fit together, the minimum wins, and the card grows past its cap until its
+    /// Iris and first line sit under the heading fade (ISSUE-005, measured: a 143pt stamp row
+    /// against 249pt of room). So the stamp stands down while typing at those sizes and returns
+    /// when the keyboard goes (owner's choice 2026-09-30). Default sizes are untouched.
+    private var hidesStampForRoom: Bool {
+        dynamicTypeSize.isAccessibilitySize && keyboardTopY < UIScreen.main.bounds.height
     }
 
     /// The keyboard's top edge in screen coords, INCLUDING its docked toolbar.
@@ -310,7 +328,7 @@ struct KeyboardTakeEditor: View {
     /// The grow-UP cap: how tall the card may get before its TOP reaches the heading, past which
     /// `BlockEditor` scrolls internally.
     private var maxHeight: CGFloat {
-        let topLimit = deviceTopInset + CatchlightLayout.headingClearance + 12 + irisReserve
+        let topLimit = deviceTopInset + headingClearance + 12 + irisReserve
         // Use the live keyboard top; fall back to the static estimate before it settles.
         let kbTop = keyboardTopY < UIScreen.main.bounds.height
             ? keyboardTopY
@@ -336,7 +354,8 @@ struct KeyboardTakeEditor: View {
                 onDiscard: onDiscard,
                 onTapIris: onTapIris,
                 onContentHeightChange: { editorContentHeight = $0 },
-                axHidden: axHidden
+                axHidden: axHidden,
+                hidesStamp: hidesStampForRoom
             )
             .padding(.leading, leadingInset)
             .padding(.trailing, trailingInset)
