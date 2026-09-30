@@ -34,8 +34,8 @@ final class UnverifiedCopyReviewUITests: XCTestCase {
         let app = launch()
         openReview(app)
 
-        XCTAssertTrue(app.buttons["Keep this version"].exists, "both-versions card")
-        XCTAssertTrue(app.buttons["Keep this phone's version"].exists, "unreadable-newer card")
+        XCTAssertEqual(app.buttons.matching(identifier: "Keep this version").count, 2,
+                       "the both-versions card and the unreadable-newer card")
         XCTAssertTrue(app.buttons["Recover"].exists, "cloud-only card")
 
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
@@ -50,6 +50,6 @@ final class UnverifiedCopyReviewUITests: XCTestCase {
 
         app.buttons["Recover"].tap()
         XCTAssertTrue(app.staticTexts["Recover this Take?"].waitForNonExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Keep this phone's version"].exists, "the other cards stay")
+        XCTAssertEqual(app.buttons.matching(identifier: "Keep this version").count, 2, "the other cards stay")
     }
 }

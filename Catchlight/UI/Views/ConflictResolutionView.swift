@@ -120,7 +120,7 @@ struct ConflictResolutionView: View {
     // MARK: - Unverified cloud copies (2026-09-30)
 
     private static let unverifiedNote = "Didn't pass its check, and may be an older version."
-    private static let replacesNewerEdit = "Whichever you keep replaces the newer edit on the other device when it next syncs."
+    private static let replacesNewerEdit = "Keeping it replaces any newer edit that may exist on another device when it syncs."
 
     /// Three shapes, one per owner rule: both versions (pick one), only this phone's (the newer
     /// version elsewhere can't be read), or only the cloud copy (recover a Take not on this phone).
@@ -147,13 +147,13 @@ struct ConflictResolutionView: View {
                              note: "The newer version from another device can't be read.",
                              tap: {})
                     .allowsHitTesting(false)
-                footnote("Keeping it replaces the newer edit on the other device when it next syncs.")
-                pillRow(primary: "Keep this phone's version", enabled: true, id: item.id) {
+                footnote(Self.replacesNewerEdit)
+                pillRow(primary: "Keep this version", enabled: true, id: item.id) {
                     try queue.keepPhone(id: item.id, store: dailies.store)
                 }
             case let (nil, cloud?):
                 Text("Recover this Take?")
-                    .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .headline))
+                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
                     .foregroundStyle(Color.ckTextPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 versionPanel(.theirs, take: cloud, selected: false,
@@ -172,7 +172,7 @@ struct ConflictResolutionView: View {
 
     private func footnote(_ text: String) -> some View {
         Text(text)
-            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
             .foregroundStyle(Color.ckTextSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -263,8 +263,8 @@ struct ConflictResolutionView: View {
                     .foregroundStyle(Color.ckTextSecondary)
                 if let note {
                     Text(note)
-                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
-                        .foregroundStyle(Color.ckAccent)
+                        .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
+                        .foregroundStyle(Color.ckTextSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(displayBody)
