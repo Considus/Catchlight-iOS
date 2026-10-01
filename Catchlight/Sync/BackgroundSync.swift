@@ -88,7 +88,7 @@ public final class BackgroundSyncCoordinator {
     /// No-op outside `.auto` (owner 2026-06-21): Manual and Disabled never run a
     /// background pass, so don't claim a background-refresh slot for one.
     public func scheduleNext(earliestInterval: TimeInterval = 15 * 60) {
-        guard SettingsViewModel.SyncMode.current == .auto else { return }
+        guard SettingsViewModel.SyncMode.current() == .auto else { return }
         let request = BGAppRefreshTaskRequest(identifier: Self.taskIdentifier)
         request.earliestBeginDate = Date(timeIntervalSinceNow: earliestInterval)
         do {
@@ -171,7 +171,7 @@ public final class BackgroundSyncCoordinator {
     /// a burst of edits coalesces into one push; a no-op outside `.auto` (also gated in
     /// `syncNow`). Call from the main thread.
     public func syncAfterSave() {
-        guard SettingsViewModel.SyncMode.current == .auto else { return }
+        guard SettingsViewModel.SyncMode.current() == .auto else { return }
         saveDebounce?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.syncNow(trigger: .saveCommitted) }
         saveDebounce = work
@@ -193,7 +193,7 @@ public final class BackgroundSyncCoordinator {
         // Sync-mode gate (owner 2026-06-21). `disabled` blocks everything;
         // `manual` blocks every automatic trigger and lets only the explicit
         // "Sync Now" tap through. `auto` is unchanged.
-        switch SettingsViewModel.SyncMode.current {
+        switch SettingsViewModel.SyncMode.current() {
         case .disabled:
             return
         case .manual where trigger != .manualButton:
@@ -309,7 +309,7 @@ public final class BackgroundSyncCoordinator {
         // A pass scheduled while in `.auto` can still fire after the user switches
         // to Manual/Disabled — honour the current mode and bail without resyncing
         // or rescheduling (owner 2026-06-21).
-        guard SettingsViewModel.SyncMode.current == .auto else {
+        guard SettingsViewModel.SyncMode.current() == .auto else {
             task.setTaskCompleted(success: true); return
         }
         scheduleNext()   // always reschedule (auto-only, guarded above)

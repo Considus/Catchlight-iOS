@@ -579,8 +579,8 @@ public final class ReminderScheduler {
     /// reminder category, so the user can Snooze/Dismiss a follow-up to stop the rest. No-op
     /// when the feature is off (Settings, default ON) or there's no future fire to follow.
     private func armFollowUps(for take: Take, afterFire: Date?) {
-        guard SettingsViewModel.FollowUpReminders.isEnabled, let afterFire else { return }
-        let interval = SettingsViewModel.SnoozeDuration.current.seconds
+        guard SettingsViewModel.FollowUpReminders.isEnabled(), let afterFire else { return }
+        let interval = SettingsViewModel.SnoozeDuration.current().seconds
         let n = now()
         for index in 1...Self.followUpCount {
             let delay = afterFire.addingTimeInterval(interval * Double(index)).timeIntervalSince(n)

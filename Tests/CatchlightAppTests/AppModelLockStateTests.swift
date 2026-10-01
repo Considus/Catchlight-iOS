@@ -139,17 +139,14 @@ final class AppModelLockStateTests: XCTestCase {
 
     func testLockAfterSettingReadsDefaultsAndOverride() {
         let key = SettingsViewModel.LockAfter.defaultsKey
-        let original = UserDefaults.standard.string(forKey: key)
-        defer {
-            if let original { UserDefaults.standard.set(original, forKey: key) }
-            else { UserDefaults.standard.removeObject(forKey: key) }
-        }
+        let suiteName = "catchlight.tests.lockAfter.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        UserDefaults.standard.removeObject(forKey: key)
-        XCTAssertEqual(SettingsViewModel.LockAfter.current, .oneMinute, "default is 1 minute")
+        XCTAssertEqual(SettingsViewModel.LockAfter.current(defaults), .oneMinute, "default is 1 minute")
 
-        UserDefaults.standard.set(SettingsViewModel.LockAfter.fiveMinutes.rawValue, forKey: key)
-        XCTAssertEqual(SettingsViewModel.LockAfter.current, .fiveMinutes)
+        defaults.set(SettingsViewModel.LockAfter.fiveMinutes.rawValue, forKey: key)
+        XCTAssertEqual(SettingsViewModel.LockAfter.current(defaults), .fiveMinutes)
         XCTAssertEqual(SettingsViewModel.LockAfter.fiveMinutes.seconds, 300)
         XCTAssertEqual(SettingsViewModel.LockAfter.oneHour.seconds, 3600)
     }

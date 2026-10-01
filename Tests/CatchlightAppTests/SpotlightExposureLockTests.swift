@@ -17,19 +17,19 @@ import XCTest
 
 final class SpotlightExposureLockTests: XCTestCase {
 
-    private var savedRaw: String?
+    /// An isolated suite per test, so nothing here reads or writes the simulator's real
+    /// Settings.
+    private var suiteName: String!
+    private var defaults: UserDefaults!
 
     override func setUp() {
         super.setUp()
-        savedRaw = UserDefaults.standard.string(forKey: SpotlightExposure.defaultsKey)
+        suiteName = "catchlight.tests.spotlight.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: suiteName)
     }
 
     override func tearDown() {
-        if let savedRaw {
-            UserDefaults.standard.set(savedRaw, forKey: SpotlightExposure.defaultsKey)
-        } else {
-            UserDefaults.standard.removeObject(forKey: SpotlightExposure.defaultsKey)
-        }
+        defaults.removePersistentDomain(forName: suiteName)
         super.tearDown()
     }
 
@@ -42,24 +42,24 @@ final class SpotlightExposureLockTests: XCTestCase {
 
     func testCurrent_persistedBodyLevel_clampsToType() {
         for locked in [SpotlightExposure.firstLine, .all] {
-            UserDefaults.standard.set(locked.rawValue, forKey: SpotlightExposure.defaultsKey)
-            XCTAssertEqual(SpotlightExposure.current, .type,
+            defaults.set(locked.rawValue, forKey: SpotlightExposure.defaultsKey)
+            XCTAssertEqual(SpotlightExposure.current(defaults), .type,
                            "a pre-lock body level must clamp to Type only, not \(locked)")
         }
     }
 
     func testCurrent_selectableLevels_roundTripUnchanged() {
         for level in [SpotlightExposure.none, .type] {
-            UserDefaults.standard.set(level.rawValue, forKey: SpotlightExposure.defaultsKey)
-            XCTAssertEqual(SpotlightExposure.current, level)
+            defaults.set(level.rawValue, forKey: SpotlightExposure.defaultsKey)
+            XCTAssertEqual(SpotlightExposure.current(defaults), level)
         }
     }
 
     func testCurrent_missingOrGarbageValue_fallsBackToDefault() {
-        UserDefaults.standard.removeObject(forKey: SpotlightExposure.defaultsKey)
-        XCTAssertEqual(SpotlightExposure.current, .default)
-        UserDefaults.standard.set("not-a-level", forKey: SpotlightExposure.defaultsKey)
-        XCTAssertEqual(SpotlightExposure.current, .default)
+        defaults.removeObject(forKey: SpotlightExposure.defaultsKey)
+        XCTAssertEqual(SpotlightExposure.current(defaults), .default)
+        defaults.set("not-a-level", forKey: SpotlightExposure.defaultsKey)
+        XCTAssertEqual(SpotlightExposure.current(defaults), .default)
     }
 }
 #endif
