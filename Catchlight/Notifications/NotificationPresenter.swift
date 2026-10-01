@@ -74,7 +74,7 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         // strings were plain Swift strings while the intents localize.
         let snooze = UNNotificationAction(
             identifier: snoozeActionIdentifier,
-            title: String(localized: "Snooze for \(SettingsViewModel.SnoozeDuration.current.label)"),
+            title: String(localized: "Snooze for \(SettingsViewModel.SnoozeDuration.current().label)"),
             options: [],
             icon: UNNotificationActionIcon(systemImageName: "zzz"))
         // A plain (non-destructive) background action: it silences the reminder but
@@ -231,7 +231,7 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
     /// Snooze (background, works while locked): re-nudge the SAME reminder later without
     /// touching the encrypted store.
     private func handleSnooze(request: UNNotificationRequest, base: String) {
-        let fireAt = Date().addingTimeInterval(SettingsViewModel.SnoozeDuration.current.seconds)
+        let fireAt = Date().addingTimeInterval(SettingsViewModel.SnoozeDuration.current().seconds)
         // The ORIGINAL "when" text, stamped at first schedule and carried across snoozes,
         // so the re-nudge reads "Originally due …" rather than the (redundant) re-fire
         // time. S1 (audit 2026-08): ONLY a stamped value may be templated — the old

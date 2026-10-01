@@ -682,7 +682,7 @@ struct SettingsView: View {
     private var spotlightExposureBinding: Binding<SpotlightExposure> {
         Binding(
             get: {
-                // Clamp exactly like `SpotlightExposure.current` — a pre-lock
+                // Clamp exactly like `SpotlightExposure.current(_:)` — a pre-lock
                 // body level reads as `.type` (the menu's locked rows can't be
                 // selected, so only the clamped value can round-trip).
                 let stored = SpotlightExposure(rawValue: spotlightExposureRaw) ?? .default
