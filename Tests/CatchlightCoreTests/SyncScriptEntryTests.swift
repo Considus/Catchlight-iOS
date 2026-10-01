@@ -283,7 +283,38 @@ final class SyncScriptEntryTests: XCTestCase {
         XCTAssertFalse(report.uploaded.contains(take.id))
         XCTAssertEqual(try entry(take.id, in: cloud, keys: k), before)
         XCTAssertEqual(try cloud.read("\(take.id.uuidString).clk"), blobBefore)
-        XCTAssertEqual(try phone.take(id: take.id)?.primaryText, "phone edit", "the edit waits on the phone")
+        // Push advances the watermark, so a merely skipped edit would look synced and the next
+        // pull would let it go. It must leave as a new Take, uploaded in this same pass.
+        let forked = try XCTUnwrap(report.forkedFromScripts.first)
+        XCTAssertTrue(report.uploaded.contains(forked))
+        XCTAssertEqual(try entry(forked, in: cloud, keys: k)?.kind, nil)
+
+        _ = try engine(phone, cloud, k, at: t0.addingTimeInterval(40)).pullInbound()
+        XCTAssertEqual(try phone.take(id: forked)?.primaryText, "phone edit", "the edit survives the next pull")
+        XCTAssertNil(try phone.take(id: take.id))
+    }
+
+    /// An Obie forked this way stays the Obie. Writing the copy as an Obie first would demote
+    /// and re-stamp the original, the release would refuse, and the Obie would be lost.
+    func testSync_bothSidesEdited_onTheObie_theCopyIsTheObie() throws {
+        let k = makeKeys(), cloud = InMemoryCloudFolder(), phone = InMemoryTakeStore()
+        var take = TestFixtures.richTake()
+        take.modifiedAt = t0
+        take.isObie = true
+        try phone.upsert(take)
+        try engine(phone, cloud, k, at: t0.addingTimeInterval(1)).sync()
+        var edited = take
+        edited.primaryText = "obie edit"
+        edited.modifiedAt = t0.addingTimeInterval(20)
+        try phone.upsert(edited)
+        try remark(take.id, kind: ManifestEntry.Kind.script, modified: t0.addingTimeInterval(25), in: cloud, keys: k)
+
+        let report = try engine(phone, cloud, k, at: t0.addingTimeInterval(30)).sync()
+
+        let forked = try XCTUnwrap(report.forkedFromScripts.first)
+        XCTAssertEqual(try phone.currentObie()?.id, forked)
+        XCTAssertEqual(try phone.take(id: forked)?.primaryText, "obie edit")
+        XCTAssertNil(try phone.take(id: take.id))
     }
 
     // MARK: - An edit landing mid-pull is never lost

@@ -184,15 +184,22 @@ public final class SyncEngine {
             for e in prev.takes { entries[e.uuid] = e }
             for t in prev.tombstones { mergedTombstones[t.uuid] = t }
         }
+        // The folder's entries as they were BEFORE this push wrote anything. The D-315 guards
+        // compare against these: an entry this push has just uploaded is our own write, not
+        // an edit from elsewhere.
+        let entriesBeforePush = entries
 
         // 1. Upload changed Takes. Blob HMACs are computed from the bytes in
         //    hand — no read-back.
         let changed = try store.takesModified(since: lastSync)
         for take in changed {
             if isCancelled() { throw CancellationError() }
-            // Never upload over a Script holding an edit this device has not seen (D-315);
-            // the pull half keeps this edit as a new Take instead.
-            if let e = entries[take.id], Self.changedElsewhere(e, since: lastSync) { continue }
+            // Never upload over a Script holding an edit this device has not seen (D-315):
+            // keep this edit as a new Take instead, uploaded now.
+            if let e = entriesBeforePush[take.id], Self.changedElsewhere(e, since: lastSync) {
+                try forkAndUpload(take, to: cloud, entries: &entries, report: &report)
+                continue
+            }
             try upload(take, to: cloud, entries: &entries, report: &report)
         }
 
@@ -276,7 +283,15 @@ public final class SyncEngine {
         for take in localTakes where !tombstonedIds.contains(take.id) {
             if isCancelled() { throw CancellationError() }
             if let entry = entries[take.id] {
-                if Self.changedElsewhere(entry, since: lastSync) { continue }   // D-315, as step 1
+                if let before = entriesBeforePush[take.id],
+                   Self.changedElsewhere(before, since: lastSync) {   // D-315, as step 1
+                    // Only an edit newer than the last sync needs keeping; anything older is
+                    // superseded by the Script, and the next pull lets it go.
+                    if take.modifiedAt > (lastSync ?? .distantPast) {
+                        try forkAndUpload(take, to: cloud, entries: &entries, report: &report)
+                    }
+                    continue
+                }
                 // REPAIR (2026-09-30): the pull found this Take's cloud copy failing verification
                 // while this device holds the very version the manifest names. Re-uploading it
                 // restores exactly what the manifest promises. Re-checked here, not trusted from
@@ -375,27 +390,46 @@ public final class SyncEngine {
     }
 
     /// Keep this device's edit as a new Take and let the original go (D-315, both sides
-    /// changed). The copy gets a fresh id, and its reminder a fresh notification id, so the
-    /// original's reminder can be cancelled without touching the copy's. The original is let
-    /// go only if it has not been edited again since it was read; if it has, the copy is
-    /// withdrawn and the next pass tries again.
-    private func fork(_ local: Take, into report: inout SyncReport) throws {
+    /// changed). Returns the copy, or nil when the original was edited again in between (the
+    /// copy is then withdrawn and a later pass tries again).
+    ///
+    /// The copy gets a fresh id, and its reminder a fresh notification id, so the original's
+    /// reminder can be cancelled without touching the copy's. It is written as an ordinary
+    /// Take FIRST and takes over the Obie only after the original is gone: writing it as an
+    /// Obie straight away would demote the original and bump its timestamp, the release would
+    /// then refuse, and the Obie would be lost. A crash between the steps can cost the Obie
+    /// marker, never the text.
+    @discardableResult
+    private func fork(_ local: Take, into report: inout SyncReport) throws -> Take? {
         let id = UUID()
         var reminder = local.timeReminder
         reminder?.notificationIdentifier = id.uuidString
         let copy = Take(id: id, createdAt: local.createdAt, modifiedAt: local.modifiedAt,
                         blocks: local.blocks, contentType: local.contentType, isNote: local.isNote,
-                        isObie: local.isObie, timeReminder: reminder,
+                        isObie: false, timeReminder: reminder,
                         locationReminder: local.locationReminder, attachments: local.attachments,
                         isSeeded: false, isImportant: local.isImportant, manualOrder: local.manualOrder)
         try store.upsert(copy)
         guard try store.release(id: local.id, ifNotModifiedAfter: local.modifiedAt) else {
             _ = try store.release(id: id, ifNotModifiedAfter: copy.modifiedAt)
-            return
+            return nil
         }
+        if local.isObie { try store.setObie(id: id, replaceExisting: true) }
         report.deletedLocally.append(local.id)
         report.applied.append(id)
         report.forkedFromScripts.append(id)
+        return try store.take(id: id)
+    }
+
+    /// Push's side of the same rule. A push can run without a pull first, and it advances the
+    /// watermark: an edit it merely skipped would then look synced, and the next pull would let
+    /// the Take go and lose it. So push forks it here and uploads the copy in the same pass.
+    private func forkAndUpload(_ take: Take, to cloud: CloudFolder,
+                               entries: inout [UUID: ManifestEntry],
+                               report: inout SyncReport) throws {
+        if let copy = try fork(take, into: &report) {
+            try upload(copy, to: cloud, entries: &entries, report: &report)
+        }
     }
 
     private func upload(_ take: Take, to cloud: CloudFolder,
