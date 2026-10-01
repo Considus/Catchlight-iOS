@@ -90,6 +90,55 @@ final class PaywallDraftPreservationTests: XCTestCase {
         XCTAssertTrue(try store.allTakes().isEmpty)
     }
 
+    // MARK: - Committing an in-place edit (timeline and Storyboard)
+
+    func testCommitEditedTake_lapsed_holdsTheTypedDraft_andWritesNothing() async throws {
+        let (app, store) = await makeUnlocked(status: .lapsed)
+        let draft = Take(blocks: [.textLine("typed while the trial ran out")])
+
+        XCTAssertEqual(app.commitEditedTake(draft), .heldForPaywall)
+        XCTAssertTrue(try store.allTakes().isEmpty, "nothing may be written while held")
+        XCTAssertEqual(app.pendingEntitledSave?.id, draft.id, "the typed draft must be held, not dropped")
+        XCTAssertTrue(app.ui.isPaywallPresented)
+
+        app.subscription.forceStatusForTesting(.subscribed)
+        app.resolvePendingEntitledSave()
+        XCTAssertEqual(try store.allTakes().map(\.id), [draft.id])
+    }
+
+    func testCommitEditedTake_entitled_saves() async throws {
+        let (app, store) = await makeUnlocked(status: .subscribed)
+        let draft = Take(blocks: [.textLine("an ordinary edit")])
+
+        XCTAssertEqual(app.commitEditedTake(draft), .saved)
+        XCTAssertEqual(try store.allTakes().map(\.plainText), ["an ordinary edit"])
+        XCTAssertNil(app.pendingEntitledSave)
+    }
+
+    /// Emptying a stored Take deletes it, and needs no entitlement: a lapsed user is not
+    /// shown the paywall for throwing nothing away.
+    func testCommitEditedTake_emptiedStoredTake_isDiscarded_evenWhenLapsed() async throws {
+        let (app, store) = await makeUnlocked(status: .lapsed)
+        let stored = Take(blocks: [.textLine("was here")])
+        try store.upsert(stored)
+        var emptied = stored
+        emptied.blocks = [.textLine("   ")]
+
+        XCTAssertEqual(app.commitEditedTake(emptied), .discarded)
+        XCTAssertNil(try store.take(id: stored.id))
+        XCTAssertFalse(app.ui.isPaywallPresented)
+        XCTAssertNil(app.pendingEntitledSave)
+    }
+
+    /// A task keeps a Take with no prose alive.
+    func testCommitEditedTake_taskWithNoProse_isSaved() async throws {
+        let (app, store) = await makeUnlocked(status: .subscribed)
+        let draft = Take(blocks: [.checkItem("")])
+
+        XCTAssertEqual(app.commitEditedTake(draft), .saved)
+        XCTAssertEqual(try store.allTakes().count, 1)
+    }
+
     // MARK: - saveLockedCapture (direct coverage — 2026-07-02 audit follow-up)
 
     /// A locked AppModel with a pending locked-capture draft and injectable
