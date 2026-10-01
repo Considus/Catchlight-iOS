@@ -681,6 +681,12 @@ public final class SyncEngine {
             report.uploaded = out.uploaded
             report.heldBack = out.heldBack
             report.repaired = out.repaired
+            // Push can fork too (D-315: a conversion landing between the halves). Its local
+            // changes must reach the app like the pull's, or the original's reminder stays
+            // armed and the copy's is never armed.
+            report.deletedLocally += out.deletedLocally
+            report.applied += out.applied
+            report.forkedFromScripts += out.forkedFromScripts
             // Content-free, like the lines above: no count, no UUID.
             if !out.repaired.isEmpty {
                 DiagnosticsLog.shared.record(.lifecycle, "Sync: repaired a cloud copy that failed verification")

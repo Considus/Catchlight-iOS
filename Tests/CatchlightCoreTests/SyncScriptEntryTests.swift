@@ -317,6 +317,33 @@ final class SyncScriptEntryTests: XCTestCase {
         XCTAssertNil(try phone.take(id: take.id))
     }
 
+    /// The other device's conversion lands between sync()'s pull and push halves, so it is the
+    /// PUSH that forks. sync()'s report must still carry the original's removal and the copy's
+    /// arrival, which is what the app uses to cancel and arm reminders.
+    func testSync_forkInThePushHalf_reachesTheSyncReport() throws {
+        let k = makeKeys(), inner = InMemoryCloudFolder(), phone = InMemoryTakeStore()
+        var take = TestFixtures.richTake()
+        take.modifiedAt = t0
+        try phone.upsert(take)
+        try engine(phone, inner, k, at: t0.addingTimeInterval(1)).sync()
+        var edited = take
+        edited.primaryText = "phone edit"
+        edited.modifiedAt = t0.addingTimeInterval(20)
+        try phone.upsert(edited)
+
+        // The push half reads the lock file first; the pull half never does.
+        let cloud = HookedCloudFolder(inner) { [unowned self] in
+            try self.remark(take.id, kind: ManifestEntry.Kind.script, modified: self.t0.addingTimeInterval(25),
+                            in: inner, keys: k)
+        }
+        let report = try engine(phone, cloud, k, at: t0.addingTimeInterval(30)).sync()
+
+        let forked = try XCTUnwrap(report.forkedFromScripts.first)
+        XCTAssertTrue(report.deletedLocally.contains(take.id))
+        XCTAssertTrue(report.applied.contains(forked))
+        XCTAssertEqual(try phone.take(id: forked)?.primaryText, "phone edit")
+    }
+
     // MARK: - An edit landing mid-pull is never lost
 
     /// The user's edit commits after the pull has decided the Take is unchanged but before it is
@@ -381,4 +408,24 @@ private final class EditBeforeReleaseStore: TakeStore {
     func purgeTombstones(ids: [UUID]) throws { try wrapped.purgeTombstones(ids: ids) }
     func applyRemote(_ take: Take) throws -> Bool { try wrapped.applyRemote(take) }
 
+}
+
+/// Runs `beforeLock` once, the first time the lock file is read: i.e. at the start of the push
+/// half, after the pull half has finished. Everything else forwards.
+private final class HookedCloudFolder: CloudFolder {
+    private let inner: InMemoryCloudFolder
+    private var beforeLock: (() throws -> Void)?
+    init(_ inner: InMemoryCloudFolder, beforeLock: @escaping () throws -> Void) {
+        self.inner = inner
+        self.beforeLock = beforeLock
+    }
+    func listFiles() throws -> [String] { try inner.listFiles() }
+    func read(_ name: String) throws -> Data? {
+        if name == SyncLock.fileName, let hook = beforeLock { beforeLock = nil; try hook() }
+        return try inner.read(name)
+    }
+    func write(_ data: Data, to name: String) throws { try inner.write(data, to: name) }
+    func writeAtomically(_ data: Data, to name: String) throws { try inner.writeAtomically(data, to: name) }
+    func delete(_ name: String) throws { try inner.delete(name) }
+    func secureDelete(_ name: String) throws { try inner.secureDelete(name) }
 }
