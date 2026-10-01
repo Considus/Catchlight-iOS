@@ -361,10 +361,13 @@ public final class SyncEngine {
         let blob = CloudBlob(take: take, sealed: sealed)
         let bytes = try blob.serialise()
         try cloud.write(bytes, to: CloudBlob.fileName(for: take.id))
+        // The entry's kind is kept (D-315): this device never turns a Script back into a
+        // Take by uploading over it.
         entries[take.id] = ManifestEntry(
             uuid: take.id,
             modified: ISO8601.string(from: take.modifiedAt),
-            hmac: signer.blobHMACHex(bytes)
+            hmac: signer.blobHMACHex(bytes),
+            kind: entries[take.id]?.kind
         )
         report.uploaded.append(take.id)
     }
@@ -427,6 +430,23 @@ public final class SyncEngine {
         // 3–6. Per-entry verify, decrypt, conflict-detect, merge.
         for entry in manifest.takes where !tombstonedIds.contains(entry.uuid) {
             if isCancelled() { throw CancellationError() }
+            // NOT A TAKE (D-315). A Script, or a kind from a newer client, is never fetched
+            // here; push carries its entry forward untouched. If another device turned a Take
+            // this phone holds into a Script, the phone lets it go WITHOUT a tombstone, since
+            // nothing was deleted. Reported as `deletedLocally` so the app cancels its
+            // reminders exactly as for a remote deletion. A local edit made since the last sync
+            // is never thrown away: it falls through to the normal path below (keep-local or a
+            // surfaced conflict), and push uploads it with the entry's kind kept, so the edit
+            // reaches the Script and the phone lets it go on a later pass.
+            if !entry.isTake {
+                guard let local = try store.take(id: entry.uuid) else { continue }
+                if let lastSync, local.modifiedAt <= lastSync {
+                    try store.delete(id: entry.uuid)
+                    try store.purgeTombstones(ids: [entry.uuid])
+                    report.deletedLocally.append(entry.uuid)
+                    continue
+                }
+            }
             let name = "\(entry.uuid.uuidString).clk"
             guard let blobBytes = try cloud.read(name) else {
                 // Declared but not yet readable — provider propagation lag or an

@@ -298,6 +298,38 @@ do {
         let afterDelete = try storeB.take(id: take.id)
         check("Inbound deletion from another device applied locally", report.deletedLocally == [take.id] && afterDelete == nil)
     }
+    // Scripts (D-315): the phone never fetches one, carries its entry forward untouched,
+    // and lets a Take go without a tombstone when another device turns it into a Script.
+    do {
+        let k = keys(); let cloud = InMemoryCloudFolder()
+        let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+        func remark(_ id: UUID, kind: String?) throws {
+            var m = try Manifest.opening(try ManifestEnvelope.parse(try cloud.read(Manifest.fileName)!),
+                                         with: k.manifestEncryptionKey())
+            m.takes = m.takes.map { $0.uuid == id ? ManifestEntry(uuid: $0.uuid, modified: $0.modified, hmac: $0.hmac, kind: kind) : $0 }
+            let env = try ManifestSigner(keys: k).sign(try m.sealed(with: k.manifestEncryptionKey()))
+            try cloud.write(try env.serialise(), to: Manifest.fileName)
+        }
+        func entry(_ id: UUID) throws -> ManifestEntry? {
+            try Manifest.opening(try ManifestEnvelope.parse(try cloud.read(Manifest.fileName)!),
+                                 with: k.manifestEncryptionKey()).takes.first { $0.uuid == id }
+        }
+        let mac = InMemoryTakeStore(); var script = richTake(); script.modifiedAt = t0; try mac.upsert(script)
+        try engine(mac, cloud, k, now: { t0 }).pushOutbound()
+        try remark(script.id, kind: ManifestEntry.Kind.script)
+        try cloud.write(Data("not a blob".utf8), to: "\(script.id.uuidString).clk")
+        let phone = InMemoryTakeStore(); var take = richTake(id: UUID()); take.modifiedAt = t0; try phone.upsert(take)
+        let pulled = try engine(phone, cloud, k, now: { t0.addingTimeInterval(1) }).sync()
+        let fetched = try phone.take(id: script.id), carried = try entry(script.id)
+        check("Script entry is never fetched by the phone",
+              fetched == nil && pulled.quarantined.isEmpty && pulled.unverified.isEmpty)
+        check("Script entry carried forward with its kind", carried?.kind == ManifestEntry.Kind.script)
+        try remark(take.id, kind: ManifestEntry.Kind.script)
+        let left = try engine(phone, cloud, k, now: { t0.addingTimeInterval(10) }).pullInbound()
+        let stillHere = try phone.take(id: take.id), pending = try phone.tombstones()
+        check("Take turned into a Script elsewhere leaves the phone without a tombstone",
+              left.deletedLocally == [take.id] && stillHere == nil && pending.isEmpty)
+    }
     // applyRemote — the sync-apply path must not resurrect a Take over a live
     // tombstone (delete-resurrection guard, closed 2026-07-23), while a remote
     // edit strictly after the deletion still lands (edit-wins).
