@@ -35,7 +35,6 @@ struct DailiesView: View {
     /// same way StoryboardView gates the identical transitions.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppModel.self) private var app
-    @Environment(FirstRunOrientationState.self) private var orientation
     @Environment(ConflictQueue.self) private var conflicts
     @Environment(\.colorScheme) private var scheme
 
@@ -54,10 +53,6 @@ struct DailiesView: View {
     @State private var focusReturnTakeID: UUID?
 
 
-    /// Cursor focus for the two hints this view hosts. Owned HERE rather than inside
-    /// `OrientationTooltip` — see the note there: a view that owns the focus state for
-    /// its own element rebuilds that element when the state flips.
-
     /// The heading's clearance (owner device report 2026-09-04, item 5).
     ///
     /// `CatchlightLayout.headingClearance` is a constant tuned for the 24pt heading, but
@@ -74,26 +69,6 @@ struct DailiesView: View {
         guard headingBlockHeight > 0 else { return CatchlightLayout.headingClearance }
         return max(CatchlightLayout.headingClearance,
                    headingBlockHeight - deviceTopInset + CatchlightLayout.headingBelowGap)
-    }
-
-    /// Leading edge of an Iris-anchored tooltip, measured from the spine centre.
-    ///
-    /// The bubble used to start a full `circleDiameter` out, which left about 17pt of air
-    /// between the arrow tip and the Iris: the arrow protrudes only ~5pt past the bubble's
-    /// leading edge (a 14x8 frame rotated 90 degrees and offset -8), while the Iris's right
-    /// edge is just `circleDiameter / 2` from the spine. Owner 2026-09-06: "can the tooltip be
-    /// moved to the left a bit, so the pointer is touching the Iris?"
-    ///
-    /// `radius + 5` puts the tip on the Iris's edge. Shared by hint 2 and hint 4 so the two
-    /// cannot drift apart.
-    private var irisHintLeadingGap: CGFloat { CatchlightLayout.circleDiameter / 2 + 5 }
-
-    /// Room an Iris-anchored tooltip has from its leading edge to the screen's trailing
-    /// margin (DT17). Falls back to the ceiling in `OrientationTooltip` before the container
-    /// has been measured.
-    private var irisHintAvailableWidth: CGFloat {
-        guard containerWidth > 0 else { return .infinity }
-        return max(120, containerWidth - (spineX + irisHintLeadingGap) - 12)
     }
 
     @Environment(\.dynamicTypeSize) private var dynamicSize
@@ -541,41 +516,6 @@ struct DailiesView: View {
             // its own solid backing + fade; scrolling Takes pass behind it and dissolve.
             // Drawn after the heading so it owns its hit region (the heading is inert).
             pinnedObie
-
-            // D-259 / audit §15af — first-run tour hint 2, re-homed here.
-            //
-            // 🚨 This is a FIRST-RUN regression, not an accessibility one: the tour has been
-            // dead after hint 1 for every user since the UIKit timeline rewrite. The hint used
-            // to live inside `row(for:isFirst:)`, gated on `isFirst`. That function is called
-            // exactly ONCE in this file — the pinned-Obie slot, with `isFirst: false` — because
-            // the scrolling timeline is `UIKitTimeline` and has no tooltip site. So `isFirst`
-            // was never true, the hint had no render site, and hints 3 and 4 sat unreachable
-            // behind it: advancing to step 3 needs an Iris tap nothing ever prompts.
-            //
-            // It belongs on this screen-fixed layer (where the beam and dust already live)
-            // rather than on a row, so it no longer depends on a SwiftUI row existing at all.
-            // `spineTopInset` already resolves the FIRST IRIS'S TOP EDGE in these coordinates
-            // for both the pinned-Obie and first-scrolling-row cases, and `spineX` gives the
-            // column, so the anchor survives the timeline being UIKit.
-            //
-            // 📌 Without an Obie, `firstRowTop` is published only by the now-dead SwiftUI row,
-            // so `spineTopInset` falls back to its constant estimate. That estimate is the
-            // CORRECT value for a first-run user with one Take and no Obie, which is the only
-            // state in which this hint ever shows. Known, accepted, do not "fix".
-
-            // Hint 4, on the SAME anchor as hint 2 (owner device round 2026-09-06).
-            //
-            // It used to be screen-anchored in `RootView` at `.padding(.top, 80)` with a
-            // `.top` arrow, pointing at nothing. On device that put a four-line bubble over
-            // the first Take — covering the very Iris it was telling the user to long-press —
-            // and its copy restated what the seeded first Take already says. Owner: "the Obie
-            // instruction basically mirrors what's said in the first Take and is too long, so
-            // it covers the Iris."
-            //
-            // Anchored beside the Iris with a leading arrow, it points at the thing it names
-            // and sits clear of it, and the copy shrinks to the one instruction that is not
-            // already on screen.
-
         }
         .background {
             // Capture the layout width (NOT UIScreen) so spineX matches the
@@ -608,26 +548,11 @@ struct DailiesView: View {
             // "keep my writing forever" isn't a wish to hoard technical logs).
             DiagnosticsLog.shared.enforceRetention(
                 autoDeleteWindow: SettingsViewModel.AutoCleanup.current.maxAge)
-            // Kick off the first-run orientation tour the first time the main app
-            // is visible. No-op once the tour has started or completed.
-            orientation.beginIfNeeded()
             // Let AppModel.relock save a mid-edit Take through our save path before it
             // tears down the store (owner 2026-06-17 — lock auto-saves, never discards).
             ui.commitInlineEdit = { saveInlineEdit() }
         }
         .onDisappear { ui.commitInlineEdit = nil }
-        // Hint 1 -> hint 2 advances when the EDITOR CLOSES, not when Add is tapped (owner
-        // 2026-09-06). Advancing on the tap armed the Iris hint while the editor was still
-        // open, so it appeared the instant the user pressed Add, pointing at an Iris behind
-        // the editor they had not finished with.
-        //
-        // The transition is watched here rather than inside `saveInlineEdit()` because this
-        // one signal covers BOTH ways out — saving and discarding — and cannot drift from
-        // them. `didFinishFirstTake()` is a no-op outside step 1, so an ordinary edit never moves the
-        // tour.
-        .onChange(of: ui.isEditingInPlace) { wasEditing, isEditing in
-            if wasEditing && !isEditing { orientation.didFinishFirstTake() }
-        }
         // The Focus ring committed while a Take is edited in place — apply it to the
         // live draft (edit-in-place 2026-06-17). Guarded on `editingTakeID` so the
         // (behind) timeline ignores commits meant for the top-anchored new-Take editor.
@@ -1408,7 +1333,6 @@ struct DailiesView: View {
             // match RootView's full-screen overlay). No edit-in-place on the new
             // timeline yet (M4), so the SwiftUI row's editing branches don't apply.
             onTapCircle: { take, irisCentre in
-                orientation.didTapIris()
                 ui.openFocusRingFan(for: take, origin: irisCentre)
             },
             // Iris long-press toggles Obie (owner 2026-07-04): demote is not gated,
@@ -1749,19 +1673,7 @@ struct DailiesView: View {
         // V44: captured BEFORE the defer clears the editing state, so the cursor
         // returns to the Take that was edited rather than to whatever the closing
         // card happened to be covering.
-        // 🚨 YIELD TO A FIRST-RUN HINT. V44 returns the cursor to the edited Take when
-        // the editor closes; hint 2's trigger was retimed in #227 to fire on exactly
-        // that event. Both then claim the cursor in the same instant, and the owner's
-        // capture caught them at the same timestamp:
-        //
-        //   22:53:48  POST layoutChanged  arg=UICollectionViewListCell  from=timeline.requestFocus
-        //   22:53:48  POST announcement   arg="Double-tap an Iris..."   from=tooltip.onAppear
-        //
-        // The two were built five days apart and neither knew the other existed. While
-        // the tour is running the HINT is the task, so it outranks a focus return —
-        // stated here as precedence rather than settled by whose delay is longer, which
-        // would only make one win by accident until the next thing claims the cursor.
-        focusReturnTakeID = orientation.isComplete ? ui.editingTakeID : nil
+        focusReturnTakeID = ui.editingTakeID
         defer { editDraft = nil; ui.endEditingInPlace() }
         guard var t = editDraft else { return }
         t.removeEmptyTextBlocks()
@@ -1807,8 +1719,7 @@ struct DailiesView: View {
     private func discardInlineEdit() {
         editFocusedBlockID = nil
         editDraft = nil
-        // Same precedence as `saveInlineEdit`: a running tour owns the cursor.
-        focusReturnTakeID = orientation.isComplete ? ui.editingTakeID : nil
+        focusReturnTakeID = ui.editingTakeID
         ui.endEditingInPlace()
     }
 
@@ -1927,7 +1838,6 @@ struct DailiesView: View {
             d.isObie = true
             d.normaliseActivityFloor()
             editDraft = d
-            orientation.didDismissObieIntro()
         }
     }
 
@@ -1937,7 +1847,6 @@ struct DailiesView: View {
         d.isObie = true
         d.normaliseActivityFloor()
         editDraft = d
-        orientation.didDismissObieIntro()
     }
 
     private func cancelInlineObie() {
@@ -1957,8 +1866,6 @@ struct DailiesView: View {
             onTapCircle: { irisCentre in
                 // While another Take is focused, any tap outside it commits and exits.
                 if editingActive && !isEditingThis { saveInlineEdit(); return }
-                // Hint 2 is dismissed by tapping any Iris.
-                orientation.didTapIris()
                 // Release the editor's keyboard BEFORE the Focus ring opens (owner
                 // lockup 2026-06-18). Leaving the editor first-responder while the ring
                 // + reminder picker sit on top made the keyboard fight the overlay —
@@ -1986,9 +1893,6 @@ struct DailiesView: View {
                 // entitlement-gated — removing a designation is always allowed, even on
                 // a lapsed trial.
                 if take.isObie { vm.demoteObie(take); return }
-                // Hint 4 no longer arms here: it shows on arrival at step 4, because gating
-                // the tip that teaches the long-press behind that long-press meant a new user
-                // never saw it (owner 2026-09-06).
                 // Task 6.20: Obie designation is a mutation — gate it.
                 guard app.ensureEntitled() else { return }
                 vm.designateObie(take, replaceExisting: false)
@@ -2204,7 +2108,6 @@ private struct SpineContainerBottomKey: PreferenceKey {
         .environment(app)
         .environment(app.dailiesVM)
         .environment(app.ui)
-        .environment(app.orientation)
         .environment(app.conflictQueue)
         .preferredColorScheme(.dark)
 }
@@ -2217,7 +2120,6 @@ private struct SpineContainerBottomKey: PreferenceKey {
         .environment(app)
         .environment(app.dailiesVM)
         .environment(app.ui)
-        .environment(app.orientation)
         .environment(app.conflictQueue)
         .preferredColorScheme(.light)
 }
@@ -2228,7 +2130,6 @@ private struct SpineContainerBottomKey: PreferenceKey {
         .environment(app)
         .environment(app.dailiesVM)
         .environment(app.ui)
-        .environment(app.orientation)
         .environment(app.conflictQueue)
         .preferredColorScheme(.dark)
 }

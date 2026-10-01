@@ -81,12 +81,11 @@ enum AccountReset {
     // MARK: - User defaults
 
     private static func wipeDefaults(clearingEntitlement: Bool) {
-        // Onboarding/orientation step + every user preference, so a reset really does return
+        // Every user preference, so a reset really does return
         // to fresh-install defaults. (owner 2026-06-16: View/Order were persisting through a
         // reset because they were not listed here when they were added. Anything new that
         // persists a user choice belongs in this list.)
         let standard = UserDefaults.standard
-        standard.removeObject(forKey: FirstRunOrientationState.storageKey)
         standard.removeObject(forKey: SettingsViewModel.appearanceDefaultsKey)
         standard.removeObject(forKey: SettingsViewModel.TakeSpacing.defaultsKey)          // "View"
         standard.removeObject(forKey: SettingsViewModel.TakeSort.defaultsKey)             // "Order"
