@@ -231,28 +231,15 @@ jobs:
         # 7.5). The scheme is declared explicitly in project.yml because
         # XcodeGen's auto-scheme does NOT include the `bundle.ui-testing` target.
         #
-        # FLAKY-XCUITEST ABSORPTION (2026-06-16): the synthesized-gesture UI flows
-        # (BlockEditor / CoreFlows) could miss an element that IS present in the
-        # accessibility tree — a simulator timing race the suite documents (and
-        # self-skip-guards in places). The races are now fixed at the source: the
-        # XCUITest interactions route through `tapWhenReady` / `tapUntil` (re-issue
-        # a dropped synthesized tap) in UITestSupport, and the reachability helpers
-        # wait 5s and re-issue their single interaction. (This also uncovered a real
-        # wrong-locator bug — the "editor-shape" footer Iris is an `Other`, not a
-        # `Button`, on iOS 18.x — that `-retry` could never have absorbed.) Verified
-        # locally green over 3–5 iterations on the iOS 18.6 leg.
-        #
-        # The stopgap is therefore REDUCED from 3 iterations to 2 (a single retry):
-        # `-retry-tests-on-failure` reruns ONLY a failed test once, so a lone CI
-        # flake on the OS=latest leg (different hardware, not verified locally)
-        # still can't block a merge, while a genuinely broken test fails both
-        # attempts and does. Unit/Core tests pass first try, so they're never
-        # retried. Drop `-test-iterations` entirely once a few real runs confirm
-        # the suite is green without the cushion.
+        # NO RETRY (2026-10-01, ISSUE-006). `-retry-tests-on-failure -test-iterations 2` used to
+        # rerun a failed UI test once. It carried a reproducible failure through at least three
+        # merges behind a green check: `A11yStateUITests.testImportantButton_valueFlipsOnToggle`
+        # failed the first attempt of every run because iOS's one-time "slide to type"
+        # introduction covers the keyboard and the editor toolbar on a fresh simulator, and the
+        # retry passed because iOS shows it once. The tests now dismiss it
+        # (`dismissKeyboardIntroductionIfPresent` in UITestSupport), and a failure fails the check.
         run: |
           xcodebuild test \
             -project Catchlight.xcodeproj \
             -scheme Catchlight \
-            -destination '${{ matrix.destination }}' \
-            -retry-tests-on-failure \
-            -test-iterations 2
+            -destination '${{ matrix.destination }}'

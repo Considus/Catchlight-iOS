@@ -77,7 +77,10 @@ func tapUntil(_ target: XCUIElement, appears result: XCUIElement,
                   file: file, line: line)
     for _ in 0..<attempts {
         target.tap()
-        if result.waitForExistence(timeout: timeout) { return true }
+        if result.waitForExistence(timeout: timeout) {
+            if result.elementType == .textView { dismissKeyboardIntroductionIfPresent() }
+            return true
+        }
     }
     XCTFail("tapUntil: result element did not appear after \(attempts) taps",
             file: file, line: line)
@@ -91,7 +94,35 @@ func typeWhenReady(_ element: XCUIElement, _ text: String, timeout: TimeInterval
     XCTAssertTrue(element.waitForExistence(timeout: timeout),
                   "typeWhenReady: element did not appear within \(timeout)s",
                   file: file, line: line)
+    dismissKeyboardIntroductionIfPresent()
     element.typeText(text)
+}
+
+// MARK: - The keyboard's one-time "slide to type" introduction (ISSUE-006)
+
+/// Set once the first keyboard presentation of this test run has been checked. The UI tests
+/// share one runner process, so this spans the whole run.
+private var keyboardIntroductionChecked = false
+
+/// iOS shows a one-time "slide to type" introduction the first time a fresh simulator raises
+/// the keyboard, and it covers the keyboard and the editor toolbar above it. CI starts every run
+/// on a fresh simulator, so whichever test first raised the keyboard found its controls with no
+/// hittable point (`Computed hit point {-1, -1}`) and failed; a retry passed because iOS shows it
+/// once. Measured 2026-10-01: present on every failing run, absent once dismissed.
+///
+/// Matched on the introduction's own text, so no other "Continue" is ever tapped. Checked once,
+/// at the first keyboard presentation: if it is not there then, this simulator has already shown
+/// it and the check is not repeated.
+func dismissKeyboardIntroductionIfPresent() {
+    guard !keyboardIntroductionChecked else { return }
+    keyboardIntroductionChecked = true
+    let app = XCUIApplication()
+    let intro = app.staticTexts
+        .matching(NSPredicate(format: "label BEGINSWITH %@", "Speed up your typing"))
+        .firstMatch
+    guard intro.waitForExistence(timeout: 3) else { return }
+    app.buttons["Continue"].tap()
+    _ = intro.waitForNonExistence(timeout: 3)
 }
 
 /// Wait for `element`, then swipe up on it (the Settings dock gesture).
