@@ -339,7 +339,6 @@ struct CatchlightApp: App {
                 RootView()
                     .environment(app)
                     .environment(app.ui)
-                    .environment(app.orientation)
                     .environment(app.conflictQueue)
                     .environmentObject(session)
 
