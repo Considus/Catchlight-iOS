@@ -212,29 +212,6 @@ enum Wiring {
                 // user's device search results clean across runs.
                 spotlight: NoopSpotlightIndexer()
             )
-            // First-run orientation state persists in standard UserDefaults
-            // across simulator launches, so whichever hint a PREVIOUS run left
-            // armed leaked into the next test (e.g. an armed settings hint
-            // swallows the first dailies-tab long-press, breaking Flow 6).
-            // UI-test runs start with the tour complete, UNLESS a test asks for a specific
-            // step with `--uitesting-orientation-step <n>`.
-            //
-            // 🚨 D-259: this line used to justify itself with "the orientation flow itself is
-            // covered by FirstRunOrientationTests (unit)". Those cover the state MACHINE —
-            // advance, persist, idempotence — and not one of them asserts that a hint RENDERS.
-            // So the tour could be dead after hint 1 for every user, sighted or not, with the
-            // whole suite green: hint 2's render site was gated on `isFirst` inside a SwiftUI
-            // row that the UIKit timeline rewrite left called once, with `isFirst: false`.
-            // Forcing the tour complete for every UI test is what made that unobservable.
-            // The opt-in below is how `FirstRunTourUITests` can assert a step reaches the
-            // screen; the default stays 5, so no existing test changes behaviour.
-            let tourArgs = ProcessInfo.processInfo.arguments
-            if let i = tourArgs.firstIndex(of: "--uitesting-orientation-step"),
-               i + 1 < tourArgs.count, let requested = Int(tourArgs[i + 1]) {
-                model.orientation.step = requested
-            } else {
-                model.orientation.step = 5
-            }
             // `--uitesting-restore` lands the run on the second-device restore
             // sheet (audit 2026-08, V8/T7): the phrase grid is otherwise
             // unreachable under test — onboarding is skipped and Settings opens
@@ -297,24 +274,6 @@ enum Wiring {
         // key but no phrase is told — without opening Settings → Privacy phrase, which
         // is the only place that ever checked (D-249: "the app never said so").
         model.refreshPhrasePresence()
-        // Arm the first-run tour at a given step on the REAL store, for device testing.
-        //
-        // `--uitesting-orientation-step` already existed but sits inside the `--uitesting`
-        // branch, which swaps in an `InMemoryTakeStore` — harmless, but it shows fixture
-        // Takes instead of the owner's own, which is not what "launch it at hint 1" means
-        // when he has data.
-        //
-        // 🚨 Logged UNCONDITIONALLY. An unrecognised launch argument is silently ignored by
-        // iOS, so a flag that is absent and a flag that did nothing look identical from
-        // the outside — this shipped once, was lost in a branch rebuild, and two launches
-        // were reported as "armed at hint 1" when the app had no such flag. The line below
-        // is what makes that distinguishable next time.
-        if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "--a11y-tour-step"),
-           i + 1 < ProcessInfo.processInfo.arguments.count,
-           let step = Int(ProcessInfo.processInfo.arguments[i + 1]) {
-            model.orientation.step = step
-            DiagnosticsLog.shared.record(.lifecycle, "TOUR step forced to \(step)")
-        }
         return model
     }
 

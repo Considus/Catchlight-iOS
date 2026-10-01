@@ -53,7 +53,6 @@ import CatchlightCore
 
 struct BottomDockView: View {
     @Environment(UIState.self) private var ui
-    @Environment(FirstRunOrientationState.self) private var orientation
     @Environment(\.dynamicTypeSize) private var dynamicSize
     /// For the per-type filter-toggle fills (owner 2026-06-18): each filter's ON fill
     /// uses its Iris quadrant colour, which is scheme-dependent.
@@ -213,9 +212,6 @@ struct BottomDockView: View {
 
     private var addButton: some View {
         Button {
-            // The tour advance used to fire HERE, which armed hint 2 while the editor was
-            // still opening. `DailiesView` now advances when the editor closes instead
-            // (owner 2026-09-06). Hint 1 hides on the same signal, below.
             // Redesign 2026-06-10: no bloom — Add creates the Take and opens
             // the editor directly (capture is two taps incl. the typing commit).
             onNewTake()
@@ -233,56 +229,10 @@ struct BottomDockView: View {
                     .font(.system(size: 24, weight: .regular))
                     .foregroundStyle(Color.ckAccent)   // #856539 glyph (Option A), like the siblings
             }
-            // 🚨 NO PULSE HERE, deliberately. The Add button used to scale 1.0 -> 1.18 ->
-            // 1.0 twice when hint 1 appeared. Removed at the owner's word (2026-09-12):
-            // "the pulse isn't important, I'm happy if we lose any visual things that fire
-            // once then never again" and "the tooltip itself does the heavy lifting".
-            //
-            // It also cost more than it was worth. Its `.scaleEffect` carried into the
-            // ACCESSIBILITY frame (measured: 44x44 at (36, 766) growing to 51.62x51.62 at
-            // (32.19, 762.19) and back), so the button's target moved under a resting
-            // cursor. And in his capture the hint's element died mid-sentence at the exact
-            // second the pulse stopped, cutting "Double-tap Add Take..." off after three
-            // syllables.
-            //
-            // ⚠️ The tooltip does NOT remount when the pulse ends — measured on the bench,
-            // one appear and no disappear across the whole cycle. So the pulse was
-            // disturbing the accessibility element rather than the view, which is a thing
-            // the simulator cannot show. Removing the animation removes the disturbance;
-            // that it FIXES his cut-off speech is not proven and is his to confirm.
             .frame(width: buttonSize, height: buttonSize)
-
-            // Add is the LEFTMOST dock slot (≈58pt from the screen edge), so a
-            // centred bubble clipped off-screen left. Anchor the arrow at the
-            // bubble's bottom-LEADING (over the +) and let the bubble extend RIGHT
-            // (owner 2026-06-15): .topLeading lines the bubble's leading up with the
-            // button's, the arrow sits 22pt in (the + centre), text spills right.
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("add-button")
-        // 🚨 THE CURSOR LANDS HERE, not on the hint (owner 2026-09-13: "if it's going to
-        // move, be best if it moved to the add button").
-        //
-        // The hint's own element dies about a second after the cursor reaches it and we
-        // could not establish why — it is stable on the bench across 88 samples, the view
-        // never remounts, and three separate causes were removed without changing it. This
-        // stops fighting that: the Add button is a permanent control, it is what the hint
-        // tells you to double-tap, and the cursor arrives ready to do it.
-        // V36 (audit §15af, D-260): the tooltip is overlaid INSIDE this Button's `label:`
-        // closure, so it belongs to the button's accessibility subtree and this label
-        // REPLACES it — `OrientationTooltip`'s own `.accessibilityElement()` and label never
-        // survive. It read once only because the tooltip's `onAppear` posts an announcement
-        // (V25's fix), which fires on first mount and never again: ARRIVAL worked, and every
-        // later focus got the bare "Add button". V25 fixed the arrival and never checked the
-        // element the user then navigates to.
-        //
-        // Fold the hint into the label while it is showing. NOT `.accessibilityHidden(true)`
-        // on the tooltip — D-221: a hide on a shape-bearing view materialises an anonymous
-        // element rather than removing one.
-        // Plain "Add Take". The fold from #225 existed because the tooltip was swallowed by
-        // this button's element and its words reached nobody. Since #235 moved the hint onto
-        // the dock row it is its OWN focusable node — measured in the owner's capture, the
-        // first time in any log — so folding it in here reads it TWICE.
         .accessibilityLabel("Add Take")
         .accessibilityHint("Double-tap to capture a new Take.")
         .accessibilityAddTraits(.isButton)
@@ -319,7 +269,6 @@ struct BottomDockView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("angle-tab")
-        // Hint 3's cursor lands here for the same reason — this is the control it names.
         .accessibilityLabel("Storyboard")
         // V27 (audit 2026-08): the hint used to say "Swipe up on the toolbar to
         // open Settings" — a gesture VoiceOver takes for itself, so the hint
@@ -330,12 +279,7 @@ struct BottomDockView: View {
         .accessibilityHint("Opens the Storyboard: every Take with a task. Use the actions rotor to open Settings.")
         // The swipe is a VoiceOver-incompatible gesture, so expose Settings as
         // an explicit named action too.
-        // 🚨 Dismiss the hint here too. The swipe-up path and a Storyboard double-tap
-        // both call `didDismissSettingsHint()`; this one did not, so a VoiceOver user
-        // following the hint's own advice opened Settings and the hint stayed up
-        // forever, with no way to reach step 4 (owner, device, 2026-09-10).
         .accessibilityAction(named: "Open Settings") {
-            orientation.didDismissSettingsHint()
             ui.isSettingsPresented = true
         }
         .accessibilityAddTraits(.isButton)
@@ -619,7 +563,6 @@ struct BottomDockView: View {
         Spacer()
         BottomDockView(onNewTake: {})
             .environment(UIState())
-            .environment(FirstRunOrientationState())
     }
     .background(Color.ckBackground)
     .preferredColorScheme(.dark)
@@ -635,7 +578,6 @@ struct BottomDockView: View {
         Spacer()
         BottomDockView(onNewTake: {})
             .environment(ui)
-            .environment(FirstRunOrientationState())
     }
     .background(Color.ckBackground)
     .preferredColorScheme(.dark)
@@ -648,7 +590,6 @@ struct BottomDockView: View {
         Spacer()
         BottomDockView(onNewTake: {})
             .environment(ui)
-            .environment(FirstRunOrientationState())
     }
     .background(Color.ckBackground)
     .preferredColorScheme(.light)

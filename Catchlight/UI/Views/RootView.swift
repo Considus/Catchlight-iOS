@@ -22,7 +22,6 @@ import CatchlightCore
 struct RootView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @Environment(FirstRunOrientationState.self) private var orientation
     @Environment(\.scenePhase) private var scenePhase
 
     /// Branded splash shown on every cold launch (owner 2026-06-14). `.task` runs
@@ -138,25 +137,8 @@ struct RootView: View {
         // `.screenChanged` re-anchors at the TOP of the new screen (with V32 that
         // is the page heading) and announces the transition — which also replaces
         // the clipped "Authenticating…" announcement (see LockView).
-        //
-        // 🚨 BUT NOT WHILE THE FIRST-RUN TOUR IS RUNNING. This re-anchor puts the cursor
-        // on the heading, and at launch it fires at the same moment hint 1 claims the
-        // cursor for itself — so the hint spoke and focus immediately left it for the
-        // heading (owner, device, 2026-09-12: "focus moved to the heading", within a
-        // second).
-        //
-        // Same precedence as V44 and stated the same way: while the tour runs the HINT is
-        // the task, so it outranks a re-anchor. Fixed at the source rather than by making
-        // one claim later than the other, which would only settle it by accident until
-        // something else claims the cursor.
-        //
-        // V34's own purpose is unaffected outside the tour: after an ordinary unlock there
-        // is no hint, and focus still moves to the top instead of the last Take.
         .onChange(of: app.lockState) { old, new in
             if old != .unlocked && new == .unlocked {
-                guard orientation.isComplete else {
-                    return
-                }
                 UIAccessibility.post(notification: .screenChanged, argument: nil)
             }
         }
@@ -294,11 +276,9 @@ struct RootView: View {
                )) {
             Button("Make Obie") {
                 app.dailiesVM.confirmObieReplacement()
-                orientation.didDismissObieIntro()
             }
             Button("Cancel", role: .cancel) {
                 app.dailiesVM.cancelObieReplacement()
-                orientation.didDismissObieIntro()
             }
         } message: {
             // Owner copy 2026-06-17: frame it as the existing Obie returning to the
@@ -468,11 +448,6 @@ struct RootView: View {
         }
     }
 
-    /// Hint 4 — the Obie introduction. A floating tooltip that sits lightly on top
-    /// of the live UI (no dim overlay). Tapping anywhere dismisses; the dailies VM's
-    /// own confirm/cancel alert ALSO dismisses (wired via the alert's button actions).
-    @ViewBuilder
-
     // MARK: - New item actions
 
     /// Invoked directly by the dock's Add button (RESTING and FILTERING states —
@@ -494,7 +469,6 @@ struct RootView: View {
     return RootView()
         .environment(app)
         .environment(app.ui)
-        .environment(app.orientation)
         .environment(app.conflictQueue)
         .preferredColorScheme(.dark)
 }
@@ -504,7 +478,6 @@ struct RootView: View {
     return RootView()
         .environment(app)
         .environment(app.ui)
-        .environment(app.orientation)
         .environment(app.conflictQueue)
         .preferredColorScheme(.dark)
 }

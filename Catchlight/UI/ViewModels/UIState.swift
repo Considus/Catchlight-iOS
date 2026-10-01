@@ -136,8 +136,7 @@ final class UIState {
     /// mid-edit Take, not discard it). nil when nothing is editing / DailiesView is gone.
     var commitInlineEdit: (() -> Void)?
 
-    /// Settings sheet — a swipe UP on the dock toggles this once the first-run
-    /// orientation has finished (step >= 4 in `FirstRunOrientationState`).
+    /// Settings sheet — a swipe UP on the dock toggles this.
     /// (Owner redesign 2026-06-11 — replaces the long-press on Dailies.)
     var isSettingsPresented = false
 
