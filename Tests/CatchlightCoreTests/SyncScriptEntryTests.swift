@@ -219,6 +219,73 @@ final class SyncScriptEntryTests: XCTestCase {
         XCTAssertEqual(try phone.take(id: script.id)?.primaryText, script.primaryText)
     }
 
+    // MARK: - Both sides edited: nothing lost, the Script never read
+
+    /// The phone edited the Take after its last sync; meanwhile the Mac turned it into a Script
+    /// and edited it too. The Script blob is unreadable garbage here, so any attempt to fetch it
+    /// would land in quarantined/unverified/conflicts. The phone keeps its edit as a NEW Take,
+    /// lets the original go, and the Script's entry and blob are left byte-for-byte alone.
+    func testSync_bothSidesEdited_phoneEditBecomesANewTake_andTheScriptIsUntouched() throws {
+        let k = makeKeys(), cloud = InMemoryCloudFolder(), phone = InMemoryTakeStore()
+        var take = TestFixtures.richTake()
+        take.primaryText = "before"
+        take.modifiedAt = t0
+        try phone.upsert(take)
+        try engine(phone, cloud, k, at: t0.addingTimeInterval(1)).sync()
+
+        var edited = take
+        edited.primaryText = "phone edit"
+        edited.modifiedAt = t0.addingTimeInterval(20)
+        try phone.upsert(edited)
+        try remark(take.id, kind: ManifestEntry.Kind.script, modified: t0.addingTimeInterval(25), in: cloud, keys: k)
+        try cloud.write(Data("the Mac's Script".utf8), to: "\(take.id.uuidString).clk")
+        let scriptEntry = try entry(take.id, in: cloud, keys: k)
+
+        let report = try engine(phone, cloud, k, at: t0.addingTimeInterval(30)).sync()
+
+        XCTAssertEqual(report.quarantined, [])
+        XCTAssertEqual(report.unverified.map(\.id), [])
+        XCTAssertEqual(report.conflicts.count, 0, "the Script never reaches the conflict screen")
+        XCTAssertEqual(try entry(take.id, in: cloud, keys: k), scriptEntry)
+        XCTAssertEqual(try cloud.read("\(take.id.uuidString).clk"), Data("the Mac's Script".utf8))
+        XCTAssertNil(try phone.take(id: take.id))
+        XCTAssertEqual(report.deletedLocally, [take.id])
+        let forked = try XCTUnwrap(report.forkedFromScripts.first)
+        XCTAssertEqual(report.forkedFromScripts.count, 1)
+        XCTAssertTrue(report.applied.contains(forked))
+        let copy = try XCTUnwrap(try phone.take(id: forked))
+        XCTAssertEqual(copy.primaryText, "phone edit")
+        XCTAssertEqual(copy.timeReminder?.notificationIdentifier, forked.uuidString,
+                       "the copy's reminder must not share the original's notification id")
+        XCTAssertEqual(try entry(forked, in: cloud, keys: k)?.kind, nil, "the copy syncs as an ordinary Take")
+        XCTAssertEqual(try phone.tombstones().map(\.id), [])
+        XCTAssertEqual(try Manifest.readEncrypted(from: cloud, keys: k).tombstones, [])
+    }
+
+    /// The same situation reached by a push on its own (no pull first): it must not upload the
+    /// phone's version over the Script.
+    func testPushAlone_neverOverwritesAScriptChangedElsewhere() throws {
+        let k = makeKeys(), cloud = InMemoryCloudFolder(), phone = InMemoryTakeStore()
+        var take = TestFixtures.richTake()
+        take.modifiedAt = t0
+        try phone.upsert(take)
+        try engine(phone, cloud, k, at: t0.addingTimeInterval(1)).sync()
+        var edited = take
+        edited.primaryText = "phone edit"
+        edited.modifiedAt = t0.addingTimeInterval(20)
+        try phone.upsert(edited)
+        try remark(take.id, kind: ManifestEntry.Kind.script, modified: t0.addingTimeInterval(25), in: cloud, keys: k)
+        let before = try entry(take.id, in: cloud, keys: k)
+        let blobBefore = try cloud.read("\(take.id.uuidString).clk")
+
+        let report = try engine(phone, cloud, k, at: t0.addingTimeInterval(30)).pushOutbound()
+
+        XCTAssertFalse(report.uploaded.contains(take.id))
+        XCTAssertEqual(try entry(take.id, in: cloud, keys: k), before)
+        XCTAssertEqual(try cloud.read("\(take.id.uuidString).clk"), blobBefore)
+        XCTAssertEqual(try phone.take(id: take.id)?.primaryText, "phone edit", "the edit waits on the phone")
+    }
+
     // MARK: - An edit landing mid-pull is never lost
 
     /// The user's edit commits after the pull has decided the Take is unchanged but before it is
