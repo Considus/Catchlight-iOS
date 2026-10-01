@@ -485,9 +485,7 @@ final class AppModel {
         // "returned to the lock screen" (5 silent crashes on 2026-07-16). If the run dies here,
         // these breadcrumbs are the only evidence of how far it got, and of typed text lost.
         DiagnosticsLog.shared.record(.lifecycle, "Locked capture: commit requested")
-        let isBlank = draft.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !draft.isTask && draft.timeReminder == nil
-        guard !isBlank else {
+        guard !draft.isBlank else {
             DiagnosticsLog.shared.record(.lifecycle, "Locked capture: blank, discarded")
             lockedCapture = nil
             return
@@ -685,11 +683,9 @@ final class AppModel {
     /// Commit a Take that was being edited in place, from the timeline or the Storyboard.
     /// Both screens used to carry their own copy of this, kept identical by hand.
     ///
-    /// A draft with nothing left in it is discarded, NOT saved — whether nothing was ever
-    /// typed into it or its text was cleared out (owner 2026-08-16). "Empty" is the whole
-    /// Take, not just its prose: a task, a reminder, a place or an attachment all keep it
-    /// alive with no text at all. The Obie takes no exception; an emptied Obie goes the
-    /// way of any other emptied Take. Discarding needs no entitlement.
+    /// A draft with nothing left in it (`Take.isBlank`) is discarded, NOT saved — whether
+    /// nothing was ever typed into it or its text was cleared out (owner 2026-08-16).
+    /// Discarding needs no entitlement.
     ///
     /// Anything else is saved if the user is entitled, and otherwise HELD for the
     /// paywall's outcome (owner 2026-07-01) rather than dropped with the editor.
@@ -697,10 +693,7 @@ final class AppModel {
     func commitEditedTake(_ draft: Take) -> EditCommit {
         var take = draft
         take.removeEmptyTextBlocks()
-        let isBlank = take.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !take.isTask && take.timeReminder == nil
-            && take.attachments.isEmpty && take.locationReminder == nil
-        if isBlank {
+        if take.isBlank {
             dailiesVM.discardIfPresent(take)
             return .discarded
         }
