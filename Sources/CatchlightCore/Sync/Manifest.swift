@@ -15,14 +15,16 @@
 //        "manifestHmac": "<hex HMAC of the envelope body>"
 //      }
 //
-//  and the sealed body inside it is the same index as before:
+//  and the sealed body inside it is the same index as before (a Script's entry, D-315,
+//  carries `kind`; a Take's never does, so its bytes are unchanged):
 //
 //      {
 //        "version": 3,
 //        "updated": "2026-05-28T07:00:00.000Z",
 //        "schemaVersion": 1,
 //        "takes": [
-//          { "uuid": "...", "modified": "...", "hmac": "<hex HMAC of the .clk blob>" }
+//          { "uuid": "...", "modified": "...", "hmac": "<hex HMAC of the .clk blob>" },
+//          { "uuid": "...", "modified": "...", "hmac": "...", "kind": "script" }
 //        ],
 //        "tombstones": [ { "uuid": "...", "deletedAt": "..." } ]
 //      }
@@ -48,15 +50,57 @@
 import Foundation
 import CryptoKit
 
+/// One synced item in the manifest.
+///
+/// `kind` says what the item IS, so a device can skip what it does not hold without
+/// downloading or decrypting it (D-315). A Take is the absence of a kind; a Script, the
+/// long-form Take written on the desktop and iPad (D-265), is `"script"`. The phone holds
+/// Takes only: it never fetches a non-Take blob, and it never changes an entry's kind.
+///
+/// The field is written ONLY for a non-Take, so every Take entry encodes byte-for-byte as
+/// it did before this field existed. A kind this client does not recognise is kept as it
+/// is and treated as "not a Take": a newer client's item is carried forward untouched
+/// rather than shown here or rejected with the whole manifest.
 public struct ManifestEntry: Codable, Equatable, Sendable {
     public let uuid: UUID
     public let modified: String        // ISO-8601
     public let hmac: String            // hex-encoded HMAC-SHA-256 of the .clk blob bytes
+    /// nil for a Take; otherwise the item's kind, e.g. `ManifestEntry.Kind.script`.
+    public let kind: String?
 
-    public init(uuid: UUID, modified: String, hmac: String) {
+    public enum Kind {
+        public static let take = "take"
+        public static let script = "script"
+    }
+
+    /// True when this device should treat the entry as a Take.
+    public var isTake: Bool { kind == nil || kind == Kind.take }
+
+    public init(uuid: UUID, modified: String, hmac: String, kind: String? = nil) {
         self.uuid = uuid
         self.modified = modified
         self.hmac = hmac
+        // A Take is stored as the absence of a kind, never as "take", so one item has one encoding.
+        self.kind = kind == Kind.take ? nil : kind
+    }
+
+    enum CodingKeys: String, CodingKey { case uuid, modified, hmac, kind }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try c.decodeIfPresent(String.self, forKey: .kind)
+        self.init(uuid: try c.decode(UUID.self, forKey: .uuid),
+                  modified: try c.decode(String.self, forKey: .modified),
+                  hmac: try c.decode(String.self, forKey: .hmac),
+                  kind: kind)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(uuid, forKey: .uuid)
+        try c.encode(modified, forKey: .modified)
+        try c.encode(hmac, forKey: .hmac)
+        if let kind { try c.encode(kind, forKey: .kind) }
     }
 }
 

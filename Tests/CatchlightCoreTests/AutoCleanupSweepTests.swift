@@ -51,6 +51,7 @@ private final class ThrowingDeleteStore: TakeStore {
     func setObie(id: UUID, replaceExisting: Bool) throws { try inner.setObie(id: id, replaceExisting: replaceExisting) }
     func lastSyncDate() -> Date? { inner.lastSyncDate() }
     func applyRemote(_ take: Take) throws -> Bool { try inner.applyRemote(take) }
+    func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool { try inner.release(id: id, ifNotModifiedAfter: cutoff) }
     func setLastSyncDate(_ date: Date) { inner.setLastSyncDate(date) }
     func tombstones() throws -> [Tombstone] { try inner.tombstones() }
     func purgeTombstones(ids: [UUID]) throws { try inner.purgeTombstones(ids: ids) }

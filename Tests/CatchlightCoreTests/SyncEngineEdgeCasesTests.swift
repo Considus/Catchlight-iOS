@@ -677,4 +677,5 @@ private final class MidPullDeleteStore: TakeStore {
     func tombstones() throws -> [Tombstone] { try wrapped.tombstones() }
     func purgeTombstones(ids: [UUID]) throws { try wrapped.purgeTombstones(ids: ids) }
     func applyRemote(_ take: Take) throws -> Bool { try wrapped.applyRemote(take) }
+    func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool { try wrapped.release(id: id, ifNotModifiedAfter: cutoff) }
 }
