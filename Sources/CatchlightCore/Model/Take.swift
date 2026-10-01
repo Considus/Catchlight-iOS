@@ -395,6 +395,19 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
         }
     }
 
+    /// True when there is nothing in this Take worth keeping, so an editor closing on it
+    /// discards it rather than saving an empty row (owner 2026-08-16). "Nothing" is the
+    /// whole Take, not just its prose: a task, a reminder, a place or an attachment each
+    /// keeps it alive with no text at all. The Obie takes no exception.
+    ///
+    /// One definition because the copies drifted: the timeline and the Storyboard
+    /// disagreed for a month about emptying an Obie.
+    public var isBlank: Bool {
+        plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !isTask && timeReminder == nil
+            && attachments.isEmpty && locationReminder == nil
+    }
+
     /// Tick (or untick) every check item. The timeline row's "mark complete"
     /// affordance (the editor toggles items individually); no-op for a non-Task.
     public mutating func setAllItemsComplete(_ complete: Bool) {
