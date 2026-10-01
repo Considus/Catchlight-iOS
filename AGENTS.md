@@ -76,6 +76,10 @@ xcodebuild test -scheme Catchlight -derivedDataPath "$BUILD_DIR/DerivedData" \
 
 Capture the **before** while you are still reproducing the problem, which is when it is cheapest, and the **after** once the change works. For a visible change that means a simulator screenshot: seed the screen, then `xcrun simctl io <udid> screenshot`. Pin the destination explicitly; a rotted simulator device is a known failure mode here and reads as a code failure.
 
+**The `--uitesting` fixture is not how Mark runs the app.** It starts at the default text size, with the "Created on" stamp off, no notice strips, and two short Takes. Before trusting a layout result, mirror the conditions the change is about: `-UIPreferredContentSizeCategoryName <category>` for text size, `-catchlight.creationStamp editor|always` for the stamp, `--uitesting-notice` for a strip above the page, `--uitesting-unverified` for the cloud-copy review sheet. A brand-new simulator also shows iOS's one-time "slide to type" introduction over the first keyboard; `dismissKeyboardIntroductionIfPresent` in `UITestSupport` handles it, so route keyboard-raising taps through `tapUntil` or `typeWhenReady`.
+
+**Run a UI test you add or change on both CI simulators before pushing**: iPhone 16 on the iOS 18 runtime and on the latest one. Their screens and keyboards differ, and a layout fix proven on one phone has failed on the other.
+
 **Mark uses this app for his real daily notes.** A data-affecting change needs a deliberate extra pass and a real backup, not just a green test run.
 
 **What cannot be checked locally:** push, StoreKit receipts and the subscription path (a sideloaded build has no receipt, and the failure mode there wipes the index), background sync scheduling, Spotlight body text on iOS 17 and later (title only, FB17330079), and anything that needs a physical device.
