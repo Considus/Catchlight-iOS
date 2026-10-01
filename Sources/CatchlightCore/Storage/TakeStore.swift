@@ -89,6 +89,19 @@ public protocol TakeStore: AnyObject {
     /// would be what a new store inherits without noticing, and it is exactly the
     /// interleaving this requirement forbids. Every store states its own.
     func applyRemote(_ take: Take) throws -> Bool
+
+    /// Remove a Take from THIS device without recording a tombstone, but only if it has not
+    /// been modified after `cutoff`. Returns false, changing nothing, if it was, or if it is
+    /// not here. Used when another device has turned the Take into a Script (D-315): the
+    /// phone lets it go, and nothing was deleted.
+    ///
+    /// Check and removal MUST happen inside one critical section, for two reasons. A user
+    /// edit committed between a separate read and delete would be discarded unseen. And
+    /// `delete` followed by `purgeTombstones` leaves a window where a tombstone exists: if
+    /// the process dies inside it, the next push propagates that tombstone and deletes the
+    /// Script on every device. No tombstone is ever written here, so there is no window.
+    /// No default implementation, for the same reason as `applyRemote`.
+    func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool
 }
 
 /// In-memory `TakeStore` for tests and previews. Not used in production.
@@ -133,6 +146,12 @@ public final class InMemoryTakeStore: TakeStore {
             return false
         }
         try upsert(take)
+        return true
+    }
+
+    public func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool {
+        guard let take = takes[id], take.modifiedAt <= cutoff else { return false }
+        takes[id] = nil
         return true
     }
 

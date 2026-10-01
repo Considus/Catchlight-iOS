@@ -218,4 +218,69 @@ final class SyncScriptEntryTests: XCTestCase {
         XCTAssertEqual(report.applied, [script.id])
         XCTAssertEqual(try phone.take(id: script.id)?.primaryText, script.primaryText)
     }
+
+    // MARK: - An edit landing mid-pull is never lost
+
+    /// The user's edit commits after the pull has decided the Take is unchanged but before it is
+    /// let go — the window a separate read-then-delete leaves open. The store's single
+    /// check-and-remove sees the edit, so the Take stays and is sent as the Script.
+    func testPull_editLandingJustBeforeTheRelease_isKept() throws {
+        let k = makeKeys(), cloud = InMemoryCloudFolder(), inner = InMemoryTakeStore()
+        var take = TestFixtures.richTake()
+        take.modifiedAt = t0
+        try inner.upsert(take)
+        try engine(inner, cloud, k, at: t0.addingTimeInterval(1)).sync()
+        try remark(take.id, kind: ManifestEntry.Kind.script, in: cloud, keys: k)
+
+        var edited = take
+        edited.primaryText = "typed mid-pull"
+        edited.modifiedAt = t0.addingTimeInterval(20)
+        let phone = EditBeforeReleaseStore(wrapping: inner, edit: edited)
+        let report = try engine(phone, cloud, k, at: t0.addingTimeInterval(30)).pullInbound()
+
+        XCTAssertTrue(phone.editFired)
+        XCTAssertEqual(report.deletedLocally, [])
+        XCTAssertEqual(try inner.take(id: take.id)?.primaryText, "typed mid-pull")
+        XCTAssertEqual(try inner.tombstones().map(\.id), [])
+    }
+}
+
+/// Commits a user edit at the start of `release`, i.e. after the pull has already read the
+/// Take as unchanged. Everything else forwards to the wrapped store.
+private final class EditBeforeReleaseStore: TakeStore {
+    private let wrapped: InMemoryTakeStore
+    private let edit: Take
+    private(set) var editFired = false
+
+    init(wrapping wrapped: InMemoryTakeStore, edit: Take) {
+        self.wrapped = wrapped
+        self.edit = edit
+    }
+
+    func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool {
+        if id == edit.id, !editFired {
+            editFired = true
+            try wrapped.upsert(edit)   // the user's edit lands here
+        }
+        return try wrapped.release(id: id, ifNotModifiedAfter: cutoff)
+    }
+
+    func upsert(_ take: Take) throws { try wrapped.upsert(take) }
+    func delete(id: UUID) throws { try wrapped.delete(id: id) }
+    func take(id: UUID) throws -> Take? { try wrapped.take(id: id) }
+    func allTakes() throws -> [Take] { try wrapped.allTakes() }
+    func takesModified(since date: Date?) throws -> [Take] { try wrapped.takesModified(since: date) }
+    func search(_ query: String) throws -> [Take] { try wrapped.search(query) }
+    func upsert(_ sequence: CatchlightSequence) throws { try wrapped.upsert(sequence) }
+    func sequence(id: UUID) throws -> CatchlightSequence? { try wrapped.sequence(id: id) }
+    func allSequences() throws -> [CatchlightSequence] { try wrapped.allSequences() }
+    func deleteSequence(id: UUID) throws { try wrapped.deleteSequence(id: id) }
+    func currentObie() throws -> Take? { try wrapped.currentObie() }
+    func setObie(id: UUID, replaceExisting: Bool) throws { try wrapped.setObie(id: id, replaceExisting: replaceExisting) }
+    func lastSyncDate() -> Date? { wrapped.lastSyncDate() }
+    func setLastSyncDate(_ date: Date) { wrapped.setLastSyncDate(date) }
+    func tombstones() throws -> [Tombstone] { try wrapped.tombstones() }
+    func purgeTombstones(ids: [UUID]) throws { try wrapped.purgeTombstones(ids: ids) }
+    func applyRemote(_ take: Take) throws -> Bool { try wrapped.applyRemote(take) }
+
 }

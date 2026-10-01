@@ -70,7 +70,10 @@ public struct SyncReport: Equatable, Sendable {
     /// always provider propagation lag or an evicted file. NOT an integrity
     /// signal; retried implicitly on the next sync pass.
     public var skipped: [UUID] = []
-    public var deletedLocally: [UUID] = []   // remote tombstones applied locally
+    /// Removed from this device by the pull: remote tombstones applied, and Takes another
+    /// device turned into Scripts (D-315), which leave without a tombstone. Either way the
+    /// app cancels their reminders.
+    public var deletedLocally: [UUID] = []
     public var uploaded: [UUID] = []         // local versions written to cloud
     /// Live local Takes push's self-heal step did NOT re-upload because this
     /// device was offline longer than the tombstone-retention window (2026-07-01):
@@ -439,13 +442,12 @@ public final class SyncEngine {
             // surfaced conflict), and push uploads it with the entry's kind kept, so the edit
             // reaches the Script and the phone lets it go on a later pass.
             if !entry.isTake {
-                guard let local = try store.take(id: entry.uuid) else { continue }
-                if let lastSync, local.modifiedAt <= lastSync {
-                    try store.delete(id: entry.uuid)
-                    try store.purgeTombstones(ids: [entry.uuid])
+                // One atomic check-and-remove, never delete + purge: see `TakeStore.release`.
+                if let lastSync, try store.release(id: entry.uuid, ifNotModifiedAfter: lastSync) {
                     report.deletedLocally.append(entry.uuid)
                     continue
                 }
+                if try store.take(id: entry.uuid) == nil { continue }
             }
             let name = "\(entry.uuid.uuidString).clk"
             guard let blobBytes = try cloud.read(name) else {

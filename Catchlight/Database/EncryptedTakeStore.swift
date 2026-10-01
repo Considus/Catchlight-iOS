@@ -460,6 +460,31 @@ public final class EncryptedTakeStore: TakeStore {
         }
     }
 
+    public func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool {
+        try queue.sync {
+            // Read and delete inside one queue.sync and one transaction, and no tombstone
+            // row: see the protocol for why both matter (D-315).
+            try exec("BEGIN IMMEDIATE;")
+            var committed = false
+            defer { if !committed { try? exec("ROLLBACK;") } }
+            let sel = try prepare("SELECT modified_at FROM takes WHERE id = ?1;")
+            defer { sqlite3_finalize(sel) }
+            bindText(sel, 1, id.uuidString)
+            guard sqlite3_step(sel) == SQLITE_ROW else { return false }
+            guard let modifiedAt = ISO8601.date(from: columnText(sel, 0)) else {
+                throw StorageError.corruptRow("take row has unparseable modified_at")
+            }
+            guard modifiedAt <= cutoff else { return false }
+            let del = try prepare("DELETE FROM takes WHERE id = ?1;")
+            defer { sqlite3_finalize(del) }
+            bindText(del, 1, id.uuidString)
+            guard sqlite3_step(del) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
+            try exec("COMMIT;")
+            committed = true
+            return true
+        }
+    }
+
     public func take(id: UUID) throws -> Take? {
         try queue.sync {
             let stmt = try prepare("SELECT id, payload FROM takes WHERE id = ?1;")
