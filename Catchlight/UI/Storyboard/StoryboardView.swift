@@ -454,42 +454,17 @@ struct StoryboardView: View {
         ui.commitInlineEdit = { commitEdit() }
     }
 
-    /// Commit the focused edit through the same `vm.save` chokepoint the timeline
-    /// uses, then clear focus. Every Storyboard Take already has content (it carries a
-    /// task), so there is no blank-discard case to handle.
+    /// Commit the focused edit through the same `AppModel.commitEditedTake` the timeline
+    /// uses, then clear focus.
     private func commitEdit() {
         ui.commitInlineEdit = nil           // this edit is over — deregister from relock
         editFocusedBlockID = nil
-        guard var t = editDraft else { return }
+        guard let t = editDraft else { return }
         withAnimation(reduceMotion ? nil : UIState.fanFade) { editDraft = nil }
-        t.removeEmptyTextBlocks()
-        // The Shot List can empty a Take (delete the last check item → one blank
-        // text row), so the "every Storyboard Take has content" assumption no
-        // longer holds at commit (2026-07-01). Same rule as the timeline: a draft
-        // left with nothing in it is discarded, never saved as an empty Note —
-        // and since 2026-08-16 that holds whether or not the stored copy had text,
-        // so an emptied Take cannot come back reading "Untitled Take".
-        //
-        // The Obie takes no exception here either (owner 2026-08-16). This copy kept the
-        // `!t.isObie` term after the timeline dropped it on 2026-07-20, so the two screens
-        // disagreed: emptying your Obie deleted it on the timeline and left it reading
-        // "Untitled Take" here. Removing it applies the July decision to the copy that
-        // missed it, and the two rules are now identical.
-        let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !t.isTask && t.timeReminder == nil
-            && t.attachments.isEmpty && t.locationReminder == nil
-        if isBlank {
-            vm.discardIfPresent(t)
-            return
-        }
-        guard app.ensureEntitled() else {
-            // Paywall interrupted the save (owner 2026-07-01): hold the typed
-            // draft for the paywall's outcome — saved on subscribe, dropped on
-            // unsubscribed dismiss — instead of clearing it above and returning.
-            app.holdDraftForPaywall(t)
-            return
-        }
-        vm.save(t)
+        // The Shot List can empty a Take (delete the last check item), so this can be a
+        // blank draft. Blank → discard, otherwise save or hold for the paywall: the same
+        // `AppModel.commitEditedTake` the timeline uses, so the two screens cannot disagree.
+        app.commitEditedTake(t)
     }
 
     /// Discard the focused edit — revert the Take to its pre-edit state (the store
