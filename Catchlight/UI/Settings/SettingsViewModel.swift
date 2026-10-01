@@ -52,7 +52,7 @@ final class SettingsViewModel {
     /// return re-locks it (D-042). Read by `AppModel.relockIfAwayTooLong()`. The app
     /// ALWAYS re-locks on cold launch and when the phone locks while Catchlight is in
     /// the foreground — this only governs the background-grace window.
-    enum LockAfter: String, CaseIterable, Identifiable {
+    enum LockAfter: String, CaseIterable, Identifiable, StoredPreference {
         case thirtySeconds, oneMinute, fiveMinutes, thirtyMinutes, oneHour
 
         static let defaultsKey = "catchlight.lockAfter"
@@ -79,21 +79,13 @@ final class SettingsViewModel {
             case .oneHour:       return "1 hour"
             }
         }
-
-        /// The user's current choice (falls back to the default), read from the same
-        /// UserDefaults key the Settings picker writes via `@AppStorage`.
-        static var current: LockAfter {
-            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-                  let value = LockAfter(rawValue: raw) else { return .default }
-            return value
-        }
     }
 
     /// How many HOURS ahead a freshly-added reminder defaults to (owner 2026-06-18 — a
     /// user preference shown as a segmented control of 1/6/12/24/48). The raw value IS
     /// the hour count. `FocusRingFanView.defaultReminderDate` reads `current` when seeding
     /// the picker; the user always refines from there.
-    enum DefaultReminderHours: String, CaseIterable, Identifiable {
+    enum DefaultReminderHours: String, CaseIterable, Identifiable, StoredPreference {
         case one = "1", six = "6", twelve = "12", twentyFour = "24", fortyEight = "48"
 
         static let defaultsKey = "catchlight.defaultReminderHours"
@@ -119,14 +111,6 @@ final class SettingsViewModel {
         func date(from now: Date = Date()) -> Date {
             now.addingTimeInterval(TimeInterval(hours) * 3600)
         }
-
-        /// The user's current choice (falls back to the default), from the same
-        /// UserDefaults key the Settings picker writes via `@AppStorage`.
-        static var current: DefaultReminderHours {
-            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-                  let value = DefaultReminderHours(rawValue: raw) else { return .default }
-            return value
-        }
     }
 
     /// Default duration for the reminder notification's "Snooze" pull-down action
@@ -134,7 +118,7 @@ final class SettingsViewModel {
     /// from the same UserDefaults key the Settings picker writes — a plain preference,
     /// so it's readable even while the phone is LOCKED (when the encrypted store, and so
     /// the reminder data, is not). Snooze re-nudges the notification by this much.
-    enum SnoozeDuration: String, CaseIterable, Identifiable {
+    enum SnoozeDuration: String, CaseIterable, Identifiable, StoredPreference {
         case fiveMinutes, fifteenMinutes, thirtyMinutes, oneHour, sixHours, twelveHours, twentyFourHours
 
         static let defaultsKey = "catchlight.snoozeDuration"
@@ -167,21 +151,8 @@ final class SettingsViewModel {
             case .twentyFourHours: return "24 hours"
             }
         }
-
-        /// The user's current choice (falls back to the default), from the same
-        /// UserDefaults key the Settings picker writes via `@AppStorage`.
-        static var current: SnoozeDuration {
-            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-                  let value = SnoozeDuration(rawValue: raw) else { return .default }
-            return value
-        }
     }
 
-    /// Follow-up reminders (owner 2026-06-28): whether a fired reminder that isn't acted on
-    /// auto re-nudges at the Snooze-duration interval, up to `ReminderScheduler.followUpCount`
-    /// times, until the user marks it done / dismisses / snoozes. Default ON, but
-    /// user-disableable — the nudges are intrusive, so this honours the "user decides"
-    /// principle. A plain bool preference, readable by `ReminderScheduler` while scheduling.
     /// Ask before deleting a Take (owner 2026-08-16). A delete is a hard store delete —
     /// there is no trash and no undo — so the confirmation defaults ON: doing nothing
     /// cannot then lose a Take, and the user can switch it off
@@ -190,18 +161,19 @@ final class SettingsViewModel {
     enum ConfirmBeforeDelete {
         static let defaultsKey = "catchlight.confirmBeforeDelete"
         static let `default` = true
-        static var isEnabled: Bool {
-            // `object(forKey:)` so an unset key reads the default (true), not false.
-            UserDefaults.standard.object(forKey: defaultsKey) as? Bool ?? `default`
-        }
     }
 
+    /// Follow-up reminders (owner 2026-06-28): whether a fired reminder that isn't acted on
+    /// auto re-nudges at the Snooze-duration interval, up to `ReminderScheduler.followUpCount`
+    /// times, until the user marks it done / dismisses / snoozes. Default ON, but
+    /// user-disableable — the nudges are intrusive, so this honours the "user decides"
+    /// principle. A plain bool preference, readable by `ReminderScheduler` while scheduling.
     enum FollowUpReminders {
         static let defaultsKey = "catchlight.followUpReminders"
         static let `default` = true
-        static var isEnabled: Bool {
+        static func isEnabled(_ defaults: UserDefaults = .standard) -> Bool {
             // `object(forKey:)` so an unset key reads the default (true), not false.
-            UserDefaults.standard.object(forKey: defaultsKey) as? Bool ?? `default`
+            defaults.object(forKey: defaultsKey) as? Bool ?? `default`
         }
     }
 
@@ -211,7 +183,7 @@ final class SettingsViewModel {
     /// the next card's top, sized so the lower card's Iris (which straddles its top
     /// edge, poking up one radius ≈ 22pt) never overlaps the card above. Read by
     /// `DailiesView` via `@AppStorage`.
-    enum TakeSpacing: String, CaseIterable, Identifiable {
+    enum TakeSpacing: String, CaseIterable, Identifiable, StoredPreference {
         case compact, standard, comfort
 
         static let defaultsKey = "catchlight.takeSpacing"
@@ -236,12 +208,6 @@ final class SettingsViewModel {
             case .comfort:  return "Comfort"
             }
         }
-
-        static var current: TakeSpacing {
-            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-                  let value = TakeSpacing(rawValue: raw) else { return .default }
-            return value
-        }
     }
 
     /// Timeline sort direction — which end of time sits at the TOP (owner 2026-06-16).
@@ -250,7 +216,7 @@ final class SettingsViewModel {
     /// toward "now" and older Takes fall off the top. This is also the order under
     /// which the chronologically-timed seed Takes read Note·Task·Reminder·Delete.
     /// `.newestFirst` inverts it. Read by `DailiesView`.
-    enum TakeSort: String, CaseIterable, Identifiable {
+    enum TakeSort: String, CaseIterable, Identifiable, StoredPreference {
         case oldestFirst, newestFirst
 
         static let defaultsKey = "catchlight.takeSort"
@@ -264,12 +230,6 @@ final class SettingsViewModel {
             case .newestFirst: return "Newest first"
             }
         }
-
-        static var current: TakeSort {
-            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-                  let value = TakeSort(rawValue: raw) else { return .default }
-            return value
-        }
     }
 
     /// How the timeline is ARRANGED: by date, or by hand (D-195, owner 2026-08-14).
@@ -280,7 +240,7 @@ final class SettingsViewModel {
     /// derived from `createdAt`, so the moment a Take is dragged out of its month
     /// they state something untrue. Read by `DailiesView` and `StoryboardView`;
     /// the arithmetic is `ManualOrder` in Core.
-    enum TimelineArrangement: String, CaseIterable, Identifiable {
+    enum TimelineArrangement: String, CaseIterable, Identifiable, StoredPreference {
         case date, manual
 
         static let defaultsKey = "catchlight.timelineArrangement"
@@ -294,12 +254,6 @@ final class SettingsViewModel {
             case .manual: return "Manual"
             }
         }
-
-        static var current: TimelineArrangement {
-            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-                  let value = TimelineArrangement(rawValue: raw) else { return .default }
-            return value
-        }
     }
 
     /// Where the "Created at …" stamp shows (owner 2026-07-01). Default `.off` — the
@@ -307,7 +261,7 @@ final class SettingsViewModel {
     /// Take is open in the inline editor; `.always` also shows it on every resting
     /// timeline card. Read by `TakeCardSurface` (always) and `TakeEditCard`
     /// (editor + always). See `CreationStampLabel`.
-    enum CreationStamp: String, CaseIterable, Identifiable {
+    enum CreationStamp: String, CaseIterable, Identifiable, StoredPreference {
         case off, editor, always
 
         static let defaultsKey = "catchlight.creationStamp"
@@ -322,18 +276,12 @@ final class SettingsViewModel {
             case .always: return "Always"
             }
         }
-
-        static var current: CreationStamp {
-            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-                  let value = CreationStamp(rawValue: raw) else { return .default }
-            return value
-        }
     }
 
     /// How much of a collapsed Take's body shows on the timeline (owner 2026-06-16:
     /// "Preview" — deliberately INDEPENDENT of `TakeSpacing`/"View" density). The
     /// reminder date/time label is unaffected (it's a separate line below the body).
-    enum TakePreview: String, CaseIterable, Identifiable {
+    enum TakePreview: String, CaseIterable, Identifiable, StoredPreference {
         case single, some, all
 
         static let defaultsKey = "catchlight.takePreview"
@@ -357,12 +305,6 @@ final class SettingsViewModel {
             case .some:   return "Some"
             case .all:    return "All"
             }
-        }
-
-        static var current: TakePreview {
-            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-                  let value = TakePreview(rawValue: raw) else { return .default }
-            return value
         }
     }
 
@@ -422,7 +364,7 @@ final class SettingsViewModel {
     /// the choice is an AGE/GRACE window after which an eligible Take (all tasks /
     /// reminders done, no note, not the Obie — see `Take.isAutoCleanupEligible`) is
     /// deleted on the next app open. Default `never` ⇒ nothing is ever auto-deleted.
-    enum AutoCleanup: String, CaseIterable, Identifiable {
+    enum AutoCleanup: String, CaseIterable, Identifiable, StoredPreference {
         case never, daily, weekly, monthly, annually
 
         static let defaultsKey = "catchlight.autoCleanup"
@@ -455,12 +397,6 @@ final class SettingsViewModel {
             case .annually: return 365 * day
             }
         }
-
-        static var current: AutoCleanup {
-            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-                  let value = AutoCleanup(rawValue: raw) else { return .default }
-            return value
-        }
     }
 
     /// How sync runs once a cloud folder is configured (owner 2026-06-21). The
@@ -474,7 +410,7 @@ final class SettingsViewModel {
     /// in `Wiring.makeSyncEngine`. Default `auto` so existing installs are
     /// unchanged. Pure UserDefaults preference — no key/store access, so it's safe
     /// to read from the background-sync queue and while locked.
-    enum SyncMode: String, CaseIterable, Identifiable {
+    enum SyncMode: String, CaseIterable, Identifiable, StoredPreference {
         case auto, manual, disabled
 
         static let defaultsKey = "catchlight.syncMode"
@@ -489,12 +425,6 @@ final class SettingsViewModel {
             case .disabled: return "Disabled"
             }
         }
-
-        static var current: SyncMode {
-            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-                  let value = SyncMode(rawValue: raw) else { return .default }
-            return value
-        }
     }
 
     var notificationStatus: UNAuthorizationStatus = .notDetermined
@@ -505,12 +435,6 @@ final class SettingsViewModel {
     var isPhraseSheetPresented: Bool = false
     var isCloudStorageSheetPresented: Bool = false
     var isAboutSheetPresented: Bool = false
-
-    private let defaults: UserDefaults
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-    }
 
     // MARK: - Notifications
 
@@ -579,9 +503,30 @@ extension SpotlightExposure {
     /// before the 2026-07-24 lock) clamps to `.type` — the nearest level still
     /// offered; that user had indexing ON, so `.none` would under-shoot their
     /// intent. `AppModel.init` performs the matching one-time index scrub.
-    static var current: SpotlightExposure {
-        guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+    static func current(_ defaults: UserDefaults = .standard) -> SpotlightExposure {
+        guard let raw = defaults.string(forKey: defaultsKey),
               let value = SpotlightExposure(rawValue: raw) else { return .default }
         return value.isSelectable ? value : .type
+    }
+}
+
+/// A Settings choice stored in `UserDefaults` as its raw string. Screens read it live
+/// through `@AppStorage(defaultsKey)`; code outside a view reads it through `current(_:)`.
+///
+/// `current` takes the defaults to read, the way `WritingToolsBehaviour.current` does, so
+/// a test can hand it an isolated suite. Everything else uses `.standard`, which is where
+/// the Settings pickers write.
+protocol StoredPreference: RawRepresentable<String> {
+    static var defaultsKey: String { get }
+    static var `default`: Self { get }
+}
+
+extension StoredPreference {
+    /// The stored choice, or `default` when the key is absent or holds a value this
+    /// build does not recognise.
+    static func current(_ defaults: UserDefaults = .standard) -> Self {
+        guard let raw = defaults.string(forKey: defaultsKey),
+              let value = Self(rawValue: raw) else { return .default }
+        return value
     }
 }

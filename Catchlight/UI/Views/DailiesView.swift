@@ -540,14 +540,14 @@ struct DailiesView: View {
             // Opt-in auto-cleanup sweep on open (owner 2026-06-19): delete finished,
             // note-free Takes past the user's chosen retention window. No-op unless the
             // user turned it on (Settings default = Never); see DailiesViewModel.
-            vm.runAutoCleanup(olderThan: SettingsViewModel.AutoCleanup.current.maxAge)
+            vm.runAutoCleanup(olderThan: SettingsViewModel.AutoCleanup.current().maxAge)
             // Trim the diagnostics log on the SAME sweep (owner 2026-07-16): reuse the retention
             // intent already expressed rather than add a setting for a log they never see. The log
             // takes the SHORTER of its own 30-day ceiling and this window — Auto-delete alone can't
             // govern it (it defaults to Never, which would leave the log unbounded in time, and
             // "keep my writing forever" isn't a wish to hoard technical logs).
             DiagnosticsLog.shared.enforceRetention(
-                autoDeleteWindow: SettingsViewModel.AutoCleanup.current.maxAge)
+                autoDeleteWindow: SettingsViewModel.AutoCleanup.current().maxAge)
             // Let AppModel.relock save a mid-edit Take through our save path before it
             // tears down the store (owner 2026-06-17 — lock auto-saves, never discards).
             ui.commitInlineEdit = { saveInlineEdit() }
