@@ -521,7 +521,7 @@ final class ReminderSchedulerTests: XCTestCase {
     func testSchedule_armsFollowUpChain() throws {
         UserDefaults.standard.set(true, forKey: SettingsViewModel.FollowUpReminders.defaultsKey)
         defer { UserDefaults.standard.removeObject(forKey: SettingsViewModel.FollowUpReminders.defaultsKey) }
-        let interval = SettingsViewModel.SnoozeDuration.current.seconds
+        let interval = SettingsViewModel.SnoozeDuration.current().seconds
         let take = takeWithReminder(at: now.addingTimeInterval(3600))   // fires 1h out
         scheduler.scheduleReminder(for: take)
 

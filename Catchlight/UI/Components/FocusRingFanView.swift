@@ -85,7 +85,7 @@ struct FocusRingFanView: View {
     /// time from UserDefaults so it always reflects the current setting; the picker
     /// opens here and the user refines or accepts it.
     static var defaultReminderDate: Date {
-        SettingsViewModel.DefaultReminderHours.current.date()
+        SettingsViewModel.DefaultReminderHours.current().date()
     }
 
     // Working selection (mutated as marks are tapped).

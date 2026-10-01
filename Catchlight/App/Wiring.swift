@@ -303,7 +303,7 @@ enum Wiring {
         #endif
         // Sync disabled entirely (owner 2026-06-21) — the absolute kill-switch:
         // never build an engine, so no path (manual button included) can sync.
-        if SettingsViewModel.SyncMode.current == .disabled { return nil }
+        if SettingsViewModel.SyncMode.current() == .disabled { return nil }
         guard MasterKeyKeychain.exists() else { return nil }
         guard let cloud = makeCloudFolder() else {
             return nil   // local-only mode

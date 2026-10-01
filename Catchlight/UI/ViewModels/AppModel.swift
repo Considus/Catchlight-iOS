@@ -206,7 +206,7 @@ final class AppModel {
         self.spotlight = spotlight
         // Apply the persisted Spotlight/Siri exposure (D-110) so per-save indexing
         // honours it from launch. Default `.none` — index nothing until opted in.
-        spotlight.exposure = SpotlightExposure.current
+        spotlight.exposure = SpotlightExposure.current()
         // One-time migration for the 2026-07-24 body-level lock: a user who had
         // opted into a body-indexing level still has decrypted Take text sitting
         // in the OS index. Rewrite their stored choice to the clamped `.type`,
@@ -532,7 +532,7 @@ final class AppModel {
         backgroundedAt = nil
         guard lockState == .unlocked, let since else { return }
         // The grace window is the user's "Lock after" setting (read fresh each time).
-        if Date().timeIntervalSince(since) >= SettingsViewModel.LockAfter.current.seconds {
+        if Date().timeIntervalSince(since) >= SettingsViewModel.LockAfter.current().seconds {
             relock()
         }
     }
