@@ -208,9 +208,18 @@ public final class SyncEngine {
         //    atomic-write semantics (new file + rename) and provider version
         //    history anyway, and doubled upload traffic per deletion. Blob
         //    confidentiality rests on AES-256-GCM, not on deletion hygiene.
+        //    The phone never deletes a Script (D-325). A Take deleted here that another
+        //    device has since turned into a Script is gone from this device only: its file
+        //    and entry are left alone, and the deletion record is dropped (step 6) rather
+        //    than sent, because from here the Take simply no longer exists.
         let localTombstones = try store.tombstones()
+        var deletionsOfScripts: [UUID] = []
         for ts in localTombstones {
             if isCancelled() { throw CancellationError() }
+            if let e = entriesBeforePush[ts.id], !e.isTake {
+                deletionsOfScripts.append(ts.id)
+                continue
+            }
             try? cloud.delete("\(ts.id.uuidString).clk")
             let incoming = ManifestTombstone(uuid: ts.id, deletedAt: ISO8601.string(from: ts.deletedAt))
             if let existing = mergedTombstones[ts.id],
@@ -227,6 +236,9 @@ public final class SyncEngine {
         let localById = Dictionary(uniqueKeysWithValues: localTakes.map { ($0.id, $0) })
         var finalTombstones: [ManifestTombstone] = []
         for (id, t) in mergedTombstones {
+            // A deletion from anywhere never removes an entry that is no longer a Take
+            // (D-325): the Script stays and the record goes.
+            if let e = entries[id], !e.isTake { continue }
             let deletedAt = ISO8601.date(from: t.deletedAt) ?? .distantPast
             if let local = localById[id], local.modifiedAt > deletedAt {
                 continue   // edited after deletion → the edit wins; entry stays
@@ -332,11 +344,13 @@ public final class SyncEngine {
         //    silently resurrect). Tombstones are purged only when OBSERVED in a
         //    PULLED manifest (see pullInbound); until then each push idempotently
         //    re-merges them. Tombstones superseded by a local edit (edit-wins
-        //    above) ARE purged — the live Take is authoritative.
+        //    above) ARE purged — the live Take is authoritative — and so are deletions of
+        //    Takes that became Scripts (step 2): they were never sent, so nothing can be
+        //    clobbered, and keeping them would only re-skip them on every push.
         let supersededByEdit = localTombstones.map(\.id).filter { id in
             !tombstonedIds.contains(id) && localById[id] != nil
         }
-        try store.purgeTombstones(ids: supersededByEdit)
+        try store.purgeTombstones(ids: supersededByEdit + deletionsOfScripts)
 
         // 7. Watermark — the pre-query timestamp, NOT "now".
         store.setLastSyncDate(watermark)
@@ -469,8 +483,12 @@ public final class SyncEngine {
 
         // 2. Apply tombstones (edit-wins by timestamp). A local edit made AFTER
         //    the deletion survives and will re-assert the Take on the next push.
-        let tombstonedIds = Set(manifest.tombstones.map(\.uuid))
-        for t in manifest.tombstones {
+        //    A deletion record never applies to an id the folder lists as a Script (D-325),
+        //    as on push: the Script rules in step 3 decide what happens to the phone's copy,
+        //    so an unsynced edit is forked rather than deleted.
+        let scriptIds = Set(manifest.takes.filter { !$0.isTake }.map(\.uuid))
+        let tombstonedIds = Set(manifest.tombstones.map(\.uuid)).subtracting(scriptIds)
+        for t in manifest.tombstones where !scriptIds.contains(t.uuid) {
             if isCancelled() { throw CancellationError() }
             let deletedAt = ISO8601.date(from: t.deletedAt) ?? .distantPast
             if let local = try store.take(id: t.uuid), local.modifiedAt <= deletedAt {

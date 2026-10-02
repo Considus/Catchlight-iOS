@@ -219,6 +219,85 @@ final class SyncScriptEntryTests: XCTestCase {
         XCTAssertEqual(try phone.take(id: script.id)?.primaryText, script.primaryText)
     }
 
+    // MARK: - The phone never deletes a Script (D-325)
+
+    /// The phone deleted the Take while offline; meanwhile the Mac turned it into a Script and
+    /// wrote into it. On the phone the Take is simply gone. The deletion must not reach the
+    /// folder: the Script's entry and file stay byte-for-byte, no tombstone is written, and the
+    /// phone drops its own deletion record rather than carrying it forever.
+    func testSync_phoneDeletedATakeThatIsNowAScript_leavesTheScriptAlone() throws {
+        let k = makeKeys(), cloud = InMemoryCloudFolder(), phone = InMemoryTakeStore()
+        var take = TestFixtures.richTake()
+        take.modifiedAt = t0
+        try phone.upsert(take)
+        try engine(phone, cloud, k, at: t0.addingTimeInterval(1)).sync()
+
+        try phone.delete(id: take.id)                                            // offline, on the phone
+        try remark(take.id, kind: ManifestEntry.Kind.script, modified: t0.addingTimeInterval(50),
+                   in: cloud, keys: k)                                           // the Mac converts it...
+        try cloud.write(Data("3,000 words".utf8), to: "\(take.id.uuidString).clk")   // ...and writes
+        let scriptEntry = try entry(take.id, in: cloud, keys: k)
+
+        let report = try engine(phone, cloud, k, at: t0.addingTimeInterval(100)).sync()
+
+        XCTAssertEqual(try entry(take.id, in: cloud, keys: k), scriptEntry)
+        XCTAssertEqual(try cloud.read("\(take.id.uuidString).clk"), Data("3,000 words".utf8))
+        XCTAssertEqual(try Manifest.readEncrypted(from: cloud, keys: k).tombstones, [])
+        XCTAssertNil(try phone.take(id: take.id))
+        XCTAssertEqual(try phone.tombstones().map(\.id), [], "the deletion record is dropped, not kept")
+        XCTAssertEqual(report.quarantined, [])
+        XCTAssertEqual(report.conflicts.count, 0)
+    }
+
+    /// A deletion record already in the folder for an entry that is now a Script (two devices
+    /// racing past the lock) must not remove it either: the Script wins, and the record goes.
+    func testPush_aTombstoneInTheFolder_neverRemovesAScriptEntry() throws {
+        let k = makeKeys(), cloud = InMemoryCloudFolder(), phone = InMemoryTakeStore()
+        let script = TestFixtures.richTake()
+        try plant(script, kind: ManifestEntry.Kind.script, modified: t0.addingTimeInterval(50),
+                  in: cloud, keys: k, at: t0)
+        var manifest = try Manifest.readEncrypted(from: cloud, keys: k)
+        manifest.tombstones = [ManifestTombstone(uuid: script.id, deletedAt: ISO8601.string(from: t0.addingTimeInterval(60)))]
+        try Manifest.writeEncrypted(manifest, to: cloud, keys: k)
+        let scriptEntry = try entry(script.id, in: cloud, keys: k)
+        let blob = try cloud.read("\(script.id.uuidString).clk")
+
+        try engine(phone, cloud, k, at: t0.addingTimeInterval(100)).pushOutbound()
+
+        XCTAssertEqual(try entry(script.id, in: cloud, keys: k), scriptEntry)
+        XCTAssertEqual(try cloud.read("\(script.id.uuidString).clk"), blob)
+        XCTAssertEqual(try Manifest.readEncrypted(from: cloud, keys: k).tombstones, [])
+    }
+
+    /// The same pair seen from the pull: a Script entry with a deletion record for its id, and
+    /// an unsynced phone edit older than that record. The record must not delete the edit; the
+    /// Script rules apply as if it were absent, so the edit is kept as a new Take.
+    func testPull_aTombstoneBesideAScriptEntry_neverDeletesAnUnsyncedPhoneEdit() throws {
+        let k = makeKeys(), cloud = InMemoryCloudFolder(), phone = InMemoryTakeStore()
+        var take = TestFixtures.richTake()
+        take.primaryText = "before"
+        take.modifiedAt = t0
+        try phone.upsert(take)
+        try engine(phone, cloud, k, at: t0.addingTimeInterval(1)).sync()
+
+        var edited = take
+        edited.primaryText = "phone edit"
+        edited.modifiedAt = t0.addingTimeInterval(20)
+        try phone.upsert(edited)
+        try remark(take.id, kind: ManifestEntry.Kind.script, modified: t0.addingTimeInterval(25), in: cloud, keys: k)
+        var manifest = try Manifest.readEncrypted(from: cloud, keys: k)
+        manifest.tombstones = [ManifestTombstone(uuid: take.id, deletedAt: ISO8601.string(from: t0.addingTimeInterval(30)))]
+        try Manifest.writeEncrypted(manifest, to: cloud, keys: k)
+
+        let report = try engine(phone, cloud, k, at: t0.addingTimeInterval(40)).sync()
+
+        let forked = try XCTUnwrap(report.forkedFromScripts.first, "the edit is kept as a new Take")
+        XCTAssertEqual(try phone.take(id: forked)?.primaryText, "phone edit")
+        XCTAssertNil(try phone.take(id: take.id))
+        XCTAssertEqual(try entry(take.id, in: cloud, keys: k)?.kind, ManifestEntry.Kind.script)
+        XCTAssertEqual(try Manifest.readEncrypted(from: cloud, keys: k).tombstones, [])
+    }
+
     // MARK: - Both sides edited: nothing lost, the Script never read
 
     /// The phone edited the Take after its last sync; meanwhile the Mac turned it into a Script
