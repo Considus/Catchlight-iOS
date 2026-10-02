@@ -339,4 +339,28 @@ class TakeStoreContractTests: XCTestCase {
         store.setLastSyncDate(stamp)
         XCTAssertEqual(store.lastSyncDate(), stamp)
     }
+
+    // MARK: - release (D-315): let a Take go without a tombstone
+
+    func testContract_release_unmodifiedTake_removesItAndRecordsNoTombstone() throws {
+        let t0 = ISO8601.date(from: "2026-05-01T09:00:00.000Z")!
+        let take = Take(modifiedAt: t0, blocks: [.textLine("going to the Mac")])
+        try store.upsert(take)
+        XCTAssertTrue(try store.release(id: take.id, ifNotModifiedAfter: t0))
+        XCTAssertNil(try store.take(id: take.id))
+        XCTAssertEqual(try store.tombstones().map(\.id), [])
+    }
+
+    func testContract_release_takeModifiedAfterCutoff_isKept() throws {
+        let t0 = ISO8601.date(from: "2026-05-01T09:00:00.000Z")!
+        let take = Take(modifiedAt: t0.addingTimeInterval(1), blocks: [.textLine("edited since")])
+        try store.upsert(take)
+        XCTAssertFalse(try store.release(id: take.id, ifNotModifiedAfter: t0))
+        XCTAssertEqual(try store.take(id: take.id), take)
+    }
+
+    func testContract_release_unknownId_returnsFalse() throws {
+        XCTAssertFalse(try store.release(id: UUID(), ifNotModifiedAfter: Date()))
+    }
+
 }

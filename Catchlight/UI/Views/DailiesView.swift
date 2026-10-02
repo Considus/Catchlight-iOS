@@ -1675,42 +1675,9 @@ struct DailiesView: View {
         // card happened to be covering.
         focusReturnTakeID = ui.editingTakeID
         defer { editDraft = nil; ui.endEditingInPlace() }
-        guard var t = editDraft else { return }
-        t.removeEmptyTextBlocks()
-        // A tapped-away Take with nothing in it is discarded, NOT saved — whether nothing
-        // was ever typed into it or its text was cleared out (owner 2026-08-16). Emptying a
-        // saved Take used to KEEP it, so it returned to the timeline reading "Untitled
-        // Take": a row with nothing in it and no obvious way to be rid of it. Deleting on
-        // an empty save is the owner's chosen route out.
-        //
-        // "Empty" is the whole Take, not just its prose: a task, a reminder, a place or an
-        // attachment all keep it alive with no text at all. That is what makes this safe to
-        // do silently — a Take with anything worth keeping cannot reach `discardIfPresent`.
-        //
-        // The Obie takes no exception (owner 2026-08-16). It briefly looked like it had one,
-        // via the `storedHadContent` guard removed here, but that guard was written for
-        // edit-in-place in general on 2026-06-17 and never for the Obie — whose own
-        // exception (`!t.isObie` in this test) went on 2026-07-20 when blank Obies persisted
-        // from the widget. An emptied Obie now goes the way of any other emptied Take, which
-        // also frees the designation; leaving "Untitled Take" pinned at the top of the
-        // timeline is the loudest possible version of the bug this fixes.
-        //
-        // Silent, by the owner's call: the × in the keyboard bar and the row's "Discard
-        // changes" both back out of an edit without touching the stored Take.
-        let isBlank = t.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !t.isTask && t.timeReminder == nil
-            && t.attachments.isEmpty && t.locationReminder == nil
-        if isBlank {
-            vm.discardIfPresent(t)          // nothing left in it — no entitlement needed to discard
-        } else if app.ensureEntitled() {
-            vm.save(t)
-        } else {
-            // Paywall interrupted the save (owner 2026-07-01): hold the typed
-            // draft for the paywall's outcome — saved on subscribe, dropped on
-            // unsubscribed dismiss — never silently destroyed here. (Previously
-            // the defer cleared the draft while the entitlement guard returned.)
-            app.holdDraftForPaywall(t)
-        }
+        guard let t = editDraft else { return }
+        // Blank → discard, otherwise save or hold for the paywall: `AppModel.commitEditedTake`.
+        app.commitEditedTake(t)
     }
 
     /// Discard the edits (owner 2026-06-17 — via the row's long-press menu): drop the

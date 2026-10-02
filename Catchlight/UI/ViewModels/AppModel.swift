@@ -485,9 +485,7 @@ final class AppModel {
         // "returned to the lock screen" (5 silent crashes on 2026-07-16). If the run dies here,
         // these breadcrumbs are the only evidence of how far it got, and of typed text lost.
         DiagnosticsLog.shared.record(.lifecycle, "Locked capture: commit requested")
-        let isBlank = draft.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !draft.isTask && draft.timeReminder == nil
-        guard !isBlank else {
+        guard !draft.isBlank else {
             DiagnosticsLog.shared.record(.lifecycle, "Locked capture: blank, discarded")
             lockedCapture = nil
             return
@@ -670,6 +668,41 @@ final class AppModel {
         }
         DiagnosticsLog.shared.record(.lifecycle, "Paywall draft saved (now entitled)")
         dailiesVM.save(draft)
+    }
+
+    /// What `commitEditedTake` did with the draft it was handed.
+    enum EditCommit: Equatable {
+        /// Nothing worth keeping: the stored copy, if any, was deleted.
+        case discarded
+        /// Written to the store.
+        case saved
+        /// The paywall interrupted the save; the draft is held for its outcome.
+        case heldForPaywall
+    }
+
+    /// Commit a Take that was being edited in place, from the timeline or the Storyboard.
+    /// Both screens used to carry their own copy of this, kept identical by hand.
+    ///
+    /// A draft with nothing left in it (`Take.isBlank`) is discarded, NOT saved — whether
+    /// nothing was ever typed into it or its text was cleared out (owner 2026-08-16).
+    /// Discarding needs no entitlement.
+    ///
+    /// Anything else is saved if the user is entitled, and otherwise HELD for the
+    /// paywall's outcome (owner 2026-07-01) rather than dropped with the editor.
+    @discardableResult
+    func commitEditedTake(_ draft: Take) -> EditCommit {
+        var take = draft
+        take.removeEmptyTextBlocks()
+        if take.isBlank {
+            dailiesVM.discardIfPresent(take)
+            return .discarded
+        }
+        guard ensureEntitled() else {
+            holdDraftForPaywall(take)
+            return .heldForPaywall
+        }
+        dailiesVM.save(take)
+        return .saved
     }
 
     /// Returns true if the caller may proceed with a create/edit action.
