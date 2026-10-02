@@ -199,15 +199,30 @@ final class RecurrenceClampTests: XCTestCase {
     func testEditorRebuild_unchanged_keepsTheSeriesDay() {
         let old = clampedFeb28()
         let rebuilt = TimeReminder(scheduledDate: old.scheduledDate, notificationIdentifier: old.notificationIdentifier,
-                                   recurrence: .monthly).keepingSeriesDay(of: old)
+                                   recurrence: .monthly).keepingSeriesDay(of: old, calendar: cal)
         XCTAssertEqual(stamp(rebuilt.nextOccurrence(after: rebuilt.scheduledDate, calendar: cal)), "2026-03-31")
+    }
+
+    func testEditorRebuild_newTimeSameDay_keepsTheSeriesDay() {
+        let old = clampedFeb28()
+        let rebuilt = TimeReminder(scheduledDate: ISO8601.date(from: "2026-02-28T15:30:00.000Z")!,
+                                   notificationIdentifier: old.notificationIdentifier,
+                                   recurrence: .monthly).keepingSeriesDay(of: old, calendar: cal)
+        XCTAssertEqual(stamp(rebuilt.nextOccurrence(after: rebuilt.scheduledDate, calendar: cal)), "2026-03-31")
+    }
+
+    func testEditorRebuild_newCadence_startsAfresh() {
+        let old = clampedFeb28()
+        let rebuilt = TimeReminder(scheduledDate: old.scheduledDate, notificationIdentifier: old.notificationIdentifier,
+                                   recurrence: .annually).keepingSeriesDay(of: old, calendar: cal)
+        XCTAssertNil(rebuilt.anchorDay)
     }
 
     func testEditorRebuild_newDate_startsAfresh() {
         let old = clampedFeb28()
         let rebuilt = TimeReminder(scheduledDate: ISO8601.date(from: "2026-02-27T12:00:00.000Z")!,
                                    notificationIdentifier: old.notificationIdentifier,
-                                   recurrence: .monthly).keepingSeriesDay(of: old)
+                                   recurrence: .monthly).keepingSeriesDay(of: old, calendar: cal)
         XCTAssertEqual(stamp(rebuilt.nextOccurrence(after: rebuilt.scheduledDate, calendar: cal)), "2026-03-27")
     }
 }

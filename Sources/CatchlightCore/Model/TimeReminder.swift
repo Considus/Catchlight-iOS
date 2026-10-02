@@ -130,11 +130,11 @@ public struct TimeReminder: Codable, Equatable, Sendable {
     }
 
     /// A reminder rebuilt by an editor carries the series' remembered day only when the editor
-    /// changed neither the date nor the cadence: Done on an untouched picker must not reset a
-    /// series on the 31st to the 28th it is currently clamped to.
-    public func keepingSeriesDay(of previous: TimeReminder?) -> TimeReminder {
-        guard let previous, previous.anchorDay != nil,
-              previous.scheduledDate == scheduledDate, previous.recurrence == recurrence else { return self }
+    /// changed neither the day nor the cadence: Done on an untouched picker, or a new time on the
+    /// same day, must not reset a series on the 31st to the 28th it is currently clamped to.
+    public func keepingSeriesDay(of previous: TimeReminder?, calendar: Calendar = .current) -> TimeReminder {
+        guard let previous, previous.anchorDay != nil, previous.recurrence == recurrence,
+              calendar.isDate(previous.scheduledDate, inSameDayAs: scheduledDate) else { return self }
         var copy = self
         copy.anchorDay = previous.anchorDay
         return copy
