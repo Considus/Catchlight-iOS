@@ -483,8 +483,12 @@ public final class SyncEngine {
 
         // 2. Apply tombstones (edit-wins by timestamp). A local edit made AFTER
         //    the deletion survives and will re-assert the Take on the next push.
-        let tombstonedIds = Set(manifest.tombstones.map(\.uuid))
-        for t in manifest.tombstones {
+        //    A deletion record never applies to an id the folder lists as a Script (D-325),
+        //    as on push: the Script rules in step 3 decide what happens to the phone's copy,
+        //    so an unsynced edit is forked rather than deleted.
+        let scriptIds = Set(manifest.takes.filter { !$0.isTake }.map(\.uuid))
+        let tombstonedIds = Set(manifest.tombstones.map(\.uuid)).subtracting(scriptIds)
+        for t in manifest.tombstones where !scriptIds.contains(t.uuid) {
             if isCancelled() { throw CancellationError() }
             let deletedAt = ISO8601.date(from: t.deletedAt) ?? .distantPast
             if let local = try store.take(id: t.uuid), local.modifiedAt <= deletedAt {

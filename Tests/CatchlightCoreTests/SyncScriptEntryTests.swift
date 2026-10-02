@@ -269,6 +269,35 @@ final class SyncScriptEntryTests: XCTestCase {
         XCTAssertEqual(try Manifest.readEncrypted(from: cloud, keys: k).tombstones, [])
     }
 
+    /// The same pair seen from the pull: a Script entry with a deletion record for its id, and
+    /// an unsynced phone edit older than that record. The record must not delete the edit; the
+    /// Script rules apply as if it were absent, so the edit is kept as a new Take.
+    func testPull_aTombstoneBesideAScriptEntry_neverDeletesAnUnsyncedPhoneEdit() throws {
+        let k = makeKeys(), cloud = InMemoryCloudFolder(), phone = InMemoryTakeStore()
+        var take = TestFixtures.richTake()
+        take.primaryText = "before"
+        take.modifiedAt = t0
+        try phone.upsert(take)
+        try engine(phone, cloud, k, at: t0.addingTimeInterval(1)).sync()
+
+        var edited = take
+        edited.primaryText = "phone edit"
+        edited.modifiedAt = t0.addingTimeInterval(20)
+        try phone.upsert(edited)
+        try remark(take.id, kind: ManifestEntry.Kind.script, modified: t0.addingTimeInterval(25), in: cloud, keys: k)
+        var manifest = try Manifest.readEncrypted(from: cloud, keys: k)
+        manifest.tombstones = [ManifestTombstone(uuid: take.id, deletedAt: ISO8601.string(from: t0.addingTimeInterval(30)))]
+        try Manifest.writeEncrypted(manifest, to: cloud, keys: k)
+
+        let report = try engine(phone, cloud, k, at: t0.addingTimeInterval(40)).sync()
+
+        let forked = try XCTUnwrap(report.forkedFromScripts.first, "the edit is kept as a new Take")
+        XCTAssertEqual(try phone.take(id: forked)?.primaryText, "phone edit")
+        XCTAssertNil(try phone.take(id: take.id))
+        XCTAssertEqual(try entry(take.id, in: cloud, keys: k)?.kind, ManifestEntry.Kind.script)
+        XCTAssertEqual(try Manifest.readEncrypted(from: cloud, keys: k).tombstones, [])
+    }
+
     // MARK: - Both sides edited: nothing lost, the Script never read
 
     /// The phone edited the Take after its last sync; meanwhile the Mac turned it into a Script
