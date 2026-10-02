@@ -26,6 +26,9 @@
 //      ## Reminder — 2026-05-16 · 🔔 2026-05-20 09:00
 //      Pick up prints
 //
+//      ## Reminder — 2026-05-17 · 📍 Home · on arrival
+//      Water the plants
+//
 //  Sort order: `createdAt` ascending (oldest first — matches `allTakes()`).
 //
 
@@ -124,7 +127,10 @@ public enum TakeExporter {
     // MARK: - Heading
 
     /// H2 line for one Take. Activity precedence:
-    ///   Reminder (timeReminder != nil) > Task > Note.
+    ///   Reminder (a time, then a place) > Task > Note. The picker sets one or the other
+    ///   (owner 2026-06-24), but `Take` doesn't enforce it, so a time wins if both are set. A
+    ///   place shows its name and arrive/leave, as on the card. A Task with either reminder
+    ///   exports as a Reminder, without the Task label or ✓ Complete.
     /// — Reminder is the most specific qualifier so it owns the heading when
     /// present; the body text and any future per-Take view still show all the
     /// activity types via the focus-ring fan.
@@ -134,6 +140,10 @@ public enum TakeExporter {
         let date = ymd.string(from: take.createdAt)
         if let reminder = take.timeReminder {
             return "Reminder — \(date) · 🔔 \(ymdHm.string(from: reminder.scheduledDate))\(recurrenceSuffix(for: reminder))"
+        }
+        if let place = take.locationReminder {
+            let name = (place.locationName?.isEmpty == false) ? place.locationName! : "Location"
+            return "Reminder — \(date) · 📍 \(name) · \(place.triggerOnArrival ? "on arrival" : "on leaving")"
         }
         if take.isTask {
             let suffix = take.isComplete ? " · ✓ Complete" : ""
