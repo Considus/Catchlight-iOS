@@ -1762,6 +1762,7 @@ struct DailiesView: View {
                                               isAllDay: command.reminderAllDay,
                                               recurrence: command.reminderRecurrence,
                                               weekdays: command.reminderRecurrence == .weekly ? command.reminderWeekdays : [])
+                    .keepingSeriesDay(of: d.timeReminder)
             } else {
                 d.timeReminder = nil
             }
