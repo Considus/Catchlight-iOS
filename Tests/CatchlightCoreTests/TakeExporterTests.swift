@@ -270,6 +270,20 @@ final class TakeExporterTests: XCTestCase {
                        "Reminder — 2026-05-14 · 🔔 2026-05-20 09:00")
     }
 
+    func testHeading_placeReminder_showsThePlaceAndWhen() {
+        let createdAt = Self.makeUTC(year: 2026, month: 5, day: 17)
+        var take = Take(createdAt: createdAt, modifiedAt: createdAt,
+                        blocks: [.checkItem("Water the plants", isComplete: false)], isNote: true)
+        take.locationReminder = LocationTrigger(latitude: 51.5, longitude: -0.1, radiusMetres: 100,
+                                                triggerOnArrival: true, locationName: "Home")
+        XCTAssertEqual(TakeExporter.heading(for: take, timeZone: TimeZone(secondsFromGMT: 0)!),
+                       "Reminder — 2026-05-17 · 📍 Home · on arrival")
+        take.locationReminder = LocationTrigger(latitude: 51.5, longitude: -0.1, radiusMetres: 100,
+                                                triggerOnArrival: false, locationName: "")
+        XCTAssertEqual(TakeExporter.heading(for: take, timeZone: TimeZone(secondsFromGMT: 0)!),
+                       "Reminder — 2026-05-17 · 📍 Location · on leaving")
+    }
+
     /// Owner decision 2026-07-01: Take-level stamps render in LOCAL time. A
     /// 09:00-UTC reminder exported in UTC+3 must read 12:00 — the previous
     /// all-UTC rendering made exports read as simply wrong to the user. The
