@@ -598,7 +598,7 @@ final class DailiesViewModel {
                     isAllDay: reminderAllDay,
                     recurrence: reminderRecurrence,
                     weekdays: reminderRecurrence == .weekly ? reminderWeekdays : []
-                )
+                ).keepingSeriesDay(of: take.timeReminder)
             } else {
                 updated.timeReminder = nil
             }

@@ -759,5 +759,24 @@ final class ReminderSchedulerTests: XCTestCase {
                        ReminderScheduler.repeatingCategoryIdentifier,
                        "snoozing a repeating reminder must not drop its Stop reminding action")
     }
+
+    /// An all-day monthly series clamped to 30 June must still fire on 31 July (owner
+    /// 2026-10-02): the scheduler moves the series to its 09:00 fire hour on the same day,
+    /// which must not cost it the day it really falls on.
+    func testSchedule_allDayMonthly_clampedToAShortMonth_firesOnTheSeriesDayAfter() throws {
+        let id = UUID()
+        var take = Take(id: id, blocks: [.textLine("Pay the rent")],
+                        timeReminder: TimeReminder(scheduledDate: ISO8601.date(from: "2026-05-31T12:00:00.000Z")!,
+                                                   notificationIdentifier: id.uuidString,
+                                                   recurrence: .monthly))
+        take.advanceRecurringOccurrence(now: now)                 // 31 May → 30 June, day 31 kept
+        take.timeReminder?.isAllDay = true
+        scheduler.scheduleReminder(for: take)
+        let days = try center.added.prefix(2).map { request -> Int in
+            let trigger = try XCTUnwrap(request.trigger as? UNCalendarNotificationTrigger)
+            return try XCTUnwrap(trigger.dateComponents.day)
+        }
+        XCTAssertEqual(days, [30, 31], "June clamps to the 30th; July returns to the 31st")
+    }
 }
 #endif

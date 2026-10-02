@@ -178,4 +178,35 @@ final class RecurrenceClampTests: XCTestCase {
         take.timeReminder!.scheduledDate = ISO8601.date(from: "2026-03-15T12:00:00.000Z")!       // the user picks the 15th
         XCTAssertEqual(stamp(take.timeReminder!.nextOccurrence(after: take.timeReminder!.scheduledDate)), "2026-04-15")
     }
+
+    private func clampedFeb28() -> TimeReminder {
+        let id = UUID()
+        var take = Take(id: id, blocks: [.textLine("Pay the rent")],
+                        timeReminder: TimeReminder(scheduledDate: ISO8601.date(from: "2026-01-31T12:00:00.000Z")!,
+                                                   notificationIdentifier: id.uuidString,
+                                                   recurrence: .monthly))
+        take.advanceRecurringOccurrence(now: ISO8601.date(from: "2026-01-01T00:00:00.000Z")!)   // → 28 Feb, day 31 kept
+        return take.timeReminder!
+    }
+
+    func testRetimed_keepsTheSeriesDay() {
+        // The scheduler moves an all-day series to its fire hour on the same day.
+        let moved = clampedFeb28().retimed(to: ISO8601.date(from: "2026-02-28T09:00:00.000Z")!)
+        XCTAssertEqual(stamp(moved.nextOccurrence(after: moved.scheduledDate)), "2026-03-31")
+    }
+
+    func testEditorRebuild_unchanged_keepsTheSeriesDay() {
+        let old = clampedFeb28()
+        let rebuilt = TimeReminder(scheduledDate: old.scheduledDate, notificationIdentifier: old.notificationIdentifier,
+                                   recurrence: .monthly).keepingSeriesDay(of: old)
+        XCTAssertEqual(stamp(rebuilt.nextOccurrence(after: rebuilt.scheduledDate)), "2026-03-31")
+    }
+
+    func testEditorRebuild_newDate_startsAfresh() {
+        let old = clampedFeb28()
+        let rebuilt = TimeReminder(scheduledDate: ISO8601.date(from: "2026-02-27T12:00:00.000Z")!,
+                                   notificationIdentifier: old.notificationIdentifier,
+                                   recurrence: .monthly).keepingSeriesDay(of: old)
+        XCTAssertEqual(stamp(rebuilt.nextOccurrence(after: rebuilt.scheduledDate)), "2026-03-27")
+    }
 }

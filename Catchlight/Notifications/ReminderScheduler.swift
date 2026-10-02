@@ -518,7 +518,7 @@ public final class ReminderScheduler {
             // fire time. iOS offers no "repeat but skip this date", so a series is expressed
             // as discrete occurrences — which is what lets "delete this occurrence" drop one.
             var r = reminder
-            if r.isAllDay { r.scheduledDate = resolvedFireDate(reminder) }
+            if r.isAllDay { r = r.retimed(to: resolvedFireDate(reminder)) }   // keeps the series' day
             var occurrence = r.effectiveNextDue(now: now)
             var out: [PlannedAlarm] = []
             for index in 0..<Self.recurrenceWindow {

@@ -119,6 +119,27 @@ public struct TimeReminder: Codable, Equatable, Sendable {
         self.weekdays = Self.validated(weekdays)
     }
 
+    /// The same reminder at another time on the SAME day, keeping the series' remembered day.
+    /// For re-timing an occurrence (the scheduler moves an all-day series to its fire hour);
+    /// setting `scheduledDate` directly starts the series afresh and would drop it.
+    public func retimed(to date: Date) -> TimeReminder {
+        var copy = self
+        copy.scheduledDate = date
+        copy.anchorDay = anchorDay
+        return copy
+    }
+
+    /// A reminder rebuilt by an editor carries the series' remembered day only when the editor
+    /// changed neither the date nor the cadence: Done on an untouched picker must not reset a
+    /// series on the 31st to the 28th it is currently clamped to.
+    public func keepingSeriesDay(of previous: TimeReminder?) -> TimeReminder {
+        guard let previous, previous.anchorDay != nil,
+              previous.scheduledDate == scheduledDate, previous.recurrence == recurrence else { return self }
+        var copy = self
+        copy.anchorDay = previous.anchorDay
+        return copy
+    }
+
     /// Drop out-of-range weekday numbers (2026-07-01). A corrupt or foreign-client
     /// payload containing e.g. `{0}` made `nextWeekly` yield no candidates and fall
     /// back to the PAST anchor — so `advanceRecurringOccurrence` never advanced and
