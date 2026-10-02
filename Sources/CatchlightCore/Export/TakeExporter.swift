@@ -127,8 +127,10 @@ public enum TakeExporter {
     // MARK: - Heading
 
     /// H2 line for one Take. Activity precedence:
-    ///   Reminder (a time or a place) > Task > Note. A Take has one or the other, never both
-    ///   (owner 2026-06-24); a place shows its name and arrive/leave, as on the card.
+    ///   Reminder (a time, then a place) > Task > Note. The picker sets one or the other
+    ///   (owner 2026-06-24), but `Take` doesn't enforce it, so a time wins if both are set. A
+    ///   place shows its name and arrive/leave, as on the card. A Task with either reminder
+    ///   exports as a Reminder, without the Task label or ✓ Complete.
     /// — Reminder is the most specific qualifier so it owns the heading when
     /// present; the body text and any future per-Take view still show all the
     /// activity types via the focus-ring fan.
