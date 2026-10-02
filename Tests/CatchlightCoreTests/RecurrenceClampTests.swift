@@ -107,4 +107,122 @@ final class RecurrenceClampTests: XCTestCase {
         XCTAssertFalse(reminder(.daily, at: "2026-06-09T12:00:00.000Z").isOverdue(now: now))
         XCTAssertFalse(reminder(.monthly, at: "2026-05-31T12:00:00.000Z").isOverdue(now: now))
     }
+
+    // MARK: advancing keeps the series' day (owner 2026-10-02)
+    //
+    // "Mark done" on a repeat stores the next occurrence as the new `scheduledDate`. A month
+    // that clamps the day must not become the series' new day: 31 Jan → 28 Feb → 31 Mar, not
+    // 28 Mar for ever after. Every call uses the fixed UTC calendar, so no device time zone can
+    // move a date across midnight.
+
+    private func stamp(_ date: Date) -> String {
+        let c = cal.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
+    }
+
+    private func advanced(_ rec: TimeReminder.Recurrence, from iso: String, times: Int) -> [String] {
+        let id = UUID()
+        var take = Take(id: id, blocks: [.textLine("Pay the rent")],
+                        timeReminder: TimeReminder(scheduledDate: ISO8601.date(from: iso)!,
+                                                   notificationIdentifier: id.uuidString,
+                                                   recurrence: rec))
+        let before = ISO8601.date(from: iso)!.addingTimeInterval(-86_400)   // "now" is before the series
+        var out: [String] = []
+        for _ in 0..<times {
+            take.advanceRecurringOccurrence(now: before, calendar: cal)
+            out.append(stamp(take.timeReminder!.scheduledDate))
+        }
+        return out
+    }
+
+    func testAdvance_monthlyOn31st_returnsToThe31stAfterAShortMonth() {
+        XCTAssertEqual(advanced(.monthly, from: "2026-01-31T12:00:00.000Z", times: 4),
+                       ["2026-02-28", "2026-03-31", "2026-04-30", "2026-05-31"])
+    }
+
+    func testAdvance_annuallyOnFeb29_returnsToThe29thInALeapYear() {
+        XCTAssertEqual(advanced(.annually, from: "2028-02-29T12:00:00.000Z", times: 4),
+                       ["2029-02-28", "2030-02-28", "2031-02-28", "2032-02-29"])
+    }
+
+    func testAdvance_ordinaryDay_writesNoExtraField() throws {
+        // A series whose day exists every month must encode exactly as before this field.
+        let id = UUID()
+        var take = Take(id: id, blocks: [.textLine("Water the plants")],
+                        timeReminder: TimeReminder(scheduledDate: ISO8601.date(from: "2026-01-16T12:00:00.000Z")!,
+                                                   notificationIdentifier: id.uuidString,
+                                                   recurrence: .monthly))
+        take.advanceRecurringOccurrence(now: ISO8601.date(from: "2026-01-01T00:00:00.000Z")!, calendar: cal)
+        let json = String(data: try JSONEncoder().encode(take.timeReminder!), encoding: .utf8)!
+        XCTAssertFalse(json.contains("anchorDay"), json)
+    }
+
+    func testClampedSeries_survivesEncodeAndDecode() throws {
+        let id = UUID()
+        var take = Take(id: id, blocks: [.textLine("Pay the rent")],
+                        timeReminder: TimeReminder(scheduledDate: ISO8601.date(from: "2026-01-31T12:00:00.000Z")!,
+                                                   notificationIdentifier: id.uuidString,
+                                                   recurrence: .monthly))
+        take.advanceRecurringOccurrence(now: ISO8601.date(from: "2026-01-01T00:00:00.000Z")!, calendar: cal)   // → 28 Feb
+        let back = try JSONDecoder().decode(TimeReminder.self, from: JSONEncoder().encode(take.timeReminder!))
+        XCTAssertEqual(back, take.timeReminder)
+        XCTAssertEqual(stamp(back.nextOccurrence(after: back.scheduledDate, calendar: cal)), "2026-03-31")
+    }
+
+    func testSettingTheDateByHand_startsANewSeriesDay() {
+        let id = UUID()
+        var take = Take(id: id, blocks: [.textLine("Pay the rent")],
+                        timeReminder: TimeReminder(scheduledDate: ISO8601.date(from: "2026-01-31T12:00:00.000Z")!,
+                                                   notificationIdentifier: id.uuidString,
+                                                   recurrence: .monthly))
+        take.advanceRecurringOccurrence(now: ISO8601.date(from: "2026-01-01T00:00:00.000Z")!, calendar: cal)   // → 28 Feb
+        take.timeReminder!.scheduledDate = ISO8601.date(from: "2026-03-15T12:00:00.000Z")!       // the user picks the 15th
+        XCTAssertEqual(stamp(take.timeReminder!.nextOccurrence(after: take.timeReminder!.scheduledDate, calendar: cal)), "2026-04-15")
+    }
+
+    private func clampedFeb28() -> TimeReminder {
+        let id = UUID()
+        var take = Take(id: id, blocks: [.textLine("Pay the rent")],
+                        timeReminder: TimeReminder(scheduledDate: ISO8601.date(from: "2026-01-31T12:00:00.000Z")!,
+                                                   notificationIdentifier: id.uuidString,
+                                                   recurrence: .monthly))
+        take.advanceRecurringOccurrence(now: ISO8601.date(from: "2026-01-01T00:00:00.000Z")!, calendar: cal)   // → 28 Feb, day 31 kept
+        return take.timeReminder!
+    }
+
+    func testRetimed_keepsTheSeriesDay() {
+        // The scheduler moves an all-day series to its fire hour on the same day.
+        let moved = clampedFeb28().retimed(to: ISO8601.date(from: "2026-02-28T09:00:00.000Z")!)
+        XCTAssertEqual(stamp(moved.nextOccurrence(after: moved.scheduledDate, calendar: cal)), "2026-03-31")
+    }
+
+    func testEditorRebuild_unchanged_keepsTheSeriesDay() {
+        let old = clampedFeb28()
+        let rebuilt = TimeReminder(scheduledDate: old.scheduledDate, notificationIdentifier: old.notificationIdentifier,
+                                   recurrence: .monthly).keepingSeriesDay(of: old, calendar: cal)
+        XCTAssertEqual(stamp(rebuilt.nextOccurrence(after: rebuilt.scheduledDate, calendar: cal)), "2026-03-31")
+    }
+
+    func testEditorRebuild_newTimeSameDay_keepsTheSeriesDay() {
+        let old = clampedFeb28()
+        let rebuilt = TimeReminder(scheduledDate: ISO8601.date(from: "2026-02-28T15:30:00.000Z")!,
+                                   notificationIdentifier: old.notificationIdentifier,
+                                   recurrence: .monthly).keepingSeriesDay(of: old, calendar: cal)
+        XCTAssertEqual(stamp(rebuilt.nextOccurrence(after: rebuilt.scheduledDate, calendar: cal)), "2026-03-31")
+    }
+
+    func testEditorRebuild_newCadence_startsAfresh() {
+        let old = clampedFeb28()
+        let rebuilt = TimeReminder(scheduledDate: old.scheduledDate, notificationIdentifier: old.notificationIdentifier,
+                                   recurrence: .annually).keepingSeriesDay(of: old, calendar: cal)
+        XCTAssertNil(rebuilt.anchorDay)
+    }
+
+    func testEditorRebuild_newDate_startsAfresh() {
+        let old = clampedFeb28()
+        let rebuilt = TimeReminder(scheduledDate: ISO8601.date(from: "2026-02-27T12:00:00.000Z")!,
+                                   notificationIdentifier: old.notificationIdentifier,
+                                   recurrence: .monthly).keepingSeriesDay(of: old, calendar: cal)
+        XCTAssertEqual(stamp(rebuilt.nextOccurrence(after: rebuilt.scheduledDate, calendar: cal)), "2026-03-27")
+    }
 }

@@ -719,6 +719,7 @@ struct DailiesView: View {
                             isAllDay: allDay,
                             recurrence: recurrence,
                             weekdays: recurrence == .weekly ? weekdays : [])
+                            .keepingSeriesDay(of: d.timeReminder)
                     }
                     d.normaliseActivityFloor()
                     editDraft = d
@@ -1761,6 +1762,7 @@ struct DailiesView: View {
                                               isAllDay: command.reminderAllDay,
                                               recurrence: command.reminderRecurrence,
                                               weekdays: command.reminderRecurrence == .weekly ? command.reminderWeekdays : [])
+                    .keepingSeriesDay(of: d.timeReminder)
             } else {
                 d.timeReminder = nil
             }

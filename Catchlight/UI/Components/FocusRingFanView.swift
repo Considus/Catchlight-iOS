@@ -548,6 +548,7 @@ struct FocusRingFanView: View {
                                isAllDay: reminderAllDay,
                                recurrence: reminderRecurrence,
                                weekdays: reminderRecurrence == .weekly ? reminderWeekdays : [])
+                    .keepingSeriesDay(of: t.timeReminder)
                 : nil
         }
         return t

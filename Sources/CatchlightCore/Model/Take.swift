@@ -455,9 +455,16 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
     /// anchor past the one currently displayed and clear `isDone`, leaving the series — and
     /// its OS alarm — live. Shared by "mark done" and Delete → "skip this occurrence" so the
     /// advance maths lives in exactly one place. No-op when there is no repeating reminder.
-    public mutating func advanceRecurringOccurrence(now: Date) {
+    public mutating func advanceRecurringOccurrence(now: Date, calendar: Calendar = .current) {
         guard let r = timeReminder, r.repeats else { return }
-        timeReminder?.scheduledDate = r.nextOccurrence(after: r.effectiveNextDue(now: now))
+        let next = r.nextOccurrence(after: r.effectiveNextDue(now: now, calendar: calendar), calendar: calendar)
+        timeReminder?.scheduledDate = next   // clears anchorDay, as any new date does
+        // A monthly or annual series keeps its own day across a clamped month (owner
+        // 2026-10-02): 31 Jan → 28 Feb → 31 Mar, not 28 Mar for ever after.
+        if r.recurrence == .monthly || r.recurrence == .annually {
+            let seriesDay = r.anchorDay ?? calendar.component(.day, from: r.scheduledDate)
+            if calendar.component(.day, from: next) != seriesDay { timeReminder?.anchorDay = seriesDay }
+        }
         timeReminder?.isDone = false
     }
 
