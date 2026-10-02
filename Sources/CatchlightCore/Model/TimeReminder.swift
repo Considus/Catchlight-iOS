@@ -46,8 +46,17 @@ public struct TimeReminder: Codable, Equatable, Sendable {
     /// device (owner-reported 2026-06-27). `createdAt`/`modifiedAt` are normalised for
     /// exactly this reason; this matches them.
     public var scheduledDate: Date {
-        didSet { scheduledDate = ISO8601.truncateToMilliseconds(scheduledDate) }
+        // A date set from outside starts the series afresh, so a remembered day from an
+        // earlier clamp no longer applies. `advanceRecurringOccurrence` sets it again after.
+        didSet { scheduledDate = ISO8601.truncateToMilliseconds(scheduledDate); anchorDay = nil }
     }
+
+    /// The day of the month a `monthly` or `annually` series really falls on, kept ONLY while
+    /// `scheduledDate` sits on a clamped day (owner 2026-10-02). Advancing a series on the 31st
+    /// stores 28 Feb as `scheduledDate`; without this, the 28th became the series' day for
+    /// ever after. nil whenever `scheduledDate`'s own day is the series' day, which is every
+    /// series that never met a short month, so their encoding is unchanged.
+    public internal(set) var anchorDay: Int?
     /// FUTURE scaffolding (owner 2026-07-01: keep) — encoded/decoded but not yet
     /// set or read anywhere; reserved for delivery tracking. Not dead code.
     public var isDelivered: Bool
@@ -124,7 +133,7 @@ public struct TimeReminder: Codable, Equatable, Sendable {
     // (old reminders always notified); `isDone` / `isAllDay` default false.
     enum CodingKeys: String, CodingKey {
         case scheduledDate, isDelivered, notificationIdentifier
-        case alarmEnabled, isDone, isAllDay, recurrence, weekdays
+        case alarmEnabled, isDone, isAllDay, recurrence, weekdays, anchorDay
     }
 
     public init(from decoder: Decoder) throws {
@@ -140,6 +149,7 @@ public struct TimeReminder: Codable, Equatable, Sendable {
         self.isAllDay = try c.decodeIfPresent(Bool.self, forKey: .isAllDay) ?? false
         self.recurrence = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence) ?? .none
         self.weekdays = Self.validated(try c.decodeIfPresent(Set<Int>.self, forKey: .weekdays) ?? [])
+        self.anchorDay = try c.decodeIfPresent(Int.self, forKey: .anchorDay).flatMap { (1...31).contains($0) ? $0 : nil }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -152,6 +162,7 @@ public struct TimeReminder: Codable, Equatable, Sendable {
         try c.encode(isAllDay, forKey: .isAllDay)
         try c.encode(recurrence, forKey: .recurrence)
         try c.encode(weekdays, forKey: .weekdays)
+        try c.encodeIfPresent(anchorDay, forKey: .anchorDay)   // only while clamped
     }
 }
 
@@ -215,9 +226,9 @@ public extension TimeReminder {
             // reduces to the single anchor weekday — identical to the pre-set behaviour.
             return Self.nextWeekly(after: date, anchor: scheduledDate, weekdays: weekdays, calendar: calendar)
         case .monthly:
-            return Self.nextClamped(after: date, anchor: scheduledDate, steppingBy: .month, calendar: calendar)
+            return Self.nextClamped(after: date, anchor: scheduledDate, day: anchorDay, steppingBy: .month, calendar: calendar)
         case .annually:
-            return Self.nextClamped(after: date, anchor: scheduledDate, steppingBy: .year, calendar: calendar)
+            return Self.nextClamped(after: date, anchor: scheduledDate, day: anchorDay, steppingBy: .year, calendar: calendar)
         }
     }
 
@@ -269,11 +280,12 @@ public extension TimeReminder {
     /// the last valid day of any short period so no occurrence is skipped (owner
     /// 2026-06-21). Walks period-by-period from `date`; the bound only guards a
     /// pathological non-terminating search and is never reached in practice.
-    private static func nextClamped(after date: Date, anchor: Date,
+    private static func nextClamped(after date: Date, anchor: Date, day: Int?,
                                     steppingBy component: Calendar.Component,
                                     calendar: Calendar) -> Date {
         let a = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: anchor)
-        guard let anchorDay = a.day else { return anchor }
+        // The series' remembered day, when the anchor itself sits on a clamped one.
+        guard let anchorDay = day ?? a.day else { return anchor }
         var probe = date
         for _ in 0..<800 {
             let p = calendar.dateComponents([.year, .month], from: probe)

@@ -457,7 +457,14 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
     /// advance maths lives in exactly one place. No-op when there is no repeating reminder.
     public mutating func advanceRecurringOccurrence(now: Date) {
         guard let r = timeReminder, r.repeats else { return }
-        timeReminder?.scheduledDate = r.nextOccurrence(after: r.effectiveNextDue(now: now))
+        let next = r.nextOccurrence(after: r.effectiveNextDue(now: now))
+        timeReminder?.scheduledDate = next   // clears anchorDay, as any new date does
+        // A monthly or annual series keeps its own day across a clamped month (owner
+        // 2026-10-02): 31 Jan → 28 Feb → 31 Mar, not 28 Mar for ever after.
+        if r.recurrence == .monthly || r.recurrence == .annually {
+            let seriesDay = r.anchorDay ?? Calendar.current.component(.day, from: r.scheduledDate)
+            if Calendar.current.component(.day, from: next) != seriesDay { timeReminder?.anchorDay = seriesDay }
+        }
         timeReminder?.isDone = false
     }
 
