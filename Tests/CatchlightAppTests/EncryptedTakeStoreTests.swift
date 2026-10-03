@@ -6,7 +6,7 @@
 //  AES-256-GCM sealed payload columns — schema v2). Two suites:
 //
 //    • `EncryptedTakeStoreContractTests` — runs the ENTIRE shared TakeStore
-//      contract (TakeStoreContractTests.swift) against the production store, so
+//      contract (`TakeStoreContractTests` from Core's CatchlightCoreTestSupport) against the production store, so
 //      takesModified/search/lastSync/tombstones are proven identical to the
 //      in-memory reference implementation.
 //    • `EncryptedTakeStoreTests` — SQLite-specific gap-fill: serialisation
@@ -26,6 +26,7 @@
 #if canImport(Catchlight)
 import XCTest
 @testable import Catchlight
+import CatchlightCoreTestSupport
 @testable import CatchlightCore
 import CryptoKit
 

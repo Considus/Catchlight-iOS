@@ -16,6 +16,7 @@
 
 #if canImport(Catchlight)
 import XCTest
+import CatchlightCoreTestSupport
 @testable import CatchlightCore
 @testable import Catchlight
 
