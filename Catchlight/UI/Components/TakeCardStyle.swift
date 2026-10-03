@@ -28,7 +28,7 @@
 //        overdue            → ruby   (`ckCardOverdueBorder`; the ONLY override of gold)
 //        Obie               → gold   (`ckCardObieBorder`; Obie identity, persists in
 //                                      every state except an overdue reminder)
-//        done               → grey   (`ckCardDoneBorder`; lighter than `ckTextComplete` since 2026-10-03)
+//        done               → grey   (`ckCardDoneBorder` == `ckTextComplete` grey)
 //        active task        → Task-quadrant colour   (same source as the Iris)
 //        active reminder    → Remind-quadrant colour  (same source as the Iris)
 //        else (plain note)  → none   (the surface colour — invisible, but the 0.75pt
