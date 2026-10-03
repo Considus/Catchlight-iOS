@@ -1,0 +1,86 @@
+name: Core pin
+
+# Opens a PR moving the CatchlightCore pin in project.yml to Core's newest tag.
+# Dependabot cannot do this: its swift ecosystem reads only Package.swift and
+# Package.resolved, and this app pins Core in an XcodeGen spec.
+#
+# A PR opened with GITHUB_TOKEN starts no pull_request workflows, so this
+# dispatches CI on the branch itself; the dispatched run's checks land on the
+# PR's head commit and satisfy branch protection. The Claude review does not
+# start that way: close and reopen the PR to get it. The repo (and the org)
+# allow Actions to open PRs for this workflow alone (owner, 2026-10-03);
+# Considus-Ops/repo-baseline.py keeps every other repo off.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-pin
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    name: Bump the Core pin
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # push the bump branch
+      pull-requests: write  # open the PR
+      actions: write        # dispatch CI on the branch
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compare the pin with Core's newest tag
+        id: compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pin=$(awk '/^  CatchlightCore:/{f=1} f && /exactVersion:/{print $2; exit}' project.yml)
+          latest=$(gh api --paginate repos/Considus/Catchlight-Core/tags -q '.[].name' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          if [ -z "$pin" ] || [ -z "$latest" ]; then
+            echo "::error::could not read the pin ('$pin') or Core's tags ('$latest')"; exit 1
+          fi
+          echo "pinned $pin, newest $latest"
+          newest=$(printf '%s\n%s\n' "$pin" "$latest" | sort -V | tail -1)
+          if [ "$newest" = "$pin" ]; then echo "up to date"; exit 0; fi
+          branch="chore/core-$latest"
+          if [ -n "$(gh pr list --head "$branch" --state open --json number -q '.[0].number')" ]; then
+            echo "PR for $latest already open"; exit 0
+          fi
+          { echo "pin=$pin"; echo "latest=$latest"; echo "branch=$branch"; echo "bump=true"; } >> "$GITHUB_OUTPUT"
+
+      - name: Push the bump branch and open the PR
+        if: steps.compare.outputs.bump == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PIN: ${{ steps.compare.outputs.pin }}
+          LATEST: ${{ steps.compare.outputs.latest }}
+          BRANCH: ${{ steps.compare.outputs.branch }}
+        run: |
+          set -euo pipefail
+          # Only the CatchlightCore entry's exactVersion line changes.
+          awk -v pin="$PIN" -v latest="$LATEST" '
+            /^  CatchlightCore:/ {f=1}
+            f && /exactVersion:/ && !done { sub("exactVersion: " pin, "exactVersion: " latest); done=1 }
+            {print}' project.yml > project.yml.new && mv project.yml.new project.yml
+          git diff --exit-code --quiet project.yml && { echo "::error::pin line not changed"; exit 1; }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$BRANCH"
+          git commit -q -m "Bump CatchlightCore $PIN -> $LATEST" project.yml
+          git push -q origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "Bump CatchlightCore $PIN -> $LATEST" \
+            --body "Moves the CatchlightCore pin in \`project.yml\` to Core's newest tag.
+
+          Core changes: https://github.com/Considus/Catchlight-Core/compare/$PIN...$LATEST
+
+          CI was dispatched on this branch by the Core pin workflow, so the required checks run against the app's own tests. Close and reopen this PR to start the Claude review. A Core release can change what is written to disk: read the compare before merging."
+          gh workflow run ci.yml --ref "$BRANCH"
