@@ -11,6 +11,7 @@
 
 import XCTest
 import UIKit
+import SwiftUI
 @testable import Catchlight
 
 final class DoneTextContrastTests: XCTestCase {
@@ -29,6 +30,17 @@ final class DoneTextContrastTests: XCTestCase {
         assertContrast(done, on: 0xFFFFFF, "Daylight card (White)")
         assertContrast(done, on: 0xFBF8F3, "Daylight Obie card")
         assertContrast(done, on: 0xF7F4EF, "Daylight page (Paper)")
+    }
+
+    /// "Done" recedes by the same amount whether it's the edge or the words (owner
+    /// 2026-06-18, reaffirmed 2026-10-03): the done card border is the done-text grey.
+    func testDoneBorderIsTheDoneTextGrey() {
+        for scheme in [ColorScheme.dark, .light] {
+            var env = EnvironmentValues()
+            env.colorScheme = scheme
+            XCTAssertEqual(Color.ckCardDoneBorder.resolve(in: env), Color.ckTextComplete.resolve(in: env),
+                           "done border and done text differ in \(scheme == .dark ? "Night" : "Daylight")")
+        }
     }
 
     // MARK: - Helpers

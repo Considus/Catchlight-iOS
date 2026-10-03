@@ -242,15 +242,11 @@ extension Color {
         light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
     ))
 
-    /// Done card BORDER (a fully-ticked Task or a reminder marked done). Light grey,
-    /// Fog @58% Night / @82% Daylight. Until 2026-10-03 this was the same grey as
-    /// `ckTextComplete` (owner 2026-06-18: "done" recedes by the same amount whether it's
-    /// the edge or the words). The text grey was then darkened to clear WCAG 4.5:1; the
-    /// border, which is decoration rather than text, was left as it was pending the owner's call.
-    static let ckCardDoneBorder = Color(uiColor: .adaptive(
-        dark: Palette.fog.withAlphaComponent(0.58),
-        light: Palette.fog.withAlphaComponent(0.82)
-    ))
+    /// Done card BORDER (a fully-ticked Task or a reminder marked done). It IS the done-text
+    /// grey, built from the same token so the two can't drift: "done" recedes by the same
+    /// amount whether it's the edge or the words (owner 2026-06-18, reaffirmed 2026-10-03
+    /// when the grey was darkened for contrast). `DoneTextContrastTests` holds it.
+    static let ckCardDoneBorder = Color(uiColor: UITheme.textComplete)
 
     /// Iris OFF-quadrant annular fill (HiFi v1.7 `--q-off` — section 7). The
     /// faint backing band that makes the Iris read as a complete RING (with a
