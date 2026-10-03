@@ -1,12 +1,13 @@
 version: 2
 updates:
-  # The app has no third-party package dependencies today (Package.resolved is
-  # gitignored and never exists at checkout), so there is no Swift manifest to
-  # track. The only pinned versions in the repo are the CI workflow's actions,
-  # which are pinned to commit SHAs — this keeps those SHAs current.
+  # No "swift" ecosystem block. The one Swift package dependency, CatchlightCore,
+  # is pinned with `exactVersion` in project.yml, and Dependabot's swift ecosystem
+  # reads only Package.swift / Package.resolved. It does not parse XcodeGen specs
+  # or .xcodeproj package references, and Package.resolved is gitignored, so a
+  # swift block here would find nothing to track. Bump the Core pin by hand.
   #
-  # Add a "swift" ecosystem block here the day a third-party dependency lands
-  # and Package.resolved gets committed.
+  # The only versions Dependabot can track are the CI workflow's actions, which
+  # are pinned to commit SHAs — this keeps those SHAs current.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

@@ -36,7 +36,9 @@ xcodegen generate
 
 **The non-negotiables in `README.md` are constraints, not house style.** A change that weakens one is rejected however good the rest is: zero knowledge with nothing transmitted off the device, `kSecAttrSynchronizable: false` on every Keychain item, encryption always on and never toggleable, offline-first with local-only as a real way to run it, and nothing in the cloud folder but platform-agnostic JSON envelopes and one plaintext metadata file.
 
-🚨 **`Sources/CatchlightCore/Crypto/` holds frozen contract bytes.** The domain-separation strings and derivation parameters had specialist sign-off on 2026-06-05, revised to v1.1 on 2026-06-10, and every future client has to agree on them. Changing one is not a refactor, it breaks existing data. Do not propose it.
+**`CatchlightCore` is not in this repo.** It lives in `Considus/Catchlight-Core` and arrives as a remote Swift package pinned with `exactVersion` in `project.yml`. A Core change is made, tested and tagged there, then reaches the app as a bump of that pin in its own PR. `Tests/CatchlightAppTests` holds only tests that need the app module; Core's suite and `coreverify` run in the Core repo.
+
+🚨 **Core's `Sources/CatchlightCore/Crypto/` holds frozen contract bytes.** The domain-separation strings and derivation parameters had specialist sign-off on 2026-06-05, revised to v1.1 on 2026-06-10, and every future client has to agree on them. Changing one is not a refactor, it breaks existing data. Do not propose it, here or through a Core version bump.
 
 **The deployment floor is iOS 18.0 and the app builds against the iOS 26 SDK.** The compiler will not catch an API newer than the floor, so anything post-18.0 needs `@available` / `#available` and a wrong version on the guard fails on a real device rather than in CI. Full Xcode 26 or later is required, because the App Intents declare `supportedModes` behind `@available(iOS 26.0, *)` and `IntentModes` is not in the iOS 18 SDK.
 
@@ -54,9 +56,6 @@ Keep build output outside the source tree:
 
 ```bash
 BUILD_DIR="$HOME/CatchlightBuild"
-swift build --scratch-path "$BUILD_DIR/spm"
-swift run coreverify          # runtime checks, must pass before any PR
-swift test  --scratch-path "$BUILD_DIR/spm"
 xcodegen generate
 xcodebuild test -scheme Catchlight -derivedDataPath "$BUILD_DIR/DerivedData" \
   -destination '<a simulator from `xcrun simctl list devices available`>'

@@ -12,7 +12,7 @@ I'll acknowledge it within **3 business days** and keep you posted while it's be
 
 ## What's in scope
 
-The iOS app and `CatchlightCore`, which means the cryptographic design, key management, local storage protection, and the file-based sync format.
+The iOS app and `CatchlightCore`, which means the cryptographic design, key management, local storage protection, and the file-based sync format. `CatchlightCore` lives in its own repo now, [Catchlight-Core](https://github.com/Considus/Catchlight-Core), and anything you find in it comes to the same address.
 
 Generally out of scope, anything that needs a jailbroken or otherwise compromised device, or physical access to a device that is already unlocked. Social engineering and denial of service are out too, along with findings in third-party platforms like Apple or whichever cloud provider the user picked, because those aren't mine to fix.
 
