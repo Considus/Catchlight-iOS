@@ -4,7 +4,8 @@ updates:
   # is pinned with `exactVersion` in project.yml, and Dependabot's swift ecosystem
   # reads only Package.swift / Package.resolved. It does not parse XcodeGen specs
   # or .xcodeproj package references, and Package.resolved is gitignored, so a
-  # swift block here would find nothing to track. Bump the Core pin by hand.
+  # swift block here would find nothing to track. `.github/workflows/core-pin.yml`
+  # opens the Core pin bump instead.
   #
   # The only versions Dependabot can track are the CI workflow's actions, which
   # are pinned to commit SHAs — this keeps those SHAs current.
