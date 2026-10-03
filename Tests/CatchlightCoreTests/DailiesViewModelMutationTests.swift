@@ -239,5 +239,68 @@ final class DailiesViewModelMutationTests: XCTestCase {
         XCTAssertEqual(after?.isSeeded, true, "Opening a seeded Take is not a first edit; the flag must survive.")
         XCTAssertEqual(after?.modifiedAt, seeded.modifiedAt)
     }
+
+    // MARK: - An Obie is always Important (owner 2026-10-03)
+
+    /// The card menu's Important item (Dailies, the UIKit timeline, Storyboard) routes
+    /// here. On the Obie it must leave the stored Take Important.
+    func testToggleImportant_onObie_leavesItImportant() throws {
+        let obie = Take(blocks: [.textLine("the one")], isObie: true)
+        let store = InMemoryTakeStore()
+        try store.upsert(obie)
+        let vm = DailiesViewModel(store: store, reminders: ReminderScheduler(center: QuietCenter()))
+
+        vm.toggleImportant(obie)
+
+        let after = try XCTUnwrap(try store.take(id: obie.id))
+        XCTAssertTrue(after.isObie)
+        XCTAssertTrue(after.isImportant, "Toggling Important on the Obie must not turn it off.")
+        XCTAssertTrue(vm.obie?.isImportant == true, "The pinned Obie on screen stays Important too.")
+    }
+
+    /// Control: on a standard Take the menu still turns Important on and off.
+    func testToggleImportant_onStandardTake_flipsIt() throws {
+        let take = Take(blocks: [.textLine("ordinary")])
+        let store = InMemoryTakeStore()
+        try store.upsert(take)
+        let vm = DailiesViewModel(store: store, reminders: ReminderScheduler(center: QuietCenter()))
+
+        vm.toggleImportant(take)
+        XCTAssertEqual(try store.take(id: take.id)?.isImportant, true)
+
+        vm.toggleImportant(try XCTUnwrap(try store.take(id: take.id)))
+        XCTAssertEqual(try store.take(id: take.id)?.isImportant, false)
+    }
+
+    /// The editor bar edits the draft and the commit goes through `save`. A draft whose
+    /// flag was cleared must still be saved Important.
+    func testSave_obieDraftWithImportantCleared_persistsImportant() throws {
+        let obie = Take(blocks: [.textLine("the one")], isObie: true)
+        let store = InMemoryTakeStore()
+        try store.upsert(obie)
+        let vm = DailiesViewModel(store: store, reminders: ReminderScheduler(center: QuietCenter()))
+
+        var draft = obie
+        draft.isImportant.toggle()
+        draft.blocks = [.textLine("the one, edited")]
+        vm.save(draft)
+
+        let after = try XCTUnwrap(try store.take(id: obie.id))
+        XCTAssertEqual(after.plainText, "the one, edited", "the edit itself was saved")
+        XCTAssertTrue(after.isImportant)
+    }
+
+    /// The Focus ring's commit with its Important Mark off still saves an Obie Important.
+    func testApplyFocusRing_importantOffOnObie_persistsImportant() throws {
+        let obie = Take(blocks: [.textLine("the one")], isObie: true)
+        let store = InMemoryTakeStore()
+        try store.upsert(obie)
+        let vm = DailiesViewModel(store: store, reminders: ReminderScheduler(center: QuietCenter()))
+
+        vm.applyActivityTypes(to: obie, isNote: true, isTask: false, hasReminder: false,
+                              reminderDate: nil, isImportant: false)
+
+        XCTAssertEqual(try store.take(id: obie.id)?.isImportant, true)
+    }
 }
 #endif

@@ -1347,9 +1347,7 @@ struct DailiesView: View {
             // and Delete reuse onToggleDone/onDelete above.
             onSetImportant: { take in
                 guard app.ensureEntitled() else { return }
-                var t = take
-                t.isImportant.toggle()
-                vm.save(t)
+                vm.toggleImportant(take)
             },
             onMakeObie: { take in
                 guard app.ensureEntitled() else { return }
@@ -1900,9 +1898,7 @@ struct DailiesView: View {
             // 2026-07-06), so no onSetImportant is offered mid-edit.
             onSetImportant: isEditingThis ? nil : {
                 guard app.ensureEntitled() else { return }
-                var t = take
-                t.isImportant.toggle()
-                vm.save(t)
+                vm.toggleImportant(take)
             },
             // Make Obie from the card long-press. On a RESTING row this is the
             // accessibility path (owner 2026-06-19), same designation as the Iris

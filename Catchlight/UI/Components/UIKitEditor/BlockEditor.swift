@@ -122,6 +122,7 @@ struct BlockEditor: UIViewControllerRepresentable {
         func makeToolbarConfig() -> EditorToolbarConfig {
             .init(
                 isImportant: parent.draft.isImportant,
+                importantLocked: !parent.draft.canChangeImportant,
                 angleEnabled: AngleRegistry.applicable(to: parent.draft).first != nil,
                 isDone: parent.draft.isMarkedDone,
                 doneEnabled: parent.draft.canBeMarkedDone,

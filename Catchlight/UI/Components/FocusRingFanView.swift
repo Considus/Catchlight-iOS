@@ -620,7 +620,9 @@ struct FocusRingFanView: View {
         .accessibilityIdentifier("focus-ring-mark-\(kind.identifierSuffix)")
         .accessibilityLabel(kind.title)
         .accessibilityValue(isActive(kind) ? "active" : "inactive")
-        .accessibilityHint("Double-tap to \(isActive(kind) ? "remove" : "add") \(kind.title).")
+        .accessibilityHint(kind == .important && !take.canChangeImportant
+                           ? "An Obie is always Important."
+                           : "Double-tap to \(isActive(kind) ? "remove" : "add") \(kind.title).")
         .accessibilityAddTraits(isActive(kind) ? [.isSelected, .isButton] : [.isButton])
     }
 
@@ -641,7 +643,9 @@ struct FocusRingFanView: View {
                 } else {
                     hasReminder = true
                 }
-            case .important: isImportant.toggle()
+            // An Obie is always Important (owner 2026-10-03): the Mark stays on. Without
+            // this it showed off while the hub preview and the commit kept it on.
+            case .important: if take.canChangeImportant { isImportant.toggle() }
             }
             // Note is the floor: if no activity TYPE is active, Note re-asserts. Important
             // is orthogonal (an Important Take is still a Note/Task/Remind), so it never
