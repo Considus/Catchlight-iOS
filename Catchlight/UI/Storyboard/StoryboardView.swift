@@ -500,17 +500,18 @@ struct StoryboardView: View {
             Label(take.isMarkedDone ? "Mark Not Done" : "Mark Done",
                   systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
         }
-        Button {
-            guard app.ensureEntitled() else { return }
-            var t = take
-            t.isImportant.toggle()
-            vm.save(t)
-        } label: {
-            // Standard Important mark, matching the Dailies long-press menu (owner 2026-06-29).
-            if take.isImportant {
-                Label { Text("Remove Important") } icon: { MenuGlyph.removeImportant }
-            } else {
-                Label { Text("Make Important") } icon: { MenuGlyph.makeImportant }
+        // No Important item on the Obie: an Obie is always Important (owner 2026-10-03).
+        if take.canChangeImportant {
+            Button {
+                guard app.ensureEntitled() else { return }
+                vm.toggleImportant(take)
+            } label: {
+                // Standard Important mark, matching the Dailies long-press menu (owner 2026-06-29).
+                if take.isImportant {
+                    Label { Text("Remove Important") } icon: { MenuGlyph.removeImportant }
+                } else {
+                    Label { Text("Make Important") } icon: { MenuGlyph.makeImportant }
+                }
             }
         }
         Button(role: .destructive) {

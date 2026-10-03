@@ -561,6 +561,16 @@ final class DailiesViewModel {
         save(updated)
     }
 
+    /// The card menu's Make/Remove Important (Dailies, the UIKit timeline, Storyboard).
+    /// Entitlement is the caller's check, as for the other menu actions. On the Obie this
+    /// changes nothing: an Obie is always Important (`Take.isImportant`), and the menus
+    /// hide the item for it anyway (`Take.canChangeImportant`).
+    func toggleImportant(_ take: Take) {
+        var t = take
+        t.isImportant.toggle()
+        save(t)
+    }
+
     // MARK: - Activity-type toggles (focus-ring fan applies these)
 
     /// Apply the focus-ring-fan selection to a Take, enforcing the Note floor.

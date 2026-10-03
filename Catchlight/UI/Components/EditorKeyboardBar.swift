@@ -20,6 +20,9 @@ import SwiftUI
 /// editor doesn't otherwise hold. Dismiss is handled internally (clears focus).
 struct EditorToolbarConfig {
     var isImportant: Bool
+    /// The Important button is disabled for the Obie, which is always Important (owner
+    /// 2026-10-03). It still shows, and speaks, as on.
+    var importantLocked: Bool = false
     /// The Angle (shopping-bag) button is enabled only when an Angle applies
     /// (a checklist Take); greyed out otherwise.
     var angleEnabled: Bool
@@ -124,12 +127,14 @@ struct EditorKeyboardBar: View {
             } else {
                 // Important: the app's Important glyph, an exclamation "!".
                 // NO state tint (C10 / D-235) — the VALUE below carries on/off.
-                slot(enabled: true, label: "Important",
+                // Disabled on the Obie, with a hint saying why (the SettingsRow pattern).
+                slot(enabled: !config.importantLocked, label: "Important",
                      value: config.isImportant ? "on" : "off",
                      selected: config.isImportant,
+                     hint: config.importantLocked ? "An Obie is always Important." : nil,
                      action: config.onToggleImportant) {
                     ImportantGlyph(size: 24)
-                        .foregroundStyle(Color.ckAccent)
+                        .foregroundStyle(config.importantLocked ? Color.ckTextSecondary.opacity(0.4) : Color.ckAccent)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -180,6 +185,7 @@ struct EditorKeyboardBar: View {
                                    label: String,
                                    value: String? = nil,
                                    selected: Bool = false,
+                                   hint: String? = nil,
                                    action: @escaping () -> Void,
                                    @ViewBuilder glyph: () -> Glyph) -> some View {
         Button(action: action) {
@@ -197,6 +203,7 @@ struct EditorKeyboardBar: View {
         .accessibilityIdentifier(identifier ?? "")
         .accessibilityLabel(label)
         .accessibilityValue(value ?? "")
+        .accessibilityHint(hint ?? "")
         .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }

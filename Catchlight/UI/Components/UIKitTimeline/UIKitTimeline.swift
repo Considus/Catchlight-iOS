@@ -420,13 +420,16 @@ struct TimelineReadCell: View {
                       systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
             }
         }
-        Button {
-            onSetImportant(take)
-        } label: {
-            if take.isImportant {
-                Label { Text("Remove Important") } icon: { MenuGlyph.removeImportant }
-            } else {
-                Label { Text("Make Important") } icon: { MenuGlyph.makeImportant }
+        // No Important item on the Obie: an Obie is always Important (owner 2026-10-03).
+        if take.canChangeImportant {
+            Button {
+                onSetImportant(take)
+            } label: {
+                if take.isImportant {
+                    Label { Text("Remove Important") } icon: { MenuGlyph.removeImportant }
+                } else {
+                    Label { Text("Make Important") } icon: { MenuGlyph.makeImportant }
+                }
             }
         }
         if !take.isObie {

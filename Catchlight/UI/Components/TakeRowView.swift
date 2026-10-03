@@ -395,7 +395,8 @@ struct TakeRowView: View {
                       systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
             }
         }
-        if let onSetImportant {
+        // No Important item on the Obie: an Obie is always Important (owner 2026-10-03).
+        if let onSetImportant, take.canChangeImportant {
             Button {
                 onSetImportant()
             } label: {
@@ -448,7 +449,7 @@ struct TakeRowView: View {
         if take.canBeMarkedDone, let onToggleComplete {
             Button(take.isMarkedDone ? "Mark Not Done" : "Mark Done") { onToggleComplete() }
         }
-        if let onSetImportant {
+        if let onSetImportant, take.canChangeImportant {
             Button(take.isImportant ? "Remove Important" : "Make Important") { onSetImportant() }
         }
         if let onMakeObie, !take.isObie {

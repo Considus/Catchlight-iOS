@@ -130,12 +130,27 @@ public struct Take: Identifiable, Codable, Equatable, Sendable {
     public var isSeeded: Bool
 
     /// `true` when this Take is flagged Important — a tier BELOW Obie (important,
-    /// plural, unordered; owner 2026-06-17). For now the ONLY way a Take becomes
-    /// Important is by being designated Obie (auto-flag, see `isObie`); it stays set
-    /// after the Obie designation is removed ("sticky"). A manual mark is deferred
-    /// (owner 2026-06-18). Additive field: `decodeIfPresent` default false keeps older
-    /// payloads decoding, and it rides the encrypted payload like any other field.
-    public var isImportant: Bool
+    /// plural, unordered; owner 2026-06-17). A Take becomes Important by being designated
+    /// Obie (auto-flag, see `isObie`) or by the manual mark (card menu, editor bar, Focus
+    /// ring); it stays set after the Obie designation is removed ("sticky"). Additive
+    /// field: `decodeIfPresent` default false keeps older payloads decoding, and it rides
+    /// the encrypted payload like any other field.
+    ///
+    /// AN OBIE IS ALWAYS IMPORTANT (owner 2026-10-03). The `didSet` refuses to clear the
+    /// flag while `isObie` is set, so no caller can write an Obie with `isImportant ==
+    /// false` — before this, the card menu's "Remove Important" and the editor bar's
+    /// toggle did, and the flag silently came back on the next launch via the decoder.
+    /// Guarding here rather than in one save method covers every write path, including
+    /// ones that reach the store without going through the view model. To clear the flag,
+    /// remove the Obie designation first.
+    public var isImportant: Bool {
+        didSet { if isObie && !isImportant { isImportant = true } }
+    }
+
+    /// Whether this Take's Important mark can be changed by the user: `false` for the
+    /// Obie, which is always Important (owner 2026-10-03). The card menu hides
+    /// Make/Remove Important and the editor bar disables its Important button on this.
+    public var canChangeImportant: Bool { !isObie }
 
     // MARK: - Manual timeline order (D-195)
 
