@@ -298,9 +298,6 @@ targets:
       - target: Catchlight
       - package: CatchlightCore
         product: CatchlightCore
-      # The shared TakeStore contract and fixtures, for this test bundle only.
-      - package: CatchlightCore
-        product: CatchlightCoreTestSupport
 
   # Task 7.4 / 7.5 — XCUITest target for the six core flows + the two-tap
   # regression anchor. UI tests drive the real app via `XCUIApplication`; the app

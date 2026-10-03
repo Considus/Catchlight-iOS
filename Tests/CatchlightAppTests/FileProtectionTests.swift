@@ -18,7 +18,6 @@
 #if canImport(Catchlight)
 import XCTest
 import CryptoKit
-import CatchlightCoreTestSupport
 @testable import CatchlightCore
 @testable import Catchlight
 
