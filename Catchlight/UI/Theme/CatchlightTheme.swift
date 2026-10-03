@@ -103,9 +103,12 @@ enum UITheme {
     static let surface       = UIColor.adaptive(dark: Palette.dusk,       light: Palette.white)
     static let textPrimary   = UIColor.adaptive(dark: Palette.catchlight, light: Palette.ink)
     static let textSecondary = UIColor.adaptive(dark: Palette.fog,        light: Palette.slate)
-    /// Receded "done" grey — Fog @58% (Night) / @82% (Daylight). Mirrors `ckTextComplete`.
-    static let textComplete  = UIColor.adaptive(dark: Palette.fog.withAlphaComponent(0.58),
-                                                light: Palette.fog.withAlphaComponent(0.82))
+    /// Receded "done" grey — Fog @76% (Night) / #746E68 (Daylight). Mirrors `ckTextComplete`.
+    /// It is text, so it clears WCAG 4.5:1 on every surface it sits on (owner 2026-10-03):
+    /// Night 5.22 on a card, 4.58 on an Obie; Daylight 5.03 on a card, 4.59 on Paper. Fog at any
+    /// opacity can't pass on White, hence a solid grey in Daylight. `DoneTextContrastTests` holds it.
+    static let textComplete  = UIColor.adaptive(dark: Palette.fog.withAlphaComponent(0.76),
+                                                light: UIColor(hex: 0x746E68))
     /// Raw Ember FILL (both modes) — the Add droplet / Restore fill.
     static let add           = UIColor.adaptive(dark: Palette.ember, light: Palette.ember)
     /// Amber FOREGROUND accent — Ember (Night) / Ember-text #856539 (Daylight, WCAG AA).
@@ -149,7 +152,8 @@ extension Color {
     /// too close to active to tell apart; the first retune (40%/55%) went too faint.
     /// Fog @ 58% (Night) / Fog @ 82% (Daylight) — receded but a touch darker than the
     /// 50%/75% pass (owner 2026-06-18: "could be made a little darker"), still clearly
-    /// distinct from active. Single token: the Angle, the inline editor, and the
+    /// distinct from active. Raised 2026-10-03 to clear WCAG 4.5:1 (owner: contrast
+    /// minimums regardless): Fog @ 76% (Night) / #746E68 (Daylight), see `UITheme.textComplete`. Single token: the Angle, the inline editor, and the
     /// timeline card all recede by the same amount.
     static let ckTextComplete = Color(uiColor: UITheme.textComplete)
 
@@ -239,9 +243,10 @@ extension Color {
     ))
 
     /// Done card BORDER (a fully-ticked Task or a reminder marked done). Light grey,
-    /// defined at the SAME Fog alphas as `ckTextComplete` (Fog @58% Night / @82%
-    /// Daylight) so the done BORDER and the done TEXT are provably one grey — "done"
-    /// recedes by the same amount whether it's the edge or the words (owner 2026-06-18).
+    /// Fog @58% Night / @82% Daylight. Until 2026-10-03 this was the same grey as
+    /// `ckTextComplete` (owner 2026-06-18: "done" recedes by the same amount whether it's
+    /// the edge or the words). The text grey was then darkened to clear WCAG 4.5:1; the
+    /// border, which is decoration rather than text, was left as it was pending the owner's call.
     static let ckCardDoneBorder = Color(uiColor: .adaptive(
         dark: Palette.fog.withAlphaComponent(0.58),
         light: Palette.fog.withAlphaComponent(0.82)

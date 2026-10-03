@@ -551,7 +551,7 @@ struct TakeCardSurface: View {
     ///     reminder/task done → `isMarkedDone`) → the ENTIRE body greys, via
     ///     `style.bodyText` = `ckTextComplete`. Single-sourced with `TakeCardStyle` so the
     ///     timeline and the inline editor recede by the same amount, in BOTH schemes
-    ///     (`ckTextComplete` is adaptive: Fog @82% Daylight / @58% Night).
+    ///     (`ckTextComplete` is adaptive: #746E68 Daylight / Fog @76% Night).
     ///   • **One item of several ticked** (NOT `isMarkedDone`) → base stays primary/Obie
     ///     and only that completed check item greys on its own (loop below) — so a single
     ///     tick never greys the whole Take.
