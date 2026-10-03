@@ -9,8 +9,6 @@
 <!-- Which of these ran, and on what. Device results carry more weight than simulator
      results for anything involving the keyboard, search, or reminders. -->
 
-- [ ] `swift run coreverify` (all green)
-- [ ] `swift test`
 - [ ] `xcodebuild test` on a simulator
 - [ ] Checked on a physical device
 
@@ -23,7 +21,7 @@
 - [ ] No analytics, no telemetry, no off-device data transmission
 - [ ] Zero-knowledge and encryption-always-on still hold
 - [ ] `kSecAttrSynchronizable: false` on every Keychain item
-- [ ] No changes to the frozen crypto contract bytes in `Sources/CatchlightCore/Crypto/`
+- [ ] No changes to the frozen crypto contract bytes (they live in Catchlight-Core's `Sources/CatchlightCore/Crypto/` and reach this app only through the version pin in `project.yml`)
 - [ ] No new third-party dependencies
 
 ## Anything else

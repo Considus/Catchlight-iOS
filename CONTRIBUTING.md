@@ -6,7 +6,7 @@ Thanks for taking a look. Catchlight holds people's private notes, and it holds 
 
 Read the non-negotiables in `README.md`, the zero-knowledge and encryption-always-on ones in particular. A contribution that weakens either of them won't be accepted, however good the rest of it is.
 
-The encryption architecture had specialist sign-off on 2026-06-05 and was revised to v1.1 on 2026-06-10. The domain-separation strings and derivation parameters in `Sources/CatchlightCore/Crypto/` are frozen cross-platform contract bytes, so please don't propose changes to them. They are the bytes every future client has to agree on.
+The encryption architecture had specialist sign-off on 2026-06-05 and was revised to v1.1 on 2026-06-10. The domain-separation strings and derivation parameters in `Sources/CatchlightCore/Crypto/` in [Catchlight-Core](https://github.com/Considus/Catchlight-Core) are frozen cross-platform contract bytes, so please don't propose changes to them. They are the bytes every future client has to agree on.
 
 ## Development setup
 
@@ -16,10 +16,6 @@ Keep build output outside the source tree, as described under "Keep build output
 
 ```bash
 BUILD_DIR="$HOME/CatchlightBuild"
-swift build  --scratch-path "$BUILD_DIR/spm"
-swift run coreverify   # the runtime checks, and they must pass before any PR
-swift test   --scratch-path "$BUILD_DIR/spm"
-
 brew install xcodegen
 xcodegen generate      # produces Catchlight.xcodeproj
 # Build with: xcodebuild … -derivedDataPath "$BUILD_DIR/DerivedData"
@@ -27,7 +23,7 @@ xcodegen generate      # produces Catchlight.xcodeproj
 
 ## Pull requests
 
-- Every PR has to pass `swift test` with no regressions.
+- Every PR has to pass `xcodebuild test` with no regressions.
 - No analytics, no telemetry, nothing transmitted off the device. Ever.
 - `kSecAttrSynchronizable: false` on every Keychain item, and that one is not up for discussion.
 - Follow the code style that is already there.
