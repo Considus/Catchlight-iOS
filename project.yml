@@ -39,9 +39,12 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 
 packages:
-  # The platform-agnostic core (this repo). Pure Swift + CryptoKit.
+  # The platform-agnostic core, pure Swift + CryptoKit. It lives in its own repo,
+  # Considus/Catchlight-Core, and is pinned to an exact tag so a Core change reaches
+  # the app only through a deliberate bump here.
   CatchlightCore:
-    path: .
+    url: https://github.com/Considus/Catchlight-Core
+    exactVersion: 1.0.0
 
   # NOTE (2026-06-05): the previous `CArgon2` vendored package has been removed.
   # Master-key derivation now uses HKDF-SHA-256 via CryptoKit (see
@@ -273,10 +276,8 @@ targets:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: Tests/CatchlightCoreTests
-      # App-module unit tests (`@testable import Catchlight`) — e.g. the Angle
-      # registry/predicate (D-033), which can't live in CatchlightCoreTests
-      # because the Angle type is in the app target (its presentation is SwiftUI).
+      # App-module unit tests (`@testable import Catchlight`). The CatchlightCore
+      # suite lives with Core in Considus/Catchlight-Core and runs there.
       - path: Tests/CatchlightAppTests
       # `EnglishWordlistTests` loads bip39-english.txt from
       # `Bundle(for: Self.self)` (the test bundle). Without this entry the

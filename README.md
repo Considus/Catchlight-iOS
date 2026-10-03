@@ -10,20 +10,9 @@ The detailed design and encryption-architecture documents are kept separately by
 
 ```
 CatchlightApp/
-├── Package.swift                 # SwiftPM: CatchlightCore + coreverify
 ├── project.yml                   # XcodeGen spec for the iOS app (run: xcodegen generate)
-├── Sources/
-│   ├── CatchlightCore/           # PLATFORM-AGNOSTIC core, pure Swift + CryptoKit
-│   │   ├── Model/                # Take, Sequence, reminders, attachments, seed Takes
-│   │   ├── Serialization/        # ISO-8601 + platform-agnostic JSON codec
-│   │   ├── Crypto/               # HKDF master key + key hierarchy, Take crypto
-│   │   │                         #   (AES-256-GCM), manifest HMAC, X25519 handshake
-│   │   │                         #   + SAS code, BIP-39, hard-failing RNG
-│   │   ├── Sync/                 # cloud blob, manifest v2 (tombstones), sync engine,
-│   │   │                         #   conflicts, lock, folder protocol
-│   │   └── Storage/              # TakeStore protocol + in-memory impl
-│   └── coreverify/               # dependency-free runtime verifier (runs under CLT)
-├── Tests/                        # XCTest suites (Core + iOS + UI)
+│                                 #   and the pinned CatchlightCore version
+├── Tests/                        # XCTest suites (iOS + UI)
 └── Catchlight/                   # iOS APP TARGET, platform-specific layers
     ├── App/                      # entry point, composition root, scene lifecycle
     ├── Security/                 # Keychain (SE-wrapped master key), PIN (PBKDF2,
@@ -43,6 +32,8 @@ CatchlightApp/
 
 That split is what makes "platform-agnostic from day one" a structural fact rather than a promise. The iOS app depends on the core and never the other way round, so the future Web, Android and Mac clients re-implement the thin app layer and nothing else.
 
+`CatchlightCore` lives in its own repo, [Catchlight-Core](https://github.com/Considus/Catchlight-Core). The app pulls it in as a Swift package at the exact version pinned in `project.yml`.
+
 ## Building and testing
 
 ### Keep build output out of the source tree
@@ -51,28 +42,18 @@ Write build products to a local directory outside the repo. If your checkout liv
 
 ```bash
 BUILD_DIR="$HOME/CatchlightBuild"
-swift build  --scratch-path "$BUILD_DIR/spm"
-swift test   --scratch-path "$BUILD_DIR/spm"
 xcodebuild … -derivedDataPath "$BUILD_DIR/DerivedData"
 ```
 
-### The core, which builds with Command Line Tools alone
+### The core
 
-```bash
-swift build            # builds CatchlightCore (pure Swift + CryptoKit)
-swift run coreverify   # runs the runtime verification harness
-```
-
-`coreverify` exists because XCTest is not bundled with the Command Line Tools. It re-runs the same scenarios as the XCTest suite against a tiny assert harness, so the core can be proven green without a full Xcode.
-
-The harness prints its own count when it finishes, and its result along with it, and this page repeats neither. Anything written down here goes stale the day somebody adds a check. Which is exactly what happened.
+The core has its own repo, [Catchlight-Core](https://github.com/Considus/Catchlight-Core), and that's where it builds and where `coreverify` and its XCTest suite run. Xcode fetches it when it resolves the project.
 
 ### The full XCTest suite and the iOS app, which need full Xcode
 
 You need **Xcode 26 or later**, and that has been true since 2026-08-15. The App Intents declare `supportedModes` behind `@available(iOS 26.0, *)` (D-202), and `IntentModes` is not in the iOS 18 SDK at all, so Xcode 16 cannot compile the app. Note what this does not change. The deployment floor is still iOS 18.0 (D-039), so the app still runs on iOS 18 and only builds against the iOS 26 SDK.
 
 ```bash
-swift test                 # the canonical Tests/ suite, under a full Xcode toolchain
 brew install xcodegen
 xcodegen generate          # produces Catchlight.xcodeproj from project.yml
 open Catchlight.xcodeproj  # set DEVELOPMENT_TEAM, then build/run on a device

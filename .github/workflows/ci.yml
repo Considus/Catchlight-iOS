@@ -3,14 +3,14 @@ name: CI
 # Task 6.17 — run the full test suite on every push to main and every PR
 # targeting main. Two jobs run in parallel:
 #
-#   core-tests  — `swift test` + `swift run coreverify` against the
-#                 CatchlightCore SPM package. No Xcode project needed.
-#   xcode-tests — `xcodebuild test` against the iOS simulator. This is the job
-#                 that runs the iOS-only suites gated by
-#                 `#if canImport(Catchlight)` — roughly half the test files
-#                 (Keychain, PIN, SQLite store, file protection, settings,
-#                 subscription, reminders, UI state, plus the XCUITest bundle).
-#                 The macOS `swift test` job alone is NOT a full signal.
+#   release-build — `xcodebuild build` in the Release configuration, a compile
+#                   check for Release-only breaks.
+#   xcode-tests   — `xcodebuild test` against the iOS simulator: the app unit
+#                   tests in Tests/CatchlightAppTests plus the XCUITest bundle.
+#
+# CatchlightCore is a Swift package pulled from Considus/Catchlight-Core at the
+# exact version pinned in project.yml. Its own suite (`swift test` + `coreverify`)
+# runs in that repo's CI, not here.
 #
 # Both jobs must pass before this commit is mergeable — these are the status
 # checks wired into branch protection in 6.18.
@@ -44,40 +44,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  core-tests:
-    name: Core (swift test + coreverify)
-    runs-on: macos-15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # Intentionally not pinning the Xcode version — the macos-15 image ships
-      # multiple side-by-side Xcodes (16.x and newer). Letting the runner use
-      # its default keeps `OS=latest` and the newer simulator runtimes
-      # resolvable. If a future image bump removes a needed runtime, pin here.
-
-      # SPM resolves CryptoKit (system) and no third-party deps today, so the
-      # cache mostly saves index/build artefacts between runs. The key hashes
-      # Package.swift only — Package.resolved is gitignored so it never exists
-      # at checkout (the previous key listed it, which silently degenerated to
-      # the same thing). Commit Package.resolved and add it back here the day a
-      # third-party dependency lands.
-      - name: Cache SwiftPM
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            .build
-            ~/Library/Caches/org.swift.swiftpm
-          key: ${{ runner.os }}-spm-${{ hashFiles('Package.swift') }}
-          restore-keys: |
-            ${{ runner.os }}-spm-
-
-      - name: swift test
-        run: swift test --enable-code-coverage
-
-      - name: swift run coreverify
-        run: swift run coreverify
-
   release-build:
     # Compile check in the RELEASE configuration. `xcodebuild test` runs Debug
     # only, so a Release-only compile break (e.g. a symbol declared inside
@@ -122,7 +88,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/Library/Caches/org.swift.swiftpm
-          key: ${{ runner.os }}-xcode-spm-${{ hashFiles('Package.swift') }}
+          key: ${{ runner.os }}-xcode-spm-${{ hashFiles('project.yml') }}
           restore-keys: |
             ${{ runner.os }}-xcode-spm-
 
@@ -193,11 +159,13 @@ jobs:
       # `DerivedData/SourcePackages` path that doesn't exist (Xcode nests
       # SourcePackages under DerivedData/<Project>-<hash>/), so it restored
       # nothing while costing save/restore time.
+      # The key hashes project.yml because that is where the CatchlightCore
+      # version pin lives (Package.resolved is gitignored).
       - name: Cache SwiftPM
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/Library/Caches/org.swift.swiftpm
-          key: ${{ runner.os }}-xcode-spm-${{ hashFiles('Package.swift') }}
+          key: ${{ runner.os }}-xcode-spm-${{ hashFiles('project.yml') }}
           restore-keys: |
             ${{ runner.os }}-xcode-spm-
 
@@ -225,7 +193,7 @@ jobs:
         # and OS=latest. FileProtectionTests self-skips on simulator via XCTSkip.
         #
         # The Catchlight scheme's test action runs BOTH `CatchlightTests`
-        # (unit tests — Tests/CatchlightCoreTests + Tests/CatchlightAppTests) and
+        # (unit tests — Tests/CatchlightAppTests) and
         # `CatchlightUITests` (XCUITest for the six core flows, the two-tap
         # regression anchor, and the block-editor / Angle flows — workplan 7.4 /
         # 7.5). The scheme is declared explicitly in project.yml because
