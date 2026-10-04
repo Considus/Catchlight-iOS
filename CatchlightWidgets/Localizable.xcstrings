@@ -1,0 +1,57 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "A blank Obie to tap and write into." : {
+
+    },
+    "A blank Take to tap and write into." : {
+
+    },
+    "Both capture buttons in one widget — tap the side you need." : {
+
+    },
+    "Capture" : {
+
+    },
+    "Catchlight" : {
+
+    },
+    "New Obie" : {
+
+    },
+    "New Obie card" : {
+
+    },
+    "New Take" : {
+
+    },
+    "New Take card" : {
+
+    },
+    "New Take or Obie" : {
+
+    },
+    "Obie" : {
+
+    },
+    "Open Catchlight and capture your Obie." : {
+
+    },
+    "Open Catchlight and open a blank Obie." : {
+
+    },
+    "Open Catchlight and start a new Take." : {
+
+    },
+    "Open Catchlight straight to a new Take." : {
+
+    },
+    "Open Catchlight to a new Take." : {
+
+    },
+    "Take" : {
+
+    }
+  },
+  "version" : "1.0"
+}

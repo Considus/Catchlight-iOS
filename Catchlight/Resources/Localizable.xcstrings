@@ -1,0 +1,947 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    " key to your data." : {
+
+    },
+    "%@ Double-tap to review." : {
+
+    },
+    "%@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. %2$@"
+          }
+        }
+      }
+    },
+    "%@. %@%@. Modified %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. %2$@%3$@. Modified %4$@."
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
+    "%lld m" : {
+
+    },
+    "%lld." : {
+
+    },
+    "A deleted Take cannot be recovered" : {
+
+    },
+    "A tighter radius is more precise, but iOS may trigger it late or miss it. 100 m is the reliable minimum." : {
+
+    },
+    "About" : {
+
+    },
+    "About. %@" : {
+
+    },
+    "active" : {
+
+    },
+    "Active" : {
+      "comment" : "Subscription status — currently subscribed."
+    },
+    "Add Take" : {
+
+    },
+    "Add this device to your account?" : {
+
+    },
+    "All caught up." : {
+
+    },
+    "All conflicts resolved." : {
+
+    },
+    "All tasks done." : {
+
+    },
+    "All-day" : {
+
+    },
+    "An Obie is always Important." : {
+
+    },
+    "Any items in the folder, that have previously been imported, will be imported again." : {
+
+    },
+    "Appearance mode" : {
+
+    },
+    "Arrangement" : {
+
+    },
+    "Authenticate with Face ID or your device passcode to view the 12 words. They're the only way to recover your account, so reveal them somewhere private." : {
+
+    },
+    "Auto-delete" : {
+
+    },
+    "Auto-renews each year. Cancel anytime in your App Store account." : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cancel search" : {
+
+    },
+    "Capture" : {
+
+    },
+    "Capture ${text}" : {
+
+    },
+    "Capture ${text} as your Obie" : {
+
+    },
+    "Capture a new Take as your Obie, from text you speak or type." : {
+
+    },
+    "Capture a new Take from text you speak or type." : {
+
+    },
+    "Capture a Take" : {
+
+    },
+    "Capture an Obie" : {
+
+    },
+    "Catchlight" : {
+
+    },
+    "Catchlight Annual" : {
+
+    },
+    "Catchlight Filter" : {
+
+    },
+    "Catchlight has been reset" : {
+
+    },
+    "Catchlight is locked" : {
+
+    },
+    "Catchlight never sees your files. Only you can read them." : {
+
+    },
+    "Catchlight uses only Apple system frameworks (CryptoKit, LocalAuthentication, Security, SQLite3). No third-party libraries are bundled." : {
+
+    },
+    "Catchlight: %@" : {
+
+    },
+    "checked" : {
+
+    },
+    "Choose a cloud folder you own" : {
+
+    },
+    "Choose folder from Files" : {
+
+    },
+    "Choose what Catchlight focuses on while this Focus is on." : {
+
+    },
+    "Choose where encrypted Takes are stored." : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear search" : {
+
+    },
+    "Close Catchlight and open it again to set up a new Privacy phrase. If you exported your Takes, you can bring them back with Import from a file." : {
+
+    },
+    "Close paywall" : {
+
+    },
+    "Close Shot List" : {
+
+    },
+    "Close Storyboard" : {
+
+    },
+    "Cloud Storage" : {
+
+    },
+    "Collapse Take" : {
+
+    },
+    "Coming soon." : {
+
+    },
+    "Completed tasks only" : {
+
+    },
+    "Confirm before deleting" : {
+
+    },
+    "Confirm three words" : {
+
+    },
+    "Continue" : {
+
+    },
+    "Copy version and device info" : {
+
+    },
+    "Couldn't unlock. Tap to save again." : {
+
+    },
+    "Creation date" : {
+
+    },
+    "Current folder: %@" : {
+
+    },
+    "Default timing" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete item" : {
+
+    },
+    "Delete only the next occurrence, or the whole repeating series?" : {
+
+    },
+    "Delete Series" : {
+
+    },
+    "Delete Take" : {
+
+    },
+    "Delete This Occurrence" : {
+
+    },
+    "Delete this Take?" : {
+
+    },
+    "Disabled" : {
+
+    },
+    "Discard changes" : {
+
+    },
+    "Dismiss" : {
+
+    },
+    "Dismiss %@" : {
+
+    },
+    "Dismiss this one" : {
+
+    },
+    "Done" : {
+
+    },
+    "done only" : {
+
+    },
+    "Double-tap to %@ %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-tap to %1$@ %2$@."
+          }
+        }
+      }
+    },
+    "Double-tap to %@ this item." : {
+
+    },
+    "Double-tap to apply your selection and close." : {
+
+    },
+    "Double-tap to bring the keyboard back and keep typing." : {
+
+    },
+    "Double-tap to capture a new Take." : {
+
+    },
+    "Double-tap to clear the search and return to the dock." : {
+
+    },
+    "Double-tap to clear." : {
+
+    },
+    "Double-tap to dismiss this notice." : {
+
+    },
+    "Double-tap to edit this Take." : {
+
+    },
+    "Double-tap to filter the timeline by notes, tasks, or reminders." : {
+
+    },
+    "Double-tap to place in the next slot." : {
+
+    },
+    "Double-tap to resume typing your search." : {
+
+    },
+    "Double-tap to save this Take and stop editing." : {
+
+    },
+    "Double-tap to save this Take." : {
+
+    },
+    "Double-tap to search your Takes." : {
+
+    },
+    "Double-tap to show only Important Takes." : {
+
+    },
+    "Double-tap to show only pure notes. Turning notes on clears the tasks and reminders filters." : {
+
+    },
+    "Double-tap to show only Takes created this month." : {
+
+    },
+    "Double-tap to toggle the phrase on screen." : {
+
+    },
+    "Double-tap to toggle. Use the actions rotor for completed tasks only." : {
+
+    },
+    "Double-tap to toggle. Use the actions rotor for expired reminders only." : {
+
+    },
+    "Double-tap to view your phrase. Face ID or passcode required." : {
+
+    },
+    "e.g. Home" : {
+
+    },
+    "Enabled" : {
+
+    },
+    "Enter your Privacy phrase" : {
+
+    },
+    "Enter your Privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed. To keep a copy first, cancel and use Export Takes (Markdown), or make sure they're already in your cloud folder." : {
+
+    },
+    "Erase everything" : {
+
+    },
+    "Erase everything on this device?" : {
+
+    },
+    "Erase. Takes exported" : {
+
+    },
+    "Erases every Take on this device and creates a new Privacy phrase." : {
+
+    },
+    "Every task on this Take is ticked. Stop its reminder?" : {
+
+    },
+    "Every thought deserves a moment of clarity." : {
+
+    },
+    "Everything" : {
+
+    },
+    "Expand Take" : {
+
+    },
+    "expired only" : {
+
+    },
+    "Expired reminders only" : {
+
+    },
+    "Export" : {
+
+    },
+    "Export a readable copy?" : {
+
+    },
+    "Export all your Takes as a Markdown file." : {
+
+    },
+    "Export anyway" : {
+
+    },
+    "Export now" : {
+
+    },
+    "Export Take" : {
+
+    },
+    "Export Takes" : {
+
+    },
+    "Export Takes now. This is the only way to preserve them. This will make cloud copies unreadable." : {
+
+    },
+    "Export your Takes" : {
+
+    },
+    "Export your Takes?" : {
+
+    },
+    "First, we'll create your Privacy phrase: 12 words that are the " : {
+
+    },
+    "Follow-up reminders" : {
+
+    },
+    "Free trial" : {
+      "comment" : "Subscription status — currently in the intro trial."
+    },
+    "Hide phrase" : {
+
+    },
+    "Hold to reveal" : {
+
+    },
+    "Hold to reveal phrase" : {
+
+    },
+    "I already use Catchlight" : {
+
+    },
+    "Ignore" : {
+
+    },
+    "Import" : {
+
+    },
+    "Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes." : {
+
+    },
+    "Import notes" : {
+
+    },
+    "Important filter" : {
+
+    },
+    "Important only" : {
+
+    },
+    "inactive" : {
+
+    },
+    "Inactive" : {
+      "comment" : "Subscription status — lapsed, in read-only mode."
+    },
+    "Location access is off. Enable it in Settings to set a place reminder." : {
+
+    },
+    "Lock after" : {
+
+    },
+    "Made by Considus" : {
+
+    },
+    "Make Important" : {
+
+    },
+    "Make Obie" : {
+
+    },
+    "Make standard Take" : {
+
+    },
+    "Make this your Obie?" : {
+
+    },
+    "Mark Done" : {
+
+    },
+    "Mark Not Done" : {
+
+    },
+    "Move down" : {
+
+    },
+    "Move up" : {
+
+    },
+    "New Obie" : {
+
+    },
+    "New Take" : {
+
+    },
+    "No notices yet" : {
+
+    },
+    "No privacy phrase on this device. Export now, then Settings > Start over." : {
+
+    },
+    "Not available yet." : {
+
+    },
+    "Not configured" : {
+      "comment" : "Cloud Storage row detail label when no folder is picked."
+    },
+    "Not now" : {
+
+    },
+    "Notes filter" : {
+
+    },
+    "Nothing planned yet" : {
+
+    },
+    "Notice History" : {
+
+    },
+    "Notifications disabled. Opens iOS Settings." : {
+
+    },
+    "Notifications enabled" : {
+
+    },
+    "Notify" : {
+
+    },
+    "Now, where should your Takes live?" : {
+
+    },
+    "Obie" : {
+
+    },
+    "off" : {
+
+    },
+    "OK" : {
+
+    },
+    "on" : {
+
+    },
+    "On-device search only. Considus can never read your Takes. Text levels are greyed out by an iOS limitation." : {
+
+    },
+    "One thing before we continue." : {
+
+    },
+    "ONLY" : {
+
+    },
+    "Open Catchlight and open a blank Obie." : {
+
+    },
+    "Open Catchlight and start a new Take." : {
+
+    },
+    "Open Settings" : {
+
+    },
+    "Open Source Licences" : {
+
+    },
+    "Opens in your browser." : {
+
+    },
+    "Opens the Catchlight report form, prefilled with your app and iOS version." : {
+
+    },
+    "Opens the Files picker to choose a folder for sync." : {
+
+    },
+    "Opens the Focus ring to change what this Take is." : {
+
+    },
+    "Opens the Storyboard: every Take with a task. Use the actions rotor to open Settings." : {
+
+    },
+    "Order" : {
+
+    },
+    "Panel suggests, you accept. Inline rewrites in place. Both send that Take to Apple. Your Privacy phrase never goes." : {
+
+    },
+    "Phrase hidden. Double-tap the reveal button to view." : {
+
+    },
+    "Phrase hidden. Press and hold the reveal button to view." : {
+
+    },
+    "Phrase revealed: %@" : {
+
+    },
+    "Pick a .md, .txt or .rtf file from Files to import as Takes. No cloud folder needed." : {
+
+    },
+    "Pick word %@ from the bank below." : {
+
+    },
+    "Place" : {
+
+    },
+    "Press and hold to display the 12 words. Release to hide them." : {
+
+    },
+    "Preview" : {
+
+    },
+    "Privacy phrase" : {
+
+    },
+    "Privacy Policy" : {
+
+    },
+    "Privacy-first notes and reminders" : {
+
+    },
+    "Proceed" : {
+
+    },
+    "Purchase in progress" : {
+
+    },
+    "Quick set" : {
+
+    },
+    "Radius" : {
+
+    },
+    "Re-nudge until you mark it done" : {
+
+    },
+    "Read-only. Your data is still yours." : {
+
+    },
+    "Recent sync, storage and conflict notices." : {
+
+    },
+    "Recover this Take?" : {
+
+    },
+    "Redeem Code" : {
+
+    },
+    "Release to hide" : {
+
+    },
+    "Reminder" : {
+
+    },
+    "Reminder type" : {
+
+    },
+    "Reminders" : {
+
+    },
+    "Reminders filter" : {
+
+    },
+    "Remove" : {
+
+    },
+    "Remove Important" : {
+
+    },
+    "Reorder item" : {
+
+    },
+    "Repeat" : {
+
+    },
+    "Requesting notification permission" : {
+
+    },
+    "Restore on this device" : {
+
+    },
+    "Restore Purchases" : {
+
+    },
+    "Restore your Takes onto this device from your Privacy phrase." : {
+
+    },
+    "Resubscribe to Catchlight" : {
+
+    },
+    "Return to local-only mode." : {
+
+    },
+    "Reveal phrase" : {
+
+    },
+    "Reveal your Privacy phrase" : {
+
+    },
+    "Review" : {
+
+    },
+    "Run a sync pass now." : {
+
+    },
+    "Save and close" : {
+
+    },
+    "Saves a readable copy. Not a recovery phrase." : {
+
+    },
+    "Search" : {
+
+    },
+    "Search a place or address" : {
+
+    },
+    "Search Takes" : {
+
+    },
+    "Second device" : {
+
+    },
+    "Select an empty folder, or create a new one, and we'll take care of the rest." : {
+
+    },
+    "Selected: %@" : {
+
+    },
+    "Sequence" : {
+
+    },
+    "Settings" : {
+
+    },
+    "SETTINGS" : {
+
+    },
+    "Shares a plain-text diagnostics log to attach to a report." : {
+
+    },
+    "SHOT LIST" : {
+
+    },
+    "Show" : {
+
+    },
+    "Show ${scope}" : {
+
+    },
+    "Show all Takes" : {
+
+    },
+    "Silent. Keeps the place on the Take, with no alert when you arrive or leave." : {
+
+    },
+    "Snooze" : {
+
+    },
+    "Snooze for %@" : {
+
+    },
+    "Spotlight and Siri indexing" : {
+
+    },
+    "Start free,\nkeep your thoughts,\nprivately." : {
+
+    },
+    "Stop" : {
+
+    },
+    "Storyboard" : {
+
+    },
+    "STORYBOARD" : {
+
+    },
+    "Subscribe" : {
+
+    },
+    "Sync" : {
+
+    },
+    "Sync %@" : {
+
+    },
+    "SYNC CONFLICTS" : {
+
+    },
+    "Sync, storage and conflict notices will appear here." : {
+
+    },
+    "Take" : {
+
+    },
+    "Takes with a task appear here." : {
+
+    },
+    "Tasks" : {
+
+    },
+    "Tasks filter" : {
+
+    },
+    "Terms of Service" : {
+
+    },
+    "Tested with iCloud Drive, Dropbox, Internxt, Koofr and Filen. Others may work, and a provider that greys out in the picker can't hand an app a whole folder. You'll need its app installed and signed in." : {
+
+    },
+    "The 12 words from your other device, in order." : {
+
+    },
+    "The BIP-39 English wordlist is sourced from the Trezor project and bundled under the MIT licence. See Resources/bip39-english.txt." : {
+
+    },
+    "The file is readable text and it does not contain a recovery phrase. Use Start over and Import from a file to re-import your Takes. Delete the export once your Takes are back." : {
+
+    },
+    "This cannot be undone." : {
+
+    },
+    "This deletes every Take on this device and the Privacy phrase that unlocks them. Takes in your cloud folder will be unreadable. This cannot be undone." : {
+
+    },
+    "This is a repeating reminder." : {
+
+    },
+    "This replaces the account on this device. Takes stored only here will be removed and can't be recovered. If you haven't already, close this and use Export Takes (Markdown) to keep a copy first." : {
+
+    },
+    "Time" : {
+
+    },
+    "Trigger" : {
+
+    },
+    "Turn off reminder" : {
+
+    },
+    "unchecked" : {
+
+    },
+    "Untitled Take" : {
+
+    },
+    "Use current location" : {
+
+    },
+    "Use the actions rotor to copy version and device info." : {
+
+    },
+    "View" : {
+
+    },
+    "View your subscription or restore purchases." : {
+
+    },
+    "We never see them, store them, or ask for them. So don't lose them." : {
+
+    },
+    "Welcome back" : {
+
+    },
+    "What to capture as your Obie." : {
+
+    },
+    "What to capture." : {
+
+    },
+    "What's your Obie?" : {
+
+    },
+    "What's your Take?" : {
+
+    },
+    "When" : {
+
+    },
+    "When I arrive" : {
+
+    },
+    "When I leave" : {
+
+    },
+    "When on, a reminder you don't act on nudges again until you mark it done." : {
+
+    },
+    "When on, deleting a Take asks you to confirm first." : {
+
+    },
+    "Which Takes Catchlight shows while this Focus is on." : {
+
+    },
+    "Word %@ of your phrase, empty" : {
+
+    },
+    "Word %@ of your phrase: %@. Double-tap to deselect." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Word %1$@ of your phrase: %2$@. Double-tap to deselect."
+          }
+        }
+      }
+    },
+    "Word %lld: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Word %1$lld: %2$@"
+          }
+        }
+      }
+    },
+    "Write these 12 words down somewhere safe, on paper. They're the only way back into your Takes on a new phone. They don't travel in an iPhone backup, and neither do your Takes, so restoring a backup won't bring either of them back." : {
+
+    },
+    "Writing Tools" : {
+
+    },
+    "You can start over and try again. Your phrase hasn't been saved anywhere. We'll generate another." : {
+
+    },
+    "You don't need to choose privacy, it's yours and you never have to ask for it." : {
+
+    },
+    "You're ready." : {
+
+    },
+    "Your account is restored on this device. Connect the cloud folder where your Takes are saved and they'll appear here." : {
+
+    },
+    "Your existing Obie returns to the timeline. Only one Take can be your Obie." : {
+
+    },
+    "Your first Take is waiting." : {
+
+    },
+    "Your Privacy phrase" : {
+
+    },
+    "Your subscription auto-renews each year unless cancelled at least 24 hours before the period ends. Manage or cancel anytime in your App Store account. Catchlight is end-to-end encrypted. Your Takes are never readable by us." : {
+
+    },
+    "Your Takes will live on this device and nowhere else. Your iPhone backup won't contain them, because we deliberately keep them out of it, and that's the same choice that keeps them out of iCloud Backup. Lose this phone or wipe it, and there's nothing to restore from." : {
+
+    },
+    "Your thoughts, in your order, telling your story. Nobody else's." : {
+
+    }
+  },
+  "version" : "1.0"
+}

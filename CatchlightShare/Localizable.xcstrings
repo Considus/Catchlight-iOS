@@ -1,0 +1,33 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Add a note (optional)" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Close" : {
+
+    },
+    "It takes text, links and web pages, not images or files." : {
+
+    },
+    "It'll be waiting on your timeline next time you open the app." : {
+
+    },
+    "Save" : {
+
+    },
+    "Save to Catchlight" : {
+
+    },
+    "Saved to Catchlight" : {
+
+    },
+    "There's nothing here Catchlight can keep." : {
+
+    }
+  },
+  "version" : "1.0"
+}
