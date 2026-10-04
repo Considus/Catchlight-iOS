@@ -11,6 +11,7 @@
 //
 //  Rules, because the codes outlive any one release:
 //  - A number is never reused or renumbered, even when its notice is deleted.
+//    `NoticeCodeTests.testCodesNeverChange` pins every code; a new one is added there.
 //  - Two call sites with the same wording still get their own codes: the code says
 //    where it happened, not only what was said.
 //  - 1xx sync, 2xx storage, 3xx conflicts, 4xx verification, 9xx developer-only

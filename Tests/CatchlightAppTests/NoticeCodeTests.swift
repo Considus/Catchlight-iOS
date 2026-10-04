@@ -13,10 +13,64 @@ import CatchlightCore
 
 final class NoticeCodeTests: XCTestCase {
 
+    /// The message part follows the device language, so it is compared with the notice's
+    /// own message rather than a fixed English string; the reference never changes.
     func testLogLine_isReferenceThenMessage() {
         XCTAssertEqual(Notice.saveFailed.reference, "CCIOS-202")
-        XCTAssertEqual(Notice.saveFailed.logLine, "[CCIOS-202] Couldn't save that Take.")
+        XCTAssertEqual(Notice.saveFailed.logLine, "[CCIOS-202] " + Notice.saveFailed.message)
+        // Developer-only lines are English in every language.
         XCTAssertEqual(Notice.takeDeleted.logLine, "[CCIOS-914] Take deleted")
+    }
+
+    /// Codes are permanent: support reads old exports against them. Renumbering,
+    /// reusing or deleting a code fails here; a new code is added to this table.
+    func testCodesNeverChange() {
+        let pinned: [String: Int] = [
+            "syncPaused": 101,
+            "syncProblem": 102,
+            "syncLockHeld": 103,
+            "libraryNotSaving": 104,
+            "cloudFolderStale": 105,
+            "cloudFolderUnresolvable": 106,
+            "takesHeldBack": 107,
+            "loadFailed": 201,
+            "saveFailed": 202,
+            "saveInPlaceFailed": 203,
+            "reorderFailed": 204,
+            "importFailed": 205,
+            "deleteFailed": 206,
+            "cleanupFailed": 207,
+            "setObieFailed": 208,
+            "replaceObieFailed": 209,
+            "conflictChoiceFailed": 210,
+            "conflictResolutionFailed": 211,
+            "watermarkPrepareFailed": 212,
+            "watermarkStepFailed": 213,
+            "libraryOpenFailed": 214,
+            "conflictsChanged": 301,
+            "conflictsUnverified": 302,
+            "takesQuarantined": 401,
+            "spotlightReindexSkipped": 901,
+            "spotlightReindexed": 902,
+            "cloudFolderConnected": 903,
+            "cloudFolderDisconnected": 904,
+            "cloudBookmarkReminted": 905,
+            "lockedCaptureCommitRequested": 906,
+            "lockedCaptureBlankDiscarded": 907,
+            "lockedCaptureDiscarded": 908,
+            "paywallDraftHeld": 909,
+            "paywallDraftDropped": 910,
+            "paywallDraftSaved": 911,
+            "takeSaved": 912,
+            "timelineReordered": 913,
+            "takeDeleted": 914,
+            "backgroundSyncNotScheduled": 915,
+            "reminderNotScheduled": 916,
+            "notificationPermission": 917,
+            "reminderPastDated": 918
+        ]
+        let current = Dictionary(uniqueKeysWithValues: NoticeCode.allCases.map { ("\($0)", $0.rawValue) })
+        XCTAssertEqual(current, pinned)
     }
 
     /// Same wording, different place: the code is what tells them apart.
