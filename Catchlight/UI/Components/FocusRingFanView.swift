@@ -1005,13 +1005,15 @@ struct ReminderPickerSheet: View {
 
     /// The seven-day toggle strip for the day-set weekly cadences (owner 2026-06-23; simplified
     /// 2026-06-30 now that Every weekday / Every weekend / Custom are chosen in the Interval
-    /// menu). Starts on SUNDAY; each letter maps to a Calendar weekday number (1 = Sun … 7 = Sat).
+    /// menu). Starts on `firstWeekday` (Sunday in English, Monday in German); each letter maps
+    /// to a Calendar weekday number (1 = Sun … 7 = Sat), so only the display order changes.
     /// Shown only when `weekdays` is non-empty (i.e. not plain "Weekly").
     private var weekdaySection: some View {
         let symbols = Calendar.current.veryShortWeekdaySymbols          // index 0 = Sunday
         let fullNames = Calendar.current.weekdaySymbols                 // index 0 = Sunday
+        let order = (0..<7).map { (Self.firstWeekday - 1 + $0) % 7 }   // symbol indices, display order
         return HStack(spacing: 6) {
-            ForEach(0..<7, id: \.self) { idx in                        // 0 = Sun … 6 = Sat
+            ForEach(order, id: \.self) { idx in                        // 0 = Sun … 6 = Sat
                 let weekday = idx + 1                                   // Calendar weekday number
                 let isOn = weekdays.contains(weekday)
                 Button {
@@ -1110,7 +1112,7 @@ struct ReminderPickerSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             // The DATE only — time of day is the separate `timeSection` row above (owner
             // 2026-06-23), so this graphical calendar is purely the day. The Sunday-first
-            // calendar in the environment makes the grid start on Sunday to match the
+            // calendar in the environment makes the grid start on the same day as the
             // weekly day strip (owner 2026-06-23) — display only, the model maths is
             // unaffected.
             DatePicker("When",
@@ -1118,16 +1120,27 @@ struct ReminderPickerSheet: View {
                        displayedComponents: [.date])
                 .datePickerStyle(.graphical)
                 .labelsHidden()
-                .environment(\.calendar, Self.weekStartsSunday)
+                .environment(\.calendar, Self.pickerCalendar)
                 .tint(Color.ckEmber)
         }
     }
 
-    /// A copy of the user's calendar pinned to a Sunday week-start, for the graphical
-    /// calendar + (already) the weekly day strip. Display only — never used for scheduling.
-    static let weekStartsSunday: Calendar = {
+    /// The day the reminder sheet's weeks start on, by app language: Sunday in English
+    /// (owner 2026-06-23), Monday in German (owner 2026-10-04). A new language picks its own
+    /// here; anything unlisted keeps Sunday. Calendar weekday numbering (1 = Sunday).
+    static var firstWeekday: Int {
+        switch Bundle.main.preferredLocalizations.first {
+        case "de": return 2   // Monday
+        default:   return 1   // Sunday
+        }
+    }
+
+    /// A copy of the user's calendar pinned to `firstWeekday`, for the graphical calendar,
+    /// so it starts on the same day as the weekly day strip. Display only — never used for
+    /// scheduling.
+    static let pickerCalendar: Calendar = {
         var c = Calendar.current
-        c.firstWeekday = 1   // Sunday
+        c.firstWeekday = firstWeekday
         return c
     }()
 
