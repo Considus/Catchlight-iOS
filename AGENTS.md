@@ -50,6 +50,31 @@ Product nouns are Capitalised in UI copy only, never in code identifiers. When t
 
 ⚠️ **Leave the vestigial `SessionController` state alone.** It has been reviewed and deliberately kept. Do not re-flag it.
 
+### Localisation
+
+Every string a person sees or hears goes through a String Catalog: `Localizable.xcstrings` in the app, widgets and share extension, `InfoPlist.xcstrings` for the permission prompts, `AppShortcuts.xcstrings` for Siri phrases. English is the source language. The compiler fills the catalogs; `xcodebuild -exportLocalizations` (or a build in Xcode) syncs them, so never hand-add a key the code does not use.
+
+- **A literal passed straight to SwiftUI is already localised** (`Text("…")`, `Button("…")`, `.accessibilityLabel("…")`). A helper or component that takes UI copy takes it as `LocalizedStringKey`, never `String`: a `String` parameter silently drops the literal out of the catalog. `SettingsRow`, `SelectorRow`, `MenuFieldRow`, `DockPill`, `SwipeAction` and `TakeLabelLane` follow this.
+- **Text built anywhere else is `String(localized: "…")` at the literal**: view-model errors, notification text, VoiceOver sentences, computed labels. The literal must sit inside the call. `String(localized: String.LocalizationValue(someVar))` compiles and is never extracted.
+- **One whole sentence per key.** Never glue fragments (`"Double-tap to " + verb`), never build plurals (`"Take\(n == 1 ? "" : "s")"`). A count goes in as an `Int` interpolation and the catalog carries the plural forms; English has its own `one`/`other` variations for every such key.
+- **A raw value is an identifier, not a label.** Enums persisted or compared by raw value get a separate `label` with a literal per case.
+- **Dates come from formatters and templates** (`setLocalizedDateFormatFromTemplate`, `DateComponentsFormatter`), never a fixed `dateFormat` for anything shown. Machine formats keep `en_US_POSIX`.
+- **What stays English on purpose:** the product nouns (Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard), which are still routed through the catalog so a translator sees them in context and keeps them; the 12 recovery-phrase words, which are the BIP-39 English wordlist and part of the key; diagnostics log lines; the `Import` folder name in the cloud folder.
+- **Core values the app shows are worded here**, in `Catchlight/UI/CoreLabels.swift`. Core's own `label`s stay English and carry no translations.
+
+Two checks, and run both after touching UI copy. The static one lists English sentences in the source that no catalog holds (export first, it is what syncs the catalogs):
+
+```bash
+python3 scripts/l10n/find_unlocalised.py
+```
+
+The visual one fills every catalog with a throwaway German that wraps each string in ⟦ ⟧. Build, launch with `-AppleLanguages '(de)'`, and any English on screen without brackets escaped. `restore` before staging anything:
+
+```bash
+python3 scripts/l10n/pseudo_locale.py apply
+python3 scripts/l10n/pseudo_locale.py restore
+```
+
 ## Prove
 
 Keep build output outside the source tree:

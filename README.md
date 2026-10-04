@@ -13,6 +13,7 @@ CatchlightApp/
 ├── project.yml                   # XcodeGen spec for the iOS app (run: xcodegen generate)
 │                                 #   and the pinned CatchlightCore version
 ├── Tests/                        # XCTest suites (iOS + UI)
+├── scripts/l10n/                 # localisation checks (see AGENTS.md, Localisation)
 └── Catchlight/                   # iOS APP TARGET, platform-specific layers
     ├── App/                      # entry point, composition root, scene lifecycle
     ├── Security/                 # Keychain (SE-wrapped master key), PIN (PBKDF2,
@@ -23,7 +24,8 @@ CatchlightApp/
     ├── Sync/                     # Files-API cloud folder, BGTaskScheduler
     ├── Notifications/            # UNUserNotificationCenter reminders
     ├── UI/                       # Phase 6 product UI (SwiftUI)
-    └── Resources/                # Info.plist, entitlements, wordlist, PrivacyInfo.xcprivacy
+    └── Resources/                # Info.plist, entitlements, wordlist, PrivacyInfo.xcprivacy,
+                                  #   String Catalogs (.xcstrings)
 ```
 
 ### The core and the app, and why they are split
