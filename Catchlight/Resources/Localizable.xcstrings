@@ -160,28 +160,6 @@
         }
       }
     },
-    "%lld Takes not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again." : {
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Take not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again."
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Takes not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "%lld-day" : {
       "comment" : "Trial length inside 'Start your %@ trial now, then only …'."
     },
@@ -758,9 +736,6 @@
 
     },
     "Encrypted cloud sync across your devices" : {
-
-    },
-    "Encrypted library failed to open: %@" : {
 
     },
     "Encrypted on this device, readable only by you." : {
@@ -1596,12 +1571,6 @@
 
     },
     "Sync paused. Your cloud data looks unexpected. No changes were made locally." : {
-
-    },
-    "Sync watermark write failed (prepare)." : {
-
-    },
-    "Sync watermark write failed (step)." : {
 
     },
     "Sync, storage and conflict notices will appear here." : {

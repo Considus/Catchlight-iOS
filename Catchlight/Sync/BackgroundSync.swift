@@ -291,12 +291,11 @@ public final class BackgroundSyncCoordinator {
         // Long-offline hold-back (2026-07-01): push declined to self-heal-upload
         // Takes this device hasn't touched since before the tombstone-retention
         // window (they may have been deleted fleet-wide in the interim). Surface
-        // a content-free count in Notice History — the user re-asserts a Take by
+        // a content-free count in the diagnostics export — the user re-asserts a Take by
         // editing it. DiagnosticsLog is thread-safe; no main-actor hop needed.
         if !report.heldBack.isEmpty {
             let n = report.heldBack.count
-            // Shown in Notice History, so recorded in the device language; the count is a
-            // plural variation in the catalog.
+            // Never shown on the main screen, so export only (9xx, English).
             DiagnosticsLog.shared.record(.takesHeldBack(n))
         }
         if let onRemoteChanges, !report.applied.isEmpty || !report.deletedLocally.isEmpty {

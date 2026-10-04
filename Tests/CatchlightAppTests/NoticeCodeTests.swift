@@ -32,7 +32,6 @@ final class NoticeCodeTests: XCTestCase {
             "libraryNotSaving": 104,
             "cloudFolderStale": 105,
             "cloudFolderUnresolvable": 106,
-            "takesHeldBack": 107,
             "loadFailed": 201,
             "saveFailed": 202,
             "saveInPlaceFailed": 203,
@@ -44,9 +43,8 @@ final class NoticeCodeTests: XCTestCase {
             "replaceObieFailed": 209,
             "conflictChoiceFailed": 210,
             "conflictResolutionFailed": 211,
-            "watermarkPrepareFailed": 212,
-            "watermarkStepFailed": 213,
-            "libraryOpenFailed": 214,
+            "privacyPhraseMissing": 212,
+            "readOnlyLapsed": 213,
             "conflictsChanged": 301,
             "conflictsUnverified": 302,
             "takesQuarantined": 401,
@@ -67,7 +65,11 @@ final class NoticeCodeTests: XCTestCase {
             "backgroundSyncNotScheduled": 915,
             "reminderNotScheduled": 916,
             "notificationPermission": 917,
-            "reminderPastDated": 918
+            "reminderPastDated": 918,
+            "takesHeldBack": 919,
+            "watermarkPrepareFailed": 920,
+            "watermarkStepFailed": 921,
+            "libraryOpenFailed": 922
         ]
         let current = Dictionary(uniqueKeysWithValues: NoticeCode.allCases.map { ("\($0)", $0.rawValue) })
         XCTAssertEqual(current, pinned)
@@ -90,6 +92,35 @@ final class NoticeCodeTests: XCTestCase {
     /// 950–999 belongs to Catchlight-Core.
     func testNoAppCode_inCoreRange() {
         XCTAssertTrue(NoticeCode.allCases.allSatisfy { !(950...999).contains($0.rawValue) })
+    }
+
+    /// A lasting banner is recorded once per onset: not again while it stays, and again
+    /// after it clears and comes back.
+    func testOnset_recordsOncePerOnset() throws {
+        let suite = "NoticeOnsetTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let log = DiagnosticsLog(fileURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("onset-\(UUID().uuidString).json"))
+        let lines = { log.entries().map(\.message) }
+
+        NoticeOnset.update(.readOnlyLapsed, active: true, defaults: defaults, log: log)
+        NoticeOnset.update(.readOnlyLapsed, active: true, defaults: defaults, log: log)
+        XCTAssertEqual(lines().count, 1)
+        XCTAssertTrue(lines()[0].hasPrefix("[CCIOS-213] "))
+
+        NoticeOnset.update(.readOnlyLapsed, active: false, defaults: defaults, log: log)
+        NoticeOnset.update(.readOnlyLapsed, active: true, defaults: defaults, log: log)
+        XCTAssertEqual(lines().count, 2)
+    }
+
+    /// The two lasting banners are user-facing; the lines never shown on screen are not.
+    func testMainScreenRule_categories() {
+        XCTAssertEqual(Notice.privacyPhraseMissing.category, .storage)
+        XCTAssertEqual(Notice.readOnlyLapsed.category, .storage)
+        XCTAssertEqual(Notice.takesHeldBack(3).category, .lifecycle)
+        XCTAssertEqual(Notice.watermarkPrepareFailed.category, .lifecycle)
+        XCTAssertEqual(Notice.libraryOpenFailed("x").category, .lifecycle)
     }
 
     func testDisplayText_dropsTheReference() {

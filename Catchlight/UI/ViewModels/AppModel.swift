@@ -94,7 +94,10 @@ final class AppModel {
     /// Privacy phrase, so only a user who happened to open that screen ever learned.
     /// The two secrets are separate keychain items and can diverge after a correct
     /// write, so the safe write order (D-253) does not make this check redundant.
-    private(set) var phraseMissing: Bool = false
+    private(set) var phraseMissing: Bool = false {
+        // The banner shows on the main screen, so it goes in Notice History once per onset.
+        didSet { NoticeOnset.update(.privacyPhraseMissing, active: phraseMissing) }
+    }
 
     /// Set once "Start over" has wiped the device (D-253, owner 2026-09-04). The app is then
     /// holding no master key and no store, so it must not render its normal UI: every branch
