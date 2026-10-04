@@ -411,8 +411,17 @@ public final class ReminderScheduler {
     private func locationContent(for take: Take, loc: LocationTrigger) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = Self.notificationTitle(for: take)
-        let place = (loc.locationName?.isEmpty == false) ? loc.locationName! : "your location"
-        content.subtitle = loc.triggerOnArrival ? String(localized: "When you arrive at \(place)") : String(localized: "When you leave \(place)")
+        // Whole sentences for the unnamed case too, so no English fragment lands inside
+        // a translated subtitle.
+        if let place = loc.locationName, !place.isEmpty {
+            content.subtitle = loc.triggerOnArrival
+                ? String(localized: "When you arrive at \(place)")
+                : String(localized: "When you leave \(place)")
+        } else {
+            content.subtitle = loc.triggerOnArrival
+                ? String(localized: "When you arrive at your location")
+                : String(localized: "When you leave your location")
+        }
         content.sound = .default
         // ALWAYS the plain category, never `category(for:)`. A geofence is registered with
         // `repeats: false` so it can't be a series — and a Take may carry BOTH a repeating

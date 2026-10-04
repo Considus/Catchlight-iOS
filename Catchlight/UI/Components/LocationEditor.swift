@@ -49,11 +49,24 @@ struct LocationEditor: View {
     /// stops the async reverse geocode clobbering e.g. "Home".
     static let currentLocationPlaceholder = String(localized: "Current location")
 
+    /// The placeholder as every bundled language writes it. The placeholder is saved as
+    /// the place's name, so a pin dropped before a language change carries the old
+    /// language's wording and must still read as unnamed afterwards.
+    static let currentLocationPlaceholderInEveryLanguage: Set<String> = {
+        var names: Set<String> = ["Current location", currentLocationPlaceholder]
+        for language in Bundle.main.localizations {
+            guard let path = Bundle.main.path(forResource: language, ofType: "lproj"),
+                  let bundle = Bundle(path: path) else { continue }
+            names.insert(bundle.localizedString(forKey: "Current location", value: nil, table: nil))
+        }
+        return names
+    }()
+
     /// Whether the reverse-geocoded name may replace the current one: only when
-    /// the field is empty or still the auto placeholder. Pure so the clobber
-    /// guard is unit-testable without the view (2026-07-04).
+    /// the field is empty or still the auto placeholder, in any language. Pure so the
+    /// clobber guard is unit-testable without the view (2026-07-04).
     static func shouldAdoptGeocodedName(currentName: String) -> Bool {
-        currentName.isEmpty || currentName == currentLocationPlaceholder
+        currentName.isEmpty || currentLocationPlaceholderInEveryLanguage.contains(currentName)
     }
 
     init(trigger: Binding<LocationTrigger?>) {

@@ -23,6 +23,19 @@ final class LocationEditorNameGuardTests: XCTestCase {
             currentName: LocationEditor.currentLocationPlaceholder))
     }
 
+    /// The placeholder is saved as the place name, so a pin dropped under one language
+    /// must still read as unnamed after the device language changes.
+    func testAdoptsGeocodedName_forPlaceholderInEveryBundledLanguage() {
+        XCTAssertTrue(LocationEditor.shouldAdoptGeocodedName(currentName: "Current location"))
+        for language in Bundle.main.localizations {
+            guard let path = Bundle.main.path(forResource: language, ofType: "lproj"),
+                  let bundle = Bundle(path: path) else { continue }
+            let saved = bundle.localizedString(forKey: "Current location", value: nil, table: nil)
+            XCTAssertTrue(LocationEditor.shouldAdoptGeocodedName(currentName: saved),
+                          "a pin saved under \(language) as \"\(saved)\" must still be replaceable")
+        }
+    }
+
     /// A user-chosen name must survive a re-pin's reverse geocode (the bug).
     func testKeepsUserName_whenNamed() {
         XCTAssertFalse(LocationEditor.shouldAdoptGeocodedName(currentName: "Home"),

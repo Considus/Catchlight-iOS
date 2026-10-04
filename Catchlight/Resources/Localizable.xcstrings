@@ -1769,7 +1769,13 @@
     "When you arrive at %@" : {
 
     },
+    "When you arrive at your location" : {
+
+    },
     "When you leave %@" : {
+
+    },
+    "When you leave your location" : {
 
     },
     "Which Takes Catchlight shows while this Focus is on." : {
