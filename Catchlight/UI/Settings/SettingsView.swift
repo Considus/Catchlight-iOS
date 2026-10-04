@@ -187,14 +187,14 @@ struct SettingsView: View {
     /// exactly the user this feature exists for.
     private func beginStartOver() {
         let context = LAContext()
-        context.localizedCancelTitle = "Cancel"
+        context.localizedCancelTitle = String(localized: "Cancel")
         var policyError: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &policyError) else {
             showStartOverExportOffer = true
             return
         }
         context.evaluatePolicy(.deviceOwnerAuthentication,
-                               localizedReason: "Confirm it's you before erasing this device.") { success, _ in
+                               localizedReason: String(localized: "Confirm it's you before erasing this device.")) { success, _ in
             guard success else { return }
             DispatchQueue.main.async { showStartOverExportOffer = true }
         }
@@ -312,7 +312,7 @@ struct SettingsView: View {
             SettingsRow(icon: "paintpalette",
                         label: "Scenes",
                         disabled: true) {
-                SettingsDetailLabel(text: "Coming soon")
+                SettingsDetailLabel(text: String(localized: "Coming soon"))
             }
             .accessibilityHint("Coming soon.")
         } header: {
@@ -325,8 +325,8 @@ struct SettingsView: View {
     /// reminder Quick Set share ONE selector look + 44pt height. The chooser is the
     /// passed `picker()`, presented inside a `Menu`; the value shows in the row.
     private func menuPickerRow<P: View>(icon: String,
-                                        label: String,
-                                        accessibilityLabel: String,
+                                        label: LocalizedStringKey,
+                                        accessibilityLabel: LocalizedStringKey,
                                         selectionLabel: String,
                                         @ViewBuilder picker: () -> P) -> some View {
         Menu {
@@ -635,23 +635,23 @@ struct SettingsView: View {
                             writingToolsBinding.wrappedValue = option
                         } label: {
                             if option == writingToolsBinding.wrappedValue {
-                                Label(option.label, systemImage: "checkmark")
+                                Label(option.localizedLabel, systemImage: "checkmark")
                             } else {
-                                Text(option.label)
+                                Text(option.localizedLabel)
                             }
                         }
                     }
                 } label: {
                     SelectorRow(icon: "wand.and.sparkles",
                                 label: "Writing Tools",
-                                value: writingToolsBinding.wrappedValue.label)
+                                value: writingToolsBinding.wrappedValue.localizedLabel)
                 }
                 .tint(Color.ckTextSecondary)
                 .accessibilityElement(children: .combine)
                 // V16: the value belongs in `accessibilityValue`, not welded into
                 // the label — otherwise changing it announces nothing.
                 .accessibilityLabel("Writing Tools")
-                .accessibilityValue(writingToolsBinding.wrappedValue.label)
+                .accessibilityValue(writingToolsBinding.wrappedValue.localizedLabel)
 
                 Text("Panel suggests, you accept. Inline rewrites in place. Both send that Take to Apple. Your Privacy phrase never goes.")
                     .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
@@ -940,7 +940,7 @@ struct SettingsView: View {
         // read-only user must not mint unlimited new Takes via the Import folder).
         guard app.ensureEntitled() else { return }
         guard let folder = ImportCoordinator.syncImportFolder() else {
-            importResultMessage = "Set up Cloud Storage first. The Import folder lives inside your sync folder."
+            importResultMessage = String(localized: "Set up Cloud Storage first. The Import folder lives inside your sync folder.")
             return
         }
         defer { folder.stopAccess() }
@@ -952,13 +952,13 @@ struct SettingsView: View {
         do {
             outcome = try ImportCoordinator.parseFolder(folder.url)
         } catch {
-            importResultMessage = "The Import folder couldn't be read. Check your cloud folder in Settings → Cloud Storage and try again."
+            importResultMessage = String(localized: "The Import folder couldn't be read. Check your cloud folder in Settings → Cloud Storage and try again.")
             return
         }
         let imported = app.dailiesVM.importTakes(outcome.takes)
 
         guard imported > 0 else {
-            importResultMessage = "No recognised markdown or text files found in the Import folder."
+            importResultMessage = String(localized: "No recognised markdown or text files found in the Import folder.")
             return
         }
         announceImport(imported)
@@ -980,14 +980,14 @@ struct SettingsView: View {
         guard app.ensureEntitled() else { return }
         guard case .success(let urls) = result, !urls.isEmpty else {
             if case .failure = result {
-                importResultMessage = "Couldn't open those files. Please try again."
+                importResultMessage = String(localized: "Couldn't open those files. Please try again.")
             }
             return
         }
         let takes = urls.flatMap { ImportCoordinator.parseSingleFile($0) }
         let imported = app.dailiesVM.importTakes(takes)
         guard imported > 0 else {
-            importResultMessage = "No notes to import from your selection."
+            importResultMessage = String(localized: "No notes to import from your selection.")
             return
         }
         announceImport(imported)
@@ -998,11 +998,12 @@ struct SettingsView: View {
     /// timeline (owner 2026-06-22).
     @MainActor
     private func announceImport(_ imported: Int) {
-        let noun = imported == 1 ? "Take" : "Takes"
-        importResultMessage = "Import successful. \(imported) \(noun) added to your timeline."
+        // One key per message, with the count as a plural variation in the catalog,
+        // because "1 Take / 2 Takes" is English grammar and other languages have more forms.
+        importResultMessage = String(localized: "Import successful. \(imported) Takes added to your timeline.")
         app.dailiesVM.importTakes([
             Take(createdAt: Date(), modifiedAt: Date(),
-                 blocks: [.textLine("Import successful. \(imported) \(noun) added.")], isNote: true)
+                 blocks: [.textLine(String(localized: "Import successful. \(imported) Takes added."))], isNote: true)
         ])
     }
 
@@ -1075,7 +1076,7 @@ struct SettingsView: View {
                     .controlSize(.small)
                     .accessibilityLabel("Requesting notification permission")
             } else {
-                SettingsDetailLabel(text: "Enable")
+                SettingsDetailLabel(text: String(localized: "Enable"))
             }
         }
     }
@@ -1090,7 +1091,7 @@ struct SettingsView: View {
 
     /// The explanatory line under a section. Same family as `sectionHeader`, but sentence
     /// case and wrapping — it carries a warning, not a label.
-    private func sectionFooter(_ text: String) -> some View {
+    private func sectionFooter(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
             .foregroundStyle(Color.ckTextSecondary)
@@ -1099,7 +1100,7 @@ struct SettingsView: View {
             .padding(.top, 6)
     }
 
-    private func sectionHeader(_ text: String) -> some View {
+    private func sectionHeader(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(CatchlightFont.ui(.medium, size: 13, relativeTo: .caption))
             .foregroundStyle(Color.ckTextSecondary)

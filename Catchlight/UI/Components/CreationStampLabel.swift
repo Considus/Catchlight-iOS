@@ -40,7 +40,7 @@ enum CreationTimestamp {
     /// "Created on 01/07/2026 at 14:39" — date then time (matches the reminder
     /// label's "… at <time>" shape), locale-formatted per the notes above.
     static func text(for date: Date) -> String {
-        "Created on \(dateFmt.string(from: date)) at \(timeFmt.string(from: date))"
+        String(localized: "Created on \(dateFmt.string(from: date)) at \(timeFmt.string(from: date))")
     }
 }
 

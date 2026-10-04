@@ -14,8 +14,9 @@ import SwiftUI
 
 struct SelectorRow: View {
     let icon: String
-    let label: String
-    /// The current selection, shown trailing (e.g. "System", "1 day", "Select").
+    let label: LocalizedStringKey
+    /// The current selection, shown trailing (e.g. "System", "1 day", "Select"). Already
+    /// display-ready: the caller localises it where the value is produced.
     let value: String
 
     var body: some View {
@@ -52,7 +53,7 @@ struct SelectorRow: View {
 /// Days and the location Radius so every nested selector shares ONE look + height; the
 /// 44 lives here once, so it can't drift (owner 2026-06-29).
 struct MenuFieldRow: View {
-    let title: String
+    let title: LocalizedStringKey
     /// Optional leading SF Symbol. Omitted for borderless rows with no icon column
     /// (e.g. Cloud Storage's Sync).
     var icon: String? = nil

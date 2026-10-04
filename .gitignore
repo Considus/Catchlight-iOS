@@ -54,3 +54,6 @@ AuthKey_*.p8
 # the CI `xcodebuild test` scheme. Delete file + this rule after the 7.12 pass
 # is signed off (Decision D-024).
 Tests/CatchlightUITests/OSFloorTourUITests.swift
+
+# scripts/l10n/pseudo_locale.py keeps the real catalogs here while a pseudo locale is applied
+.l10n-pseudo-backup/

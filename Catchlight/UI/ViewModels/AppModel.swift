@@ -334,7 +334,7 @@ final class AppModel {
             performManualSync?()
             return nil
         } catch {
-            return "Couldn't save that folder: \(error.localizedDescription)"
+            return String(localized: "Couldn't save that folder: \(error.localizedDescription)")
         }
     }
 
@@ -362,10 +362,10 @@ final class AppModel {
         // 1. Validate + derive FIRST — a bad phrase must destroy nothing.
         let bip39: BIP39
         do { bip39 = BIP39(wordlist: try EnglishWordlist.load()) }
-        catch { return "Couldn't check your phrase on this device." }
+        catch { return String(localized: "Couldn't check your phrase on this device.") }
         let masterKeyData: Data
         do { masterKeyData = try PhraseRecovery.recoverMasterKey(from: cleaned, bip39: bip39) }
-        catch { return "That doesn't look right. Check the words and try again." }
+        catch { return String(localized: "That doesn't look right. Check the words and try again.") }
 
         // 2. Install the new secrets (overwrites the current account's key + mnemonic).
         do {
@@ -375,7 +375,7 @@ final class AppModel {
             try MnemonicKeychain.store(cleaned)
             try MasterKeyKeychain.store(masterKeyData)
         } catch {
-            return "Couldn't secure your account on this device."
+            return String(localized: "Couldn't secure your account on this device.")
         }
 
         // 3. Drop the old encrypted store (release its SQLite handle), purge the old
@@ -391,7 +391,7 @@ final class AppModel {
         session.adopt(keys)
         guard let store = makeStoreFromKeys(keys) else {
             lockState = .locked   // relaunch will retry the unlock with the stored key
-            return "Couldn't open your library on this device. Please restart Catchlight."
+            return String(localized: "Couldn't open your library on this device. Please restart Catchlight.")
         }
         rebind(to: store)        // fresh empty store under the new account
         lockState = .unlocked
@@ -438,7 +438,7 @@ final class AppModel {
             let retrieve = unlockKeys
             keys = try await Task.detached(priority: .userInitiated) { try retrieve() }.value
         } catch {
-            lockState = .failed("Couldn't unlock. Authenticate to open your Takes.")
+            lockState = .failed(String(localized: "Couldn't unlock. Authenticate to open your Takes."))
             return
         }
         session.adopt(keys)
@@ -446,8 +446,8 @@ final class AppModel {
             // Auth succeeded but the encrypted DB couldn't open (corrupt / I/O).
             // Distinct from cancel — retrying auth won't help. Surface via the
             // existing strip too, but stay locked (no writable fallback).
-            lastSyncError = "Your encrypted library couldn't be opened, so changes aren't being saved to this device yet. Please restart Catchlight."
-            lockState = .failed("Your encrypted library couldn't be opened. Please restart Catchlight.")
+            lastSyncError = String(localized: "Your encrypted library couldn't be opened, so changes aren't being saved to this device yet. Please restart Catchlight.")
+            lockState = .failed(String(localized: "Your encrypted library couldn't be opened. Please restart Catchlight."))
             return
         }
         if seedOnNextUnlock {
@@ -564,23 +564,23 @@ final class AppModel {
         if let sync = error as? SyncError {
             switch sync {
             case .manifestSignatureInvalid:
-                return "Sync paused. Your cloud data looks unexpected. No changes were made locally."
+                return String(localized: "Sync paused. Your cloud data looks unexpected. No changes were made locally.")
             case .noCloudFolderConfigured:
                 // Expected in local-only mode — never surface to the user.
                 return nil
             default:
-                return "Sync encountered a problem and will retry."
+                return String(localized: "Sync encountered a problem and will retry.")
             }
         }
         if let lock = error as? SyncLockError {
             switch lock {
             case .heldByOtherDevice:
-                return "Another device is syncing. Catchlight will retry automatically."
+                return String(localized: "Another device is syncing. Catchlight will retry automatically.")
             default:
-                return "Sync encountered a problem and will retry."
+                return String(localized: "Sync encountered a problem and will retry.")
             }
         }
-        return "Sync encountered a problem and will retry."
+        return String(localized: "Sync encountered a problem and will retry.")
     }
 
     /// Record a sync failure for display. Filters out the `noCloudFolderConfigured`
@@ -596,9 +596,9 @@ final class AppModel {
     static func friendlyBookmarkErrorMessage(for error: Wiring.CloudBookmarkError) -> String {
         switch error {
         case .stale:
-            return "Your cloud folder is no longer available. Open Settings → Cloud Storage to re-pick it."
+            return String(localized: "Your cloud folder is no longer available. Open Settings → Cloud Storage to re-pick it.")
         case .unresolvable:
-            return "Your cloud folder couldn't be opened. Open Settings → Cloud Storage to choose a new one."
+            return String(localized: "Your cloud folder couldn't be opened. Open Settings → Cloud Storage to choose a new one.")
         }
     }
 

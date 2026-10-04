@@ -33,9 +33,9 @@ final class SettingsViewModel {
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .system:   return "System"
-            case .daylight: return "Light"
-            case .night:    return "Dark"
+            case .system:   return String(localized: "System")
+            case .daylight: return String(localized: "Light")
+            case .night:    return String(localized: "Dark")
             }
         }
         /// Translate to SwiftUI's preferredColorScheme. `nil` means "follow system".
@@ -72,11 +72,11 @@ final class SettingsViewModel {
 
         var label: String {
             switch self {
-            case .thirtySeconds: return "30 seconds"
-            case .oneMinute:     return "1 minute"
-            case .fiveMinutes:   return "5 minutes"
-            case .thirtyMinutes: return "30 minutes"
-            case .oneHour:       return "1 hour"
+            case .thirtySeconds: return String(localized: "30 seconds")
+            case .oneMinute:     return String(localized: "1 minute")
+            case .fiveMinutes:   return String(localized: "5 minutes")
+            case .thirtyMinutes: return String(localized: "30 minutes")
+            case .oneHour:       return String(localized: "1 hour")
             }
         }
     }
@@ -97,11 +97,11 @@ final class SettingsViewModel {
         /// 48h "2 days"; the rawValue is still the hour count used by `hours`.
         var label: String {
             switch self {
-            case .one:        return "1 hour"
-            case .six:        return "6 hours"
-            case .twelve:     return "12 hours"
-            case .twentyFour: return "1 day"
-            case .fortyEight: return "2 days"
+            case .one:        return String(localized: "1 hour")
+            case .six:        return String(localized: "6 hours")
+            case .twelve:     return String(localized: "12 hours")
+            case .twentyFour: return String(localized: "1 day")
+            case .fortyEight: return String(localized: "2 days")
             }
         }
 
@@ -142,13 +142,13 @@ final class SettingsViewModel {
         // one line like the hours; the hours fit already (owner 2026-06-20).
         var label: String {
             switch self {
-            case .fiveMinutes:     return "5 mins"
-            case .fifteenMinutes:  return "15 mins"
-            case .thirtyMinutes:   return "30 mins"
-            case .oneHour:         return "1 hour"
-            case .sixHours:        return "6 hours"
-            case .twelveHours:     return "12 hours"
-            case .twentyFourHours: return "24 hours"
+            case .fiveMinutes:     return String(localized: "5 mins")
+            case .fifteenMinutes:  return String(localized: "15 mins")
+            case .thirtyMinutes:   return String(localized: "30 mins")
+            case .oneHour:         return String(localized: "1 hour")
+            case .sixHours:        return String(localized: "6 hours")
+            case .twelveHours:     return String(localized: "12 hours")
+            case .twentyFourHours: return String(localized: "24 hours")
             }
         }
     }
@@ -203,9 +203,9 @@ final class SettingsViewModel {
 
         var label: String {
             switch self {
-            case .compact:  return "Compact"
-            case .standard: return "Standard"
-            case .comfort:  return "Comfort"
+            case .compact:  return String(localized: "Compact")
+            case .standard: return String(localized: "Standard")
+            case .comfort:  return String(localized: "Comfort")
             }
         }
     }
@@ -226,8 +226,8 @@ final class SettingsViewModel {
 
         var label: String {
             switch self {
-            case .oldestFirst: return "Oldest first"
-            case .newestFirst: return "Newest first"
+            case .oldestFirst: return String(localized: "Oldest first")
+            case .newestFirst: return String(localized: "Newest first")
             }
         }
     }
@@ -250,8 +250,8 @@ final class SettingsViewModel {
 
         var label: String {
             switch self {
-            case .date: return "Date"
-            case .manual: return "Manual"
+            case .date: return String(localized: "Date")
+            case .manual: return String(localized: "Manual")
             }
         }
     }
@@ -271,9 +271,9 @@ final class SettingsViewModel {
 
         var label: String {
             switch self {
-            case .off:    return "Off"
-            case .editor: return "Editor only"
-            case .always: return "Always"
+            case .off:    return String(localized: "Off")
+            case .editor: return String(localized: "Editor only")
+            case .always: return String(localized: "Always")
             }
         }
     }
@@ -301,9 +301,9 @@ final class SettingsViewModel {
         /// Short label for the segmented control.
         var label: String {
             switch self {
-            case .single: return "Single"
-            case .some:   return "Some"
-            case .all:    return "All"
+            case .single: return String(localized: "Single")
+            case .some:   return String(localized: "Some")
+            case .all:    return String(localized: "All")
             }
         }
     }
@@ -376,11 +376,11 @@ final class SettingsViewModel {
         /// window. Segmented was too cramped for five options (owner 2026-06-19).
         var label: String {
             switch self {
-            case .never:    return "Never"
-            case .daily:    return "Daily"
-            case .weekly:   return "Weekly"
-            case .monthly:  return "Monthly"
-            case .annually: return "Annually"
+            case .never:    return String(localized: "Never")
+            case .daily:    return String(localized: "Daily")
+            case .weekly:   return String(localized: "Weekly")
+            case .monthly:  return String(localized: "Monthly")
+            case .annually: return String(localized: "Annually")
             }
         }
 
@@ -420,9 +420,9 @@ final class SettingsViewModel {
 
         var label: String {
             switch self {
-            case .auto:     return "Automatic"
-            case .manual:   return "Manual"
-            case .disabled: return "Disabled"
+            case .auto:     return String(localized: "Automatic")
+            case .manual:   return String(localized: "Manual")
+            case .disabled: return String(localized: "Disabled")
             }
         }
     }
@@ -475,10 +475,10 @@ extension SpotlightExposure {
 
     var label: String {
         switch self {
-        case .none:      return "None"
-        case .type:      return "Type only"
-        case .firstLine: return "Type + first line"
-        case .all:       return "Type + full text"
+        case .none:      return String(localized: "None")
+        case .type:      return String(localized: "Type only")
+        case .firstLine: return String(localized: "Type + first line")
+        case .all:       return String(localized: "Type + full text")
         }
     }
 

@@ -265,7 +265,7 @@ struct CloudStorageView: View {
 
             if syncMode == .manual {
                 Button { fireManualSync() } label: {
-                    Text(syncFeedback ?? "Sync Now")
+                    Text(syncFeedback ?? String(localized: "Sync Now"))
                         .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
                         .foregroundStyle(hasFolderConfigured ? Color.ckTextObie : Color.ckTextSecondary)
                 }
@@ -293,9 +293,9 @@ struct CloudStorageView: View {
 
     private var syncModeDescription: String {
         switch syncMode {
-        case .auto:     return "Syncs automatically in the background and when you open the app."
-        case .manual:   return "Only syncs when you tap Sync Now."
-        case .disabled: return "Never syncs. Your Takes stay on this device."
+        case .auto:     return String(localized: "Syncs automatically in the background and when you open the app.")
+        case .manual:   return String(localized: "Only syncs when you tap Sync Now.")
+        case .disabled: return String(localized: "Never syncs. Your Takes stay on this device.")
         }
     }
 
@@ -310,7 +310,7 @@ struct CloudStorageView: View {
     /// surface the actual result. Honest, not a false "Done".
     private func fireManualSync() {
         app.performManualSync?()
-        syncFeedback = "Syncing…"
+        syncFeedback = String(localized: "Syncing…")
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             syncFeedback = nil
         }
@@ -334,7 +334,7 @@ struct CloudStorageView: View {
         } else {
             folderDisplayPath = url.path
             errorText = nil
-            syncFeedback = "Syncing…"
+            syncFeedback = String(localized: "Syncing…")
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { syncFeedback = nil }
         }
     }

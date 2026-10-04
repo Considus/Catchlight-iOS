@@ -611,9 +611,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
                 // XCUITests assert on (`box.value == "checked"/"unchecked"`), since a UIButton's
                 // image says nothing to a test. Republished here, next to the glyph, so the two
                 // can't disagree. Mirrors what the retired SwiftUI checkbox exposed.
-                b.accessibilityLabel = block.text.isEmpty ? "Checklist item" : block.text
+                b.accessibilityLabel = block.text.isEmpty ? String(localized: "Checklist item") : block.text
                 b.accessibilityValue = done ? "checked" : "unchecked"
-                b.accessibilityHint = "Double-tap to \(done ? "untick" : "tick") this item."
+                b.accessibilityHint = done ? String(localized: "Double-tap to untick this item.") : String(localized: "Double-tap to tick this item.")
                 if done { b.accessibilityTraits.insert(.selected) }
                 else { b.accessibilityTraits.remove(.selected) }
             }

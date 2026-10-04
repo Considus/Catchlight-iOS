@@ -22,7 +22,7 @@ import SwiftUI
 /// text (primary), or a ckTextPrimary@40% outline (secondary). The primary
 /// label is Ink in both modes (D-028) — Paper-on-Ember fails WCAG in Daylight.
 struct DockPill: View {
-    let title: String
+    let title: LocalizedStringKey
     var secondary: Bool = false
     let action: () -> Void
 

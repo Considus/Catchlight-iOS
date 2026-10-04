@@ -108,7 +108,7 @@ struct ConflictResolutionView: View {
         .padding(.bottom, 4)
     }
 
-    private func guidance(_ text: String) -> some View {
+    private func guidance(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
             .foregroundStyle(Color.ckTextSecondary)
@@ -119,8 +119,8 @@ struct ConflictResolutionView: View {
 
     // MARK: - Unverified cloud copies (2026-09-30)
 
-    private static let unverifiedNote = "Didn't pass its check, and may be an older version."
-    private static let replacesNewerEdit = "Keeping it replaces any newer edit that may exist on another device when it syncs."
+    private static let unverifiedNote = String(localized: "Didn't pass its check, and may be an older version.")
+    private static let replacesNewerEdit = String(localized: "Keeping it replaces any newer edit that may exist on another device when it syncs.")
 
     /// Three shapes, one per owner rule: both versions (pick one), only this phone's (the newer
     /// version elsewhere can't be read), or only the cloud copy (recover a Take not on this phone).
@@ -144,7 +144,7 @@ struct ConflictResolutionView: View {
                 }
             case let (local?, nil):
                 versionPanel(.mine, take: local, selected: false,
-                             note: "The newer version from another device can't be read.",
+                             note: String(localized: "The newer version from another device can't be read."),
                              tap: {})
                     .allowsHitTesting(false)
                 footnote(Self.replacesNewerEdit)
@@ -157,7 +157,7 @@ struct ConflictResolutionView: View {
                     .foregroundStyle(Color.ckTextPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 versionPanel(.theirs, take: cloud, selected: false,
-                             note: "It's in your cloud folder but not on this phone. It didn't pass its check, so it may be an older version.",
+                             note: String(localized: "It's in your cloud folder but not on this phone. It didn't pass its check, so it may be an older version."),
                              tap: {})
                     .allowsHitTesting(false)
                 pillRow(primary: "Recover", enabled: true, id: item.id) {
@@ -178,7 +178,7 @@ struct ConflictResolutionView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func pillRow(primary: String, enabled: Bool, id: UUID,
+    private func pillRow(primary: LocalizedStringKey, enabled: Bool, id: UUID,
                          action: @escaping () throws -> Void) -> some View {
         HStack(spacing: 12) {
             DockPill(title: primary) {
@@ -188,7 +188,7 @@ struct ConflictResolutionView: View {
                     selection.removeValue(forKey: id)
                     dailies.reload()
                 } catch {
-                    dailies.reportStorageError("Couldn't save that choice. Please try again.")
+                    dailies.reportStorageError(String(localized: "Couldn't save that choice. Please try again."))
                 }
             }
             .disabled(!enabled)
@@ -238,7 +238,7 @@ struct ConflictResolutionView: View {
     // MARK: - Version panel
 
     private enum Side { case mine, theirs
-        var label: String { self == .mine ? "Local" : "Cloud" }
+        var label: String { self == .mine ? String(localized: "Local") : String(localized: "Cloud") }
     }
 
     private func versionPanel(_ side: Side,
@@ -316,7 +316,7 @@ struct ConflictResolutionView: View {
                     // ConflictQueue writes through the store directly, bypassing
                     // DailiesViewModel — route the failure through the timeline's
                     // storage-error strip; the pair stays queued so the user can retry.
-                    dailies.reportStorageError("Couldn't save that resolution. Please try again.")
+                    dailies.reportStorageError(String(localized: "Couldn't save that resolution. Please try again."))
                 }
             }
             .disabled(chosenLocal == nil)

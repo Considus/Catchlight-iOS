@@ -163,15 +163,15 @@ struct CaptureSurface {
 
     static let take = CaptureSurface(
         url: CaptureRouting.captureURL(.text),
-        title: "New Take",
-        heroPrompt: "What's your Take?",
+        title: String(localized: "New Take"),
+        heroPrompt: String(localized: "What's your Take?"),
         isObie: false
     )
 
     static let obie = CaptureSurface(
         url: CaptureRouting.captureURL(.obie),
-        title: "New Obie",
-        heroPrompt: "What's most important?",
+        title: String(localized: "New Obie"),
+        heroPrompt: String(localized: "What's most important?"),
         isObie: true
     )
 }

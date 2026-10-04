@@ -37,6 +37,14 @@ settings:
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
+    # Localisation (2026-10-04). English is the source language. Every UI string
+    # lives in a String Catalog per bundle (`Localizable.xcstrings` in the app,
+    # widgets and share extension; `InfoPlist.xcstrings` for the app's permission
+    # prompts), and the compiler emits every localizable literal into it. Product
+    # nouns (Take, Obie, Dailies, Angle, Shot List) stay English in every
+    # language: owner decision, 2026-10-04.
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
 
 packages:
   # The platform-agnostic core, pure Swift + CryptoKit. It lives in its own repo,

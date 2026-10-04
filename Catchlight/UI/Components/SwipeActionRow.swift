@@ -36,7 +36,7 @@ import SwiftUI
 /// One side's swipe action.
 struct SwipeAction {
     enum Style { case destructive, standard }
-    var title: String
+    var title: LocalizedStringKey
     var systemImage: String
     var tint: Color
     /// Colour of the glyph + label drawn ON the fill. Defaults to white (the

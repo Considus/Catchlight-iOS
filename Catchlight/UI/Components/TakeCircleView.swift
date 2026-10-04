@@ -320,12 +320,12 @@ struct TakeCircleView: View {
     /// a Note, and the caller's intro stands alone.
     static func activityDescription(for take: Take, includesObie: Bool = true) -> String {
         var parts: [String] = []
-        if take.isObie && includesObie { parts.append("Obie") }
-        if take.isImportant { parts.append("Important") }
-        if take.isNote { parts.append("Note") }
-        if take.isTask { parts.append(take.isComplete ? "completed Task" : "Task") }
-        if take.timeReminder != nil || take.locationReminder != nil { parts.append("Reminder") }
-        if parts.isEmpty { return includesObie ? "Note" : "" }
+        if take.isObie && includesObie { parts.append(String(localized: "Obie")) }
+        if take.isImportant { parts.append(String(localized: "Important")) }
+        if take.isNote { parts.append(String(localized: "Note")) }
+        if take.isTask { parts.append(take.isComplete ? String(localized: "completed Task") : String(localized: "Task")) }
+        if take.timeReminder != nil || take.locationReminder != nil { parts.append(String(localized: "Reminder")) }
+        if parts.isEmpty { return includesObie ? String(localized: "Note") : "" }
         return parts.joined(separator: ", ")
     }
 }

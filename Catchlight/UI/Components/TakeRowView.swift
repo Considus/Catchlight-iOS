@@ -144,27 +144,22 @@ struct TakeRowView: View {
             match.url.host.map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 }
         }
         if let first = domains.first {
-            var phrase = "Link to \(first)"
-            if webLinks.count > 1 {
-                phrase += webLinks.count == 2 ? " and 1 more link"
-                                              : " and \(webLinks.count - 1) more links"
-            }
-            phrases.append(phrase)
+            // The "more" count is a plural variation in the catalog.
+            phrases.append(webLinks.count > 1
+                ? String(localized: "Link to \(first) and \(webLinks.count - 1) more links")
+                : String(localized: "Link to \(first)"))
         }
 
         let addresses = emails.map { match -> String in
             let absolute = match.url.absoluteString
             let raw = absolute.hasPrefix("mailto:") ? String(absolute.dropFirst(7)) : absolute
             let halves = raw.split(separator: "@", maxSplits: 1)
-            return halves.count == 2 ? "\(halves[0]) at \(halves[1])" : raw
+            return halves.count == 2 ? String(localized: "\(String(halves[0])) at \(String(halves[1]))", comment: "An email address read aloud: user at domain.") : raw
         }
         if let first = addresses.first {
-            var phrase = "Email to \(first)"
-            if emails.count > 1 {
-                phrase += emails.count == 2 ? " and 1 more email"
-                                            : " and \(emails.count - 1) more emails"
-            }
-            phrases.append(phrase)
+            phrases.append(emails.count > 1
+                ? String(localized: "Email to \(first) and \(emails.count - 1) more emails")
+                : String(localized: "Email to \(first)"))
         }
 
         let spoken = ([words] + phrases).filter { !$0.isEmpty }.joined(separator: ". ")
@@ -184,9 +179,9 @@ struct TakeRowView: View {
             .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
             .first.map(String.init) ?? ""
         let name = irisNameTruncated(spokenLine(for: firstLine))
-        let head = name.isEmpty ? "Iris" : "Iris, \(name)"
+        let head = name.isEmpty ? String(localized: "Iris") : String(localized: "Iris, \(name)")
         var parts = [head]
-        if take.isObie { parts.append("Obie: your pinned Take") }
+        if take.isObie { parts.append(String(localized: "Obie: your pinned Take")) }
         let activity = TakeCircleView.activityDescription(for: take, includesObie: false)
         if !activity.isEmpty { parts.append(activity) }
         return parts.joined(separator: ". ")
@@ -208,8 +203,8 @@ struct TakeRowView: View {
     /// (same class as the V27 swipe-up hint).
     static func irisAccessibilityHint(for take: Take) -> String {
         take.isObie
-            ? "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take."
-            : "Opens the Focus ring. Use the actions rotor to make this your Obie."
+            ? String(localized: "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take.")
+            : String(localized: "Opens the Focus ring. Use the actions rotor to make this your Obie.")
     }
 
     /// The spoken status (Obie / Task + progress / Note / reminder-set) portion of
@@ -219,16 +214,16 @@ struct TakeRowView: View {
                                   now: Date = Date(),
                                   isSnoozed: Bool = false) -> String {
         var parts: [String] = []
-        if take.isObie { parts.append("Obie, your pinned Take") }
+        if take.isObie { parts.append(String(localized: "Obie, your pinned Take")) }
         if take.isTask {
             if let progress = take.checklistProgress {
-                parts.append("Task, \(progress.done) of \(progress.total) complete")
+                parts.append(String(localized: "Task, \(progress.done) of \(progress.total) complete"))
             } else {
-                parts.append(take.isComplete ? "Task, complete" : "Task")
+                parts.append(take.isComplete ? String(localized: "Task, complete") : String(localized: "Task"))
             }
         }
         if let reminder = take.timeReminder {
-            parts.append("Reminder set")
+            parts.append(String(localized: "Reminder set"))
             // V4 (audit 2026-08): the visible ruby "OVERDUE"/"SNOOZED" lane is
             // accessibility-hidden on the promise that the row label speaks the
             // state — this is that promise. Snoozed wins over Overdue (D-058/D-060:
@@ -236,21 +231,21 @@ struct TakeRowView: View {
             // single overdue rule (the card edge uses the same one); a repeating
             // reminder is never overdue by that rule.
             if isSnoozed {
-                parts.append("Snoozed")
+                parts.append(String(localized: "Snoozed"))
             } else if reminder.isOverdue(now: now) {
-                parts.append("Overdue")
+                parts.append(String(localized: "Overdue"))
             }
         }
         if let loc = take.locationReminder {
             // A silent place tag (alarm off) doesn't remind — say so for VoiceOver.
             if loc.alarmEnabled {
-                parts.append(loc.triggerOnArrival ? "Reminds on arrival" : "Reminds on leaving")
+                parts.append(loc.triggerOnArrival ? String(localized: "Reminds on arrival") : String(localized: "Reminds on leaving"))
             } else {
-                parts.append(loc.triggerOnArrival ? "Place set, arrival, silent" : "Place set, leaving, silent")
+                parts.append(loc.triggerOnArrival ? String(localized: "Place set, arrival, silent") : String(localized: "Place set, leaving, silent"))
             }
         }
         if take.isNote && !take.isTask && take.timeReminder == nil && take.locationReminder == nil {
-            parts.append("Note")
+            parts.append(String(localized: "Note"))
         }
         return parts.joined(separator: ". ")
     }
@@ -598,7 +593,7 @@ struct TakeCardSurface: View {
     /// (owner 2026-06-17) — the bare "3 of 5" read ambiguously.
     private var progressText: String? {
         guard let progress = take.checklistProgress else { return nil }
-        return "\(progress.done) of \(progress.total) completed"
+        return String(localized: "\(progress.done) of \(progress.total) completed")
     }
 
     /// The card's full colour treatment (surface, border, text, overdue/done flags),
@@ -645,7 +640,7 @@ struct TakeCardSurface: View {
         let formatter = r.isAllDay ? dateOnlyFormatter : reminderFormatter
         if r.repeats {
             let due = r.effectiveNextDue(now: Date())
-            return "\(formatter.string(from: due)) · \(r.recurrence.label)"
+            return "\(formatter.string(from: due)) · \(r.recurrence.localizedLabel)"
         }
         return formatter.string(from: r.scheduledDate)
     }
@@ -656,8 +651,10 @@ struct TakeCardSurface: View {
     /// `reminderLabel` are mutually exclusive on a given Take.
     private var locationLabel: String? {
         guard let loc = take.locationReminder else { return nil }
-        let place = (loc.locationName?.isEmpty == false) ? loc.locationName! : "Location"
-        return "\(place) · \(loc.triggerOnArrival ? "On arrival" : "On leaving")"
+        let place = (loc.locationName?.isEmpty == false) ? loc.locationName! : String(localized: "Location")
+        return loc.triggerOnArrival
+            ? String(localized: "\(place) · On arrival")
+            : String(localized: "\(place) · On leaving")
     }
 
     /// Whether this reminder's alarm will actually fire — drives the bell vs bell.slash

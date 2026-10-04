@@ -91,8 +91,8 @@ struct SecondDeviceRestoreView: View {
         let message: String
         let isError: Bool
         if let errorText { message = errorText; isError = true }
-        else if ready { message = "Ready to restore."; isError = false }
-        else { message = "\(filledCount) of 12 words"; isError = false }
+        else if ready { message = String(localized: "Ready to restore."); isError = false }
+        else { message = String(localized: "\(filledCount) of 12 words"); isError = false }
         return Text(message)
             .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .caption))
             .foregroundStyle(isError ? Color.ckRuby : Color.ckTextSecondary)

@@ -555,8 +555,8 @@ private struct RestoreEntryStep: View {
         let message: String
         let isError: Bool
         if let err = vm.restoreError { message = err; isError = true }
-        else if ready { message = "Ready to restore."; isError = false }
-        else { message = "\(filledCount) of 12 words"; isError = false }
+        else if ready { message = String(localized: "Ready to restore."); isError = false }
+        else { message = String(localized: "\(filledCount) of 12 words"); isError = false }
         return Text(message)
             .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .caption))
             .foregroundStyle(isError ? Color.ckRuby : Color.ckTextSecondary)
@@ -610,8 +610,8 @@ private struct StorageChoiceStep: View {
 }
 
 private struct StorageOptionCard: View {
-    let title: String
-    let description: String
+    let title: LocalizedStringKey
+    let description: LocalizedStringKey
     let action: () -> Void
     var body: some View {
         Button(action: action) {
@@ -714,9 +714,9 @@ private struct RevealStep: View {
     private var bodyText: String {
         switch vm.storagePath {
         case .local:
-            return "Write these 12 words down and keep them somewhere safe. They encrypt your Takes and enable a second device."
+            return String(localized: "Write these 12 words down and keep them somewhere safe. They encrypt your Takes and enable a second device.")
         case .cloud:
-            return "Write these 12 words down and keep them somewhere safe. They're needed in order to decrypt your Takes on a new device, and they don't travel in an iPhone backup, so the copy you write down is the copy that counts."
+            return String(localized: "Write these 12 words down and keep them somewhere safe. They're needed in order to decrypt your Takes on a new device, and they don't travel in an iPhone backup, so the copy you write down is the copy that counts.")
         }
     }
 
@@ -957,9 +957,9 @@ private struct ConfirmStep: View {
     private var promptCopy: String {
         let positions = vm.targetPositionsForDisplay
         guard positions.count == 3 else {
-            return "Tap the words from your phrase, in order."
+            return String(localized: "Tap the words from your phrase, in order.")
         }
-        return "Tap words \(positions[0]), \(positions[1]) and \(positions[2]) from your phrase, in order."
+        return String(localized: "Tap words \(positions[0]), \(positions[1]) and \(positions[2]) from your phrase, in order.")
     }
 
     private var slotsRow: some View {
@@ -1097,9 +1097,9 @@ private struct CompleteStep: View {
     private var bodyText: String {
         switch vm.storagePath {
         case .local:
-            return "Encrypted on this device, readable only by you."
+            return String(localized: "Encrypted on this device, readable only by you.")
         case .cloud:
-            return "Encrypted on this device, readable only by you. To finish setting up cloud backup, choose your folder in Settings → System → Cloud Storage."
+            return String(localized: "Encrypted on this device, readable only by you. To finish setting up cloud backup, choose your folder in Settings → System → Cloud Storage.")
         }
     }
 
@@ -1188,36 +1188,26 @@ private struct BasicsStep: View {
     private var points: [Point] {
         switch page {
         case .first:
-            return [Point(title: "Add a Take",
-                          shown: "Tap the + button. Tap anywhere outside the Take to "
-                          + "save. That's the whole capture flow.",
-                          spoken: "Double-tap Add Take in the toolbar. To save, "
-                          + "double-tap Save and close. That's the whole capture flow."),
-                    Point(title: "Shape your Take with the Iris",
-                          shown: "Tap the circle beside any Take to make it a task, set "
-                          + "a reminder, or make it important.",
-                          spoken: "Double-tap an Iris to make that Take a task, set a "
-                          + "reminder, or make it important.")]
+            return [Point(title: String(localized: "Add a Take"),
+                          shown: String(localized: "Tap the + button. Tap anywhere outside the Take to save. That's the whole capture flow."),
+                          spoken: String(localized: "Double-tap Add Take in the toolbar. To save, double-tap Save and close. That's the whole capture flow.")),
+                    Point(title: String(localized: "Shape your Take with the Iris"),
+                          shown: String(localized: "Tap the circle beside any Take to make it a task, set a reminder, or make it important."),
+                          spoken: String(localized: "Double-tap an Iris to make that Take a task, set a reminder, or make it important."))]
         case .second:
-            return [Point(title: "Your Obie",
-                          shown: "Press and hold an Iris to pin one above the rest. Only "
-                          + "one is ever your Obie, because there can only be one that's "
-                          + "most important.",
-                          spoken: "Select an Iris, use the rotor to select Actions, "
-                          + "swipe up to select Make Obie, then double-tap. Only one is "
-                          + "ever your Obie, because there can only be one that's most "
-                          + "important."),
-                    Point(title: "Settings",
-                          shown: "Simply swipe up from the toolbar.",
-                          spoken: "Select Storyboard, then use the rotor to select "
-                          + "Actions and double-tap to open Settings.")]
+            return [Point(title: String(localized: "Your Obie"),
+                          shown: String(localized: "Press and hold an Iris to pin one above the rest. Only one is ever your Obie, because there can only be one that's most important."),
+                          spoken: String(localized: "Select an Iris, use the rotor to select Actions, swipe up to select Make Obie, then double-tap. Only one is ever your Obie, because there can only be one that's most important.")),
+                    Point(title: String(localized: "Settings"),
+                          shown: String(localized: "Simply swipe up from the toolbar."),
+                          spoken: String(localized: "Select Storyboard, then use the rotor to select Actions and double-tap to open Settings."))]
         }
     }
 
     /// Both pages carry the SAME hero (owner 2026-09-14). The two screens are one
     /// thought split for height, and the mark and hero sit at identical positions on
     /// each, so the unchanged line reads as one page continuing rather than two.
-    private let heading = "A few things worth knowing"
+    private let heading = String(localized: "A few things worth knowing")
 
     var body: some View {
         // The shared intro layout (Welcome · Storage · Local warning · Complete): brand
@@ -1280,7 +1270,7 @@ private struct FailureStep: View {
         StepScaffold {
             VStack(spacing: 20) {
                 Spacer()
-                Text(vm.failure ?? "Something went wrong.")
+                Text(vm.failure ?? String(localized: "Something went wrong."))
                     .font(CatchlightFont.displayFixed(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)

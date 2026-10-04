@@ -183,10 +183,10 @@ struct FocusRingFanView: View {
         var sweepDuration: Double { max(0.28, sweep * 0.0055) }   // ~5.5ms/°
         var title: String {
             switch self {
-            case .note: return "Note"
-            case .task: return "Task"
-            case .remind: return "Remind"
-            case .important: return "Important"
+            case .note: return String(localized: "Note")
+            case .task: return String(localized: "Task")
+            case .remind: return String(localized: "Remind")
+            case .important: return String(localized: "Important")
             }
         }
         var systemImage: String? {
@@ -622,7 +622,9 @@ struct FocusRingFanView: View {
         .accessibilityValue(isActive(kind) ? "active" : "inactive")
         .accessibilityHint(kind == .important && !take.canChangeImportant
                            ? "An Obie is always Important."
-                           : "Double-tap to \(isActive(kind) ? "remove" : "add") \(kind.title).")
+                           : (isActive(kind)
+                    ? "Double-tap to remove \(kind.title)."
+                    : "Double-tap to add \(kind.title)."))
         .accessibilityAddTraits(isActive(kind) ? [.isSelected, .isButton] : [.isButton])
     }
 
@@ -730,6 +732,13 @@ struct ReminderPickerSheet: View {
     enum ReminderMode: String, CaseIterable, Identifiable {
         case time = "Time", place = "Place"
         var id: String { rawValue }
+        /// What the picker shows; the raw value is an identifier only.
+        var label: String {
+            switch self {
+            case .time:  return String(localized: "Time")
+            case .place: return String(localized: "Place")
+            }
+        }
     }
 
     init(initialDate: Date,
@@ -764,6 +773,16 @@ struct ReminderPickerSheet: View {
         case thisWeekend = "This weekend"
         case nextWeek    = "Next week"
         var id: String { rawValue }
+        /// What the menu shows. The raw value is an identifier only, so a translation
+        /// never changes it. Literal per case so the compiler extracts each one.
+        var label: String {
+            switch self {
+            case .thisEvening: return String(localized: "This evening")
+            case .tomorrow:    return String(localized: "Tomorrow")
+            case .thisWeekend: return String(localized: "This weekend")
+            case .nextWeek:    return String(localized: "Next week")
+            }
+        }
 
         func date(now: Date, calendar: Calendar) -> Date {
             let morning = ReminderScheduler.allDayFireHour
@@ -857,7 +876,7 @@ struct ReminderPickerSheet: View {
         Menu {
             Picker("Quick set", selection: $quickSet) {
                 ForEach(Preset.allCases) { preset in
-                    Text(preset.rawValue).tag(Optional(preset))
+                    Text(preset.label).tag(Optional(preset))
                 }
             }
         } label: {
@@ -865,7 +884,7 @@ struct ReminderPickerSheet: View {
             // (owner 2026-06-29). The card supplies horizontal inset + fill only —
             // SelectorRow owns the height, so it lands at the standard 44pt.
             SelectorRow(icon: "wand.and.stars", label: "Quick set",
-                        value: quickSet?.rawValue ?? "Select")
+                        value: quickSet?.label ?? String(localized: "Select"))
                 .padding(.horizontal, 14)
                 .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
@@ -904,7 +923,7 @@ struct ReminderPickerSheet: View {
     /// Place clears the time — enforced at the commit ("location wins when present").
     private var modeSwitch: some View {
         Picker("Reminder type", selection: $mode) {
-            ForEach(ReminderMode.allCases) { Text($0.rawValue).tag($0) }
+            ForEach(ReminderMode.allCases) { Text($0.label).tag($0) }
         }
         .pickerStyle(.segmented)
         .tint(Color.ckEmber)
@@ -960,10 +979,10 @@ struct ReminderPickerSheet: View {
                     // as first-class interval choices for discoverability (owner 2026-06-30);
                     // `cadenceBinding` maps them to `.weekly` + a weekday set.
                     Picker("Repeat", selection: cadenceBinding) {
-                        ForEach(CadenceChoice.allCases) { Text($0.rawValue).tag($0) }
+                        ForEach(CadenceChoice.allCases) { Text($0.label).tag($0) }
                     }
                 } label: {
-                    MenuFieldRow(title: "Interval", icon: "clock", value: cadenceBinding.wrappedValue.rawValue)
+                    MenuFieldRow(title: "Interval", icon: "clock", value: cadenceBinding.wrappedValue.label)
                 }
                 .accessibilityIdentifier("reminder-repeat-cadence")
 
@@ -1032,6 +1051,19 @@ struct ReminderPickerSheet: View {
         case monthly = "Monthly"
         case annually = "Annually"
         var id: String { rawValue }
+        /// What the menu shows; the raw value is an identifier only.
+        var label: String {
+            switch self {
+            case .hourly:       return String(localized: "Hourly")
+            case .daily:        return String(localized: "Daily")
+            case .weekly:       return String(localized: "Weekly")
+            case .everyWeekday: return String(localized: "Every weekday")
+            case .everyWeekend: return String(localized: "Every weekend")
+            case .custom:       return String(localized: "Custom")
+            case .monthly:      return String(localized: "Monthly")
+            case .annually:     return String(localized: "Annually")
+            }
+        }
     }
 
     /// Maps `recurrence` + `weekdays` to/from the Interval selection. Reading derives the
