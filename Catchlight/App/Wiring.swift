@@ -136,7 +136,7 @@ enum Wiring {
             // undiagnosable from a bug report (2026-07-02). Leave a content-free
             // breadcrumb — StorageError carries no Take content by design.
             DiagnosticsLog.shared.record(.storage,
-                "Encrypted library failed to open: \(String(describing: error))")
+                String(localized: "Encrypted library failed to open: \(String(describing: error))"))
             return nil
         }
     }

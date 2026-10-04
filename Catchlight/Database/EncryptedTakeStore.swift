@@ -644,13 +644,13 @@ public final class EncryptedTakeStore: TakeStore {
                 // A persistently failing watermark write makes every sync re-scan
                 // from the epoch with no visible symptom — leave a content-free
                 // breadcrumb (2026-07-01) so a bug-report export can show it.
-                DiagnosticsLog.shared.record(.storage, "Sync watermark write failed (prepare).")
+                DiagnosticsLog.shared.record(.storage, String(localized: "Sync watermark write failed (prepare)."))
                 return
             }
             defer { sqlite3_finalize(stmt) }
             bindText(stmt, 1, ISO8601.string(from: date))
             if sqlite3_step(stmt) != SQLITE_DONE {
-                DiagnosticsLog.shared.record(.storage, "Sync watermark write failed (step).")
+                DiagnosticsLog.shared.record(.storage, String(localized: "Sync watermark write failed (step)."))
             }
         }
     }

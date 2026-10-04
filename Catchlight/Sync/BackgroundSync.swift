@@ -296,9 +296,10 @@ public final class BackgroundSyncCoordinator {
         // editing it. DiagnosticsLog is thread-safe; no main-actor hop needed.
         if !report.heldBack.isEmpty {
             let n = report.heldBack.count
+            // Shown in Notice History, so recorded in the device language; the count is a
+            // plural variation in the catalog.
             DiagnosticsLog.shared.record(.sync,
-                "\(n) Take\(n == 1 ? "" : "s") not re-uploaded. This device was away too long "
-                + "to rule out deletion elsewhere. Edit a Take to sync it again.")
+                String(localized: "\(n) Takes not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again."))
         }
         if let onRemoteChanges, !report.applied.isEmpty || !report.deletedLocally.isEmpty {
             Task { @MainActor in onRemoteChanges(report) }

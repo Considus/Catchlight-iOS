@@ -55,8 +55,10 @@ final class AppModel {
     var quarantinedCount: Int = 0 {
         didSet {
             if quarantinedCount > 0, quarantinedCount != oldValue {
+                // Shown in Notice History, so recorded in the device language like the
+                // on-screen notice; the count is a plural variation in the catalog.
                 DiagnosticsLog.shared.record(.quarantine,
-                    "\(quarantinedCount) Take\(quarantinedCount == 1 ? "" : "s") couldn't be verified and \(quarantinedCount == 1 ? "was" : "were") skipped.")
+                    String(localized: "\(quarantinedCount) Takes couldn't be verified and were skipped."))
             }
         }
     }

@@ -27,6 +27,10 @@ final class LocalisationPluralTests: XCTestCase {
                        "Import successful. 1 Take added to your timeline.")
         XCTAssertEqual(String(localized: "Import successful. \(3) Takes added.", locale: english),
                        "Import successful. 3 Takes added.")
+        XCTAssertEqual(String(localized: "\(1) Takes couldn't be verified and need a choice.", locale: english),
+                       "1 Take couldn't be verified and needs a choice.")
+        XCTAssertEqual(String(localized: "\(1) Takes not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again.", locale: english),
+                       "1 Take not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again.")
     }
 
     /// A name before the count: the plural must key on the count, and both values land.
