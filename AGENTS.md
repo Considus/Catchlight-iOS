@@ -69,6 +69,8 @@ Every string a person sees or hears goes through a String Catalog: `Localizable.
 - **What stays English on purpose:** the product nouns (Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard), which are still routed through the catalog so a translator sees them in context and keeps them; the 12 recovery-phrase words, which are the BIP-39 English wordlist and part of the key; developer-only diagnostics (the `lifecycle` category and scheduling failures, which never show in Notice History); the `Import` folder name in the cloud folder. Notice History lines are recorded in the device language, like the notices themselves.
 - **Core values the app shows are worded here**, in `Catchlight/UI/CoreLabels.swift`. Core's own `label`s stay English and carry no translations.
 
+The test scheme runs in English whatever the machine is set to (`language: en` in `project.yml`), because many tests assert the English copy. To run them in another language, say so: `xcodebuild test -testLanguage de -testRegion DE`; English-copy assertions are expected to fail there.
+
 Two checks, and run both after touching UI copy. The static one lists English sentences in the source that no catalog holds (export first, it is what syncs the catalogs):
 
 ```bash

@@ -466,6 +466,10 @@ schemes:
       # Tests also use the local StoreKit config so any test that touches the
       # paywall isn't talking to live App Store servers.
       storeKitConfiguration: Catchlight/Resources/Catchlight.storekit
+      # Tests run in English whatever the Mac or simulator is set to: many assert the
+      # English copy. Check another language explicitly with
+      # `xcodebuild test -testLanguage de -testRegion DE`.
+      language: en
       targets:
         - CatchlightTests
         - CatchlightUITests
