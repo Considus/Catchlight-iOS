@@ -200,9 +200,9 @@ struct BottomDockView: View {
             // underneath them (the four buttons are replaced wholesale).
             let announcement: String
             switch mode {
-            case .resting: announcement = "Dock returned to navigation."
-            case .filtering: announcement = "Dock showing timeline filters."
-            case .searching: announcement = "Dock showing search."
+            case .resting: announcement = String(localized: "Dock returned to navigation.")
+            case .filtering: announcement = String(localized: "Dock showing timeline filters.")
+            case .searching: announcement = String(localized: "Dock showing search.")
             }
             UIAccessibility.post(notification: .layoutChanged, argument: announcement)
         }
@@ -516,7 +516,7 @@ struct BottomDockView: View {
             ui.raiseSearchKeyboard()
         } label: {
             HStack {
-                Text(ui.searchQuery.isEmpty ? "Search your Takes" : ui.searchQuery)
+                Text(ui.searchQuery.isEmpty ? String(localized: "Search your Takes") : ui.searchQuery)
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
                     .foregroundStyle(ui.searchQuery.isEmpty ? Color.ckTextSecondary : Color.ckTextPrimary)
                     .lineLimit(1)

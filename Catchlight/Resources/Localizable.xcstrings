@@ -7,7 +7,27 @@
     " key to your data." : {
 
     },
+    "%@ · On arrival" : {
+
+    },
+    "%@ · On leaving" : {
+
+    },
+    "%@ at %@" : {
+      "comment" : "An email address read aloud: user at domain.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ at %2$@"
+          }
+        }
+      }
+    },
     "%@ Double-tap to review." : {
+
+    },
+    "%@, filtering" : {
 
     },
     "%@. %@" : {
@@ -30,16 +50,152 @@
         }
       }
     },
+    "%@/year" : {
+
+    },
     "%lld" : {
 
     },
     "%lld m" : {
 
     },
+    "%lld of %lld completed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld completed"
+          }
+        }
+      }
+    },
+    "%lld of 12 words" : {
+
+    },
+    "%lld Takes changed on another device." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take changed on another device."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes changed on another device."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld Takes couldn't be verified and were skipped." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take couldn't be verified and was skipped."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes couldn't be verified and were skipped."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld Takes need a decision." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take needs a decision."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes need a decision."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld-day" : {
+      "comment" : "Trial length inside 'Start your %@ trial now, then only …'."
+    },
+    "%lld-month" : {
+      "comment" : "Trial length inside 'Start your %@ trial now, then only …'."
+    },
+    "%lld-week" : {
+      "comment" : "Trial length inside 'Start your %@ trial now, then only …'."
+    },
+    "%lld-year" : {
+      "comment" : "Trial length inside 'Start your %@ trial now, then only …'."
+    },
     "%lld." : {
 
     },
+    "1 day" : {
+
+    },
+    "1 hour" : {
+
+    },
+    "1 minute" : {
+
+    },
+    "2 days" : {
+
+    },
+    "5 mins" : {
+
+    },
+    "5 minutes" : {
+
+    },
+    "6 hours" : {
+
+    },
+    "12 hours" : {
+
+    },
+    "15 mins" : {
+
+    },
+    "24 hours" : {
+
+    },
+    "30 mins" : {
+
+    },
+    "30 minutes" : {
+
+    },
+    "30 seconds" : {
+
+    },
     "A deleted Take cannot be recovered" : {
+
+    },
+    "A few things worth knowing" : {
 
     },
     "A tighter radius is more precise, but iOS may trigger it late or miss it. 100 m is the reliable minimum." : {
@@ -57,10 +213,19 @@
     "Active" : {
       "comment" : "Subscription status — currently subscribed."
     },
+    "Add a Take" : {
+
+    },
+    "Add reminder" : {
+
+    },
     "Add Take" : {
 
     },
     "Add this device to your account?" : {
+
+    },
+    "All" : {
 
     },
     "All caught up." : {
@@ -75,10 +240,25 @@
     "All-day" : {
 
     },
+    "Always" : {
+
+    },
     "An Obie is always Important." : {
 
     },
+    "Annually" : {
+
+    },
+    "Another device is syncing. Catchlight will retry automatically." : {
+
+    },
     "Any items in the folder, that have previously been imported, will be imported again." : {
+
+    },
+    "App" : {
+
+    },
+    "Appearance" : {
 
     },
     "Appearance mode" : {
@@ -87,13 +267,34 @@
     "Arrangement" : {
 
     },
+    "Authenticate to open your Takes." : {
+
+    },
     "Authenticate with Face ID or your device passcode to view the 12 words. They're the only way to recover your account, so reveal them somewhere private." : {
+
+    },
+    "Authenticating…" : {
+
+    },
+    "Authentication needed to reveal your phrase." : {
 
     },
     "Auto-delete" : {
 
     },
+    "Auto-Delete (exc. notes)" : {
+
+    },
+    "Auto-delete completed Takes, excluding notes" : {
+
+    },
     "Auto-renews each year. Cancel anytime in your App Store account." : {
+
+    },
+    "Automatic" : {
+
+    },
+    "Back" : {
 
     },
     "Cancel" : {
@@ -141,13 +342,22 @@
     "Catchlight never sees your files. Only you can read them." : {
 
     },
+    "Catchlight stores the Privacy phrase only on the device where you set it up. If you onboarded on a different device, use that one to view it." : {
+
+    },
     "Catchlight uses only Apple system frameworks (CryptoKit, LocalAuthentication, Security, SQLite3). No third-party libraries are bundled." : {
 
     },
     "Catchlight: %@" : {
 
     },
+    "Catchlight's security depends on iOS's built-in protections. This device appears to have been modified, which may reduce those protections. Your data may be at greater risk than on an unmodified device." : {
+
+    },
     "checked" : {
+
+    },
+    "Checklist item" : {
 
     },
     "Choose a cloud folder you own" : {
@@ -180,13 +390,31 @@
     "Close Storyboard" : {
 
     },
+    "Cloud" : {
+
+    },
     "Cloud Storage" : {
+
+    },
+    "Cloud: backed up and restorable" : {
 
     },
     "Collapse Take" : {
 
     },
+    "Comfort" : {
+
+    },
+    "Coming soon" : {
+
+    },
     "Coming soon." : {
+
+    },
+    "Compact" : {
+
+    },
+    "completed Task" : {
 
     },
     "Completed tasks only" : {
@@ -195,7 +423,19 @@
     "Confirm before deleting" : {
 
     },
+    "Confirm it's you before erasing this device." : {
+
+    },
     "Confirm three words" : {
+
+    },
+    "Conflict" : {
+
+    },
+    "Connect a cloud folder you control. Your Takes stay encrypted, we never see them, and your 12 words are what open them again on a new phone." : {
+
+    },
+    "Connect cloud folder" : {
 
     },
     "Continue" : {
@@ -204,13 +444,98 @@
     "Copy version and device info" : {
 
     },
+    "Couldn't check your phrase on this device." : {
+
+    },
+    "Couldn't delete that Take." : {
+
+    },
+    "Couldn't generate a Privacy phrase." : {
+
+    },
+    "Couldn't import one of the notes." : {
+
+    },
+    "Couldn't load your Takes." : {
+
+    },
+    "Couldn't open those files. Please try again." : {
+
+    },
+    "Couldn't open your library on this device. Please restart Catchlight." : {
+
+    },
+    "Couldn't reach the App Store. Check your connection." : {
+
+    },
+    "Couldn't reorder your Takes." : {
+
+    },
+    "Couldn't restore purchases. Please try again." : {
+
+    },
+    "Couldn't save that choice. Please try again." : {
+
+    },
+    "Couldn't save that folder: %@" : {
+
+    },
+    "Couldn't save that resolution. Please try again." : {
+
+    },
+    "Couldn't save that Take." : {
+
+    },
+    "Couldn't secure your account on this device." : {
+
+    },
+    "Couldn't set Obie." : {
+
+    },
+    "Couldn't unlock. Authenticate to open your Takes." : {
+
+    },
     "Couldn't unlock. Tap to save again." : {
 
+    },
+    "Create my Privacy phrase" : {
+
+    },
+    "Created on %@ at %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Created on %1$@ at %2$@"
+          }
+        }
+      }
     },
     "Creation date" : {
 
     },
     "Current folder: %@" : {
+
+    },
+    "Current location" : {
+
+    },
+    "Custom" : {
+
+    },
+    "DAILIES" : {
+
+    },
+    "Daily" : {
+
+    },
+    "Dark" : {
+
+    },
+    "Date" : {
+
+    },
+    "Default reminder timing" : {
 
     },
     "Default timing" : {
@@ -237,6 +562,9 @@
     "Delete this Take?" : {
 
     },
+    "Didn't pass its check, and may be an older version." : {
+
+    },
     "Disabled" : {
 
     },
@@ -252,23 +580,28 @@
     "Dismiss this one" : {
 
     },
+    "Dock returned to navigation." : {
+
+    },
+    "Dock showing search." : {
+
+    },
+    "Dock showing timeline filters." : {
+
+    },
     "Done" : {
 
     },
     "done only" : {
 
     },
-    "Double-tap to %@ %@." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Double-tap to %1$@ %2$@."
-          }
-        }
-      }
+    "Double-tap Add Take in the toolbar. To save, double-tap Save and close. That's the whole capture flow." : {
+
     },
-    "Double-tap to %@ this item." : {
+    "Double-tap an Iris to make that Take a task, set a reminder, or make it important." : {
+
+    },
+    "Double-tap to add %@." : {
 
     },
     "Double-tap to apply your selection and close." : {
@@ -298,6 +631,9 @@
     "Double-tap to place in the next slot." : {
 
     },
+    "Double-tap to remove %@." : {
+
+    },
     "Double-tap to resume typing your search." : {
 
     },
@@ -319,6 +655,9 @@
     "Double-tap to show only Takes created this month." : {
 
     },
+    "Double-tap to tick this item." : {
+
+    },
     "Double-tap to toggle the phrase on screen." : {
 
     },
@@ -328,13 +667,59 @@
     "Double-tap to toggle. Use the actions rotor for expired reminders only." : {
 
     },
+    "Double-tap to untick this item." : {
+
+    },
     "Double-tap to view your phrase. Face ID or passcode required." : {
 
     },
     "e.g. Home" : {
 
     },
+    "Edit reminder" : {
+
+    },
+    "Editor only" : {
+
+    },
+    "Email to %@" : {
+
+    },
+    "Email to %@ and %lld more emails" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Email to %@ and %lld more email"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Email to %@ and %lld more emails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Enable" : {
+
+    },
     "Enabled" : {
+
+    },
+    "Encrypted cloud sync across your devices" : {
+
+    },
+    "Encrypted on this device, readable only by you." : {
+
+    },
+    "Encrypted on this device, readable only by you. To finish setting up cloud backup, choose your folder in Settings → System → Cloud Storage." : {
 
     },
     "Enter your Privacy phrase" : {
@@ -352,6 +737,9 @@
     "Erase. Takes exported" : {
 
     },
+    "Erases every Take here and creates a new Privacy phrase. Cloud copies become unreadable too. Export first, it is the only way back." : {
+
+    },
     "Erases every Take on this device and creates a new Privacy phrase." : {
 
     },
@@ -359,6 +747,12 @@
 
     },
     "Every thought deserves a moment of clarity." : {
+
+    },
+    "Every weekday" : {
+
+    },
+    "Every weekend" : {
 
     },
     "Everything" : {
@@ -383,6 +777,9 @@
 
     },
     "Export anyway" : {
+
+    },
+    "Export diagnostics" : {
 
     },
     "Export now" : {
@@ -412,6 +809,12 @@
     "Free trial" : {
       "comment" : "Subscription status — currently in the intro trial."
     },
+    "Go back" : {
+
+    },
+    "Got it" : {
+
+    },
     "Hide phrase" : {
 
     },
@@ -421,7 +824,16 @@
     "Hold to reveal phrase" : {
 
     },
+    "Hourly" : {
+
+    },
     "I already use Catchlight" : {
+
+    },
+    "I know the risk" : {
+
+    },
+    "I've written them down" : {
 
     },
     "Ignore" : {
@@ -433,7 +845,57 @@
     "Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes." : {
 
     },
+    "Import from a file" : {
+
+    },
     "Import notes" : {
+
+    },
+    "Import successful. %lld Takes added to your timeline." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Import successful. %lld Take added to your timeline."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Import successful. %lld Takes added to your timeline."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Import successful. %lld Takes added." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Import successful. %lld Take added."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Import successful. %lld Takes added."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Important" : {
 
     },
     "Important filter" : {
@@ -447,6 +909,67 @@
     },
     "Inactive" : {
       "comment" : "Subscription status — lapsed, in read-only mode."
+    },
+    "Inline" : {
+
+    },
+    "Interval" : {
+
+    },
+    "Iris" : {
+
+    },
+    "Iris, %@" : {
+
+    },
+    "It's in your cloud folder but not on this phone. It didn't pass its check, so it may be an older version." : {
+
+    },
+    "Item" : {
+
+    },
+    "Keep this version" : {
+
+    },
+    "Keeping it replaces any newer edit that may exist on another device when it syncs." : {
+
+    },
+    "Light" : {
+
+    },
+    "Link to %@" : {
+
+    },
+    "Link to %@ and %lld more links" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Link to %@ and %lld more link"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Link to %@ and %lld more links"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Local" : {
+
+    },
+    "Local: on this device only" : {
+
+    },
+    "Location" : {
+
     },
     "Location access is off. Enable it in Settings to set a place reminder." : {
 
@@ -469,10 +992,28 @@
     "Make this your Obie?" : {
 
     },
+    "Manage Subscription" : {
+
+    },
+    "Manual" : {
+
+    },
+    "Mark done" : {
+
+    },
     "Mark Done" : {
 
     },
+    "Mark not done" : {
+
+    },
     "Mark Not Done" : {
+
+    },
+    "Mode" : {
+
+    },
+    "Monthly" : {
 
     },
     "Move down" : {
@@ -481,10 +1022,31 @@
     "Move up" : {
 
     },
+    "Never" : {
+
+    },
+    "Never syncs. Your Takes stay on this device." : {
+
+    },
     "New Obie" : {
 
     },
     "New Take" : {
+
+    },
+    "Newest first" : {
+
+    },
+    "Next" : {
+
+    },
+    "Next week" : {
+
+    },
+    "No active subscription was found for this Apple ID." : {
+
+    },
+    "No notes to import from your selection." : {
 
     },
     "No notices yet" : {
@@ -493,13 +1055,25 @@
     "No privacy phrase on this device. Export now, then Settings > Start over." : {
 
     },
+    "No recognised markdown or text files found in the Import folder." : {
+
+    },
+    "None" : {
+
+    },
     "Not available yet." : {
 
     },
     "Not configured" : {
       "comment" : "Cloud Storage row detail label when no folder is picked."
     },
+    "Not done" : {
+
+    },
     "Not now" : {
+
+    },
+    "Note" : {
 
     },
     "Notes filter" : {
@@ -509,6 +1083,9 @@
 
     },
     "Notice History" : {
+
+    },
+    "Notifications" : {
 
     },
     "Notifications disabled. Opens iOS Settings." : {
@@ -526,10 +1103,22 @@
     "Obie" : {
 
     },
+    "Obie, your pinned Take" : {
+
+    },
+    "Obie: your pinned Take" : {
+
+    },
     "off" : {
 
     },
+    "Off" : {
+
+    },
     "OK" : {
+
+    },
+    "Oldest first" : {
 
     },
     "on" : {
@@ -544,6 +1133,9 @@
     "ONLY" : {
 
     },
+    "Only syncs when you tap Sync Now." : {
+
+    },
     "Open Catchlight and open a blank Obie." : {
 
     },
@@ -551,6 +1143,9 @@
 
     },
     "Open Settings" : {
+
+    },
+    "Open Shot List" : {
 
     },
     "Open Source Licences" : {
@@ -568,10 +1163,25 @@
     "Opens the Focus ring to change what this Take is." : {
 
     },
+    "Opens the Focus ring. Use the actions rotor to make this your Obie." : {
+
+    },
+    "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take." : {
+
+    },
     "Opens the Storyboard: every Take with a task. Use the actions rotor to open Settings." : {
 
     },
     "Order" : {
+
+    },
+    "Overdue" : {
+
+    },
+    "OVERDUE" : {
+
+    },
+    "Panel" : {
 
     },
     "Panel suggests, you accept. Inline rewrites in place. Both send that Take to Apple. Your Privacy phrase never goes." : {
@@ -581,6 +1191,9 @@
 
     },
     "Phrase hidden. Press and hold the reveal button to view." : {
+
+    },
+    "Phrase isn't on this device" : {
 
     },
     "Phrase revealed: %@" : {
@@ -593,6 +1206,15 @@
 
     },
     "Place" : {
+
+    },
+    "Place set, arrival, silent" : {
+
+    },
+    "Place set, leaving, silent" : {
+
+    },
+    "Press and hold an Iris to pin one above the rest. Only one is ever your Obie, because there can only be one that's most important." : {
 
     },
     "Press and hold to display the 12 words. Release to hide them." : {
@@ -613,7 +1235,13 @@
     "Proceed" : {
 
     },
+    "Purchase couldn't complete. Please try again." : {
+
+    },
     "Purchase in progress" : {
+
+    },
+    "Quarantine" : {
 
     },
     "Quick set" : {
@@ -628,7 +1256,13 @@
     "Read-only. Your data is still yours." : {
 
     },
+    "Ready to restore." : {
+
+    },
     "Recent sync, storage and conflict notices." : {
+
+    },
+    "Recover" : {
 
     },
     "Recover this Take?" : {
@@ -640,16 +1274,31 @@
     "Release to hide" : {
 
     },
+    "Remind" : {
+
+    },
     "Reminder" : {
 
     },
+    "Reminder set" : {
+
+    },
     "Reminder type" : {
+
+    },
+    "Reminder: still not done" : {
 
     },
     "Reminders" : {
 
     },
     "Reminders filter" : {
+
+    },
+    "Reminds on arrival" : {
+
+    },
+    "Reminds on leaving" : {
 
     },
     "Remove" : {
@@ -664,7 +1313,13 @@
     "Repeat" : {
 
     },
+    "Report an issue" : {
+
+    },
     "Requesting notification permission" : {
+
+    },
+    "Restore" : {
 
     },
     "Restore on this device" : {
@@ -700,7 +1355,13 @@
     "Saves a readable copy. Not a recovery phrase." : {
 
     },
+    "Scenes" : {
+
+    },
     "Search" : {
+
+    },
+    "SEARCH" : {
 
     },
     "Search a place or address" : {
@@ -709,10 +1370,25 @@
     "Search Takes" : {
 
     },
+    "Search your Takes" : {
+
+    },
     "Second device" : {
 
     },
+    "Security" : {
+
+    },
+    "Select" : {
+
+    },
     "Select an empty folder, or create a new one, and we'll take care of the rest." : {
+
+    },
+    "Select an Iris, use the rotor to select Actions, swipe up to select Make Obie, then double-tap. Only one is ever your Obie, because there can only be one that's most important." : {
+
+    },
+    "Select Storyboard, then use the rotor to select Actions and double-tap to open Settings." : {
 
     },
     "Selected: %@" : {
@@ -721,13 +1397,25 @@
     "Sequence" : {
 
     },
+    "SEQUENCE" : {
+
+    },
+    "Set up Cloud Storage first. The Import folder lives inside your sync folder." : {
+
+    },
     "Settings" : {
 
     },
     "SETTINGS" : {
 
     },
+    "Shape your Take with the Iris" : {
+
+    },
     "Shares a plain-text diagnostics log to attach to a report." : {
+
+    },
+    "Shot List" : {
 
     },
     "SHOT LIST" : {
@@ -742,22 +1430,86 @@
     "Show all Takes" : {
 
     },
+    "Show creation date" : {
+
+    },
+    "Show my words once more" : {
+
+    },
     "Silent. Keeps the place on the Take, with no alert when you arrive or leave." : {
+
+    },
+    "Simply swipe up from the toolbar." : {
+
+    },
+    "Single" : {
+
+    },
+    "Skip for now" : {
 
     },
     "Snooze" : {
 
     },
+    "Snooze duration" : {
+
+    },
+    "Snooze Duration" : {
+
+    },
     "Snooze for %@" : {
+
+    },
+    "Snoozed" : {
+
+    },
+    "SNOOZED" : {
+
+    },
+    "Snoozed. Originally due %@" : {
+
+    },
+    "Some" : {
+
+    },
+    "Some finished Takes couldn't be cleaned up. They'll be retried." : {
+
+    },
+    "Something went wrong." : {
+
+    },
+    "Spotlight & Siri" : {
 
     },
     "Spotlight and Siri indexing" : {
 
     },
+    "Standard" : {
+
+    },
     "Start free,\nkeep your thoughts,\nprivately." : {
 
     },
+    "Start over" : {
+
+    },
+    "Start using Catchlight" : {
+
+    },
+    "Start your %@ trial now, then only %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Start your %1$@ trial now, then only %2$@"
+          }
+        }
+      }
+    },
     "Stop" : {
+
+    },
+    "Storage" : {
 
     },
     "Storyboard" : {
@@ -769,6 +1521,18 @@
     "Subscribe" : {
 
     },
+    "Subscribe now" : {
+
+    },
+    "Subscription" : {
+
+    },
+    "Subscription is unavailable right now." : {
+
+    },
+    "Support" : {
+
+    },
     "Sync" : {
 
     },
@@ -778,13 +1542,72 @@
     "SYNC CONFLICTS" : {
 
     },
+    "Sync encountered a problem and will retry." : {
+
+    },
+    "Sync Now" : {
+
+    },
+    "Sync paused. Your cloud data looks unexpected. No changes were made locally." : {
+
+    },
     "Sync, storage and conflict notices will appear here." : {
+
+    },
+    "Syncing…" : {
+
+    },
+    "Syncs automatically in the background and when you open the app." : {
+
+    },
+    "System" : {
 
     },
     "Take" : {
 
     },
+    "Take preview length" : {
+
+    },
+    "Take spacing" : {
+
+    },
     "Takes with a task appear here." : {
+
+    },
+    "Tap the + button. Tap anywhere outside the Take to save. That's the whole capture flow." : {
+
+    },
+    "Tap the circle beside any Take to make it a task, set a reminder, or make it important." : {
+
+    },
+    "Tap the words from your phrase, in order." : {
+
+    },
+    "Tap words %lld, %lld and %lld from your phrase, in order." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tap words %1$lld, %2$lld and %3$lld from your phrase, in order."
+          }
+        }
+      }
+    },
+    "Task" : {
+
+    },
+    "Task, %lld of %lld complete" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Task, %1$lld of %2$lld complete"
+          }
+        }
+      }
+    },
+    "Task, complete" : {
 
     },
     "Tasks" : {
@@ -799,13 +1622,28 @@
     "Tested with iCloud Drive, Dropbox, Internxt, Koofr and Filen. Others may work, and a provider that greys out in the picker can't hand an app a whole folder. You'll need its app installed and signed in." : {
 
     },
+    "That doesn't look right. Check the words and try again." : {
+
+    },
     "The 12 words from your other device, in order." : {
 
     },
     "The BIP-39 English wordlist is sourced from the Trezor project and bundled under the MIT licence. See Resources/bip39-english.txt." : {
 
     },
+    "The copies of these Takes in your cloud folder didn't pass their check. Nothing changes on this phone until you choose." : {
+
+    },
     "The file is readable text and it does not contain a recovery phrase. Use Start over and Import from a file to re-import your Takes. Delete the export once your Takes are back." : {
+
+    },
+    "The Import folder couldn't be read. Check your cloud folder in Settings → Cloud Storage and try again." : {
+
+    },
+    "The newer version from another device can't be read." : {
+
+    },
+    "These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed." : {
 
     },
     "This cannot be undone." : {
@@ -814,22 +1652,64 @@
     "This deletes every Take on this device and the Privacy phrase that unlocks them. Takes in your cloud folder will be unreadable. This cannot be undone." : {
 
     },
+    "This evening" : {
+
+    },
     "This is a repeating reminder." : {
 
     },
     "This replaces the account on this device. Takes stored only here will be removed and can't be recovered. If you haven't already, close this and use Export Takes (Markdown) to keep a copy first." : {
 
     },
+    "This weekend" : {
+
+    },
+    "Those aren't quite right. Try again." : {
+
+    },
     "Time" : {
+
+    },
+    "Timeline arrangement" : {
+
+    },
+    "Timeline order" : {
+
+    },
+    "Tomorrow" : {
 
     },
     "Trigger" : {
 
     },
+    "Try Again" : {
+
+    },
     "Turn off reminder" : {
 
     },
+    "Type + first line" : {
+
+    },
+    "Type + full text" : {
+
+    },
+    "Type only" : {
+
+    },
     "unchecked" : {
+
+    },
+    "Unlimited Takes, tasks and reminders" : {
+
+    },
+    "Unlock" : {
+
+    },
+    "Unlock your Takes" : {
+
+    },
+    "Unlocking…" : {
 
     },
     "Untitled Take" : {
@@ -841,6 +1721,9 @@
     "Use the actions rotor to copy version and device info." : {
 
     },
+    "Version %@" : {
+
+    },
     "View" : {
 
     },
@@ -848,6 +1731,9 @@
 
     },
     "We never see them, store them, or ask for them. So don't lose them." : {
+
+    },
+    "Weekly" : {
 
     },
     "Welcome back" : {
@@ -880,6 +1766,12 @@
     "When on, deleting a Take asks you to confirm first." : {
 
     },
+    "When you arrive at %@" : {
+
+    },
+    "When you leave %@" : {
+
+    },
     "Which Takes Catchlight shows while this Focus is on." : {
 
     },
@@ -896,6 +1788,9 @@
         }
       }
     },
+    "Word %lld of 12" : {
+
+    },
     "Word %lld: %@" : {
       "localizations" : {
         "en" : {
@@ -905,6 +1800,12 @@
           }
         }
       }
+    },
+    "Write these 12 words down and keep them somewhere safe. They encrypt your Takes and enable a second device." : {
+
+    },
+    "Write these 12 words down and keep them somewhere safe. They're needed in order to decrypt your Takes on a new device, and they don't travel in an iPhone backup, so the copy you write down is the copy that counts." : {
+
     },
     "Write these 12 words down somewhere safe, on paper. They're the only way back into your Takes on a new phone. They don't travel in an iPhone backup, and neither do your Takes, so restoring a backup won't bring either of them back." : {
 
@@ -924,16 +1825,40 @@
     "Your account is restored on this device. Connect the cloud folder where your Takes are saved and they'll appear here." : {
 
     },
+    "Your cloud folder couldn't be opened. Open Settings → Cloud Storage to choose a new one." : {
+
+    },
+    "Your cloud folder is no longer available. Open Settings → Cloud Storage to re-pick it." : {
+
+    },
+    "Your data stays yours: readable, exportable" : {
+
+    },
+    "Your encrypted library couldn't be opened, so changes aren't being saved to this device yet. Please restart Catchlight." : {
+
+    },
+    "Your encrypted library couldn't be opened. Please restart Catchlight." : {
+
+    },
     "Your existing Obie returns to the timeline. Only one Take can be your Obie." : {
 
     },
     "Your first Take is waiting." : {
 
     },
+    "Your Obie" : {
+
+    },
     "Your Privacy phrase" : {
 
     },
+    "Your purchase is awaiting approval. You'll get access as soon as it's confirmed." : {
+
+    },
     "Your subscription auto-renews each year unless cancelled at least 24 hours before the period ends. Manage or cancel anytime in your App Store account. Catchlight is end-to-end encrypted. Your Takes are never readable by us." : {
+
+    },
+    "Your Takes stay on this device and nowhere else. Your iPhone backup won't contain them, so if the phone goes, they go with it." : {
 
     },
     "Your Takes will live on this device and nowhere else. Your iPhone backup won't contain them, because we deliberately keep them out of it, and that's the same choice that keeps them out of iCloud Backup. Lose this phone or wipe it, and there's nothing to restore from." : {

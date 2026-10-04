@@ -38,8 +38,6 @@ public enum JailbreakDetector {
         }
     }
 
-    public static let warningMessage =
-        "Catchlight's security depends on iOS's built-in protections. This device " +
-        "appears to have been modified, which may reduce those protections. Your " +
-        "data may be at greater risk than on an unmodified device."
+    public static let warningMessage = String(localized:
+        "Catchlight's security depends on iOS's built-in protections. This device appears to have been modified, which may reduce those protections. Your data may be at greater risk than on an unmodified device.")
 }

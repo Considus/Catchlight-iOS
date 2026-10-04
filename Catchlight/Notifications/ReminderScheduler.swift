@@ -412,7 +412,7 @@ public final class ReminderScheduler {
         let content = UNMutableNotificationContent()
         content.title = Self.notificationTitle(for: take)
         let place = (loc.locationName?.isEmpty == false) ? loc.locationName! : "your location"
-        content.subtitle = loc.triggerOnArrival ? "When you arrive at \(place)" : "When you leave \(place)"
+        content.subtitle = loc.triggerOnArrival ? String(localized: "When you arrive at \(place)") : String(localized: "When you leave \(place)")
         content.sound = .default
         // ALWAYS the plain category, never `category(for:)`. A geofence is registered with
         // `repeats: false` so it can't be a series — and a Take may carry BOTH a repeating
@@ -604,7 +604,7 @@ public final class ReminderScheduler {
     private func followUpContent(for take: Take, originallyDue: Date) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = Self.notificationTitle(for: take)
-        content.subtitle = "Reminder: still not done"
+        content.subtitle = String(localized: "Reminder: still not done")
         content.sound = .default
         content.categoryIdentifier = Self.category(for: take)
         content.threadIdentifier = take.id.uuidString
@@ -705,7 +705,7 @@ public final class ReminderScheduler {
         guard interval > 0 else { return }
         let content = UNMutableNotificationContent()
         content.title = title
-        content.subtitle = dueText.isEmpty ? "Snoozed" : "Snoozed. Originally due \(dueText)"
+        content.subtitle = dueText.isEmpty ? String(localized: "Snoozed") : String(localized: "Snoozed. Originally due \(dueText)")
         content.sound = .default
         content.categoryIdentifier = categoryIdentifier        // snoozed nudge keeps the same actions
         // Same thread as the reminder's other notifications so the snooze stacks with

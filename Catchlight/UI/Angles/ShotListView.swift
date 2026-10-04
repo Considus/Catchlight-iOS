@@ -238,9 +238,9 @@ struct ShotListView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("angle-checkbox")
-            .accessibilityLabel(item.text.isEmpty ? "Item" : item.text)
+            .accessibilityLabel(item.text.isEmpty ? String(localized: "Item") : item.text)
             .accessibilityValue(item.isComplete ? "checked" : "unchecked")
-            .accessibilityHint("Double-tap to \(item.isComplete ? "untick" : "tick") this item.")
+            .accessibilityHint(item.isComplete ? "Double-tap to untick this item." : "Double-tap to tick this item.")
             .accessibilityAddTraits(item.isComplete ? [.isButton, .isSelected] : .isButton)
             .accessibilityAction(named: "Move up") { moveItem(item.id, by: -1) }
             .accessibilityAction(named: "Move down") { moveItem(item.id, by: 1) }

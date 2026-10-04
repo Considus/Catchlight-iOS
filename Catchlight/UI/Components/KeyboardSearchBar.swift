@@ -234,7 +234,7 @@ final class SearchBarAccessory: UIView {
         field.returnKeyType = .search
         field.clearButtonMode = .whileEditing
         field.attributedPlaceholder = NSAttributedString(
-            string: "Search your Takes",
+            string: String(localized: "Search your Takes"),
             attributes: [.foregroundColor: Self.placeholderGrey])
         field.accessibilityIdentifier = "search-field"
         field.accessibilityLabel = "Search Takes"

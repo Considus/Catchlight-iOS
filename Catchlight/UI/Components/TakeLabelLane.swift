@@ -27,7 +27,7 @@ struct TakeLabelLane: View {
     enum Content {
         case none
         /// Vertical text label (string + colour), Time-note font. No fill.
-        case systemText(String, Color)
+        case systemText(LocalizedStringKey, Color)
         // FUTURE — user label: the lane filled with the colour + Take shadow, a
         // floating chip (DEMO-wired now; a later release adds the data model + UI).
         case colourChip(Color)

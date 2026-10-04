@@ -82,12 +82,12 @@ struct LockView: View {
     private var message: String {
         switch app.lockState {
         case .failed(let reason): return reason
-        case .unlocking:          return "Authenticating…"
-        default:                  return "Authenticate to open your Takes."
+        case .unlocking:          return String(localized: "Authenticating…")
+        default:                  return String(localized: "Authenticate to open your Takes.")
         }
     }
 
-    private var buttonTitle: String {
+    private var buttonTitle: LocalizedStringKey {
         switch app.lockState {
         case .failed:    return "Try Again"
         case .unlocking: return "Unlocking…"

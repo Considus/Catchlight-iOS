@@ -63,7 +63,7 @@ struct NoticeHistoryView: View {
                             .padding(.vertical, 2)
                             .listRowBackground(Color.ckSurface)
                             .accessibilityElement(children: .combine)
-                            .accessibilityLabel("\(entry.category.displayName). \(entry.message)")
+                            .accessibilityLabel("\(entry.category.localizedName). \(entry.message)")
                             // Audit 2026-08, V15: the explicit label overrides the
                             // combine, dropping the relative time — carry it as the
                             // value so VoiceOver still speaks it after the message.

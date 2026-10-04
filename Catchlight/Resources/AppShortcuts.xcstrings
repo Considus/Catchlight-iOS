@@ -1,0 +1,38 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "New Obie in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "New Obie in ${applicationName}",
+              "Obie this in ${applicationName}",
+              "New ${applicationName} Obie",
+              "Start an Obie in ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "New Take in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "New Take in ${applicationName}",
+              "Take this in ${applicationName}",
+              "New ${applicationName} Take",
+              "Start a Take in ${applicationName}"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

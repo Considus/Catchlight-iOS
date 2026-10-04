@@ -568,7 +568,7 @@ struct TimelineMonthDivider: View {
             // Audit 2026-08, V23: instructions live in the HINT, not the label —
             // a user who disables hints chose not to hear them, and the label
             // stays short for the rotor.
-            .accessibilityLabel(isActive ? "\(title), filtering" : title)
+            .accessibilityLabel(isActive ? String(localized: "\(title), filtering") : title)
             .accessibilityHint(isActive
                 ? "Double-tap to clear."
                 : "Double-tap to show only Takes created this month.")

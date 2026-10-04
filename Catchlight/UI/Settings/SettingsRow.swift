@@ -13,7 +13,7 @@ import SwiftUI
 struct SettingsRow<Accessory: View>: View {
 
     let icon: String?
-    let label: String
+    let label: LocalizedStringKey
     var chevron: Bool = false
     var disabled: Bool = false
     var action: (() -> Void)? = nil
@@ -71,7 +71,7 @@ struct SettingsRow<Accessory: View>: View {
 
 extension SettingsRow where Accessory == EmptyView {
     init(icon: String? = nil,
-         label: String,
+         label: LocalizedStringKey,
          chevron: Bool = false,
          disabled: Bool = false,
          action: (() -> Void)? = nil) {

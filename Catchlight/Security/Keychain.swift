@@ -125,7 +125,7 @@ public struct MasterKeyKeychain {
     /// biometric / passcode prompt (via the SE key on hardware, via item access
     /// control on the simulator).
     /// - Parameter reason: the LAContext prompt reason shown to the user.
-    public static func retrieve(reason: String = "Unlock your Takes") throws -> SymmetricKey {
+    public static func retrieve(reason: String = String(localized: "Unlock your Takes")) throws -> SymmetricKey {
         let context = LAContext()
         context.localizedReason = reason
         var query: [String: Any] = [

@@ -205,7 +205,7 @@ struct AboutView: View {
 
     /// The label shown under the tagline, e.g. `Version 1.0.0 (1)`.
     static var versionString: String {
-        "Version \(versionAndBuild)"
+        String(localized: "Version \(versionAndBuild)")
     }
 
     /// A short, paste-ready support block copied from the version line: app name +

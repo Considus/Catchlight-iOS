@@ -182,10 +182,10 @@ struct EditorKeyboardBar: View {
     /// says what the state IS. Important is a state.)
     private func slot<Glyph: View>(enabled: Bool,
                                    identifier: String? = nil,
-                                   label: String,
-                                   value: String? = nil,
+                                   label: LocalizedStringKey,
+                                   value: LocalizedStringKey? = nil,
                                    selected: Bool = false,
-                                   hint: String? = nil,
+                                   hint: LocalizedStringKey? = nil,
                                    action: @escaping () -> Void,
                                    @ViewBuilder glyph: () -> Glyph) -> some View {
         Button(action: action) {

@@ -53,7 +53,7 @@ extension Angle {
     /// Applies whenever the Take has at least one check item (`isTask`).
     static let list = Angle(
         id: "list",
-        title: "Shot List",
+        title: String(localized: "Shot List"),
         systemImage: "checklist",
         appliesTo: { $0.isTask },
         makePresentation: { take, onClose in

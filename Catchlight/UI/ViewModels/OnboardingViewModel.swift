@@ -130,7 +130,7 @@ final class OnboardingViewModel {
             }
             step = .reveal
         } catch {
-            failure = "Couldn't generate a Privacy phrase."
+            failure = String(localized: "Couldn't generate a Privacy phrase.")
             failureDetail = "\(error)"
             step = .failure
         }
@@ -207,7 +207,7 @@ final class OnboardingViewModel {
             step = .basics
         } else {
             flashError = true
-            failure = "Those aren't quite right. Try again."
+            failure = String(localized: "Those aren't quite right. Try again.")
             Task { @MainActor [weak self] in
                 try? await Task.sleep(nanoseconds: 600_000_000)
                 guard let self else { return }
@@ -252,7 +252,7 @@ final class OnboardingViewModel {
         do {
             masterKeyData = try PhraseRecovery.recoverMasterKey(from: cleaned, bip39: bip39)
         } catch {
-            restoreError = "That doesn't look right. Check the words and try again."
+            restoreError = String(localized: "That doesn't look right. Check the words and try again.")
             return
         }
         do {
@@ -264,11 +264,11 @@ final class OnboardingViewModel {
             try MasterKeyKeychain.store(masterKeyData)
             onComplete(masterKeyData, /* isRestore: */ true)
         } catch let error as KeychainError {
-            failure = "Couldn't secure your account on this device."
+            failure = String(localized: "Couldn't secure your account on this device.")
             failureDetail = describe(error)
             step = .failure
         } catch {
-            failure = "Couldn't secure your account on this device."
+            failure = String(localized: "Couldn't secure your account on this device.")
             failureDetail = "\(error)"
             step = .failure
         }
@@ -312,11 +312,11 @@ final class OnboardingViewModel {
             try MasterKeyKeychain.store(masterKeyData)
             onComplete(masterKeyData, /* isRestore: */ false)
         } catch let error as KeychainError {
-            failure = "Couldn't secure your account on this device."
+            failure = String(localized: "Couldn't secure your account on this device.")
             failureDetail = describe(error)
             step = .failure
         } catch {
-            failure = "Couldn't secure your account on this device."
+            failure = String(localized: "Couldn't secure your account on this device.")
             failureDetail = "\(error)"
             step = .failure
         }

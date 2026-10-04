@@ -126,7 +126,7 @@ final class DailiesViewModel {
             pruneExpandedTakeIDs(live: Set(all.map(\.id)))
             lastError = nil
         } catch {
-            lastError = "Couldn't load your Takes."
+            lastError = String(localized: "Couldn't load your Takes.")
         }
     }
 
@@ -259,7 +259,7 @@ final class DailiesViewModel {
             reload()
             notifyLocalChange()
         } catch {
-            lastError = "Couldn't save that Take."
+            lastError = String(localized: "Couldn't save that Take.")
         }
     }
 
@@ -288,7 +288,7 @@ final class DailiesViewModel {
             reload()
             notifyLocalChange()
         } catch {
-            lastError = "Couldn't reorder your Takes."
+            lastError = String(localized: "Couldn't reorder your Takes.")
             reload()   // the arrangement on screen may be half-applied — resync from the store
         }
     }
@@ -317,7 +317,7 @@ final class DailiesViewModel {
             }
             notifyLocalChange()
         } catch {
-            lastError = "Couldn't save that Take."
+            lastError = String(localized: "Couldn't save that Take.")
         }
     }
 
@@ -337,7 +337,7 @@ final class DailiesViewModel {
                 spotlight.index(t)
                 inserted += 1
             } catch {
-                lastError = "Couldn't import one of the notes."
+                lastError = String(localized: "Couldn't import one of the notes.")
             }
         }
         if inserted > 0 { reload(); notifyLocalChange() }
@@ -362,7 +362,7 @@ final class DailiesViewModel {
             else { takes.removeAll { $0.id == take.id } }
             notifyLocalChange()
         } catch {
-            lastError = "Couldn't delete that Take."
+            lastError = String(localized: "Couldn't delete that Take.")
         }
     }
 
@@ -409,7 +409,7 @@ final class DailiesViewModel {
         if failed > 0 {
             // Cleanup is best-effort; surface a quiet note rather than fail silently. The
             // un-deleted Takes are still eligible, so the next sweep (next app open) retries.
-            lastError = "Some finished Takes couldn't be cleaned up. They'll be retried."
+            lastError = String(localized: "Some finished Takes couldn't be cleaned up. They'll be retried.")
         }
         if deleted > 0 { reload() }
         return deleted
@@ -635,7 +635,7 @@ final class DailiesViewModel {
         } catch StorageError.obieConflict(let existing) {
             pendingObieConflict = (newTake: take.id, existing: existing)
         } catch {
-            lastError = "Couldn't set Obie."
+            lastError = String(localized: "Couldn't set Obie.")
         }
     }
 
@@ -663,7 +663,7 @@ final class DailiesViewModel {
             reload()
             notifyLocalChange()
         } catch {
-            lastError = "Couldn't set Obie."
+            lastError = String(localized: "Couldn't set Obie.")
         }
     }
 

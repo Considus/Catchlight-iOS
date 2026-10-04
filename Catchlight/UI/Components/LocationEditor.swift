@@ -47,7 +47,7 @@ struct LocationEditor: View {
     /// The name this editor writes when a fresh fix drops a pin and the user
     /// hasn't named the place. Distinguishing it from a real user name is what
     /// stops the async reverse geocode clobbering e.g. "Home".
-    static let currentLocationPlaceholder = "Current location"
+    static let currentLocationPlaceholder = String(localized: "Current location")
 
     /// Whether the reverse-geocoded name may replace the current one: only when
     /// the field is empty or still the auto placeholder. Pure so the clobber
@@ -204,7 +204,7 @@ struct LocationEditor: View {
                     }
                 }
             } label: {
-                MenuFieldRow(title: "Radius", icon: "circle.dashed", value: "\(Int(radiusMetres)) m")
+                MenuFieldRow(title: "Radius", icon: "circle.dashed", value: String(localized: "\(Int(radiusMetres)) m"))
             }
             .accessibilityIdentifier("location-radius-picker")
 

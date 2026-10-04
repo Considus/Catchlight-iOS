@@ -99,7 +99,7 @@ final class SubscriptionManager {
             // synchronous view code can read it.
             introOfferEligible = await annual?.subscription?.isEligibleForIntroOffer ?? false
         } catch {
-            lastError = "Couldn't reach the App Store. Check your connection."
+            lastError = String(localized: "Couldn't reach the App Store. Check your connection.")
         }
     }
 
@@ -163,7 +163,7 @@ final class SubscriptionManager {
     @discardableResult
     func purchase() async -> Bool {
         guard let annual else {
-            lastError = "Subscription is unavailable right now."
+            lastError = String(localized: "Subscription is unavailable right now.")
             return false
         }
         isWorking = true
@@ -182,7 +182,7 @@ final class SubscriptionManager {
                 // Ask to Buy / SCA: the purchase is awaiting approval. Surface
                 // it — previously this returned false with no message, so the
                 // button just stopped spinning and nothing else happened.
-                lastError = "Your purchase is awaiting approval. You'll get access as soon as it's confirmed."
+                lastError = String(localized: "Your purchase is awaiting approval. You'll get access as soon as it's confirmed.")
                 return false
             case .userCancelled:
                 return false
@@ -190,7 +190,7 @@ final class SubscriptionManager {
                 return false
             }
         } catch {
-            lastError = "Purchase couldn't complete. Please try again."
+            lastError = String(localized: "Purchase couldn't complete. Please try again.")
             return false
         }
     }
@@ -208,10 +208,10 @@ final class SubscriptionManager {
             try await AppStore.sync()
             await refreshEntitlements()
             if status.isEntitled { return true }
-            lastError = "No active subscription was found for this Apple ID."
+            lastError = String(localized: "No active subscription was found for this Apple ID.")
             return false
         } catch {
-            lastError = "Couldn't restore purchases. Please try again."
+            lastError = String(localized: "Couldn't restore purchases. Please try again.")
             return false
         }
     }
@@ -257,10 +257,12 @@ final class SubscriptionManager {
         guard let offer = annual?.subscription?.introductoryOffer else { return nil }
         let n = offer.period.value
         switch offer.period.unit {
-        case .day: return "\(n)-day"
-        case .week: return "\(n)-week"
-        case .month: return "\(n)-month"
-        case .year: return "\(n)-year"
+        // Each unit is its own key so a translator can inflect it for the sentence it
+        // sits in ("14-day trial", "14-tägige Testphase").
+        case .day: return String(localized: "\(n)-day", comment: "Trial length inside 'Start your %@ trial now, then only …'.")
+        case .week: return String(localized: "\(n)-week", comment: "Trial length inside 'Start your %@ trial now, then only …'.")
+        case .month: return String(localized: "\(n)-month", comment: "Trial length inside 'Start your %@ trial now, then only …'.")
+        case .year: return String(localized: "\(n)-year", comment: "Trial length inside 'Start your %@ trial now, then only …'.")
         @unknown default: return nil
         }
     }

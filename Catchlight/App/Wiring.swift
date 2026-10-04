@@ -263,7 +263,7 @@ enum Wiring {
             session: session,
             makeStoreFromKeys: { keys in makeStore(keys: keys) }, // unlock + onboarding open (no prompt)
             unlockKeys: {                                         // the `.userPresence` prompt — runs off-main
-                let masterKey = try MasterKeyKeychain.retrieve(reason: "Unlock your Takes")
+                let masterKey = try MasterKeyKeychain.retrieve(reason: String(localized: "Unlock your Takes"))
                 return KeyHierarchy(masterKey: masterKey)
             },
             lockState: lockState,

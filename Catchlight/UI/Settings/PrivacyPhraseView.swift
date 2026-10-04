@@ -129,7 +129,7 @@ struct PrivacyPhraseView: View {
             stage = .revealed(words)
             errorText = nil
         } else {
-            errorText = "Authentication needed to reveal your phrase."
+            errorText = String(localized: "Authentication needed to reveal your phrase.")
         }
     }
 
@@ -139,7 +139,7 @@ struct PrivacyPhraseView: View {
         PhraseRevealGrid(words: words)
     }
 
-    private func explainer(symbol: String, title: String, body: String) -> some View {
+    private func explainer(symbol: String, title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
         VStack(spacing: 16) {
             Image(systemName: symbol)
                 .font(.system(size: 40, weight: .regular))
@@ -200,7 +200,7 @@ private struct PhraseRevealGrid: View {
             // the reader can actually take — under VoiceOver the reveal control is
             // a double-tap toggle, not a press-and-hold.
             .accessibilityLabel(revealed
-                ? "Phrase revealed: \(words.joined(separator: ", "))"
+                ? "Phrase revealed: \(words.joined(separator: ", "))" as LocalizedStringKey
                 : (voiceOverEnabled
                     ? "Phrase hidden. Double-tap the reveal button to view."
                     : "Phrase hidden. Press and hold the reveal button to view."))

@@ -132,7 +132,7 @@ struct PaywallView: View {
         }
     }
 
-    private func valueRow(_ text: String) -> some View {
+    private func valueRow(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
             .foregroundStyle(Color.ckTextPrimary)
@@ -159,10 +159,11 @@ struct PaywallView: View {
     /// line regardless, so the copy is reviewable on device without a sandbox offer.
     private var pricingText: String {
         if manager.isEligibleForIntroOffer, let trial = manager.trialDurationAdjectiveCopy {
-            return "Start your \(trial) trial now, then only \(priceCopy)"
+            return String(localized: "Start your \(trial) trial now, then only \(priceCopy)")
         }
         #if DEBUG
-        return "Start your 14-day trial now, then only \(priceCopy)"
+        let trial = String(localized: "\(14)-day", comment: "Trial length inside 'Start your %@ trial now, then only …'.")
+        return String(localized: "Start your \(trial) trial now, then only \(priceCopy)")
         #else
         return priceCopy
         #endif
@@ -177,7 +178,7 @@ struct PaywallView: View {
     }
 
     private var priceCopy: String {
-        manager.annual.map { "\($0.displayPrice)/year" } ?? "—"
+        manager.annual.map { String(localized: "\($0.displayPrice)/year") } ?? "—"
     }
 
     // MARK: - CTAs
@@ -232,7 +233,7 @@ struct PaywallView: View {
 
     // Owner 2026-06-21: the button is just "Subscribe now" — the trial + price
     // detail already lives in the Cormorant price line directly above it.
-    private var ctaText: String { "Subscribe now" }
+    private var ctaText: String { String(localized: "Subscribe now") }
 
     private var secondaryActions: some View {
         VStack(spacing: 12) {

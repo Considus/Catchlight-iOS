@@ -770,9 +770,9 @@ struct DailiesView: View {
     /// The page title follows the activity: DAILIES · SEQUENCE · SEARCH.
     private var headingTitle: String {
         switch ui.dockMode {
-        case .resting:   return "DAILIES"
-        case .filtering: return "SEQUENCE"
-        case .searching: return "SEARCH"
+        case .resting:   return String(localized: "DAILIES")
+        case .filtering: return String(localized: "SEQUENCE")
+        case .searching: return String(localized: "SEARCH")
         }
     }
 
@@ -1164,9 +1164,10 @@ struct DailiesView: View {
         let count = conflicts.attentionCount
         // Two-version conflicts keep their wording; once an unverified copy is in the mix the
         // accurate thing to say is only that a choice is waiting (2026-09-30).
+        // The count is a plural variation in the catalog, not English grammar built here.
         let message = conflicts.unverified.isEmpty
-            ? "\(count) Take\(count == 1 ? "" : "s") changed on another device."
-            : "\(count) Take\(count == 1 ? " needs" : "s need") a decision."
+            ? String(localized: "\(count) Takes changed on another device.")
+            : String(localized: "\(count) Takes need a decision.")
         if count > 0 {
             HStack(spacing: 10) {
                 Image(systemName: "arrow.triangle.2.circlepath")
@@ -1293,7 +1294,7 @@ struct DailiesView: View {
     private var quarantineNoticeStrip: some View {
         let count = app.quarantinedCount
         if count > 0 {
-            let copy = "\(count) Take\(count == 1 ? "" : "s") couldn't be verified and \(count == 1 ? "was" : "were") skipped."
+            let copy = String(localized: "\(count) Takes couldn't be verified and were skipped.")
             noticeStrip(
                 icon: "lock.slash",
                 text: copy,
@@ -2014,8 +2015,9 @@ struct DailiesView: View {
     /// Cached formatter — `DateFormatter` construction is expensive and this
     /// property is evaluated on every body pass.
     private static let monthFormatter: DateFormatter = {
+        // A template, not a fixed format, so each language orders and spells it its own way.
         let f = DateFormatter()
-        f.dateFormat = "LLLL yyyy"
+        f.setLocalizedDateFormatFromTemplate("LLLLyyyy")
         return f
     }()
 
