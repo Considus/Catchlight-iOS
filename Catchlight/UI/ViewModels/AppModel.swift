@@ -43,8 +43,12 @@ final class AppModel {
     /// Set by BackgroundSync via `reportSyncError(_:)`; cleared by the strip's
     /// Dismiss button or its 8-second auto-dismiss timer. Each non-nil value is recorded to
     /// the content-free diagnostics log (D-085) for Notice History + export.
-    var lastSyncError: String? {
-        didSet { if let lastSyncError { DiagnosticsLog.shared.record(.sync, lastSyncError) } }
+    private(set) var lastSyncError: String?
+
+    /// Show a sync notice in the strip and record it, with its reference code, to the log.
+    private func reportSyncNotice(_ notice: Notice) {
+        lastSyncError = notice.message
+        DiagnosticsLog.shared.record(notice)
     }
 
     /// Number of Takes the last sync pass refused to decrypt because their
@@ -57,8 +61,7 @@ final class AppModel {
             if quarantinedCount > 0, quarantinedCount != oldValue {
                 // Shown in Notice History, so recorded in the device language like the
                 // on-screen notice; the count is a plural variation in the catalog.
-                DiagnosticsLog.shared.record(.quarantine,
-                    String(localized: "\(quarantinedCount) Takes couldn't be verified and were skipped."))
+                DiagnosticsLog.shared.record(.takesQuarantined(quarantinedCount))
             }
         }
     }
@@ -246,12 +249,13 @@ final class AppModel {
     /// Shared by lapse-recovery and the Settings exposure change (D-110).
     private func reindexAllTakes() {
         guard lockState == .unlocked, let takes = try? dailiesVM.store.allTakes() else {
-            DiagnosticsLog.shared.record(.lifecycle, "Spotlight reindex skipped (locked or store unavailable)")
+            DiagnosticsLog.shared.record(.spotlightReindexSkipped)
             return
         }
         // Content-free: count + exposure level only, never any Take text or id.
-        DiagnosticsLog.shared.record(.lifecycle,
-            "Spotlight reindex: \(takes.count) takes at exposure=\(spotlight.exposure.rawValue), status=\(subscription.status)")
+        DiagnosticsLog.shared.record(.spotlightReindexed(count: takes.count,
+                                                         exposure: spotlight.exposure.rawValue,
+                                                         status: "\(subscription.status)"))
         takes.forEach { spotlight.index($0) }
     }
 
@@ -332,7 +336,7 @@ final class AppModel {
             // carry an account handle. The BOUNDARY is the whole point — a diagnostics
             // log spanning several providers is otherwise unsegmentable from its own
             // contents, and the tester writes the provider against this timestamp.
-            DiagnosticsLog.shared.record(.lifecycle, "Cloud folder connected")
+            DiagnosticsLog.shared.record(.cloudFolderConnected)
             performManualSync?()
             return nil
         } catch {
@@ -448,7 +452,7 @@ final class AppModel {
             // Auth succeeded but the encrypted DB couldn't open (corrupt / I/O).
             // Distinct from cancel — retrying auth won't help. Surface via the
             // existing strip too, but stay locked (no writable fallback).
-            lastSyncError = String(localized: "Your encrypted library couldn't be opened, so changes aren't being saved to this device yet. Please restart Catchlight.")
+            reportSyncNotice(.libraryNotSaving)
             lockState = .failed(String(localized: "Your encrypted library couldn't be opened. Please restart Catchlight."))
             return
         }
@@ -486,9 +490,9 @@ final class AppModel {
         // The locked-capture path is where a crash is INVISIBLE — it looks exactly like
         // "returned to the lock screen" (5 silent crashes on 2026-07-16). If the run dies here,
         // these breadcrumbs are the only evidence of how far it got, and of typed text lost.
-        DiagnosticsLog.shared.record(.lifecycle, "Locked capture: commit requested")
+        DiagnosticsLog.shared.record(.lockedCaptureCommitRequested)
         guard !draft.isBlank else {
-            DiagnosticsLog.shared.record(.lifecycle, "Locked capture: blank, discarded")
+            DiagnosticsLog.shared.record(.lockedCaptureBlankDiscarded)
             lockedCapture = nil
             return
         }
@@ -511,7 +515,7 @@ final class AppModel {
 
     /// Abandon a locked capture without saving — back to the normal lock screen.
     func discardLockedCapture() {
-        DiagnosticsLog.shared.record(.lifecycle, "Locked capture discarded")
+        DiagnosticsLog.shared.record(.lockedCaptureDiscarded)
         lockedCapture = nil
     }
 
@@ -562,52 +566,59 @@ final class AppModel {
     /// shown in the timeline strip, or `nil` if the error is the expected
     /// "local-only mode" case and should NOT be surfaced. Pure / static so the
     /// mapping can be unit-tested without spinning up the whole AppModel.
-    static func friendlySyncErrorMessage(for error: Error) -> String? {
+    static func friendlySyncNotice(for error: Error) -> Notice? {
         if let sync = error as? SyncError {
             switch sync {
             case .manifestSignatureInvalid:
-                return String(localized: "Sync paused. Your cloud data looks unexpected. No changes were made locally.")
+                return .syncPaused
             case .noCloudFolderConfigured:
                 // Expected in local-only mode — never surface to the user.
                 return nil
             default:
-                return String(localized: "Sync encountered a problem and will retry.")
+                return .syncProblem
             }
         }
         if let lock = error as? SyncLockError {
             switch lock {
             case .heldByOtherDevice:
-                return String(localized: "Another device is syncing. Catchlight will retry automatically.")
+                return .syncLockHeld
             default:
-                return String(localized: "Sync encountered a problem and will retry.")
+                return .syncProblem
             }
         }
-        return String(localized: "Sync encountered a problem and will retry.")
+        return .syncProblem
+    }
+
+    /// The strip text for a sync error, or nil when it isn't surfaced.
+    static func friendlySyncErrorMessage(for error: Error) -> String? {
+        friendlySyncNotice(for: error)?.message
     }
 
     /// Record a sync failure for display. Filters out the `noCloudFolderConfigured`
     /// case (local-only is not an error).
     func reportSyncError(_ error: Error) {
-        if let message = Self.friendlySyncErrorMessage(for: error) {
-            lastSyncError = message
+        if let notice = Self.friendlySyncNotice(for: error) {
+            reportSyncNotice(notice)
         }
     }
 
     /// Task 6.13 — friendly string for a stale or unresolvable cloud-folder
     /// bookmark. Exposed for testability.
-    static func friendlyBookmarkErrorMessage(for error: Wiring.CloudBookmarkError) -> String {
+    static func friendlyBookmarkNotice(for error: Wiring.CloudBookmarkError) -> Notice {
         switch error {
-        case .stale:
-            return String(localized: "Your cloud folder is no longer available. Open Settings → Cloud Storage to re-pick it.")
-        case .unresolvable:
-            return String(localized: "Your cloud folder couldn't be opened. Open Settings → Cloud Storage to choose a new one.")
+        case .stale: return .cloudFolderStale
+        case .unresolvable: return .cloudFolderUnresolvable
         }
+    }
+
+    static func friendlyBookmarkErrorMessage(for error: Wiring.CloudBookmarkError) -> String {
+        friendlyBookmarkNotice(for: error).message
     }
 
     /// Report a bookmark-health issue through the same non-blocking strip the
     /// sync engine uses. Called by CatchlightApp on scenePhase → active.
     func reportBookmarkError(_ error: Wiring.CloudBookmarkError) {
-        lastSyncError = Self.friendlyBookmarkErrorMessage(for: error)
+        reportSyncNotice(Self.friendlyBookmarkNotice(for: error))
     }
 
     /// Add to the running quarantine count from the latest sync pass.
@@ -648,7 +659,7 @@ final class AppModel {
     /// Hold a draft whose `ensureEntitled()` just returned false (the paywall is
     /// presenting) for the paywall's outcome, instead of discarding typed text.
     func holdDraftForPaywall(_ draft: Take) {
-        DiagnosticsLog.shared.record(.lifecycle, "Draft held for paywall (entitlement check failed)")
+        DiagnosticsLog.shared.record(.paywallDraftHeld)
         pendingEntitledSave = draft
     }
 
@@ -664,11 +675,11 @@ final class AppModel {
             // leaves a trail. If someone reports "my note vanished after the paywall", this line
             // is the difference between a mystery and an answer. Kind only, never the text.
             if pendingEntitledSave != nil {
-                DiagnosticsLog.shared.record(.lifecycle, "Paywall draft DROPPED (not entitled) — typed text discarded")
+                DiagnosticsLog.shared.record(.paywallDraftDropped)
             }
             return
         }
-        DiagnosticsLog.shared.record(.lifecycle, "Paywall draft saved (now entitled)")
+        DiagnosticsLog.shared.record(.paywallDraftSaved)
         dailiesVM.save(draft)
     }
 

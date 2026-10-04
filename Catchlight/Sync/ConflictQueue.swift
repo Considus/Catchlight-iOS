@@ -43,8 +43,7 @@ final class ConflictQueue {
         // count only, no Take content (the banner shows the same count).
         if added > 0 {
             // Shown in Notice History, so recorded in the device language.
-            DiagnosticsLog.shared.record(.conflict,
-                String(localized: "\(added) Takes changed on another device."))
+            DiagnosticsLog.shared.record(.conflictsChanged(added))
         }
     }
 
@@ -105,8 +104,7 @@ final class ConflictQueue {
             }
         }
         if added > 0 {
-            DiagnosticsLog.shared.record(.conflict,
-                String(localized: "\(added) Takes couldn't be verified and need a choice."))
+            DiagnosticsLog.shared.record(.conflictsUnverified(added))
         }
     }
 

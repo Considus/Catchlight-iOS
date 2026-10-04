@@ -103,8 +103,7 @@ public final class BackgroundSyncCoordinator {
             // 'background sync never runs and nobody can tell why' failure" — was invisible in
             // exactly the case it describes. Content-free: system error domain/code only.
             let ns = error as NSError
-            DiagnosticsLog.shared.record(.lifecycle,
-                "Background sync scheduling FAILED — BG refresh will not run (\(ns.domain) \(ns.code))")
+            DiagnosticsLog.shared.record(.backgroundSyncNotScheduled(domain: ns.domain, code: ns.code))
         }
     }
 
@@ -298,8 +297,7 @@ public final class BackgroundSyncCoordinator {
             let n = report.heldBack.count
             // Shown in Notice History, so recorded in the device language; the count is a
             // plural variation in the catalog.
-            DiagnosticsLog.shared.record(.sync,
-                String(localized: "\(n) Takes not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again."))
+            DiagnosticsLog.shared.record(.takesHeldBack(n))
         }
         if let onRemoteChanges, !report.applied.isEmpty || !report.deletedLocally.isEmpty {
             Task { @MainActor in onRemoteChanges(report) }

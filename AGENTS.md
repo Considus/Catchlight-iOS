@@ -52,6 +52,10 @@ Product nouns are Capitalised in UI copy only, never in code identifiers. When t
 
 ⚠️ **Leave the vestigial `SessionController` state alone.** It has been reviewed and deliberately kept. Do not re-flag it.
 
+### Diagnostics log
+
+**Every line the app writes to the diagnostics log is a `Notice`** (`Catchlight/Diagnostics/Notice.swift`), recorded with `DiagnosticsLog.shared.record(.someNotice)`. The log stores `[CCIOS-NNN] message`: the code identifies the notice whatever language the message is in, and Notice History strips it, so only the export shows it. A new log line is a new `NoticeCode` case with the next free number in its hundred and a one-line English summary comment. Never reuse or renumber a code. `NoticeCodeTests` fails on the free-text form `record(.storage, "…")`. After adding a code, regenerate the support table: `python3 scripts/diagnostics/notice_codes.py > ~/Claude/Considus/Products/Catchlight/03_Engineering/Diagnostic_Reference_Codes.md`.
+
 ### Localisation
 
 Every string a person sees or hears goes through a String Catalog: `Localizable.xcstrings` in the app, widgets and share extension, `InfoPlist.xcstrings` for the permission prompts, `AppShortcuts.xcstrings` for Siri phrases. English is the source language. The compiler fills the catalogs; `xcodebuild -exportLocalizations` (or a build in Xcode) syncs them, so never hand-add a key the code does not use.

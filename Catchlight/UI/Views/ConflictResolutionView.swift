@@ -188,7 +188,7 @@ struct ConflictResolutionView: View {
                     selection.removeValue(forKey: id)
                     dailies.reload()
                 } catch {
-                    dailies.reportStorageError(String(localized: "Couldn't save that choice. Please try again."))
+                    dailies.reportStorageError(.conflictChoiceFailed)
                 }
             }
             .disabled(!enabled)
@@ -316,7 +316,7 @@ struct ConflictResolutionView: View {
                     // ConflictQueue writes through the store directly, bypassing
                     // DailiesViewModel — route the failure through the timeline's
                     // storage-error strip; the pair stays queued so the user can retry.
-                    dailies.reportStorageError(String(localized: "Couldn't save that resolution. Please try again."))
+                    dailies.reportStorageError(.conflictResolutionFailed)
                 }
             }
             .disabled(chosenLocal == nil)

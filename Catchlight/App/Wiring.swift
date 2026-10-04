@@ -56,7 +56,7 @@ enum Wiring {
         let defaults = UserDefaults(suiteName: AppGroup.identifier)
         defaults?.removeObject(forKey: bookmarkDefaultsKey)
         defaults?.removeObject(forKey: legacyCloudFolderURLStringKey)
-        DiagnosticsLog.shared.record(.lifecycle, "Cloud folder disconnected (local-only)")
+        DiagnosticsLog.shared.record(.cloudFolderDisconnected)
     }
 
     /// Structured cloud-bookmark error so the UI layer can map to a user-
@@ -135,8 +135,7 @@ enum Wiring {
             // legacy migration) was previously swallowed by `try?` and
             // undiagnosable from a bug report (2026-07-02). Leave a content-free
             // breadcrumb — StorageError carries no Take content by design.
-            DiagnosticsLog.shared.record(.storage,
-                String(localized: "Encrypted library failed to open: \(String(describing: error))"))
+            DiagnosticsLog.shared.record(.libraryOpenFailed(String(describing: error)))
             return nil
         }
     }
@@ -344,7 +343,7 @@ enum Wiring {
             // A silent self-heal until now. It is not a folder CHANGE and must not be
             // read as one, but it is the moment access would otherwise have degraded,
             // so a run that later goes wrong can be lined up against it.
-            DiagnosticsLog.shared.record(.lifecycle, "Cloud folder bookmark re-minted (was stale)")
+            DiagnosticsLog.shared.record(.cloudBookmarkReminted)
         }
         return cloud
     }

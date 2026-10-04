@@ -24,8 +24,12 @@ final class DailiesViewModel {
     /// Surfaced to the UI when a store operation fails; views may show a quiet note. Each
     /// non-nil value is also recorded to the content-free diagnostics log (D-085) so it shows
     /// in Notice History and the export. These messages are static/generic — no Take content.
-    private(set) var lastError: String? {
-        didSet { if let lastError { DiagnosticsLog.shared.record(.storage, lastError) } }
+    private(set) var lastError: String?
+
+    /// Show a storage notice in the strip and record it, with its reference code, to the log.
+    private func report(_ notice: Notice) {
+        lastError = notice.message
+        DiagnosticsLog.shared.record(notice)
     }
 
     /// The Take whose LAST outstanding item was just ticked, while it still carries a live
@@ -126,7 +130,7 @@ final class DailiesViewModel {
             pruneExpandedTakeIDs(live: Set(all.map(\.id)))
             lastError = nil
         } catch {
-            lastError = String(localized: "Couldn't load your Takes.")
+            report(.loadFailed)
         }
     }
 
@@ -201,7 +205,7 @@ final class DailiesViewModel {
     /// Surface a storage failure that happened outside this view model (e.g. a
     /// conflict resolution writing through the shared store). Routes through the
     /// same non-blocking strip as the VM's own errors.
-    func reportStorageError(_ message: String) { lastError = message }
+    func reportStorageError(_ notice: Notice) { report(notice) }
 
     // MARK: - Create / edit
 
@@ -250,7 +254,7 @@ final class DailiesViewModel {
         updated.modifiedAt = Date()
         do {
             try store.upsert(updated)
-            DiagnosticsLog.shared.record(.lifecycle, "Take saved")
+            DiagnosticsLog.shared.record(.takeSaved)
             // Spotlight (Task 6.19) — re-index every save (covers both create
             // and update paths since both funnel here). Fire-and-forget; the
             // store write is the authoritative outcome.
@@ -259,7 +263,7 @@ final class DailiesViewModel {
             reload()
             notifyLocalChange()
         } catch {
-            lastError = String(localized: "Couldn't save that Take.")
+            report(.saveFailed)
         }
     }
 
@@ -284,11 +288,11 @@ final class DailiesViewModel {
                 take.modifiedAt = Date()
                 try store.upsert(take)
             }
-            DiagnosticsLog.shared.record(.lifecycle, "Timeline reordered")
+            DiagnosticsLog.shared.record(.timelineReordered)
             reload()
             notifyLocalChange()
         } catch {
-            lastError = String(localized: "Couldn't reorder your Takes.")
+            report(.reorderFailed)
             reload()   // the arrangement on screen may be half-applied — resync from the store
         }
     }
@@ -317,7 +321,7 @@ final class DailiesViewModel {
             }
             notifyLocalChange()
         } catch {
-            lastError = String(localized: "Couldn't save that Take.")
+            report(.saveInPlaceFailed)
         }
     }
 
@@ -337,7 +341,7 @@ final class DailiesViewModel {
                 spotlight.index(t)
                 inserted += 1
             } catch {
-                lastError = String(localized: "Couldn't import one of the notes.")
+                report(.importFailed)
             }
         }
         if inserted > 0 { reload(); notifyLocalChange() }
@@ -347,7 +351,7 @@ final class DailiesViewModel {
     func delete(_ take: Take) {
         do {
             try store.delete(id: take.id)
-            DiagnosticsLog.shared.record(.lifecycle, "Take deleted")
+            DiagnosticsLog.shared.record(.takeDeleted)
             // Spotlight (Task 6.19) — drop the item from the OS index so a
             // deleted Take can't be discovered via search.
             spotlight.deindex(takeID: take.id)
@@ -362,7 +366,7 @@ final class DailiesViewModel {
             else { takes.removeAll { $0.id == take.id } }
             notifyLocalChange()
         } catch {
-            lastError = String(localized: "Couldn't delete that Take.")
+            report(.deleteFailed)
         }
     }
 
@@ -409,7 +413,7 @@ final class DailiesViewModel {
         if failed > 0 {
             // Cleanup is best-effort; surface a quiet note rather than fail silently. The
             // un-deleted Takes are still eligible, so the next sweep (next app open) retries.
-            lastError = String(localized: "Some finished Takes couldn't be cleaned up. They'll be retried.")
+            report(.cleanupFailed)
         }
         if deleted > 0 { reload() }
         return deleted
@@ -635,7 +639,7 @@ final class DailiesViewModel {
         } catch StorageError.obieConflict(let existing) {
             pendingObieConflict = (newTake: take.id, existing: existing)
         } catch {
-            lastError = String(localized: "Couldn't set Obie.")
+            report(.setObieFailed)
         }
     }
 
@@ -663,7 +667,7 @@ final class DailiesViewModel {
             reload()
             notifyLocalChange()
         } catch {
-            lastError = String(localized: "Couldn't set Obie.")
+            report(.replaceObieFailed)
         }
     }
 
