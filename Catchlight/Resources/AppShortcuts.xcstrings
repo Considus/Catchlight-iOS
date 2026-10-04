@@ -14,6 +14,17 @@
               "Start an Obie in ${applicationName}"
             ]
           }
+        },
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Neues Obie in ${applicationName}",
+              "Obie in ${applicationName} erfassen",
+              "Neues ${applicationName} Obie",
+              "Starte ein Obie in ${applicationName}"
+            ]
+          }
         }
       }
     },
@@ -28,6 +39,17 @@
               "Take this in ${applicationName}",
               "New ${applicationName} Take",
               "Start a Take in ${applicationName}"
+            ]
+          }
+        },
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Neuer Take in ${applicationName}",
+              "Take in ${applicationName} erfassen",
+              "Neuer ${applicationName} Take",
+              "Starte einen Take in ${applicationName}"
             ]
           }
         }

@@ -10,6 +10,12 @@
             "state" : "new",
             "value" : "Catchlight"
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
         }
       }
     },
@@ -20,6 +26,12 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
+            "value" : "Catchlight"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "Catchlight"
           }
         }
@@ -34,6 +46,12 @@
             "state" : "new",
             "value" : "Catchlight uses Face ID to unlock your encrypted Takes."
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight verwendet Face ID, um deine verschlüsselten Takes zu entsperren."
+          }
         }
       }
     },
@@ -45,6 +63,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Catchlight uses your location to remind you about a Take when you arrive at or leave a place."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight verwendet deinen Standort, um dich an einen Take zu erinnern, wenn du an einem Ort ankommst oder ihn verlässt."
           }
         }
       }
