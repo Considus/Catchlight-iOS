@@ -629,6 +629,13 @@ final class AppModel {
     /// Counts DISTINCT Takes: every pull re-reports a Take whose cloud copy still fails, so adding
     /// the pass's count double-counted the same Take (observed: "3 Takes" then "6 Takes" a minute
     /// later, with three Takes in the store).
+    /// Takes a push held back because this device was away too long: shown in the sync
+    /// strip, so it also lands in Notice History.
+    func reportHeldBack(_ count: Int) {
+        guard count > 0 else { return }
+        reportSyncNotice(.takesHeldBack(count))
+    }
+
     func reportQuarantined(_ ids: [UUID]) {
         guard !ids.isEmpty else { return }
         quarantinedIDs.formUnion(ids)

@@ -40,6 +40,7 @@ enum NoticeCode: Int, CaseIterable {
     case libraryNotSaving = 104             // Unlocked, but the encrypted library couldn't open; changes aren't saved.
     case cloudFolderStale = 105             // The cloud folder bookmark is stale; the user must re-pick it.
     case cloudFolderUnresolvable = 106      // The cloud folder bookmark can't be resolved; the user must choose a new one.
+    case takesHeldBack = 107                // N Takes not re-uploaded: device away too long to rule out deletion elsewhere.
 
     // 2xx storage
     case loadFailed = 201                   // Couldn't load the Takes (reload).
@@ -82,7 +83,6 @@ enum NoticeCode: Int, CaseIterable {
     case reminderNotScheduled = 916         // Reminder scheduling failed; the OS will not deliver it.
     case notificationPermission = 917       // Notification permission changed, with the new state.
     case reminderPastDated = 918            // Reminder refused: past-dated, would never fire.
-    case takesHeldBack = 919                // N Takes not re-uploaded: device away too long to rule out deletion elsewhere.
     case watermarkPrepareFailed = 920       // Sync watermark write failed (prepare).
     case watermarkStepFailed = 921          // Sync watermark write failed (step).
     case libraryOpenFailed = 922            // Encrypted library failed to open, with the error (the user sees 104).
@@ -198,6 +198,8 @@ enum Notice: Equatable {
             return String(localized: "Your cloud folder is no longer available. Open Settings → Cloud Storage to re-pick it.")
         case .cloudFolderUnresolvable:
             return String(localized: "Your cloud folder couldn't be opened. Open Settings → Cloud Storage to choose a new one.")
+        case .takesHeldBack(let n):
+            return String(localized: "\(n) Takes not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again.")
         case .loadFailed:
             return String(localized: "Couldn't load your Takes.")
         case .saveFailed, .saveInPlaceFailed:
@@ -264,8 +266,6 @@ enum Notice: Equatable {
             return "Notification permission: \(state)\(remindersWillFire ? "" : " — reminders will NOT fire")"
         case .reminderPastDated:
             return "Reminder refused — past-dated, will never fire"
-        case .takesHeldBack(let n):
-            return "Takes not re-uploaded: \(n). This device was away too long to rule out deletion elsewhere; editing a Take syncs it again."
         case .watermarkPrepareFailed:
             return "Sync watermark write failed (prepare)."
         case .watermarkStepFailed:

@@ -66,7 +66,7 @@ final class NoticeCodeTests: XCTestCase {
             "reminderNotScheduled": 916,
             "notificationPermission": 917,
             "reminderPastDated": 918,
-            "takesHeldBack": 919,
+            "takesHeldBack": 107,
             "watermarkPrepareFailed": 920,
             "watermarkStepFailed": 921,
             "libraryOpenFailed": 922
@@ -118,7 +118,7 @@ final class NoticeCodeTests: XCTestCase {
     func testMainScreenRule_categories() {
         XCTAssertEqual(Notice.privacyPhraseMissing.category, .storage)
         XCTAssertEqual(Notice.readOnlyLapsed.category, .storage)
-        XCTAssertEqual(Notice.takesHeldBack(3).category, .lifecycle)
+        XCTAssertEqual(Notice.takesHeldBack(3).category, .sync)
         XCTAssertEqual(Notice.watermarkPrepareFailed.category, .lifecycle)
         XCTAssertEqual(Notice.libraryOpenFailed("x").category, .lifecycle)
     }

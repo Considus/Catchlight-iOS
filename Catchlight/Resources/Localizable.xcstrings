@@ -160,6 +160,28 @@
         }
       }
     },
+    "%lld Takes not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes not re-uploaded. This device was away too long to rule out deletion elsewhere. Edit a Take to sync it again."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld-day" : {
       "comment" : "Trial length inside 'Start your %@ trial now, then only …'."
     },

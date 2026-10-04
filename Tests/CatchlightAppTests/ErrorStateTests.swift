@@ -84,6 +84,15 @@ final class ErrorStateTests: XCTestCase {
         XCTAssertNil(app.lastSyncError)
     }
 
+    /// Takes held back after a long time offline show in the sync strip (owner 2026-10-04).
+    func testReportHeldBack_showsInTheSyncStrip() {
+        let app = AppModel.preview(store: InMemoryTakeStore(), onboarded: true)
+        app.reportHeldBack(0)
+        XCTAssertNil(app.lastSyncError, "nothing held back, nothing to say")
+        app.reportHeldBack(2)
+        XCTAssertEqual(app.lastSyncError, Notice.takesHeldBack(2).message)
+    }
+
     // MARK: - AppModel.reportQuarantined
 
     func testQuarantineCountIncrement() {
