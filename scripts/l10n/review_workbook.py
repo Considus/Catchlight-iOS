@@ -8,11 +8,16 @@ support a new language.
 
 --store adds the App Store listing and screenshot text, which live outside the
 repo: a source file of rows {id, where, form, en, limit, note, en_us} and the
-language's draft {id: text}. --txt also writes two plain-text files beside the
-workbook, <stem>_EN.txt and <stem>_<LANG>.txt, one string per line in the same
-order, with a line break inside a string written as \n.
+language's draft {id: text}.
 
-Usage: review_workbook.py <lang> <out.xlsx> [--root DIR] [--store SRC DRAFT] [--txt]
+--texts DIR writes plain-text files instead: Catchlight_iOS_Translation_EN.txt
+and one Catchlight_iOS_Translation_<LANG>.txt per language, where line N of each
+translates line N of the English, in plain language (see readable()). With
+--store-src SRC --store-dir DIR they include the App Store rows, read from
+DIR/store-<lang>.json.
+
+Usage: review_workbook.py <lang> <out.xlsx> [--root DIR] [--store SRC DRAFT]
+       review_workbook.py --texts DIR [--root DIR] [--store-src SRC --store-dir DIR]
 Needs openpyxl.
 """
 import argparse
@@ -253,12 +258,110 @@ def store_rows(src_path, draft_path):
     return rows
 
 
+TOKENS = {"${applicationName}": "{app}", "${text}": "{text}", "${scope}": "{filter}"}
+PRODUCT = re.compile(r"\b(Takes?|Obies?|Iris|Dailies|DAILIES|Sequence|SEQUENCE|Shot List|SHOT LIST|"
+                     r"Storyboard|STORYBOARD|Angle|Catchlight|Considus)\b")
+SPEC = re.compile(r"%(?:(\d+)\$)?(?:l{0,2}[@dDuUxXoOfeEgGcCsSp])")
+
+
+def readable(text):
+    """A string as a translator reads it: placeholders become {1}, {2}… by position
+    (so a translation may reorder them), Siri tokens become {app}, {text}, {filter},
+    a line break inside a string becomes " / " and bold markers are dropped. It is
+    one-way: the text files are for reading and translating; corrections go back into
+    the catalogs through the workbook or by hand, restoring any bold markers and line
+    breaks from the English key."""
+    auto = 0
+
+    def number(m):
+        nonlocal auto
+        if m.group(1):
+            return "{" + m.group(1) + "}"
+        auto += 1
+        return "{" + str(auto) + "}"
+
+    text = SPEC.sub(number, text)
+    for raw, shown in TOKENS.items():
+        text = text.replace(raw, shown)
+    return text.replace("\n", " / ").replace("**", "")
+
+
+def english_line(row):
+    """The English a translator reads for one row. A count with no English plural
+    ("%lld-day", the trial length) reads as "{1} day" / "{1} days" so its two forms differ."""
+    _, key, form, en, _, _ = row
+    m = re.fullmatch(r"%lld-(\w+)", key)
+    if m and form.startswith("plural:"):
+        return "{1} " + m.group(1) + ("" if form == "plural: one" else "s")
+    return readable(str(en))
+
+
+def write_texts(out_dir, root, store_src, store_dir):
+    """One English file and one file per language in LANGS: line N of each language
+    file translates line N of the English. The line list is shared, so it is the union
+    of every language's rows (a language with no plural for a key repeats its one
+    translation on both lines), each English line once, and only lines with something
+    to translate. Rows that share an English line must share its translation, so one
+    line stands for every key whose English reads as that line."""
+    per_lang = {}
+    for lang in LANGS:
+        rows = collect(root, lang)
+        if store_src:
+            rows += store_rows(store_src, os.path.join(store_dir, f"store-{lang}.json"))
+        per_lang[lang] = {(r[0], r[1], r[2]): r for r in rows}
+    split = {i[:2] for rows in per_lang.values() for i in rows if i[2].startswith("plural:")}
+    order, english = [], {}
+    for lang, rows in per_lang.items():
+        for ident, r in rows.items():
+            if ident in english or (ident[2] == "" and ident[:2] in split):
+                continue
+            en = english_line(r)
+            rest = PRODUCT.sub("", re.sub(r"\{\w+\}", "", en))
+            if re.search(r"[A-Za-z]{2,}", rest):
+                english[ident] = en
+                order.append(ident)
+    def find(rows, ident):
+        if ident in rows:
+            return rows[ident]
+        area, key, _ = ident  # a plural form this language does not split
+        return next((r for i, r in rows.items() if i[:2] == (area, key)), None)
+
+    # Every kept row must be translated, and rows sharing an English line must share
+    # its translation in every language, or the merged line would hide a difference.
+    # Checked before anything is written, so a failure leaves the old files whole.
+    text, problems = {}, []
+    for lang, rows in per_lang.items():
+        by_line = {}
+        for ident in order:
+            r = find(rows, ident)
+            if r is None:
+                problems.append(f"{lang}: no translation for {ident}")
+                continue
+            by_line.setdefault(english[ident], set()).add(readable(str(r[4])))
+        for en, versions in by_line.items():
+            if len(versions) > 1:
+                problems.append(f"{lang}: {en!r} is translated {len(versions)} ways: {sorted(versions)}")
+        text[lang] = {en: next(iter(v)) for en, v in by_line.items()}
+    if problems:
+        sys.exit("text files not written:\n  " + "\n  ".join(problems))
+    lines = list(dict.fromkeys(english[i] for i in order))
+
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, "Catchlight_iOS_Translation_EN.txt"), "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    for lang in per_lang:
+        path = os.path.join(out_dir, f"Catchlight_iOS_Translation_{lang.upper()}.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(text[lang][en] for en in lines) + "\n")
+    print(f"{out_dir}: EN + {len(per_lang)} languages, {len(lines)} lines each")
+
+
 def words(s):
     s = re.sub(r"%(\d\$)?(lld|ld|d|@)|\$\{\w+\}|\*\*", " ", s)
     return len([w for w in s.split() if re.search(r"[A-Za-zÀ-ÿ]", w)])
 
 
-def build(lang, out, root, store=None, txt=False):
+def build(lang, out, root, store=None):
     cfg = LANGS[lang]
     name = cfg["name"]
     rows = collect(root, lang)
@@ -354,20 +457,24 @@ def build(lang, out, root, store=None, txt=False):
     c.font, c.alignment = body, wrap
     wb.save(out)
     print(f"{out}\nrows={len(rows)} words={total}")
-    if txt:
-        stem = os.path.splitext(out)[0]
-        for suffix, col in (("EN", 3), (lang.upper(), 4)):
-            with open(f"{stem}_{suffix}.txt", "w", encoding="utf-8") as f:
-                f.write("\n".join(str(r[col]).replace("\n", "\\n") for r in rows) + "\n")
-        print(f"{stem}_EN.txt\n{stem}_{lang.upper()}.txt")
+
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(usage=__doc__)
-    ap.add_argument("lang", choices=sorted(LANGS))
-    ap.add_argument("out")
+    ap.add_argument("lang", nargs="?", choices=sorted(LANGS))
+    ap.add_argument("out", nargs="?")
     ap.add_argument("--root", default=".")
     ap.add_argument("--store", nargs=2, metavar=("SRC", "DRAFT"))
-    ap.add_argument("--txt", action="store_true")
+    ap.add_argument("--texts", metavar="DIR")
+    ap.add_argument("--store-src")
+    ap.add_argument("--store-dir")
     a = ap.parse_args()
-    build(a.lang, a.out, a.root, a.store, a.txt)
+    if bool(a.store_src) != bool(a.store_dir):
+        ap.error("--store-src and --store-dir go together")
+    if a.texts:
+        write_texts(a.texts, a.root, a.store_src, a.store_dir)
+    elif a.lang and a.out:
+        build(a.lang, a.out, a.root, a.store)
+    else:
+        ap.error("give <lang> <out.xlsx>, or --texts DIR")
