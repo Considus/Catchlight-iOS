@@ -267,8 +267,10 @@ SPEC = re.compile(r"%(?:(\d+)\$)?(?:l{0,2}[@dDuUxXoOfeEgGcCsSp])")
 def readable(text):
     """A string as a translator reads it: placeholders become {1}, {2}… by position
     (so a translation may reorder them), Siri tokens become {app}, {text}, {filter},
-    a line break inside a string becomes " / " and bold markers are dropped. The
-    mapping is fixed, so a returned line converts back against its English key."""
+    a line break inside a string becomes " / " and bold markers are dropped. It is
+    one-way: the text files are for reading and translating; corrections go back into
+    the catalogs through the workbook or by hand, restoring any bold markers and line
+    breaks from the English key."""
     auto = 0
 
     def number(m):
@@ -299,9 +301,8 @@ def write_texts(out_dir, root, store_src, store_dir):
     file translates line N of the English. The line list is shared, so it is the union
     of every language's rows (a language with no plural for a key repeats its one
     translation on both lines), each English line once, and only lines with something
-    to translate. Rows that share an English line must share its translation, which is
-    what makes a returned file convert back: a line's translation applies to every key
-    whose English reads as that line."""
+    to translate. Rows that share an English line must share its translation, so one
+    line stands for every key whose English reads as that line."""
     per_lang = {}
     for lang in LANGS:
         rows = collect(root, lang)
