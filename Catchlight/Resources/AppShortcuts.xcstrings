@@ -36,6 +36,50 @@
               "Commencer un Obie dans ${applicationName}"
             ]
           }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Nuevo Obie en ${applicationName}",
+              "Haz de esto mi Obie en ${applicationName}",
+              "Nuevo Obie de ${applicationName}",
+              "Empieza un Obie en ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Nuovo Obie in ${applicationName}",
+              "Salva come Obie in ${applicationName}",
+              "Nuovo Obie di ${applicationName}",
+              "Inizia un Obie in ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Novo Obie no ${applicationName}",
+              "Criar um Obie no ${applicationName}",
+              "Novo Obie do ${applicationName}",
+              "Começar um Obie no ${applicationName}"
+            ]
+          }
+        },
+        "nl" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Nieuwe Obie in ${applicationName}",
+              "Leg een Obie vast in ${applicationName}",
+              "Maak een nieuwe Obie in ${applicationName}",
+              "Begin een Obie in ${applicationName}"
+            ]
+          }
         }
       }
     },
@@ -72,6 +116,50 @@
               "Capturer un Take dans ${applicationName}",
               "Nouveau Take ${applicationName}",
               "Commencer un Take dans ${applicationName}"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Nuevo Take en ${applicationName}",
+              "Anota esto en ${applicationName}",
+              "Nuevo Take de ${applicationName}",
+              "Empieza un Take en ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Nuovo Take in ${applicationName}",
+              "Salva questo in ${applicationName}",
+              "Nuovo Take di ${applicationName}",
+              "Inizia un Take in ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Novo Take no ${applicationName}",
+              "Criar um Take no ${applicationName}",
+              "Novo Take do ${applicationName}",
+              "Começar um Take no ${applicationName}"
+            ]
+          }
+        },
+        "nl" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Nieuwe Take in ${applicationName}",
+              "Leg een Take vast in ${applicationName}",
+              "Maak een nieuwe Take in ${applicationName}",
+              "Begin een Take in ${applicationName}"
             ]
           }
         }

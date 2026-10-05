@@ -22,6 +22,30 @@
             "state" : "translated",
             "value" : "Catchlight"
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
         }
       }
     },
@@ -42,6 +66,30 @@
           }
         },
         "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight"
@@ -70,6 +118,30 @@
             "state" : "translated",
             "value" : "Catchlight utilise Face ID pour déverrouiller vos Takes chiffrés."
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight usa Face ID para desbloquear tus Takes cifrados."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight usa Face ID per sbloccare i tuoi Take crittografati."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Catchlight usa o Face ID para desbloquear seus Takes criptografados."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight gebruikt Face ID om je versleutelde Takes te ontgrendelen."
+          }
         }
       }
     },
@@ -93,6 +165,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight utilise votre position pour vous rappeler un Take quand vous arrivez dans un lieu ou le quittez."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight usa tu ubicación para recordarte un Take cuando llegas a un lugar o sales de él."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight usa la tua posizione per ricordarti un Take quando arrivi in un luogo o te ne vai."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Catchlight usa sua localização para lembrar você de um Take quando você chegar a um local ou sair dele."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight gebruikt je locatie om je aan een Take te herinneren wanneer je op een plek aankomt of er vertrekt."
           }
         }
       }
