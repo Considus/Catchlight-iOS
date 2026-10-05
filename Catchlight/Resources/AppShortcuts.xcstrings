@@ -25,6 +25,17 @@
               "Starte ein Obie in ${applicationName}"
             ]
           }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Nouvel Obie dans ${applicationName}",
+              "Capturer un Obie dans ${applicationName}",
+              "Nouvel Obie ${applicationName}",
+              "Commencer un Obie dans ${applicationName}"
+            ]
+          }
         }
       }
     },
@@ -50,6 +61,17 @@
               "Take in ${applicationName} erfassen",
               "Neuer ${applicationName} Take",
               "Starte einen Take in ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Nouveau Take dans ${applicationName}",
+              "Capturer un Take dans ${applicationName}",
+              "Nouveau Take ${applicationName}",
+              "Commencer un Take dans ${applicationName}"
             ]
           }
         }

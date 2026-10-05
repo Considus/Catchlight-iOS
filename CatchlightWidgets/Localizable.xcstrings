@@ -8,6 +8,12 @@
             "state" : "translated",
             "value" : "Ein leeres Obie zum Antippen und Losschreiben."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un Obie vierge : touchez et écrivez."
+          }
         }
       }
     },
@@ -17,6 +23,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein leerer Take zum Antippen und Losschreiben."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un Take vierge : touchez et écrivez."
           }
         }
       }
@@ -28,6 +40,12 @@
             "state" : "translated",
             "value" : "Beide Erfassen-Tasten in einem Widget – tippe auf die Seite, die du brauchst."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les deux boutons de capture dans un seul widget : touchez le côté voulu."
+          }
         }
       }
     },
@@ -38,12 +56,24 @@
             "state" : "translated",
             "value" : "Erfassen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturer"
+          }
         }
       }
     },
     "Catchlight" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight"
@@ -58,6 +88,12 @@
             "state" : "translated",
             "value" : "Neues Obie"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouvel Obie"
+          }
         }
       }
     },
@@ -67,6 +103,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Karte „Neues Obie“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carte « Nouvel Obie »"
           }
         }
       }
@@ -78,6 +120,12 @@
             "state" : "translated",
             "value" : "Neuer Take"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouveau Take"
+          }
         }
       }
     },
@@ -87,6 +135,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Karte „Neuer Take“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carte « Nouveau Take »"
           }
         }
       }
@@ -98,12 +152,24 @@
             "state" : "translated",
             "value" : "Neuer Take oder Obie"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouveau Take ou Obie"
+          }
         }
       }
     },
     "Obie" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Obie"
@@ -118,6 +184,12 @@
             "state" : "translated",
             "value" : "Öffne Catchlight und erfasse dein Obie."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez Catchlight et capturez votre Obie."
+          }
         }
       }
     },
@@ -127,6 +199,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öffne Catchlight mit einem leeren Obie."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez Catchlight sur un Obie vierge."
           }
         }
       }
@@ -138,6 +216,12 @@
             "state" : "translated",
             "value" : "Öffne Catchlight und beginne einen neuen Take."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez Catchlight et commencez un nouveau Take."
+          }
         }
       }
     },
@@ -147,6 +231,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öffne Catchlight direkt mit einem neuen Take."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez Catchlight directement sur un nouveau Take."
           }
         }
       }
@@ -158,12 +248,24 @@
             "state" : "translated",
             "value" : "Öffne Catchlight mit einem neuen Take."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez Catchlight sur un nouveau Take."
+          }
         }
       }
     },
     "Take" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Take"
@@ -178,6 +280,12 @@
             "state" : "translated",
             "value" : "Was ist am wichtigsten?"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qu’est-ce qui compte le plus ?"
+          }
         }
       }
     },
@@ -187,6 +295,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Was ist dein Take?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quel est votre Take ?"
           }
         }
       }

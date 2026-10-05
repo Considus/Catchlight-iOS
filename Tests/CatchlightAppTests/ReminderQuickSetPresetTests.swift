@@ -59,5 +59,15 @@ final class ReminderQuickSetPresetTests: XCTestCase {
         XCTAssertEqual(utc.component(.day, from: result), 2)
         XCTAssertEqual(utc.component(.hour, from: result), ReminderScheduler.allDayFireHour)
     }
+
+    /// Week start by app language (1 = Sunday, 2 = Monday): French Canada keeps Sunday.
+    func testFirstWeekday_byLanguageAndRegion() {
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "en", region: "GB"), 1)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "de", region: "DE"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "fr", region: "FR"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "fr", region: "BE"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "fr", region: "CA"), 1)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: nil, region: nil), 1)
+    }
 }
 #endif

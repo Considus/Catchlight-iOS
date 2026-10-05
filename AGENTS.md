@@ -64,14 +64,14 @@ Every string a person sees or hears goes through a String Catalog: `Localizable.
 - **Text built anywhere else is `String(localized: "…")` at the literal**: view-model errors, notification text, VoiceOver sentences, computed labels. The literal must sit inside the call. `String(localized: String.LocalizationValue(someVar))` compiles and is never extracted.
 - **One whole sentence per key.** Never glue fragments (`"Double-tap to " + verb`), never build plurals (`"Take\(n == 1 ? "" : "s")"`). A count goes in as an `Int` interpolation and the catalog carries the plural forms; English has its own `one`/`other` variations for every such key.
 - **A raw value is an identifier, not a label.** Enums persisted or compared by raw value get a separate `label` with a literal per case.
-- **The reminder sheet's week start is per language**, in `ReminderPickerSheet.firstWeekday`: Sunday in English, Monday in German. A new language adds its own case.
+- **The reminder sheet's week start is per language**, in `ReminderPickerSheet.firstWeekday`: Sunday in English, Monday in German and French, except French in Canada (Sunday). A new language adds its own case.
 - **Dates come from formatters and templates** (`setLocalizedDateFormatFromTemplate`, `DateComponentsFormatter`), never a fixed `dateFormat` for anything shown. Machine formats keep `en_US_POSIX`.
 - **What stays English on purpose:** the product nouns (Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard), which are still routed through the catalog so a translator sees them in context and keeps them; the 12 recovery-phrase words, which are the BIP-39 English wordlist and part of the key; developer-only diagnostics (the `lifecycle` category and scheduling failures, which never show in Notice History); the `Import` folder name in the cloud folder. Notice History lines are recorded in the device language, like the notices themselves.
 - **Core values the app shows are worded here**, in `Catchlight/UI/CoreLabels.swift`. Core's own `label`s stay English and carry no translations.
 
 The test scheme runs in English whatever the machine is set to (`language: en` in `project.yml`), because many tests assert the English copy. To run them in another language, say so: `xcodebuild test -testLanguage de -testRegion DE`; English-copy assertions are expected to fail there.
 
-Two checks, and run both after touching UI copy. The static one lists English sentences in the source that no catalog holds (export first, it is what syncs the catalogs):
+Three checks. Run the first two after touching UI copy. The static one lists English sentences in the source that no catalog holds (export first, it is what syncs the catalogs):
 
 ```bash
 python3 scripts/l10n/find_unlocalised.py
@@ -82,6 +82,18 @@ The visual one fills every catalog with a throwaway German that wraps each strin
 ```bash
 python3 scripts/l10n/pseudo_locale.py apply
 python3 scripts/l10n/pseudo_locale.py restore
+```
+
+The third runs after adding or changing a translation. It compares every translation's placeholders with the English, in every plural form and Siri phrase, and lists each mismatch, because a dropped or retyped placeholder garbles or crashes at run time with nothing at build time to say so:
+
+```bash
+python3 scripts/l10n/check_placeholders.py
+```
+
+A translator gets a review workbook built from the catalogs: English beside the draft, a column for their version, English word counts and a glossary. Each language's notes and glossary live in the script (needs `openpyxl`):
+
+```bash
+python3 scripts/l10n/review_workbook.py fr Catchlight_iOS_French_Translation_Review.xlsx
 ```
 
 ## Prove

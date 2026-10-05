@@ -8,6 +8,12 @@
             "state" : "translated",
             "value" : "Notiz hinzufügen (optional)"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter une note (facultatif)"
+          }
         }
       }
     },
@@ -17,6 +23,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abbrechen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler"
           }
         }
       }
@@ -28,6 +40,12 @@
             "state" : "translated",
             "value" : "Schließen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer"
+          }
         }
       }
     },
@@ -37,6 +55,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Es nimmt Text, Links und Webseiten an, keine Bilder oder Dateien."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il accepte le texte, les liens et les pages web, mais pas les images ni les fichiers."
           }
         }
       }
@@ -48,6 +72,12 @@
             "state" : "translated",
             "value" : "Er wartet in deiner Zeitleiste, wenn du die App das nächste Mal öffnest."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il vous attendra dans votre chronologie à la prochaine ouverture de l’app."
+          }
         }
       }
     },
@@ -57,6 +87,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sichern"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer"
           }
         }
       }
@@ -68,6 +104,12 @@
             "state" : "translated",
             "value" : "In Catchlight sichern"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer dans Catchlight"
+          }
         }
       }
     },
@@ -78,6 +120,12 @@
             "state" : "translated",
             "value" : "In Catchlight gesichert"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistré dans Catchlight"
+          }
         }
       }
     },
@@ -87,6 +135,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hier gibt es nichts, was Catchlight aufbewahren kann."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il n’y a rien ici que Catchlight puisse conserver."
           }
         }
       }

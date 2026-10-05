@@ -48,5 +48,31 @@ final class LocalisationPluralTests: XCTestCase {
         XCTAssertEqual(String(localized: "Email to \("ann at example.com") and \(1) more emails", bundle: englishBundle, locale: english),
                        "Email to ann at example.com and 1 more email")
     }
+
+    private let frenchBundle: Bundle = {
+        let path = Bundle.main.path(forResource: "fr", ofType: "lproj")
+        return path.flatMap(Bundle.init(path:)) ?? .main
+    }()
+    private var french: Locale { Locale(identifier: "fr") }
+
+    /// French takes the singular for 0 as well as 1, unlike English.
+    func testFrenchTakeCounts_useSingularForZeroAndOne() {
+        XCTAssertEqual(String(localized: "\(0) Takes changed on another device.", bundle: frenchBundle, locale: french),
+                       "0 Take modifié sur un autre appareil.")
+        XCTAssertEqual(String(localized: "\(1) Takes need a decision.", bundle: frenchBundle, locale: french),
+                       "1 Take demande une décision.")
+        XCTAssertEqual(String(localized: "\(2) Takes need a decision.", bundle: frenchBundle, locale: french),
+                       "2 Takes demandent une décision.")
+        XCTAssertEqual(String(localized: "Link to \("example.com") and \(1) more links", bundle: frenchBundle, locale: french),
+                       "Lien vers example.com et 1 autre lien")
+    }
+
+    /// The trial length has no plural in English ("14-day") but needs one in French,
+    /// so the variations exist only in the French table.
+    func testFrenchTrialLength_isPlural() {
+        XCTAssertEqual(String(localized: "\(1)-week", bundle: frenchBundle, locale: french), "1 semaine")
+        XCTAssertEqual(String(localized: "\(14)-day", bundle: frenchBundle, locale: french), "14 jours")
+        XCTAssertEqual(String(localized: "\(1)-day", bundle: englishBundle, locale: english), "1-day")
+    }
 }
 #endif
