@@ -61,6 +61,10 @@ struct CatchlightApp: App {
             onQuarantined: { ids in
                 app.reportQuarantined(ids)
             },
+            // Takes a push held back after a long time offline — sync strip (2026-10-04).
+            onHeldBack: { count in
+                app.reportHeldBack(count)
+            },
             // Foreground sync (2026-06-10) — when a pass applied remote
             // changes, reconcile notifications AND refresh the timeline
             // snapshot (2026-07-01: previously reload-only, so a Take deleted

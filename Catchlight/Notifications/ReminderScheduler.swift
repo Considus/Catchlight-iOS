@@ -68,8 +68,7 @@ extension UNUserNotificationCenter: NotificationScheduling {
                 // out only by NOT being reminded). Content-free: a system error domain/code, never
                 // the reminder's text. `.lifecycle` = export-only, no new user-facing notice.
                 let ns = error as NSError
-                DiagnosticsLog.shared.record(.lifecycle,
-                    "Reminder scheduling FAILED — the OS will not deliver it (\(ns.domain) \(ns.code))")
+                DiagnosticsLog.shared.record(.reminderNotScheduled(domain: ns.domain, code: ns.code))
             }
         }
     }
@@ -101,9 +100,8 @@ public final class ReminderScheduler {
         let key = "catchlight.diagnostics.lastNotificationAuth"
         guard defaults.string(forKey: key) != name else { return }
         defaults.set(name, forKey: key)
-        let consequence = (status == .denied || status == .notDetermined)
-            ? " — reminders will NOT fire" : ""
-        DiagnosticsLog.shared.record(.lifecycle, "Notification permission: \(name)\(consequence)")
+        let willFire = !(status == .denied || status == .notDetermined)
+        DiagnosticsLog.shared.record(.notificationPermission(state: name, remindersWillFire: willFire))
     }
 
     public static let categoryIdentifier = "TAKE_REMINDER"
@@ -370,7 +368,7 @@ public final class ReminderScheduler {
         Self.logger.warning("Refusing to schedule a past-dated reminder (id \(reminder.notificationIdentifier, privacy: .public))")
         // Export-visible too: the Take shows a reminder the OS will never deliver, and the user
         // has no way to know. Content-free — no date, no text (a due date is user data).
-        DiagnosticsLog.shared.record(.lifecycle, "Reminder refused — past-dated, will never fire")
+        DiagnosticsLog.shared.record(.reminderPastDated)
     }
 
     /// Schedule the geofence notification for a Take's LOCATION reminder (owner 2026-06-23).

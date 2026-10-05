@@ -52,7 +52,8 @@ struct NoticeHistoryView: View {
                                     .frame(width: 24)
                                     .accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(entry.message)
+                                    // The reference code is for the export only.
+                                    Text(Notice.displayText(of: entry.message))
                                         .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
                                         .foregroundStyle(Color.ckTextPrimary)
                                     Text(entry.timestamp, format: .relative(presentation: .named))
@@ -63,7 +64,7 @@ struct NoticeHistoryView: View {
                             .padding(.vertical, 2)
                             .listRowBackground(Color.ckSurface)
                             .accessibilityElement(children: .combine)
-                            .accessibilityLabel("\(entry.category.localizedName). \(entry.message)")
+                            .accessibilityLabel("\(entry.category.localizedName). \(Notice.displayText(of: entry.message))")
                             // Audit 2026-08, V15: the explicit label overrides the
                             // combine, dropping the relative time — carry it as the
                             // value so VoiceOver still speaks it after the message.

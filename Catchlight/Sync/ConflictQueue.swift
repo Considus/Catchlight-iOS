@@ -42,8 +42,8 @@ final class ConflictQueue {
         // Record newly-surfaced conflicts to the content-free diagnostics log (D-085) — a
         // count only, no Take content (the banner shows the same count).
         if added > 0 {
-            DiagnosticsLog.shared.record(.conflict,
-                "\(added) Take\(added == 1 ? "" : "s") changed on another device.")
+            // Shown in Notice History, so recorded in the device language.
+            DiagnosticsLog.shared.record(.conflictsChanged(added))
         }
     }
 
@@ -104,8 +104,7 @@ final class ConflictQueue {
             }
         }
         if added > 0 {
-            DiagnosticsLog.shared.record(.conflict,
-                "\(added) Take\(added == 1 ? "" : "s") couldn't be verified and \(added == 1 ? "needs" : "need") a choice.")
+            DiagnosticsLog.shared.record(.conflictsUnverified(added))
         }
     }
 

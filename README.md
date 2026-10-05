@@ -13,7 +13,7 @@ CatchlightApp/
 ├── project.yml                   # XcodeGen spec for the iOS app (run: xcodegen generate)
 │                                 #   and the pinned CatchlightCore version
 ├── Tests/                        # XCTest suites (iOS + UI)
-├── scripts/l10n/                 # localisation checks (see AGENTS.md, Localisation)
+├── scripts/                      # localisation checks, diagnostics code table (see AGENTS.md)
 └── Catchlight/                   # iOS APP TARGET, platform-specific layers
     ├── App/                      # entry point, composition root, scene lifecycle
     ├── Security/                 # Keychain (SE-wrapped master key), PIN (PBKDF2,

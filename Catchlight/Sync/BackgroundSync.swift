@@ -46,6 +46,10 @@ public final class BackgroundSyncCoordinator {
     /// the UI never exposes the UUIDs themselves.
     private let onQuarantined: (@MainActor ([UUID]) -> Void)?
 
+    /// Invoked on the main actor with the number of Takes a push held back because this
+    /// device was away too long to rule out deletion elsewhere (shown in the sync strip).
+    private let onHeldBack: (@MainActor (Int) -> Void)?
+
     /// Invoked on the main actor after a sync pass that CHANGED local state
     /// (applied remote versions or applied remote deletions), so the UI layer
     /// can reload its view-model snapshots. Foreground-sync support
@@ -58,17 +62,20 @@ public final class BackgroundSyncCoordinator {
     ///   Called on `MainActor`; pass `nil` for callers that don't surface conflicts.
     /// - Parameter onSyncError: hand-off for thrown sync errors (Task 3.9).
     /// - Parameter onQuarantined: hand-off for per-blob quarantine ids (Task 3.9).
+    /// - Parameter onHeldBack: hand-off for the count of Takes a push held back.
     public init(makeEngine: @escaping () -> SyncEngine?,
                 onConflicts: (@MainActor ([(local: Take, remote: Take)]) -> Void)? = nil,
                 onUnverified: (@MainActor ([UnverifiedCopy]) -> Void)? = nil,
                 onSyncError: (@MainActor (Error) -> Void)? = nil,
                 onQuarantined: (@MainActor ([UUID]) -> Void)? = nil,
+                onHeldBack: (@MainActor (Int) -> Void)? = nil,
                 onRemoteChanges: (@MainActor (SyncReport) -> Void)? = nil) {
         self.makeEngine = makeEngine
         self.onConflicts = onConflicts
         self.onUnverified = onUnverified
         self.onSyncError = onSyncError
         self.onQuarantined = onQuarantined
+        self.onHeldBack = onHeldBack
         self.onRemoteChanges = onRemoteChanges
     }
 
@@ -103,8 +110,7 @@ public final class BackgroundSyncCoordinator {
             // 'background sync never runs and nobody can tell why' failure" — was invisible in
             // exactly the case it describes. Content-free: system error domain/code only.
             let ns = error as NSError
-            DiagnosticsLog.shared.record(.lifecycle,
-                "Background sync scheduling FAILED — BG refresh will not run (\(ns.domain) \(ns.code))")
+            DiagnosticsLog.shared.record(.backgroundSyncNotScheduled(domain: ns.domain, code: ns.code))
         }
     }
 
@@ -250,6 +256,7 @@ public final class BackgroundSyncCoordinator {
         let onUnverified = self.onUnverified
         let onSyncError = self.onSyncError
         let onQuarantined = self.onQuarantined
+        let onHeldBack = self.onHeldBack
         let onRemoteChanges = self.onRemoteChanges
 
         DispatchQueue.global(qos: .utility).async {
@@ -260,6 +267,7 @@ public final class BackgroundSyncCoordinator {
                              onConflicts: onConflicts,
                              onUnverified: onUnverified,
                              onQuarantined: onQuarantined,
+                             onHeldBack: onHeldBack,
                              onRemoteChanges: onRemoteChanges)
             } catch is CancellationError {
                 // Assertion expired mid-pass; the next trigger resumes cleanly.
@@ -276,6 +284,7 @@ public final class BackgroundSyncCoordinator {
                                 onConflicts: (@MainActor ([(local: Take, remote: Take)]) -> Void)?,
                                 onUnverified: (@MainActor ([UnverifiedCopy]) -> Void)?,
                                 onQuarantined: (@MainActor ([UUID]) -> Void)?,
+                                onHeldBack: (@MainActor (Int) -> Void)?,
                                 onRemoteChanges: (@MainActor (SyncReport) -> Void)?) {
         if let onConflicts, !report.conflicts.isEmpty {
             let conflicts = report.conflicts
@@ -291,14 +300,16 @@ public final class BackgroundSyncCoordinator {
         }
         // Long-offline hold-back (2026-07-01): push declined to self-heal-upload
         // Takes this device hasn't touched since before the tombstone-retention
-        // window (they may have been deleted fleet-wide in the interim). Surface
-        // a content-free count in Notice History — the user re-asserts a Take by
-        // editing it. DiagnosticsLog is thread-safe; no main-actor hop needed.
+        // window (they may have been deleted fleet-wide in the interim). The count shows
+        // in the sync strip (owner 2026-10-04) and so in Notice History; the user re-asserts
+        // a Take by editing it. A caller with no strip still gets the log line.
         if !report.heldBack.isEmpty {
             let n = report.heldBack.count
-            DiagnosticsLog.shared.record(.sync,
-                "\(n) Take\(n == 1 ? "" : "s") not re-uploaded. This device was away too long "
-                + "to rule out deletion elsewhere. Edit a Take to sync it again.")
+            if let onHeldBack {
+                Task { @MainActor in onHeldBack(n) }
+            } else {
+                DiagnosticsLog.shared.record(.takesHeldBack(n))
+            }
         }
         if let onRemoteChanges, !report.applied.isEmpty || !report.deletedLocally.isEmpty {
             Task { @MainActor in onRemoteChanges(report) }
@@ -318,6 +329,7 @@ public final class BackgroundSyncCoordinator {
         let onUnverified = self.onUnverified
         let onSyncError = self.onSyncError
         let onQuarantined = self.onQuarantined
+        let onHeldBack = self.onHeldBack
         let onRemoteChanges = self.onRemoteChanges
         let makeEngine = self.makeEngine
         let completion = TaskCompletion()
@@ -351,6 +363,7 @@ public final class BackgroundSyncCoordinator {
                                  onConflicts: onConflicts,
                                  onUnverified: onUnverified,
                                  onQuarantined: onQuarantined,
+                                 onHeldBack: onHeldBack,
                                  onRemoteChanges: onRemoteChanges)
                     completion.complete(task, success: true)
                 } catch is CancellationError {

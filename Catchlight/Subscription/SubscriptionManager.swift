@@ -27,7 +27,15 @@ final class SubscriptionManager {
 
     /// User-visible state. Starts `.unknown`; flips after the first call to
     /// `refreshEntitlements()`. AppModel reads this.
-    private(set) var status: SubscriptionStatus = .unknown
+    private(set) var status: SubscriptionStatus = .unknown {
+        // The read-only banner shows on the main screen, so a lapse goes in Notice History
+        // once per onset. `.unknown` is the launch placeholder, not a known state, so it
+        // neither records nor clears.
+        didSet {
+            guard status != .unknown else { return }
+            NoticeOnset.update(.readOnlyLapsed, active: status == .lapsed)
+        }
+    }
 
     /// The Annual product, resolved lazily from the App Store. Nil before the
     /// first `loadProduct()` succeeds. The paywall renders price + trial
