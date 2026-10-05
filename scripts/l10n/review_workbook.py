@@ -6,9 +6,16 @@ version, per-row English word counts, a glossary and a read-me with the totals.
 Each language's notes, glossary and tone live in LANGS below; add one there to
 support a new language.
 
-Usage: review_workbook.py <lang> <out.xlsx> [repo root]
+--store adds the App Store listing and screenshot text, which live outside the
+repo: a source file of rows {id, where, form, en, limit, note, en_us} and the
+language's draft {id: text}. --txt also writes two plain-text files beside the
+workbook, <stem>_EN.txt and <stem>_<LANG>.txt, one string per line in the same
+order, with a line break inside a string written as \n.
+
+Usage: review_workbook.py <lang> <out.xlsx> [--root DIR] [--store SRC DRAFT] [--txt]
 Needs openpyxl.
 """
+import argparse
 import json
 import os
 import re
@@ -99,6 +106,106 @@ LANGS = {
             ("you", "vous / votre", "Formal throughout."),
         ],
     },
+    "es": {
+        "name": "Spanish",
+        "tone": 'Informal "tú", warm and plain. Catchlight is a private notes app. Spanish as used in Spain.',
+        "plural": 'Rows marked "plural: one" are used when the count is 1; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · draft "No se han podido cargar tus Takes." · '
+                   'your Spanish "No se pudieron cargar tus Takes." · your comment "más natural"',
+        "notes": {
+            "Privacy phrase": 'Glossary term. Draft "frase de privacidad": please confirm or propose a better term.',
+            "%lld-day": 'Trial length inside "Start your %@ trial now…" (e.g. "prueba de 14 días"). Spanish needs a plural here; English does not.',
+            "Done": 'One string serves as a button and as a task state; drafted "Hecho".',
+            "Created on %@ at %@": 'Drafted with "a las", which is wrong at 1 o\'clock ("a la 1"). A wording that works for every hour is welcome.',
+        },
+        "glossary": [
+            ("Take", "Take (el Take, los Takes)", "Product name. Keep in English. Masculine."),
+            ("Obie", "Obie (el Obie)", "Product name. Keep in English. Masculine."),
+            ("Iris", "Iris (el Iris)", "Product name: the circle beside each Take. Keep. Masculine."),
+            ("Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep."),
+            ("Privacy phrase", "frase de privacidad", "The 12 recovery words. Draft term, please confirm."),
+            ("Timeline", "cronología", "Draft term."),
+            ("Notice", "aviso", "A status message on the main screen. Draft term."),
+            ("Settings / Save / Snooze", "Ajustes / Guardar / Posponer", "Follows Apple's Spanish UI."),
+            ("Double-tap …", "Toca dos veces …", "VoiceOver hints follow Apple's Spanish wording."),
+            ("you", "tú / tu", "Informal throughout."),
+        ],
+    },
+    "it": {
+        "name": "Italian",
+        "tone": 'Informal "tu", warm and plain. Catchlight is a private notes app.',
+        "plural": 'Rows marked "plural: one" are used when the count is 1; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · draft "Impossibile caricare i tuoi Take." · '
+                   'your Italian "Non è stato possibile caricare i tuoi Take." · your comment "meno brusco"',
+        "notes": {
+            "Privacy phrase": 'Glossary term. Draft "frase di privacy": please confirm or propose a better term.',
+            "%lld-day": 'Trial length inside "Start your %@ trial now…" (e.g. "prova di 14 giorni"). Italian needs a plural here; English does not.',
+            "Done": 'One string serves as a button and as a task state.',
+            "Inline": "Apple's Italian name for this Writing Tools option was not confirmed.",
+        },
+        "glossary": [
+            ("Take", "Take (il Take, i Take)", "Product name. Keep in English. Masculine, invariable plural."),
+            ("Obie", "Obie (l'Obie, gli Obie)", "Product name. Keep in English. Masculine."),
+            ("Iris", "Iris (l'Iris)", "Product name: the circle beside each Take. Keep. Masculine."),
+            ("Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep."),
+            ("Privacy phrase", "frase di privacy", "The 12 recovery words. Draft term, please confirm."),
+            ("Timeline", "cronologia", "Draft term."),
+            ("Notice", "avviso", "A status message on the main screen. Draft term."),
+            ("Settings / Save / Snooze", "Impostazioni / Salva / Posticipa", "Follows Apple's Italian UI."),
+            ("Double-tap …", "Tocca due volte …", "VoiceOver hints follow Apple's Italian wording."),
+            ("you", "tu / tuo", "Informal throughout."),
+        ],
+    },
+    "nl": {
+        "name": "Dutch",
+        "tone": 'Informal "je / jouw", as Apple uses. Warm and plain. Catchlight is a private notes app.',
+        "plural": 'Rows marked "plural: one" are used when the count is 1; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · draft "Je Takes konden niet worden geladen." · '
+                   'your Dutch "Kan je Takes niet laden." · your comment "korter"',
+        "notes": {
+            "Privacy phrase": 'Glossary term. Draft "privacyzin": please confirm or propose a better term.',
+            "Notice History": '"Notice" is drafted as "melding", but Apple\'s Dutch for Notifications is also "Meldingen". A clearer word for these status messages is welcome.',
+            "%lld-day": 'Trial length inside "Start your %@ trial now…" (e.g. "proefperiode van 14 dagen"). Dutch needs a plural here; English does not.',
+            "Done": 'One string serves as a button and as a task state; drafted "Klaar".',
+        },
+        "glossary": [
+            ("Take", "Take (de Take, de Takes)", "Product name. Keep in English."),
+            ("Obie", "Obie (de Obie)", "Product name. Keep in English."),
+            ("Iris", "Iris (de Iris)", "Product name: the circle beside each Take. Keep."),
+            ("Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep."),
+            ("Privacy phrase", "privacyzin", "The 12 recovery words. Draft term, please confirm."),
+            ("Timeline", "tijdlijn", "Draft term."),
+            ("Notice", "melding", "A status message on the main screen. Draft term; clashes with Notifications."),
+            ("Settings / Save / Snooze", "Instellingen / Bewaar / Sluimer", "Follows Apple's Dutch UI."),
+            ("Double-tap …", "Tik twee keer …", "VoiceOver hints follow Apple's Dutch wording."),
+            ("you", "je / jouw", "Informal throughout."),
+        ],
+    },
+    "pt-BR": {
+        "name": "Brazilian Portuguese",
+        "tone": 'Informal "você", warm and plain. Catchlight is a private notes app. Brazilian usage.',
+        "plural": 'Rows marked "plural: one" are used when the count is 0 or 1; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · draft "Não foi possível carregar seus Takes." · '
+                   'your Portuguese "Não deu para carregar seus Takes." · your comment "mais leve"',
+        "notes": {
+            "Privacy phrase": 'Glossary term. Draft "frase de privacidade": please confirm or propose a better term.',
+            "%lld-day": 'Trial length inside "Start your %@ trial now…" (e.g. "teste de 14 dias"). Portuguese needs a plural here; English does not.',
+            "Done": 'One string serves as a button and as a task state; drafted "Concluído".',
+            "Welcome back": 'Drafted gender-neutral ("Que bom ter você de volta"); a shorter neutral form is welcome.',
+        },
+        "glossary": [
+            ("Take", "Take (o Take, os Takes)", "Product name. Keep in English. Masculine."),
+            ("Obie", "Obie (o Obie)", "Product name. Keep in English. Masculine."),
+            ("Iris", "Iris (o Iris)", "Product name: the circle beside each Take. Keep. Masculine."),
+            ("Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep."),
+            ("Privacy phrase", "frase de privacidade", "The 12 recovery words. Draft term, please confirm."),
+            ("Timeline", "linha do tempo", "Draft term."),
+            ("Notice", "aviso", "A status message on the main screen. Draft term."),
+            ("Settings / Save / Snooze", "Ajustes / Salvar / Adiar", "Follows Apple's Brazilian Portuguese UI."),
+            ("Double-tap …", "Toque duas vezes …", "VoiceOver hints follow Apple's Brazilian Portuguese wording."),
+            ("you", "você / seu", "Informal throughout."),
+        ],
+    },
 }
 
 
@@ -129,15 +236,34 @@ def collect(root, lang):
     return rows
 
 
+def store_rows(src_path, draft_path):
+    src = json.load(open(src_path, encoding="utf-8"))
+    draft = json.load(open(draft_path, encoding="utf-8"))
+    missing = [r["id"] for r in src if r["id"] not in draft]
+    if missing:
+        sys.exit(f"store draft is missing: {', '.join(missing)}")
+    rows = []
+    for r in src:
+        note = r.get("note", "")
+        if r.get("limit"):
+            note = f"Max {r['limit']} characters. {note}".strip()
+        if r.get("en_us"):
+            note = f"{note} U.S. English reads: \"{r['en_us']}\"".strip()
+        rows.append((r["where"], r["id"], r["form"], r["en"], draft[r["id"]], note))
+    return rows
+
+
 def words(s):
     s = re.sub(r"%(\d\$)?(lld|ld|d|@)|\$\{\w+\}|\*\*", " ", s)
     return len([w for w in s.split() if re.search(r"[A-Za-zÀ-ÿ]", w)])
 
 
-def build(lang, out, root):
+def build(lang, out, root, store=None, txt=False):
     cfg = LANGS[lang]
     name = cfg["name"]
     rows = collect(root, lang)
+    if store:
+        rows += store_rows(*store)
 
     wb = Workbook()
     F = "Arial"
@@ -202,6 +328,10 @@ def build(lang, out, root):
                          "${applicationName}."),
         ("Length", f"Short labels sit in narrow rows on an iPhone screen. Where the {name} runs much longer than the "
                    "English, a shorter wording is welcome."),
+        ("App Store and screenshots", 'Rows whose "Where" is App Store or Screenshot are the store listing and the text '
+                                      "shown in the App Store screenshots. Character limits are in the Context column and "
+                                      "are hard limits. Keywords are search terms people in your country would type, not "
+                                      "a translation. Demo Takes are sample notes: make them feel local."),
         ("Word count", "English words per row are in the last column of the Strings tab: words containing letters, "
                        "placeholders not counted. Each plural form and each Siri phrase counts as its own row."),
     ]
@@ -224,9 +354,20 @@ def build(lang, out, root):
     c.font, c.alignment = body, wrap
     wb.save(out)
     print(f"{out}\nrows={len(rows)} words={total}")
+    if txt:
+        stem = os.path.splitext(out)[0]
+        for suffix, col in (("EN", 3), (lang.upper(), 4)):
+            with open(f"{stem}_{suffix}.txt", "w", encoding="utf-8") as f:
+                f.write("\n".join(str(r[col]).replace("\n", "\\n") for r in rows) + "\n")
+        print(f"{stem}_EN.txt\n{stem}_{lang.upper()}.txt")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3 or sys.argv[1] not in LANGS:
-        sys.exit(__doc__)
-    build(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else ".")
+    ap = argparse.ArgumentParser(usage=__doc__)
+    ap.add_argument("lang", choices=sorted(LANGS))
+    ap.add_argument("out")
+    ap.add_argument("--root", default=".")
+    ap.add_argument("--store", nargs=2, metavar=("SRC", "DRAFT"))
+    ap.add_argument("--txt", action="store_true")
+    a = ap.parse_args()
+    build(a.lang, a.out, a.root, a.store, a.txt)
