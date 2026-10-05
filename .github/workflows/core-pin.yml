@@ -6,8 +6,8 @@ name: Core pin
 #
 # A PR opened with GITHUB_TOKEN starts no pull_request workflows, so this
 # dispatches CI on the branch itself; the dispatched run's checks land on the
-# PR's head commit and satisfy branch protection. The Claude review does not
-# start that way: close and reopen the PR to get it. The repo (and the org)
+# PR's head commit and satisfy branch protection. The Claude review skips a PR a
+# bot opened, so the person merging reviews the diff themselves. The repo (and the org)
 # allow Actions to open PRs for this workflow alone (owner, 2026-10-03);
 # Considus-Ops/repo-baseline.py keeps every other repo off.
 
@@ -82,5 +82,5 @@ jobs:
 
           Core changes: https://github.com/Considus/Catchlight-Core/compare/$PIN...$LATEST
 
-          CI was dispatched on this branch by the Core pin workflow, so the required checks run against the app's own tests. Close and reopen this PR to start the Claude review. A Core release can change what is written to disk: read the compare before merging."
+          CI was dispatched on this branch by the Core pin workflow, so the required checks run against the app's own tests. The Claude review skips a PR a bot opened, so review this diff yourself. A Core release can change what is written to disk: read the compare before merging."
           gh workflow run ci.yml --ref "$BRANCH"
