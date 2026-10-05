@@ -277,21 +277,22 @@ struct CatchlightApp: App {
     /// Three ordering rules, each load-bearing:
     ///   • UNLOCKED ONLY. Saving needs the store, so a locked app leaves the queue untouched
     ///     for the next open rather than dropping it.
-    ///   • CLEAR ONLY WHAT WAS WRITTEN. The count is captured first and cleared after, so a
-    ///     share arriving mid-drain isn't discarded unread, and a failed save doesn't lose
-    ///     content.
+    ///   • CLEAR ONLY WHAT WAS WRITTEN. The entries read are the ones cleared, by their own
+    ///     keys and only after the saves, so a share arriving mid-drain isn't discarded unread,
+    ///     and a crash between the two doesn't lose content.
     ///   • ENTITLEMENT FIRST, and the queue survives it. A lapsed user's shares stay queued
     ///     behind the paywall instead of being silently binned — matching `drainPendingCapture`,
     ///     which also refuses to capture but never destroys the request.
     @MainActor
     private func drainSharedCaptures() {
         guard app.lockState == .unlocked else { return }
-        let queued = CaptureRouting.sharedQueue()
+        let queued = CaptureRouting.sharedQueueEntries()
         guard !queued.isEmpty else { return }
         guard app.ensureEntitled() else { return }
 
         var lastSavedID: UUID?
-        for item in queued {
+        for entry in queued {
+            let item = entry.item
             var take = app.dailiesVM.createTake()
             take.blocks = [.textLine(item.text)]
             // Obie via the model's own setter, so its "Obie implies Important" rule applies;
@@ -303,7 +304,7 @@ struct CatchlightApp: App {
             app.dailiesVM.save(take)
             lastSavedID = take.id
         }
-        CaptureRouting.clearSharedQueue(consumed: queued.count)
+        CaptureRouting.clearShared(queued)
         // Show what just landed when exactly ONE thing did (owner 2026-08-11). A dictated Take
         // saves without the user touching anything, so without this it is saved invisibly and
         // they have to go looking to believe it. Several at once (a batch of shares) get no
