@@ -1005,7 +1005,7 @@ struct ReminderPickerSheet: View {
 
     /// The seven-day toggle strip for the day-set weekly cadences (owner 2026-06-23; simplified
     /// 2026-06-30 now that Every weekday / Every weekend / Custom are chosen in the Interval
-    /// menu). Starts on `firstWeekday` (Sunday in English, Monday in German); each letter maps
+    /// menu). Starts on `firstWeekday` (Sunday or Monday by language); each letter maps
     /// to a Calendar weekday number (1 = Sun … 7 = Sat), so only the display order changes.
     /// Shown only when `weekdays` is non-empty (i.e. not plain "Weekly").
     private var weekdaySection: some View {
@@ -1126,12 +1126,19 @@ struct ReminderPickerSheet: View {
     }
 
     /// The day the reminder sheet's weeks start on, by app language: Sunday in English
-    /// (owner 2026-06-23), Monday in German (owner 2026-10-04). A new language picks its own
+    /// (owner 2026-06-23), Monday in German (owner 2026-10-04) and in French except in
+    /// Canada, where weeks start on Sunday (owner 2026-10-05). A new language picks its own
     /// here; anything unlisted keeps Sunday. Calendar weekday numbering (1 = Sunday).
     static var firstWeekday: Int {
-        switch Bundle.main.preferredLocalizations.first {
-        case "de": return 2   // Monday
-        default:   return 1   // Sunday
+        firstWeekday(language: Bundle.main.preferredLocalizations.first,
+                     region: Locale.current.region?.identifier)
+    }
+
+    static func firstWeekday(language: String?, region: String?) -> Int {
+        switch language {
+        case "de": return 2                          // Monday
+        case "fr": return region == "CA" ? 1 : 2     // Sunday in Canada, else Monday
+        default:   return 1                          // Sunday
         }
     }
 

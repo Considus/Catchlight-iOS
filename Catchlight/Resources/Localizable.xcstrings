@@ -11,6 +11,12 @@
             "state" : "translated",
             "value" : "%@ · Bei Ankunft"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · À l’arrivée"
+          }
         }
       }
     },
@@ -20,6 +26,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ · Beim Verlassen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Au départ"
           }
         }
       }
@@ -38,6 +50,12 @@
             "state" : "translated",
             "value" : "%1$@ at %2$@"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ arobase %2$@"
+          }
         }
       }
     },
@@ -48,6 +66,12 @@
             "state" : "translated",
             "value" : "%@ Doppeltippen zum Prüfen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Touchez deux fois pour vérifier."
+          }
         }
       }
     },
@@ -57,6 +81,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@, gefiltert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, filtre actif"
           }
         }
       }
@@ -70,6 +100,12 @@
           }
         },
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. %2$@"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@. %2$@"
@@ -90,6 +126,12 @@
             "state" : "translated",
             "value" : "%1$@. %2$@%3$@. Geändert %4$@."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. %2$@%3$@. Modification : %4$@."
+          }
         }
       }
     },
@@ -99,6 +141,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@/Jahr"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@/an"
           }
         }
       }
@@ -110,12 +158,24 @@
             "state" : "translated",
             "value" : "%lld"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
         }
       }
     },
     "%lld m" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld m"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld m"
@@ -136,6 +196,12 @@
             "state" : "translated",
             "value" : "%1$lld von %2$lld erledigt"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld sur %2$lld terminées"
+          }
         }
       }
     },
@@ -145,6 +211,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld von 12 Wörtern"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sur 12 mots"
           }
         }
       }
@@ -182,6 +254,24 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld Takes wurden auf einem anderen Gerät geändert."
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take modifié sur un autre appareil."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes modifiés sur un autre appareil."
                 }
               }
             }
@@ -226,6 +316,24 @@
               }
             }
           }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take n’a pas pu être vérifié et demande un choix."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes n’ont pas pu être vérifiés et demandent un choix."
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -262,6 +370,24 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld Takes konnten nicht verifiziert werden und wurden übersprungen."
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take n’a pas pu être vérifié et a été ignoré."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes n’ont pas pu être vérifiés et ont été ignorés."
                 }
               }
             }
@@ -306,6 +432,24 @@
               }
             }
           }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take demande une décision."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes demandent une décision."
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -346,6 +490,24 @@
               }
             }
           }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take non renvoyé. Cet appareil est resté hors ligne trop longtemps pour exclure une suppression ailleurs. Modifiez un Take pour le synchroniser à nouveau."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes non renvoyés. Cet appareil est resté hors ligne trop longtemps pour exclure une suppression ailleurs. Modifiez un Take pour le synchroniser à nouveau."
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -356,6 +518,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld-tägige"
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld jour"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld jours"
+                }
+              }
+            }
           }
         }
       }
@@ -368,6 +548,24 @@
             "state" : "translated",
             "value" : "%lld-monatige"
           }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld mois"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld mois"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -378,6 +576,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld-wöchige"
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld semaine"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld semaines"
+                }
+              }
+            }
           }
         }
       }
@@ -390,12 +606,36 @@
             "state" : "translated",
             "value" : "%lld-jährige"
           }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld an"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ans"
+                }
+              }
+            }
+          }
         }
       }
     },
     "%lld." : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld."
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld."
@@ -410,6 +650,12 @@
             "state" : "translated",
             "value" : "1 Tag"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 jour"
+          }
         }
       }
     },
@@ -419,6 +665,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1 Stunde"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 heure"
           }
         }
       }
@@ -430,6 +682,12 @@
             "state" : "translated",
             "value" : "1 Minute"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 minute"
+          }
         }
       }
     },
@@ -439,6 +697,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "2 Tage"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 jours"
           }
         }
       }
@@ -450,6 +714,12 @@
             "state" : "translated",
             "value" : "5 Min."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 min"
+          }
         }
       }
     },
@@ -459,6 +729,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "5 Minuten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 minutes"
           }
         }
       }
@@ -470,6 +746,12 @@
             "state" : "translated",
             "value" : "6 Stunden"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 heures"
+          }
         }
       }
     },
@@ -479,6 +761,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "12 Stunden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "12 heures"
           }
         }
       }
@@ -490,6 +778,12 @@
             "state" : "translated",
             "value" : "15 Min."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "15 min"
+          }
         }
       }
     },
@@ -499,6 +793,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "24 Stunden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "24 heures"
           }
         }
       }
@@ -510,6 +810,12 @@
             "state" : "translated",
             "value" : "30 Min."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 min"
+          }
         }
       }
     },
@@ -519,6 +825,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "30 Minuten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 minutes"
           }
         }
       }
@@ -530,6 +842,12 @@
             "state" : "translated",
             "value" : "30 Sekunden"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 secondes"
+          }
         }
       }
     },
@@ -539,6 +857,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein gelöschter Take lässt sich nicht wiederherstellen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un Take supprimé ne peut pas être récupéré"
           }
         }
       }
@@ -550,6 +874,12 @@
             "state" : "translated",
             "value" : "Ein paar Dinge, die du wissen solltest"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quelques points à savoir"
+          }
         }
       }
     },
@@ -559,6 +889,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein kleinerer Radius ist genauer, aber iOS löst ihn eventuell zu spät oder gar nicht aus. 100 m sind das zuverlässige Minimum."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un rayon plus petit est plus précis, mais iOS peut le déclencher en retard ou pas du tout. 100 m est le minimum fiable."
           }
         }
       }
@@ -570,6 +906,12 @@
             "state" : "translated",
             "value" : "Über"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À propos"
+          }
         }
       }
     },
@@ -580,6 +922,12 @@
             "state" : "translated",
             "value" : "Über. %@"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À propos. %@"
+          }
         }
       }
     },
@@ -589,6 +937,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "aktiv"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "actif"
           }
         }
       }
@@ -601,6 +955,12 @@
             "state" : "translated",
             "value" : "Aktiv"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actif"
+          }
         }
       }
     },
@@ -610,6 +970,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einen Take hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un Take"
           }
         }
       }
@@ -621,6 +987,12 @@
             "state" : "translated",
             "value" : "Erinnerung hinzufügen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un rappel"
+          }
         }
       }
     },
@@ -630,6 +1002,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Take hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un Take"
           }
         }
       }
@@ -641,6 +1019,12 @@
             "state" : "translated",
             "value" : "Dieses Gerät zu deinem Konto hinzufügen?"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter cet appareil à votre compte ?"
+          }
         }
       }
     },
@@ -650,6 +1034,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout"
           }
         }
       }
@@ -661,6 +1051,12 @@
             "state" : "translated",
             "value" : "Alles erledigt."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous êtes à jour."
+          }
         }
       }
     },
@@ -670,6 +1066,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alle Konflikte gelöst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tous les conflits sont résolus."
           }
         }
       }
@@ -681,6 +1083,12 @@
             "state" : "translated",
             "value" : "Alle Aufgaben erledigt."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toutes les tâches sont terminées."
+          }
         }
       }
     },
@@ -690,6 +1098,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ganztägig"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toute la journée"
           }
         }
       }
@@ -701,6 +1115,12 @@
             "state" : "translated",
             "value" : "Immer"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toujours"
+          }
         }
       }
     },
@@ -710,6 +1130,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein Obie ist immer wichtig."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un Obie est toujours important."
           }
         }
       }
@@ -721,6 +1147,12 @@
             "state" : "translated",
             "value" : "Jährlich"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque année"
+          }
         }
       }
     },
@@ -730,6 +1162,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein anderes Gerät synchronisiert gerade. Catchlight versucht es automatisch erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un autre appareil est en cours de synchronisation. Catchlight réessaiera automatiquement."
           }
         }
       }
@@ -741,12 +1179,24 @@
             "state" : "translated",
             "value" : "Alle Dateien im Ordner, die schon einmal importiert wurden, werden erneut importiert."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les fichiers du dossier déjà importés seront importés à nouveau."
+          }
         }
       }
     },
     "App" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "App"
@@ -761,6 +1211,12 @@
             "state" : "translated",
             "value" : "Darstellung"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apparence"
+          }
         }
       }
     },
@@ -770,6 +1226,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Darstellungsmodus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode d’apparence"
           }
         }
       }
@@ -781,6 +1243,12 @@
             "state" : "translated",
             "value" : "Anordnung"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disposition"
+          }
         }
       }
     },
@@ -790,6 +1258,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Authentifiziere dich, um deine Takes zu öffnen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authentifiez-vous pour ouvrir vos Takes."
           }
         }
       }
@@ -801,6 +1275,12 @@
             "state" : "translated",
             "value" : "Authentifiziere dich mit Face ID oder deinem Gerätecode, um die 12 Wörter zu sehen. Nur mit ihnen lässt sich dein Konto wiederherstellen, also zeige sie dir nur, wo dich niemand beobachtet."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authentifiez-vous avec Face ID ou le code de votre appareil pour voir les 12 mots. Ils sont le seul moyen de récupérer votre compte : affichez-les à l’abri des regards."
+          }
         }
       }
     },
@@ -810,6 +1290,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Authentifizierung …"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authentification…"
           }
         }
       }
@@ -821,6 +1307,12 @@
             "state" : "translated",
             "value" : "Zum Anzeigen deiner Phrase ist eine Authentifizierung nötig."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une authentification est nécessaire pour afficher votre phrase."
+          }
         }
       }
     },
@@ -830,6 +1322,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Automatisch löschen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suppression automatique"
           }
         }
       }
@@ -841,6 +1339,12 @@
             "state" : "translated",
             "value" : "Auto-Löschen (außer Notizen)"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suppr. auto (sauf notes)"
+          }
         }
       }
     },
@@ -850,6 +1354,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erledigte Takes automatisch löschen, außer Notizen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer automatiquement les Takes terminés, sauf les notes"
           }
         }
       }
@@ -861,6 +1371,12 @@
             "state" : "translated",
             "value" : "Verlängert sich jährlich. Jederzeit in deinem App Store-Konto kündbar."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Renouvellement automatique chaque année. Résiliable à tout moment dans votre compte App Store."
+          }
         }
       }
     },
@@ -870,6 +1386,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Automatisch"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatique"
           }
         }
       }
@@ -881,6 +1403,12 @@
             "state" : "translated",
             "value" : "Zurück"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retour"
+          }
         }
       }
     },
@@ -890,6 +1418,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abbrechen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler"
           }
         }
       }
@@ -901,6 +1435,12 @@
             "state" : "translated",
             "value" : "Suche abbrechen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler la recherche"
+          }
         }
       }
     },
@@ -910,6 +1450,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erfassen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturer"
           }
         }
       }
@@ -921,6 +1467,12 @@
             "state" : "translated",
             "value" : "${text} erfassen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturer ${text}"
+          }
         }
       }
     },
@@ -930,6 +1482,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "${text} als dein Obie erfassen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturer ${text} comme Obie"
           }
         }
       }
@@ -941,6 +1499,12 @@
             "state" : "translated",
             "value" : "Erfasse einen neuen Take als dein Obie, aus gesprochenem oder getipptem Text."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturez un nouveau Take comme Obie, à partir d’un texte dicté ou saisi."
+          }
         }
       }
     },
@@ -950,6 +1514,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erfasse einen neuen Take aus gesprochenem oder getipptem Text."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturez un nouveau Take à partir d’un texte dicté ou saisi."
           }
         }
       }
@@ -961,6 +1531,12 @@
             "state" : "translated",
             "value" : "Einen Take erfassen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturer un Take"
+          }
         }
       }
     },
@@ -971,12 +1547,24 @@
             "state" : "translated",
             "value" : "Ein Obie erfassen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturer un Obie"
+          }
         }
       }
     },
     "Catchlight" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight"
@@ -991,6 +1579,12 @@
             "state" : "translated",
             "value" : "Catchlight Jährlich"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight annuel"
+          }
         }
       }
     },
@@ -1000,6 +1594,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight-Filter"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filtre Catchlight"
           }
         }
       }
@@ -1011,6 +1611,12 @@
             "state" : "translated",
             "value" : "Catchlight wurde zurückgesetzt"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight a été réinitialisé"
+          }
         }
       }
     },
@@ -1020,6 +1626,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight ist gesperrt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight est verrouillé"
           }
         }
       }
@@ -1031,6 +1643,12 @@
             "state" : "translated",
             "value" : "Catchlight sieht deine Dateien nie. Nur du kannst sie lesen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight ne voit jamais vos fichiers. Ils ne sont lisibles que par vous."
+          }
         }
       }
     },
@@ -1040,6 +1658,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight speichert die Datenschutz-Phrase nur auf dem Gerät, auf dem du sie eingerichtet hast. Hast du Catchlight auf einem anderen Gerät eingerichtet, sieh sie dir dort an."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight conserve la phrase de confidentialité uniquement sur l’appareil où vous l’avez configurée. Si vous avez démarré sur un autre appareil, affichez-la sur celui-ci."
           }
         }
       }
@@ -1051,6 +1675,12 @@
             "state" : "translated",
             "value" : "Catchlight verwendet nur Apple-Systemframeworks (CryptoKit, LocalAuthentication, Security, SQLite3). Bibliotheken von Drittanbietern sind nicht enthalten."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight utilise uniquement des frameworks système d’Apple (CryptoKit, LocalAuthentication, Security, SQLite3). Aucune bibliothèque tierce n’est incluse."
+          }
         }
       }
     },
@@ -1060,6 +1690,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight : %@"
           }
         }
       }
@@ -1071,6 +1707,12 @@
             "state" : "translated",
             "value" : "Die Sicherheit von Catchlight beruht auf den eingebauten Schutzmechanismen von iOS. Dieses Gerät scheint verändert worden zu sein, was diesen Schutz schwächen kann. Deine Daten sind hier möglicherweise stärker gefährdet als auf einem unveränderten Gerät."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La sécurité de Catchlight repose sur les protections intégrées d’iOS. Cet appareil semble avoir été modifié, ce qui peut affaiblir ces protections. Vos données y sont peut-être plus exposées que sur un appareil non modifié."
+          }
         }
       }
     },
@@ -1080,6 +1722,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "abgehakt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "coché"
           }
         }
       }
@@ -1091,6 +1739,12 @@
             "state" : "translated",
             "value" : "Checklistenpunkt"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Élément de liste"
+          }
         }
       }
     },
@@ -1100,6 +1754,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wähle einen Cloud-Ordner, der dir gehört"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez un dossier cloud qui vous appartient"
           }
         }
       }
@@ -1111,6 +1771,12 @@
             "state" : "translated",
             "value" : "Ordner in „Dateien“ wählen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir un dossier dans Fichiers"
+          }
         }
       }
     },
@@ -1120,6 +1786,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wähle, worauf sich Catchlight konzentriert, während dieser Fokus aktiv ist."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez ce que Catchlight met en avant pendant ce mode de concentration."
           }
         }
       }
@@ -1131,6 +1803,12 @@
             "state" : "translated",
             "value" : "Wähle, wo verschlüsselte Takes gespeichert werden."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez où les Takes chiffrés sont stockés."
+          }
         }
       }
     },
@@ -1140,6 +1818,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Löschen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer"
           }
         }
       }
@@ -1151,6 +1835,12 @@
             "state" : "translated",
             "value" : "Suche löschen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer la recherche"
+          }
         }
       }
     },
@@ -1160,6 +1850,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schließe Catchlight und öffne es erneut, um eine neue Datenschutz-Phrase einzurichten. Wenn du deine Takes exportiert hast, holst du sie mit „Aus Datei importieren“ zurück."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermez Catchlight et rouvrez-le pour configurer une nouvelle phrase de confidentialité. Si vous avez exporté vos Takes, vous pouvez les récupérer avec « Importer depuis un fichier »."
           }
         }
       }
@@ -1171,6 +1867,12 @@
             "state" : "translated",
             "value" : "Abo-Angebot schließen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer l’offre d’abonnement"
+          }
         }
       }
     },
@@ -1180,6 +1882,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shot List schließen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer la Shot List"
           }
         }
       }
@@ -1191,12 +1899,24 @@
             "state" : "translated",
             "value" : "Storyboard schließen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer le Storyboard"
+          }
         }
       }
     },
     "Cloud" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cloud"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cloud"
@@ -1211,6 +1931,12 @@
             "state" : "translated",
             "value" : "Cloud-Speicher"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stockage cloud"
+          }
         }
       }
     },
@@ -1220,6 +1946,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cloud: gesichert und wiederherstellbar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cloud : sauvegardé et restaurable"
           }
         }
       }
@@ -1231,6 +1963,12 @@
             "state" : "translated",
             "value" : "Take einklappen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réduire le Take"
+          }
         }
       }
     },
@@ -1240,6 +1978,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Großzügig"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aéré"
           }
         }
       }
@@ -1251,6 +1995,12 @@
             "state" : "translated",
             "value" : "Demnächst"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bientôt disponible"
+          }
         }
       }
     },
@@ -1260,6 +2010,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Demnächst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bientôt disponible."
           }
         }
       }
@@ -1271,6 +2027,12 @@
             "state" : "translated",
             "value" : "Kompakt"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compact"
+          }
         }
       }
     },
@@ -1280,6 +2042,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "erledigte Aufgabe"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tâche terminée"
           }
         }
       }
@@ -1291,6 +2059,12 @@
             "state" : "translated",
             "value" : "Nur erledigte Aufgaben"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tâches terminées uniquement"
+          }
         }
       }
     },
@@ -1300,6 +2074,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vor dem Löschen bestätigen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmer avant de supprimer"
           }
         }
       }
@@ -1311,6 +2091,12 @@
             "state" : "translated",
             "value" : "Bestätige, dass du es bist, bevor dieses Gerät gelöscht wird."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmez votre identité avant d’effacer cet appareil."
+          }
         }
       }
     },
@@ -1320,6 +2106,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Drei Wörter bestätigen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmer trois mots"
           }
         }
       }
@@ -1331,6 +2123,12 @@
             "state" : "translated",
             "value" : "Konflikt"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conflit"
+          }
         }
       }
     },
@@ -1340,6 +2138,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verbinde einen Cloud-Ordner, über den du bestimmst. Deine Takes bleiben verschlüsselt, wir sehen sie nie, und deine 12 Wörter öffnen sie auf einem neuen iPhone wieder."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connectez un dossier cloud que vous contrôlez. Vos Takes restent chiffrés, nous ne les voyons jamais, et vos 12 mots permettent de les rouvrir sur un nouvel iPhone."
           }
         }
       }
@@ -1351,6 +2155,12 @@
             "state" : "translated",
             "value" : "Cloud-Ordner verbinden"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecter un dossier cloud"
+          }
         }
       }
     },
@@ -1360,6 +2170,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Weiter"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer"
           }
         }
       }
@@ -1371,6 +2187,12 @@
             "state" : "translated",
             "value" : "Version und Geräteinfo kopieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier la version et les infos de l’appareil"
+          }
         }
       }
     },
@@ -1380,6 +2202,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Phrase konnte auf diesem Gerät nicht geprüft werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de vérifier votre phrase sur cet appareil."
           }
         }
       }
@@ -1391,6 +2219,12 @@
             "state" : "translated",
             "value" : "Dieser Take konnte nicht gelöscht werden."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de supprimer ce Take."
+          }
         }
       }
     },
@@ -1400,6 +2234,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Es konnte keine Datenschutz-Phrase erzeugt werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de générer une phrase de confidentialité."
           }
         }
       }
@@ -1411,6 +2251,12 @@
             "state" : "translated",
             "value" : "Eine der Notizen konnte nicht importiert werden."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’importer l’une des notes."
+          }
         }
       }
     },
@@ -1420,6 +2266,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Takes konnten nicht geladen werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de charger vos Takes."
           }
         }
       }
@@ -1431,6 +2283,12 @@
             "state" : "translated",
             "value" : "Diese Dateien konnten nicht geöffnet werden. Bitte versuche es erneut."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’ouvrir ces fichiers. Veuillez réessayer."
+          }
         }
       }
     },
@@ -1440,6 +2298,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Bibliothek konnte auf diesem Gerät nicht geöffnet werden. Bitte starte Catchlight neu."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’ouvrir votre bibliothèque sur cet appareil. Veuillez redémarrer Catchlight."
           }
         }
       }
@@ -1451,6 +2315,12 @@
             "state" : "translated",
             "value" : "Der App Store ist nicht erreichbar. Prüfe deine Verbindung."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de joindre l’App Store. Vérifiez votre connexion."
+          }
         }
       }
     },
@@ -1460,6 +2330,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Takes konnten nicht neu sortiert werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de réorganiser vos Takes."
           }
         }
       }
@@ -1471,6 +2347,12 @@
             "state" : "translated",
             "value" : "Käufe konnten nicht wiederhergestellt werden. Bitte versuche es erneut."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de restaurer les achats. Veuillez réessayer."
+          }
         }
       }
     },
@@ -1480,6 +2362,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Auswahl konnte nicht gespeichert werden. Bitte versuche es erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’enregistrer ce choix. Veuillez réessayer."
           }
         }
       }
@@ -1491,6 +2379,12 @@
             "state" : "translated",
             "value" : "Dieser Ordner konnte nicht gespeichert werden: %@"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’enregistrer ce dossier : %@"
+          }
         }
       }
     },
@@ -1500,6 +2394,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Lösung konnte nicht gespeichert werden. Bitte versuche es erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’enregistrer ce choix de résolution. Veuillez réessayer."
           }
         }
       }
@@ -1511,6 +2411,12 @@
             "state" : "translated",
             "value" : "Dieser Take konnte nicht gespeichert werden."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’enregistrer ce Take."
+          }
         }
       }
     },
@@ -1520,6 +2426,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dein Konto konnte auf diesem Gerät nicht gesichert werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de sécuriser votre compte sur cet appareil."
           }
         }
       }
@@ -1531,6 +2443,12 @@
             "state" : "translated",
             "value" : "Obie konnte nicht festgelegt werden."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de définir l’Obie."
+          }
         }
       }
     },
@@ -1540,6 +2458,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Entsperren fehlgeschlagen. Authentifiziere dich, um deine Takes zu öffnen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec du déverrouillage. Authentifiez-vous pour ouvrir vos Takes."
           }
         }
       }
@@ -1551,6 +2475,12 @@
             "state" : "translated",
             "value" : "Entsperren fehlgeschlagen. Tippe, um erneut zu speichern."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec du déverrouillage. Touchez pour réessayer d’enregistrer."
+          }
         }
       }
     },
@@ -1560,6 +2490,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Meine Datenschutz-Phrase erstellen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer ma phrase de confidentialité"
           }
         }
       }
@@ -1577,6 +2513,12 @@
             "state" : "translated",
             "value" : "Erstellt am %1$@ um %2$@"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créé le %1$@ à %2$@"
+          }
         }
       }
     },
@@ -1586,6 +2528,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erstellungsdatum"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Date de création"
           }
         }
       }
@@ -1597,6 +2545,12 @@
             "state" : "translated",
             "value" : "Aktueller Ordner: %@"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dossier actuel : %@"
+          }
         }
       }
     },
@@ -1606,6 +2560,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aktueller Standort"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Position actuelle"
           }
         }
       }
@@ -1617,12 +2577,24 @@
             "state" : "translated",
             "value" : "Eigene"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personnalisé"
+          }
         }
       }
     },
     "DAILIES" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DAILIES"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "DAILIES"
@@ -1637,6 +2609,12 @@
             "state" : "translated",
             "value" : "Täglich"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque jour"
+          }
         }
       }
     },
@@ -1646,6 +2624,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dunkel"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sombre"
           }
         }
       }
@@ -1657,6 +2641,12 @@
             "state" : "translated",
             "value" : "Datum"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Date"
+          }
         }
       }
     },
@@ -1666,6 +2656,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Standardzeitpunkt für Erinnerungen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Délai de rappel par défaut"
           }
         }
       }
@@ -1677,6 +2673,12 @@
             "state" : "translated",
             "value" : "Standardzeitpunkt"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Délai par défaut"
+          }
         }
       }
     },
@@ -1686,6 +2688,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Löschen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer"
           }
         }
       }
@@ -1697,6 +2705,12 @@
             "state" : "translated",
             "value" : "Punkt löschen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer l’élément"
+          }
         }
       }
     },
@@ -1706,6 +2720,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nur den nächsten Termin löschen oder die ganze Serie?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer uniquement la prochaine occurrence, ou toute la série ?"
           }
         }
       }
@@ -1717,6 +2737,12 @@
             "state" : "translated",
             "value" : "Serie löschen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer la série"
+          }
         }
       }
     },
@@ -1726,6 +2752,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Take löschen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer le Take"
           }
         }
       }
@@ -1737,6 +2769,12 @@
             "state" : "translated",
             "value" : "Diesen Termin löschen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer cette occurrence"
+          }
         }
       }
     },
@@ -1746,6 +2784,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diesen Take löschen?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer ce Take ?"
           }
         }
       }
@@ -1757,6 +2801,12 @@
             "state" : "translated",
             "value" : "Hat die Prüfung nicht bestanden und ist möglicherweise eine ältere Version."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "N’a pas passé la vérification et peut être une version plus ancienne."
+          }
         }
       }
     },
@@ -1766,6 +2816,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deaktiviert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivé"
           }
         }
       }
@@ -1777,6 +2833,12 @@
             "state" : "translated",
             "value" : "Änderungen verwerfen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abandonner les modifications"
+          }
         }
       }
     },
@@ -1786,6 +2848,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ausblenden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masquer"
           }
         }
       }
@@ -1797,6 +2865,12 @@
             "state" : "translated",
             "value" : "%@ ausblenden"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masquer %@"
+          }
         }
       }
     },
@@ -1806,6 +2880,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese ausblenden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masquer celle-ci"
           }
         }
       }
@@ -1817,6 +2897,12 @@
             "state" : "translated",
             "value" : "Dock zeigt wieder die Navigation."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le Dock affiche à nouveau la navigation."
+          }
         }
       }
     },
@@ -1826,6 +2912,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dock zeigt die Suche."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le Dock affiche la recherche."
           }
         }
       }
@@ -1837,6 +2929,12 @@
             "state" : "translated",
             "value" : "Dock zeigt die Zeitleistenfilter."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le Dock affiche les filtres de la chronologie."
+          }
         }
       }
     },
@@ -1846,6 +2944,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erledigt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminé"
           }
         }
       }
@@ -1857,6 +2961,12 @@
             "state" : "translated",
             "value" : "nur erledigte"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "terminées uniquement"
+          }
         }
       }
     },
@@ -1866,6 +2976,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tippe in der Symbolleiste doppelt auf „Take hinzufügen“. Zum Speichern tippst du doppelt auf „Sichern und schließen“. Mehr ist zum Erfassen nicht nötig."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois « Ajouter un Take » dans la barre d’outils. Pour enregistrer, touchez deux fois « Enregistrer et fermer ». C’est tout pour capturer."
           }
         }
       }
@@ -1877,6 +2993,12 @@
             "state" : "translated",
             "value" : "Tippe doppelt auf eine Iris, um den Take zur Aufgabe zu machen, eine Erinnerung festzulegen oder ihn als wichtig zu markieren."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois un Iris pour faire de ce Take une tâche, définir un rappel ou le marquer comme important."
+          }
         }
       }
     },
@@ -1886,6 +3008,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um %@ hinzuzufügen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour ajouter %@."
           }
         }
       }
@@ -1897,6 +3025,12 @@
             "state" : "translated",
             "value" : "Doppeltippen, um die Auswahl zu übernehmen und zu schließen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour appliquer votre sélection et fermer."
+          }
         }
       }
     },
@@ -1906,6 +3040,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um die Tastatur wieder einzublenden und weiterzuschreiben."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour réafficher le clavier et continuer à écrire."
           }
         }
       }
@@ -1917,6 +3057,12 @@
             "state" : "translated",
             "value" : "Doppeltippen, um einen neuen Take zu erfassen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour capturer un nouveau Take."
+          }
         }
       }
     },
@@ -1926,6 +3072,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um die Suche zu löschen und zum Dock zurückzukehren."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour effacer la recherche et revenir au Dock."
           }
         }
       }
@@ -1937,6 +3089,12 @@
             "state" : "translated",
             "value" : "Doppeltippen zum Löschen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour effacer."
+          }
         }
       }
     },
@@ -1946,6 +3104,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um diesen Hinweis auszublenden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour masquer cette alerte."
           }
         }
       }
@@ -1957,6 +3121,12 @@
             "state" : "translated",
             "value" : "Doppeltippen, um diesen Take zu bearbeiten."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour modifier ce Take."
+          }
         }
       }
     },
@@ -1966,6 +3136,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um die Zeitleiste nach Notizen, Aufgaben oder Erinnerungen zu filtern."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour filtrer la chronologie par notes, tâches ou rappels."
           }
         }
       }
@@ -1977,6 +3153,12 @@
             "state" : "translated",
             "value" : "Doppeltippen, um es in das nächste Feld zu setzen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour le placer dans la case suivante."
+          }
         }
       }
     },
@@ -1986,6 +3168,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um %@ zu entfernen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour retirer %@."
           }
         }
       }
@@ -1997,6 +3185,12 @@
             "state" : "translated",
             "value" : "Doppeltippen, um mit der Sucheingabe fortzufahren."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour reprendre la saisie de votre recherche."
+          }
         }
       }
     },
@@ -2006,6 +3200,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um diesen Take zu sichern und die Bearbeitung zu beenden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour enregistrer ce Take et terminer la modification."
           }
         }
       }
@@ -2017,6 +3217,12 @@
             "state" : "translated",
             "value" : "Doppeltippen, um diesen Take zu sichern."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour enregistrer ce Take."
+          }
         }
       }
     },
@@ -2026,6 +3232,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um deine Takes zu durchsuchen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour rechercher dans vos Takes."
           }
         }
       }
@@ -2037,6 +3249,12 @@
             "state" : "translated",
             "value" : "Doppeltippen, um nur wichtige Takes anzuzeigen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour n’afficher que les Takes importants."
+          }
         }
       }
     },
@@ -2046,6 +3264,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um nur reine Notizen anzuzeigen. Das Einschalten von Notizen hebt die Filter für Aufgaben und Erinnerungen auf."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour n’afficher que les notes simples. Activer les notes désactive les filtres Tâches et Rappels."
           }
         }
       }
@@ -2057,6 +3281,12 @@
             "state" : "translated",
             "value" : "Doppeltippen, um nur Takes aus diesem Monat anzuzeigen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour n’afficher que les Takes créés ce mois-ci."
+          }
         }
       }
     },
@@ -2066,6 +3296,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um diesen Punkt abzuhaken."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour cocher cet élément."
           }
         }
       }
@@ -2077,6 +3313,12 @@
             "state" : "translated",
             "value" : "Doppeltippen, um die Phrase ein- oder auszublenden."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour afficher ou masquer la phrase."
+          }
         }
       }
     },
@@ -2086,6 +3328,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen zum Umschalten. Über den Aktionen-Rotor nur erledigte Aufgaben anzeigen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour activer ou désactiver. Utilisez le rotor Actions pour n’afficher que les tâches terminées."
           }
         }
       }
@@ -2097,6 +3345,12 @@
             "state" : "translated",
             "value" : "Doppeltippen zum Umschalten. Über den Aktionen-Rotor nur abgelaufene Erinnerungen anzeigen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour activer ou désactiver. Utilisez le rotor Actions pour n’afficher que les rappels expirés."
+          }
         }
       }
     },
@@ -2106,6 +3360,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doppeltippen, um den Haken zu entfernen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour décocher cet élément."
           }
         }
       }
@@ -2117,6 +3377,12 @@
             "state" : "translated",
             "value" : "Doppeltippen, um deine Phrase anzuzeigen. Face ID oder Gerätecode erforderlich."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez deux fois pour voir votre phrase. Face ID ou code requis."
+          }
         }
       }
     },
@@ -2126,6 +3392,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "z. B. Zuhause"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ex. : Maison"
           }
         }
       }
@@ -2137,6 +3409,12 @@
             "state" : "translated",
             "value" : "Erinnerung bearbeiten"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier le rappel"
+          }
         }
       }
     },
@@ -2147,6 +3425,12 @@
             "state" : "translated",
             "value" : "Nur im Editor"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Éditeur uniquement"
+          }
         }
       }
     },
@@ -2156,6 +3440,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "E-Mail an %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mail à %@"
           }
         }
       }
@@ -2197,6 +3487,24 @@
               }
             }
           }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "E-mail à %@ et %lld autre e-mail"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "E-mail à %@ et %lld autres e-mails"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -2206,6 +3514,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aktivieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activer"
           }
         }
       }
@@ -2217,6 +3531,12 @@
             "state" : "translated",
             "value" : "Aktiviert"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activé"
+          }
         }
       }
     },
@@ -2226,6 +3546,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verschlüsselte Cloud-Synchronisierung auf all deinen Geräten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisation cloud chiffrée sur tous vos appareils"
           }
         }
       }
@@ -2237,6 +3563,12 @@
             "state" : "translated",
             "value" : "Auf diesem Gerät verschlüsselt, nur für dich lesbar."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiffré sur cet appareil, lisible uniquement par vous."
+          }
         }
       }
     },
@@ -2246,6 +3578,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auf diesem Gerät verschlüsselt, nur für dich lesbar. Um die Cloud-Sicherung abzuschließen, wähle deinen Ordner unter Einstellungen → System → Cloud-Speicher."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiffré sur cet appareil, lisible uniquement par vous. Pour terminer la configuration de la sauvegarde cloud, choisissez votre dossier dans Réglages → Système → Stockage cloud."
           }
         }
       }
@@ -2257,6 +3595,12 @@
             "state" : "translated",
             "value" : "Gib deine Datenschutz-Phrase ein"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisissez votre phrase de confidentialité"
+          }
         }
       }
     },
@@ -2266,6 +3610,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gib deine Datenschutz-Phrase ein, um deine Takes auf dieses Gerät zu holen. Takes, die nur auf diesem Gerät gespeichert sind, werden entfernt. Um vorher eine Kopie zu behalten, brich ab und nutze „Takes exportieren“ (Markdown) oder stelle sicher, dass sie bereits in deinem Cloud-Ordner liegen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisissez votre phrase de confidentialité pour récupérer vos Takes sur cet appareil. Les Takes stockés uniquement sur cet appareil seront supprimés. Pour en garder une copie d’abord, annulez et utilisez « Exporter les Takes » (Markdown), ou vérifiez qu’ils se trouvent déjà dans votre dossier cloud."
           }
         }
       }
@@ -2277,6 +3627,12 @@
             "state" : "translated",
             "value" : "Alles löschen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout effacer"
+          }
         }
       }
     },
@@ -2286,6 +3642,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alles auf diesem Gerät löschen?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout effacer sur cet appareil ?"
           }
         }
       }
@@ -2297,6 +3659,12 @@
             "state" : "translated",
             "value" : "Löschen. Takes exportiert"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer. Takes exportés"
+          }
         }
       }
     },
@@ -2306,6 +3674,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Löscht alle Takes hier und erstellt eine neue Datenschutz-Phrase. Auch Kopien in der Cloud werden unlesbar. Exportiere vorher, das ist der einzige Weg zurück."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efface tous les Takes ici et crée une nouvelle phrase de confidentialité. Les copies dans le cloud deviennent aussi illisibles. Exportez d’abord : c’est le seul moyen de revenir en arrière."
           }
         }
       }
@@ -2317,6 +3691,12 @@
             "state" : "translated",
             "value" : "Löscht alle Takes auf diesem Gerät und erstellt eine neue Datenschutz-Phrase."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efface tous les Takes de cet appareil et crée une nouvelle phrase de confidentialité."
+          }
         }
       }
     },
@@ -2326,6 +3706,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alle Aufgaben in diesem Take sind abgehakt. Erinnerung beenden?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toutes les tâches de ce Take sont cochées. Arrêter son rappel ?"
           }
         }
       }
@@ -2337,6 +3723,12 @@
             "state" : "translated",
             "value" : "Jeder Gedanke verdient einen Moment der Klarheit."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque pensée mérite un moment de clarté."
+          }
         }
       }
     },
@@ -2346,6 +3738,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jeden Werktag"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En semaine"
           }
         }
       }
@@ -2357,6 +3755,12 @@
             "state" : "translated",
             "value" : "Jedes Wochenende"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque week-end"
+          }
         }
       }
     },
@@ -2366,6 +3770,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout"
           }
         }
       }
@@ -2377,6 +3787,12 @@
             "state" : "translated",
             "value" : "Take aufklappen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Développer le Take"
+          }
         }
       }
     },
@@ -2386,6 +3802,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "nur abgelaufene"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "expirés uniquement"
           }
         }
       }
@@ -2397,6 +3819,12 @@
             "state" : "translated",
             "value" : "Nur abgelaufene Erinnerungen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rappels expirés uniquement"
+          }
         }
       }
     },
@@ -2406,6 +3834,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Exportieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter"
           }
         }
       }
@@ -2417,6 +3851,12 @@
             "state" : "translated",
             "value" : "Eine lesbare Kopie exportieren?"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter une copie lisible ?"
+          }
         }
       }
     },
@@ -2426,6 +3866,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Exportiere alle deine Takes als Markdown-Datei."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportez tous vos Takes dans un fichier Markdown."
           }
         }
       }
@@ -2437,6 +3883,12 @@
             "state" : "translated",
             "value" : "Trotzdem exportieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter quand même"
+          }
         }
       }
     },
@@ -2446,6 +3898,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diagnosedaten exportieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter les diagnostics"
           }
         }
       }
@@ -2457,6 +3915,12 @@
             "state" : "translated",
             "value" : "Jetzt exportieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter maintenant"
+          }
         }
       }
     },
@@ -2466,6 +3930,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Take exportieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter le Take"
           }
         }
       }
@@ -2477,6 +3947,12 @@
             "state" : "translated",
             "value" : "Takes exportieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter les Takes"
+          }
         }
       }
     },
@@ -2486,6 +3962,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Exportiere deine Takes jetzt. Nur so bleiben sie erhalten. Kopien in der Cloud werden dadurch unlesbar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportez vos Takes maintenant. C’est le seul moyen de les conserver. Les copies dans le cloud deviendront illisibles."
           }
         }
       }
@@ -2497,6 +3979,12 @@
             "state" : "translated",
             "value" : "Deine Takes exportieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter vos Takes"
+          }
         }
       }
     },
@@ -2506,6 +3994,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Takes exportieren?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporter vos Takes ?"
           }
         }
       }
@@ -2517,6 +4011,12 @@
             "state" : "translated",
             "value" : "Zuerst erstellen wir deine Datenschutz-Phrase: 12 Wörter, die der **EINZIGE** Schlüssel zu deinen Daten sind."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "D’abord, nous allons créer votre phrase de confidentialité : 12 mots qui sont la **SEULE** clé de vos données."
+          }
         }
       }
     },
@@ -2526,6 +4026,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nachfass-Erinnerungen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rappels de relance"
           }
         }
       }
@@ -2538,6 +4044,12 @@
             "state" : "translated",
             "value" : "Gratis-Testphase"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essai gratuit"
+          }
         }
       }
     },
@@ -2547,6 +4059,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zurück"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retour"
           }
         }
       }
@@ -2558,6 +4076,12 @@
             "state" : "translated",
             "value" : "Verstanden"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compris"
+          }
         }
       }
     },
@@ -2567,6 +4091,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Phrase ausblenden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masquer la phrase"
           }
         }
       }
@@ -2578,6 +4108,12 @@
             "state" : "translated",
             "value" : "Gedrückt halten zum Anzeigen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenir pour afficher"
+          }
         }
       }
     },
@@ -2587,6 +4123,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gedrückt halten, um die Phrase anzuzeigen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenir pour afficher la phrase"
           }
         }
       }
@@ -2598,6 +4140,12 @@
             "state" : "translated",
             "value" : "Stündlich"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toutes les heures"
+          }
         }
       }
     },
@@ -2607,6 +4155,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ich nutze Catchlight bereits"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "J’utilise déjà Catchlight"
           }
         }
       }
@@ -2618,6 +4172,12 @@
             "state" : "translated",
             "value" : "Ich kenne das Risiko"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je connais le risque"
+          }
         }
       }
     },
@@ -2627,6 +4187,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ich habe sie aufgeschrieben"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je les ai notés"
           }
         }
       }
@@ -2638,6 +4204,12 @@
             "state" : "translated",
             "value" : "Ignorieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ignorer"
+          }
         }
       }
     },
@@ -2647,6 +4219,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Importieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importer"
           }
         }
       }
@@ -2658,6 +4236,12 @@
             "state" : "translated",
             "value" : "Importiere .md-, .txt- oder .rtf-Dateien aus dem Ordner „Import“ deines Sync-Speicherorts als neue Takes."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importez des fichiers .md, .txt ou .rtf du dossier Import de votre emplacement de synchronisation comme nouveaux Takes."
+          }
         }
       }
     },
@@ -2668,6 +4252,12 @@
             "state" : "translated",
             "value" : "Aus Datei importieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importer depuis un fichier"
+          }
         }
       }
     },
@@ -2677,6 +4267,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Notizen importieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importer des notes"
           }
         }
       }
@@ -2714,6 +4310,24 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Import erfolgreich. %lld Takes wurden deiner Zeitleiste hinzugefügt."
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Importation réussie. %lld Take ajouté à votre chronologie."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Importation réussie. %lld Takes ajoutés à votre chronologie."
                 }
               }
             }
@@ -2758,6 +4372,24 @@
               }
             }
           }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Importation réussie. %lld Take ajouté."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Importation réussie. %lld Takes ajoutés."
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -2767,6 +4399,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wichtig"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Important"
           }
         }
       }
@@ -2778,6 +4416,12 @@
             "state" : "translated",
             "value" : "Filter „Wichtig“"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filtre Important"
+          }
         }
       }
     },
@@ -2788,6 +4432,12 @@
             "state" : "translated",
             "value" : "Nur wichtige"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importants uniquement"
+          }
         }
       }
     },
@@ -2797,6 +4447,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "inaktiv"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "inactif"
           }
         }
       }
@@ -2809,6 +4465,12 @@
             "state" : "translated",
             "value" : "Inaktiv"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inactif"
+          }
         }
       }
     },
@@ -2818,6 +4480,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Direkt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intégré"
           }
         }
       }
@@ -2829,12 +4497,24 @@
             "state" : "translated",
             "value" : "Intervall"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intervalle"
+          }
         }
       }
     },
     "Iris" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iris"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Iris"
@@ -2849,6 +4529,12 @@
             "state" : "translated",
             "value" : "Iris, %@"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iris, %@"
+          }
         }
       }
     },
@@ -2858,6 +4544,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Er liegt in deinem Cloud-Ordner, aber nicht auf diesem iPhone. Er hat die Prüfung nicht bestanden und ist daher möglicherweise eine ältere Version."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il se trouve dans votre dossier cloud mais pas sur cet iPhone. Il n’a pas passé la vérification : il s’agit peut-être d’une version plus ancienne."
           }
         }
       }
@@ -2869,6 +4561,12 @@
             "state" : "translated",
             "value" : "Punkt"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Élément"
+          }
         }
       }
     },
@@ -2878,6 +4576,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Version behalten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garder cette version"
           }
         }
       }
@@ -2889,6 +4593,12 @@
             "state" : "translated",
             "value" : "Wenn du sie behältst, ersetzt sie beim Synchronisieren alle neueren Änderungen, die es auf einem anderen Gerät geben könnte."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La garder remplacera, lors de la synchronisation, toute modification plus récente faite sur un autre appareil."
+          }
         }
       }
     },
@@ -2899,6 +4609,12 @@
             "state" : "translated",
             "value" : "Hell"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clair"
+          }
         }
       }
     },
@@ -2908,6 +4624,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Link zu %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lien vers %@"
           }
         }
       }
@@ -2949,6 +4671,24 @@
               }
             }
           }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Lien vers %@ et %lld autre lien"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Lien vers %@ et %lld autres liens"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -2958,6 +4698,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lokal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local"
           }
         }
       }
@@ -2969,6 +4715,12 @@
             "state" : "translated",
             "value" : "Lokal: nur auf diesem Gerät"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local : sur cet appareil uniquement"
+          }
         }
       }
     },
@@ -2978,6 +4730,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ort"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lieu"
           }
         }
       }
@@ -2989,6 +4747,12 @@
             "state" : "translated",
             "value" : "Der Standortzugriff ist aus. Aktiviere ihn in den Einstellungen, um eine Ortserinnerung festzulegen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’accès à la position est désactivé. Activez-le dans Réglages pour définir un rappel de lieu."
+          }
         }
       }
     },
@@ -2998,6 +4762,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sperren nach"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verrouiller après"
           }
         }
       }
@@ -3009,6 +4779,12 @@
             "state" : "translated",
             "value" : "Entwickelt von Considus"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conçu par Considus"
+          }
         }
       }
     },
@@ -3018,6 +4794,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Als wichtig markieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marquer comme important"
           }
         }
       }
@@ -3029,6 +4811,12 @@
             "state" : "translated",
             "value" : "Zum Obie machen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En faire l’Obie"
+          }
         }
       }
     },
@@ -3038,6 +4826,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zum normalen Take machen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En faire un Take standard"
           }
         }
       }
@@ -3049,6 +4843,12 @@
             "state" : "translated",
             "value" : "Diesen Take zu deinem Obie machen?"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En faire votre Obie ?"
+          }
         }
       }
     },
@@ -3058,6 +4858,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abo verwalten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gérer l’abonnement"
           }
         }
       }
@@ -3069,6 +4875,12 @@
             "state" : "translated",
             "value" : "Manuell"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manuel"
+          }
         }
       }
     },
@@ -3078,6 +4890,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Als erledigt markieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marquer comme terminé"
           }
         }
       }
@@ -3089,6 +4907,12 @@
             "state" : "translated",
             "value" : "Als erledigt markieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marquer comme terminé"
+          }
         }
       }
     },
@@ -3098,6 +4922,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Als nicht erledigt markieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marquer comme non terminé"
           }
         }
       }
@@ -3109,6 +4939,12 @@
             "state" : "translated",
             "value" : "Als nicht erledigt markieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marquer comme non terminé"
+          }
         }
       }
     },
@@ -3118,6 +4954,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Modus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode"
           }
         }
       }
@@ -3129,6 +4971,12 @@
             "state" : "translated",
             "value" : "Monatlich"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque mois"
+          }
         }
       }
     },
@@ -3138,6 +4986,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nach unten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descendre"
           }
         }
       }
@@ -3149,6 +5003,12 @@
             "state" : "translated",
             "value" : "Nach oben"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monter"
+          }
         }
       }
     },
@@ -3158,6 +5018,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nie"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jamais"
           }
         }
       }
@@ -3169,6 +5035,12 @@
             "state" : "translated",
             "value" : "Synchronisiert nie. Deine Takes bleiben auf diesem Gerät."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune synchronisation. Vos Takes restent sur cet appareil."
+          }
         }
       }
     },
@@ -3178,6 +5050,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neues Obie"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouvel Obie"
           }
         }
       }
@@ -3189,6 +5067,12 @@
             "state" : "translated",
             "value" : "Neuer Take"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouveau Take"
+          }
         }
       }
     },
@@ -3198,6 +5082,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neueste zuerst"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus récents d’abord"
           }
         }
       }
@@ -3209,6 +5099,12 @@
             "state" : "translated",
             "value" : "Weiter"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suivant"
+          }
         }
       }
     },
@@ -3218,6 +5114,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nächste Woche"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La semaine prochaine"
           }
         }
       }
@@ -3229,6 +5131,12 @@
             "state" : "translated",
             "value" : "Für diese Apple-ID wurde kein aktives Abo gefunden."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun abonnement actif n’a été trouvé pour cet identifiant Apple."
+          }
         }
       }
     },
@@ -3238,6 +5146,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "In deiner Auswahl gibt es keine Notizen zum Importieren."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune note à importer dans votre sélection."
           }
         }
       }
@@ -3249,6 +5163,12 @@
             "state" : "translated",
             "value" : "Noch keine Hinweise"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune alerte pour l’instant"
+          }
         }
       }
     },
@@ -3258,6 +5178,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine Datenschutz-Phrase auf diesem Gerät. Exportiere jetzt, dann Einstellungen > Neu beginnen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune phrase de confidentialité sur cet appareil. Exportez maintenant, puis Réglages > Recommencer."
           }
         }
       }
@@ -3269,6 +5195,12 @@
             "state" : "translated",
             "value" : "Im Ordner „Import“ wurden keine lesbaren Markdown- oder Textdateien gefunden."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun fichier Markdown ou texte reconnu dans le dossier Import."
+          }
         }
       }
     },
@@ -3279,6 +5211,12 @@
             "state" : "translated",
             "value" : "Keine"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun"
+          }
         }
       }
     },
@@ -3288,6 +5226,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch nicht verfügbar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas encore disponible."
           }
         }
       }
@@ -3300,6 +5244,12 @@
             "state" : "translated",
             "value" : "Kein Ordner"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non configuré"
+          }
         }
       }
     },
@@ -3309,6 +5259,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht erledigt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non terminé"
           }
         }
       }
@@ -3320,6 +5276,12 @@
             "state" : "translated",
             "value" : "Nicht jetzt"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus tard"
+          }
         }
       }
     },
@@ -3329,6 +5291,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Notiz"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note"
           }
         }
       }
@@ -3340,6 +5308,12 @@
             "state" : "translated",
             "value" : "Filter „Notizen“"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filtre Notes"
+          }
         }
       }
     },
@@ -3349,6 +5323,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch nichts geplant"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien de prévu pour l’instant"
           }
         }
       }
@@ -3360,6 +5340,12 @@
             "state" : "translated",
             "value" : "Hinweisverlauf"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Historique des alertes"
+          }
         }
       }
     },
@@ -3369,6 +5355,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mitteilungen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
           }
         }
       }
@@ -3380,6 +5372,12 @@
             "state" : "translated",
             "value" : "Mitteilungen deaktiviert. Öffnet die iOS-Einstellungen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications désactivées. Ouvre les Réglages d’iOS."
+          }
         }
       }
     },
@@ -3389,6 +5387,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mitteilungen aktiviert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications activées"
           }
         }
       }
@@ -3400,6 +5404,12 @@
             "state" : "translated",
             "value" : "Benachrichtigen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifier"
+          }
         }
       }
     },
@@ -3410,12 +5420,24 @@
             "state" : "translated",
             "value" : "Und wo sollen deine Takes zu Hause sein?"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Et maintenant, où vos Takes doivent-ils vivre ?"
+          }
         }
       }
     },
     "Obie" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Obie"
@@ -3430,6 +5452,12 @@
             "state" : "translated",
             "value" : "Obie, dein angehefteter Take"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie, votre Take épinglé"
+          }
         }
       }
     },
@@ -3439,6 +5467,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Obie: dein angehefteter Take"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie : votre Take épinglé"
           }
         }
       }
@@ -3450,6 +5484,12 @@
             "state" : "translated",
             "value" : "aus"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "désactivé"
+          }
         }
       }
     },
@@ -3460,12 +5500,24 @@
             "state" : "translated",
             "value" : "Aus"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivé"
+          }
         }
       }
     },
     "OK" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
@@ -3480,6 +5532,12 @@
             "state" : "translated",
             "value" : "Älteste zuerst"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus anciens d’abord"
+          }
         }
       }
     },
@@ -3489,6 +5547,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ein"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "activé"
           }
         }
       }
@@ -3500,6 +5564,12 @@
             "state" : "translated",
             "value" : "Suche nur auf dem Gerät. Considus kann deine Takes niemals lesen. Die Textstufen sind wegen einer iOS-Einschränkung ausgegraut."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recherche sur l’appareil uniquement. Considus ne peut jamais lire vos Takes. Les niveaux de texte sont grisés en raison d’une limite d’iOS."
+          }
         }
       }
     },
@@ -3509,6 +5579,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch eine Sache, bevor es weitergeht."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une chose avant de continuer."
           }
         }
       }
@@ -3520,6 +5596,12 @@
             "state" : "translated",
             "value" : "Synchronisiert nur, wenn du auf „Jetzt synchronisieren“ tippst."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronise uniquement quand vous touchez « Synchroniser maintenant »."
+          }
         }
       }
     },
@@ -3529,6 +5611,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öffne Catchlight mit einem leeren Obie."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez Catchlight sur un Obie vierge."
           }
         }
       }
@@ -3540,6 +5628,12 @@
             "state" : "translated",
             "value" : "Öffne Catchlight und beginne einen neuen Take."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez Catchlight et commencez un nouveau Take."
+          }
         }
       }
     },
@@ -3549,6 +5643,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einstellungen öffnen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir Réglages"
           }
         }
       }
@@ -3560,6 +5660,12 @@
             "state" : "translated",
             "value" : "Shot List öffnen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir la Shot List"
+          }
         }
       }
     },
@@ -3569,6 +5675,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open-Source-Lizenzen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Licences open source"
           }
         }
       }
@@ -3580,6 +5692,12 @@
             "state" : "translated",
             "value" : "Wird in deinem Browser geöffnet."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S’ouvre dans votre navigateur."
+          }
         }
       }
     },
@@ -3589,6 +5707,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öffnet das Catchlight-Meldeformular, bereits ausgefüllt mit deiner App- und iOS-Version."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre le formulaire de signalement Catchlight, prérempli avec vos versions de l’app et d’iOS."
           }
         }
       }
@@ -3600,6 +5724,12 @@
             "state" : "translated",
             "value" : "Öffnet „Dateien“, um einen Ordner für die Synchronisierung zu wählen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre Fichiers pour choisir un dossier de synchronisation."
+          }
         }
       }
     },
@@ -3609,6 +5739,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öffnet den Fokusring, um die Art dieses Takes zu ändern."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre l’anneau de focus pour changer le type de ce Take."
           }
         }
       }
@@ -3620,6 +5756,12 @@
             "state" : "translated",
             "value" : "Öffnet den Fokusring. Über den Aktionen-Rotor machst du diesen Take zu deinem Obie."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre l’anneau de focus. Utilisez le rotor Actions pour en faire votre Obie."
+          }
         }
       }
     },
@@ -3629,6 +5771,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öffnet den Fokusring. Über den Aktionen-Rotor machst du ihn wieder zu einem normalen Take."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre l’anneau de focus. Utilisez le rotor Actions pour en refaire un Take standard."
           }
         }
       }
@@ -3640,6 +5788,12 @@
             "state" : "translated",
             "value" : "Öffnet das Storyboard: alle Takes mit einer Aufgabe. Über den Aktionen-Rotor öffnest du die Einstellungen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre le Storyboard : tous les Takes avec une tâche. Utilisez le rotor Actions pour ouvrir Réglages."
+          }
         }
       }
     },
@@ -3649,6 +5803,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reihenfolge"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordre"
           }
         }
       }
@@ -3660,6 +5820,12 @@
             "state" : "translated",
             "value" : "Überfällig"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En retard"
+          }
         }
       }
     },
@@ -3669,6 +5835,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ÜBERFÄLLIG"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EN RETARD"
           }
         }
       }
@@ -3680,6 +5852,12 @@
             "state" : "translated",
             "value" : "Fenster"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panneau"
+          }
         }
       }
     },
@@ -3689,6 +5867,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "„Fenster“ schlägt vor, du übernimmst. „Direkt“ schreibt an Ort und Stelle um. Beide senden diesen Take an Apple. Deine Datenschutz-Phrase nie."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« Panneau » propose, vous acceptez. « Intégré » réécrit directement. Les deux envoient ce Take à Apple. Votre phrase de confidentialité, jamais."
           }
         }
       }
@@ -3700,6 +5884,12 @@
             "state" : "translated",
             "value" : "Phrase ausgeblendet. Tippe doppelt auf die Taste zum Anzeigen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrase masquée. Touchez deux fois le bouton d’affichage pour la voir."
+          }
         }
       }
     },
@@ -3709,6 +5899,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Phrase ausgeblendet. Halte die Taste zum Anzeigen gedrückt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrase masquée. Maintenez le doigt sur le bouton d’affichage pour la voir."
           }
         }
       }
@@ -3720,6 +5916,12 @@
             "state" : "translated",
             "value" : "Die Phrase ist nicht auf diesem Gerät"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La phrase n’est pas sur cet appareil"
+          }
         }
       }
     },
@@ -3729,6 +5931,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Phrase angezeigt: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrase affichée : %@"
           }
         }
       }
@@ -3740,6 +5948,12 @@
             "state" : "translated",
             "value" : "Wähle in „Dateien“ eine .md-, .txt- oder .rtf-Datei, um sie als Takes zu importieren. Kein Cloud-Ordner nötig."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez un fichier .md, .txt ou .rtf dans Fichiers pour l’importer en tant que Takes. Aucun dossier cloud requis."
+          }
         }
       }
     },
@@ -3749,6 +5963,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wähle Wort %@ aus der Auswahl unten."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez le mot %@ dans la liste ci-dessous."
           }
         }
       }
@@ -3760,6 +5980,12 @@
             "state" : "translated",
             "value" : "Ort"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lieu"
+          }
         }
       }
     },
@@ -3769,6 +5995,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ort festgelegt, Ankunft, stumm"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lieu défini, arrivée, silencieux"
           }
         }
       }
@@ -3780,6 +6012,12 @@
             "state" : "translated",
             "value" : "Ort festgelegt, Verlassen, stumm"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lieu défini, départ, silencieux"
+          }
         }
       }
     },
@@ -3789,6 +6027,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Halte eine Iris gedrückt, um ihren Take über alle anderen zu heften. Es gibt immer nur ein Obie, denn nur eines kann das Wichtigste sein."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenez le doigt sur un Iris pour épingler son Take au-dessus des autres. Vous n’avez jamais qu’un seul Obie, car un seul peut être le plus important."
           }
         }
       }
@@ -3800,6 +6044,12 @@
             "state" : "translated",
             "value" : "Gedrückt halten, um die 12 Wörter anzuzeigen. Loslassen, um sie auszublenden."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenez le doigt pour afficher les 12 mots. Relâchez pour les masquer."
+          }
         }
       }
     },
@@ -3809,6 +6059,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vorschau"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aperçu"
           }
         }
       }
@@ -3820,6 +6076,12 @@
             "state" : "translated",
             "value" : "Datenschutz-Phrase"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrase de confidentialité"
+          }
         }
       }
     },
@@ -3829,6 +6091,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Datenschutzerklärung"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Politique de confidentialité"
           }
         }
       }
@@ -3840,6 +6108,12 @@
             "state" : "translated",
             "value" : "Notizen und Erinnerungen, Datenschutz zuerst"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notes et rappels, la confidentialité d’abord"
+          }
         }
       }
     },
@@ -3849,6 +6123,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fortfahren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer"
           }
         }
       }
@@ -3860,6 +6140,12 @@
             "state" : "translated",
             "value" : "Der Kauf konnte nicht abgeschlossen werden. Bitte versuche es erneut."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’achat n’a pas pu aboutir. Veuillez réessayer."
+          }
         }
       }
     },
@@ -3869,6 +6155,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kauf wird ausgeführt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Achat en cours"
           }
         }
       }
@@ -3880,6 +6172,12 @@
             "state" : "translated",
             "value" : "Quarantäne"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quarantaine"
+          }
         }
       }
     },
@@ -3889,6 +6187,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schnellauswahl"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglage rapide"
           }
         }
       }
@@ -3900,6 +6204,12 @@
             "state" : "translated",
             "value" : "Radius"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rayon"
+          }
         }
       }
     },
@@ -3909,6 +6219,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erneut erinnern, bis du es als erledigt markierst"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relancer jusqu’à ce qu’il soit marqué comme terminé"
           }
         }
       }
@@ -3920,6 +6236,12 @@
             "state" : "translated",
             "value" : "Nur lesen. Deine Daten gehören weiterhin dir."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture seule. Vos données restent les vôtres."
+          }
         }
       }
     },
@@ -3929,6 +6251,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bereit zur Wiederherstellung."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prêt pour la restauration."
           }
         }
       }
@@ -3940,6 +6268,12 @@
             "state" : "translated",
             "value" : "Aktuelle Hinweise zu Synchronisierung, Speicher und Konflikten."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alertes récentes de synchronisation, de stockage et de conflit."
+          }
         }
       }
     },
@@ -3949,6 +6283,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wiederherstellen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Récupérer"
           }
         }
       }
@@ -3960,6 +6300,12 @@
             "state" : "translated",
             "value" : "Diesen Take wiederherstellen?"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Récupérer ce Take ?"
+          }
         }
       }
     },
@@ -3969,6 +6315,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Code einlösen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser un code"
           }
         }
       }
@@ -3980,6 +6332,12 @@
             "state" : "translated",
             "value" : "Loslassen zum Ausblenden"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relâcher pour masquer"
+          }
         }
       }
     },
@@ -3989,6 +6347,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erinnern"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rappeler"
           }
         }
       }
@@ -4000,6 +6364,12 @@
             "state" : "translated",
             "value" : "Erinnerung"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rappel"
+          }
         }
       }
     },
@@ -4009,6 +6379,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erinnerung festgelegt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rappel défini"
           }
         }
       }
@@ -4020,6 +6396,12 @@
             "state" : "translated",
             "value" : "Art der Erinnerung"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type de rappel"
+          }
         }
       }
     },
@@ -4029,6 +6411,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erinnerung: noch nicht erledigt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rappel : toujours pas terminé"
           }
         }
       }
@@ -4040,6 +6428,12 @@
             "state" : "translated",
             "value" : "Erinnerungen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rappels"
+          }
         }
       }
     },
@@ -4049,6 +6443,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Filter „Erinnerungen“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filtre Rappels"
           }
         }
       }
@@ -4060,6 +6460,12 @@
             "state" : "translated",
             "value" : "Erinnert bei Ankunft"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rappel à l’arrivée"
+          }
         }
       }
     },
@@ -4069,6 +6475,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erinnert beim Verlassen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rappel au départ"
           }
         }
       }
@@ -4080,6 +6492,12 @@
             "state" : "translated",
             "value" : "Entfernen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer"
+          }
         }
       }
     },
@@ -4089,6 +6507,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht mehr wichtig"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer Important"
           }
         }
       }
@@ -4100,6 +6524,12 @@
             "state" : "translated",
             "value" : "Punkt verschieben"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déplacer l’élément"
+          }
         }
       }
     },
@@ -4109,6 +6539,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wiederholen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Répéter"
           }
         }
       }
@@ -4120,6 +6556,12 @@
             "state" : "translated",
             "value" : "Problem melden"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signaler un problème"
+          }
         }
       }
     },
@@ -4129,6 +6571,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erlaubnis für Mitteilungen wird angefragt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demande d’autorisation des notifications"
           }
         }
       }
@@ -4140,6 +6588,12 @@
             "state" : "translated",
             "value" : "Wiederherstellen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restaurer"
+          }
         }
       }
     },
@@ -4149,6 +6603,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auf diesem Gerät wiederherstellen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restaurer sur cet appareil"
           }
         }
       }
@@ -4160,6 +6620,12 @@
             "state" : "translated",
             "value" : "Käufe wiederherstellen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restaurer les achats"
+          }
         }
       }
     },
@@ -4169,6 +6635,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stelle deine Takes mit deiner Datenschutz-Phrase auf diesem Gerät wieder her."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restaurez vos Takes sur cet appareil grâce à votre phrase de confidentialité."
           }
         }
       }
@@ -4180,6 +6652,12 @@
             "state" : "translated",
             "value" : "Catchlight erneut abonnieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se réabonner à Catchlight"
+          }
         }
       }
     },
@@ -4189,6 +6667,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zurück zum rein lokalen Modus."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revenir au mode local uniquement."
           }
         }
       }
@@ -4200,6 +6684,12 @@
             "state" : "translated",
             "value" : "Phrase anzeigen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher la phrase"
+          }
         }
       }
     },
@@ -4209,6 +6699,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Datenschutz-Phrase anzeigen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher votre phrase de confidentialité"
           }
         }
       }
@@ -4220,6 +6716,12 @@
             "state" : "translated",
             "value" : "Prüfen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifier"
+          }
         }
       }
     },
@@ -4229,6 +6731,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jetzt synchronisieren."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lancer une synchronisation maintenant."
           }
         }
       }
@@ -4240,6 +6748,12 @@
             "state" : "translated",
             "value" : "Sichern und schließen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer et fermer"
+          }
         }
       }
     },
@@ -4249,6 +6763,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sichert eine lesbare Kopie. Keine Wiederherstellungsphrase."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistre une copie lisible. Pas une phrase de récupération."
           }
         }
       }
@@ -4260,6 +6780,12 @@
             "state" : "translated",
             "value" : "Szenen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scènes"
+          }
         }
       }
     },
@@ -4269,6 +6795,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suchen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher"
           }
         }
       }
@@ -4280,6 +6812,12 @@
             "state" : "translated",
             "value" : "SUCHE"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RECHERCHE"
+          }
         }
       }
     },
@@ -4289,6 +6827,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ort oder Adresse suchen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher un lieu ou une adresse"
           }
         }
       }
@@ -4300,6 +6844,12 @@
             "state" : "translated",
             "value" : "Takes durchsuchen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher des Takes"
+          }
         }
       }
     },
@@ -4309,6 +6859,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Takes durchsuchen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher dans vos Takes"
           }
         }
       }
@@ -4320,6 +6876,12 @@
             "state" : "translated",
             "value" : "Zweites Gerät"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deuxième appareil"
+          }
         }
       }
     },
@@ -4329,6 +6891,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sicherheit"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sécurité"
           }
         }
       }
@@ -4340,6 +6908,12 @@
             "state" : "translated",
             "value" : "Auswählen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sélectionner"
+          }
         }
       }
     },
@@ -4349,6 +6923,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wähle einen leeren Ordner oder erstelle einen neuen, um den Rest kümmern wir uns."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sélectionnez un dossier vide, ou créez-en un, et nous nous occupons du reste."
           }
         }
       }
@@ -4360,6 +6940,12 @@
             "state" : "translated",
             "value" : "Wähle eine Iris, stelle den Rotor auf „Aktionen“, streiche nach oben bis „Zum Obie machen“ und tippe doppelt. Es gibt immer nur ein Obie, denn nur eines kann das Wichtigste sein."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sélectionnez un Iris, réglez le rotor sur Actions, balayez vers le haut jusqu’à « En faire l’Obie », puis touchez deux fois. Vous n’avez jamais qu’un seul Obie, car un seul peut être le plus important."
+          }
         }
       }
     },
@@ -4369,6 +6955,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wähle „Storyboard“, stelle den Rotor auf „Aktionen“ und tippe doppelt, um die Einstellungen zu öffnen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sélectionnez Storyboard, réglez le rotor sur Actions, puis touchez deux fois pour ouvrir Réglages."
           }
         }
       }
@@ -4380,12 +6972,24 @@
             "state" : "translated",
             "value" : "Ausgewählt: %@"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sélectionné : %@"
+          }
         }
       }
     },
     "Sequence" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sequence"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sequence"
@@ -4400,6 +7004,12 @@
             "state" : "translated",
             "value" : "SEQUENCE"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SEQUENCE"
+          }
         }
       }
     },
@@ -4409,6 +7019,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Richte zuerst den Cloud-Speicher ein. Der Ordner „Import“ liegt in deinem Sync-Ordner."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurez d’abord le stockage cloud. Le dossier Import se trouve dans votre dossier de synchronisation."
           }
         }
       }
@@ -4420,6 +7036,12 @@
             "state" : "translated",
             "value" : "Einstellungen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages"
+          }
         }
       }
     },
@@ -4429,6 +7051,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "EINSTELLUNGEN"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RÉGLAGES"
           }
         }
       }
@@ -4440,6 +7068,12 @@
             "state" : "translated",
             "value" : "Gestalte deinen Take mit der Iris"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Façonnez votre Take avec l’Iris"
+          }
         }
       }
     },
@@ -4450,12 +7084,24 @@
             "state" : "translated",
             "value" : "Teilt ein Diagnoseprotokoll als reinen Text, das du einer Meldung anhängen kannst."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partage un journal de diagnostic en texte brut à joindre à un signalement."
+          }
         }
       }
     },
     "Shot List" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shot List"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shot List"
@@ -4470,6 +7116,12 @@
             "state" : "translated",
             "value" : "SHOT LIST"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SHOT LIST"
+          }
         }
       }
     },
@@ -4479,6 +7131,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Anzeigen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher"
           }
         }
       }
@@ -4490,6 +7148,12 @@
             "state" : "translated",
             "value" : "${scope} anzeigen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher ${scope}"
+          }
         }
       }
     },
@@ -4499,6 +7163,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alle Takes anzeigen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher tous les Takes"
           }
         }
       }
@@ -4510,6 +7180,12 @@
             "state" : "translated",
             "value" : "Erstellungsdatum anzeigen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher la date de création"
+          }
         }
       }
     },
@@ -4519,6 +7195,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Meine Wörter noch einmal zeigen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revoir mes mots"
           }
         }
       }
@@ -4530,6 +7212,12 @@
             "state" : "translated",
             "value" : "Stumm. Der Ort bleibt am Take, ohne Hinweis bei Ankunft oder Verlassen."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Silencieux. Le lieu reste associé au Take, sans alerte à l’arrivée ni au départ."
+          }
         }
       }
     },
@@ -4539,6 +7227,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Streiche einfach von der Symbolleiste nach oben."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Balayez simplement vers le haut depuis la barre d’outils."
           }
         }
       }
@@ -4550,6 +7244,12 @@
             "state" : "translated",
             "value" : "Eine Zeile"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une ligne"
+          }
         }
       }
     },
@@ -4559,6 +7259,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vorerst überspringen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ignorer pour l’instant"
           }
         }
       }
@@ -4570,6 +7276,12 @@
             "state" : "translated",
             "value" : "Schlummern"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reporter"
+          }
         }
       }
     },
@@ -4579,6 +7291,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schlummerdauer"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durée du report"
           }
         }
       }
@@ -4590,6 +7308,12 @@
             "state" : "translated",
             "value" : "Schlummerdauer"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durée du report"
+          }
         }
       }
     },
@@ -4599,6 +7323,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ schlummern"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reporter de %@"
           }
         }
       }
@@ -4610,6 +7340,12 @@
             "state" : "translated",
             "value" : "Geschlummert"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reporté"
+          }
         }
       }
     },
@@ -4619,6 +7355,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "GESCHLUMMERT"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "REPORTÉ"
           }
         }
       }
@@ -4630,6 +7372,12 @@
             "state" : "translated",
             "value" : "Geschlummert. Ursprünglich fällig %@"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reporté. Échéance initiale : %@"
+          }
         }
       }
     },
@@ -4639,6 +7387,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einige Zeilen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quelques lignes"
           }
         }
       }
@@ -4650,6 +7404,12 @@
             "state" : "translated",
             "value" : "Einige erledigte Takes konnten nicht aufgeräumt werden. Es wird erneut versucht."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certains Takes terminés n’ont pas pu être nettoyés. Une nouvelle tentative aura lieu."
+          }
         }
       }
     },
@@ -4659,6 +7419,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Etwas ist schiefgelaufen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un problème est survenu."
           }
         }
       }
@@ -4670,6 +7436,12 @@
             "state" : "translated",
             "value" : "Spotlight & Siri"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spotlight et Siri"
+          }
         }
       }
     },
@@ -4680,12 +7452,24 @@
             "state" : "translated",
             "value" : "Indexierung für Spotlight und Siri"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indexation Spotlight et Siri"
+          }
         }
       }
     },
     "Standard" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Standard"
@@ -4700,6 +7484,12 @@
             "state" : "translated",
             "value" : "Starte kostenlos,\nbehalte deine Gedanken,\nprivat."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commencez gratuitement,\ngardez vos pensées,\nen privé."
+          }
         }
       }
     },
@@ -4710,6 +7500,12 @@
             "state" : "translated",
             "value" : "Neu beginnen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recommencer"
+          }
         }
       }
     },
@@ -4719,6 +7515,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mit Catchlight loslegen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commencer à utiliser Catchlight"
           }
         }
       }
@@ -4736,6 +7538,12 @@
             "state" : "translated",
             "value" : "Starte jetzt deine %1$@ Testphase, danach nur %2$@"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commencez votre essai de %1$@ maintenant, puis seulement %2$@"
+          }
         }
       }
     },
@@ -4745,6 +7553,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beenden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrêter"
           }
         }
       }
@@ -4756,12 +7570,24 @@
             "state" : "translated",
             "value" : "Speicher"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stockage"
+          }
         }
       }
     },
     "Storyboard" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Storyboard"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Storyboard"
@@ -4776,6 +7602,12 @@
             "state" : "translated",
             "value" : "STORYBOARD"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STORYBOARD"
+          }
         }
       }
     },
@@ -4785,6 +7617,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abonnieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S’abonner"
           }
         }
       }
@@ -4796,6 +7634,12 @@
             "state" : "translated",
             "value" : "Jetzt abonnieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S’abonner maintenant"
+          }
         }
       }
     },
@@ -4805,6 +7649,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonnement"
           }
         }
       }
@@ -4816,6 +7666,12 @@
             "state" : "translated",
             "value" : "Das Abo ist gerade nicht verfügbar."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’abonnement est indisponible pour le moment."
+          }
         }
       }
     },
@@ -4825,6 +7681,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Support"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Assistance"
           }
         }
       }
@@ -4836,6 +7698,12 @@
             "state" : "translated",
             "value" : "Synchronisierung"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisation"
+          }
         }
       }
     },
@@ -4845,6 +7713,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Synchronisierung %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisation : %@"
           }
         }
       }
@@ -4856,6 +7730,12 @@
             "state" : "translated",
             "value" : "SYNC-KONFLIKTE"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CONFLITS DE SYNCHRONISATION"
+          }
         }
       }
     },
@@ -4865,6 +7745,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bei der Synchronisierung ist ein Problem aufgetreten. Es wird erneut versucht."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La synchronisation a rencontré un problème et va réessayer."
           }
         }
       }
@@ -4876,6 +7762,12 @@
             "state" : "translated",
             "value" : "Jetzt synchronisieren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchroniser maintenant"
+          }
         }
       }
     },
@@ -4885,6 +7777,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Synchronisierung pausiert. Deine Cloud-Daten sehen unerwartet aus. Lokal wurde nichts geändert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisation en pause. Vos données cloud semblent inhabituelles. Rien n’a été modifié localement."
           }
         }
       }
@@ -4896,6 +7794,12 @@
             "state" : "translated",
             "value" : "Hinweise zu Synchronisierung, Speicher und Konflikten erscheinen hier."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les alertes de synchronisation, de stockage et de conflit apparaîtront ici."
+          }
         }
       }
     },
@@ -4905,6 +7809,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Synchronisiert …"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisation…"
           }
         }
       }
@@ -4916,6 +7826,12 @@
             "state" : "translated",
             "value" : "Synchronisiert automatisch im Hintergrund und beim Öffnen der App."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronise automatiquement en arrière-plan et à l’ouverture de l’app."
+          }
         }
       }
     },
@@ -4926,12 +7842,24 @@
             "state" : "translated",
             "value" : "System"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Système"
+          }
         }
       }
     },
     "Take" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Take"
@@ -4946,6 +7874,12 @@
             "state" : "translated",
             "value" : "Vorschaulänge von Takes"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Longueur de l’aperçu des Takes"
+          }
         }
       }
     },
@@ -4955,6 +7889,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abstand zwischen Takes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espacement des Takes"
           }
         }
       }
@@ -4966,6 +7906,12 @@
             "state" : "translated",
             "value" : "Takes mit einer Aufgabe erscheinen hier."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les Takes avec une tâche apparaissent ici."
+          }
         }
       }
     },
@@ -4975,6 +7921,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tippe auf die Taste +. Tippe irgendwo außerhalb des Takes, um zu sichern. Mehr ist zum Erfassen nicht nötig."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez le bouton +. Touchez n’importe où en dehors du Take pour enregistrer. C’est tout pour capturer."
           }
         }
       }
@@ -4986,6 +7938,12 @@
             "state" : "translated",
             "value" : "Tippe auf den Kreis neben einem Take, um ihn zur Aufgabe zu machen, eine Erinnerung festzulegen oder ihn als wichtig zu markieren."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez le cercle à côté d’un Take pour en faire une tâche, définir un rappel ou le marquer comme important."
+          }
         }
       }
     },
@@ -4995,6 +7953,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tippe die Wörter deiner Phrase in der richtigen Reihenfolge an."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez les mots de votre phrase, dans l’ordre."
           }
         }
       }
@@ -5012,6 +7976,12 @@
             "state" : "translated",
             "value" : "Tippe die Wörter %1$lld, %2$lld und %3$lld deiner Phrase in dieser Reihenfolge an."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez les mots %1$lld, %2$lld et %3$lld de votre phrase, dans l’ordre."
+          }
         }
       }
     },
@@ -5021,6 +7991,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aufgabe"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tâche"
           }
         }
       }
@@ -5038,6 +8014,12 @@
             "state" : "translated",
             "value" : "Aufgabe, %1$lld von %2$lld erledigt"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tâche, %1$lld sur %2$lld terminées"
+          }
         }
       }
     },
@@ -5047,6 +8029,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aufgabe, erledigt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tâche, terminée"
           }
         }
       }
@@ -5058,6 +8046,12 @@
             "state" : "translated",
             "value" : "Aufgaben"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tâches"
+          }
         }
       }
     },
@@ -5067,6 +8061,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Filter „Aufgaben“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filtre Tâches"
           }
         }
       }
@@ -5078,6 +8078,12 @@
             "state" : "translated",
             "value" : "Nutzungsbedingungen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conditions d’utilisation"
+          }
         }
       }
     },
@@ -5087,6 +8093,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Getestet mit iCloud Drive, Dropbox, Internxt, Koofr und Filen. Andere funktionieren eventuell; ein Anbieter, der in der Auswahl ausgegraut ist, kann einer App keinen ganzen Ordner übergeben. Seine App muss installiert und angemeldet sein."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Testé avec iCloud Drive, Dropbox, Internxt, Koofr et Filen. D’autres peuvent fonctionner ; un service grisé dans le sélecteur ne peut pas confier un dossier entier à une app. Son app doit être installée et connectée."
           }
         }
       }
@@ -5098,6 +8110,12 @@
             "state" : "translated",
             "value" : "Das stimmt nicht ganz. Prüfe die Wörter und versuche es erneut."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce n’est pas tout à fait ça. Vérifiez les mots et réessayez."
+          }
         }
       }
     },
@@ -5107,6 +8125,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die 12 Wörter von deinem anderen Gerät, in der richtigen Reihenfolge."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les 12 mots de votre autre appareil, dans l’ordre."
           }
         }
       }
@@ -5118,6 +8142,12 @@
             "state" : "translated",
             "value" : "Die englische BIP-39-Wortliste stammt aus dem Trezor-Projekt und ist unter der MIT-Lizenz enthalten. Siehe Resources/bip39-english.txt."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La liste de mots anglaise BIP-39 provient du projet Trezor et est incluse sous licence MIT. Voir Resources/bip39-english.txt."
+          }
         }
       }
     },
@@ -5127,6 +8157,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Kopien dieser Takes in deinem Cloud-Ordner haben die Prüfung nicht bestanden. Auf diesem iPhone ändert sich nichts, bis du entscheidest."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les copies de ces Takes dans votre dossier cloud n’ont pas passé la vérification. Rien ne change sur cet iPhone tant que vous n’avez pas choisi."
           }
         }
       }
@@ -5138,6 +8174,12 @@
             "state" : "translated",
             "value" : "Die Datei ist lesbarer Text und enthält keine Wiederherstellungsphrase. Nutze „Neu beginnen“ und „Aus Datei importieren“, um deine Takes wieder zu importieren. Lösche den Export, sobald deine Takes zurück sind."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le fichier est du texte lisible et ne contient pas de phrase de récupération. Utilisez « Recommencer » puis « Importer depuis un fichier » pour réimporter vos Takes. Supprimez l’export une fois vos Takes récupérés."
+          }
         }
       }
     },
@@ -5147,6 +8189,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Der Ordner „Import“ konnte nicht gelesen werden. Prüfe deinen Cloud-Ordner unter Einstellungen → Cloud-Speicher und versuche es erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire le dossier Import. Vérifiez votre dossier cloud dans Réglages → Stockage cloud et réessayez."
           }
         }
       }
@@ -5158,6 +8206,12 @@
             "state" : "translated",
             "value" : "Die neuere Version von einem anderen Gerät ist nicht lesbar."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La version plus récente provenant d’un autre appareil est illisible."
+          }
         }
       }
     },
@@ -5167,6 +8221,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Takes wurden möglicherweise auf verschiedenen Geräten bearbeitet, daher können wir nicht entscheiden, welche Version bleibt. Tippe auf die Version, die du behalten möchtest. Die andere wird entfernt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ces Takes ont peut-être été modifiés sur différents appareils : nous ne pouvons donc pas déterminer lequel garder. Touchez la version que vous souhaitez conserver. L’autre sera supprimée."
           }
         }
       }
@@ -5178,6 +8238,12 @@
             "state" : "translated",
             "value" : "Das kann nicht rückgängig gemacht werden."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette action est irréversible."
+          }
         }
       }
     },
@@ -5187,6 +8253,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Damit werden alle Takes auf diesem Gerät gelöscht, ebenso die Datenschutz-Phrase, die sie entsperrt. Takes in deinem Cloud-Ordner werden unlesbar. Das kann nicht rückgängig gemacht werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette action supprime tous les Takes de cet appareil ainsi que la phrase de confidentialité qui les déverrouille. Les Takes de votre dossier cloud deviendront illisibles. Cette action est irréversible."
           }
         }
       }
@@ -5198,6 +8270,12 @@
             "state" : "translated",
             "value" : "Heute Abend"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce soir"
+          }
         }
       }
     },
@@ -5207,6 +8285,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das ist eine wiederkehrende Erinnerung."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce rappel se répète."
           }
         }
       }
@@ -5218,6 +8302,12 @@
             "state" : "translated",
             "value" : "Damit wird das Konto auf diesem Gerät ersetzt. Takes, die nur hier gespeichert sind, werden entfernt und lassen sich nicht wiederherstellen. Falls noch nicht geschehen, schließe dies und sichere zuerst eine Kopie mit „Takes exportieren“ (Markdown)."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette action remplace le compte sur cet appareil. Les Takes stockés uniquement ici seront supprimés et ne pourront pas être récupérés. Si ce n’est pas déjà fait, fermez cette fenêtre et utilisez « Exporter les Takes » (Markdown) pour garder d’abord une copie."
+          }
         }
       }
     },
@@ -5227,6 +8317,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dieses Wochenende"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce week-end"
           }
         }
       }
@@ -5238,6 +8334,12 @@
             "state" : "translated",
             "value" : "Das stimmt noch nicht ganz. Versuche es erneut."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce n’est pas tout à fait ça. Réessayez."
+          }
         }
       }
     },
@@ -5247,6 +8349,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zeit"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heure"
           }
         }
       }
@@ -5258,6 +8366,12 @@
             "state" : "translated",
             "value" : "Anordnung der Zeitleiste"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disposition de la chronologie"
+          }
         }
       }
     },
@@ -5267,6 +8381,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reihenfolge der Zeitleiste"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordre de la chronologie"
           }
         }
       }
@@ -5278,6 +8398,12 @@
             "state" : "translated",
             "value" : "Morgen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demain"
+          }
         }
       }
     },
@@ -5287,6 +8413,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auslöser"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déclencheur"
           }
         }
       }
@@ -5298,6 +8430,12 @@
             "state" : "translated",
             "value" : "Erneut versuchen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réessayer"
+          }
         }
       }
     },
@@ -5307,6 +8445,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Erinnerung ausschalten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactiver le rappel"
           }
         }
       }
@@ -5318,6 +8462,12 @@
             "state" : "translated",
             "value" : "Art + erste Zeile"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type + première ligne"
+          }
         }
       }
     },
@@ -5327,6 +8477,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Art + ganzer Text"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type + texte complet"
           }
         }
       }
@@ -5338,6 +8494,12 @@
             "state" : "translated",
             "value" : "Nur Art"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type uniquement"
+          }
         }
       }
     },
@@ -5347,6 +8509,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "nicht abgehakt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "non coché"
           }
         }
       }
@@ -5358,6 +8526,12 @@
             "state" : "translated",
             "value" : "Unbegrenzt Takes, Aufgaben und Erinnerungen"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takes, tâches et rappels illimités"
+          }
         }
       }
     },
@@ -5367,6 +8541,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Entsperren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déverrouiller"
           }
         }
       }
@@ -5378,6 +8558,12 @@
             "state" : "translated",
             "value" : "Deine Takes entsperren"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déverrouillez vos Takes"
+          }
         }
       }
     },
@@ -5387,6 +8573,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wird entsperrt …"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déverrouillage…"
           }
         }
       }
@@ -5398,6 +8590,12 @@
             "state" : "translated",
             "value" : "Take ohne Titel"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take sans titre"
+          }
         }
       }
     },
@@ -5407,6 +8605,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aktuellen Standort verwenden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser la position actuelle"
           }
         }
       }
@@ -5418,12 +8622,24 @@
             "state" : "translated",
             "value" : "Über den Aktionen-Rotor kopierst du Version und Geräteinfo."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisez le rotor Actions pour copier la version et les infos de l’appareil."
+          }
         }
       }
     },
     "Version %@" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version %@"
+          }
+        },
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Version %@"
@@ -5438,6 +8654,12 @@
             "state" : "translated",
             "value" : "Ansicht"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affichage"
+          }
         }
       }
     },
@@ -5447,6 +8669,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sieh dir dein Abo an oder stelle Käufe wieder her."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consultez votre abonnement ou restaurez vos achats."
           }
         }
       }
@@ -5458,6 +8686,12 @@
             "state" : "translated",
             "value" : "Wir sehen sie nie, speichern sie nie und fragen nie danach. Also verlier sie nicht."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nous ne les voyons jamais, ne les stockons jamais et ne vous les demandons jamais. Alors ne les perdez pas."
+          }
         }
       }
     },
@@ -5467,6 +8701,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wöchentlich"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque semaine"
           }
         }
       }
@@ -5478,6 +8718,12 @@
             "state" : "translated",
             "value" : "Willkommen zurück"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bon retour"
+          }
         }
       }
     },
@@ -5487,6 +8733,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Was du als dein Obie erfassen möchtest."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce que vous voulez capturer comme Obie."
           }
         }
       }
@@ -5498,6 +8750,12 @@
             "state" : "translated",
             "value" : "Was du erfassen möchtest."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce que vous voulez capturer."
+          }
         }
       }
     },
@@ -5507,6 +8765,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Was ist dein Obie?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quel est votre Obie ?"
           }
         }
       }
@@ -5518,6 +8782,12 @@
             "state" : "translated",
             "value" : "Was ist dein Take?"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quel est votre Take ?"
+          }
         }
       }
     },
@@ -5527,6 +8797,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wann"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand"
           }
         }
       }
@@ -5538,6 +8814,12 @@
             "state" : "translated",
             "value" : "Wenn ich ankomme"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand j’arrive"
+          }
         }
       }
     },
@@ -5547,6 +8829,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wenn ich gehe"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand je pars"
           }
         }
       }
@@ -5558,6 +8846,12 @@
             "state" : "translated",
             "value" : "Wenn aktiviert, erinnert dich eine unbeachtete Erinnerung erneut, bis du sie als erledigt markierst."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si cette option est activée, un rappel resté sans suite vous relance jusqu’à ce que vous le marquiez comme terminé."
+          }
         }
       }
     },
@@ -5567,6 +8861,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wenn aktiviert, musst du das Löschen eines Takes zuerst bestätigen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si cette option est activée, la suppression d’un Take demande d’abord une confirmation."
           }
         }
       }
@@ -5578,6 +8878,12 @@
             "state" : "translated",
             "value" : "Wenn du bei %@ ankommst"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand vous arrivez à %@"
+          }
         }
       }
     },
@@ -5587,6 +8893,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wenn du an deinem Ort ankommst"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand vous arrivez à votre lieu"
           }
         }
       }
@@ -5598,6 +8910,12 @@
             "state" : "translated",
             "value" : "Wenn du %@ verlässt"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand vous quittez %@"
+          }
         }
       }
     },
@@ -5607,6 +8925,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wenn du deinen Ort verlässt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand vous quittez votre lieu"
           }
         }
       }
@@ -5618,6 +8942,12 @@
             "state" : "translated",
             "value" : "Welche Takes Catchlight zeigt, während dieser Fokus aktiv ist."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les Takes que Catchlight affiche pendant ce mode de concentration."
+          }
         }
       }
     },
@@ -5627,6 +8957,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wort %@ deiner Phrase, leer"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot %@ de votre phrase, vide"
           }
         }
       }
@@ -5644,6 +8980,12 @@
             "state" : "translated",
             "value" : "Wort %1$@ deiner Phrase: %2$@. Doppeltippen, um die Auswahl aufzuheben."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot %1$@ de votre phrase : %2$@. Touchez deux fois pour désélectionner."
+          }
         }
       }
     },
@@ -5653,6 +8995,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wort %lld von 12"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot %lld sur 12"
           }
         }
       }
@@ -5670,6 +9018,12 @@
             "state" : "translated",
             "value" : "Wort %1$lld: %2$@"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot %1$lld : %2$@"
+          }
         }
       }
     },
@@ -5679,6 +9033,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schreib diese 12 Wörter auf und bewahre sie sicher auf. Sie verschlüsseln deine Takes und ermöglichen ein zweites Gerät."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notez ces 12 mots et conservez-les en lieu sûr. Ils chiffrent vos Takes et permettent d’ajouter un deuxième appareil."
           }
         }
       }
@@ -5690,6 +9050,12 @@
             "state" : "translated",
             "value" : "Schreib diese 12 Wörter auf und bewahre sie sicher auf. Du brauchst sie, um deine Takes auf einem neuen Gerät zu entschlüsseln. Sie sind in keinem iPhone-Backup enthalten, also zählt allein die Kopie, die du aufschreibst."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notez ces 12 mots et conservez-les en lieu sûr. Ils sont nécessaires pour déchiffrer vos Takes sur un nouvel appareil, et ils ne font pas partie de la sauvegarde de l’iPhone : seule compte la copie que vous notez."
+          }
         }
       }
     },
@@ -5699,6 +9065,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schreib diese 12 Wörter an einem sicheren Ort auf Papier auf. Nur mit ihnen kommst du auf einem neuen iPhone wieder an deine Takes. Weder die Wörter noch deine Takes sind in einem iPhone-Backup enthalten, ein wiederhergestelltes Backup bringt also keins von beiden zurück."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notez ces 12 mots sur papier et rangez-les en lieu sûr. Ils sont le seul moyen de retrouver vos Takes sur un nouvel iPhone. Ni ces mots ni vos Takes ne font partie de la sauvegarde de l’iPhone : restaurer une sauvegarde ne ramènera donc ni les uns ni les autres."
           }
         }
       }
@@ -5710,6 +9082,12 @@
             "state" : "translated",
             "value" : "Schreibtools"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outils d’écriture"
+          }
         }
       }
     },
@@ -5719,6 +9097,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du kannst neu beginnen und es noch einmal versuchen. Deine Phrase wurde nirgends gespeichert. Wir erzeugen eine neue."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous pouvez recommencer et réessayer. Votre phrase n’a été enregistrée nulle part. Nous en générerons une autre."
           }
         }
       }
@@ -5730,6 +9114,12 @@
             "state" : "translated",
             "value" : "Datenschutz musst du nicht erst wählen. Er gehört dir, und du musst nie darum bitten."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous n’avez pas à choisir la confidentialité : elle vous appartient, et vous n’avez jamais à la demander."
+          }
         }
       }
     },
@@ -5739,6 +9129,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du bist startklar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout est prêt."
           }
         }
       }
@@ -5750,6 +9146,12 @@
             "state" : "translated",
             "value" : "Dein Konto ist auf diesem Gerät wiederhergestellt. Verbinde den Cloud-Ordner, in dem deine Takes liegen, und sie erscheinen hier."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre compte est restauré sur cet appareil. Connectez le dossier cloud où sont enregistrés vos Takes, et ils apparaîtront ici."
+          }
         }
       }
     },
@@ -5759,6 +9161,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dein Cloud-Ordner konnte nicht geöffnet werden. Wähle unter Einstellungen → Cloud-Speicher einen neuen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’ouvrir votre dossier cloud. Ouvrez Réglages → Stockage cloud pour en choisir un nouveau."
           }
         }
       }
@@ -5770,6 +9178,12 @@
             "state" : "translated",
             "value" : "Dein Cloud-Ordner ist nicht mehr verfügbar. Wähle ihn unter Einstellungen → Cloud-Speicher erneut aus."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre dossier cloud n’est plus disponible. Ouvrez Réglages → Stockage cloud pour le sélectionner à nouveau."
+          }
         }
       }
     },
@@ -5779,6 +9193,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Daten bleiben deine: lesbar, exportierbar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vos données restent les vôtres : lisibles, exportables"
           }
         }
       }
@@ -5790,6 +9210,12 @@
             "state" : "translated",
             "value" : "Deine verschlüsselte Bibliothek konnte nicht geöffnet werden, daher werden Änderungen noch nicht auf diesem Gerät gespeichert. Bitte starte Catchlight neu."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’ouvrir votre bibliothèque chiffrée : les modifications ne sont pas encore enregistrées sur cet appareil. Veuillez redémarrer Catchlight."
+          }
         }
       }
     },
@@ -5799,6 +9225,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine verschlüsselte Bibliothek konnte nicht geöffnet werden. Bitte starte Catchlight neu."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’ouvrir votre bibliothèque chiffrée. Veuillez redémarrer Catchlight."
           }
         }
       }
@@ -5810,6 +9242,12 @@
             "state" : "translated",
             "value" : "Dein bisheriges Obie kehrt in die Zeitleiste zurück. Nur ein Take kann dein Obie sein."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre Obie actuel retourne dans la chronologie. Un seul Take peut être votre Obie."
+          }
         }
       }
     },
@@ -5819,6 +9257,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dein erster Take wartet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre premier Take vous attend."
           }
         }
       }
@@ -5830,6 +9274,12 @@
             "state" : "translated",
             "value" : "Dein Obie"
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre Obie"
+          }
         }
       }
     },
@@ -5839,6 +9289,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Datenschutz-Phrase"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre phrase de confidentialité"
           }
         }
       }
@@ -5850,6 +9306,12 @@
             "state" : "translated",
             "value" : "Dein Kauf wartet auf Freigabe. Du erhältst Zugriff, sobald er bestätigt ist."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre achat est en attente d’approbation. Vous y aurez accès dès sa confirmation."
+          }
         }
       }
     },
@@ -5859,6 +9321,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dein Abo verlängert sich jährlich automatisch, sofern du nicht spätestens 24 Stunden vor Ablauf des Zeitraums kündigst. Verwalte oder kündige es jederzeit in deinem App Store-Konto. Catchlight ist Ende-zu-Ende-verschlüsselt. Deine Takes sind für uns nie lesbar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre abonnement est renouvelé automatiquement chaque année, sauf résiliation au moins 24 heures avant la fin de la période en cours. Gérez-le ou résiliez-le à tout moment dans votre compte App Store. Catchlight est chiffré de bout en bout. Vos Takes ne sont jamais lisibles par nous."
           }
         }
       }
@@ -5870,6 +9338,12 @@
             "state" : "translated",
             "value" : "Deine Takes bleiben auf diesem Gerät und nirgendwo sonst. Dein iPhone-Backup enthält sie nicht: Ist das iPhone weg, sind sie es auch."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vos Takes restent sur cet appareil et nulle part ailleurs. La sauvegarde de votre iPhone ne les contiendra pas : si vous perdez l’iPhone, vous les perdez aussi."
+          }
         }
       }
     },
@@ -5880,6 +9354,12 @@
             "state" : "translated",
             "value" : "Deine Takes liegen dann auf diesem Gerät und nirgendwo sonst. Dein iPhone-Backup enthält sie nicht, weil wir sie bewusst heraushalten, und genau das hält sie auch aus dem iCloud-Backup heraus. Verlierst oder löschst du dieses iPhone, gibt es nichts, woraus du sie wiederherstellen könntest."
           }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vos Takes vivront sur cet appareil et nulle part ailleurs. La sauvegarde de votre iPhone ne les contiendra pas, car nous les en excluons délibérément, et c’est ce même choix qui les tient à l’écart de la sauvegarde iCloud. Si vous perdez ou effacez cet iPhone, il n’y aura rien à restaurer."
+          }
         }
       }
     },
@@ -5889,6 +9369,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Gedanken, in deiner Reihenfolge, erzählen deine Geschichte. Niemandes sonst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vos pensées, dans votre ordre, racontent votre histoire. Celle de personne d’autre."
           }
         }
       }
