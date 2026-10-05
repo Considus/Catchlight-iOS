@@ -102,7 +102,7 @@ A translator gets a review workbook built from the catalogs: English beside the 
 python3 scripts/l10n/review_workbook.py fr Catchlight_iOS_French_Translation_Review.xlsx --store store-src.json store-fr.json
 ```
 
-For a translator who wants plain text, `--texts` writes one English file and one file per language, line N of each translating line N of the English. Placeholders read as `{1}`, `{2}` (numbered by position, so a translation may reorder them) and `{app}`, a line break as ` / `; lines with nothing to translate are left out and each English line appears once. The mapping is fixed, so a returned file converts back against the English keys:
+For a translator who wants plain text, `--texts` writes one English file and one file per language, line N of each translating line N of the English. Placeholders read as `{1}`, `{2}` (numbered by position, so a translation may reorder them) and `{app}`, a line break as ` / `; lines with nothing to translate are left out and each English line appears once. The script refuses to write anything if a language is missing a line or translates two keys that share an English line differently, so each line's translation applies to every key whose English reads as that line, and a returned file converts back:
 
 ```bash
 python3 scripts/l10n/review_workbook.py --texts OUT_DIR --store-src store-src.json --store-dir DRAFTS_DIR

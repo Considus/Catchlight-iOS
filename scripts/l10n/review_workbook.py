@@ -299,7 +299,9 @@ def write_texts(out_dir, root, store_src, store_dir):
     file translates line N of the English. The line list is shared, so it is the union
     of every language's rows (a language with no plural for a key repeats its one
     translation on both lines), each English line once, and only lines with something
-    to translate."""
+    to translate. Rows that share an English line must share its translation, which is
+    what makes a returned file convert back: a line's translation applies to every key
+    whose English reads as that line."""
     per_lang = {}
     for lang in LANGS:
         rows = collect(root, lang)
@@ -317,25 +319,39 @@ def write_texts(out_dir, root, store_src, store_dir):
             if re.search(r"[A-Za-z]{2,}", rest):
                 english[ident] = en
                 order.append(ident)
-    lines, seen = [], set()
-    for ident in order:
-        if english[ident] not in seen:
-            seen.add(english[ident])
-            lines.append(ident)
-
     def find(rows, ident):
         if ident in rows:
             return rows[ident]
-        area, key, form = ident  # plural form this language does not split
-        return next(r for i, r in rows.items() if i[:2] == (area, key))
+        area, key, _ = ident  # a plural form this language does not split
+        return next((r for i, r in rows.items() if i[:2] == (area, key)), None)
+
+    # Every kept row must be translated, and rows sharing an English line must share
+    # its translation in every language, or the merged line would hide a difference.
+    # Checked before anything is written, so a failure leaves the old files whole.
+    text, problems = {}, []
+    for lang, rows in per_lang.items():
+        by_line = {}
+        for ident in order:
+            r = find(rows, ident)
+            if r is None:
+                problems.append(f"{lang}: no translation for {ident}")
+                continue
+            by_line.setdefault(english[ident], set()).add(readable(str(r[4])))
+        for en, versions in by_line.items():
+            if len(versions) > 1:
+                problems.append(f"{lang}: {en!r} is translated {len(versions)} ways: {sorted(versions)}")
+        text[lang] = {en: next(iter(v)) for en, v in by_line.items()}
+    if problems:
+        sys.exit("text files not written:\n  " + "\n  ".join(problems))
+    lines = list(dict.fromkeys(english[i] for i in order))
 
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "Catchlight_iOS_Translation_EN.txt"), "w", encoding="utf-8") as f:
-        f.write("\n".join(english[i] for i in lines) + "\n")
-    for lang, rows in per_lang.items():
+        f.write("\n".join(lines) + "\n")
+    for lang in per_lang:
         path = os.path.join(out_dir, f"Catchlight_iOS_Translation_{lang.upper()}.txt")
         with open(path, "w", encoding="utf-8") as f:
-            f.write("\n".join(readable(str(find(rows, i)[4])) for i in lines) + "\n")
+            f.write("\n".join(text[lang][en] for en in lines) + "\n")
     print(f"{out_dir}: EN + {len(per_lang)} languages, {len(lines)} lines each")
 
 
@@ -453,6 +469,8 @@ if __name__ == "__main__":
     ap.add_argument("--store-src")
     ap.add_argument("--store-dir")
     a = ap.parse_args()
+    if bool(a.store_src) != bool(a.store_dir):
+        ap.error("--store-src and --store-dir go together")
     if a.texts:
         write_texts(a.texts, a.root, a.store_src, a.store_dir)
     elif a.lang and a.out:
