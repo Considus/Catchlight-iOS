@@ -34,6 +34,9 @@ struct CatchlightApp: App {
     private let backgroundSync: BackgroundSyncCoordinator
 
     init() {
+        // Before anything is logged: Core's own diagnostics lines (launch, sync) carry this
+        // app's platform code, `[CCIOS-952] …`, like the app's notices.
+        DiagnosticsLog.shared.platformCode = Notice.platform
         // Create the crypto session first so it can be shared: AppModel drives
         // unlock through it imperatively, while this view observes its `isObscured`
         // for the privacy overlay (hence the @StateObject wrapper over the SAME
