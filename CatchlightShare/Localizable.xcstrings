@@ -2,31 +2,94 @@
   "sourceLanguage" : "en",
   "strings" : {
     "Add a note (optional)" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notiz hinzufügen (optional)"
+          }
+        }
+      }
     },
     "Cancel" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abbrechen"
+          }
+        }
+      }
     },
     "Close" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schließen"
+          }
+        }
+      }
     },
     "It takes text, links and web pages, not images or files." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es nimmt Text, Links und Webseiten an, keine Bilder oder Dateien."
+          }
+        }
+      }
     },
     "It'll be waiting on your timeline next time you open the app." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Er wartet in deiner Zeitleiste, wenn du die App das nächste Mal öffnest."
+          }
+        }
+      }
     },
     "Save" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sichern"
+          }
+        }
+      }
     },
     "Save to Catchlight" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Catchlight sichern"
+          }
+        }
+      }
     },
     "Saved to Catchlight" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Catchlight gesichert"
+          }
+        }
+      }
     },
     "There's nothing here Catchlight can keep." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier gibt es nichts, was Catchlight aufbewahren kann."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

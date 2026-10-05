@@ -362,9 +362,9 @@ struct WelcomeContent: View {
 
     private var bodyBlock: some View {
         VStack(spacing: 16) {
-            (Text("First, we'll create your Privacy phrase: 12 words that are the ")
-             + Text("ONLY").bold()
-             + Text(" key to your data."))
+            // One sentence with inline Markdown bold, so a translation can move the
+            // emphasis to wherever its own word order puts it.
+            Text("First, we'll create your Privacy phrase: 12 words that are the **ONLY** key to your data.")
                 .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)

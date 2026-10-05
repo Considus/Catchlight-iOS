@@ -4,14 +4,25 @@
     "" : {
 
     },
-    " key to your data." : {
-
-    },
     "%@ · On arrival" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Bei Ankunft"
+          }
+        }
+      }
     },
     "%@ · On leaving" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Beim Verlassen"
+          }
+        }
+      }
     },
     "%@ at %@" : {
       "comment" : "An email address read aloud: user at domain.",
@@ -21,20 +32,46 @@
             "state" : "new",
             "value" : "%1$@ at %2$@"
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ at %2$@"
+          }
         }
       }
     },
     "%@ Double-tap to review." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Doppeltippen zum Prüfen."
+          }
+        }
+      }
     },
     "%@, filtering" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, gefiltert"
+          }
+        }
+      }
     },
     "%@. %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
+            "value" : "%1$@. %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "%1$@. %2$@"
           }
         }
@@ -47,17 +84,44 @@
             "state" : "new",
             "value" : "%1$@. %2$@%3$@. Modified %4$@."
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. %2$@%3$@. Geändert %4$@."
+          }
         }
       }
     },
     "%@/year" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@/Jahr"
+          }
+        }
+      }
     },
     "%lld" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        }
+      }
     },
     "%lld m" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld m"
+          }
+        }
+      }
     },
     "%lld of %lld completed" : {
       "localizations" : {
@@ -66,11 +130,24 @@
             "state" : "new",
             "value" : "%1$lld of %2$lld completed"
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld von %2$lld erledigt"
+          }
         }
       }
     },
     "%lld of 12 words" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld von 12 Wörtern"
+          }
+        }
+      }
     },
     "%lld Takes changed on another device." : {
       "localizations" : {
@@ -87,6 +164,24 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld Takes changed on another device."
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take wurde auf einem anderen Gerät geändert."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes wurden auf einem anderen Gerät geändert."
                 }
               }
             }
@@ -113,6 +208,24 @@
               }
             }
           }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take konnte nicht verifiziert werden und braucht eine Entscheidung."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes konnten nicht verifiziert werden und brauchen eine Entscheidung."
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -131,6 +244,24 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld Takes couldn't be verified and were skipped."
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take konnte nicht verifiziert werden und wurde übersprungen."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes konnten nicht verifiziert werden und wurden übersprungen."
                 }
               }
             }
@@ -157,6 +288,24 @@
               }
             }
           }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take braucht eine Entscheidung."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes brauchen eine Entscheidung."
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -179,371 +328,1241 @@
               }
             }
           }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take nicht erneut hochgeladen. Dieses Gerät war zu lange offline, um auszuschließen, dass er anderswo gelöscht wurde. Bearbeite einen Take, um ihn wieder zu synchronisieren."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes nicht erneut hochgeladen. Dieses Gerät war zu lange offline, um auszuschließen, dass sie anderswo gelöscht wurden. Bearbeite einen Take, um ihn wieder zu synchronisieren."
+                }
+              }
+            }
+          }
         }
       }
     },
     "%lld-day" : {
-      "comment" : "Trial length inside 'Start your %@ trial now, then only …'."
+      "comment" : "Trial length inside 'Start your %@ trial now, then only …'.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld-tägige"
+          }
+        }
+      }
     },
     "%lld-month" : {
-      "comment" : "Trial length inside 'Start your %@ trial now, then only …'."
+      "comment" : "Trial length inside 'Start your %@ trial now, then only …'.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld-monatige"
+          }
+        }
+      }
     },
     "%lld-week" : {
-      "comment" : "Trial length inside 'Start your %@ trial now, then only …'."
+      "comment" : "Trial length inside 'Start your %@ trial now, then only …'.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld-wöchige"
+          }
+        }
+      }
     },
     "%lld-year" : {
-      "comment" : "Trial length inside 'Start your %@ trial now, then only …'."
+      "comment" : "Trial length inside 'Start your %@ trial now, then only …'.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld-jährige"
+          }
+        }
+      }
     },
     "%lld." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld."
+          }
+        }
+      }
     },
     "1 day" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Tag"
+          }
+        }
+      }
     },
     "1 hour" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Stunde"
+          }
+        }
+      }
     },
     "1 minute" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Minute"
+          }
+        }
+      }
     },
     "2 days" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 Tage"
+          }
+        }
+      }
     },
     "5 mins" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 Min."
+          }
+        }
+      }
     },
     "5 minutes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 Minuten"
+          }
+        }
+      }
     },
     "6 hours" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 Stunden"
+          }
+        }
+      }
     },
     "12 hours" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "12 Stunden"
+          }
+        }
+      }
     },
     "15 mins" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "15 Min."
+          }
+        }
+      }
     },
     "24 hours" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "24 Stunden"
+          }
+        }
+      }
     },
     "30 mins" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 Min."
+          }
+        }
+      }
     },
     "30 minutes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 Minuten"
+          }
+        }
+      }
     },
     "30 seconds" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 Sekunden"
+          }
+        }
+      }
     },
     "A deleted Take cannot be recovered" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein gelöschter Take lässt sich nicht wiederherstellen"
+          }
+        }
+      }
     },
     "A few things worth knowing" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein paar Dinge, die du wissen solltest"
+          }
+        }
+      }
     },
     "A tighter radius is more precise, but iOS may trigger it late or miss it. 100 m is the reliable minimum." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein kleinerer Radius ist genauer, aber iOS löst ihn eventuell zu spät oder gar nicht aus. 100 m sind das zuverlässige Minimum."
+          }
+        }
+      }
     },
     "About" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Über"
+          }
+        }
+      }
     },
     "About. %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Über. %@"
+          }
+        }
+      }
     },
     "active" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aktiv"
+          }
+        }
+      }
     },
     "Active" : {
-      "comment" : "Subscription status — currently subscribed."
+      "comment" : "Subscription status — currently subscribed.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiv"
+          }
+        }
+      }
     },
     "Add a Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einen Take hinzufügen"
+          }
+        }
+      }
     },
     "Add reminder" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnerung hinzufügen"
+          }
+        }
+      }
     },
     "Add Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take hinzufügen"
+          }
+        }
+      }
     },
     "Add this device to your account?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Gerät zu deinem Konto hinzufügen?"
+          }
+        }
+      }
     },
     "All" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles"
+          }
+        }
+      }
     },
     "All caught up." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles erledigt."
+          }
+        }
+      }
     },
     "All conflicts resolved." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Konflikte gelöst."
+          }
+        }
+      }
     },
     "All tasks done." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Aufgaben erledigt."
+          }
+        }
+      }
     },
     "All-day" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganztägig"
+          }
+        }
+      }
     },
     "Always" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immer"
+          }
+        }
+      }
     },
     "An Obie is always Important." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Obie ist immer wichtig."
+          }
+        }
+      }
     },
     "Annually" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jährlich"
+          }
+        }
+      }
     },
     "Another device is syncing. Catchlight will retry automatically." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein anderes Gerät synchronisiert gerade. Catchlight versucht es automatisch erneut."
+          }
+        }
+      }
     },
     "Any items in the folder, that have previously been imported, will be imported again." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Dateien im Ordner, die schon einmal importiert wurden, werden erneut importiert."
+          }
+        }
+      }
     },
     "App" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App"
+          }
+        }
+      }
     },
     "Appearance" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Darstellung"
+          }
+        }
+      }
     },
     "Appearance mode" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Darstellungsmodus"
+          }
+        }
+      }
     },
     "Arrangement" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anordnung"
+          }
+        }
+      }
     },
     "Authenticate to open your Takes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authentifiziere dich, um deine Takes zu öffnen."
+          }
+        }
+      }
     },
     "Authenticate with Face ID or your device passcode to view the 12 words. They're the only way to recover your account, so reveal them somewhere private." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authentifiziere dich mit Face ID oder deinem Gerätecode, um die 12 Wörter zu sehen. Nur mit ihnen lässt sich dein Konto wiederherstellen, also zeige sie dir nur, wo dich niemand beobachtet."
+          }
+        }
+      }
     },
     "Authenticating…" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authentifizierung …"
+          }
+        }
+      }
     },
     "Authentication needed to reveal your phrase." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum Anzeigen deiner Phrase ist eine Authentifizierung nötig."
+          }
+        }
+      }
     },
     "Auto-delete" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch löschen"
+          }
+        }
+      }
     },
     "Auto-Delete (exc. notes)" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-Löschen (außer Notizen)"
+          }
+        }
+      }
     },
     "Auto-delete completed Takes, excluding notes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erledigte Takes automatisch löschen, außer Notizen"
+          }
+        }
+      }
     },
     "Auto-renews each year. Cancel anytime in your App Store account." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verlängert sich jährlich. Jederzeit in deinem App Store-Konto kündbar."
+          }
+        }
+      }
     },
     "Automatic" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch"
+          }
+        }
+      }
     },
     "Back" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück"
+          }
+        }
+      }
     },
     "Cancel" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abbrechen"
+          }
+        }
+      }
     },
     "Cancel search" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche abbrechen"
+          }
+        }
+      }
     },
     "Capture" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erfassen"
+          }
+        }
+      }
     },
     "Capture ${text}" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${text} erfassen"
+          }
+        }
+      }
     },
     "Capture ${text} as your Obie" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${text} als dein Obie erfassen"
+          }
+        }
+      }
     },
     "Capture a new Take as your Obie, from text you speak or type." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erfasse einen neuen Take als dein Obie, aus gesprochenem oder getipptem Text."
+          }
+        }
+      }
     },
     "Capture a new Take from text you speak or type." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erfasse einen neuen Take aus gesprochenem oder getipptem Text."
+          }
+        }
+      }
     },
     "Capture a Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einen Take erfassen"
+          }
+        }
+      }
     },
     "Capture an Obie" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Obie erfassen"
+          }
+        }
+      }
     },
     "Catchlight" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        }
+      }
     },
     "Catchlight Annual" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight Jährlich"
+          }
+        }
+      }
     },
     "Catchlight Filter" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight-Filter"
+          }
+        }
+      }
     },
     "Catchlight has been reset" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight wurde zurückgesetzt"
+          }
+        }
+      }
     },
     "Catchlight is locked" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight ist gesperrt"
+          }
+        }
+      }
     },
     "Catchlight never sees your files. Only you can read them." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight sieht deine Dateien nie. Nur du kannst sie lesen."
+          }
+        }
+      }
     },
     "Catchlight stores the Privacy phrase only on the device where you set it up. If you onboarded on a different device, use that one to view it." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight speichert die Datenschutz-Phrase nur auf dem Gerät, auf dem du sie eingerichtet hast. Hast du Catchlight auf einem anderen Gerät eingerichtet, sieh sie dir dort an."
+          }
+        }
+      }
     },
     "Catchlight uses only Apple system frameworks (CryptoKit, LocalAuthentication, Security, SQLite3). No third-party libraries are bundled." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight verwendet nur Apple-Systemframeworks (CryptoKit, LocalAuthentication, Security, SQLite3). Bibliotheken von Drittanbietern sind nicht enthalten."
+          }
+        }
+      }
     },
     "Catchlight: %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight: %@"
+          }
+        }
+      }
     },
     "Catchlight's security depends on iOS's built-in protections. This device appears to have been modified, which may reduce those protections. Your data may be at greater risk than on an unmodified device." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Sicherheit von Catchlight beruht auf den eingebauten Schutzmechanismen von iOS. Dieses Gerät scheint verändert worden zu sein, was diesen Schutz schwächen kann. Deine Daten sind hier möglicherweise stärker gefährdet als auf einem unveränderten Gerät."
+          }
+        }
+      }
     },
     "checked" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "abgehakt"
+          }
+        }
+      }
     },
     "Checklist item" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checklistenpunkt"
+          }
+        }
+      }
     },
     "Choose a cloud folder you own" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle einen Cloud-Ordner, der dir gehört"
+          }
+        }
+      }
     },
     "Choose folder from Files" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordner in „Dateien“ wählen"
+          }
+        }
+      }
     },
     "Choose what Catchlight focuses on while this Focus is on." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle, worauf sich Catchlight konzentriert, während dieser Fokus aktiv ist."
+          }
+        }
+      }
     },
     "Choose where encrypted Takes are stored." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle, wo verschlüsselte Takes gespeichert werden."
+          }
+        }
+      }
     },
     "Clear" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löschen"
+          }
+        }
+      }
     },
     "Clear search" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche löschen"
+          }
+        }
+      }
     },
     "Close Catchlight and open it again to set up a new Privacy phrase. If you exported your Takes, you can bring them back with Import from a file." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schließe Catchlight und öffne es erneut, um eine neue Datenschutz-Phrase einzurichten. Wenn du deine Takes exportiert hast, holst du sie mit „Aus Datei importieren“ zurück."
+          }
+        }
+      }
     },
     "Close paywall" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abo-Angebot schließen"
+          }
+        }
+      }
     },
     "Close Shot List" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shot List schließen"
+          }
+        }
+      }
     },
     "Close Storyboard" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Storyboard schließen"
+          }
+        }
+      }
     },
     "Cloud" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cloud"
+          }
+        }
+      }
     },
     "Cloud Storage" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cloud-Speicher"
+          }
+        }
+      }
     },
     "Cloud: backed up and restorable" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cloud: gesichert und wiederherstellbar"
+          }
+        }
+      }
     },
     "Collapse Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take einklappen"
+          }
+        }
+      }
     },
     "Comfort" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Großzügig"
+          }
+        }
+      }
     },
     "Coming soon" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demnächst"
+          }
+        }
+      }
     },
     "Coming soon." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demnächst."
+          }
+        }
+      }
     },
     "Compact" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kompakt"
+          }
+        }
+      }
     },
     "completed Task" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "erledigte Aufgabe"
+          }
+        }
+      }
     },
     "Completed tasks only" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur erledigte Aufgaben"
+          }
+        }
+      }
     },
     "Confirm before deleting" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vor dem Löschen bestätigen"
+          }
+        }
+      }
     },
     "Confirm it's you before erasing this device." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bestätige, dass du es bist, bevor dieses Gerät gelöscht wird."
+          }
+        }
+      }
     },
     "Confirm three words" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drei Wörter bestätigen"
+          }
+        }
+      }
     },
     "Conflict" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konflikt"
+          }
+        }
+      }
     },
     "Connect a cloud folder you control. Your Takes stay encrypted, we never see them, and your 12 words are what open them again on a new phone." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbinde einen Cloud-Ordner, über den du bestimmst. Deine Takes bleiben verschlüsselt, wir sehen sie nie, und deine 12 Wörter öffnen sie auf einem neuen iPhone wieder."
+          }
+        }
+      }
     },
     "Connect cloud folder" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cloud-Ordner verbinden"
+          }
+        }
+      }
     },
     "Continue" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiter"
+          }
+        }
+      }
     },
     "Copy version and device info" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version und Geräteinfo kopieren"
+          }
+        }
+      }
     },
     "Couldn't check your phrase on this device." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Phrase konnte auf diesem Gerät nicht geprüft werden."
+          }
+        }
+      }
     },
     "Couldn't delete that Take." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Take konnte nicht gelöscht werden."
+          }
+        }
+      }
     },
     "Couldn't generate a Privacy phrase." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es konnte keine Datenschutz-Phrase erzeugt werden."
+          }
+        }
+      }
     },
     "Couldn't import one of the notes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine der Notizen konnte nicht importiert werden."
+          }
+        }
+      }
     },
     "Couldn't load your Takes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Takes konnten nicht geladen werden."
+          }
+        }
+      }
     },
     "Couldn't open those files. Please try again." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Dateien konnten nicht geöffnet werden. Bitte versuche es erneut."
+          }
+        }
+      }
     },
     "Couldn't open your library on this device. Please restart Catchlight." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Bibliothek konnte auf diesem Gerät nicht geöffnet werden. Bitte starte Catchlight neu."
+          }
+        }
+      }
     },
     "Couldn't reach the App Store. Check your connection." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der App Store ist nicht erreichbar. Prüfe deine Verbindung."
+          }
+        }
+      }
     },
     "Couldn't reorder your Takes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Takes konnten nicht neu sortiert werden."
+          }
+        }
+      }
     },
     "Couldn't restore purchases. Please try again." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Käufe konnten nicht wiederhergestellt werden. Bitte versuche es erneut."
+          }
+        }
+      }
     },
     "Couldn't save that choice. Please try again." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Auswahl konnte nicht gespeichert werden. Bitte versuche es erneut."
+          }
+        }
+      }
     },
     "Couldn't save that folder: %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Ordner konnte nicht gespeichert werden: %@"
+          }
+        }
+      }
     },
     "Couldn't save that resolution. Please try again." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Lösung konnte nicht gespeichert werden. Bitte versuche es erneut."
+          }
+        }
+      }
     },
     "Couldn't save that Take." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Take konnte nicht gespeichert werden."
+          }
+        }
+      }
     },
     "Couldn't secure your account on this device." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Konto konnte auf diesem Gerät nicht gesichert werden."
+          }
+        }
+      }
     },
     "Couldn't set Obie." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie konnte nicht festgelegt werden."
+          }
+        }
+      }
     },
     "Couldn't unlock. Authenticate to open your Takes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entsperren fehlgeschlagen. Authentifiziere dich, um deine Takes zu öffnen."
+          }
+        }
+      }
     },
     "Couldn't unlock. Tap to save again." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entsperren fehlgeschlagen. Tippe, um erneut zu speichern."
+          }
+        }
+      }
     },
     "Create my Privacy phrase" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Datenschutz-Phrase erstellen"
+          }
+        }
+      }
     },
     "Created on %@ at %@" : {
       "localizations" : {
@@ -552,182 +1571,594 @@
             "state" : "new",
             "value" : "Created on %1$@ at %2$@"
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstellt am %1$@ um %2$@"
+          }
         }
       }
     },
     "Creation date" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstellungsdatum"
+          }
+        }
+      }
     },
     "Current folder: %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktueller Ordner: %@"
+          }
+        }
+      }
     },
     "Current location" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktueller Standort"
+          }
+        }
+      }
     },
     "Custom" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigene"
+          }
+        }
+      }
     },
     "DAILIES" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DAILIES"
+          }
+        }
+      }
     },
     "Daily" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Täglich"
+          }
+        }
+      }
     },
     "Dark" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dunkel"
+          }
+        }
+      }
     },
     "Date" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datum"
+          }
+        }
+      }
     },
     "Default reminder timing" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standardzeitpunkt für Erinnerungen"
+          }
+        }
+      }
     },
     "Default timing" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standardzeitpunkt"
+          }
+        }
+      }
     },
     "Delete" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löschen"
+          }
+        }
+      }
     },
     "Delete item" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Punkt löschen"
+          }
+        }
+      }
     },
     "Delete only the next occurrence, or the whole repeating series?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur den nächsten Termin löschen oder die ganze Serie?"
+          }
+        }
+      }
     },
     "Delete Series" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serie löschen"
+          }
+        }
+      }
     },
     "Delete Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take löschen"
+          }
+        }
+      }
     },
     "Delete This Occurrence" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Termin löschen"
+          }
+        }
+      }
     },
     "Delete this Take?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Take löschen?"
+          }
+        }
+      }
     },
     "Didn't pass its check, and may be an older version." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hat die Prüfung nicht bestanden und ist möglicherweise eine ältere Version."
+          }
+        }
+      }
     },
     "Disabled" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deaktiviert"
+          }
+        }
+      }
     },
     "Discard changes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Änderungen verwerfen"
+          }
+        }
+      }
     },
     "Dismiss" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausblenden"
+          }
+        }
+      }
     },
     "Dismiss %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ausblenden"
+          }
+        }
+      }
     },
     "Dismiss this one" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese ausblenden"
+          }
+        }
+      }
     },
     "Dock returned to navigation." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dock zeigt wieder die Navigation."
+          }
+        }
+      }
     },
     "Dock showing search." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dock zeigt die Suche."
+          }
+        }
+      }
     },
     "Dock showing timeline filters." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dock zeigt die Zeitleistenfilter."
+          }
+        }
+      }
     },
     "Done" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erledigt"
+          }
+        }
+      }
     },
     "done only" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nur erledigte"
+          }
+        }
+      }
     },
     "Double-tap Add Take in the toolbar. To save, double-tap Save and close. That's the whole capture flow." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe in der Symbolleiste doppelt auf „Take hinzufügen“. Zum Speichern tippst du doppelt auf „Sichern und schließen“. Mehr ist zum Erfassen nicht nötig."
+          }
+        }
+      }
     },
     "Double-tap an Iris to make that Take a task, set a reminder, or make it important." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe doppelt auf eine Iris, um den Take zur Aufgabe zu machen, eine Erinnerung festzulegen oder ihn als wichtig zu markieren."
+          }
+        }
+      }
     },
     "Double-tap to add %@." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um %@ hinzuzufügen."
+          }
+        }
+      }
     },
     "Double-tap to apply your selection and close." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um die Auswahl zu übernehmen und zu schließen."
+          }
+        }
+      }
     },
     "Double-tap to bring the keyboard back and keep typing." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um die Tastatur wieder einzublenden und weiterzuschreiben."
+          }
+        }
+      }
     },
     "Double-tap to capture a new Take." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um einen neuen Take zu erfassen."
+          }
+        }
+      }
     },
     "Double-tap to clear the search and return to the dock." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um die Suche zu löschen und zum Dock zurückzukehren."
+          }
+        }
+      }
     },
     "Double-tap to clear." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen zum Löschen."
+          }
+        }
+      }
     },
     "Double-tap to dismiss this notice." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um diesen Hinweis auszublenden."
+          }
+        }
+      }
     },
     "Double-tap to edit this Take." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um diesen Take zu bearbeiten."
+          }
+        }
+      }
     },
     "Double-tap to filter the timeline by notes, tasks, or reminders." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um die Zeitleiste nach Notizen, Aufgaben oder Erinnerungen zu filtern."
+          }
+        }
+      }
     },
     "Double-tap to place in the next slot." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um es in das nächste Feld zu setzen."
+          }
+        }
+      }
     },
     "Double-tap to remove %@." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um %@ zu entfernen."
+          }
+        }
+      }
     },
     "Double-tap to resume typing your search." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um mit der Sucheingabe fortzufahren."
+          }
+        }
+      }
     },
     "Double-tap to save this Take and stop editing." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um diesen Take zu sichern und die Bearbeitung zu beenden."
+          }
+        }
+      }
     },
     "Double-tap to save this Take." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um diesen Take zu sichern."
+          }
+        }
+      }
     },
     "Double-tap to search your Takes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um deine Takes zu durchsuchen."
+          }
+        }
+      }
     },
     "Double-tap to show only Important Takes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um nur wichtige Takes anzuzeigen."
+          }
+        }
+      }
     },
     "Double-tap to show only pure notes. Turning notes on clears the tasks and reminders filters." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um nur reine Notizen anzuzeigen. Das Einschalten von Notizen hebt die Filter für Aufgaben und Erinnerungen auf."
+          }
+        }
+      }
     },
     "Double-tap to show only Takes created this month." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um nur Takes aus diesem Monat anzuzeigen."
+          }
+        }
+      }
     },
     "Double-tap to tick this item." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um diesen Punkt abzuhaken."
+          }
+        }
+      }
     },
     "Double-tap to toggle the phrase on screen." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um die Phrase ein- oder auszublenden."
+          }
+        }
+      }
     },
     "Double-tap to toggle. Use the actions rotor for completed tasks only." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen zum Umschalten. Über den Aktionen-Rotor nur erledigte Aufgaben anzeigen."
+          }
+        }
+      }
     },
     "Double-tap to toggle. Use the actions rotor for expired reminders only." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen zum Umschalten. Über den Aktionen-Rotor nur abgelaufene Erinnerungen anzeigen."
+          }
+        }
+      }
     },
     "Double-tap to untick this item." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um den Haken zu entfernen."
+          }
+        }
+      }
     },
     "Double-tap to view your phrase. Face ID or passcode required." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um deine Phrase anzuzeigen. Face ID oder Gerätecode erforderlich."
+          }
+        }
+      }
     },
     "e.g. Home" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. Zuhause"
+          }
+        }
+      }
     },
     "Edit reminder" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnerung bearbeiten"
+          }
+        }
+      }
     },
     "Editor only" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur im Editor"
+          }
+        }
+      }
     },
     "Email to %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-Mail an %@"
+          }
+        }
+      }
     },
     "Email to %@ and %lld more emails" : {
       "localizations" : {
@@ -748,152 +2179,507 @@
               }
             }
           }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "E-Mail an %@ und %lld weitere E-Mail"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "E-Mail an %@ und %lld weitere E-Mails"
+                }
+              }
+            }
+          }
         }
       }
     },
     "Enable" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivieren"
+          }
+        }
+      }
     },
     "Enabled" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiviert"
+          }
+        }
+      }
     },
     "Encrypted cloud sync across your devices" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verschlüsselte Cloud-Synchronisierung auf all deinen Geräten"
+          }
+        }
+      }
     },
     "Encrypted on this device, readable only by you." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf diesem Gerät verschlüsselt, nur für dich lesbar."
+          }
+        }
+      }
     },
     "Encrypted on this device, readable only by you. To finish setting up cloud backup, choose your folder in Settings → System → Cloud Storage." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf diesem Gerät verschlüsselt, nur für dich lesbar. Um die Cloud-Sicherung abzuschließen, wähle deinen Ordner unter Einstellungen → System → Cloud-Speicher."
+          }
+        }
+      }
     },
     "Enter your Privacy phrase" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib deine Datenschutz-Phrase ein"
+          }
+        }
+      }
     },
     "Enter your Privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed. To keep a copy first, cancel and use Export Takes (Markdown), or make sure they're already in your cloud folder." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib deine Datenschutz-Phrase ein, um deine Takes auf dieses Gerät zu holen. Takes, die nur auf diesem Gerät gespeichert sind, werden entfernt. Um vorher eine Kopie zu behalten, brich ab und nutze „Takes exportieren“ (Markdown) oder stelle sicher, dass sie bereits in deinem Cloud-Ordner liegen."
+          }
+        }
+      }
     },
     "Erase everything" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles löschen"
+          }
+        }
+      }
     },
     "Erase everything on this device?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles auf diesem Gerät löschen?"
+          }
+        }
+      }
     },
     "Erase. Takes exported" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löschen. Takes exportiert"
+          }
+        }
+      }
     },
     "Erases every Take here and creates a new Privacy phrase. Cloud copies become unreadable too. Export first, it is the only way back." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löscht alle Takes hier und erstellt eine neue Datenschutz-Phrase. Auch Kopien in der Cloud werden unlesbar. Exportiere vorher, das ist der einzige Weg zurück."
+          }
+        }
+      }
     },
     "Erases every Take on this device and creates a new Privacy phrase." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löscht alle Takes auf diesem Gerät und erstellt eine neue Datenschutz-Phrase."
+          }
+        }
+      }
     },
     "Every task on this Take is ticked. Stop its reminder?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Aufgaben in diesem Take sind abgehakt. Erinnerung beenden?"
+          }
+        }
+      }
     },
     "Every thought deserves a moment of clarity." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeder Gedanke verdient einen Moment der Klarheit."
+          }
+        }
+      }
     },
     "Every weekday" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeden Werktag"
+          }
+        }
+      }
     },
     "Every weekend" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Wochenende"
+          }
+        }
+      }
     },
     "Everything" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles"
+          }
+        }
+      }
     },
     "Expand Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take aufklappen"
+          }
+        }
+      }
     },
     "expired only" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nur abgelaufene"
+          }
+        }
+      }
     },
     "Expired reminders only" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur abgelaufene Erinnerungen"
+          }
+        }
+      }
     },
     "Export" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportieren"
+          }
+        }
+      }
     },
     "Export a readable copy?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine lesbare Kopie exportieren?"
+          }
+        }
+      }
     },
     "Export all your Takes as a Markdown file." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportiere alle deine Takes als Markdown-Datei."
+          }
+        }
+      }
     },
     "Export anyway" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trotzdem exportieren"
+          }
+        }
+      }
     },
     "Export diagnostics" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnosedaten exportieren"
+          }
+        }
+      }
     },
     "Export now" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt exportieren"
+          }
+        }
+      }
     },
     "Export Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take exportieren"
+          }
+        }
+      }
     },
     "Export Takes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takes exportieren"
+          }
+        }
+      }
     },
     "Export Takes now. This is the only way to preserve them. This will make cloud copies unreadable." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportiere deine Takes jetzt. Nur so bleiben sie erhalten. Kopien in der Cloud werden dadurch unlesbar."
+          }
+        }
+      }
     },
     "Export your Takes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Takes exportieren"
+          }
+        }
+      }
     },
     "Export your Takes?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Takes exportieren?"
+          }
+        }
+      }
     },
-    "First, we'll create your Privacy phrase: 12 words that are the " : {
-
+    "First, we'll create your Privacy phrase: 12 words that are the **ONLY** key to your data." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuerst erstellen wir deine Datenschutz-Phrase: 12 Wörter, die der **EINZIGE** Schlüssel zu deinen Daten sind."
+          }
+        }
+      }
     },
     "Follow-up reminders" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nachfass-Erinnerungen"
+          }
+        }
+      }
     },
     "Free trial" : {
-      "comment" : "Subscription status — currently in the intro trial."
+      "comment" : "Subscription status — currently in the intro trial.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gratis-Testphase"
+          }
+        }
+      }
     },
     "Go back" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück"
+          }
+        }
+      }
     },
     "Got it" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verstanden"
+          }
+        }
+      }
     },
     "Hide phrase" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrase ausblenden"
+          }
+        }
+      }
     },
     "Hold to reveal" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gedrückt halten zum Anzeigen"
+          }
+        }
+      }
     },
     "Hold to reveal phrase" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gedrückt halten, um die Phrase anzuzeigen"
+          }
+        }
+      }
     },
     "Hourly" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stündlich"
+          }
+        }
+      }
     },
     "I already use Catchlight" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich nutze Catchlight bereits"
+          }
+        }
+      }
     },
     "I know the risk" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich kenne das Risiko"
+          }
+        }
+      }
     },
     "I've written them down" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich habe sie aufgeschrieben"
+          }
+        }
+      }
     },
     "Ignore" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ignorieren"
+          }
+        }
+      }
     },
     "Import" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importieren"
+          }
+        }
+      }
     },
     "Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importiere .md-, .txt- oder .rtf-Dateien aus dem Ordner „Import“ deines Sync-Speicherorts als neue Takes."
+          }
+        }
+      }
     },
     "Import from a file" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus Datei importieren"
+          }
+        }
+      }
     },
     "Import notes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notizen importieren"
+          }
+        }
+      }
     },
     "Import successful. %lld Takes added to your timeline." : {
       "localizations" : {
@@ -910,6 +2696,24 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Import successful. %lld Takes added to your timeline."
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Import erfolgreich. %lld Take wurde deiner Zeitleiste hinzugefügt."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Import erfolgreich. %lld Takes wurden deiner Zeitleiste hinzugefügt."
                 }
               }
             }
@@ -936,53 +2740,177 @@
               }
             }
           }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Import erfolgreich. %lld Take hinzugefügt."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Import erfolgreich. %lld Takes hinzugefügt."
+                }
+              }
+            }
+          }
         }
       }
     },
     "Important" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wichtig"
+          }
+        }
+      }
     },
     "Important filter" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter „Wichtig“"
+          }
+        }
+      }
     },
     "Important only" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur wichtige"
+          }
+        }
+      }
     },
     "inactive" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "inaktiv"
+          }
+        }
+      }
     },
     "Inactive" : {
-      "comment" : "Subscription status — lapsed, in read-only mode."
+      "comment" : "Subscription status — lapsed, in read-only mode.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inaktiv"
+          }
+        }
+      }
     },
     "Inline" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direkt"
+          }
+        }
+      }
     },
     "Interval" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intervall"
+          }
+        }
+      }
     },
     "Iris" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iris"
+          }
+        }
+      }
     },
     "Iris, %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iris, %@"
+          }
+        }
+      }
     },
     "It's in your cloud folder but not on this phone. It didn't pass its check, so it may be an older version." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Er liegt in deinem Cloud-Ordner, aber nicht auf diesem iPhone. Er hat die Prüfung nicht bestanden und ist daher möglicherweise eine ältere Version."
+          }
+        }
+      }
     },
     "Item" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Punkt"
+          }
+        }
+      }
     },
     "Keep this version" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Version behalten"
+          }
+        }
+      }
     },
     "Keeping it replaces any newer edit that may exist on another device when it syncs." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du sie behältst, ersetzt sie beim Synchronisieren alle neueren Änderungen, die es auf einem anderen Gerät geben könnte."
+          }
+        }
+      }
     },
     "Light" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hell"
+          }
+        }
+      }
     },
     "Link to %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link zu %@"
+          }
+        }
+      }
     },
     "Link to %@ and %lld more links" : {
       "localizations" : {
@@ -1003,542 +2931,1797 @@
               }
             }
           }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Link zu %@ und %lld weiterer Link"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Link zu %@ und %lld weitere Links"
+                }
+              }
+            }
+          }
         }
       }
     },
     "Local" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokal"
+          }
+        }
+      }
     },
     "Local: on this device only" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokal: nur auf diesem Gerät"
+          }
+        }
+      }
     },
     "Location" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ort"
+          }
+        }
+      }
     },
     "Location access is off. Enable it in Settings to set a place reminder." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Standortzugriff ist aus. Aktiviere ihn in den Einstellungen, um eine Ortserinnerung festzulegen."
+          }
+        }
+      }
     },
     "Lock after" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sperren nach"
+          }
+        }
+      }
     },
     "Made by Considus" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entwickelt von Considus"
+          }
+        }
+      }
     },
     "Make Important" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als wichtig markieren"
+          }
+        }
+      }
     },
     "Make Obie" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum Obie machen"
+          }
+        }
+      }
     },
     "Make standard Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum normalen Take machen"
+          }
+        }
+      }
     },
     "Make this your Obie?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Take zu deinem Obie machen?"
+          }
+        }
+      }
     },
     "Manage Subscription" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abo verwalten"
+          }
+        }
+      }
     },
     "Manual" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manuell"
+          }
+        }
+      }
     },
     "Mark done" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als erledigt markieren"
+          }
+        }
+      }
     },
     "Mark Done" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als erledigt markieren"
+          }
+        }
+      }
     },
     "Mark not done" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als nicht erledigt markieren"
+          }
+        }
+      }
     },
     "Mark Not Done" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als nicht erledigt markieren"
+          }
+        }
+      }
     },
     "Mode" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modus"
+          }
+        }
+      }
     },
     "Monthly" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monatlich"
+          }
+        }
+      }
     },
     "Move down" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach unten"
+          }
+        }
+      }
     },
     "Move up" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach oben"
+          }
+        }
+      }
     },
     "Never" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie"
+          }
+        }
+      }
     },
     "Never syncs. Your Takes stay on this device." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisiert nie. Deine Takes bleiben auf diesem Gerät."
+          }
+        }
+      }
     },
     "New Obie" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neues Obie"
+          }
+        }
+      }
     },
     "New Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuer Take"
+          }
+        }
+      }
     },
     "Newest first" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neueste zuerst"
+          }
+        }
+      }
     },
     "Next" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiter"
+          }
+        }
+      }
     },
     "Next week" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nächste Woche"
+          }
+        }
+      }
     },
     "No active subscription was found for this Apple ID." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für diese Apple-ID wurde kein aktives Abo gefunden."
+          }
+        }
+      }
     },
     "No notes to import from your selection." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In deiner Auswahl gibt es keine Notizen zum Importieren."
+          }
+        }
+      }
     },
     "No notices yet" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Hinweise"
+          }
+        }
+      }
     },
     "No privacy phrase on this device. Export now, then Settings > Start over." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Datenschutz-Phrase auf diesem Gerät. Exportiere jetzt, dann Einstellungen > Neu beginnen."
+          }
+        }
+      }
     },
     "No recognised markdown or text files found in the Import folder." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Ordner „Import“ wurden keine lesbaren Markdown- oder Textdateien gefunden."
+          }
+        }
+      }
     },
     "None" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine"
+          }
+        }
+      }
     },
     "Not available yet." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nicht verfügbar."
+          }
+        }
+      }
     },
     "Not configured" : {
-      "comment" : "Cloud Storage row detail label when no folder is picked."
+      "comment" : "Cloud Storage row detail label when no folder is picked.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Ordner"
+          }
+        }
+      }
     },
     "Not done" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht erledigt"
+          }
+        }
+      }
     },
     "Not now" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht jetzt"
+          }
+        }
+      }
     },
     "Note" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notiz"
+          }
+        }
+      }
     },
     "Notes filter" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter „Notizen“"
+          }
+        }
+      }
     },
     "Nothing planned yet" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nichts geplant"
+          }
+        }
+      }
     },
     "Notice History" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hinweisverlauf"
+          }
+        }
+      }
     },
     "Notifications" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen"
+          }
+        }
+      }
     },
     "Notifications disabled. Opens iOS Settings." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen deaktiviert. Öffnet die iOS-Einstellungen."
+          }
+        }
+      }
     },
     "Notifications enabled" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen aktiviert"
+          }
+        }
+      }
     },
     "Notify" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Benachrichtigen"
+          }
+        }
+      }
     },
     "Now, where should your Takes live?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Und wo sollen deine Takes zu Hause sein?"
+          }
+        }
+      }
     },
     "Obie" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
+        }
+      }
     },
     "Obie, your pinned Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie, dein angehefteter Take"
+          }
+        }
+      }
     },
     "Obie: your pinned Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie: dein angehefteter Take"
+          }
+        }
+      }
     },
     "off" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aus"
+          }
+        }
+      }
     },
     "Off" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus"
+          }
+        }
+      }
     },
     "OK" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
     },
     "Oldest first" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Älteste zuerst"
+          }
+        }
+      }
     },
     "on" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ein"
+          }
+        }
+      }
     },
     "On-device search only. Considus can never read your Takes. Text levels are greyed out by an iOS limitation." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche nur auf dem Gerät. Considus kann deine Takes niemals lesen. Die Textstufen sind wegen einer iOS-Einschränkung ausgegraut."
+          }
+        }
+      }
     },
     "One thing before we continue." : {
-
-    },
-    "ONLY" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch eine Sache, bevor es weitergeht."
+          }
+        }
+      }
     },
     "Only syncs when you tap Sync Now." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisiert nur, wenn du auf „Jetzt synchronisieren“ tippst."
+          }
+        }
+      }
     },
     "Open Catchlight and open a blank Obie." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne Catchlight mit einem leeren Obie."
+          }
+        }
+      }
     },
     "Open Catchlight and start a new Take." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne Catchlight und beginne einen neuen Take."
+          }
+        }
+      }
     },
     "Open Settings" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen öffnen"
+          }
+        }
+      }
     },
     "Open Shot List" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shot List öffnen"
+          }
+        }
+      }
     },
     "Open Source Licences" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open-Source-Lizenzen"
+          }
+        }
+      }
     },
     "Opens in your browser." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird in deinem Browser geöffnet."
+          }
+        }
+      }
     },
     "Opens the Catchlight report form, prefilled with your app and iOS version." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet das Catchlight-Meldeformular, bereits ausgefüllt mit deiner App- und iOS-Version."
+          }
+        }
+      }
     },
     "Opens the Files picker to choose a folder for sync." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet „Dateien“, um einen Ordner für die Synchronisierung zu wählen."
+          }
+        }
+      }
     },
     "Opens the Focus ring to change what this Take is." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet den Fokusring, um die Art dieses Takes zu ändern."
+          }
+        }
+      }
     },
     "Opens the Focus ring. Use the actions rotor to make this your Obie." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet den Fokusring. Über den Aktionen-Rotor machst du diesen Take zu deinem Obie."
+          }
+        }
+      }
     },
     "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet den Fokusring. Über den Aktionen-Rotor machst du ihn wieder zu einem normalen Take."
+          }
+        }
+      }
     },
     "Opens the Storyboard: every Take with a task. Use the actions rotor to open Settings." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet das Storyboard: alle Takes mit einer Aufgabe. Über den Aktionen-Rotor öffnest du die Einstellungen."
+          }
+        }
+      }
     },
     "Order" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reihenfolge"
+          }
+        }
+      }
     },
     "Overdue" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Überfällig"
+          }
+        }
+      }
     },
     "OVERDUE" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ÜBERFÄLLIG"
+          }
+        }
+      }
     },
     "Panel" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fenster"
+          }
+        }
+      }
     },
     "Panel suggests, you accept. Inline rewrites in place. Both send that Take to Apple. Your Privacy phrase never goes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Fenster“ schlägt vor, du übernimmst. „Direkt“ schreibt an Ort und Stelle um. Beide senden diesen Take an Apple. Deine Datenschutz-Phrase nie."
+          }
+        }
+      }
     },
     "Phrase hidden. Double-tap the reveal button to view." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrase ausgeblendet. Tippe doppelt auf die Taste zum Anzeigen."
+          }
+        }
+      }
     },
     "Phrase hidden. Press and hold the reveal button to view." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrase ausgeblendet. Halte die Taste zum Anzeigen gedrückt."
+          }
+        }
+      }
     },
     "Phrase isn't on this device" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Phrase ist nicht auf diesem Gerät"
+          }
+        }
+      }
     },
     "Phrase revealed: %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrase angezeigt: %@"
+          }
+        }
+      }
     },
     "Pick a .md, .txt or .rtf file from Files to import as Takes. No cloud folder needed." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle in „Dateien“ eine .md-, .txt- oder .rtf-Datei, um sie als Takes zu importieren. Kein Cloud-Ordner nötig."
+          }
+        }
+      }
     },
     "Pick word %@ from the bank below." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle Wort %@ aus der Auswahl unten."
+          }
+        }
+      }
     },
     "Place" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ort"
+          }
+        }
+      }
     },
     "Place set, arrival, silent" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ort festgelegt, Ankunft, stumm"
+          }
+        }
+      }
     },
     "Place set, leaving, silent" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ort festgelegt, Verlassen, stumm"
+          }
+        }
+      }
     },
     "Press and hold an Iris to pin one above the rest. Only one is ever your Obie, because there can only be one that's most important." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halte eine Iris gedrückt, um ihren Take über alle anderen zu heften. Es gibt immer nur ein Obie, denn nur eines kann das Wichtigste sein."
+          }
+        }
+      }
     },
     "Press and hold to display the 12 words. Release to hide them." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gedrückt halten, um die 12 Wörter anzuzeigen. Loslassen, um sie auszublenden."
+          }
+        }
+      }
     },
     "Preview" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschau"
+          }
+        }
+      }
     },
     "Privacy phrase" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datenschutz-Phrase"
+          }
+        }
+      }
     },
     "Privacy Policy" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datenschutzerklärung"
+          }
+        }
+      }
     },
     "Privacy-first notes and reminders" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notizen und Erinnerungen, Datenschutz zuerst"
+          }
+        }
+      }
     },
     "Proceed" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fortfahren"
+          }
+        }
+      }
     },
     "Purchase couldn't complete. Please try again." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Kauf konnte nicht abgeschlossen werden. Bitte versuche es erneut."
+          }
+        }
+      }
     },
     "Purchase in progress" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kauf wird ausgeführt"
+          }
+        }
+      }
     },
     "Quarantine" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quarantäne"
+          }
+        }
+      }
     },
     "Quick set" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schnellauswahl"
+          }
+        }
+      }
     },
     "Radius" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Radius"
+          }
+        }
+      }
     },
     "Re-nudge until you mark it done" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erneut erinnern, bis du es als erledigt markierst"
+          }
+        }
+      }
     },
     "Read-only. Your data is still yours." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur lesen. Deine Daten gehören weiterhin dir."
+          }
+        }
+      }
     },
     "Ready to restore." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bereit zur Wiederherstellung."
+          }
+        }
+      }
     },
     "Recent sync, storage and conflict notices." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktuelle Hinweise zu Synchronisierung, Speicher und Konflikten."
+          }
+        }
+      }
     },
     "Recover" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wiederherstellen"
+          }
+        }
+      }
     },
     "Recover this Take?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Take wiederherstellen?"
+          }
+        }
+      }
     },
     "Redeem Code" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code einlösen"
+          }
+        }
+      }
     },
     "Release to hide" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loslassen zum Ausblenden"
+          }
+        }
+      }
     },
     "Remind" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnern"
+          }
+        }
+      }
     },
     "Reminder" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnerung"
+          }
+        }
+      }
     },
     "Reminder set" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnerung festgelegt"
+          }
+        }
+      }
     },
     "Reminder type" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Art der Erinnerung"
+          }
+        }
+      }
     },
     "Reminder: still not done" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnerung: noch nicht erledigt"
+          }
+        }
+      }
     },
     "Reminders" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnerungen"
+          }
+        }
+      }
     },
     "Reminders filter" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter „Erinnerungen“"
+          }
+        }
+      }
     },
     "Reminds on arrival" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnert bei Ankunft"
+          }
+        }
+      }
     },
     "Reminds on leaving" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnert beim Verlassen"
+          }
+        }
+      }
     },
     "Remove" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entfernen"
+          }
+        }
+      }
     },
     "Remove Important" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht mehr wichtig"
+          }
+        }
+      }
     },
     "Reorder item" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Punkt verschieben"
+          }
+        }
+      }
     },
     "Repeat" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wiederholen"
+          }
+        }
+      }
     },
     "Report an issue" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Problem melden"
+          }
+        }
+      }
     },
     "Requesting notification permission" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaubnis für Mitteilungen wird angefragt"
+          }
+        }
+      }
     },
     "Restore" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wiederherstellen"
+          }
+        }
+      }
     },
     "Restore on this device" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf diesem Gerät wiederherstellen"
+          }
+        }
+      }
     },
     "Restore Purchases" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Käufe wiederherstellen"
+          }
+        }
+      }
     },
     "Restore your Takes onto this device from your Privacy phrase." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stelle deine Takes mit deiner Datenschutz-Phrase auf diesem Gerät wieder her."
+          }
+        }
+      }
     },
     "Resubscribe to Catchlight" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight erneut abonnieren"
+          }
+        }
+      }
     },
     "Return to local-only mode." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück zum rein lokalen Modus."
+          }
+        }
+      }
     },
     "Reveal phrase" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrase anzeigen"
+          }
+        }
+      }
     },
     "Reveal your Privacy phrase" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Datenschutz-Phrase anzeigen"
+          }
+        }
+      }
     },
     "Review" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prüfen"
+          }
+        }
+      }
     },
     "Run a sync pass now." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt synchronisieren."
+          }
+        }
+      }
     },
     "Save and close" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sichern und schließen"
+          }
+        }
+      }
     },
     "Saves a readable copy. Not a recovery phrase." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sichert eine lesbare Kopie. Keine Wiederherstellungsphrase."
+          }
+        }
+      }
     },
     "Scenes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Szenen"
+          }
+        }
+      }
     },
     "Search" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suchen"
+          }
+        }
+      }
     },
     "SEARCH" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SUCHE"
+          }
+        }
+      }
     },
     "Search a place or address" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ort oder Adresse suchen"
+          }
+        }
+      }
     },
     "Search Takes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takes durchsuchen"
+          }
+        }
+      }
     },
     "Search your Takes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Takes durchsuchen"
+          }
+        }
+      }
     },
     "Second device" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zweites Gerät"
+          }
+        }
+      }
     },
     "Security" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sicherheit"
+          }
+        }
+      }
     },
     "Select" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auswählen"
+          }
+        }
+      }
     },
     "Select an empty folder, or create a new one, and we'll take care of the rest." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle einen leeren Ordner oder erstelle einen neuen, um den Rest kümmern wir uns."
+          }
+        }
+      }
     },
     "Select an Iris, use the rotor to select Actions, swipe up to select Make Obie, then double-tap. Only one is ever your Obie, because there can only be one that's most important." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine Iris, stelle den Rotor auf „Aktionen“, streiche nach oben bis „Zum Obie machen“ und tippe doppelt. Es gibt immer nur ein Obie, denn nur eines kann das Wichtigste sein."
+          }
+        }
+      }
     },
     "Select Storyboard, then use the rotor to select Actions and double-tap to open Settings." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle „Storyboard“, stelle den Rotor auf „Aktionen“ und tippe doppelt, um die Einstellungen zu öffnen."
+          }
+        }
+      }
     },
     "Selected: %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgewählt: %@"
+          }
+        }
+      }
     },
     "Sequence" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sequence"
+          }
+        }
+      }
     },
     "SEQUENCE" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SEQUENCE"
+          }
+        }
+      }
     },
     "Set up Cloud Storage first. The Import folder lives inside your sync folder." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Richte zuerst den Cloud-Speicher ein. Der Ordner „Import“ liegt in deinem Sync-Ordner."
+          }
+        }
+      }
     },
     "Settings" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen"
+          }
+        }
+      }
     },
     "SETTINGS" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EINSTELLUNGEN"
+          }
+        }
+      }
     },
     "Shape your Take with the Iris" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gestalte deinen Take mit der Iris"
+          }
+        }
+      }
     },
     "Shares a plain-text diagnostics log to attach to a report." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teilt ein Diagnoseprotokoll als reinen Text, das du einer Meldung anhängen kannst."
+          }
+        }
+      }
     },
     "Shot List" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shot List"
+          }
+        }
+      }
     },
     "SHOT LIST" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SHOT LIST"
+          }
+        }
+      }
     },
     "Show" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anzeigen"
+          }
+        }
+      }
     },
     "Show ${scope}" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${scope} anzeigen"
+          }
+        }
+      }
     },
     "Show all Takes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Takes anzeigen"
+          }
+        }
+      }
     },
     "Show creation date" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstellungsdatum anzeigen"
+          }
+        }
+      }
     },
     "Show my words once more" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Wörter noch einmal zeigen"
+          }
+        }
+      }
     },
     "Silent. Keeps the place on the Take, with no alert when you arrive or leave." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stumm. Der Ort bleibt am Take, ohne Hinweis bei Ankunft oder Verlassen."
+          }
+        }
+      }
     },
     "Simply swipe up from the toolbar." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Streiche einfach von der Symbolleiste nach oben."
+          }
+        }
+      }
     },
     "Single" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Zeile"
+          }
+        }
+      }
     },
     "Skip for now" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorerst überspringen"
+          }
+        }
+      }
     },
     "Snooze" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlummern"
+          }
+        }
+      }
     },
     "Snooze duration" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlummerdauer"
+          }
+        }
+      }
     },
     "Snooze Duration" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlummerdauer"
+          }
+        }
+      }
     },
     "Snooze for %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ schlummern"
+          }
+        }
+      }
     },
     "Snoozed" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geschlummert"
+          }
+        }
+      }
     },
     "SNOOZED" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GESCHLUMMERT"
+          }
+        }
+      }
     },
     "Snoozed. Originally due %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geschlummert. Ursprünglich fällig %@"
+          }
+        }
+      }
     },
     "Some" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige Zeilen"
+          }
+        }
+      }
     },
     "Some finished Takes couldn't be cleaned up. They'll be retried." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige erledigte Takes konnten nicht aufgeräumt werden. Es wird erneut versucht."
+          }
+        }
+      }
     },
     "Something went wrong." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etwas ist schiefgelaufen."
+          }
+        }
+      }
     },
     "Spotlight & Siri" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spotlight & Siri"
+          }
+        }
+      }
     },
     "Spotlight and Siri indexing" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indexierung für Spotlight und Siri"
+          }
+        }
+      }
     },
     "Standard" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        }
+      }
     },
     "Start free,\nkeep your thoughts,\nprivately." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starte kostenlos,\nbehalte deine Gedanken,\nprivat."
+          }
+        }
+      }
     },
     "Start over" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neu beginnen"
+          }
+        }
+      }
     },
     "Start using Catchlight" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Catchlight loslegen"
+          }
+        }
+      }
     },
     "Start your %@ trial now, then only %@" : {
       "localizations" : {
@@ -1547,86 +4730,274 @@
             "state" : "new",
             "value" : "Start your %1$@ trial now, then only %2$@"
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starte jetzt deine %1$@ Testphase, danach nur %2$@"
+          }
         }
       }
     },
     "Stop" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beenden"
+          }
+        }
+      }
     },
     "Storage" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speicher"
+          }
+        }
+      }
     },
     "Storyboard" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Storyboard"
+          }
+        }
+      }
     },
     "STORYBOARD" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STORYBOARD"
+          }
+        }
+      }
     },
     "Subscribe" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonnieren"
+          }
+        }
+      }
     },
     "Subscribe now" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt abonnieren"
+          }
+        }
+      }
     },
     "Subscription" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abo"
+          }
+        }
+      }
     },
     "Subscription is unavailable right now." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Abo ist gerade nicht verfügbar."
+          }
+        }
+      }
     },
     "Support" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support"
+          }
+        }
+      }
     },
     "Sync" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisierung"
+          }
+        }
+      }
     },
     "Sync %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisierung %@"
+          }
+        }
+      }
     },
     "SYNC CONFLICTS" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SYNC-KONFLIKTE"
+          }
+        }
+      }
     },
     "Sync encountered a problem and will retry." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei der Synchronisierung ist ein Problem aufgetreten. Es wird erneut versucht."
+          }
+        }
+      }
     },
     "Sync Now" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt synchronisieren"
+          }
+        }
+      }
     },
     "Sync paused. Your cloud data looks unexpected. No changes were made locally." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisierung pausiert. Deine Cloud-Daten sehen unerwartet aus. Lokal wurde nichts geändert."
+          }
+        }
+      }
     },
     "Sync, storage and conflict notices will appear here." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hinweise zu Synchronisierung, Speicher und Konflikten erscheinen hier."
+          }
+        }
+      }
     },
     "Syncing…" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisiert …"
+          }
+        }
+      }
     },
     "Syncs automatically in the background and when you open the app." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisiert automatisch im Hintergrund und beim Öffnen der App."
+          }
+        }
+      }
     },
     "System" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System"
+          }
+        }
+      }
     },
     "Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
+        }
+      }
     },
     "Take preview length" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschaulänge von Takes"
+          }
+        }
+      }
     },
     "Take spacing" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abstand zwischen Takes"
+          }
+        }
+      }
     },
     "Takes with a task appear here." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takes mit einer Aufgabe erscheinen hier."
+          }
+        }
+      }
     },
     "Tap the + button. Tap anywhere outside the Take to save. That's the whole capture flow." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf die Taste +. Tippe irgendwo außerhalb des Takes, um zu sichern. Mehr ist zum Erfassen nicht nötig."
+          }
+        }
+      }
     },
     "Tap the circle beside any Take to make it a task, set a reminder, or make it important." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf den Kreis neben einem Take, um ihn zur Aufgabe zu machen, eine Erinnerung festzulegen oder ihn als wichtig zu markieren."
+          }
+        }
+      }
     },
     "Tap the words from your phrase, in order." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe die Wörter deiner Phrase in der richtigen Reihenfolge an."
+          }
+        }
+      }
     },
     "Tap words %lld, %lld and %lld from your phrase, in order." : {
       "localizations" : {
@@ -1635,11 +5006,24 @@
             "state" : "new",
             "value" : "Tap words %1$lld, %2$lld and %3$lld from your phrase, in order."
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe die Wörter %1$lld, %2$lld und %3$lld deiner Phrase in dieser Reihenfolge an."
+          }
         }
       }
     },
     "Task" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufgabe"
+          }
+        }
+      }
     },
     "Task, %lld of %lld complete" : {
       "localizations" : {
@@ -1648,185 +5032,604 @@
             "state" : "new",
             "value" : "Task, %1$lld of %2$lld complete"
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufgabe, %1$lld von %2$lld erledigt"
+          }
         }
       }
     },
     "Task, complete" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufgabe, erledigt"
+          }
+        }
+      }
     },
     "Tasks" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufgaben"
+          }
+        }
+      }
     },
     "Tasks filter" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter „Aufgaben“"
+          }
+        }
+      }
     },
     "Terms of Service" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutzungsbedingungen"
+          }
+        }
+      }
     },
     "Tested with iCloud Drive, Dropbox, Internxt, Koofr and Filen. Others may work, and a provider that greys out in the picker can't hand an app a whole folder. You'll need its app installed and signed in." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Getestet mit iCloud Drive, Dropbox, Internxt, Koofr und Filen. Andere funktionieren eventuell; ein Anbieter, der in der Auswahl ausgegraut ist, kann einer App keinen ganzen Ordner übergeben. Seine App muss installiert und angemeldet sein."
+          }
+        }
+      }
     },
     "That doesn't look right. Check the words and try again." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das stimmt nicht ganz. Prüfe die Wörter und versuche es erneut."
+          }
+        }
+      }
     },
     "The 12 words from your other device, in order." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die 12 Wörter von deinem anderen Gerät, in der richtigen Reihenfolge."
+          }
+        }
+      }
     },
     "The BIP-39 English wordlist is sourced from the Trezor project and bundled under the MIT licence. See Resources/bip39-english.txt." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die englische BIP-39-Wortliste stammt aus dem Trezor-Projekt und ist unter der MIT-Lizenz enthalten. Siehe Resources/bip39-english.txt."
+          }
+        }
+      }
     },
     "The copies of these Takes in your cloud folder didn't pass their check. Nothing changes on this phone until you choose." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Kopien dieser Takes in deinem Cloud-Ordner haben die Prüfung nicht bestanden. Auf diesem iPhone ändert sich nichts, bis du entscheidest."
+          }
+        }
+      }
     },
     "The file is readable text and it does not contain a recovery phrase. Use Start over and Import from a file to re-import your Takes. Delete the export once your Takes are back." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Datei ist lesbarer Text und enthält keine Wiederherstellungsphrase. Nutze „Neu beginnen“ und „Aus Datei importieren“, um deine Takes wieder zu importieren. Lösche den Export, sobald deine Takes zurück sind."
+          }
+        }
+      }
     },
     "The Import folder couldn't be read. Check your cloud folder in Settings → Cloud Storage and try again." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Ordner „Import“ konnte nicht gelesen werden. Prüfe deinen Cloud-Ordner unter Einstellungen → Cloud-Speicher und versuche es erneut."
+          }
+        }
+      }
     },
     "The newer version from another device can't be read." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die neuere Version von einem anderen Gerät ist nicht lesbar."
+          }
+        }
+      }
     },
     "These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Takes wurden möglicherweise auf verschiedenen Geräten bearbeitet, daher können wir nicht entscheiden, welche Version bleibt. Tippe auf die Version, die du behalten möchtest. Die andere wird entfernt."
+          }
+        }
+      }
     },
     "This cannot be undone." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das kann nicht rückgängig gemacht werden."
+          }
+        }
+      }
     },
     "This deletes every Take on this device and the Privacy phrase that unlocks them. Takes in your cloud folder will be unreadable. This cannot be undone." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Damit werden alle Takes auf diesem Gerät gelöscht, ebenso die Datenschutz-Phrase, die sie entsperrt. Takes in deinem Cloud-Ordner werden unlesbar. Das kann nicht rückgängig gemacht werden."
+          }
+        }
+      }
     },
     "This evening" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute Abend"
+          }
+        }
+      }
     },
     "This is a repeating reminder." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist eine wiederkehrende Erinnerung."
+          }
+        }
+      }
     },
     "This replaces the account on this device. Takes stored only here will be removed and can't be recovered. If you haven't already, close this and use Export Takes (Markdown) to keep a copy first." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Damit wird das Konto auf diesem Gerät ersetzt. Takes, die nur hier gespeichert sind, werden entfernt und lassen sich nicht wiederherstellen. Falls noch nicht geschehen, schließe dies und sichere zuerst eine Kopie mit „Takes exportieren“ (Markdown)."
+          }
+        }
+      }
     },
     "This weekend" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Wochenende"
+          }
+        }
+      }
     },
     "Those aren't quite right. Try again." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das stimmt noch nicht ganz. Versuche es erneut."
+          }
+        }
+      }
     },
     "Time" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeit"
+          }
+        }
+      }
     },
     "Timeline arrangement" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anordnung der Zeitleiste"
+          }
+        }
+      }
     },
     "Timeline order" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reihenfolge der Zeitleiste"
+          }
+        }
+      }
     },
     "Tomorrow" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Morgen"
+          }
+        }
+      }
     },
     "Trigger" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auslöser"
+          }
+        }
+      }
     },
     "Try Again" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erneut versuchen"
+          }
+        }
+      }
     },
     "Turn off reminder" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erinnerung ausschalten"
+          }
+        }
+      }
     },
     "Type + first line" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Art + erste Zeile"
+          }
+        }
+      }
     },
     "Type + full text" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Art + ganzer Text"
+          }
+        }
+      }
     },
     "Type only" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Art"
+          }
+        }
+      }
     },
     "unchecked" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nicht abgehakt"
+          }
+        }
+      }
     },
     "Unlimited Takes, tasks and reminders" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unbegrenzt Takes, Aufgaben und Erinnerungen"
+          }
+        }
+      }
     },
     "Unlock" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entsperren"
+          }
+        }
+      }
     },
     "Unlock your Takes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Takes entsperren"
+          }
+        }
+      }
     },
     "Unlocking…" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird entsperrt …"
+          }
+        }
+      }
     },
     "Untitled Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take ohne Titel"
+          }
+        }
+      }
     },
     "Use current location" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktuellen Standort verwenden"
+          }
+        }
+      }
     },
     "Use the actions rotor to copy version and device info." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Über den Aktionen-Rotor kopierst du Version und Geräteinfo."
+          }
+        }
+      }
     },
     "Version %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version %@"
+          }
+        }
+      }
     },
     "View" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ansicht"
+          }
+        }
+      }
     },
     "View your subscription or restore purchases." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieh dir dein Abo an oder stelle Käufe wieder her."
+          }
+        }
+      }
     },
     "We never see them, store them, or ask for them. So don't lose them." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wir sehen sie nie, speichern sie nie und fragen nie danach. Also verlier sie nicht."
+          }
+        }
+      }
     },
     "Weekly" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wöchentlich"
+          }
+        }
+      }
     },
     "Welcome back" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Willkommen zurück"
+          }
+        }
+      }
     },
     "What to capture as your Obie." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du als dein Obie erfassen möchtest."
+          }
+        }
+      }
     },
     "What to capture." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du erfassen möchtest."
+          }
+        }
+      }
     },
     "What's your Obie?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was ist dein Obie?"
+          }
+        }
+      }
     },
     "What's your Take?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was ist dein Take?"
+          }
+        }
+      }
     },
     "When" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wann"
+          }
+        }
+      }
     },
     "When I arrive" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn ich ankomme"
+          }
+        }
+      }
     },
     "When I leave" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn ich gehe"
+          }
+        }
+      }
     },
     "When on, a reminder you don't act on nudges again until you mark it done." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn aktiviert, erinnert dich eine unbeachtete Erinnerung erneut, bis du sie als erledigt markierst."
+          }
+        }
+      }
     },
     "When on, deleting a Take asks you to confirm first." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn aktiviert, musst du das Löschen eines Takes zuerst bestätigen."
+          }
+        }
+      }
     },
     "When you arrive at %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du bei %@ ankommst"
+          }
+        }
+      }
     },
     "When you arrive at your location" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du an deinem Ort ankommst"
+          }
+        }
+      }
     },
     "When you leave %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du %@ verlässt"
+          }
+        }
+      }
     },
     "When you leave your location" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du deinen Ort verlässt"
+          }
+        }
+      }
     },
     "Which Takes Catchlight shows while this Focus is on." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Takes Catchlight zeigt, während dieser Fokus aktiv ist."
+          }
+        }
+      }
     },
     "Word %@ of your phrase, empty" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wort %@ deiner Phrase, leer"
+          }
+        }
+      }
     },
     "Word %@ of your phrase: %@. Double-tap to deselect." : {
       "localizations" : {
@@ -1835,11 +5638,24 @@
             "state" : "new",
             "value" : "Word %1$@ of your phrase: %2$@. Double-tap to deselect."
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wort %1$@ deiner Phrase: %2$@. Doppeltippen, um die Auswahl aufzuheben."
+          }
         }
       }
     },
     "Word %lld of 12" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wort %lld von 12"
+          }
+        }
+      }
     },
     "Word %lld: %@" : {
       "localizations" : {
@@ -1848,74 +5664,234 @@
             "state" : "new",
             "value" : "Word %1$lld: %2$@"
           }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wort %1$lld: %2$@"
+          }
         }
       }
     },
     "Write these 12 words down and keep them somewhere safe. They encrypt your Takes and enable a second device." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schreib diese 12 Wörter auf und bewahre sie sicher auf. Sie verschlüsseln deine Takes und ermöglichen ein zweites Gerät."
+          }
+        }
+      }
     },
     "Write these 12 words down and keep them somewhere safe. They're needed in order to decrypt your Takes on a new device, and they don't travel in an iPhone backup, so the copy you write down is the copy that counts." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schreib diese 12 Wörter auf und bewahre sie sicher auf. Du brauchst sie, um deine Takes auf einem neuen Gerät zu entschlüsseln. Sie sind in keinem iPhone-Backup enthalten, also zählt allein die Kopie, die du aufschreibst."
+          }
+        }
+      }
     },
     "Write these 12 words down somewhere safe, on paper. They're the only way back into your Takes on a new phone. They don't travel in an iPhone backup, and neither do your Takes, so restoring a backup won't bring either of them back." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schreib diese 12 Wörter an einem sicheren Ort auf Papier auf. Nur mit ihnen kommst du auf einem neuen iPhone wieder an deine Takes. Weder die Wörter noch deine Takes sind in einem iPhone-Backup enthalten, ein wiederhergestelltes Backup bringt also keins von beiden zurück."
+          }
+        }
+      }
     },
     "Writing Tools" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schreibtools"
+          }
+        }
+      }
     },
     "You can start over and try again. Your phrase hasn't been saved anywhere. We'll generate another." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kannst neu beginnen und es noch einmal versuchen. Deine Phrase wurde nirgends gespeichert. Wir erzeugen eine neue."
+          }
+        }
+      }
     },
     "You don't need to choose privacy, it's yours and you never have to ask for it." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datenschutz musst du nicht erst wählen. Er gehört dir, und du musst nie darum bitten."
+          }
+        }
+      }
     },
     "You're ready." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist startklar."
+          }
+        }
+      }
     },
     "Your account is restored on this device. Connect the cloud folder where your Takes are saved and they'll appear here." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Konto ist auf diesem Gerät wiederhergestellt. Verbinde den Cloud-Ordner, in dem deine Takes liegen, und sie erscheinen hier."
+          }
+        }
+      }
     },
     "Your cloud folder couldn't be opened. Open Settings → Cloud Storage to choose a new one." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Cloud-Ordner konnte nicht geöffnet werden. Wähle unter Einstellungen → Cloud-Speicher einen neuen."
+          }
+        }
+      }
     },
     "Your cloud folder is no longer available. Open Settings → Cloud Storage to re-pick it." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Cloud-Ordner ist nicht mehr verfügbar. Wähle ihn unter Einstellungen → Cloud-Speicher erneut aus."
+          }
+        }
+      }
     },
     "Your data stays yours: readable, exportable" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Daten bleiben deine: lesbar, exportierbar"
+          }
+        }
+      }
     },
     "Your encrypted library couldn't be opened, so changes aren't being saved to this device yet. Please restart Catchlight." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine verschlüsselte Bibliothek konnte nicht geöffnet werden, daher werden Änderungen noch nicht auf diesem Gerät gespeichert. Bitte starte Catchlight neu."
+          }
+        }
+      }
     },
     "Your encrypted library couldn't be opened. Please restart Catchlight." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine verschlüsselte Bibliothek konnte nicht geöffnet werden. Bitte starte Catchlight neu."
+          }
+        }
+      }
     },
     "Your existing Obie returns to the timeline. Only one Take can be your Obie." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein bisheriges Obie kehrt in die Zeitleiste zurück. Nur ein Take kann dein Obie sein."
+          }
+        }
+      }
     },
     "Your first Take is waiting." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein erster Take wartet."
+          }
+        }
+      }
     },
     "Your Obie" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Obie"
+          }
+        }
+      }
     },
     "Your Privacy phrase" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Datenschutz-Phrase"
+          }
+        }
+      }
     },
     "Your purchase is awaiting approval. You'll get access as soon as it's confirmed." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Kauf wartet auf Freigabe. Du erhältst Zugriff, sobald er bestätigt ist."
+          }
+        }
+      }
     },
     "Your subscription auto-renews each year unless cancelled at least 24 hours before the period ends. Manage or cancel anytime in your App Store account. Catchlight is end-to-end encrypted. Your Takes are never readable by us." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Abo verlängert sich jährlich automatisch, sofern du nicht spätestens 24 Stunden vor Ablauf des Zeitraums kündigst. Verwalte oder kündige es jederzeit in deinem App Store-Konto. Catchlight ist Ende-zu-Ende-verschlüsselt. Deine Takes sind für uns nie lesbar."
+          }
+        }
+      }
     },
     "Your Takes stay on this device and nowhere else. Your iPhone backup won't contain them, so if the phone goes, they go with it." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Takes bleiben auf diesem Gerät und nirgendwo sonst. Dein iPhone-Backup enthält sie nicht: Ist das iPhone weg, sind sie es auch."
+          }
+        }
+      }
     },
     "Your Takes will live on this device and nowhere else. Your iPhone backup won't contain them, because we deliberately keep them out of it, and that's the same choice that keeps them out of iCloud Backup. Lose this phone or wipe it, and there's nothing to restore from." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Takes liegen dann auf diesem Gerät und nirgendwo sonst. Dein iPhone-Backup enthält sie nicht, weil wir sie bewusst heraushalten, und genau das hält sie auch aus dem iCloud-Backup heraus. Verlierst oder löschst du dieses iPhone, gibt es nichts, woraus du sie wiederherstellen könntest."
+          }
+        }
+      }
     },
     "Your thoughts, in your order, telling your story. Nobody else's." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Gedanken, in deiner Reihenfolge, erzählen deine Geschichte. Niemandes sonst."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

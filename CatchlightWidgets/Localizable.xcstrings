@@ -2,61 +2,194 @@
   "sourceLanguage" : "en",
   "strings" : {
     "A blank Obie to tap and write into." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein leeres Obie zum Antippen und Losschreiben."
+          }
+        }
+      }
     },
     "A blank Take to tap and write into." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein leerer Take zum Antippen und Losschreiben."
+          }
+        }
+      }
     },
     "Both capture buttons in one widget — tap the side you need." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beide Erfassen-Tasten in einem Widget – tippe auf die Seite, die du brauchst."
+          }
+        }
+      }
     },
     "Capture" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erfassen"
+          }
+        }
+      }
     },
     "Catchlight" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        }
+      }
     },
     "New Obie" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neues Obie"
+          }
+        }
+      }
     },
     "New Obie card" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karte „Neues Obie“"
+          }
+        }
+      }
     },
     "New Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuer Take"
+          }
+        }
+      }
     },
     "New Take card" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karte „Neuer Take“"
+          }
+        }
+      }
     },
     "New Take or Obie" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuer Take oder Obie"
+          }
+        }
+      }
     },
     "Obie" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
+        }
+      }
     },
     "Open Catchlight and capture your Obie." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne Catchlight und erfasse dein Obie."
+          }
+        }
+      }
     },
     "Open Catchlight and open a blank Obie." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne Catchlight mit einem leeren Obie."
+          }
+        }
+      }
     },
     "Open Catchlight and start a new Take." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne Catchlight und beginne einen neuen Take."
+          }
+        }
+      }
     },
     "Open Catchlight straight to a new Take." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne Catchlight direkt mit einem neuen Take."
+          }
+        }
+      }
     },
     "Open Catchlight to a new Take." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne Catchlight mit einem neuen Take."
+          }
+        }
+      }
     },
     "Take" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
+        }
+      }
     },
     "What's most important?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was ist am wichtigsten?"
+          }
+        }
+      }
     },
     "What's your Take?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was ist dein Take?"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
