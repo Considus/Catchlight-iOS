@@ -24,7 +24,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aggiungi una nota (facoltativa)"
+            "value" : "Aggiungi una nota (facoltativo)"
           }
         },
         "pt-BR" : {
@@ -37,6 +37,48 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Voeg een notitie toe (optioneel)"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar uma nota (opcional)"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj notatkę (opcjonalnie)"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lägg till en anteckning (valfritt)"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilføj en note (valgfrit)"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til et notat (valgfritt)"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lisää muistiinpano (valinnainen)"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not ekle (isteğe bağlı)"
           }
         }
       }
@@ -76,7 +118,49 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Annuleer"
+            "value" : "Annuleren"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelar"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anuluj"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avbryt"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuller"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avbryt"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuleren"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İptal"
           }
         }
       }
@@ -116,7 +200,49 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sluit"
+            "value" : "Sluiten"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fechar"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zamknij"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stäng"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luk"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lukk"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sulje"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kapat"
           }
         }
       }
@@ -126,13 +252,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Es nimmt Text, Links und Webseiten an, keine Bilder oder Dateien."
+            "value" : "Du kannst Text, Links und Webseiten hinzufügen, aber keine Bilder oder Dateien."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il accepte le texte, les liens et les pages web, mais pas les images ni les fichiers."
+            "value" : "Vous pouvez partager du texte, des liens et des pages web, mais pas des images ni des fichiers."
           }
         },
         "es" : {
@@ -144,19 +270,61 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Accetta testo, link e pagine web, non immagini o file."
+            "value" : "Puoi acquisire testo, link e pagine web, ma non immagini o file."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ele aceita textos, links e páginas da web, mas não imagens nem arquivos."
+            "value" : "Aceita textos, links e páginas da web, não imagens ou arquivos."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het werkt met tekst, links en webpagina’s, niet met afbeeldingen of bestanden."
+            "value" : "Je kunt tekst, links en webpagina's toevoegen, maar geen afbeeldingen of bestanden."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aceita texto, ligações e páginas Web, mas não imagens nem ficheiros."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przyjmuje tekst, linki i strony internetowe, a nie obrazy czy pliki."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kan spara text, länkar och webbsidor, men inte bilder eller filer."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den kan hente tekst, links og websider, men ikke billeder eller filer."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kan hente inn tekst, lenker og nettsider, men ikke bilder eller filer."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voit tuoda tekstiä, linkkejä ja verkkosivuja, mutta et kuvia tai tiedostoja."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Görselleri veya dosyaları değil; metinleri, bağlantıları ve web sayfalarını kabul eder."
           }
         }
       }
@@ -166,37 +334,79 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er wartet in deiner Zeitleiste, wenn du die App das nächste Mal öffnest."
+            "value" : "Beim nächsten Öffnen der App wartet sie auf deiner Timeline auf dich."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il vous attendra dans votre chronologie à la prochaine ouverture de l’app."
+            "value" : "Votre note vous attendra dans votre fil la prochaine fois que vous ouvrirez l’app."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Te estará esperando en la cronología la próxima vez que abras la app."
+            "value" : "Estará esperando en tu cronología la próxima vez que abras la aplicación."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ti aspetterà nella cronologia la prossima volta che apri l’app."
+            "value" : "La troverai nella tua cronologia la prossima volta che aprirai l’app."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ele vai estar esperando na sua linha do tempo da próxima vez que você abrir o app."
+            "value" : "Estará esperando na sua linha do tempo da próxima vez que você abrir o app."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hij staat klaar in je tijdlijn als je de app weer opent."
+            "value" : "De notitie staat klaar op je tijdlijn wanneer je de app de volgende keer opent."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estará à sua espera na cronologia da próxima vez que abrir a app."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Będzie czekać na Twojej linii czasu przy następnym otwarciu aplikacji."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den väntar i din tidslinje nästa gång du öppnar appen."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den ligger klar på din tidslinje, næste gang du åbner appen."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det ligger klart på tidslinjen din neste gang du åpner appen."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se odottaa aikajanallasi, kun avaat sovelluksen seuraavan kerran."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uygulamayı bir sonraki açışınızda zaman akışınızda bekliyor olacak."
           }
         }
       }
@@ -206,7 +416,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sichern"
+            "value" : "Speichern"
           }
         },
         "fr" : {
@@ -238,6 +448,48 @@
             "state" : "translated",
             "value" : "Bewaar"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisz"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spara"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gem"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagre"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tallenna"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kaydet"
+          }
         }
       }
     },
@@ -246,7 +498,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In Catchlight sichern"
+            "value" : "In Catchlight speichern"
           }
         },
         "fr" : {
@@ -264,7 +516,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salva in Catchlight"
+            "value" : "Salva su Catchlight"
           }
         },
         "pt-BR" : {
@@ -278,6 +530,48 @@
             "state" : "translated",
             "value" : "Bewaar in Catchlight"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar no Catchlight"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisz w Catchlight"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spara i Catchlight"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gem i Catchlight"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagre i Catchlight"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tallenna Catchlightiin"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight'a Kaydet"
+          }
         }
       }
     },
@@ -286,7 +580,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In Catchlight gesichert"
+            "value" : "In Catchlight gespeichert"
           }
         },
         "fr" : {
@@ -304,7 +598,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salvato in Catchlight"
+            "value" : "Salvato su Catchlight"
           }
         },
         "pt-BR" : {
@@ -318,6 +612,48 @@
             "state" : "translated",
             "value" : "Bewaard in Catchlight"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardado no Catchlight"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisano w Catchlight"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sparad i Catchlight"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemt i Catchlight"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagret i Catchlight"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tallennettu Catchlightiin"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight'a Kaydedildi"
+          }
         }
       }
     },
@@ -326,13 +662,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hier gibt es nichts, was Catchlight aufbewahren kann."
+            "value" : "Hier ist nichts, was Catchlight aufbewahren kann."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il n’y a rien ici que Catchlight puisse conserver."
+            "value" : "Catchlight ne peut rien conserver ici."
           }
         },
         "es" : {
@@ -344,7 +680,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Qui non c’è niente che Catchlight possa conservare."
+            "value" : "Qui non c’è nulla che Catchlight possa conservare."
           }
         },
         "pt-BR" : {
@@ -356,7 +692,49 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er is hier niets wat Catchlight kan bewaren."
+            "value" : "Hier is niets dat Catchlight kan bewaren."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não há nada aqui que o Catchlight possa guardar."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie ma tu nic, co Catchlight mogłoby zapisać."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det finns inget här som Catchlight kan spara."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der er ikke noget her, Catchlight kan gemme."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight har ingenting her den kan ta vare på."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlightilla ei ole täällä mitään tallennettavaa."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Burada Catchlight'ın saklayabileceği bir şey yok."
           }
         }
       }
