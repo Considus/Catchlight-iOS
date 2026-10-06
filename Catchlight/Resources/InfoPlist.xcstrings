@@ -260,7 +260,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight gebruikt Face ID om je versleutelde Takes te ontgrendelen."
+            "value" : "Catchlight käyttää Face ID:tä salattujen Takejesi avaamiseen."
           }
         },
         "tr" : {
@@ -350,7 +350,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight gebruikt je locatie om je aan een Take te herinneren wanneer je ergens aankomt of vertrekt."
+            "value" : "Catchlight käyttää sijaintiasi muistuttaakseen sinua Take:sta, kun saavut paikkaan tai lähdet sieltä."
           }
         },
         "tr" : {

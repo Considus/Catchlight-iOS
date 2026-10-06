@@ -90,6 +90,12 @@ The third runs after adding or changing a translation. It compares every transla
 python3 scripts/l10n/check_placeholders.py
 ```
 
+A translation pasted from the wrong language passes the placeholder check, because the other language has the same placeholders. The mix-up check compares every pair of languages and flags one whose text is copied from another (neighbouring languages are allowed the overlap they honestly share):
+
+```bash
+python3 scripts/l10n/check_mixups.py
+```
+
 A new language's draft goes into every catalog in one step, from a JSON file of plain strings, plural forms and Siri phrases; it refuses to write anything while a catalog key is missing from the draft:
 
 ```bash

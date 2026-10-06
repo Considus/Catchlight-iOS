@@ -75,7 +75,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ · Bij aankomst"
+            "value" : "%@ · Saapuessa"
           }
         },
         "tr" : {
@@ -157,7 +157,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ · Bij vertrek"
+            "value" : "%@ · Lähtiessä"
           }
         },
         "tr" : {
@@ -328,7 +328,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ Dubbeltik om te bekijken."
+            "value" : "%@ Tarkista kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -410,7 +410,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@, bezig met filteren"
+            "value" : "%@, suodatus"
           }
         },
         "tr" : {
@@ -586,7 +586,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@. %2$@%3$@. Gewijzigd op %4$@."
+            "value" : "%1$@. %2$@%3$@. Muokattu %4$@."
           }
         },
         "tr" : {
@@ -668,7 +668,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@/jaar"
+            "value" : "%@/vuosi"
           }
         },
         "tr" : {
@@ -920,7 +920,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld van %2$lld voltooid"
+            "value" : "%1$lld/%2$lld tehty"
           }
         },
         "tr" : {
@@ -1002,7 +1002,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld van 12 woorden"
+            "value" : "%lld/12 sanaa"
           }
         },
         "tr" : {
@@ -1237,13 +1237,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld Take gewijzigd op een ander apparaat."
+                  "value" : "%lld Take muuttui toisella laitteella."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld Takes gewijzigd op een ander apparaat."
+                  "value" : "%lld Take:a muuttui toisella laitteella."
                 }
               }
             }
@@ -1493,13 +1493,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld Take kon niet worden geverifieerd en vereist een keuze."
+                  "value" : "%lld Take:a ei voitu vahvistaa, ja se vaatii valinnan."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld Takes konden niet worden geverifieerd en vereisen een keuze."
+                  "value" : "%lld Take:a ei voitu vahvistaa, ja ne vaativat valinnan."
                 }
               }
             }
@@ -1749,13 +1749,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld Take kon niet worden geverifieerd en is overgeslagen."
+                  "value" : "%lld Take:a ei voitu vahvistaa, joten se ohitettiin."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld Takes konden niet worden geverifieerd en zijn overgeslagen."
+                  "value" : "%lld Take:a ei voitu vahvistaa, joten ne ohitettiin."
                 }
               }
             }
@@ -2005,13 +2005,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Voor %lld Take is een beslissing nodig."
+                  "value" : "%lld Take vaatii päätöksen."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Voor %lld Takes is een beslissing nodig."
+                  "value" : "%lld Take:a vaatii päätöksen."
                 }
               }
             }
@@ -2261,13 +2261,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld Take niet opnieuw geüpload. Dit apparaat was te lang offline om verwijdering elders uit te sluiten. Bewerk een Take om opnieuw te synchroniseren."
+                  "value" : "%lld Take:a ei ladattu uudelleen. Tämä laite oli poissa liian kauan, jotta muualla tehty poisto voitaisiin sulkea pois. Muokkaa Take:a, niin se synkronoituu taas."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld Takes niet opnieuw geüpload. Dit apparaat was te lang offline om verwijdering elders uit te sluiten. Bewerk een Take om opnieuw te synchroniseren."
+                  "value" : "%lld Take:a ei ladattu uudelleen. Tämä laite oli poissa liian kauan, jotta muualla tehty poisto voitaisiin sulkea pois. Muokkaa Take:a, niin se synkronoituu taas."
                 }
               }
             }
@@ -3402,7 +3402,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1 dag"
+            "value" : "1 päivä"
           }
         },
         "tr" : {
@@ -3566,7 +3566,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1 minuut"
+            "value" : "1 minuutti"
           }
         },
         "tr" : {
@@ -3812,7 +3812,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "5 minuten"
+            "value" : "5 minuuttia"
           }
         },
         "tr" : {
@@ -4304,7 +4304,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "30 minuten"
+            "value" : "30 minuuttia"
           }
         },
         "tr" : {
@@ -4386,7 +4386,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "30 seconden"
+            "value" : "30 sekuntia"
           }
         },
         "tr" : {
@@ -4468,7 +4468,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een verwijderde Take kan niet worden hersteld"
+            "value" : "Poistettua Take:a ei voi palauttaa"
           }
         },
         "tr" : {
@@ -4878,7 +4878,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "actief"
+            "value" : "aktiivinen"
           }
         },
         "tr" : {
@@ -4961,7 +4961,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Actief"
+            "value" : "Aktiivinen"
           }
         },
         "tr" : {
@@ -5043,7 +5043,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een Take toevoegen"
+            "value" : "Lisää Take"
           }
         },
         "tr" : {
@@ -5125,7 +5125,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Herinnering toevoegen"
+            "value" : "Lisää muistutus"
           }
         },
         "tr" : {
@@ -5207,7 +5207,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Take toevoegen"
+            "value" : "Lisää Take"
           }
         },
         "tr" : {
@@ -5289,7 +5289,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit apparaat aan je account toevoegen?"
+            "value" : "Lisätäänkö tämä laite tiliisi?"
           }
         },
         "tr" : {
@@ -5535,7 +5535,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle conflicten opgelost."
+            "value" : "Kaikki ristiriidat ratkaistu."
           }
         },
         "tr" : {
@@ -5617,7 +5617,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle taken voltooid."
+            "value" : "Kaikki tehtävät tehty."
           }
         },
         "tr" : {
@@ -5699,7 +5699,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hele dag"
+            "value" : "Koko päivän"
           }
         },
         "tr" : {
@@ -5781,7 +5781,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Altijd"
+            "value" : "Aina"
           }
         },
         "tr" : {
@@ -5863,7 +5863,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een Obie is altijd belangrijk."
+            "value" : "Obie on aina tärkeä."
           }
         },
         "tr" : {
@@ -5945,7 +5945,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jaarlijks"
+            "value" : "Vuosittain"
           }
         },
         "tr" : {
@@ -6109,7 +6109,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle items in de map die eerder zijn geïmporteerd, worden opnieuw geïmporteerd."
+            "value" : "Kansion kohteet, jotka on tuotu aiemmin, tuodaan uudelleen."
           }
         },
         "tr" : {
@@ -6273,7 +6273,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Weergave"
+            "value" : "Ulkoasu"
           }
         },
         "tr" : {
@@ -6355,7 +6355,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Weergavemodus"
+            "value" : "Ulkoasutila"
           }
         },
         "tr" : {
@@ -6437,7 +6437,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Indeling"
+            "value" : "Järjestely"
           }
         },
         "tr" : {
@@ -6519,7 +6519,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verifieer je identiteit om je Takes te openen."
+            "value" : "Avaa Takesi tunnistautumalla."
           }
         },
         "tr" : {
@@ -6847,7 +6847,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Automatisch verwijderen"
+            "value" : "Automaattinen poisto"
           }
         },
         "tr" : {
@@ -6929,7 +6929,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Automatisch verwijderen (behalve notities)"
+            "value" : "Autom. poisto (ei muistiinp.)"
           }
         },
         "tr" : {
@@ -7011,7 +7011,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voltooide Takes automatisch verwijderen, behalve notities"
+            "value" : "Poista valmiit Taket automaattisesti, muistiinpanoja lukuun ottamatta"
           }
         },
         "tr" : {
@@ -7093,7 +7093,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wordt elk jaar automatisch verlengd. Je kunt op elk moment opzeggen via je App Store-account."
+            "value" : "Uusiutuu automaattisesti vuosittain. Peru milloin tahansa App Store -tililläsi."
           }
         },
         "tr" : {
@@ -7175,7 +7175,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Automatisch"
+            "value" : "Automaattinen"
           }
         },
         "tr" : {
@@ -7339,7 +7339,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Annuleren"
+            "value" : "Kumoa"
           }
         },
         "tr" : {
@@ -7421,7 +7421,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zoeken annuleren"
+            "value" : "Kumoa haku"
           }
         },
         "tr" : {
@@ -7503,7 +7503,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vastleggen"
+            "value" : "Kirjaa"
           }
         },
         "tr" : {
@@ -7749,7 +7749,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leg een nieuwe Take vast als je Obie, met tekst die je inspreekt of typt."
+            "value" : "Kirjaa uusi Take Obie:ksi puhumastasi tai kirjoittamastasi tekstistä."
           }
         },
         "tr" : {
@@ -7831,7 +7831,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leg een nieuwe Take vast met tekst die je inspreekt of typt."
+            "value" : "Kirjaa uusi Take puhumastasi tai kirjoittamastasi tekstistä."
           }
         },
         "tr" : {
@@ -7913,7 +7913,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een Take vastleggen"
+            "value" : "Kirjaa Take"
           }
         },
         "tr" : {
@@ -7995,7 +7995,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een Obie vastleggen"
+            "value" : "Kirjaa Obie"
           }
         },
         "tr" : {
@@ -8159,7 +8159,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight Jaarabonnement"
+            "value" : "Catchlight-vuositilaus"
           }
         },
         "tr" : {
@@ -8241,7 +8241,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight-filter"
+            "value" : "Catchlight-suodatin"
           }
         },
         "tr" : {
@@ -8323,7 +8323,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight is opnieuw ingesteld"
+            "value" : "Catchlight on nollattu"
           }
         },
         "tr" : {
@@ -8405,7 +8405,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight is vergrendeld"
+            "value" : "Catchlight on lukittu"
           }
         },
         "tr" : {
@@ -8487,7 +8487,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight ziet je bestanden nooit. Alleen jij kunt ze lezen."
+            "value" : "Catchlight ei koskaan näe tiedostojasi. Vain sinä voit lukea ne."
           }
         },
         "tr" : {
@@ -8569,7 +8569,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight bewaart de privacyzin alleen op het apparaat waarop je deze hebt ingesteld. Heb je Catchlight op een ander apparaat ingesteld, gebruik dat apparaat dan om de zin te bekijken."
+            "value" : "Catchlight tallentaa yksityisyyslauseen vain laitteeseen, jolla otit sen käyttöön. Jos otit apin käyttöön toisella laitteella, katso lause siltä."
           }
         },
         "tr" : {
@@ -8651,7 +8651,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight gebruikt alleen Apple-systeemframeworks (CryptoKit, LocalAuthentication, Security, SQLite3). Er zijn geen bibliotheken van derden inbegrepen."
+            "value" : "Catchlight käyttää vain Applen järjestelmäkehyksiä (CryptoKit, LocalAuthentication, Security, SQLite3). Mukana ei ole kolmannen osapuolen kirjastoja."
           }
         },
         "tr" : {
@@ -8815,7 +8815,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De beveiliging van Catchlight is afhankelijk van de ingebouwde beveiligingen van iOS. Dit apparaat lijkt te zijn aangepast, waardoor die beveiligingen mogelijk minder goed werken. Je gegevens lopen mogelijk meer risico dan op een onaangepast apparaat."
+            "value" : "Catchlightin tietoturva perustuu iOS:n sisäänrakennettuihin suojauksiin. Tämä laite näyttää olevan muokattu, mikä voi heikentää näitä suojauksia. Tietosi voivat olla suuremmassa vaarassa kuin muokkaamattomalla laitteella."
           }
         },
         "tr" : {
@@ -8897,7 +8897,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "aangevinkt"
+            "value" : "valittu"
           }
         },
         "tr" : {
@@ -8979,7 +8979,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Checklistitem"
+            "value" : "Tarkistuslistan kohta"
           }
         },
         "tr" : {
@@ -9061,7 +9061,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kies een cloudmap die van jou is"
+            "value" : "Valitse oma pilvikansiosi"
           }
         },
         "tr" : {
@@ -9143,7 +9143,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kies een map uit Bestanden"
+            "value" : "Valitse kansio Tiedostot-apista"
           }
         },
         "tr" : {
@@ -9307,7 +9307,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kies waar versleutelde Takes worden opgeslagen."
+            "value" : "Valitse, minne salatut Taket tallennetaan."
           }
         },
         "tr" : {
@@ -9389,7 +9389,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wissen"
+            "value" : "Tyhjennä"
           }
         },
         "tr" : {
@@ -9471,7 +9471,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zoekopdracht wissen"
+            "value" : "Tyhjennä haku"
           }
         },
         "tr" : {
@@ -9799,7 +9799,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Storyboard sluiten"
+            "value" : "Sulje Storyboard"
           }
         },
         "tr" : {
@@ -9963,7 +9963,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cloudopslag"
+            "value" : "Pilvitallennus"
           }
         },
         "tr" : {
@@ -10209,7 +10209,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Comfort"
+            "value" : "Väljä"
           }
         },
         "tr" : {
@@ -10291,7 +10291,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Binnenkort beschikbaar"
+            "value" : "Tulossa pian"
           }
         },
         "tr" : {
@@ -10373,7 +10373,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Binnenkort beschikbaar."
+            "value" : "Tulossa pian."
           }
         },
         "tr" : {
@@ -10537,7 +10537,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "voltooide taak"
+            "value" : "valmis tehtävä"
           }
         },
         "tr" : {
@@ -10619,7 +10619,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alleen voltooide taken"
+            "value" : "Vain valmiit tehtävät"
           }
         },
         "tr" : {
@@ -10701,7 +10701,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bevestiging vragen voordat je verwijdert"
+            "value" : "Vahvista ennen poistamista"
           }
         },
         "tr" : {
@@ -10783,7 +10783,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bevestig dat jij het bent voordat je dit apparaat wist."
+            "value" : "Vahvista henkilöllisyytesi ennen tämän laitteen tyhjentämistä."
           }
         },
         "tr" : {
@@ -10865,7 +10865,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Drie woorden bevestigen"
+            "value" : "Vahvista kolme sanaa"
           }
         },
         "tr" : {
@@ -11111,7 +11111,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cloudmap koppelen"
+            "value" : "Yhdistä pilvikansio"
           }
         },
         "tr" : {
@@ -11193,7 +11193,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Doorgaan"
+            "value" : "Jatka"
           }
         },
         "tr" : {
@@ -11275,7 +11275,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Versie- en apparaatgegevens kopiëren"
+            "value" : "Kopioi versio- ja laitetiedot"
           }
         },
         "tr" : {
@@ -11357,7 +11357,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Je zin kon niet op dit apparaat worden gecontroleerd."
+            "value" : "Lausettasi ei voitu tarkistaa tällä laitteella."
           }
         },
         "tr" : {
@@ -11439,7 +11439,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Take kon niet worden verwijderd."
+            "value" : "Take:a ei voitu poistaa."
           }
         },
         "tr" : {
@@ -11521,7 +11521,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er kon geen privacyzin worden aangemaakt."
+            "value" : "Yksityisyyslausetta ei voitu luoda."
           }
         },
         "tr" : {
@@ -11603,7 +11603,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een van de notities kon niet worden geïmporteerd."
+            "value" : "Yhtä muistiinpanoista ei voitu tuoda."
           }
         },
         "tr" : {
@@ -11685,7 +11685,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Je Takes konden niet worden geladen."
+            "value" : "Takejasi ei voitu ladata."
           }
         },
         "tr" : {
@@ -11767,7 +11767,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die bestanden konden niet worden geopend. Probeer het opnieuw."
+            "value" : "Tiedostoja ei voitu avata. Yritä uudelleen."
           }
         },
         "tr" : {
@@ -11849,7 +11849,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Je bibliotheek kon niet op dit apparaat worden geopend. Start Catchlight opnieuw."
+            "value" : "Kirjastoasi ei voitu avata tällä laitteella. Käynnistä Catchlight uudelleen."
           }
         },
         "tr" : {
@@ -11931,7 +11931,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De App Store kon niet worden bereikt. Controleer je verbinding."
+            "value" : "App Storeen ei saatu yhteyttä. Tarkista verkkoyhteys."
           }
         },
         "tr" : {
@@ -12013,7 +12013,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De volgorde van je Takes kon niet worden gewijzigd."
+            "value" : "Takejesi järjestystä ei voitu muuttaa."
           }
         },
         "tr" : {
@@ -12095,7 +12095,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aankopen konden niet worden hersteld. Probeer het opnieuw."
+            "value" : "Ostoja ei voitu palauttaa. Yritä uudelleen."
           }
         },
         "tr" : {
@@ -12177,7 +12177,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die keuze kon niet worden opgeslagen. Probeer het opnieuw."
+            "value" : "Valintaa ei voitu tallentaa. Yritä uudelleen."
           }
         },
         "tr" : {
@@ -12259,7 +12259,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die map kon niet worden opgeslagen: %@"
+            "value" : "Kansiota ei voitu tallentaa: %@"
           }
         },
         "tr" : {
@@ -12341,7 +12341,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die oplossing kon niet worden opgeslagen. Probeer het opnieuw."
+            "value" : "Ratkaisua ei voitu tallentaa. Yritä uudelleen."
           }
         },
         "tr" : {
@@ -12423,7 +12423,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Take kon niet worden opgeslagen."
+            "value" : "Take:a ei voitu tallentaa."
           }
         },
         "tr" : {
@@ -12505,7 +12505,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Je account kon niet op dit apparaat worden beveiligd."
+            "value" : "Tiliäsi ei voitu suojata tällä laitteella."
           }
         },
         "tr" : {
@@ -12587,7 +12587,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Obie kon niet worden ingesteld."
+            "value" : "Obie:ta ei voitu asettaa."
           }
         },
         "tr" : {
@@ -12669,7 +12669,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ontgrendelen mislukt. Verifieer je identiteit om je Takes te openen."
+            "value" : "Avaus epäonnistui. Avaa Takesi tunnistautumalla."
           }
         },
         "tr" : {
@@ -12751,7 +12751,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ontgrendelen mislukt. Tik om opnieuw op te slaan."
+            "value" : "Avaus epäonnistui. Tallenna uudelleen napauttamalla."
           }
         },
         "tr" : {
@@ -12833,7 +12833,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mijn privacyzin aanmaken"
+            "value" : "Luo yksityisyyslauseeni"
           }
         },
         "tr" : {
@@ -12921,7 +12921,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aangemaakt op %1$@ om %2$@"
+            "value" : "Luotu %1$@ klo %2$@"
           }
         },
         "tr" : {
@@ -13003,7 +13003,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aanmaakdatum"
+            "value" : "Luontipäivä"
           }
         },
         "tr" : {
@@ -13085,7 +13085,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Huidige map: %@"
+            "value" : "Nykyinen kansio: %@"
           }
         },
         "tr" : {
@@ -13167,7 +13167,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Huidige locatie"
+            "value" : "Nykyinen sijainti"
           }
         },
         "tr" : {
@@ -13249,7 +13249,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aangepast"
+            "value" : "Mukautettu"
           }
         },
         "tr" : {
@@ -13413,7 +13413,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dagelijks"
+            "value" : "Päivittäin"
           }
         },
         "tr" : {
@@ -13495,7 +13495,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Donker"
+            "value" : "Tumma"
           }
         },
         "tr" : {
@@ -13823,7 +13823,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verwijderen"
+            "value" : "Poista"
           }
         },
         "tr" : {
@@ -13905,7 +13905,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Item verwijderen"
+            "value" : "Poista kohde"
           }
         },
         "tr" : {
@@ -14069,7 +14069,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reeks verwijderen"
+            "value" : "Poista sarja"
           }
         },
         "tr" : {
@@ -14151,7 +14151,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Take verwijderen"
+            "value" : "Poista Take"
           }
         },
         "tr" : {
@@ -14233,7 +14233,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze keer verwijderen"
+            "value" : "Poista tämä kerta"
           }
         },
         "tr" : {
@@ -14315,7 +14315,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze Take verwijderen?"
+            "value" : "Poistetaanko tämä Take?"
           }
         },
         "tr" : {
@@ -14397,7 +14397,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Is niet door de controle gekomen en is mogelijk een oudere versie."
+            "value" : "Ei läpäissyt tarkistusta, ja se voi olla vanhempi versio."
           }
         },
         "tr" : {
@@ -14479,7 +14479,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uitgeschakeld"
+            "value" : "Ei käytössä"
           }
         },
         "tr" : {
@@ -14561,7 +14561,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wijzigingen verwerpen"
+            "value" : "Hylkää muutokset"
           }
         },
         "tr" : {
@@ -14971,7 +14971,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dock toont zoekfunctie."
+            "value" : "Dock näyttää haun."
           }
         },
         "tr" : {
@@ -15053,7 +15053,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dock toont tijdlijnfilters."
+            "value" : "Dock näyttää aikajanan suodattimet."
           }
         },
         "tr" : {
@@ -15135,7 +15135,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gereed"
+            "value" : "Valmis"
           }
         },
         "tr" : {
@@ -15463,7 +15463,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om %@ toe te voegen."
+            "value" : "Lisää %@ kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -15627,7 +15627,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om het toetsenbord weer te openen en verder te typen."
+            "value" : "Tuo näppäimistö takaisin ja jatka kirjoittamista kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -15709,7 +15709,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om een nieuwe Take vast te leggen."
+            "value" : "Kirjaa uusi Take kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -15873,7 +15873,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om te wissen."
+            "value" : "Tyhjennä kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -15955,7 +15955,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om deze melding te sluiten."
+            "value" : "Ohita tämä ilmoitus kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -16037,7 +16037,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om deze Take te bewerken."
+            "value" : "Muokkaa tätä Take:a kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -16119,7 +16119,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om de tijdlijn te filteren op notities, taken of herinneringen."
+            "value" : "Suodata aikajanaa muistiinpanojen, tehtävien tai muistutusten mukaan kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -16201,7 +16201,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om naar het volgende tijdslot te gaan."
+            "value" : "Sijoita seuraavaan paikkaan kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -16283,7 +16283,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om %@ te verwijderen."
+            "value" : "Poista %@ kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -16365,7 +16365,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om verder te gaan met het typen van je zoekopdracht."
+            "value" : "Jatka haun kirjoittamista kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -16447,7 +16447,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om deze Take op te slaan en te stoppen met bewerken."
+            "value" : "Tallenna tämä Take ja lopeta muokkaus kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -16529,7 +16529,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om deze Take op te slaan."
+            "value" : "Tallenna tämä Take kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -16775,7 +16775,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om alleen gewone notities te tonen. Als je notities inschakelt, worden de filters voor taken en herinneringen gewist."
+            "value" : "Näytä vain pelkät muistiinpanot kaksoisnapauttamalla. Muistiinpanojen valitseminen poistaa tehtävä- ja muistutussuodattimet."
           }
         },
         "tr" : {
@@ -16857,7 +16857,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om alleen Takes te tonen die deze maand zijn aangemaakt."
+            "value" : "Näytä vain tässä kuussa luodut Taket kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -16939,7 +16939,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om dit item aan te vinken."
+            "value" : "Rastita tämä kohde kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -17021,7 +17021,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om de zin op het scherm te tonen of te verbergen."
+            "value" : "Näytä tai piilota lause kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -17103,7 +17103,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om te schakelen. Gebruik de actierotor om alleen voltooide taken te tonen."
+            "value" : "Vaihda kaksoisnapauttamalla. Valitse vain valmiit tehtävät Toiminnot-roottorilla."
           }
         },
         "tr" : {
@@ -17185,7 +17185,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om te schakelen. Gebruik de actierotor om alleen verlopen herinneringen te tonen."
+            "value" : "Vaihda kaksoisnapauttamalla. Valitse vain vanhentuneet muistutukset Toiminnot-roottorilla."
           }
         },
         "tr" : {
@@ -17267,7 +17267,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om dit item uit te vinken."
+            "value" : "Poista rasti tästä kohteesta kaksoisnapauttamalla."
           }
         },
         "tr" : {
@@ -17349,7 +17349,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dubbeltik om je zin te bekijken. Face ID of toegangscode vereist."
+            "value" : "Näytä lauseesi kaksoisnapauttamalla. Vaatii Face ID:n tai pääsykoodin."
           }
         },
         "tr" : {

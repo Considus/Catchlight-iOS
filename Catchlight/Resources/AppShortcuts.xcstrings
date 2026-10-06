@@ -140,10 +140,10 @@
           "stringSet" : {
             "state" : "translated",
             "values" : [
-              "Nieuwe Obie in ${applicationName}",
-              "Maak hiervan een Obie in ${applicationName}",
-              "Nieuwe Obie voor ${applicationName}",
-              "Begin een Obie in ${applicationName}"
+              "Uusi Obie sovelluksessa ${applicationName}",
+              "Obie tästä sovelluksessa ${applicationName}",
+              "${applicationName}, uusi Obie",
+              "Aloita Obie sovelluksessa ${applicationName}"
             ]
           }
         },
@@ -299,10 +299,10 @@
           "stringSet" : {
             "state" : "translated",
             "values" : [
-              "Nieuwe Take in ${applicationName}",
-              "Maak hiervan een Take in ${applicationName}",
-              "Nieuwe Take voor ${applicationName}",
-              "Begin een Take in ${applicationName}"
+              "Uusi Take sovelluksessa ${applicationName}",
+              "Take tästä sovelluksessa ${applicationName}",
+              "${applicationName}, uusi Take",
+              "Aloita Take sovelluksessa ${applicationName}"
             ]
           }
         },
