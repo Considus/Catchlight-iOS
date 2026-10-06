@@ -157,6 +157,61 @@
               "${applicationName} uygulamasında bir Obie başlat"
             ]
           }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}で新しいObieを作成",
+              "これを${applicationName}でObieにする",
+              "新しい${applicationName}のObie",
+              "${applicationName}でObieを開始"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}에서 새 Obie",
+              "이 내용을 ${applicationName}에서 Obie로 캡처",
+              "새 ${applicationName} Obie",
+              "${applicationName}에서 Obie 시작"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在 ${applicationName} 中新建 Obie",
+              "在 ${applicationName} 中将此内容记为 Obie",
+              "新建 ${applicationName} Obie",
+              "在 ${applicationName} 中开始记录 Obie"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在 ${applicationName} 中新增 Obie",
+              "在 ${applicationName} 中將此內容設為 Obie",
+              "新增 ${applicationName} Obie",
+              "在 ${applicationName} 中開始使用 Obie"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Obie ใหม่ใน ${applicationName}",
+              "เปลี่ยนสิ่งนี้เป็น Obie ใน ${applicationName}",
+              "Obie ใหม่ของ ${applicationName}",
+              "เริ่ม Obie ใน ${applicationName}"
+            ]
+          }
         }
       }
     },
@@ -314,6 +369,61 @@
               "${applicationName} uygulamasında bunu Take yap",
               "Yeni ${applicationName} Take",
               "${applicationName} uygulamasında bir Take başlat"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}で新しいTake",
+              "${applicationName}でこれをTakeに",
+              "${applicationName}の新しいTake",
+              "${applicationName}でTakeを開始"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}에서 새 Take",
+              "${applicationName}에서 이걸 Take로",
+              "새 ${applicationName} Take",
+              "${applicationName}에서 Take 시작"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在 ${applicationName} 中新建 Take",
+              "在 ${applicationName} 中将此内容记为 Take",
+              "新建 ${applicationName} Take",
+              "在 ${applicationName} 中开始一条 Take"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在 ${applicationName} 中新增 Take",
+              "在 ${applicationName} 中 Take 此內容",
+              "新增 ${applicationName} Take",
+              "在 ${applicationName} 中開始 Take"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Take ใหม่ใน ${applicationName}",
+              "เปลี่ยนสิ่งนี้เป็น Take ใน ${applicationName}",
+              "Take ใหม่ของ ${applicationName}",
+              "เริ่ม Take ใน ${applicationName}"
             ]
           }
         }

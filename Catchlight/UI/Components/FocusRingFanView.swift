@@ -1128,7 +1128,8 @@ struct ReminderPickerSheet: View {
     /// The day the reminder sheet's weeks start on, by app language: Sunday in English
     /// (owner 2026-06-23), Monday in German (owner 2026-10-04), Spanish, Italian, Dutch and
     /// French except in Canada, Sunday in Brazilian Portuguese (owner 2026-10-05), Monday
-    /// in European Portuguese, Polish, Swedish, Danish, Norwegian, Finnish and Turkish
+    /// in European Portuguese, Polish, Swedish, Danish, Norwegian, Finnish, Turkish and
+    /// Simplified Chinese; Sunday in Japanese, Korean, Traditional Chinese and Thai
     /// (owner 2026-10-06). A new language picks its own here; anything unlisted keeps
     /// Sunday. Calendar weekday numbering (1 = Sunday).
     static var firstWeekday: Int {
@@ -1138,7 +1139,7 @@ struct ReminderPickerSheet: View {
 
     static func firstWeekday(language: String?, region: String?) -> Int {
         switch language {
-        case "de", "es", "it", "nl", "pt-PT", "pl", "sv", "da", "nb", "fi", "tr":
+        case "de", "es", "it", "nl", "pt-PT", "pl", "sv", "da", "nb", "fi", "tr", "zh-Hans":
             return 2                                 // Monday
         case "fr": return region == "CA" ? 1 : 2     // Sunday in Canada, else Monday
         default:   return 1                          // Sunday

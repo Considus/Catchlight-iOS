@@ -11,6 +11,7 @@
 
 #if canImport(Catchlight)
 import XCTest
+import UIKit
 @testable import Catchlight
 @testable import CatchlightCore
 
@@ -78,7 +79,22 @@ final class ReminderQuickSetPresetTests: XCTestCase {
         XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "nb", region: "NO"), 2)
         XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "fi", region: "FI"), 2)
         XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "tr", region: "TR"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "zh-Hans", region: "CN"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "zh-Hant", region: "TW"), 1)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "ja", region: "JP"), 1)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "ko", region: "KR"), 1)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "th", region: "TH"), 1)
         XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: nil, region: nil), 1)
+    }
+
+    /// Japanese display text falls back to Hiragino Mincho, the iOS serif that pairs
+    /// with Cormorant; other languages keep the system fallback.
+    func testDisplayFallback_onlyJapaneseGetsASerif() {
+        XCTAssertEqual(CatchlightFont.displayFallback(for: "ja"), "HiraMinProN-W3")
+        XCTAssertNotNil(UIFont(name: "HiraMinProN-W3", size: 12), "the fallback must exist on iOS")
+        for language in ["en", "ko", "zh-Hans", "zh-Hant", "th", "de", nil] as [String?] {
+            XCTAssertNil(CatchlightFont.displayFallback(for: language))
+        }
     }
 }
 #endif
