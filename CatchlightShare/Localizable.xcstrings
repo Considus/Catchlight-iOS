@@ -72,7 +72,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lisää muistiinpano (valinnainen)"
+            "value" : "Lisää huomautus (valinnainen)"
           }
         },
         "tr" : {
@@ -184,7 +184,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kumoa"
+            "value" : "Peruuta"
           }
         },
         "tr" : {
@@ -408,7 +408,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voit tuoda tekstiä, linkkejä ja verkkosivuja, mutta et kuvia tai tiedostoja."
+            "value" : "Se tukee tekstiä, linkkejä ja verkkosivuja, ei kuvia tai tiedostoja."
           }
         },
         "tr" : {
@@ -520,7 +520,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se odottaa aikajanallasi, kun avaat sovelluksen seuraavan kerran."
+            "value" : "Se odottaa aikajanallasi seuraavalla kerralla, kun avaat sovelluksen."
           }
         },
         "tr" : {
@@ -968,7 +968,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlightilla ei ole täällä mitään tallennettavaa."
+            "value" : "Täällä ei ole mitään, mitä Catchlight voisi säilyttää."
           }
         },
         "tr" : {

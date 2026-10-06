@@ -72,7 +72,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tyhjä Obie-kortti, jota napauttamalla voit kirjoittaa."
+            "value" : "Tyhjä Obie napautettavaksi ja kirjoitettavaksi."
           }
         },
         "tr" : {
@@ -184,7 +184,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tyhjä Take, johon voit napauttaa ja kirjoittaa."
+            "value" : "Tyhjä Take napautettavaksi ja kirjoitettavaksi."
           }
         },
         "tr" : {
@@ -296,7 +296,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Molemmat tallennuspainikkeet samassa widgetissä – napauta haluamaasi puolta."
+            "value" : "Molemmat tallennuspainikkeet yhdessä widgetissä — napauta tarvitsemaasi puolta."
           }
         },
         "tr" : {
@@ -408,7 +408,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kirjaa"
+            "value" : "Tallenna"
           }
         },
         "tr" : {
@@ -744,7 +744,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uusi Obie-kortti"
+            "value" : "Uusi Obie -kortti"
           }
         },
         "tr" : {

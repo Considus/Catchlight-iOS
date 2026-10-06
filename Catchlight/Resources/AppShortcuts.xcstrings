@@ -141,8 +141,8 @@
             "state" : "translated",
             "values" : [
               "Uusi Obie sovelluksessa ${applicationName}",
-              "Obie tästä sovelluksessa ${applicationName}",
-              "${applicationName}, uusi Obie",
+              "Tee tästä Obie sovelluksessa ${applicationName}",
+              "Uusi ${applicationName}-Obie",
               "Aloita Obie sovelluksessa ${applicationName}"
             ]
           }
@@ -355,8 +355,8 @@
             "state" : "translated",
             "values" : [
               "Uusi Take sovelluksessa ${applicationName}",
-              "Take tästä sovelluksessa ${applicationName}",
-              "${applicationName}, uusi Take",
+              "Tee tästä Take sovelluksessa ${applicationName}",
+              "Uusi ${applicationName}-Take",
               "Aloita Take sovelluksessa ${applicationName}"
             ]
           }
