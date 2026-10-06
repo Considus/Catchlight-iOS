@@ -482,13 +482,63 @@ enum CatchlightFont {
         return resolved
     }
 
+    /// The face the display (Cormorant) text falls back to for characters it has no
+    /// glyph for, by app language. Cormorant and DM Sans cover Latin scripts only, so
+    /// iOS fills Japanese, Korean, Chinese and Thai from its own fonts. Its default is a
+    /// sans, which suits the DM Sans text but loses the serif of the display face.
+    /// Japanese has an iOS serif to pair with it, Hiragino Mincho; Korean, Chinese and
+    /// Thai have none on iOS, so they keep the system sans (Apple SD Gothic Neo, PingFang,
+    /// Thonburi), which needs no change (owner 2026-10-06).
+    static func displayFallback(for language: String?) -> String? {
+        language == "ja" ? "HiraMinProN-W3" : nil
+    }
+
+    private static var displayFallbackName: String? {
+        displayFallback(for: Bundle.main.preferredLocalizations.first)
+    }
+
+    /// `font` with the language's display fallback first in its cascade list, or
+    /// `font` unchanged when the language has none.
+    private static func withDisplayFallback(_ font: UIFont) -> UIFont {
+        guard let name = displayFallbackName else { return font }
+        let cascade = [UIFontDescriptor(name: name, size: font.pointSize)]
+        let descriptor = font.fontDescriptor.addingAttributes([.cascadeList: cascade])
+        return UIFont(descriptor: descriptor, size: font.pointSize)
+    }
+
+    /// A display face as a SwiftUI font with the language's fallback, scaled for
+    /// Dynamic Type like `.custom(_:size:relativeTo:)`. Nil when there is no fallback,
+    /// so callers keep the plain custom font.
+    private static func cascaded(_ name: String, size: CGFloat, relativeTo style: Font.TextStyle?) -> Font? {
+        guard displayFallbackName != nil, let base = UIFont(name: name, size: size) else { return nil }
+        let font = withDisplayFallback(base)
+        guard let style else { return Font(font) }
+        return Font(UIFontMetrics(forTextStyle: uiTextStyle(style)).scaledFont(for: font))
+    }
+
+    private static func uiTextStyle(_ style: Font.TextStyle) -> UIFont.TextStyle {
+        switch style {
+        case .largeTitle: return .largeTitle
+        case .title: return .title1
+        case .title2: return .title2
+        case .title3: return .title3
+        case .headline: return .headline
+        case .subheadline: return .subheadline
+        case .callout: return .callout
+        case .footnote: return .footnote
+        case .caption: return .caption1
+        case .caption2: return .caption2
+        default: return .body
+        }
+    }
+
     /// Display / Take text — Cormorant Garamond Italic, scaling with Dynamic
     /// Type. Falls back to the system serif (italic) when the font is not bundled.
     /// Use for USER CONTENT rendered in the display face (e.g. Take body text on
     /// rows / edit sheet) — content must respect the user's text size preference.
     static func display(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
         if let name = firstAvailable(displayCandidates) {
-            return .custom(name, size: size, relativeTo: style)
+            return cascaded(name, size: size, relativeTo: style) ?? .custom(name, size: size, relativeTo: style)
         }
         return .system(style, design: .serif).italic()
     }
@@ -500,7 +550,7 @@ enum CatchlightFont {
     /// Take content. Falls back to the system serif (upright, no `.italic()`).
     static func displayRoman(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
         if let name = firstAvailable(displayRomanCandidates) {
-            return .custom(name, size: size, relativeTo: style)
+            return cascaded(name, size: size, relativeTo: style) ?? .custom(name, size: size, relativeTo: style)
         }
         return .system(style, design: .serif)
     }
@@ -513,7 +563,7 @@ enum CatchlightFont {
     /// honoured.
     static func displayFixed(size: CGFloat) -> Font {
         if let name = firstAvailable(displayCandidates) {
-            return .custom(name, fixedSize: size)
+            return cascaded(name, size: size, relativeTo: nil) ?? .custom(name, fixedSize: size)
         }
         // System-serif fallback has no fixedSize counterpart; clamp via .system.
         return .system(size: size, weight: .regular, design: .serif).italic()
@@ -526,7 +576,7 @@ enum CatchlightFont {
     static func uiDisplay(size: CGFloat) -> UIFont {
         let base: UIFont
         if let name = firstAvailable(displayCandidates), let custom = UIFont(name: name, size: size) {
-            base = custom
+            base = withDisplayFallback(custom)
         } else {
             let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
                 .withDesign(.serif)?

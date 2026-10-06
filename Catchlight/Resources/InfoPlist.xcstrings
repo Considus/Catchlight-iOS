@@ -88,6 +88,36 @@
             "state" : "translated",
             "value" : "Catchlight"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
         }
       }
     },
@@ -174,6 +204,36 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "th" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight"
@@ -268,6 +328,36 @@
             "state" : "translated",
             "value" : "Catchlight, şifrelenmiş Take'lerinizin kilidini açmak için Face ID kullanır."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlightは、暗号化されたTakeのロックを解除するためにFace IDを使用します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight는 암호화된 Take를 잠금 해제하기 위해 Face ID를 사용합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight 使用面容 ID 解锁已加密的 Takes。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight 使用 Face ID 解鎖您已加密的 Takes。"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight ใช้ Face ID เพื่อปลดล็อก Take ที่เข้ารหัสของคุณ"
+          }
         }
       }
     },
@@ -357,6 +447,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight, bir yere vardığınızda veya bir yerden ayrıldığınızda bir Take'i size hatırlatmak için konumunuzu kullanır."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlightは、特定の場所に到着したときや出発したときにTakeについて通知するために、位置情報を使用します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight는 장소에 도착하거나 떠날 때 Take에 대해 알려 드리기 위해 위치를 사용합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当您到达或离开某个地点时，Catchlight 会根据您的位置提醒您查看 Take。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight 會使用您的位置，在您抵達或離開某處時提醒您查看 Take。"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight ใช้ตำแหน่งที่ตั้งของคุณเพื่อเตือนเกี่ยวกับ Take เมื่อคุณไปถึงหรือออกจากสถานที่"
           }
         }
       }
