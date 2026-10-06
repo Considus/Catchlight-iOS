@@ -35003,7 +35003,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ei synkronoidu koskaan. Take-merkintäsi pysyvät tällä laitteella."
+            "value" : "Ei synkronoidu koskaan. Takesi pysyvät tällä laitteella."
           }
         },
         "tr" : {
@@ -37692,7 +37692,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Missä Take-merkintäsi siis säilytetään?"
+            "value" : "Missä Takesi siis säilytetään?"
           }
         },
         "tr" : {
@@ -37916,7 +37916,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Obie, kiinnitetty Take-merkintäsi"
+            "value" : "Obie, kiinnitetty Takesi"
           }
         },
         "tr" : {
@@ -38028,7 +38028,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Obie: kiinnitetty Take-merkintäsi"
+            "value" : "Obie: kiinnitetty Takesi"
           }
         },
         "tr" : {
@@ -38700,7 +38700,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Haku vain laitteella. Considus ei voi koskaan lukea Take-merkintöjäsi. Tekstitasot näkyvät harmaina iOS:n rajoituksen vuoksi."
+            "value" : "Haku vain laitteella. Considus ei voi koskaan lukea Takejasi. Tekstitasot näkyvät harmaina iOS:n rajoituksen vuoksi."
           }
         },
         "tr" : {
@@ -39932,7 +39932,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avaa tarkennusrenkaan, jolla voit muuttaa tämän Take-merkinnän tyyppiä."
+            "value" : "Avaa tarkennusrenkaan, jolla voit muuttaa tämän Take:n tyyppiä."
           }
         },
         "tr" : {
@@ -40156,7 +40156,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avaa tarkennusrenkaan. Muuta tämä takaisin tavalliseksi Take-merkinnäksi käyttämällä roottorin Toiminnot-valintaa."
+            "value" : "Avaa tarkennusrenkaan. Muuta tämä takaisin tavalliseksi Take:ksi käyttämällä roottorin Toiminnot-valintaa."
           }
         },
         "tr" : {
@@ -40268,7 +40268,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avaa Storyboardin: kaikki tehtävän sisältävät Take-merkinnät. Avaa Asetukset käyttämällä roottorin Toiminnot-valintaa."
+            "value" : "Avaa Storyboardin: kaikki tehtävän sisältävät Taket. Avaa Asetukset käyttämällä roottorin Toiminnot-valintaa."
           }
         },
         "tr" : {
@@ -40828,7 +40828,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Paneeli ehdottaa, sinä hyväksyt. Tekstin suora uudelleenkirjoitus muuttaa sitä paikan päällä. Molemmat lähettävät kyseisen Take-merkinnän Applelle. Yksityisyyslausettasi ei koskaan lähetetä."
+            "value" : "Paneeli ehdottaa, sinä hyväksyt. Tekstin suora uudelleenkirjoitus muuttaa sitä paikan päällä. Molemmat lähettävät kyseisen Take:n Applelle. Yksityisyyslausettasi ei koskaan lähetetä."
           }
         },
         "tr" : {
@@ -41388,7 +41388,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tuo Take-merkinnöiksi valitsemalla Tiedostoista .md-, .txt- tai .rtf-tiedosto. Pilvikansiota ei tarvita."
+            "value" : "Tuo Takeiksi valitsemalla Tiedostoista .md-, .txt- tai .rtf-tiedosto. Pilvikansiota ei tarvita."
           }
         },
         "tr" : {
@@ -46204,7 +46204,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Palauta Take-merkintäsi tälle laitteelle yksityisyyslauseesi avulla."
+            "value" : "Palauta Takesi tälle laitteelle yksityisyyslauseesi avulla."
           }
         },
         "tr" : {
@@ -47660,7 +47660,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hae Take-merkintöjä"
+            "value" : "Hae Takeja"
           }
         },
         "tr" : {
@@ -47772,7 +47772,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hae Take-merkintöjäsi"
+            "value" : "Hae Takejasi"
           }
         },
         "tr" : {
@@ -49228,7 +49228,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Muotoile Take-merkintääsi Iriksellä"
+            "value" : "Muotoile Take:asi Iriksellä"
           }
         },
         "tr" : {
@@ -49900,7 +49900,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Näytä kaikki Take-merkinnät"
+            "value" : "Näytä kaikki Taket"
           }
         },
         "tr" : {
@@ -50236,7 +50236,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Äänetön. Säilyttää paikan Take-merkinnässä, mutta ei ilmoita saapuessasi tai lähtiessäsi."
+            "value" : "Äänetön. Säilyttää paikan Take:ssa, mutta ei ilmoita saapuessasi tai lähtiessäsi."
           }
         },
         "tr" : {
