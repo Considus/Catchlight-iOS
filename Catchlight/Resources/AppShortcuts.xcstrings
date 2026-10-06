@@ -19,10 +19,10 @@
           "stringSet" : {
             "state" : "translated",
             "values" : [
-              "Neues Obie in ${applicationName}",
-              "Obie in ${applicationName} erfassen",
-              "Neues ${applicationName} Obie",
-              "Starte ein Obie in ${applicationName}"
+              "Neuer Obie in ${applicationName}",
+              "Als Obie in ${applicationName} erfassen",
+              "Neuer ${applicationName}-Obie",
+              "Obie in ${applicationName} starten"
             ]
           }
         },
@@ -31,9 +31,9 @@
             "state" : "translated",
             "values" : [
               "Nouvel Obie dans ${applicationName}",
-              "Capturer un Obie dans ${applicationName}",
+              "Créer un Obie dans ${applicationName}",
               "Nouvel Obie ${applicationName}",
-              "Commencer un Obie dans ${applicationName}"
+              "Démarrer un Obie dans ${applicationName}"
             ]
           }
         },
@@ -42,9 +42,9 @@
             "state" : "translated",
             "values" : [
               "Nuevo Obie en ${applicationName}",
-              "Haz de esto mi Obie en ${applicationName}",
+              "Obie esto en ${applicationName}",
               "Nuevo Obie de ${applicationName}",
-              "Empieza un Obie en ${applicationName}"
+              "Iniciar un Obie en ${applicationName}"
             ]
           }
         },
@@ -53,9 +53,9 @@
             "state" : "translated",
             "values" : [
               "Nuovo Obie in ${applicationName}",
-              "Salva come Obie in ${applicationName}",
+              "Crea un Obie in ${applicationName}",
               "Nuovo Obie di ${applicationName}",
-              "Inizia un Obie in ${applicationName}"
+              "Avvia un Obie in ${applicationName}"
             ]
           }
         },
@@ -64,9 +64,9 @@
             "state" : "translated",
             "values" : [
               "Novo Obie no ${applicationName}",
-              "Criar um Obie no ${applicationName}",
+              "Transforme isto em um Obie no ${applicationName}",
               "Novo Obie do ${applicationName}",
-              "Começar um Obie no ${applicationName}"
+              "Iniciar um Obie no ${applicationName}"
             ]
           }
         },
@@ -75,9 +75,86 @@
             "state" : "translated",
             "values" : [
               "Nieuwe Obie in ${applicationName}",
-              "Leg een Obie vast in ${applicationName}",
-              "Maak een nieuwe Obie in ${applicationName}",
-              "Begin een Obie in ${applicationName}"
+              "Obie dit in ${applicationName}",
+              "Nieuwe ${applicationName} Obie",
+              "Start een Obie in ${applicationName}"
+            ]
+          }
+        },
+        "pt-PT" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Novo Obie no ${applicationName}",
+              "Obie disto no ${applicationName}",
+              "Novo Obie do ${applicationName}",
+              "Iniciar um Obie no ${applicationName}"
+            ]
+          }
+        },
+        "pl" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Nowy Obie w ${applicationName}",
+              "Utwórz Obie w ${applicationName}",
+              "Nowy Obie w ${applicationName}",
+              "Rozpocznij Obie w ${applicationName}"
+            ]
+          }
+        },
+        "sv" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ny Obie i ${applicationName}",
+              "Gör en Obie av detta i ${applicationName}",
+              "Ny ${applicationName}-Obie",
+              "Starta en Obie i ${applicationName}"
+            ]
+          }
+        },
+        "da" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ny Obie i ${applicationName}",
+              "Lav en Obie af dette i ${applicationName}",
+              "Ny Obie til ${applicationName}",
+              "Start en Obie i ${applicationName}"
+            ]
+          }
+        },
+        "nb" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ny Obie i ${applicationName}",
+              "Gjør dette til en Obie i ${applicationName}",
+              "Ny ${applicationName}-Obie",
+              "Start en Obie i ${applicationName}"
+            ]
+          }
+        },
+        "fi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Uusi Obie sovelluksessa ${applicationName}",
+              "Obie tästä sovelluksessa ${applicationName}",
+              "${applicationName}, uusi Obie",
+              "Aloita Obie sovelluksessa ${applicationName}"
+            ]
+          }
+        },
+        "tr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} uygulamasında Yeni Obie",
+              "${applicationName} uygulamasında bunu Obie yap",
+              "Yeni ${applicationName} Obie",
+              "${applicationName} uygulamasında bir Obie başlat"
             ]
           }
         }
@@ -102,9 +179,9 @@
             "state" : "translated",
             "values" : [
               "Neuer Take in ${applicationName}",
-              "Take in ${applicationName} erfassen",
-              "Neuer ${applicationName} Take",
-              "Starte einen Take in ${applicationName}"
+              "Als Take in ${applicationName} erfassen",
+              "Neuer ${applicationName}-Take",
+              "Take in ${applicationName} starten"
             ]
           }
         },
@@ -115,7 +192,7 @@
               "Nouveau Take dans ${applicationName}",
               "Capturer un Take dans ${applicationName}",
               "Nouveau Take ${applicationName}",
-              "Commencer un Take dans ${applicationName}"
+              "Démarrer un Take dans ${applicationName}"
             ]
           }
         },
@@ -126,7 +203,7 @@
               "Nuevo Take en ${applicationName}",
               "Anota esto en ${applicationName}",
               "Nuevo Take de ${applicationName}",
-              "Empieza un Take en ${applicationName}"
+              "Iniciar un Take en ${applicationName}"
             ]
           }
         },
@@ -135,9 +212,9 @@
             "state" : "translated",
             "values" : [
               "Nuovo Take in ${applicationName}",
-              "Salva questo in ${applicationName}",
+              "Crea un Take in ${applicationName}",
               "Nuovo Take di ${applicationName}",
-              "Inizia un Take in ${applicationName}"
+              "Avvia un Take in ${applicationName}"
             ]
           }
         },
@@ -146,9 +223,9 @@
             "state" : "translated",
             "values" : [
               "Novo Take no ${applicationName}",
-              "Criar um Take no ${applicationName}",
+              "Registrar isto como Take no ${applicationName}",
               "Novo Take do ${applicationName}",
-              "Começar um Take no ${applicationName}"
+              "Iniciar um Take no ${applicationName}"
             ]
           }
         },
@@ -157,9 +234,86 @@
             "state" : "translated",
             "values" : [
               "Nieuwe Take in ${applicationName}",
-              "Leg een Take vast in ${applicationName}",
-              "Maak een nieuwe Take in ${applicationName}",
-              "Begin een Take in ${applicationName}"
+              "Take dit in ${applicationName}",
+              "Nieuwe ${applicationName} Take",
+              "Start een Take in ${applicationName}"
+            ]
+          }
+        },
+        "pt-PT" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Novo Take no ${applicationName}",
+              "Take disto no ${applicationName}",
+              "Novo Take do ${applicationName}",
+              "Iniciar um Take no ${applicationName}"
+            ]
+          }
+        },
+        "pl" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Nowy Take w ${applicationName}",
+              "Utwórz Take w ${applicationName}",
+              "Nowy Take w ${applicationName}",
+              "Rozpocznij Take w ${applicationName}"
+            ]
+          }
+        },
+        "sv" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ny Take i ${applicationName}",
+              "Skapa en Take av detta i ${applicationName}",
+              "Ny ${applicationName}-Take",
+              "Starta en Take i ${applicationName}"
+            ]
+          }
+        },
+        "da" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ny Take i ${applicationName}",
+              "Opret en Take af dette i ${applicationName}",
+              "Ny Take til ${applicationName}",
+              "Start en Take i ${applicationName}"
+            ]
+          }
+        },
+        "nb" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ny Take i ${applicationName}",
+              "Lag en Take av dette i ${applicationName}",
+              "Ny ${applicationName}-Take",
+              "Start en Take i ${applicationName}"
+            ]
+          }
+        },
+        "fi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Uusi Take sovelluksessa ${applicationName}",
+              "Take tästä sovelluksessa ${applicationName}",
+              "${applicationName}, uusi Take",
+              "Aloita Take sovelluksessa ${applicationName}"
+            ]
+          }
+        },
+        "tr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} uygulamasında Yeni Take",
+              "${applicationName} uygulamasında bunu Take yap",
+              "Yeni ${applicationName} Take",
+              "${applicationName} uygulamasında bir Take başlat"
             ]
           }
         }

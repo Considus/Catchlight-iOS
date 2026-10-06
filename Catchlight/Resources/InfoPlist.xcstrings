@@ -46,6 +46,48 @@
             "state" : "translated",
             "value" : "Catchlight"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
         }
       }
     },
@@ -94,6 +136,48 @@
             "state" : "translated",
             "value" : "Catchlight"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
         }
       }
     },
@@ -110,7 +194,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight verwendet Face ID, um deine verschlüsselten Takes zu entsperren."
+            "value" : "Catchlight nutzt Face ID, um deine verschlüsselten Takes zu entsperren."
           }
         },
         "fr" : {
@@ -128,7 +212,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight usa Face ID per sbloccare i tuoi Take crittografati."
+            "value" : "Catchlight utilizza Face ID per sbloccare i tuoi Take crittografati."
           }
         },
         "pt-BR" : {
@@ -141,6 +225,48 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Catchlight gebruikt Face ID om je versleutelde Takes te ontgrendelen."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Catchlight usa o Face ID para desbloquear os seus Takes encriptados."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight używa Face ID do odblokowania zaszyfrowanych Takes."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight använder Face ID för att låsa upp dina krypterade Takes."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight bruger Face ID til at låse dine krypterede Takes op."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight bruker Face ID til å låse opp de krypterte Take-ene dine."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight käyttää Face ID:tä salattujen Takejesi avaamiseen."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight, şifrelenmiş Take'lerinizin kilidini açmak için Face ID kullanır."
           }
         }
       }
@@ -158,37 +284,79 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight verwendet deinen Standort, um dich an einen Take zu erinnern, wenn du an einem Ort ankommst oder ihn verlässt."
+            "value" : "Catchlight nutzt deinen Standort, um dich an einen Take zu erinnern, wenn du an einem Ort ankommst oder ihn verlässt."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight utilise votre position pour vous rappeler un Take quand vous arrivez dans un lieu ou le quittez."
+            "value" : "Catchlight utilise votre position pour vous rappeler un Take lorsque vous arrivez à un endroit ou le quittez."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight usa tu ubicación para recordarte un Take cuando llegas a un lugar o sales de él."
+            "value" : "Catchlight usa tu ubicación para recordarte sobre un Take cuando llegues o salgas de un lugar."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight usa la tua posizione per ricordarti un Take quando arrivi in un luogo o te ne vai."
+            "value" : "Catchlight utilizza la tua posizione per ricordarti di un Take quando arrivi in un luogo o lo lasci."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Catchlight usa sua localização para lembrar você de um Take quando você chegar a um local ou sair dele."
+            "value" : "O Catchlight usa sua localização para lembrar você de um Take quando chegar ou sair de um lugar."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catchlight gebruikt je locatie om je aan een Take te herinneren wanneer je op een plek aankomt of er vertrekt."
+            "value" : "Catchlight gebruikt je locatie om je aan een Take te herinneren wanneer je ergens aankomt of vertrekt."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Catchlight usa a sua localização para o lembrar de um Take quando chegar ou sair de um local."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight używa Twojej lokalizacji, aby przypomnieć Ci o Take, gdy przybędziesz do miejsca lub je opuścisz."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight använder din plats för att påminna dig om en Take när du kommer till eller lämnar en plats."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight bruger din lokalitet til at minde dig om en Take, når du ankommer til eller forlader et sted."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight bruker posisjonen din til å minne deg på en Take når du ankommer eller forlater et sted."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight käyttää sijaintiasi muistuttaakseen sinua Take:sta, kun saavut paikkaan tai lähdet sieltä."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight, bir yere vardığınızda veya bir yerden ayrıldığınızda bir Take'i size hatırlatmak için konumunuzu kullanır."
           }
         }
       }

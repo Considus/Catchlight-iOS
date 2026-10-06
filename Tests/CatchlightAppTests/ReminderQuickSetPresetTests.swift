@@ -71,6 +71,13 @@ final class ReminderQuickSetPresetTests: XCTestCase {
         XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "it", region: "IT"), 2)
         XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "nl", region: "NL"), 2)
         XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "pt-BR", region: "BR"), 1)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "pt-PT", region: "PT"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "pl", region: "PL"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "sv", region: "SE"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "da", region: "DK"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "nb", region: "NO"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "fi", region: "FI"), 2)
+        XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: "tr", region: "TR"), 2)
         XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: nil, region: nil), 1)
     }
 }

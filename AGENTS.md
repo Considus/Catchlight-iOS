@@ -64,7 +64,7 @@ Every string a person sees or hears goes through a String Catalog: `Localizable.
 - **Text built anywhere else is `String(localized: "…")` at the literal**: view-model errors, notification text, VoiceOver sentences, computed labels. The literal must sit inside the call. `String(localized: String.LocalizationValue(someVar))` compiles and is never extracted.
 - **One whole sentence per key.** Never glue fragments (`"Double-tap to " + verb`), never build plurals (`"Take\(n == 1 ? "" : "s")"`). A count goes in as an `Int` interpolation and the catalog carries the plural forms; English has its own `one`/`other` variations for every such key.
 - **A raw value is an identifier, not a label.** Enums persisted or compared by raw value get a separate `label` with a literal per case.
-- **The reminder sheet's week start is per language**, in `ReminderPickerSheet.firstWeekday`: Sunday in English and Brazilian Portuguese, Monday in German, Spanish, Italian, Dutch and French, except French in Canada (Sunday). A new language adds its own case.
+- **The reminder sheet's week start is per language**, in `ReminderPickerSheet.firstWeekday`: Sunday in English and Brazilian Portuguese, Monday in German, Spanish, Italian, Dutch, European Portuguese, Polish, Swedish, Danish, Norwegian, Finnish, Turkish and French, except French in Canada (Sunday). A new language adds its own case.
 - **Dates come from formatters and templates** (`setLocalizedDateFormatFromTemplate`, `DateComponentsFormatter`), never a fixed `dateFormat` for anything shown. Machine formats keep `en_US_POSIX`.
 - **What stays English on purpose:** the product nouns (Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard), which are still routed through the catalog so a translator sees them in context and keeps them; the 12 recovery-phrase words, which are the BIP-39 English wordlist and part of the key; developer-only diagnostics (the `lifecycle` category and scheduling failures, which never show in Notice History); the `Import` folder name in the cloud folder. Notice History lines are recorded in the device language, like the notices themselves.
 - **Core values the app shows are worded here**, in `Catchlight/UI/CoreLabels.swift`. Core's own `label`s stay English and carry no translations.
@@ -90,6 +90,12 @@ The third runs after adding or changing a translation. It compares every transla
 python3 scripts/l10n/check_placeholders.py
 ```
 
+A translation pasted from the wrong language passes the placeholder check, because the other language has the same placeholders. The mix-up check compares every pair of languages and flags one whose text is copied from another (neighbouring languages are allowed the overlap they honestly share):
+
+```bash
+python3 scripts/l10n/check_mixups.py
+```
+
 A new language's draft goes into every catalog in one step, from a JSON file of plain strings, plural forms and Siri phrases; it refuses to write anything while a catalog key is missing from the draft:
 
 ```bash
@@ -102,10 +108,17 @@ A translator gets a review workbook built from the catalogs: English beside the 
 python3 scripts/l10n/review_workbook.py fr Catchlight_iOS_French_Translation_Review.xlsx --store store-src.json store-fr.json
 ```
 
-For a translator who wants plain text, `--texts` writes one English file and one file per language, line N of each translating line N of the English. Placeholders read as `{1}`, `{2}` (numbered by position, so a translation may reorder them) and `{app}`, a line break as ` / `; lines with nothing to translate are left out and each English line appears once. The script refuses to write anything if a language is missing a line or translates two keys that share an English line differently. The text files are one-way, for reading and translating: corrections go back through the workbook or by hand, restoring bold markers and line breaks from the English key:
+For a translator who wants plain text, `--texts` writes one English file and one file per language, line N of each translating line N of the English. Placeholders read as `{1}`, `{2}` (numbered by position, so a translation may reorder them) and `{app}`, a line break as ` / `; lines with nothing to translate are left out and each English line appears once. The script refuses to write anything if a language is missing a line or translates two keys that share an English line differently.:
 
 ```bash
 python3 scripts/l10n/review_workbook.py --texts OUT_DIR --store-src store-src.json --store-dir DRAFTS_DIR
+```
+
+A translated text file goes back into the catalogs with `apply_texts.py`. It finds each key by its English line and rebuilds the value against that key's English: `{1}` becomes the key's specifier (numbered when the key has more than one), `{app}` becomes `${applicationName}`, ` / ` becomes a line break where the English has one, and the one capitalised run is wrapped in `**` where the English is bold. It refuses to write anything if a translation loses or invents a placeholder. A product name or bare number has no line; a new language takes the English for it. `test_round_trip.py` exports every language to text and writes it back, and must report 0 changed:
+
+```bash
+python3 scripts/l10n/apply_texts.py pl Catchlight_iOS_Translation_EN.txt Catchlight_iOS_Translation_PL.txt
+python3 scripts/l10n/test_round_trip.py
 ```
 
 ## Prove

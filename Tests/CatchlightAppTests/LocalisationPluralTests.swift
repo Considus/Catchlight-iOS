@@ -60,9 +60,9 @@ final class LocalisationPluralTests: XCTestCase {
         XCTAssertEqual(String(localized: "\(0) Takes changed on another device.", bundle: frenchBundle, locale: french),
                        "0 Take modifié sur un autre appareil.")
         XCTAssertEqual(String(localized: "\(1) Takes need a decision.", bundle: frenchBundle, locale: french),
-                       "1 Take demande une décision.")
+                       "1 Take nécessite une décision.")
         XCTAssertEqual(String(localized: "\(2) Takes need a decision.", bundle: frenchBundle, locale: french),
-                       "2 Takes demandent une décision.")
+                       "2 Takes nécessitent une décision.")
         XCTAssertEqual(String(localized: "Link to \("example.com") and \(1) more links", bundle: frenchBundle, locale: french),
                        "Lien vers example.com et 1 autre lien")
     }

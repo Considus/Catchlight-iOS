@@ -211,6 +211,83 @@ LANGS = {
             ("you", "você / seu", "Informal throughout."),
         ],
     },
+    "pt-PT": {
+        "name": "European Portuguese",
+        "tone": 'Informal "tu", warm and plain. Catchlight is a private notes app.',
+        "plural": 'Rows marked "plural: one" are used for one; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · the European Portuguese draft · your European Portuguese · your comment',
+        "notes": {},
+        "glossary": [
+            ("Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep in English."),
+            ("you", "tu", "Informal throughout."),
+        ],
+    },
+    "pl": {
+        "name": "Polish",
+        "tone": 'Informal "ty", warm and plain. Catchlight is a private notes app.',
+        "plural": 'Rows marked "plural: one" are used for one; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · the Polish draft · your Polish · your comment',
+        "notes": {},
+        "glossary": [
+            ("Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep in English."),
+            ("you", "ty", "Informal throughout."),
+        ],
+    },
+    "sv": {
+        "name": "Swedish",
+        "tone": 'Informal "du", warm and plain. Catchlight is a private notes app.',
+        "plural": 'Rows marked "plural: one" are used for one; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · the Swedish draft · your Swedish · your comment',
+        "notes": {},
+        "glossary": [
+            ("Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep in English."),
+            ("you", "du", "Informal throughout."),
+        ],
+    },
+    "da": {
+        "name": "Danish",
+        "tone": 'Informal "du", warm and plain. Catchlight is a private notes app.',
+        "plural": 'Rows marked "plural: one" are used for one; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · the Danish draft · your Danish · your comment',
+        "notes": {},
+        "glossary": [
+            ("Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep in English."),
+            ("you", "du", "Informal throughout."),
+        ],
+    },
+    "nb": {
+        "name": "Norwegian",
+        "tone": 'Informal "du", warm and plain. Catchlight is a private notes app.',
+        "plural": 'Rows marked "plural: one" are used for one; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · the Norwegian draft · your Norwegian · your comment',
+        "notes": {},
+        "glossary": [
+            ("Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep in English."),
+            ("you", "du", "Informal throughout."),
+        ],
+    },
+    "fi": {
+        "name": "Finnish",
+        "tone": 'Informal "sinä", warm and plain. Catchlight is a private notes app.',
+        "plural": 'Rows marked "plural: one" are used for one; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · the Finnish draft · your Finnish · your comment',
+        "notes": {},
+        "glossary": [
+            ("Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep in English."),
+            ("you", "sinä", "Informal throughout."),
+        ],
+    },
+    "tr": {
+        "name": "Turkish",
+        "tone": 'Informal "sen", warm and plain. Catchlight is a private notes app.',
+        "plural": 'Rows marked "plural: one" are used for one; "plural: other" for every other count.',
+        "example": 'English "Couldn\'t load your Takes." · the Turkish draft · your Turkish · your comment',
+        "notes": {},
+        "glossary": [
+            ("Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep in English."),
+            ("you", "sen", "Informal throughout."),
+        ],
+    },
 }
 
 

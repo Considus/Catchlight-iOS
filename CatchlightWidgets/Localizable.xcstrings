@@ -6,25 +6,25 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein leeres Obie zum Antippen und Losschreiben."
+            "value" : "Eine leere Obie-Karte zum Antippen und Beschreiben."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Un Obie vierge : touchez et écrivez."
+            "value" : "Une carte Obie vierge sur laquelle appuyer pour écrire."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Un Obie en blanco para tocar y escribir."
+            "value" : "Una tarjeta Obie en blanco para tocar y escribir."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Un Obie vuoto da toccare per scriverci."
+            "value" : "Una scheda Obie vuota, da toccare e compilare."
           }
         },
         "pt-BR" : {
@@ -38,6 +38,48 @@
             "state" : "translated",
             "value" : "Een lege Obie om op te tikken en in te schrijven."
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um Obie em branco para tocar e escrever."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Czysty Obie — dotknij i zacznij pisać."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ett tomt Obie-kort att trycka på och skriva i."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Et tomt Obie-kort, du kan trykke på og skrive i."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Et tomt Obie-kort du kan trykke på og skrive i."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tyhjä Obie-kortti, jota napauttamalla voit kirjoittaa."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokunup içine yazmak için boş bir Obie."
+          }
         }
       }
     },
@@ -46,25 +88,25 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein leerer Take zum Antippen und Losschreiben."
+            "value" : "Ein leerer Take zum Antippen und Beschreiben."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Un Take vierge : touchez et écrivez."
+            "value" : "Une carte Take vierge sur laquelle appuyer pour écrire."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Un Take en blanco para tocar y escribir."
+            "value" : "Una tarjeta Take en blanco para tocar y escribir."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Un Take vuoto da toccare per scriverci."
+            "value" : "Un Take vuoto, da toccare e compilare."
           }
         },
         "pt-BR" : {
@@ -78,6 +120,48 @@
             "state" : "translated",
             "value" : "Een lege Take om op te tikken en in te schrijven."
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um Take em branco para tocar e escrever."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Czysty Take — dotknij i zacznij pisać."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ett tomt Take-kort att trycka på och skriva i."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En tom Take, du kan trykke på og skrive i."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En tom Take du kan trykke på og skrive i."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tyhjä Take, johon voit napauttaa ja kirjoittaa."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokunup içine yazmak için boş bir Take."
+          }
         }
       }
     },
@@ -86,13 +170,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Beide Erfassen-Tasten in einem Widget – tippe auf die Seite, die du brauchst."
+            "value" : "Beide Aufnahmetasten in einem Widget — tippe auf die Seite, die du brauchst."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les deux boutons de capture dans un seul widget : touchez le côté voulu."
+            "value" : "Les deux boutons de capture dans un seul widget : appuyez sur celui dont vous avez besoin."
           }
         },
         "es" : {
@@ -104,19 +188,61 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Entrambi i pulsanti di cattura in un solo widget: tocca il lato che ti serve."
+            "value" : "Entrambi i pulsanti di acquisizione in un unico widget: tocca il lato che ti serve."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Os dois botões de captura em um só widget: toque no lado que precisar."
+            "value" : "Ambos os botões de captura em um único widget — toque no lado que você precisa."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Beide vastlegknoppen in één widget – tik op de kant die je nodig hebt."
+            "value" : "Beide opnameknoppen in één widget — tik op de kant die je nodig hebt."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os dois botões de captura num só widget — toque no lado de que precisa."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oba przyciski tworzenia w jednym widżecie — dotknij strony, której potrzebujesz."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Båda inspelningsknapparna i en widget – tryck på den sida du behöver."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begge optageknapper i én widget – tryk på den side, du skal bruge."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begge opptaksknappene i én widget – trykk på den siden du trenger."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Molemmat tallennuspainikkeet samassa widgetissä – napauta haluamaasi puolta."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Her iki yakalama düğmesi tek bir araç takımında — ihtiyacınız olan tarafa dokunun."
           }
         }
       }
@@ -144,7 +270,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cattura"
+            "value" : "Acquisisci"
           }
         },
         "pt-BR" : {
@@ -156,7 +282,49 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leg vast"
+            "value" : "Vastleggen"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturar"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przechwyć"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fånga"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optag"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrer"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirjaa"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kaydet"
           }
         }
       }
@@ -198,6 +366,48 @@
             "state" : "translated",
             "value" : "Catchlight"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight"
+          }
         }
       }
     },
@@ -206,7 +416,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Neues Obie"
+            "value" : "Neuer Obie"
           }
         },
         "fr" : {
@@ -238,6 +448,48 @@
             "state" : "translated",
             "value" : "Nieuwe Obie"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Novo Obie"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowy Obie"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny Obie"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny Obie"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny Obie"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uusi Obie"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeni Obie"
+          }
         }
       }
     },
@@ -246,37 +498,79 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Karte „Neues Obie“"
+            "value" : "Neue Obie-Karte"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carte « Nouvel Obie »"
+            "value" : "Nouvelle carte Obie"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tarjeta “Nuevo Obie”"
+            "value" : "Nueva tarjeta Obie"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scheda “Nuovo Obie”"
+            "value" : "Nuova scheda Obie"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cartão “Novo Obie”"
+            "value" : "Cartão de novo Obie"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kaart ‘Nieuwe Obie’"
+            "value" : "Nieuwe Obie-kaart"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Novo cartão Obie"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karta nowego Obie"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nytt Obie-kort"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyt Obie-kort"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nytt Obie-kort"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uusi Obie-kortti"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeni Obie kartı"
           }
         }
       }
@@ -318,6 +612,48 @@
             "state" : "translated",
             "value" : "Nieuwe Take"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Novo Take"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowy Take"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny Take"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny Take"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny Take"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uusi Take"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeni Take"
+          }
         }
       }
     },
@@ -326,37 +662,79 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Karte „Neuer Take“"
+            "value" : "Neue Take-Karte"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carte « Nouveau Take »"
+            "value" : "Nouvelle carte Take"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tarjeta “Nuevo Take”"
+            "value" : "Nueva tarjeta Take"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scheda “Nuovo Take”"
+            "value" : "Nuova scheda Take"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cartão “Novo Take”"
+            "value" : "Cartão de novo Take"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kaart ‘Nieuwe Take’"
+            "value" : "Nieuwe Take-kaart"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Novo cartão Take"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karta nowego Take"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nytt Take-kort"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyt Take-kort"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nytt Take-kort"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uusi Take -kortti"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeni Take kartı"
           }
         }
       }
@@ -366,13 +744,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Neuer Take oder Obie"
+            "value" : "Neuer Take oder neue Obie"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nouveau Take ou Obie"
+            "value" : "Nouvelle Take ou Obie"
           }
         },
         "es" : {
@@ -397,6 +775,48 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nieuwe Take of Obie"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Novo Take ou Obie"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowy Take lub Obie"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny Take eller Obie"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny Take eller Obie"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny Take eller Obie"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uusi Take tai Obie"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeni Take veya Obie"
           }
         }
       }
@@ -438,6 +858,48 @@
             "state" : "translated",
             "value" : "Obie"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie"
+          }
         }
       }
     },
@@ -446,7 +908,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffne Catchlight und erfasse dein Obie."
+            "value" : "Öffne Catchlight und halte deine Obie fest."
           }
         },
         "fr" : {
@@ -464,7 +926,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apri Catchlight e cattura il tuo Obie."
+            "value" : "Apri Catchlight e acquisisci il tuo Obie."
           }
         },
         "pt-BR" : {
@@ -478,6 +940,48 @@
             "state" : "translated",
             "value" : "Open Catchlight en leg je Obie vast."
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra o Catchlight e registe o seu Obie."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz Catchlight i zapisz swój Obie."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öppna Catchlight och skriv i din Obie."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn Catchlight, og skriv din Obie."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne Catchlight og fang din Obie."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avaa Catchlight ja tallenna Obiesi."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight'ı açın ve Obie'nizi yakalayın."
+          }
         }
       }
     },
@@ -486,37 +990,79 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffne Catchlight mit einem leeren Obie."
+            "value" : "Öffne Catchlight und öffne einen leeren Obie."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrez Catchlight sur un Obie vierge."
+            "value" : "Ouvrez Catchlight et ouvrez un Obie vide."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre Catchlight con un Obie en blanco."
+            "value" : "Abre Catchlight y abre un Obie en blanco."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apri Catchlight su un Obie vuoto."
+            "value" : "Apri Catchlight e apri un Obie vuoto."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abra o Catchlight em um Obie em branco."
+            "value" : "Abra o Catchlight e abra um Obie em branco."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Catchlight met een lege Obie."
+            "value" : "Open Catchlight en open een lege Obie."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra o Catchlight e abra um Obie em branco."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz Catchlight i otwórz puste Obie."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öppna Catchlight och öppna en tom Obie."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn Catchlight og åbn en tom Obie."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne Catchlight og åpne en tom Obie."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avaa Catchlight ja avaa tyhjä Obie."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight'ı açın ve boş bir Obie açın."
           }
         }
       }
@@ -526,7 +1072,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffne Catchlight und beginne einen neuen Take."
+            "value" : "Öffne Catchlight und erstelle einen neuen Take."
           }
         },
         "fr" : {
@@ -558,6 +1104,48 @@
             "state" : "translated",
             "value" : "Open Catchlight en begin een nieuwe Take."
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra o Catchlight e inicie um novo Take."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz Catchlight i zacznij nowy Take."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öppna Catchlight och skapa en ny Take."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn Catchlight og opret en ny Take."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne Catchlight og start en ny Take."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avaa Catchlight ja aloita uusi Take."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight'ı açın ve yeni bir Take başlatın."
+          }
         }
       }
     },
@@ -572,13 +1160,13 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrez Catchlight directement sur un nouveau Take."
+            "value" : "Ouvrez Catchlight directement sur une nouvelle Take."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre Catchlight directamente en un nuevo Take."
+            "value" : "Abre Catchlight directamente en un Take nuevo."
           }
         },
         "it" : {
@@ -590,13 +1178,55 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abra o Catchlight direto em um novo Take."
+            "value" : "Abra o Catchlight diretamente em um novo Take."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Catchlight direct op een nieuwe Take."
+            "value" : "Open Catchlight meteen met een nieuwe Take."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra o Catchlight diretamente num novo Take."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz Catchlight bezpośrednio do nowego Take."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öppna Catchlight direkt till en ny Take."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn Catchlight direkte til en ny Take."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne Catchlight rett til en ny Take."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avaa Catchlight suoraan uuteen Take:hen."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight'ı doğrudan yeni bir Take'e açın."
           }
         }
       }
@@ -612,13 +1242,13 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrez Catchlight sur un nouveau Take."
+            "value" : "Ouvrez Catchlight pour créer une nouvelle Take."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre Catchlight en un nuevo Take."
+            "value" : "Abre Catchlight para crear un Take nuevo."
           }
         },
         "it" : {
@@ -636,7 +1266,49 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Catchlight op een nieuwe Take."
+            "value" : "Open Catchlight met een nieuwe Take."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra o Catchlight num novo Take."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz Catchlight do nowego Take."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öppna Catchlight till en ny Take."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn Catchlight til en ny Take."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne Catchlight til en ny Take."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avaa Catchlight uuteen Take:hen."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight'ı yeni bir Take açacak şekilde açın."
           }
         }
       }
@@ -678,6 +1350,48 @@
             "state" : "translated",
             "value" : "Take"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take"
+          }
         }
       }
     },
@@ -692,7 +1406,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Qu’est-ce qui compte le plus ?"
+            "value" : "Qu’est-ce qui compte le plus ?"
           }
         },
         "es" : {
@@ -704,7 +1418,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Qual è la cosa più importante?"
+            "value" : "Che cosa conta di più?"
           }
         },
         "pt-BR" : {
@@ -717,6 +1431,48 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wat is het belangrijkst?"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O que é mais importante?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Co jest najważniejsze?"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vad är viktigast?"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvad er vigtigst?"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hva er viktigst?"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mikä on tärkeintä?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En önemli şey ne?"
           }
         }
       }
@@ -732,7 +1488,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quel est votre Take ?"
+            "value" : "Quel est votre Take ?"
           }
         },
         "es" : {
@@ -757,6 +1513,48 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wat is je Take?"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qual é o seu Take?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jaki jest Twój Take?"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vad är din Take?"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvad er din Take?"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hva er Take-en din?"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mikä on Takesi?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take'iniz nedir?"
           }
         }
       }
