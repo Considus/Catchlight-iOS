@@ -40,6 +40,11 @@ final class DailiesViewModel {
     /// ([[catchlight-user-decides-principle]]). nil whenever there is nothing to ask.
     private(set) var tasksCompletedTakeID: UUID?
 
+    /// A success moment the timeline should ask for an App Store rating after, once
+    /// nothing is open on top of it (`RatingPrompt`). nil when there is nothing to ask.
+    private(set) var pendingRatingMoment: RatingMoment?
+    let ratingLedger: RatingPromptLedger
+
     /// The underlying store. Exposed so conflict resolution (Task 6.15) can write
     /// the winning version through the same backend the timeline reads from.
     let store: TakeStore
@@ -79,8 +84,10 @@ final class DailiesViewModel {
     init(store: TakeStore,
          spotlight: SpotlightIndexing = NoopSpotlightIndexer(),
          reminders: ReminderScheduler = ReminderScheduler(),
-         notificationAuthPreflighted: Bool = false) {
+         notificationAuthPreflighted: Bool = false,
+         ratingLedger: RatingPromptLedger = RatingPromptLedger()) {
         self.store = store
+        self.ratingLedger = ratingLedger
         self.spotlight = spotlight
         self.reminders = reminders
         self.didRequestNotificationAuth = notificationAuthPreflighted
@@ -178,6 +185,21 @@ final class DailiesViewModel {
 
     func clearTasksCompletedNotice() { tasksCompletedTakeID = nil }
 
+    func clearRatingMoment() { pendingRatingMoment = nil }
+
+    /// Note a rating moment made by a user's save. `previous` is the stored Take before it.
+    private func noteRatingMoment(previous: Take?, updated: Take) {
+        let created = takes.map(\.createdAt) + [obie?.createdAt].compactMap { $0 }
+        if let moment = RatingPrompt.moment(previous: previous, updated: updated,
+                                            allCreatedAt: created,
+                                            firstLaunch: ratingLedger.firstLaunch) {
+            pendingRatingMoment = moment
+        } else if pendingRatingMoment == .checklistFinished, updated.isTask, !updated.isComplete {
+            // Un-ticked again before the ask: the moment has passed.
+            pendingRatingMoment = nil
+        }
+    }
+
     /// Forget "Expand Take" overrides for Takes that no longer exist (owner 2026-08-11).
     ///
     /// The overrides live in UserDefaults keyed by Take id, so without this a delete would
@@ -245,7 +267,8 @@ final class DailiesViewModel {
         var updated = take
         if updated.isSeeded { updated.isSeeded = false }
         updated.normaliseActivityFloor()
-        if let stored = try? store.take(id: updated.id) {
+        let stored = try? store.take(id: updated.id)
+        if let stored {
             var candidate = updated
             candidate.modifiedAt = stored.modifiedAt
             candidate.isSeeded = stored.isSeeded
@@ -261,6 +284,7 @@ final class DailiesViewModel {
             spotlight.index(updated)
             reconcileNotification(for: updated)
             reload()
+            noteRatingMoment(previous: stored, updated: updated)
             notifyLocalChange()
         } catch {
             report(.saveFailed)
@@ -308,10 +332,12 @@ final class DailiesViewModel {
         updated.modifiedAt = Date()
         if updated.isSeeded { updated.isSeeded = false }
         updated.normaliseActivityFloor()
+        let previous = obie?.id == updated.id ? obie : takes.first { $0.id == updated.id }
         do {
             try store.upsert(updated)
             spotlight.index(updated)
             reconcileNotification(for: updated)
+            defer { if let previous { noteRatingMoment(previous: previous, updated: updated) } }
             if obie?.id == updated.id {
                 obie = updated
             } else if let i = takes.firstIndex(where: { $0.id == updated.id }) {

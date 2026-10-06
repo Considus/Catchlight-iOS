@@ -26,6 +26,7 @@
 //
 
 import SwiftUI
+import StoreKit
 import CatchlightCore
 
 struct DailiesView: View {
@@ -37,6 +38,7 @@ struct DailiesView: View {
     @Environment(AppModel.self) private var app
     @Environment(ConflictQueue.self) private var conflicts
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.requestReview) private var requestReview
 
     /// Measured height of the heading block (title + its paddings, INCLUDING `deviceTopInset`).
     @State private var headingBlockHeight: CGFloat = 0
@@ -551,8 +553,28 @@ struct DailiesView: View {
             // Let AppModel.relock save a mid-edit Take through our save path before it
             // tears down the store (owner 2026-06-17 — lock auto-saves, never discards).
             ui.commitInlineEdit = { saveInlineEdit() }
+            _ = vm.ratingLedger.firstLaunch   // starts the clock RatingPrompt waits on
         }
         .onDisappear { ui.commitInlineEdit = nil }
+        // App Store rating (owner 2026-10-06): after a success moment, once the timeline is
+        // back to rest with nothing open on top, and a short pause so the ask never lands
+        // on the tap that made the moment. `RatingPrompt` decides whether to ask at all.
+        .task(id: ratingPromptReady) {
+            guard ratingPromptReady else { return }
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled, ratingPromptReady else { return }
+            vm.clearRatingMoment()
+            let ledger = vm.ratingLedger
+            let now = Date()
+            let version = RatingPromptLedger.currentVersion
+            guard RatingPrompt.shouldAsk(now: now, firstLaunch: ledger.firstLaunch,
+                                         lastAsked: ledger.lastAsked,
+                                         lastAskedVersion: ledger.lastAskedVersion,
+                                         currentVersion: version,
+                                         isEntitled: app.subscriptionStatus.isEntitled) else { return }
+            ledger.recordAsked(at: now, version: version)
+            requestReview()
+        }
         // The Focus ring committed while a Take is edited in place — apply it to the
         // live draft (edit-in-place 2026-06-17). Guarded on `editingTakeID` so the
         // (behind) timeline ignores commits meant for the top-anchored new-Take editor.
@@ -1666,6 +1688,18 @@ struct DailiesView: View {
             return
         }
         vm.stopRemindingForCompletedTake()
+    }
+
+    /// A rating moment is waiting and nothing is in the way: not editing, no sheet, no
+    /// strip asking a question, the dock at rest, and not a UI-test run.
+    private var ratingPromptReady: Bool {
+        vm.pendingRatingMoment != nil
+            && !ui.isEditingInPlace && ui.pendingInlineNewTake == nil
+            && !ui.isSettingsPresented && !ui.isPaywallPresented
+            && !ui.isConflictSheetPresented && !ui.isStoryboardPresented
+            && !ui.isFocusRingFanPresented && ui.dockMode == .resting
+            && vm.tasksCompletedTakeID == nil
+            && !ProcessInfo.processInfo.arguments.contains("--uitesting")
     }
 
     private func saveInlineEdit() {
