@@ -29,6 +29,9 @@ struct SelectorRow: View {
             Text(label)
                 .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
                 .foregroundStyle(Color.ckTextPrimary)
+                // A `Menu` centres a label that wraps; a long translation (or a large
+                // text size) wraps here, so keep it flush left like every other row.
+                .multilineTextAlignment(.leading)
             Spacer(minLength: 8)
             Text(value)
                 .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
@@ -76,6 +79,7 @@ struct MenuFieldRow: View {
                 .font(.caption2)
                 .foregroundStyle(Color.ckTextSecondary)
         }
+        .multilineTextAlignment(.leading)   // as `SelectorRow`: a Menu centres a wrapped label
         .frame(minHeight: 44)
         .contentShape(Rectangle())
     }
