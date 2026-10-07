@@ -28,7 +28,9 @@ import CatchlightCore
 
 struct ShareSheetView: View {
     let load: () async -> [String]
-    let onSave: (CaptureRouting.SharedItem) -> Void
+    /// True once the share is queued. False when it was refused (R7: no capture inbox key,
+    /// so Catchlight hasn't been opened since it was set up, updated or erased).
+    let onSave: (CaptureRouting.SharedItem) -> Bool
     let onCancel: () -> Void
 
     private enum Phase: Equatable {
@@ -38,6 +40,8 @@ struct ShareSheetView: View {
         /// hit the silent version as "opened the editor and closed again".
         case nothingToSave
         case saved
+        /// The queue refused it. Said out loud, for the same reason as `nothingToSave`.
+        case notQueued
     }
 
     @State private var phase: Phase = .loading
@@ -104,6 +108,21 @@ struct ShareSheetView: View {
             Text("It'll be waiting on your timeline next time you open the app.")
                 .font(CatchlightFont.ui(.regular, size: 16, relativeTo: .callout))
                 .foregroundStyle(Color.ckTextSecondary)
+
+        case .notQueued:
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Catchlight can't keep this yet.")
+                    .font(CatchlightFont.ui(.regular, size: 16, relativeTo: .callout))
+                    .foregroundStyle(Color.ckTextPrimary)
+                Text("Open Catchlight once, then share it again.")
+                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                    .foregroundStyle(Color.ckTextSecondary)
+                Button("Close", action: onCancel)
+                    .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .callout))
+                    .foregroundStyle(Color.ckAccent)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
 
         case .ready(let items):
             preview(items)
@@ -233,8 +252,7 @@ struct ShareSheetView: View {
         let body = ([note.trimmingCharacters(in: .whitespacesAndNewlines)] + items)
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
-        phase = .saved
-        onSave(CaptureRouting.SharedItem(text: body))
+        phase = onSave(CaptureRouting.SharedItem(text: body)) ? .saved : .notQueued
     }
 }
 

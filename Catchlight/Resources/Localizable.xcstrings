@@ -65202,6 +65202,31 @@
           }
         }
       }
+    },
+    "%lld shared Takes were made before this account was set up and couldn't be opened." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld shared Take was made before this account was set up and couldn't be opened."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld shared Takes were made before this account was set up and couldn't be opened."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Catchlight can't keep that yet. Open Catchlight once, then try again." : {
+
     }
   },
   "version" : "1.0"

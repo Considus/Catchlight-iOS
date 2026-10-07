@@ -39,9 +39,15 @@ public final class SessionController: ObservableObject {
     /// presents the Face ID/passcode sheet) runs OFF the main actor in
     /// `AppModel.attemptUnlock()` so the lock screen never freezes; the resulting
     /// keys are handed here to bring the session live.
+    ///
+    /// Every unlock passes through here (cold unlock, onboarding, Second device), so this is
+    /// where the capture inbox's PUBLIC key is published (R7). The share extension and the Siri
+    /// intents seal what they queue to it, and only these keys can open it. Republishing on each
+    /// unlock keeps it on the account that will drain the queue.
     public func adopt(_ keys: KeyHierarchy) {
         self.keys = keys
         isUnlocked = true
+        CaptureRouting.publishInboxKey(keys.captureInboxPublicKey())
     }
 
     public func currentKeys() -> KeyHierarchy? { keys }

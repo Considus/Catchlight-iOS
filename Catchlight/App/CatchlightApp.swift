@@ -211,11 +211,15 @@ struct CatchlightApp: App {
         // so a locked phone costs the user nothing and demands no Face ID. A blank launcher (a
         // widget, the Control, the Action button) still opens the editor below — there is nothing
         // to save yet, and an editor is exactly what it asked for.
+        //
+        // The pending slot is cleared only once the queue has taken the text. The queue refuses
+        // when there is no capture inbox key yet (R7: after an update, before the first unlock
+        // publishes it), and the slot then keeps the words for the next activation to retry.
         if let text = pending.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            CaptureRouting.clearPending()
-            CaptureRouting.enqueueShared(
-                .init(text: text, isObie: pending.mode == .obie))
-            drainSharedCaptures()
+            if CaptureRouting.enqueueShared(.init(text: text, isObie: pending.mode == .obie)) {
+                CaptureRouting.clearPending()
+                drainSharedCaptures()
+            }
             return
         }
         if app.lockState == .unlocked {
@@ -283,10 +287,20 @@ struct CatchlightApp: App {
     ///   • ENTITLEMENT FIRST, and the queue survives it. A lapsed user's shares stay queued
     ///     behind the paywall instead of being silently binned — matching `drainPendingCapture`,
     ///     which also refuses to capture but never destroys the request.
+    ///
+    /// The queue is SEALED (R7): each capture is opened with the inbox key derived from the
+    /// session's keys. One sealed for a previous account cannot be opened by anyone, so it is
+    /// reported on the strip and cleared, not left to fill the queue.
     @MainActor
     private func drainSharedCaptures() {
-        guard app.lockState == .unlocked else { return }
-        let queued = CaptureRouting.sharedQueueEntries()
+        guard app.lockState == .unlocked, let keys = app.sessionKeys else { return }
+        let inbox = keys.captureInboxPrivateKey()
+        let lost = CaptureRouting.unopenableSharedEntries(opening: inbox)
+        if !lost.isEmpty {
+            CaptureRouting.clearShared(lost)
+            app.reportUnopenableCaptures(lost.count)
+        }
+        let queued = CaptureRouting.sharedQueueEntries(opening: inbox)
         guard !queued.isEmpty else { return }
         guard app.ensureEntitled() else { return }
 

@@ -98,6 +98,11 @@ enum AccountReset {
         // and are so much scrap to the new one. Same code path the Settings sheet uses.
         Wiring.clearCloudFolderBookmark()
 
+        // The capture inbox key belonged to the erased account. Without it a share or a Siri
+        // capture is refused (and says so) until the next account is set up, rather than sealed
+        // to a key nobody holds any more.
+        CaptureRouting.clearInboxKey()
+
         if clearingEntitlement {
             UserDefaults(suiteName: AppGroup.identifier)?
                 .removeObject(forKey: SubscriptionManager.everEntitledDefaultsKey)

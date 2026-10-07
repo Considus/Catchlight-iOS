@@ -51,6 +51,15 @@ final class AppModel {
         DiagnosticsLog.shared.record(notice)
     }
 
+    /// Captures queued for a previous account (R7): they are sealed to a key this account
+    /// doesn't hold, so their text is gone. Said on the strip rather than dropped silently.
+    func reportUnopenableCaptures(_ count: Int) {
+        reportSyncNotice(.capturesUnopenable(count))
+    }
+
+    /// The live session's keys, for the capture drain to open the sealed queue with.
+    var sessionKeys: KeyHierarchy? { session.currentKeys() }
+
     /// Number of Takes the last sync pass refused to decrypt because their
     /// per-blob HMAC didn't verify (Task 3.9). UUIDs are deliberately NOT exposed
     /// to the UI — privacy. Drives a second non-blocking strip when > 0; tapping
