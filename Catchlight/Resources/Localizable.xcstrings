@@ -6406,7 +6406,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このアプリについて"
+            "value" : "情報"
           }
         },
         "ko" : {
@@ -13515,13 +13515,13 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spazio di archiviazione cloud"
+            "value" : "Archivio cloud"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Armazenamento em Nuvem"
+            "value" : "Armazenar na nuvem"
           }
         },
         "nl" : {
@@ -13539,7 +13539,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Przechowywanie w chmurze"
+            "value" : "Pamięć w chmurze"
           }
         },
         "sv" : {
@@ -14505,25 +14505,25 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vor dem Löschen bestätigen"
+            "value" : "Löschen bestätigen"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Confirmer avant suppression"
+            "value" : "Confirmer la suppression"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Confirmar antes de eliminar"
+            "value" : "Confirmar al eliminar"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Conferma prima di eliminare"
+            "value" : "Conferma eliminazione"
           }
         },
         "pt-BR" : {
@@ -14535,19 +14535,19 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bevestiging vragen voordat je verwijdert"
+            "value" : "Verwijderen bevestigen"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Confirmar antes de eliminar"
+            "value" : "Confirmar eliminação"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Potwierdź przed usunięciem"
+            "value" : "Potwierdzaj usuwanie"
           }
         },
         "sv" : {
@@ -14571,7 +14571,7 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vahvista ennen poistamista"
+            "value" : "Vahvista poisto"
           }
         },
         "tr" : {
@@ -18673,7 +18673,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tempistica predefinita"
+            "value" : "Tempo predefinito"
           }
         },
         "pt-BR" : {
@@ -28085,7 +28085,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recordatorios de seguimiento"
+            "value" : "Recordatorios extra"
           }
         },
         "it" : {
@@ -28097,7 +28097,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lembretes de acompanhamento"
+            "value" : "Lembretes extras"
           }
         },
         "nl" : {
@@ -28115,7 +28115,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Przypomnienia uzupełniające"
+            "value" : "Ponowne przypomnienia"
           }
         },
         "sv" : {
@@ -33099,13 +33099,13 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lukitse tämän ajan kuluttua"
+            "value" : "Lukitusviive"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Şu süreden sonra kilitle:"
+            "value" : "Kilitleme süresi"
           }
         },
         "ja" : {
@@ -33807,7 +33807,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "จัดการการสมัครรับข้อมูล"
+            "value" : "จัดการการสมัครรับ"
           }
         }
       }
@@ -50854,7 +50854,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duración de la Posposición"
+            "value" : "Posponer"
           }
         },
         "it" : {
@@ -50866,7 +50866,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duração do Adiamento"
+            "value" : "Adiar por"
           }
         },
         "nl" : {
@@ -50878,19 +50878,19 @@
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duração do Adiamento"
+            "value" : "Adiar por"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Czas trwania drzemki"
+            "value" : "Drzemka"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hur länge påminnelsen ska skjutas upp"
+            "value" : "Snoozetid"
           }
         },
         "da" : {
@@ -50902,7 +50902,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Varighet på utsettelse"
+            "value" : "Slumretid"
           }
         },
         "fi" : {
@@ -50944,7 +50944,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ระยะเวลาการเลื่อนการแจ้งเตือน"
+            "value" : "ระยะเวลาเลื่อน"
           }
         }
       }
@@ -65222,11 +65222,444 @@
               }
             }
           }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take compartido se creó antes de configurar esta cuenta y no se pudo abrir."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes compartidos se crearon antes de configurar esta cuenta y no se pudieron abrir."
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take partagé a été créé avant la configuration de ce compte et n’a pas pu être ouvert."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes partagés ont été créés avant la configuration de ce compte et n’ont pas pu être ouverts."
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld geteilter Take wurde erstellt, bevor dieses Konto eingerichtet wurde, und konnte nicht geöffnet werden."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld geteilte Takes wurden erstellt, bevor dieses Konto eingerichtet wurde, und konnten nicht geöffnet werden."
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 条共享的 Take 是在此账户设置之前创建的，因此无法打开。"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 条共享的 Takes 是在此账户设置之前创建的，因此无法打开。"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 則共享的 Take 是在此帳號設定完成前建立的，因此無法開啟。"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 則共享的 Take 是在此帳號設定完成前建立的，因此無法開啟。"
+                }
+              }
+            }
+          }
+        },
+        "da" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld delt Take blev lavet, før denne konto blev oprettet, og kunne ikke åbnes."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld delte Takes blev lavet, før denne konto blev oprettet, og kunne ikke åbnes."
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld gedeelde Take is gemaakt voordat dit account was ingesteld en kon niet worden geopend."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld gedeelde Takes zijn gemaakt voordat dit account was ingesteld en konden niet worden geopend."
+                }
+              }
+            }
+          }
+        },
+        "fi" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld jaettu Take tehtiin ennen kuin tämä tili perustettiin, eikä sitä voitu avata."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld jaettua Take:a tehtiin ennen kuin tämä tili perustettiin, eikä niitä voitu avata."
+                }
+              }
+            }
+          }
+        },
+        "it" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take condiviso è stato creato prima della configurazione di questo account e non è stato possibile aprirlo."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take condivisi sono stati creati prima della configurazione di questo account e non è stato possibile aprirli."
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "共有された%lld件のTakeは、このアカウントが設定される前に作成されたため、開くことができませんでした。"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "共有された%lld件のTakeは、このアカウントが設定される前に作成されたため、開くことができませんでした。"
+                }
+              }
+            }
+          }
+        },
+        "nb" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld delt Take ble laget før denne kontoen ble opprettet, og kunne ikke åpnes."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld delte Takes ble laget før denne kontoen ble opprettet, og kunne ikke åpnes."
+                }
+              }
+            }
+          }
+        },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld udostępniony Take powstał, zanim skonfigurowano to konto, i nie można go było otworzyć."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld udostępnione Takes powstały, zanim skonfigurowano to konto, i nie można ich było otworzyć."
+                }
+              }
+            }
+          }
+        },
+        "pt-BR" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take compartilhado foi feito antes da configuração desta conta e não pôde ser aberto."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes compartilhados foram feitos antes da configuração desta conta e não puderam ser abertos."
+                }
+              }
+            }
+          }
+        },
+        "pt-PT" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Take partilhado foi criado antes de esta conta ser configurada e não foi possível abri-lo."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Takes partilhados foram criados antes de esta conta ser configurada e não foi possível abri-los."
+                }
+              }
+            }
+          }
+        },
+        "sv" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld delad Take skapades innan det här kontot konfigurerades och kunde inte öppnas."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld delade Takes skapades innan det här kontot konfigurerades och kunde inte öppnas."
+                }
+              }
+            }
+          }
+        },
+        "th" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Take ที่แชร์ %lld รายการถูกสร้างก่อนที่บัญชีนี้จะถูกตั้งค่า จึงไม่สามารถเปิดได้"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Take ที่แชร์ %lld รายการถูกสร้างก่อนที่บัญชีนี้จะถูกตั้งค่า จึงไม่สามารถเปิดได้"
+                }
+              }
+            }
+          }
+        },
+        "tr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld paylaşılan Take, bu hesap oluşturulmadan önce yapıldığı için açılamadı."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld paylaşılan Take, bu hesap oluşturulmadan önce yapıldığı için açılamadı."
+                }
+              }
+            }
+          }
+        },
+        "ko" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "공유된 Take %lld개가 이 계정이 설정되기 전에 생성되어 열 수 없었습니다."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "공유된 Take %lld개가 이 계정이 설정되기 전에 생성되어 열 수 없었습니다."
+                }
+              }
+            }
+          }
         }
       }
     },
     "Catchlight can't keep that yet. Open Catchlight once, then try again." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight todavía no puede guardar eso. Abre Catchlight una vez y vuelve a intentarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight ne peut pas encore conserver cela. Ouvrez Catchlight une fois, puis réessayez."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight kann das noch nicht speichern. Öffne Catchlight einmal und versuche es dann erneut."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight 暂时无法保存该内容。请先打开 Catchlight 一次，再重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight 目前還無法保留那個項目。請先開啟 Catchlight 一次，然後再試一次。"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight kan ikke gemme det endnu. Åbn Catchlight én gang, og prøv igen."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight kan dat nog niet bewaren. Open Catchlight eenmaal en probeer het dan opnieuw."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight ei voi vielä tallentaa tuota. Avaa Catchlight kerran ja yritä uudelleen."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight non può ancora conservare quell'elemento. Apri Catchlight una volta, poi riprova."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlightはまだそれを保存できません。一度Catchlightを開いてから、もう一度お試しください。"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight kan ikke lagre dette ennå. Åpne Catchlight én gang, og prøv på nytt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight nie może jeszcze tego zachować. Otwórz Catchlight raz, a następnie spróbuj ponownie."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Catchlight ainda não pode salvar isso. Abra o Catchlight uma vez e tente novamente."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Catchlight ainda não pode guardar isso. Abra o Catchlight uma vez e tente novamente."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight kan inte behålla det där än. Öppna Catchlight en gång och försök sedan igen."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight ยังไม่สามารถบันทึกสิ่งนั้นได้ เปิด Catchlight หนึ่งครั้ง แล้วลองอีกครั้ง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight bunu henüz kaydedemiyor. Catchlight'ı bir kez açın ve tekrar deneyin."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catchlight에서 아직 해당 항목을 보관할 수 없습니다. Catchlight를 한 번 연 다음 다시 시도해 주세요."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
