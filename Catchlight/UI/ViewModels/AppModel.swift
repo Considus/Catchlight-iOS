@@ -57,8 +57,9 @@ final class AppModel {
         reportSyncNotice(.capturesUnopenable(count))
     }
 
-    /// The live session's keys, for the capture drain to open the sealed queue with.
-    var sessionKeys: KeyHierarchy? { session.currentKeys() }
+    /// The open store's keys, for the capture drain to open the sealed queue with. Present for as
+    /// long as the app is unlocked, including after a trip to the background (`Wiring`).
+    var sessionKeys: KeyHierarchy? { Wiring.currentSessionKeys() }
 
     /// Number of Takes the last sync pass refused to decrypt because their
     /// per-blob HMAC didn't verify (Task 3.9). UUIDs are deliberately NOT exposed
