@@ -32,6 +32,12 @@ final class DailiesViewModel {
         DiagnosticsLog.shared.record(notice)
     }
 
+    /// A failed write, said as what it was: a Take waiting for a conflict choice refuses every
+    /// change (`ConflictHoldingStore`), which is not a storage fault.
+    private func report(_ notice: Notice, for error: Error) {
+        report(error is TakeHeldForConflict ? .takeAwaitingConflict : notice)
+    }
+
     /// The Take whose LAST outstanding item was just ticked, while it still carries a live
     /// reminder (owner 2026-08-11). Drives the "All tasks done. Stop reminding?" strip.
     ///
@@ -45,9 +51,14 @@ final class DailiesViewModel {
     private(set) var pendingRatingMoment: RatingMoment?
     let ratingLedger: RatingPromptLedger
 
-    /// The underlying store. Exposed so conflict resolution (Task 6.15) can write
-    /// the winning version through the same backend the timeline reads from.
+    /// The store every edit here goes through. In the app it is a `ConflictHoldingStore`,
+    /// which refuses writes to a Take waiting for a conflict choice.
     let store: TakeStore
+
+    /// The same store without the conflict hold, for the conflict choice itself
+    /// (`ConflictQueue.resolve`, Task 6.15): choosing a version is the one write a held Take
+    /// is waiting for.
+    var conflictChoiceStore: TakeStore { (store as? ConflictHoldingStore)?.base ?? store }
 
     /// Task 6.19 — Spotlight surface. Injected so previews and tests can opt out
     /// of indexing (NoopSpotlightIndexer); production uses CoreSpotlightIndexer
@@ -287,7 +298,7 @@ final class DailiesViewModel {
             noteRatingMoment(previous: stored, updated: updated)
             notifyLocalChange()
         } catch {
-            report(.saveFailed)
+            report(.saveFailed, for: error)
         }
     }
 
@@ -316,7 +327,7 @@ final class DailiesViewModel {
             reload()
             notifyLocalChange()
         } catch {
-            report(.reorderFailed)
+            report(.reorderFailed, for: error)
             reload()   // the arrangement on screen may be half-applied — resync from the store
         }
     }
@@ -347,7 +358,7 @@ final class DailiesViewModel {
             }
             notifyLocalChange()
         } catch {
-            report(.saveInPlaceFailed)
+            report(.saveInPlaceFailed, for: error)
         }
     }
 
@@ -367,7 +378,7 @@ final class DailiesViewModel {
                 spotlight.index(t)
                 inserted += 1
             } catch {
-                report(.importFailed)
+                report(.importFailed, for: error)
             }
         }
         if inserted > 0 { reload(); notifyLocalChange() }
@@ -392,7 +403,7 @@ final class DailiesViewModel {
             else { takes.removeAll { $0.id == take.id } }
             notifyLocalChange()
         } catch {
-            report(.deleteFailed)
+            report(.deleteFailed, for: error)
         }
     }
 
@@ -402,7 +413,13 @@ final class DailiesViewModel {
     /// there is nothing the user meant to keep.
     func discardIfPresent(_ take: Take) {
         guard (try? store.take(id: take.id)) != nil else { return }
-        try? store.delete(id: take.id)
+        do {
+            try store.delete(id: take.id)
+        } catch is TakeHeldForConflict {
+            // Waiting for a conflict choice: the stored Take stays, and the user is told why.
+            report(.takeAwaitingConflict)
+            return
+        } catch {}
         spotlight.deindex(takeID: take.id)
         reminders.cancelReminder(identifier: take.id.uuidString)
         reload()
@@ -432,6 +449,9 @@ final class DailiesViewModel {
                 spotlight.deindex(takeID: take.id)
                 reminders.cancelReminder(identifier: take.id.uuidString)
                 deleted += 1
+            } catch is TakeHeldForConflict {
+                // Waiting for a conflict choice: left alone, and swept once it's resolved.
+                continue
             } catch {
                 failed += 1
             }
@@ -665,7 +685,7 @@ final class DailiesViewModel {
         } catch StorageError.obieConflict(let existing) {
             pendingObieConflict = (newTake: take.id, existing: existing)
         } catch {
-            report(.setObieFailed)
+            report(.setObieFailed, for: error)
         }
     }
 
@@ -693,7 +713,7 @@ final class DailiesViewModel {
             reload()
             notifyLocalChange()
         } catch {
-            report(.replaceObieFailed)
+            report(.replaceObieFailed, for: error)
         }
     }
 

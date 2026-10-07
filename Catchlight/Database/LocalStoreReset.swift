@@ -21,12 +21,18 @@ import Foundation
 import CatchlightCore
 
 enum LocalStoreReset {
+    /// The encrypted store's directory. The conflict queue keeps its sealed files inside it
+    /// (`ConflictQueue.defaultDirectory`), so the wipe below removes them with the library.
+    static var databaseDirectory: URL {
+        AppGroup.containerURL().appendingPathComponent("Database", isDirectory: true)
+    }
+
     /// Remove the entire encrypted store directory (and any legacy root-level db)
-    /// from the app-group container. Best-effort: a missing file is success.
+    /// from the app-group container, the waiting conflicts with it. Best-effort: a
+    /// missing file is success.
     static func wipeDatabaseFiles() {
         let container = AppGroup.containerURL()
-        let dbDir = container.appendingPathComponent("Database", isDirectory: true)
-        try? FileManager.default.removeItem(at: dbDir)
+        try? FileManager.default.removeItem(at: databaseDirectory)
         // Also remove a legacy root-level db file if one was ever migrated from.
         let legacy = container.appendingPathComponent("catchlight.db")
         try? FileManager.default.removeItem(at: legacy)

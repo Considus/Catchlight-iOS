@@ -65227,6 +65227,12 @@
     },
     "Catchlight can't keep that yet. Open Catchlight once, then try again." : {
 
+    },
+    "This Take changed on another device. Choose which version to keep before you change it." : {
+
+    },
+    "This Take changed on another device, so your edit was saved as a new Take." : {
+
     }
   },
   "version" : "1.0"

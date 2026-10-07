@@ -26,6 +26,11 @@ public final class BackgroundSyncCoordinator {
 
     private let makeEngine: () -> SyncEngine?
 
+    /// The Takes waiting for the user's conflict choice (`ConflictQueue.held`). Every pass
+    /// holds them: never uploaded, never overwritten or deleted from the folder's side, until
+    /// the user chooses (owner 2026-10-07). nil for a caller with no queue.
+    private let heldTakes: HeldTakes?
+
     /// Invoked on the main actor with the conflicts surfaced by each sync pass, so
     /// the UI layer can enqueue them for resolution (Task 6.15). Optional — the
     /// coordinator continues to work for background-only callers that don't have
@@ -63,7 +68,9 @@ public final class BackgroundSyncCoordinator {
     /// - Parameter onSyncError: hand-off for thrown sync errors (Task 3.9).
     /// - Parameter onQuarantined: hand-off for per-blob quarantine ids (Task 3.9).
     /// - Parameter onHeldBack: hand-off for the count of Takes a push held back.
-    public init(makeEngine: @escaping () -> SyncEngine?,
+    /// - Parameter heldTakes: the conflict queue's held Takes, read at the start of each pass.
+    init(makeEngine: @escaping () -> SyncEngine?,
+                heldTakes: HeldTakes? = nil,
                 onConflicts: (@MainActor ([(local: Take, remote: Take)]) -> Void)? = nil,
                 onUnverified: (@MainActor ([UnverifiedCopy]) -> Void)? = nil,
                 onSyncError: (@MainActor (Error) -> Void)? = nil,
@@ -71,6 +78,7 @@ public final class BackgroundSyncCoordinator {
                 onHeldBack: (@MainActor (Int) -> Void)? = nil,
                 onRemoteChanges: (@MainActor (SyncReport) -> Void)? = nil) {
         self.makeEngine = makeEngine
+        self.heldTakes = heldTakes
         self.onConflicts = onConflicts
         self.onUnverified = onUnverified
         self.onSyncError = onSyncError
@@ -258,11 +266,12 @@ public final class BackgroundSyncCoordinator {
         let onQuarantined = self.onQuarantined
         let onHeldBack = self.onHeldBack
         let onRemoteChanges = self.onRemoteChanges
+        let heldTakes = self.heldTakes
 
         DispatchQueue.global(qos: .utility).async {
             defer { finish() }
             do {
-                let report = try engine.sync(isCancelled: { cancel.isCancelled })
+                let report = try Self.pass(engine, holding: heldTakes, isCancelled: { cancel.isCancelled })
                 Self.deliver(report,
                              onConflicts: onConflicts,
                              onUnverified: onUnverified,
@@ -277,6 +286,14 @@ public final class BackgroundSyncCoordinator {
                 }
             }
         }
+    }
+
+    /// One sync pass, shared by the foreground and BGTask paths: the Takes waiting for a
+    /// conflict choice are read as the pass starts, so a conflict queued by the previous pass
+    /// is already held.
+    static func pass(_ engine: SyncEngine, holding heldTakes: HeldTakes?,
+                     isCancelled: () -> Bool) throws -> SyncReport {
+        try engine.sync(isCancelled: isCancelled, holding: heldTakes?.current ?? [])
     }
 
     /// Shared report fan-out for both the BGTask and foreground paths.
@@ -332,6 +349,7 @@ public final class BackgroundSyncCoordinator {
         let onHeldBack = self.onHeldBack
         let onRemoteChanges = self.onRemoteChanges
         let makeEngine = self.makeEngine
+        let heldTakes = self.heldTakes
         let completion = TaskCompletion()
         let cancel = CancelFlag()
 
@@ -358,7 +376,8 @@ public final class BackgroundSyncCoordinator {
                     // pull + push; idempotent. Checks `cancel` between items so an
                     // expiring task lets go of cloud-file access promptly instead of
                     // running on past expiry (a 0xdead10cc termination risk).
-                    let report = try engine.sync(isCancelled: { cancel.isCancelled })
+                    let report = try Self.pass(engine, holding: heldTakes,
+                                               isCancelled: { cancel.isCancelled })
                     Self.deliver(report,
                                  onConflicts: onConflicts,
                                  onUnverified: onUnverified,

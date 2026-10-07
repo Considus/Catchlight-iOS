@@ -49,6 +49,8 @@ struct CatchlightApp: App {
         // the main actor and land in `AppModel.conflictQueue` for the UI to resolve.
         let backgroundSync = BackgroundSyncCoordinator(
             makeEngine: { Wiring.makeSyncEngine() },
+            // Takes waiting for a conflict choice are held by every pass (owner 2026-10-07).
+            heldTakes: app.conflictQueue.held,
             onConflicts: { conflicts in
                 app.conflictQueue.enqueue(conflicts)
             },

@@ -423,6 +423,11 @@ struct RootView: View {
                             ui.closeFocusRingFan(animated: false)
                             ui.inlineFanCommand = command
                         } else {
+                            // A conflict may have arrived while the ring was open.
+                            guard app.ensureNotHeld(take.id) else {
+                                ui.closeFocusRingFan()
+                                return
+                            }
                             app.dailiesVM.applyActivityTypes(
                                 to: take,
                                 isNote: isNote, isTask: isTask,
