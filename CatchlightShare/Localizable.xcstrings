@@ -225,6 +225,9 @@
         }
       }
     },
+    "Catchlight can't keep this yet." : {
+
+    },
     "Close" : {
       "localizations" : {
         "de" : {
@@ -560,6 +563,9 @@
           }
         }
       }
+    },
+    "Open Catchlight once, then share it again." : {
+
     },
     "Save" : {
       "localizations" : {

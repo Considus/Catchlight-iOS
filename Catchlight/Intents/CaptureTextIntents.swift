@@ -99,13 +99,27 @@ import CatchlightCore
 /// below is what makes the transition explicit and unconfirmed. To stop the app coming
 /// forward at all, take `.foreground(.deferred)` out of `supportedModes` — and accept that
 /// an unlocked capture then loses its instant save and its pulse.
+///
+/// A REFUSED CAPTURE THROWS (R7). The queue refuses when there is no capture inbox key yet:
+/// Catchlight hasn't been unlocked since it was set up, updated or erased. Siri then reads the
+/// error out, so the user knows to open the app and say it again, instead of hearing success
+/// for words that were never kept.
 private extension AppIntent {
     @MainActor
-    func queueDictatedCapture(text: String, isObie: Bool) async {
-        CaptureRouting.enqueueShared(.init(text: text, isObie: isObie))
+    func queueDictatedCapture(text: String, isObie: Bool) async throws {
+        guard CaptureRouting.enqueueShared(.init(text: text, isObie: isObie)) else {
+            throw CaptureNotQueued()
+        }
         if #available(iOS 26.0, *), systemContext.currentMode.canContinueInForeground {
             try? await continueInForeground(alwaysConfirm: false)
         }
+    }
+}
+
+/// What Siri says when the queue refused a dictated capture.
+struct CaptureNotQueued: Error, CustomLocalizedStringResourceConvertible {
+    var localizedStringResource: LocalizedStringResource {
+        "Catchlight can't keep that yet. Open Catchlight once, then try again."
     }
 }
 
@@ -142,7 +156,7 @@ struct CaptureTakeIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        await queueDictatedCapture(text: text, isObie: false)
+        try await queueDictatedCapture(text: text, isObie: false)
         return .result()
     }
 }
@@ -177,7 +191,7 @@ struct CaptureObieIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        await queueDictatedCapture(text: text, isObie: true)
+        try await queueDictatedCapture(text: text, isObie: true)
         return .result()
     }
 }

@@ -48,6 +48,7 @@ final class NoticeCodeTests: XCTestCase {
             "conflictsChanged": 301,
             "conflictsUnverified": 302,
             "takesQuarantined": 401,
+            "capturesUnopenable": 402,
             "spotlightReindexSkipped": 901,
             "spotlightReindexed": 902,
             "cloudFolderConnected": 903,

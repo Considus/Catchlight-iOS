@@ -52,7 +52,7 @@ packages:
   # the app only through a deliberate bump here.
   CatchlightCore:
     url: https://github.com/Considus/Catchlight-Core
-    exactVersion: 1.2.1
+    exactVersion: 1.3.1
 
   # NOTE (2026-06-05): the previous `CArgon2` vendored package has been removed.
   # Master-key derivation now uses HKDF-SHA-256 via CryptoKit (see

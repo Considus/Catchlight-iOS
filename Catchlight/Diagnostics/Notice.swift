@@ -63,6 +63,7 @@ enum NoticeCode: Int, CaseIterable {
 
     // 4xx verification
     case takesQuarantined = 401             // N Takes failed verification during pull and were skipped.
+    case capturesUnopenable = 402           // N shared or Siri captures were sealed for a previous account and couldn't be opened.
 
     // 9xx developer-only breadcrumbs (export only, English)
     case spotlightReindexSkipped = 901      // Spotlight reindex skipped: locked or store unavailable.
@@ -101,6 +102,7 @@ enum Notice: Equatable {
 
     case conflictsChanged(Int), conflictsUnverified(Int)
     case takesQuarantined(Int)
+    case capturesUnopenable(Int)
 
     case spotlightReindexSkipped
     case spotlightReindexed(count: Int, exposure: String, status: String)
@@ -146,6 +148,7 @@ enum Notice: Equatable {
         case .conflictsChanged: return .conflictsChanged
         case .conflictsUnverified: return .conflictsUnverified
         case .takesQuarantined: return .takesQuarantined
+        case .capturesUnopenable: return .capturesUnopenable
         case .spotlightReindexSkipped: return .spotlightReindexSkipped
         case .spotlightReindexed: return .spotlightReindexed
         case .cloudFolderConnected: return .cloudFolderConnected
@@ -228,6 +231,8 @@ enum Notice: Equatable {
             return String(localized: "\(n) Takes couldn't be verified and need a choice.")
         case .takesQuarantined(let n):
             return String(localized: "\(n) Takes couldn't be verified and were skipped.")
+        case .capturesUnopenable(let n):
+            return String(localized: "\(n) shared Takes were made before this account was set up and couldn't be opened.")
 
         // Developer-only, English by design: export only, never shown in Notice History.
         case .spotlightReindexSkipped:

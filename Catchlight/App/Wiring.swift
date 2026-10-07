@@ -145,6 +145,12 @@ enum Wiring {
     /// keys and must wait for a fresh unlock.
     static func clearSessionKeys() { sessionKeys = nil }
 
+    /// The keys the open store was unlocked with, for the capture drain to open the sealed queue
+    /// (R7). Not `SessionController.currentKeys()`: that drops its keys on every trip to the
+    /// background, while the app stays unlocked and this cache lives until the relock. Main thread
+    /// only, like the cache itself.
+    static func currentSessionKeys() -> KeyHierarchy? { sessionKeys }
+
     /// Build the application-scope model that drives the whole UI. Decides onboarding
     /// vs. main app based on whether a master key already exists, and supplies the
     /// production store provider used after onboarding completes.

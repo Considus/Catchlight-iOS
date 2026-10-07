@@ -39,8 +39,10 @@ final class ShareViewController: UIViewController {
         let root = ShareSheetView(
             load: { [weak self] in await self?.extractSharedText() ?? [] },
             onSave: { [weak self] item in
-                CaptureRouting.enqueueShared(item)
+                // Refused (no capture inbox key yet): stay open so the sheet can say so.
+                guard CaptureRouting.enqueueShared(item) else { return false }
                 self?.finish()
+                return true
             },
             onCancel: { [weak self] in self?.finish() }
         )
