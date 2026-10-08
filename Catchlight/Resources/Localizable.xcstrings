@@ -65662,16 +65662,452 @@
       }
     },
     "This Take changed on another device. Choose which version to keep before you change it." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este Take cambió en otro dispositivo. Elige qué versión quieres conservar antes de cambiarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce Take a changé sur un autre appareil. Choisissez la version à conserver avant de le modifier."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Take wurde auf einem anderen Gerät geändert. Wähle aus, welche Version du behalten möchtest, bevor du ihn änderst."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 Take 已在另一台设备上更改。请在修改前选择要保留的版本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這個 Take 已在另一部裝置上變更。請先選擇要保留的版本，再進行變更。"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne Take er blevet ændret på en anden enhed. Vælg, hvilken version du vil beholde, før du ændrer den."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze Take is gewijzigd op een ander apparaat. Kies welke versie je wilt behouden voordat je deze wijzigt."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tämä Take muuttui toisella laitteella. Valitse säilytettävä versio ennen kuin muokkaat sitä."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questo Take è stato modificato su un altro dispositivo. Scegli quale versione mantenere prima di modificarlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このTakeは別のデバイスで変更されました。変更する前に、どちらのバージョンを残すか選択してください。"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne Take har endret seg på en annen enhet. Velg hvilken versjon du vil beholde før du endrer den."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ten Take zmienił się na innym urządzeniu. Zanim go zmienisz, wybierz wersję, którą chcesz zachować."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este Take foi alterado em outro dispositivo. Escolha qual versão manter antes de alterá-lo."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este Take foi alterado noutro dispositivo. Escolha que versão pretende manter antes de o alterar."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den här Taken ändrades på en annan enhet. Välj vilken version du vill behålla innan du ändrar den."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take นี้มีการเปลี่ยนแปลงบนอุปกรณ์อื่น เลือกเวอร์ชันที่ต้องการเก็บไว้ก่อนที่คุณจะทำการเปลี่ยนแปลง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu Take başka bir cihazda değiştirildi. Değişiklik yapmadan önce hangi sürümü tutacağınızı seçin."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 Take가 다른 기기에서 변경되었습니다. 변경하기 전에 유지할 버전을 선택하세요."
+          }
+        }
+      }
     },
     "This Take changed on another device, so your edit was saved as a new Take." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este Take cambió en otro dispositivo, así que tu edición se guardó como un nuevo Take."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce Take a changé sur un autre appareil ; votre modification a donc été enregistrée dans un nouveau Take."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Take wurde auf einem anderen Gerät geändert, daher wurde deine Bearbeitung als neuer Take gespeichert."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 Take 已在另一台设备上更改，因此您的编辑已另存为新的 Take。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這個 Take 已在另一部裝置上變更，因此你的編輯已另存為新的 Take。"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne Take er blevet ændret på en anden enhed, så din ændring blev gemt som en ny Take."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze Take is gewijzigd op een ander apparaat, dus je bewerking is opgeslagen als een nieuwe Take."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tämä Take muuttui toisella laitteella, joten muokkauksesi tallennettiin uutena Takena."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questo Take è stato modificato su un altro dispositivo, quindi la tua modifica è stata salvata come un nuovo Take."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このTakeは別のデバイスで変更されたため、編集内容は新しいTakeとして保存されました。"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne Take har endret seg på en annen enhet, så redigeringen din ble lagret som en ny Take."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ten Take zmienił się na innym urządzeniu, dlatego Twoja edycja została zapisana jako nowy Take."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este Take foi alterado em outro dispositivo, por isso sua edição foi salva como um novo Take."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este Take foi alterado noutro dispositivo, por isso a sua edição foi guardada como um novo Take."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den här Taken ändrades på en annan enhet, så din redigering sparades som en ny Take."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take นี้มีการเปลี่ยนแปลงบนอุปกรณ์อื่น ดังนั้นการแก้ไขของคุณจึงถูกบันทึกเป็น Take ใหม่"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu Take başka bir cihazda değiştirildi; bu yüzden düzenlemeniz yeni bir Take olarak kaydedildi."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 Take가 다른 기기에서 변경되어, 수정한 내용이 새 Take로 저장되었습니다."
+          }
+        }
+      }
     },
     "Saved, but not as your Obie. Your Obie changed on another device and is waiting for your choice." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se guardó, pero no como tu Obie. Tu Obie cambió en otro dispositivo y está esperando que elijas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistré, mais pas en tant que votre Obie. Votre Obie a changé sur un autre appareil et attend votre choix."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gespeichert, aber nicht als dein Obie. Dein Obie wurde auf einem anderen Gerät geändert und wartet auf deine Auswahl."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已保存，但未保存为您的 Obie。您的 Obie 已在另一台设备上更改，正在等待您的选择。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已儲存，但不是儲存為你的 Obie。你的 Obie 已在另一部裝置上變更，正等待你選擇。"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemt, men ikke som din Obie. Din Obie er blevet ændret på en anden enhed og afventer dit valg."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgeslagen, maar niet als je Obie. Je Obie is gewijzigd op een ander apparaat en wacht op je keuze."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tallennettu, mutta ei Obieksesi. Obiesi muuttui toisella laitteella ja odottaa valintaasi."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salvato, ma non come il tuo Obie. Il tuo Obie è stato modificato su un altro dispositivo ed è in attesa della tua scelta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存されましたが、あなたのObieとしてではありません。あなたのObieは別のデバイスで変更されており、選択待ちです。"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagret, men ikke som Obien din. Obien din har endret seg på en annen enhet og venter på ditt valg."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisano, ale nie jako Twoje Obie. Twoje Obie zmieniło się na innym urządzeniu i czeka na Twój wybór."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salvo, mas não como seu Obie. Seu Obie foi alterado em outro dispositivo e está aguardando sua escolha."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardado, mas não como o seu Obie. O seu Obie foi alterado noutro dispositivo e aguarda a sua escolha."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sparat, men inte som din Obie. Din Obie ändrades på en annan enhet och väntar på att du ska välja."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกแล้ว แต่ไม่ได้บันทึกเป็น Obie ของคุณ Obie ของคุณมีการเปลี่ยนแปลงบนอุปกรณ์อื่นและกำลังรอให้คุณเลือก"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kaydedildi, ancak Obie'niz olarak değil. Obie'niz başka bir cihazda değiştirildi ve seçiminizi bekliyor."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장되었지만 회원님의 Obie로 저장되지는 않았습니다. 회원님의 Obie가 다른 기기에서 변경되어 선택을 기다리고 있습니다."
+          }
+        }
+      }
     },
     "Your Obie changed on another device. Choose which version to keep before you change your Obie." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu Obie cambió en otro dispositivo. Elige qué versión quieres conservar antes de cambiar tu Obie."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre Obie a changé sur un autre appareil. Choisissez la version à conserver avant de modifier votre Obie."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Obie wurde auf einem anderen Gerät geändert. Wähle aus, welche Version du behalten möchtest, bevor du deinen Obie änderst."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您的 Obie 已在另一台设备上更改。请在更改您的 Obie 前选择要保留的版本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的 Obie 已在另一部裝置上變更。請先選擇要保留的版本，再變更你的 Obie。"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Din Obie er blevet ændret på en anden enhed. Vælg, hvilken version du vil beholde, før du ændrer din Obie."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je Obie is gewijzigd op een ander apparaat. Kies welke versie je wilt behouden voordat je je Obie wijzigt."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obiesi muuttui toisella laitteella. Valitse säilytettävä versio ennen kuin muokkaat Obietasi."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tuo Obie è stato modificato su un altro dispositivo. Scegli quale versione mantenere prima di modificare il tuo Obie."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたのObieは別のデバイスで変更されました。変更する前に、どちらのバージョンを残すか選択してください。"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obien din har endret seg på en annen enhet. Velg hvilken versjon du vil beholde før du endrer Obien din."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twoje Obie zmieniło się na innym urządzeniu. Zanim je zmienisz, wybierz wersję, którą chcesz zachować."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seu Obie foi alterado em outro dispositivo. Escolha qual versão manter antes de alterar seu Obie."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O seu Obie foi alterado noutro dispositivo. Escolha que versão pretende manter antes de alterar o seu Obie."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Din Obie ändrades på en annan enhet. Välj vilken version du vill behålla innan du ändrar din Obie."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie ของคุณมีการเปลี่ยนแปลงบนอุปกรณ์อื่น เลือกเวอร์ชันที่ต้องการเก็บไว้ก่อนที่คุณจะเปลี่ยนแปลง Obie ของคุณ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obie'niz başka bir cihazda değiştirildi. Obie'nizde değişiklik yapmadan önce hangi sürümü tutacağınızı seçin."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회원님의 Obie가 다른 기기에서 변경되었습니다. Obie를 변경하기 전에 유지할 버전을 선택하세요."
+          }
+        }
+      }
     },
     "%lld sync conflicts couldn't be opened on this device, so their Takes stay read-only." : {
       "localizations" : {
@@ -65688,6 +66124,330 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld sync conflicts couldn't be opened on this device, so their Takes stay read-only."
+                }
+              }
+            }
+          }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "No se pudo abrir %lld conflicto de sincronización en este dispositivo, por lo que su Take permanece en modo de solo lectura."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "No se pudieron abrir %lld conflictos de sincronización en este dispositivo, por lo que sus Takes permanecen en modo de solo lectura."
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld conflit de synchronisation n’a pas pu être ouvert sur cet appareil ; son Take reste en lecture seule."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld conflits de synchronisation n’ont pas pu être ouverts sur cet appareil ; leurs Takes restent en lecture seule."
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Synchronisierungskonflikt konnte auf diesem Gerät nicht geöffnet werden, daher bleibt sein Take schreibgeschützt."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Synchronisierungskonflikte konnten auf diesem Gerät nicht geöffnet werden, daher bleiben ihre Takes schreibgeschützt."
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 个同步冲突无法在此设备上打开，因此其 Take 保持只读状态。"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 个同步冲突无法在此设备上打开，因此它们的 Take 保持只读状态。"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 個同步衝突無法在這部裝置上開啟，因此其 Take 會保持唯讀。"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 個同步衝突無法在這部裝置上開啟，因此其 Take 會保持唯讀。"
+                }
+              }
+            }
+          }
+        },
+        "da" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld synkroniseringskonflikt kunne ikke åbnes på denne enhed, så dens Take forbliver skrivebeskyttet."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld synkroniseringskonflikter kunne ikke åbnes på denne enhed, så deres Takes forbliver skrivebeskyttede."
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld synchronisatieconflict kon niet worden geopend op dit apparaat, dus de bijbehorende Take blijft alleen-lezen."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld synchronisatieconflicten konden niet worden geopend op dit apparaat, dus de bijbehorende Takes blijven alleen-lezen."
+                }
+              }
+            }
+          }
+        },
+        "fi" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld synkronointiristiriitaa ei voitu avata tällä laitteella, joten sen Take pysyy vain luku -tilassa."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld synkronointiristiriitaa ei voitu avata tällä laitteella, joten niiden Taket pysyvät vain luku -tilassa."
+                }
+              }
+            }
+          }
+        },
+        "it" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Non è stato possibile aprire %lld conflitto di sincronizzazione su questo dispositivo, quindi il Take associato resta di sola lettura."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Non è stato possibile aprire %lld conflitti di sincronizzazione su questo dispositivo, quindi i Take associati restano di sola lettura."
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "このデバイスでは%lld件の同期競合を開けなかったため、そのTakeは読み取り専用のままです。"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "このデバイスでは%lld件の同期競合を開けなかったため、それらのTakeは読み取り専用のままです。"
+                }
+              }
+            }
+          }
+        },
+        "nb" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld synkkonflikt kunne ikke åpnes på denne enheten, så dens Take forblir skrivebeskyttet."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld synkkonflikter kunne ikke åpnes på denne enheten, så deres Takes forblir skrivebeskyttet."
+                }
+              }
+            }
+          }
+        },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld konflikt synchronizacji nie mógł zostać otwarty na tym urządzeniu, więc jego Take pozostaje tylko do odczytu."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld konfliktów synchronizacji nie mogło zostać otwartych na tym urządzeniu, więc ich Takes pozostają tylko do odczytu."
+                }
+              }
+            }
+          }
+        },
+        "pt-BR" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld conflito de sincronização não pôde ser aberto neste dispositivo, por isso seu Take permanece como somente leitura."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld conflitos de sincronização não puderam ser abertos neste dispositivo, por isso seus Takes permanecem como somente leitura."
+                }
+              }
+            }
+          }
+        },
+        "pt-PT" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Não foi possível abrir %lld conflito de sincronização neste dispositivo, por isso o respetivo Take permanece apenas de leitura."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Não foi possível abrir %lld conflitos de sincronização neste dispositivo, por isso os respetivos Takes permanecem apenas de leitura."
+                }
+              }
+            }
+          }
+        },
+        "sv" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Det gick inte att öppna %lld synkroniseringskonflikt på den här enheten, så dess Take förblir skrivskyddad."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Det gick inte att öppna %lld synkroniseringskonflikter på den här enheten, så deras Takes förblir skrivskyddade."
+                }
+              }
+            }
+          }
+        },
+        "th" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "ไม่สามารถเปิดข้อขัดแย้งในการซิงค์ %lld รายการบนอุปกรณ์นี้ได้ ดังนั้น Take ของรายการนี้จึงยังคงเป็นแบบอ่านอย่างเดียว"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "ไม่สามารถเปิดข้อขัดแย้งในการซิงค์ %lld รายการบนอุปกรณ์นี้ได้ ดังนั้น Take ของรายการเหล่านี้จึงยังคงเป็นแบบอ่านอย่างเดียว"
+                }
+              }
+            }
+          }
+        },
+        "tr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld eşitleme çakışması bu cihazda açılamadı; bu nedenle ilgili Take salt okunur kalacak."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld eşitleme çakışması bu cihazda açılamadı; bu nedenle ilgili Take'ler salt okunur kalacak."
+                }
+              }
+            }
+          }
+        },
+        "ko" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "이 기기에서 %lld개의 동기화 충돌을 열 수 없어 해당 Take는 읽기 전용으로 유지됩니다."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "이 기기에서 %lld개의 동기화 충돌을 열 수 없어 해당 Take들은 읽기 전용으로 유지됩니다."
                 }
               }
             }
