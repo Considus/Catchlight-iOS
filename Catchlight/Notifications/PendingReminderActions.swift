@@ -91,6 +91,15 @@ enum PendingReminderActions {
         return raw.compactMap(UUID.init(uuidString:))
     }
 
+    /// Every Take id with an action waiting, without draining anything.
+    static func queuedIDs() -> Set<UUID> {
+        guard let defaults else { return [] }
+        let raw = (defaults.stringArray(forKey: dismissedKey) ?? [])
+            + (defaults.stringArray(forKey: stopRemindingKey) ?? [])
+        return Set(raw.compactMap { UUID(uuidString: $0.hasSuffix(locationSuffix)
+                                                ? String($0.dropLast(locationSuffix.count)) : $0) })
+    }
+
     static func drainDismissed() -> [DismissedAction] {
         guard let defaults else { return [] }
         let raw = defaults.stringArray(forKey: dismissedKey) ?? []

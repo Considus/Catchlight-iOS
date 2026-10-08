@@ -24,9 +24,11 @@ import CatchlightCore
 final class AppModel {
 
     let ui = UIState()
-    /// Pending sync conflicts surfaced by BackgroundSync (Task 6.15). Drives the
-    /// amber banner on the timeline and the resolution sheet. In-memory only —
-    /// conflicts re-detect on the next sync if dismissed without resolving.
+    /// Sync conflicts waiting for the user's choice, surfaced by BackgroundSync (Task 6.15).
+    /// Drives the amber banner on the timeline and the resolution sheet. A waiting Take is
+    /// held: every edit to it is refused (`ensureEditable`, `ConflictHoldingStore`) and sync
+    /// leaves it alone until the user chooses (owner 2026-10-07). Kept on disk, sealed, and
+    /// loaded at unlock, so the hold survives a relaunch.
     let conflictQueue = ConflictQueue()
 
     /// Subscription manager (Tasks 6.20 / 6.21). Owns StoreKit access and
@@ -123,6 +125,9 @@ final class AppModel {
     /// Wipe this device and enter the terminal state. Irreversible.
     @MainActor
     func startOver() {
+        // Before the library goes: a sync pass still running must not deliver conflicts that
+        // would recreate `Database/Conflicts` with files sealed under the erased keys.
+        conflictQueue.detach()
         AccountReset.wipe()
         awaitingRelaunchAfterReset = true
     }
@@ -203,6 +208,9 @@ final class AppModel {
     /// SubscriptionManager uses it to deindex everything on lapse.
     let spotlight: SpotlightIndexing
 
+    /// Where the conflict queue is kept on disk. Injected so tests never touch the library's.
+    private let conflictDirectory: URL
+
     // `subscription` has no default value: SubscriptionManager.init is
     // @MainActor-isolated and a default argument evaluates in a nonisolated
     // context (compile error under the current toolchain). Callers construct it
@@ -214,8 +222,10 @@ final class AppModel {
          unlockKeys: @escaping @Sendable () throws -> KeyHierarchy,
          lockState: LockState = .unlocked,
          subscription: SubscriptionManager,
-         spotlight: SpotlightIndexing = NoopSpotlightIndexer()) {
+         spotlight: SpotlightIndexing = NoopSpotlightIndexer(),
+         conflictDirectory: URL = ConflictQueue.defaultDirectory) {
         self.needsOnboarding = needsOnboarding
+        self.conflictDirectory = conflictDirectory
         self.session = session
         self.makeStoreFromKeys = makeStoreFromKeys
         self.unlockKeys = unlockKeys
@@ -239,7 +249,9 @@ final class AppModel {
             spotlight.deindexAll()
             reindexAfterUnlock = true
         }
-        self.dailiesVM = DailiesViewModel(store: initialStore, spotlight: spotlight)
+        self.dailiesVM = DailiesViewModel(
+            store: ConflictHoldingStore(base: initialStore, held: conflictQueue.held),
+            spotlight: spotlight)
         // Hand the indexer to the subscription manager so the lapse transition
         // triggers a deindex-all without AppModel needing to observe status.
         subscription.attachSpotlightIndexer(spotlight)
@@ -311,7 +323,7 @@ final class AppModel {
         session.adopt(keys)
         if let store = makeStoreFromKeys(keys) {
             if !isRestore { seedIfEmpty(store) }
-            rebind(to: store)
+            rebind(to: store, keys: keys)
             lockState = .unlocked
             // A restore lands empty and needs the cloud folder connected to pull the
             // user's Takes — surface the guidance card unless a folder is already set.
@@ -402,6 +414,7 @@ final class AppModel {
         //    files so the store re-opens EMPTY under the new key.
         dailiesVM = DailiesViewModel(store: InMemoryTakeStore(), spotlight: spotlight)
         spotlight.deindexAll()
+        conflictQueue.detach()            // the old account's conflicts; their files go with the library
         LocalStoreReset.wipeDatabaseFiles()
 
         // 4. Re-bind under the new keys — mirrors completeOnboarding's open path
@@ -412,7 +425,8 @@ final class AppModel {
             lockState = .locked   // relaunch will retry the unlock with the stored key
             return String(localized: "Couldn't open your library on this device. Please restart Catchlight.")
         }
-        rebind(to: store)        // fresh empty store under the new account
+        rebind(to: store, keys: keys)   // fresh empty store under the new account; its conflicts
+                                        // went with the old library, so the queue loads empty
         lockState = .unlocked
 
         // 5. The new account needs its OWN cloud folder — the previous bookmark (if any)
@@ -429,15 +443,25 @@ final class AppModel {
         }
     }
 
-    private func rebind(to store: TakeStore) {
+    /// - Parameter keys: the unlocked keys the store opened with, which also open the
+    ///   conflict queue kept on disk. nil for the locked placeholder: the queue is forgotten
+    ///   from memory until the next unlock.
+    private func rebind(to store: TakeStore, keys: KeyHierarchy?) {
+        if let keys { conflictQueue.attach(keys: keys, directory: conflictDirectory) } else { conflictQueue.detach() }
         // Carry the same Spotlight indexer through the store swap that follows
         // onboarding completion — without this, post-onboarding Takes wouldn't
-        // be indexed until the next app launch.
-        dailiesVM = DailiesViewModel(store: store, spotlight: spotlight)
+        // be indexed until the next app launch. Every edit goes through the hold.
+        dailiesVM = DailiesViewModel(store: ConflictHoldingStore(base: store, held: conflictQueue.held),
+                                     spotlight: spotlight)
         // Push local edits shortly after they're saved (owner 2026-07-02). Set on the
         // REBOUND (real, unlocked) store only — the locked placeholder never takes user
         // edits. `syncAfterSave` is debounced + SyncMode-gated by the coordinator.
         dailiesVM.onLocalChange = { [weak self] in self?.syncAfterSave?() }
+        // Conflicts kept on disk that these keys can't open: their Takes stay read-only, and
+        // the user is told once per unlock.
+        if !conflictQueue.unreadable.isEmpty {
+            dailiesVM.reportStorageError(.conflictsUnreadable(conflictQueue.unreadable.count))
+        }
     }
 
     // MARK: - D-042 — app-entry lock screen
@@ -475,7 +499,7 @@ final class AppModel {
             seedIfEmpty(store)
             seedOnNextUnlock = false
         }
-        rebind(to: store)        // bind the REAL store before the UI un-gates
+        rebind(to: store, keys: keys)   // bind the REAL store (and load the waiting conflicts) before the UI un-gates
         session.clearObscured()  // drop the privacy curtain so it can't flash post-Face ID
         lockState = .unlocked
         if reindexAfterUnlock {
@@ -569,7 +593,7 @@ final class AppModel {
         ui.endEditingInPlace()              // drop in-place edit focus (the draft lives in DailiesView, torn down with the locked timeline)
         session.lock()                      // zero the session's keys + decrypted cache
         Wiring.clearSessionKeys()           // drop the cached keys used by sync
-        rebind(to: InMemoryTakeStore())     // tear down the encrypted store (never written while locked)
+        rebind(to: InMemoryTakeStore(), keys: nil)   // tear down the encrypted store (never written while locked)
         lockState = .locked
     }
 
@@ -700,6 +724,11 @@ final class AppModel {
             return
         }
         DiagnosticsLog.shared.record(.paywallDraftSaved)
+        // A conflict for this Take may have arrived while the paywall was up.
+        if conflictQueue.isHeld(draft.id) {
+            commitEditToHeldTake(draft)
+            return
+        }
         dailiesVM.save(draft)
     }
 
@@ -711,6 +740,11 @@ final class AppModel {
         case saved
         /// The paywall interrupted the save; the draft is held for its outcome.
         case heldForPaywall
+        /// The Take is waiting for a conflict choice and the draft changed nothing, so
+        /// nothing was written.
+        case refusedForConflict
+        /// The Take is waiting for a conflict choice; the edit was saved as a new Take.
+        case savedAsCopy
     }
 
     /// Commit a Take that was being edited in place, from the timeline or the Storyboard.
@@ -722,10 +756,15 @@ final class AppModel {
     ///
     /// Anything else is saved if the user is entitled, and otherwise HELD for the
     /// paywall's outcome (owner 2026-07-01) rather than dropped with the editor.
+    ///
+    /// A Take waiting for a conflict choice is never written (owner 2026-10-07). An edit made
+    /// to it before the conflict arrived is kept as a new Take instead of being lost with the
+    /// editor (`commitEditToHeldTake`).
     @discardableResult
     func commitEditedTake(_ draft: Take) -> EditCommit {
         var take = draft
         take.removeEmptyTextBlocks()
+        if conflictQueue.isHeld(take.id) { return commitEditToHeldTake(take) }
         if take.isBlank {
             dailiesVM.discardIfPresent(take)
             return .discarded
@@ -736,6 +775,58 @@ final class AppModel {
         }
         dailiesVM.save(take)
         return .saved
+    }
+
+    /// An edit to a Take that is waiting for a conflict choice. The Take itself stays as it is.
+    /// If the draft changed anything, it is saved beside it as a new Take (a new id, never the
+    /// Obie, as "keep both" on the Mac), so the user's typing survives the editor closing and
+    /// is still there when they have chosen. A draft that changed nothing, or was emptied,
+    /// writes nothing. Either way the user is told, and the conflict is shown again.
+    @discardableResult
+    private func commitEditToHeldTake(_ draft: Take) -> EditCommit {
+        conflictQueue.reveal(id: draft.id)
+        let stored = try? dailiesVM.store.take(id: draft.id)
+        var candidate = draft
+        candidate.normaliseActivityFloor()
+        if let stored {
+            candidate.modifiedAt = stored.modifiedAt
+            candidate.isSeeded = stored.isSeeded
+        }
+        if draft.isBlank || candidate == stored {
+            dailiesVM.reportStorageError(.takeAwaitingConflict)
+            return .refusedForConflict
+        }
+        let copy = ConflictQueue.copy(of: draft)
+        guard ensureEntitled() else {
+            holdDraftForPaywall(copy)
+            return .heldForPaywall
+        }
+        dailiesVM.save(copy)
+        dailiesVM.reportStorageError(.conflictEditKeptAsCopy)
+        return .savedAsCopy
+    }
+
+    /// Returns true if the Take may be changed. A Take waiting for a conflict choice may not
+    /// (owner 2026-10-07): the change is refused, the user is told to choose a version first,
+    /// and the conflict is shown again if it was skipped, so its banner offers Review. Not
+    /// entitlement: for actions every user may take, such as removing the Obie designation.
+    @discardableResult
+    func ensureNotHeld(_ takeID: UUID) -> Bool {
+        guard conflictQueue.isHeld(takeID) else { return true }
+        if conflictQueue.unreadable.contains(takeID) {
+            dailiesVM.reportStorageError(.conflictsUnreadable(1))
+            return false
+        }
+        conflictQueue.reveal(id: takeID)
+        dailiesVM.reportStorageError(.takeAwaitingConflict)
+        return false
+    }
+
+    /// `ensureNotHeld`, then `ensureEntitled`: the gate for every action that changes an
+    /// existing Take.
+    @discardableResult
+    func ensureEditable(_ takeID: UUID) -> Bool {
+        ensureNotHeld(takeID) && ensureEntitled()
     }
 
     /// Returns true if the caller may proceed with a create/edit action.

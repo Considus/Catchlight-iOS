@@ -441,7 +441,8 @@ struct StoryboardView: View {
     // MARK: - Edit lifecycle
 
     private func beginEdit(_ take: Take) {
-        guard app.ensureEntitled() else { return }
+        // Lapsed users get the paywall; a Take waiting for a conflict choice is read-only.
+        guard app.ensureEditable(take.id) else { return }
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editFocusedBlockID = t.blocks.last?.id
@@ -494,7 +495,7 @@ struct StoryboardView: View {
     @ViewBuilder
     private func rowMenu(for take: Take) -> some View {
         Button {
-            guard app.ensureEntitled() else { return }
+            guard app.ensureEditable(take.id) else { return }
             vm.toggleDone(take)
         } label: {
             Label(take.isMarkedDone ? "Mark Not Done" : "Mark Done",
@@ -503,7 +504,7 @@ struct StoryboardView: View {
         // No Important item on the Obie: an Obie is always Important (owner 2026-10-03).
         if take.canChangeImportant {
             Button {
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(take.id) else { return }
                 vm.toggleImportant(take)
             } label: {
                 // Standard Important mark, matching the Dailies long-press menu (owner 2026-06-29).
@@ -515,7 +516,7 @@ struct StoryboardView: View {
             }
         }
         Button(role: .destructive) {
-            guard app.ensureEntitled() else { return }
+            guard app.ensureEditable(take.id) else { return }
             // Same question, same words, as the timeline (owner 2026-08-16). No
             // repeating-reminder branch here: this menu has no "Delete Series" dialog,
             // so the plain confirmation is the only one on offer.

@@ -50,6 +50,8 @@ Prefer a shared component or a token over a per-screen implementation. Extract s
 
 Product nouns are Capitalised in UI copy only, never in code identifiers. When the subject is what the app holds, the noun is a **Take**. The product lexicon is `https://catchlight.app/glossary/`: name new types, tests and PR prose after its concepts rather than inventing synonyms.
 
+🚨 **A Take waiting in the conflict queue is held until the user chooses** (owner 2026-10-07: "the file shouldn't update or edit until the conflict is resolved"). Every app edit goes through `ConflictHoldingStore`, which refuses writes to a held Take; a new edit path gates on `AppModel.ensureEditable(takeID)` (or `ensureNotHeld` for an ungated action) so the user is told why. Sync is handed the held ids on every pass (`BackgroundSyncCoordinator.pass`). Only `ConflictQueue.resolve` and the unverified-copy choices write through `DailiesViewModel.conflictChoiceStore`, the raw store. The queue is kept on disk, sealed, in `Database/Conflicts` inside the library, so "Skip for now" hides a conflict until the next launch and never releases the hold. A conflict file these keys can't open still holds its Take. The queue accepts nothing between `detach()` (relock, Start over, Second device) and the next `attach`, and the coordinator delivers a pass's report into it only if the queue's generation hasn't changed since the pass began.
+
 ⚠️ **Leave the vestigial `SessionController` state alone.** It has been reviewed and deliberately kept. Do not re-flag it.
 
 ### Diagnostics log

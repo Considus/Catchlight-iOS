@@ -65660,6 +65660,40 @@
           }
         }
       }
+    },
+    "This Take changed on another device. Choose which version to keep before you change it." : {
+
+    },
+    "This Take changed on another device, so your edit was saved as a new Take." : {
+
+    },
+    "Saved, but not as your Obie. Your Obie changed on another device and is waiting for your choice." : {
+
+    },
+    "Your Obie changed on another device. Choose which version to keep before you change your Obie." : {
+
+    },
+    "%lld sync conflicts couldn't be opened on this device, so their Takes stay read-only." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sync conflict couldn't be opened on this device, so its Take stays read-only."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sync conflicts couldn't be opened on this device, so their Takes stay read-only."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

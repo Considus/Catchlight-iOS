@@ -5,6 +5,8 @@
 //  Sheet for resolving sync conflicts surfaced by `BackgroundSync`. The list comes
 //  from `ConflictQueue.pending`; for each pair the user picks "Local" or "Cloud"
 //  and confirms with "Keep this version", or sidesteps it with "Skip for now".
+//  Skipping only hides the pair: the Take stays read-only, and sync leaves it alone,
+//  until a version is kept (owner 2026-10-07, `ConflictQueue`).
 //
 //  Selection is two-step on purpose: a single tap could resolve the wrong side
 //  irreversibly. The user picks a panel (visible amber border + nudged scale),
@@ -139,8 +141,8 @@ struct ConflictResolutionView: View {
                 }
                 footnote(Self.replacesNewerEdit)
                 pillRow(primary: "Keep this version", enabled: chosenPhone != nil, id: item.id) {
-                    if chosenPhone == true { try queue.keepPhone(id: item.id, store: dailies.store) }
-                    else { try queue.keepCloud(id: item.id, store: dailies.store) }
+                    if chosenPhone == true { try queue.keepPhone(id: item.id, store: dailies.conflictChoiceStore) }
+                    else { try queue.keepCloud(id: item.id, store: dailies.conflictChoiceStore) }
                 }
             case let (local?, nil):
                 versionPanel(.mine, take: local, selected: false,
@@ -149,7 +151,7 @@ struct ConflictResolutionView: View {
                     .allowsHitTesting(false)
                 footnote(Self.replacesNewerEdit)
                 pillRow(primary: "Keep this version", enabled: true, id: item.id) {
-                    try queue.keepPhone(id: item.id, store: dailies.store)
+                    try queue.keepPhone(id: item.id, store: dailies.conflictChoiceStore)
                 }
             case let (nil, cloud?):
                 Text("Recover this Take?")
@@ -161,7 +163,7 @@ struct ConflictResolutionView: View {
                              tap: {})
                     .allowsHitTesting(false)
                 pillRow(primary: "Recover", enabled: true, id: item.id) {
-                    try queue.keepCloud(id: item.id, store: dailies.store)
+                    try queue.keepCloud(id: item.id, store: dailies.conflictChoiceStore)
                 }
             case (nil, nil):
                 EmptyView()   // never produced: the engine quarantines these instead
@@ -309,9 +311,15 @@ struct ConflictResolutionView: View {
             DockPill(title: "Keep this version") {
                 guard let keepLocal = chosenLocal else { return }
                 do {
-                    try queue.resolve(id: pair.local.id, keepLocal: keepLocal, store: dailies.store)
+                    try queue.resolve(id: pair.local.id, keepLocal: keepLocal, store: dailies.conflictChoiceStore)
                     selection.removeValue(forKey: pair.local.id)
                     dailies.reload()
+                    // The hold is released: push the choice rather than wait for the next
+                    // automatic pass.
+                    dailies.onLocalChange?()
+                    // Reminder actions tapped while it was held, waiting for this choice.
+                    dailies.applyPendingReminderActions()
+                    dailies.refreshRecurringSchedules()
                 } catch {
                     // ConflictQueue writes through the store directly, bypassing
                     // DailiesViewModel — route the failure through the timeline's

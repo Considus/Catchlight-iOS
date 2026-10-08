@@ -1346,34 +1346,39 @@ struct DailiesView: View {
             topInset: newTimelineTopInset,
             bottomInset: CatchlightLayout.dockClearance + deviceBottomInset,
             onToggleDone: { take in
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(take.id) else { return }
                 vm.toggleDone(take)
             },
             onDelete: { take in
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(take.id) else { return }
                 requestDelete(take)
             },
             // Iris tap → bloom the Focus-ring fan at the tapped Iris (window coords
             // match RootView's full-screen overlay). No edit-in-place on the new
             // timeline yet (M4), so the SwiftUI row's editing branches don't apply.
             onTapCircle: { take, irisCentre in
+                // A Take waiting for a conflict choice is read-only: no Focus ring.
+                guard app.ensureNotHeld(take.id) else { return }
                 ui.openFocusRingFan(for: take, origin: irisCentre)
             },
             // Iris long-press toggles Obie (owner 2026-07-04): demote is not gated,
             // designate is. Mirrors DailiesView.rowContent's onLongPressCircle.
             onLongPressCircle: { take in
-                if take.isObie { vm.demoteObie(take); return }
-                guard app.ensureEntitled() else { return }
+                if take.isObie {
+                    guard app.ensureNotHeld(take.id) else { return }
+                    vm.demoteObie(take); return
+                }
+                guard app.ensureEditable(take.id) else { return }
                 vm.designateObie(take, replaceExisting: false)
             },
             // Card context-menu extras (resting-row set) — mirror rowContent. Mark-done
             // and Delete reuse onToggleDone/onDelete above.
             onSetImportant: { take in
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(take.id) else { return }
                 vm.toggleImportant(take)
             },
             onMakeObie: { take in
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(take.id) else { return }
                 vm.designateObie(take, replaceExisting: false)
             },
             onExport: { take in
@@ -1410,11 +1415,11 @@ struct DailiesView: View {
             // Manual arrangement (D-195) — the drag handle and interactive move.
             isReorderable: canReorder,
             onReorder: { movedID, displayOrder in
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(movedID) else { return }
                 commitReorder(of: movedID, displayOrder: displayOrder)
             },
             onNudge: { take, delta in
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(take.id) else { return }
                 nudge(take, by: delta)
             }
         )
@@ -1521,7 +1526,7 @@ struct DailiesView: View {
                     tint: .ckEmber,            // Task accent — owner to confirm on device
                     style: .standard,
                     perform: {
-                        guard app.ensureEntitled() else { return }
+                        guard app.ensureEditable(take.id) else { return }
                         vm.toggleDone(take)
                     }
                 )
@@ -1542,7 +1547,7 @@ struct DailiesView: View {
                 style: take.timeReminder?.repeats == true || confirmBeforeDelete
                     ? .standard : .destructive,
                 perform: {
-                    guard app.ensureEntitled() else { return }
+                    guard app.ensureEditable(take.id) else { return }
                     requestDelete(take)
                 }
             ),
@@ -1631,8 +1636,9 @@ struct DailiesView: View {
     /// places the caret at the end of the focused block's text on becoming first
     /// responder.)
     private func beginInlineEdit(_ take: Take) {
-        // Task 6.20: editing is gated for lapsed users — paywall opens instead.
-        guard app.ensureEntitled() else { return }
+        // Task 6.20: editing is gated for lapsed users — paywall opens instead. A Take
+        // waiting for a conflict choice is read-only until the user chooses (owner 2026-10-07).
+        guard app.ensureEditable(take.id) else { return }
         var t = take
         if t.blocks.isEmpty { t.blocks = [.text(TextBlock(text: ""))] }
         editDraft = t
@@ -1873,6 +1879,8 @@ struct DailiesView: View {
                 // + reminder picker sit on top made the keyboard fight the overlay —
                 // Done re-raised it / needed a second tap. The ring owns the
                 // interaction; the commit re-focuses (applyInlineFanCommand).
+                // A Take waiting for a conflict choice is read-only: no Focus ring.
+                if !isEditingThis { guard app.ensureNotHeld(take.id) else { return } }
                 if isEditingThis { ringReturnFocus = editFocusedBlockID; editFocusedBlockID = nil }
                 // Section 8 — bloom the fan in place at the tapped Iris (window
                 // coords match the full-screen overlay space). The .zero fallback
@@ -1894,9 +1902,12 @@ struct DailiesView: View {
                 // Iris turns it back into a standard Take. Demotion is NOT
                 // entitlement-gated — removing a designation is always allowed, even on
                 // a lapsed trial.
-                if take.isObie { vm.demoteObie(take); return }
+                if take.isObie {
+                    guard app.ensureNotHeld(take.id) else { return }
+                    vm.demoteObie(take); return
+                }
                 // Task 6.20: Obie designation is a mutation — gate it.
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(take.id) else { return }
                 vm.designateObie(take, replaceExisting: false)
             },
             onTapText: {
@@ -1925,14 +1936,14 @@ struct DailiesView: View {
                     editDraft = d
                     return
                 }
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(take.id) else { return }
                 vm.toggleDone(take)
             },
             // Manual Important mark (owner 2026-06-19) — the RESTING timeline menu only.
             // While editing, this slot is given over to "Make Obie" instead (owner
             // 2026-07-06), so no onSetImportant is offered mid-edit.
             onSetImportant: isEditingThis ? nil : {
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(take.id) else { return }
                 vm.toggleImportant(take)
             },
             // Make Obie from the card long-press. On a RESTING row this is the
@@ -1943,11 +1954,11 @@ struct DailiesView: View {
             onMakeObie: isEditingThis
                 ? { makeInlineObie() }
                 : {
-                    guard app.ensureEntitled() else { return }
+                    guard app.ensureEditable(take.id) else { return }
                     vm.designateObie(take, replaceExisting: false)
                 },
             onDelete: {
-                guard app.ensureEntitled() else { return }
+                guard app.ensureEditable(take.id) else { return }
                 requestDelete(take)
             },
             // Export this one Take (owner 2026-06-27). Exports what's on screen — the live
