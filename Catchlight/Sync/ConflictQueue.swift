@@ -59,11 +59,22 @@ final class ConflictQueue {
 
     func isHeld(_ id: UUID) -> Bool { held.contains(id) }
 
+    /// Takes whose conflict file is on disk but did not open with these keys. Held all the
+    /// same, read-only, because the file may be the only copy of the other version; there is
+    /// no pair to show, so they can't be resolved here.
+    private(set) var unreadable: Set<UUID> = []
+
     @ObservationIgnored private var directory: URL?
     @ObservationIgnored private var keys: KeyHierarchy?
 
+    /// False between `detach()` and the next `attach`: locked, or the account is being
+    /// replaced or erased. A sync pass that finishes then delivers nothing into the queue
+    /// (the coordinator also drops a delivery from an older generation, `HeldTakes`).
+    /// A new queue starts accepting, in memory only, for previews and UI tests.
+    @ObservationIgnored private var accepting = true
+
     private func waitingChanged() {
-        held.replace(with: Set(waiting.map(\.local.id)))
+        held.replace(with: Set(waiting.map(\.local.id)).union(unreadable))
     }
 
     // MARK: - Lifetime
@@ -74,8 +85,11 @@ final class ConflictQueue {
     func attach(keys: KeyHierarchy, directory: URL = ConflictQueue.defaultDirectory) {
         self.directory = directory
         self.keys = keys
+        accepting = true
+        held.newGeneration()
         skipped.removeAll()
         unverified.removeAll()
+        unreadable.removeAll()
         var loaded: [(pair: (local: Take, remote: Take), date: Date)] = []
         let files = (try? FileManager.default.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: [.creationDateKey])) ?? []
@@ -87,22 +101,44 @@ final class ConflictQueue {
                 loaded.append((pair, date))
             } catch {
                 // Kept as it is, never deleted: it may hold the only copy of the other version.
-                DiagnosticsLog.shared.record(.conflictNotOpened)
+                // And its Take stays held, so the owner's rule holds even here.
+                unreadable.insert(id)
             }
         }
         waiting = loaded.sorted { $0.date < $1.date }.map(\.pair)
         waitingChanged()
+        // `AppModel` shows `.conflictsUnreadable` on the strip when `unreadable` isn't empty.
     }
 
     /// Forget the queue from memory at relock: it holds decrypted Takes. The files stay, and
     /// the next unlock loads them again.
+    /// Also at Start over and Second device, before the library goes, so nothing a late sync
+    /// delivers can write a file sealed under the old keys.
     func detach() {
         directory = nil
         keys = nil
+        accepting = false
+        held.newGeneration()
         waiting.removeAll()
         skipped.removeAll()
         unverified.removeAll()
+        unreadable.removeAll()
         waitingChanged()
+    }
+
+    /// Let go of conflicts whose Take has left this device: another device made it a Script,
+    /// and the sync released it (or kept this device's edit as a new Take and released the
+    /// original — `SyncReport.forkedFromScripts`). Nothing is left to choose between: the
+    /// other version is that device's Script, and this device's version, if edited, is the new
+    /// Take. The pair, its file and its hold go.
+    func release(_ ids: [UUID]) {
+        guard accepting else { return }
+        let gone = Set(ids).intersection(waiting.map(\.local.id))
+        guard !gone.isEmpty else { return }
+        waiting.removeAll { gone.contains($0.local.id) }
+        skipped.subtract(gone)
+        waitingChanged()
+        for id in gone { removeFile(id) }
     }
 
     // MARK: - Conflicts
@@ -112,6 +148,7 @@ final class ConflictQueue {
     /// against the newest snapshot. A newer pair also shows a skipped conflict again.
     /// Safe to call repeatedly with the same SyncReport (idempotent).
     func enqueue(_ conflicts: [(local: Take, remote: Take)]) {
+        guard accepting else { return }
         var added = 0
         for pair in conflicts {
             let id = pair.local.id
@@ -272,9 +309,12 @@ final class ConflictQueue {
     var attentionCount: Int { pending.count + unverified.count }
 
     /// Add unverified copies; an incoming item replaces a pending one for the same id.
+    /// Never offered for a Take waiting for a conflict choice: keeping either copy writes the
+    /// raw store, which would change a held Take.
     func enqueueUnverified(_ items: [UnverifiedCopy]) {
+        guard accepting else { return }
         var added = 0
-        for item in items {
+        for item in items where !isHeld(item.id) {
             if let idx = unverified.firstIndex(where: { $0.id == item.id }) {
                 unverified[idx] = item
             } else {

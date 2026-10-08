@@ -49,6 +49,9 @@ final class NoticeCodeTests: XCTestCase {
             "conflictsUnverified": 302,
             "takeAwaitingConflict": 303,
             "conflictEditKeptAsCopy": 304,
+            "savedNotAsObie": 305,
+            "obieAwaitingConflict": 306,
+            "conflictsUnreadable": 307,
             "takesQuarantined": 401,
             "capturesUnopenable": 402,
             "spotlightReindexSkipped": 901,
@@ -74,8 +77,7 @@ final class NoticeCodeTests: XCTestCase {
             "watermarkStepFailed": 921,
             "libraryOpenFailed": 922,
             "conflictNotKept": 923,
-            "conflictNotOpened": 924,
-            "conflictFileNotRemoved": 925
+            "conflictFileNotRemoved": 924
         ]
         let current = Dictionary(uniqueKeysWithValues: NoticeCode.allCases.map { ("\($0)", $0.rawValue) })
         XCTAssertEqual(current, pinned)

@@ -38,6 +38,21 @@ final class DailiesViewModel {
         report(error is TakeHeldForConflict ? .takeAwaitingConflict : notice)
     }
 
+    /// As `report(_:for:)`, for making `id` the Obie: refused because the CURRENT Obie is
+    /// waiting for a conflict choice, which is said as such.
+    private func reportObie(_ notice: Notice, for error: Error, making id: UUID) {
+        if let held = error as? TakeHeldForConflict, held.id != id {
+            report(.obieAwaitingConflict)
+        } else {
+            report(notice, for: error)
+        }
+    }
+
+    /// Whether a Take is waiting for a conflict choice (`ConflictHoldingStore`).
+    func isHeld(_ id: UUID) -> Bool {
+        (store as? ConflictHoldingStore)?.isHeld(id) ?? false
+    }
+
     /// The Take whose LAST outstanding item was just ticked, while it still carries a live
     /// reminder (owner 2026-08-11). Drives the "All tasks done. Stop reminding?" strip.
     ///
@@ -274,7 +289,16 @@ final class DailiesViewModel {
     /// The early return skips the write entirely — not just the bump — because an identical
     /// row rewritten costs a re-seal, a Spotlight re-index, a notification reconcile, a
     /// timeline reload and a sync trigger, all to store bytes that were already there.
-    func save(_ take: Take) {
+    ///
+    /// AN OBIE WHILE THE OBIE IS HELD (owner 2026-10-07). Saving a Take as the Obie demotes the
+    /// current one, which is a write to it; if that Take is waiting for a conflict choice the
+    /// store refuses. The text must never be lost to that, so the Take is saved without the
+    /// Obie designation and the user is told.
+    ///
+    /// - Returns: whether the Take is in the store as asked (or was already), so a caller that
+    ///   clears a queue only after a save can tell.
+    @discardableResult
+    func save(_ take: Take) -> Bool {
         var updated = take
         if updated.isSeeded { updated.isSeeded = false }
         updated.normaliseActivityFloor()
@@ -283,11 +307,18 @@ final class DailiesViewModel {
             var candidate = updated
             candidate.modifiedAt = stored.modifiedAt
             candidate.isSeeded = stored.isSeeded
-            if candidate == stored { return }
+            if candidate == stored { return true }
         }
         updated.modifiedAt = Date()
+        var notObie = false
         do {
-            try store.upsert(updated)
+            do {
+                try store.upsert(updated)
+            } catch let held as TakeHeldForConflict where held.id != updated.id && updated.isObie {
+                updated.isObie = false
+                try store.upsert(updated)
+                notObie = true
+            }
             DiagnosticsLog.shared.record(.takeSaved)
             // Spotlight (Task 6.19) — re-index every save (covers both create
             // and update paths since both funnel here). Fire-and-forget; the
@@ -297,8 +328,11 @@ final class DailiesViewModel {
             reload()
             noteRatingMoment(previous: stored, updated: updated)
             notifyLocalChange()
+            if notObie { report(.savedNotAsObie) }
+            return true
         } catch {
             report(.saveFailed, for: error)
+            return false
         }
     }
 
@@ -316,6 +350,13 @@ final class DailiesViewModel {
     func moveTake(_ id: UUID, to destination: Int) {
         let values = ManualOrder.reorder(takes, moving: id, to: destination)
         guard !values.isEmpty else { return }   // dropped where it started
+        // All or nothing: a renumber that would touch a Take waiting for a conflict choice is
+        // refused before anything is written, so the arrangement never half-applies.
+        if values.contains(where: { isHeld($0.0) }) {
+            reload()   // first: a successful reload clears the strip
+            report(.takeAwaitingConflict)
+            return
+        }
         do {
             for (takeID, order) in values {
                 guard var take = takes.first(where: { $0.id == takeID }), take.manualOrder != order else { continue }
@@ -327,8 +368,8 @@ final class DailiesViewModel {
             reload()
             notifyLocalChange()
         } catch {
-            report(.reorderFailed, for: error)
             reload()   // the arrangement on screen may be half-applied — resync from the store
+            report(.reorderFailed, for: error)   // after: a successful reload clears the strip
         }
     }
 
@@ -529,7 +570,13 @@ final class DailiesViewModel {
     /// re-schedule, since the alarm is now off) and reloads. No-op when the queue is empty;
     /// skips ids whose Take/reminder has gone, whose alarm is already off, or that REPEAT.
     func applyPendingReminderActions() {
+        // A Take waiting for a conflict choice can't be written: its actions go back on the queue,
+        // to apply once the choice is made (`ConflictResolutionView` runs this again).
         for action in PendingReminderActions.drainDismissed() {
+            if isHeld(action.id) {
+                PendingReminderActions.enqueueDismiss(takeID: action.id.uuidString, isLocation: action.isLocation)
+                continue
+            }
             guard var updated = try? store.take(id: action.id) else { continue }
             if action.isLocation {
                 // Dismiss on a PLACE reminder (2026-07-01): turn the geofence alarm
@@ -557,6 +604,10 @@ final class DailiesViewModel {
         // the card with a crossed-out bell, which reads as a reminder that still exists. The
         // TAKE is untouched — this ends the nagging, it does not delete anything the user wrote.
         for id in PendingReminderActions.drainStopReminding() {
+            if isHeld(id) {
+                PendingReminderActions.enqueueStopReminding(takeID: id.uuidString)
+                continue
+            }
             guard var updated = try? store.take(id: id), updated.timeReminder != nil else { continue }
             updated.timeReminder = nil
             save(updated)
@@ -592,7 +643,12 @@ final class DailiesViewModel {
     }
 
     func refreshRecurringSchedules() {
-        guard let all = try? store.allTakes() else { return }
+        guard var all = try? store.allTakes() else { return }
+        // A reminder action still queued for a held Take is not yet in the store; re-arming
+        // its alarms would bring back a reminder the user dismissed or stopped. Its alarms
+        // were cancelled at the tap, and are left alone until the action applies.
+        let waiting = PendingReminderActions.queuedIDs()
+        all.removeAll { waiting.contains($0.id) && isHeld($0.id) }
         // Global rebuild (owner 2026-06-21): re-arms recurring windows AND keeps the whole
         // pending set within iOS's 64-alarm cap by favouring the soonest occurrences across
         // every reminder (one-shot + recurring). Pending snoozes are preserved.
@@ -685,7 +741,7 @@ final class DailiesViewModel {
         } catch StorageError.obieConflict(let existing) {
             pendingObieConflict = (newTake: take.id, existing: existing)
         } catch {
-            report(.setObieFailed, for: error)
+            reportObie(.setObieFailed, for: error, making: take.id)
         }
     }
 
@@ -713,7 +769,7 @@ final class DailiesViewModel {
             reload()
             notifyLocalChange()
         } catch {
-            report(.replaceObieFailed, for: error)
+            reportObie(.replaceObieFailed, for: error, making: pending.newTake)
         }
     }
 

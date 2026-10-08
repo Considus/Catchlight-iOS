@@ -22,6 +22,26 @@ import CatchlightCore
 final class HeldTakes: @unchecked Sendable {
     private let lock = NSLock()
     private var ids: Set<UUID> = []
+    private var generationValue = 0
+
+    /// Changes whenever the queue is attached or detached (unlock, relock, a new account). A
+    /// sync pass notes it as it starts, and its report is delivered into the queue only if it
+    /// has not changed, so a pass begun for one session never lands in another.
+    var generation: Int {
+        lock.lock(); defer { lock.unlock() }
+        return generationValue
+    }
+
+    /// The held ids and the generation, read together as a pass starts.
+    var snapshot: (ids: Set<UUID>, generation: Int) {
+        lock.lock(); defer { lock.unlock() }
+        return (ids, generationValue)
+    }
+
+    /// Only the queue calls this.
+    func newGeneration() {
+        lock.lock(); generationValue += 1; lock.unlock()
+    }
 
     var current: Set<UUID> {
         lock.lock(); defer { lock.unlock() }
@@ -39,7 +59,8 @@ final class HeldTakes: @unchecked Sendable {
     }
 }
 
-/// A write the store refused because the Take is waiting for a conflict choice.
+/// A write the store refused because a Take is waiting for a conflict choice. `id` is the held
+/// Take, which is not the one being written when the write would have demoted a held Obie.
 struct TakeHeldForConflict: Error, Equatable {
     let id: UUID
 }
@@ -53,6 +74,8 @@ final class ConflictHoldingStore: TakeStore {
         self.base = base
         self.held = held
     }
+
+    func isHeld(_ id: UUID) -> Bool { held.contains(id) }
 
     private func refuse(_ id: UUID) throws {
         if held.contains(id) { throw TakeHeldForConflict(id: id) }

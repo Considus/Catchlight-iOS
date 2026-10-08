@@ -125,6 +125,9 @@ final class AppModel {
     /// Wipe this device and enter the terminal state. Irreversible.
     @MainActor
     func startOver() {
+        // Before the library goes: a sync pass still running must not deliver conflicts that
+        // would recreate `Database/Conflicts` with files sealed under the erased keys.
+        conflictQueue.detach()
         AccountReset.wipe()
         awaitingRelaunchAfterReset = true
     }
@@ -454,6 +457,11 @@ final class AppModel {
         // REBOUND (real, unlocked) store only — the locked placeholder never takes user
         // edits. `syncAfterSave` is debounced + SyncMode-gated by the coordinator.
         dailiesVM.onLocalChange = { [weak self] in self?.syncAfterSave?() }
+        // Conflicts kept on disk that these keys can't open: their Takes stay read-only, and
+        // the user is told once per unlock.
+        if !conflictQueue.unreadable.isEmpty {
+            dailiesVM.reportStorageError(.conflictsUnreadable(conflictQueue.unreadable.count))
+        }
     }
 
     // MARK: - D-042 — app-entry lock screen
@@ -805,6 +813,10 @@ final class AppModel {
     @discardableResult
     func ensureNotHeld(_ takeID: UUID) -> Bool {
         guard conflictQueue.isHeld(takeID) else { return true }
+        if conflictQueue.unreadable.contains(takeID) {
+            dailiesVM.reportStorageError(.conflictsUnreadable(1))
+            return false
+        }
         conflictQueue.reveal(id: takeID)
         dailiesVM.reportStorageError(.takeAwaitingConflict)
         return false

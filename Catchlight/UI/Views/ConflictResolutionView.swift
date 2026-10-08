@@ -317,6 +317,9 @@ struct ConflictResolutionView: View {
                     // The hold is released: push the choice rather than wait for the next
                     // automatic pass.
                     dailies.onLocalChange?()
+                    // Reminder actions tapped while it was held, waiting for this choice.
+                    dailies.applyPendingReminderActions()
+                    dailies.refreshRecurringSchedules()
                 } catch {
                     // ConflictQueue writes through the store directly, bypassing
                     // DailiesViewModel — route the failure through the timeline's

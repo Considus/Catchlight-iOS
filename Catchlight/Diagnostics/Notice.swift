@@ -62,6 +62,9 @@ enum NoticeCode: Int, CaseIterable {
     case conflictsUnverified = 302          // N cloud copies failed verification and need a choice.
     case takeAwaitingConflict = 303         // Change refused: the Take is waiting for a conflict choice.
     case conflictEditKeptAsCopy = 304       // An edit to a Take waiting for a conflict choice was saved as a new Take.
+    case savedNotAsObie = 305               // Saved, but not as the Obie: the current Obie is waiting for a conflict choice.
+    case obieAwaitingConflict = 306         // Obie change refused: the current Obie is waiting for a conflict choice.
+    case conflictsUnreadable = 307          // N waiting conflicts couldn't be opened at unlock; their Takes stay read-only.
 
     // 4xx verification
     case takesQuarantined = 401             // N Takes failed verification during pull and were skipped.
@@ -90,8 +93,7 @@ enum NoticeCode: Int, CaseIterable {
     case watermarkStepFailed = 921          // Sync watermark write failed (step).
     case libraryOpenFailed = 922            // Encrypted library failed to open, with the error (the user sees 104).
     case conflictNotKept = 923              // A waiting conflict couldn't be written to disk, with the system error; held for this session only.
-    case conflictNotOpened = 924            // A waiting conflict's file didn't open at unlock; the file is kept.
-    case conflictFileNotRemoved = 925       // A resolved conflict's file couldn't be removed.
+    case conflictFileNotRemoved = 924       // A resolved conflict's file couldn't be removed.
 }
 
 /// One line for the diagnostics log. Build it, then `DiagnosticsLog.shared.record(_:)`.
@@ -106,7 +108,8 @@ enum Notice: Equatable {
     case privacyPhraseMissing, readOnlyLapsed
 
     case conflictsChanged(Int), conflictsUnverified(Int)
-    case takeAwaitingConflict, conflictEditKeptAsCopy
+    case takeAwaitingConflict, conflictEditKeptAsCopy, savedNotAsObie, obieAwaitingConflict
+    case conflictsUnreadable(Int)
     case takesQuarantined(Int)
     case capturesUnopenable(Int)
 
@@ -123,7 +126,7 @@ enum Notice: Equatable {
     case watermarkPrepareFailed, watermarkStepFailed
     case libraryOpenFailed(String)
     case conflictNotKept(domain: String, code: Int)
-    case conflictNotOpened, conflictFileNotRemoved
+    case conflictFileNotRemoved
 
     /// The platform part of the reference. The Mac app uses "CCMOS".
     static let platform = "CCIOS"
@@ -158,7 +161,9 @@ enum Notice: Equatable {
         case .takeAwaitingConflict: return .takeAwaitingConflict
         case .conflictEditKeptAsCopy: return .conflictEditKeptAsCopy
         case .conflictNotKept: return .conflictNotKept
-        case .conflictNotOpened: return .conflictNotOpened
+        case .savedNotAsObie: return .savedNotAsObie
+        case .obieAwaitingConflict: return .obieAwaitingConflict
+        case .conflictsUnreadable: return .conflictsUnreadable
         case .conflictFileNotRemoved: return .conflictFileNotRemoved
         case .takesQuarantined: return .takesQuarantined
         case .capturesUnopenable: return .capturesUnopenable
@@ -246,6 +251,12 @@ enum Notice: Equatable {
             return String(localized: "This Take changed on another device. Choose which version to keep before you change it.")
         case .conflictEditKeptAsCopy:
             return String(localized: "This Take changed on another device, so your edit was saved as a new Take.")
+        case .savedNotAsObie:
+            return String(localized: "Saved, but not as your Obie. Your Obie changed on another device and is waiting for your choice.")
+        case .obieAwaitingConflict:
+            return String(localized: "Your Obie changed on another device. Choose which version to keep before you change your Obie.")
+        case .conflictsUnreadable(let n):
+            return String(localized: "\(n) sync conflicts couldn't be opened on this device, so their Takes stay read-only.")
         case .takesQuarantined(let n):
             return String(localized: "\(n) Takes couldn't be verified and were skipped.")
         case .capturesUnopenable(let n):
@@ -296,8 +307,6 @@ enum Notice: Equatable {
             return "Encrypted library failed to open: \(detail)"
         case let .conflictNotKept(domain, code):
             return "A waiting conflict couldn't be kept on disk; held for this session only (\(domain) \(code))"
-        case .conflictNotOpened:
-            return "A waiting conflict didn't open at unlock; its file is kept"
         case .conflictFileNotRemoved:
             return "A resolved conflict's file couldn't be removed"
         }

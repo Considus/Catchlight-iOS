@@ -61,6 +61,10 @@ public final class BackgroundSyncCoordinator {
     /// (2026-06-10); nil for callers that don't render.
     private let onRemoteChanges: (@MainActor (SyncReport) -> Void)?
 
+    /// Invoked on the main actor with the Takes a pass let go of (`SyncReport.deletedLocally`),
+    /// for the conflict queue to drop pairs that no longer have a Take on this device.
+    private let onReleased: (@MainActor ([UUID]) -> Void)?
+
     /// - Parameter makeEngine: builds a SyncEngine if a cloud folder is configured
     ///   and the master key is available; returns nil in local-only/locked states.
     /// - Parameter onConflicts: hand-off for conflicts detected during the sync.
@@ -76,7 +80,8 @@ public final class BackgroundSyncCoordinator {
                 onSyncError: (@MainActor (Error) -> Void)? = nil,
                 onQuarantined: (@MainActor ([UUID]) -> Void)? = nil,
                 onHeldBack: (@MainActor (Int) -> Void)? = nil,
-                onRemoteChanges: (@MainActor (SyncReport) -> Void)? = nil) {
+                onRemoteChanges: (@MainActor (SyncReport) -> Void)? = nil,
+                onReleased: (@MainActor ([UUID]) -> Void)? = nil) {
         self.makeEngine = makeEngine
         self.heldTakes = heldTakes
         self.onConflicts = onConflicts
@@ -85,6 +90,7 @@ public final class BackgroundSyncCoordinator {
         self.onQuarantined = onQuarantined
         self.onHeldBack = onHeldBack
         self.onRemoteChanges = onRemoteChanges
+        self.onReleased = onReleased
     }
 
     /// Call once at launch (before app finishes launching).
@@ -175,7 +181,7 @@ public final class BackgroundSyncCoordinator {
     public static let saveDebounceInterval: TimeInterval = 2
 
     private let stateLock = NSLock()
-    private var isSyncing = false
+    private let flight = SyncFlight()
     private var lastActivationSync: Date?
     /// Pending debounced save-sync, cancelled + rescheduled on each new save.
     private var saveDebounce: DispatchWorkItem?
@@ -201,8 +207,9 @@ public final class BackgroundSyncCoordinator {
 
     /// Run a sync pass now, off the main thread, reusing the session's
     /// in-memory keys (via `makeEngine`). Single-flight: a trigger arriving
-    /// while a pass is in flight is dropped (the running pass already covers
-    /// it; sync is idempotent). Call from the main thread.
+    /// while a pass is in flight runs once more after it (`SyncFlight`), because the
+    /// running pass may already be past what the trigger is about: a conflict choice made
+    /// mid-pass, for one. Call from the main thread.
     public func syncNow(trigger: ForegroundSyncTrigger, now: Date = Date()) {
         // Sync-mode gate (owner 2026-06-21). `disabled` blocks everything;
         // `manual` blocks every automatic trigger and lets only the explicit
@@ -223,12 +230,11 @@ public final class BackgroundSyncCoordinator {
             stateLock.unlock()
             return
         }
-        guard !isSyncing else { stateLock.unlock(); return }
-        isSyncing = true
         stateLock.unlock()
+        guard flight.begin(trigger) else { return }
 
         guard let engine = makeEngine() else {
-            stateLock.lock(); isSyncing = false; stateLock.unlock()
+            _ = flight.end()
             return   // local-only mode, locked, or pre-onboarding — nothing to do
         }
 
@@ -252,11 +258,10 @@ public final class BackgroundSyncCoordinator {
             cancel.cancel()
         }
         let finish: () -> Void = { [weak self] in
-            if let self {
-                self.stateLock.lock(); self.isSyncing = false; self.stateLock.unlock()
-            }
+            let rerun = self?.flight.end()
             DispatchQueue.main.async {
                 if assertion != .invalid { UIApplication.shared.endBackgroundTask(assertion) }
+                if let rerun { self?.syncNow(trigger: rerun) }
             }
         }
 
@@ -266,13 +271,16 @@ public final class BackgroundSyncCoordinator {
         let onQuarantined = self.onQuarantined
         let onHeldBack = self.onHeldBack
         let onRemoteChanges = self.onRemoteChanges
+        let onReleased = self.onReleased
         let heldTakes = self.heldTakes
 
         DispatchQueue.global(qos: .utility).async {
             defer { finish() }
             do {
-                let report = try Self.pass(engine, holding: heldTakes, isCancelled: { cancel.isCancelled })
-                Self.deliver(report,
+                let (report, generation) = try Self.pass(engine, holding: heldTakes,
+                                                         isCancelled: { cancel.isCancelled })
+                Self.deliver(report, heldTakes: heldTakes, generation: generation,
+                             onReleased: onReleased,
                              onConflicts: onConflicts,
                              onUnverified: onUnverified,
                              onQuarantined: onQuarantined,
@@ -291,25 +299,43 @@ public final class BackgroundSyncCoordinator {
     /// One sync pass, shared by the foreground and BGTask paths: the Takes waiting for a
     /// conflict choice are read as the pass starts, so a conflict queued by the previous pass
     /// is already held.
+    /// Returns the queue generation the pass started in, for `deliver` to check.
+    @discardableResult
     static func pass(_ engine: SyncEngine, holding heldTakes: HeldTakes?,
-                     isCancelled: () -> Bool) throws -> SyncReport {
-        try engine.sync(isCancelled: isCancelled, holding: heldTakes?.current ?? [])
+                     isCancelled: () -> Bool) throws -> (report: SyncReport, generation: Int?) {
+        let snapshot = heldTakes?.snapshot
+        let report = try engine.sync(isCancelled: isCancelled, holding: snapshot?.ids ?? [])
+        return (report, snapshot?.generation)
+    }
+
+    /// Whether a pass begun in `generation` may still deliver into the conflict queue: not if
+    /// the queue was detached or re-attached meanwhile (relock, Start over, Second device), when
+    /// its pairs belong to a session or an account that has gone.
+    static func isCurrent(_ generation: Int?, _ heldTakes: HeldTakes?) -> Bool {
+        heldTakes?.generation == generation
     }
 
     /// Shared report fan-out for both the BGTask and foreground paths.
     private static func deliver(_ report: SyncReport,
+                                heldTakes: HeldTakes?, generation: Int?,
+                                onReleased: (@MainActor ([UUID]) -> Void)?,
                                 onConflicts: (@MainActor ([(local: Take, remote: Take)]) -> Void)?,
                                 onUnverified: (@MainActor ([UnverifiedCopy]) -> Void)?,
                                 onQuarantined: (@MainActor ([UUID]) -> Void)?,
                                 onHeldBack: (@MainActor (Int) -> Void)?,
                                 onRemoteChanges: (@MainActor (SyncReport) -> Void)?) {
+        // Into the conflict queue only if it is still the queue this pass started with.
+        if let onReleased, !report.deletedLocally.isEmpty {
+            let released = report.deletedLocally
+            Task { @MainActor in if isCurrent(generation, heldTakes) { onReleased(released) } }
+        }
         if let onConflicts, !report.conflicts.isEmpty {
             let conflicts = report.conflicts
-            Task { @MainActor in onConflicts(conflicts) }
+            Task { @MainActor in if isCurrent(generation, heldTakes) { onConflicts(conflicts) } }
         }
         if let onUnverified, !report.unverified.isEmpty {
             let unverified = report.unverified
-            Task { @MainActor in onUnverified(unverified) }
+            Task { @MainActor in if isCurrent(generation, heldTakes) { onUnverified(unverified) } }
         }
         if let onQuarantined, !report.quarantined.isEmpty {
             let quarantined = report.quarantined
@@ -350,6 +376,7 @@ public final class BackgroundSyncCoordinator {
         let onRemoteChanges = self.onRemoteChanges
         let makeEngine = self.makeEngine
         let heldTakes = self.heldTakes
+        let onReleased = self.onReleased
         let completion = TaskCompletion()
         let cancel = CancelFlag()
 
@@ -376,9 +403,10 @@ public final class BackgroundSyncCoordinator {
                     // pull + push; idempotent. Checks `cancel` between items so an
                     // expiring task lets go of cloud-file access promptly instead of
                     // running on past expiry (a 0xdead10cc termination risk).
-                    let report = try Self.pass(engine, holding: heldTakes,
-                                               isCancelled: { cancel.isCancelled })
-                    Self.deliver(report,
+                    let (report, generation) = try Self.pass(engine, holding: heldTakes,
+                                                             isCancelled: { cancel.isCancelled })
+                    Self.deliver(report, heldTakes: heldTakes, generation: generation,
+                                 onReleased: onReleased,
                                  onConflicts: onConflicts,
                                  onUnverified: onUnverified,
                                  onQuarantined: onQuarantined,
@@ -395,5 +423,32 @@ public final class BackgroundSyncCoordinator {
                 }
             }
         }
+    }
+}
+
+/// Single-flight for foreground sync. One pass at a time; a trigger that arrives while one is
+/// running is not dropped but remembered, and `end()` hands it back so the caller runs one more
+/// pass. Several triggers during one pass collapse into a single rerun. An activation trigger
+/// is never remembered: the running pass already does what it asks.
+final class SyncFlight: @unchecked Sendable {
+    private let lock = NSLock()
+    private var running = false
+    private var pending: BackgroundSyncCoordinator.ForegroundSyncTrigger?
+
+    /// True if the caller should run a pass now.
+    func begin(_ trigger: BackgroundSyncCoordinator.ForegroundSyncTrigger) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard running else { running = true; return true }
+        // A manual tap outranks an automatic trigger: in Manual mode only it may run.
+        if trigger != .appBecameActive, pending != .manualButton { pending = trigger }
+        return false
+    }
+
+    /// The pass is over. Returns a trigger to run again, if one arrived meanwhile.
+    func end() -> BackgroundSyncCoordinator.ForegroundSyncTrigger? {
+        lock.lock(); defer { lock.unlock() }
+        running = false
+        defer { pending = nil }
+        return pending
     }
 }

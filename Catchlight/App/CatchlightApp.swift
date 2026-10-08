@@ -77,6 +77,10 @@ struct CatchlightApp: App {
             // with the deleted Take's decrypted title).
             onRemoteChanges: { report in
                 app.dailiesVM.applyRemoteChanges(report)
+            },
+            // A held Take another device made a Script has left this device: its conflict goes.
+            onReleased: { ids in
+                app.conflictQueue.release(ids)
             }
         )
         self.backgroundSync = backgroundSync
@@ -307,6 +311,7 @@ struct CatchlightApp: App {
         guard app.ensureEntitled() else { return }
 
         var lastSavedID: UUID?
+        var saved: [CaptureRouting.SharedEntry] = []
         for entry in queued {
             let item = entry.item
             var take = app.dailiesVM.createTake()
@@ -317,15 +322,18 @@ struct CatchlightApp: App {
             // shaping pills were cut as off-brand (owner 2026-08-11).
             if item.isObie { take.isObie = true }
             take.normaliseActivityFloor()
-            app.dailiesVM.save(take)
+            // Only what was written leaves the queue: a failed save keeps the capture for the next
+            // drain rather than losing it.
+            guard app.dailiesVM.save(take) else { continue }
             lastSavedID = take.id
+            saved.append(entry)
         }
-        CaptureRouting.clearShared(queued)
+        CaptureRouting.clearShared(saved)
         // Show what just landed when exactly ONE thing did (owner 2026-08-11). A dictated Take
         // saves without the user touching anything, so without this it is saved invisibly and
         // they have to go looking to believe it. Several at once (a batch of shares) get no
         // reveal — pulsing an arbitrary one of them would be a lie about the rest.
-        if queued.count == 1, let lastSavedID {
+        if queued.count == 1, saved.count == 1, let lastSavedID {
             app.ui.exitToResting()
             app.ui.revealTargetTakeID = lastSavedID
         }

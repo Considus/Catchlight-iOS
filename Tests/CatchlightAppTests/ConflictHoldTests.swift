@@ -211,15 +211,191 @@ final class ConflictHoldTests: XCTestCase {
         XCTAssertEqual(relaunched.pending.first?.remote.primaryText, "their secret version")
     }
 
-    func testQueue_otherKeysOpenNothing_andTheFileIsKept() throws {
+    /// A file that won't open is kept, and its Take stays held: the owner's rule holds even
+    /// when the pair can't be shown.
+    func testQueue_aFileThatWontOpen_isKept_andItsTakeStaysHeld() throws {
+        let x = take("mine")
         let first = ConflictQueue()
         first.attach(keys: keys, directory: directory)
-        first.enqueue([pair(for: take("mine"))])
+        first.enqueue([pair(for: x)])
 
         let other = ConflictQueue()
         other.attach(keys: KeyHierarchy(masterKeyBytes: Data(repeating: 1, count: 32)), directory: directory)
         XCTAssertTrue(other.pending.isEmpty)
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path).count, 1)
+        XCTAssertTrue(other.isHeld(x.id))
+        XCTAssertEqual(other.unreadable, [x.id])
+    }
+
+    func testUnlock_withAFileThatWontOpen_saysSo() async throws {
+        let x = take("mine")
+        let first = ConflictQueue()
+        first.attach(keys: KeyHierarchy(masterKeyBytes: Data(repeating: 1, count: 32)), directory: directory)
+        first.enqueue([pair(for: x)])
+        let store = InMemoryTakeStore()
+        try store.upsert(x)
+
+        let app = await makeApp(store: store)
+
+        XCTAssertEqual(app.dailiesVM.lastError, Notice.conflictsUnreadable(1).message)
+        XCTAssertFalse(app.ensureEditable(x.id))
+    }
+
+    // MARK: - Late and stale deliveries
+
+    func testDetached_enqueueDoesNothing_andWritesNoFile() {
+        let queue = ConflictQueue()
+        queue.attach(keys: keys, directory: directory)
+        queue.detach()
+
+        queue.enqueue([pair(for: take("late"))])
+        queue.enqueueUnverified([UnverifiedCopy(id: UUID(), local: nil, cloud: take("late"))])
+
+        XCTAssertTrue(queue.pending.isEmpty)
+        XCTAssertTrue(queue.unverified.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+    }
+
+    /// A pass begun before a relock (or a new account) may not deliver into the queue after it.
+    func testAPassFromAnEarlierGeneration_isNotCurrent() {
+        let queue = ConflictQueue()
+        queue.attach(keys: keys, directory: directory)
+        let started = queue.held.snapshot.generation
+        XCTAssertTrue(BackgroundSyncCoordinator.isCurrent(started, queue.held))
+
+        queue.detach()
+        XCTAssertFalse(BackgroundSyncCoordinator.isCurrent(started, queue.held))
+        queue.attach(keys: keys, directory: directory)
+        XCTAssertFalse(BackgroundSyncCoordinator.isCurrent(started, queue.held))
+    }
+
+    // MARK: - Reconciling with sync
+
+    /// Another device made the held Take a Script and the pass let it go: nothing is left to
+    /// choose, so the pair, its hold and its file go too.
+    func testRelease_dropsThePairItsHoldAndItsFile() throws {
+        let x = take("mine"), y = take("other")
+        let queue = ConflictQueue()
+        queue.attach(keys: keys, directory: directory)
+        queue.enqueue([pair(for: x), pair(for: y)])
+
+        queue.release([x.id, UUID()])
+
+        XCTAssertFalse(queue.isHeld(x.id))
+        XCTAssertEqual(queue.pending.map(\.local.id), [y.id])
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path).count, 1)
+    }
+
+    /// Keeping either unverified copy writes the raw store, so a held Take is never offered.
+    func testUnverifiedCopy_ofAHeldTake_isNotOffered() {
+        let x = take("held"), y = take("free")
+        let queue = ConflictQueue()
+        queue.enqueue([pair(for: x)])
+
+        queue.enqueueUnverified([UnverifiedCopy(id: x.id, local: x, cloud: take("cloud", id: x.id)),
+                                 UnverifiedCopy(id: y.id, local: y, cloud: nil)])
+
+        XCTAssertEqual(queue.unverified.map(\.id), [y.id])
+    }
+
+    // MARK: - The Obie
+
+    /// A new Take saved as the Obie while the current Obie is held: the text is kept, as an
+    /// ordinary Take, and the user is told. (Before: refused, and the text was lost.)
+    func testNewObie_whileTheObieIsHeld_isSavedButNotAsObie() async throws {
+        let store = InMemoryTakeStore()
+        let obie = take("held Obie", isObie: true)
+        try store.upsert(obie)
+        let app = await makeApp(store: store)
+        app.conflictQueue.enqueue([pair(for: obie)])
+
+        var capture = app.dailiesVM.createTake()
+        capture.blocks = [.textLine("dictated to Siri")]
+        capture.isObie = true
+        XCTAssertTrue(app.dailiesVM.save(capture))
+
+        let saved = try XCTUnwrap(store.take(id: capture.id))
+        XCTAssertEqual(saved.primaryText, "dictated to Siri")
+        XCTAssertFalse(saved.isObie)
+        XCTAssertEqual(try store.currentObie()?.id, obie.id)
+        XCTAssertEqual(app.dailiesVM.lastError, Notice.savedNotAsObie.message)
+    }
+
+    func testMakingAnotherTakeTheObie_whileTheObieIsHeld_saysWhy() async throws {
+        let store = InMemoryTakeStore()
+        let obie = take("held Obie", isObie: true), other = take("other")
+        try store.upsert(obie); try store.upsert(other)
+        let app = await makeApp(store: store)
+        app.conflictQueue.enqueue([pair(for: obie)])
+
+        app.dailiesVM.designateObie(other, replaceExisting: true)
+
+        XCTAssertEqual(try store.currentObie()?.id, obie.id)
+        XCTAssertEqual(app.dailiesVM.lastError, Notice.obieAwaitingConflict.message)
+    }
+
+    // MARK: - Reminder actions and reorder
+
+    /// A "Stop reminding" tapped for a held Take stays queued, and applies once it's resolved.
+    /// (Before: drained, refused and lost.)
+    func testReminderAction_forAHeldTake_waitsForTheChoice() async throws {
+        _ = PendingReminderActions.drainStopReminding()
+        _ = PendingReminderActions.drainDismissed()
+        defer { _ = PendingReminderActions.drainStopReminding() }
+        let store = InMemoryTakeStore()
+        var x = take("call the framer")
+        x.timeReminder = TimeReminder(scheduledDate: Date().addingTimeInterval(3600),
+                                      notificationIdentifier: x.id.uuidString)
+        try store.upsert(x)
+        let app = await makeApp(store: store)
+        app.conflictQueue.enqueue([(local: x, remote: x)])
+        PendingReminderActions.enqueueStopReminding(takeID: x.id.uuidString)
+
+        app.dailiesVM.applyPendingReminderActions()
+        XCTAssertNotNil(try store.take(id: x.id)?.timeReminder)
+        XCTAssertEqual(PendingReminderActions.queuedIDs(), [x.id])
+
+        try app.conflictQueue.resolve(id: x.id, keepLocal: true, store: app.dailiesVM.conflictChoiceStore)
+        app.dailiesVM.applyPendingReminderActions()
+        XCTAssertNil(try store.take(id: x.id)?.timeReminder)
+        XCTAssertTrue(PendingReminderActions.queuedIDs().isEmpty)
+    }
+
+    /// A drag whose renumber reaches a held Take writes nothing at all.
+    func testReorder_thatWouldRenumberAHeldTake_writesNothing() async throws {
+        let store = InMemoryTakeStore()
+        var a = take("a"), b = take("b"), c = take("c")
+        a.manualOrder = 1
+        b.manualOrder = Double(1).nextUp   // no midpoint left: moving between them renumbers
+        c.manualOrder = 5
+        for t in [a, b, c] { try store.upsert(t) }
+        let app = await makeApp(store: store)
+        app.conflictQueue.enqueue([pair(for: a)])
+
+        app.dailiesVM.moveTake(c.id, to: 1)
+
+        XCTAssertEqual(try store.allTakes().sorted { $0.primaryText < $1.primaryText }, [a, b, c])
+        XCTAssertEqual(app.dailiesVM.lastError, Notice.takeAwaitingConflict.message)
+    }
+
+    // MARK: - Single flight
+
+    /// A conflict choice made while a pass runs is pushed by one more pass after it.
+    func testATriggerDuringAPass_runsOnceMoreAfterIt() {
+        let flight = SyncFlight()
+        XCTAssertTrue(flight.begin(.appBecameActive))
+        XCTAssertFalse(flight.begin(.saveCommitted))
+        XCTAssertFalse(flight.begin(.saveCommitted))
+        XCTAssertEqual(flight.end(), .saveCommitted)
+        XCTAssertTrue(flight.begin(.saveCommitted))
+        XCTAssertNil(flight.end())
+    }
+
+    func testAnActivationDuringAPass_isNotRepeated() {
+        let flight = SyncFlight()
+        XCTAssertTrue(flight.begin(.saveCommitted))
+        XCTAssertFalse(flight.begin(.appBecameActive))
+        XCTAssertNil(flight.end())
     }
 
     func testSkip_hidesUntilRelaunch_andTheTakeStaysHeld() {
