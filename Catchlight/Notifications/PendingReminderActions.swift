@@ -100,6 +100,25 @@ enum PendingReminderActions {
                                                 ? String($0.dropLast(locationSuffix.count)) : $0) })
     }
 
+    /// Move every action queued for `from` to `to`: a Take kept as a new Take after a converted
+    /// conflict (Catchlight-Core#29), whose Dismiss or Stop reminding was tapped while it was held
+    /// and must apply to the copy, not come back on it. Nil drops them (the Take was let go).
+    static func move(from: UUID, to: UUID?) {
+        guard let defaults else { return }
+        for key in [dismissedKey, stopRemindingKey] {
+            let raw = defaults.stringArray(forKey: key) ?? []
+            let old = from.uuidString
+            let moved = raw.compactMap { entry -> String? in
+                let isLocation = entry.hasSuffix(locationSuffix)
+                let base = isLocation ? String(entry.dropLast(locationSuffix.count)) : entry
+                guard base.caseInsensitiveCompare(old) == .orderedSame else { return entry }
+                guard let to else { return nil }
+                return to.uuidString + (isLocation ? locationSuffix : "")
+            }
+            if moved != raw { defaults.set(Array(Set(moved)), forKey: key) }
+        }
+    }
+
     static func drainDismissed() -> [DismissedAction] {
         guard let defaults else { return [] }
         let raw = defaults.stringArray(forKey: dismissedKey) ?? []

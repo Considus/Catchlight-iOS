@@ -633,6 +633,26 @@ final class DailiesViewModel {
         reload()
     }
 
+    /// After a converted conflict is resolved (`ConflictQueue.resolveConverted`): the original
+    /// left this phone, so its alarms go, as for a Take a sync let go; a Take kept as new gets its
+    /// own, under its own notification id.
+    ///
+    /// Reminder actions tapped while it was held move to the copy and apply before its alarms are
+    /// armed, so a Dismiss or Stop reminding never comes back on it; then the same refresh as the
+    /// usual choice. Spotlight drops the original and indexes the copy.
+    func applyConvertedChoice(released id: UUID, keptAs copy: Take?) {
+        reminders.cancelReminder(identifier: id.uuidString)
+        spotlight.deindex(takeID: id)
+        PendingReminderActions.move(from: id, to: copy?.id)
+        applyPendingReminderActions()
+        if let copy, let stored = try? store.take(id: copy.id) {
+            spotlight.index(stored)
+            reconcileNotification(for: stored)
+        }
+        refreshRecurringSchedules()
+        reload()
+    }
+
     /// Drop pending alarms whose Take no longer exists. Runs on unlock, beside the
     /// re-arm, because that is the first moment the store can say which Takes are real.
     /// A no-op on a healthy install; it exists for the ones already carrying orphans,

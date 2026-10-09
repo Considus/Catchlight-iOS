@@ -57,6 +57,56 @@ final class HeldTakes: @unchecked Sendable {
     func replace(with new: Set<UUID>) {
         lock.lock(); ids = new; lock.unlock()
     }
+
+    // MARK: Retired ids
+
+    private var retiredIDs: Set<UUID> = []
+
+    /// Originals a converted conflict choice let go (Catchlight-Core#29): their id is now another
+    /// device's Script, so the app's store refuses to write it again this session, whatever still
+    /// holds a copy (an editor left open, a stale snapshot). Kept for the whole launch, across
+    /// relocks and new generations, as on the Mac: an editor can outlive a relock, and an id from
+    /// another account can never collide with one of these.
+    func retire(_ id: UUID) {
+        lock.lock(); retiredIDs.insert(id); lock.unlock()
+    }
+
+    func isRetired(_ id: UUID) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return retiredIDs.contains(id)
+    }
+
+    // MARK: Passes in flight
+
+    private var passes = 0
+    /// Main actor only.
+    private var afterPasses: [@MainActor () -> Void] = []
+
+    /// A sync pass has begun (`BackgroundSyncCoordinator.pass`). Any thread.
+    func beginPass() {
+        lock.lock(); passes += 1; lock.unlock()
+    }
+
+    var isPassRunning: Bool {
+        lock.lock(); defer { lock.unlock() }
+        return passes > 0
+    }
+
+    /// The pass has ended and its report has reached the queue. Runs the work that waited for it.
+    @MainActor func endPass() {
+        lock.lock(); passes = max(0, passes - 1); let idle = passes == 0; lock.unlock()
+        guard idle else { return }
+        let work = afterPasses
+        afterPasses = []
+        work.forEach { $0() }
+    }
+
+    /// Run `work` now, or once no pass is running and its report has been delivered. A conflict
+    /// choice waits here: made while a pass runs, it could be made against a pair the pass has
+    /// just found changed (a Take turned into a Script elsewhere), and re-stamp the Take into it.
+    @MainActor func whenNoPassRunning(_ work: @escaping @MainActor () -> Void) {
+        if isPassRunning { afterPasses.append(work) } else { work() }
+    }
 }
 
 /// A write the store refused because a Take is waiting for a conflict choice. `id` is the held
@@ -78,7 +128,7 @@ final class ConflictHoldingStore: TakeStore {
     func isHeld(_ id: UUID) -> Bool { held.contains(id) }
 
     private func refuse(_ id: UUID) throws {
-        if held.contains(id) { throw TakeHeldForConflict(id: id) }
+        if held.contains(id) || held.isRetired(id) { throw TakeHeldForConflict(id: id) }
     }
 
     /// An Obie written here demotes the current Obie inside the store, which is a write to

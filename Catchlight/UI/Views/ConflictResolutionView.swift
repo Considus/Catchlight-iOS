@@ -8,6 +8,11 @@
 //  Skipping only hides the pair: the Take stays read-only, and sync leaves it alone,
 //  until a version is kept (owner 2026-10-07, `ConflictQueue`).
 //
+//  A CONVERTED pair (another device has since turned the Take into a Script, which the phone
+//  never reads, D-315) shows only this phone's version: keep it as a new Take, or let it go
+//  (`ConflictQueue.resolveConverted`). Picking a version would re-stamp the Take on its own id and
+//  send the choice into the Script, so it is not offered.
+//
 //  Selection is two-step on purpose: a single tap could resolve the wrong side
 //  irreversibly. The user picks a panel (visible amber border + nudged scale),
 //  THEN confirms.
@@ -74,8 +79,14 @@ struct ConflictResolutionView: View {
             VStack(alignment: .leading, spacing: 16) {
                 header
                 ForEach(queue.pending, id: \.local.id) { pair in
-                    conflictCard(pair)
-                        .padding(.horizontal, 20)
+                    Group {
+                        if queue.isConverted(pair.local.id) {
+                            convertedCard(pair.local)
+                        } else {
+                            conflictCard(pair)
+                        }
+                    }
+                    .padding(.horizontal, 20)
                 }
                 if !queue.unverified.isEmpty {
                     guidance("The copies of these Takes in your cloud folder didn't pass their check. Nothing changes on this phone until you choose.")
@@ -100,7 +111,8 @@ struct ConflictResolutionView: View {
             Text("SYNC CONFLICTS")
                 .pageHeadingStyle()
                 .accessibilityAddTraits(.isHeader)
-            if !queue.pending.isEmpty {
+            // About choosing between two versions, which a converted pair doesn't offer.
+            if queue.pending.contains(where: { !queue.isConverted($0.local.id) }) {
                 guidance("These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed.")
             }
         }
@@ -232,6 +244,55 @@ struct ConflictResolutionView: View {
         .padding(14)
     }
 
+    // MARK: - Converted (Catchlight-Core#29)
+
+    /// The other version is now a Script on another device and is never read here: only this
+    /// phone's version is shown, not selectable, with the two choices that never write its id.
+    private func convertedCard(_ local: Take) -> some View {
+        VStack(spacing: 12) {
+            Text("This Take was turned into a Script on another device.")
+                .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
+                .foregroundStyle(Color.ckTextPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            versionPanel(.mine, take: local, selected: false, tap: {})
+                .allowsHitTesting(false)
+            footnote(String(localized: "The Script can't be shown here. Keep this version as a new Take, or let it go."))
+            convertedChoices(local.id)
+        }
+        .padding(14)
+        .accessibilityIdentifier("conflict.converted")
+    }
+
+    /// The long primary gets a row of its own; the pills keep the action row's 44pt minimum.
+    private func convertedChoices(_ id: UUID) -> some View {
+        VStack(spacing: 12) {
+            DockPill(title: "Keep this version as a new Take") { resolveConverted(id, keepAsNew: true) }
+                .frame(minHeight: CatchlightLayout.minTouchTarget)
+                .accessibilityIdentifier("conflict.keepAsNew")
+            HStack(spacing: 12) {
+                DockPill(title: "Let it go", secondary: true) { resolveConverted(id, keepAsNew: false) }
+                    .accessibilityIdentifier("conflict.letGo")
+                DockPill(title: "Skip for now", secondary: true) { queue.skip(id: id) }
+            }
+            .frame(minHeight: CatchlightLayout.minTouchTarget)
+        }
+    }
+
+    private func resolveConverted(_ id: UUID, keepAsNew: Bool) {
+        // After any running pass has delivered, like every choice here.
+        queue.held.whenNoPassRunning {
+            do {
+                let copy = try queue.resolveConverted(id: id, keepAsNew: keepAsNew, store: dailies.conflictChoiceStore)
+                dailies.applyConvertedChoice(released: id, keptAs: copy)
+                // Send the new Take (if any) rather than wait for the next automatic pass.
+                dailies.onLocalChange?()
+            } catch {
+                dailies.reportStorageError(.conflictResolutionFailed)
+            }
+        }
+    }
+
     private func shouldStack(pair: (local: Take, remote: Take)) -> Bool {
         // Compact width AND both bodies long enough to need real estate.
         hSize == .compact && pair.local.plainText.count > 80 && pair.remote.plainText.count > 80
@@ -310,21 +371,30 @@ struct ConflictResolutionView: View {
         HStack(spacing: 12) {
             DockPill(title: "Keep this version") {
                 guard let keepLocal = chosenLocal else { return }
-                do {
-                    try queue.resolve(id: pair.local.id, keepLocal: keepLocal, store: dailies.conflictChoiceStore)
-                    selection.removeValue(forKey: pair.local.id)
-                    dailies.reload()
-                    // The hold is released: push the choice rather than wait for the next
-                    // automatic pass.
-                    dailies.onLocalChange?()
-                    // Reminder actions tapped while it was held, waiting for this choice.
-                    dailies.applyPendingReminderActions()
-                    dailies.refreshRecurringSchedules()
-                } catch {
-                    // ConflictQueue writes through the store directly, bypassing
-                    // DailiesViewModel — route the failure through the timeline's
-                    // storage-error strip; the pair stays queued so the user can retry.
-                    dailies.reportStorageError(.conflictResolutionFailed)
+                // A pass running now may find this Take turned into a Script elsewhere; the choice
+                // waits until its report is in, and is then refused for a converted pair rather
+                // than re-stamped into the Script (`ConflictQueue.resolve`).
+                queue.held.whenNoPassRunning {
+                    do {
+                        try queue.resolve(id: pair.local.id, keepLocal: keepLocal, store: dailies.conflictChoiceStore)
+                        selection.removeValue(forKey: pair.local.id)
+                        dailies.reload()
+                        // The hold is released: push the choice rather than wait for the next
+                        // automatic pass.
+                        dailies.onLocalChange?()
+                        // Reminder actions tapped while it was held, waiting for this choice.
+                        dailies.applyPendingReminderActions()
+                        dailies.refreshRecurringSchedules()
+                    } catch is ConflictQueue.ChoiceDoesNotFit {
+                        // The pass that ran meanwhile found the Take turned into a Script elsewhere:
+                        // nothing was written, and the card now offers that pair's own choices.
+                        selection.removeValue(forKey: pair.local.id)
+                    } catch {
+                        // ConflictQueue writes through the store directly, bypassing
+                        // DailiesViewModel — route the failure through the timeline's
+                        // storage-error strip; the pair stays queued so the user can retry.
+                        dailies.reportStorageError(.conflictResolutionFailed)
+                    }
                 }
             }
             .disabled(chosenLocal == nil)

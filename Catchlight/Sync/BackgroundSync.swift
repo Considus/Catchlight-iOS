@@ -65,6 +65,11 @@ public final class BackgroundSyncCoordinator {
     /// for the conflict queue to drop pairs that no longer have a Take on this device.
     private let onReleased: (@MainActor ([UUID]) -> Void)?
 
+    /// Invoked on the main actor with the held Takes whose other side another device has turned
+    /// into a Script (`SyncReport.heldConverted`), for the conflict queue to mark them. Delivered
+    /// after the pass's conflicts, so a pair queued in the same pass is there to mark.
+    private let onHeldConverted: (@MainActor ([UUID]) -> Void)?
+
     /// - Parameter makeEngine: builds a SyncEngine if a cloud folder is configured
     ///   and the master key is available; returns nil in local-only/locked states.
     /// - Parameter onConflicts: hand-off for conflicts detected during the sync.
@@ -81,7 +86,8 @@ public final class BackgroundSyncCoordinator {
                 onQuarantined: (@MainActor ([UUID]) -> Void)? = nil,
                 onHeldBack: (@MainActor (Int) -> Void)? = nil,
                 onRemoteChanges: (@MainActor (SyncReport) -> Void)? = nil,
-                onReleased: (@MainActor ([UUID]) -> Void)? = nil) {
+                onReleased: (@MainActor ([UUID]) -> Void)? = nil,
+                onHeldConverted: (@MainActor ([UUID]) -> Void)? = nil) {
         self.makeEngine = makeEngine
         self.heldTakes = heldTakes
         self.onConflicts = onConflicts
@@ -91,6 +97,7 @@ public final class BackgroundSyncCoordinator {
         self.onHeldBack = onHeldBack
         self.onRemoteChanges = onRemoteChanges
         self.onReleased = onReleased
+        self.onHeldConverted = onHeldConverted
     }
 
     /// Call once at launch (before app finishes launching).
@@ -272,6 +279,7 @@ public final class BackgroundSyncCoordinator {
         let onHeldBack = self.onHeldBack
         let onRemoteChanges = self.onRemoteChanges
         let onReleased = self.onReleased
+        let onHeldConverted = self.onHeldConverted
         let heldTakes = self.heldTakes
 
         DispatchQueue.global(qos: .utility).async {
@@ -281,6 +289,7 @@ public final class BackgroundSyncCoordinator {
                                                          isCancelled: { cancel.isCancelled })
                 Self.deliver(report, heldTakes: heldTakes, generation: generation,
                              onReleased: onReleased,
+                             onHeldConverted: onHeldConverted,
                              onConflicts: onConflicts,
                              onUnverified: onUnverified,
                              onQuarantined: onQuarantined,
@@ -303,9 +312,17 @@ public final class BackgroundSyncCoordinator {
     @discardableResult
     static func pass(_ engine: SyncEngine, holding heldTakes: HeldTakes?,
                      isCancelled: () -> Bool) throws -> (report: SyncReport, generation: Int?) {
+        // Counted from here until `deliver` hands the report to the main actor (or the pass
+        // fails), so a conflict choice waits for it (`HeldTakes.whenNoPassRunning`).
+        heldTakes?.beginPass()
         let snapshot = heldTakes?.snapshot
-        let report = try engine.sync(isCancelled: isCancelled, holding: snapshot?.ids ?? [])
-        return (report, snapshot?.generation)
+        do {
+            let report = try engine.sync(isCancelled: isCancelled, holding: snapshot?.ids ?? [])
+            return (report, snapshot?.generation)
+        } catch {
+            if let heldTakes { Task { @MainActor in heldTakes.endPass() } }
+            throw error
+        }
     }
 
     /// Whether a pass begun in `generation` may still deliver into the conflict queue: not if
@@ -319,6 +336,7 @@ public final class BackgroundSyncCoordinator {
     private static func deliver(_ report: SyncReport,
                                 heldTakes: HeldTakes?, generation: Int?,
                                 onReleased: (@MainActor ([UUID]) -> Void)?,
+                                onHeldConverted: (@MainActor ([UUID]) -> Void)?,
                                 onConflicts: (@MainActor ([(local: Take, remote: Take)]) -> Void)?,
                                 onUnverified: (@MainActor ([UnverifiedCopy]) -> Void)?,
                                 onQuarantined: (@MainActor ([UUID]) -> Void)?,
@@ -329,9 +347,15 @@ public final class BackgroundSyncCoordinator {
             let released = report.deletedLocally
             Task { @MainActor in if isCurrent(generation, heldTakes) { onReleased(released) } }
         }
-        if let onConflicts, !report.conflicts.isEmpty {
-            let conflicts = report.conflicts
-            Task { @MainActor in if isCurrent(generation, heldTakes) { onConflicts(conflicts) } }
+        // One hop for both, conflicts first, so a pair queued by this pass is there to be marked;
+        // then the pass ends, releasing any conflict choice that waited for it.
+        let conflicts = report.conflicts, converted = report.heldConverted
+        Task { @MainActor in
+            if isCurrent(generation, heldTakes) {
+                if !conflicts.isEmpty { onConflicts?(conflicts) }
+                if !converted.isEmpty { onHeldConverted?(converted) }
+            }
+            heldTakes?.endPass()
         }
         if let onUnverified, !report.unverified.isEmpty {
             let unverified = report.unverified
@@ -377,6 +401,7 @@ public final class BackgroundSyncCoordinator {
         let makeEngine = self.makeEngine
         let heldTakes = self.heldTakes
         let onReleased = self.onReleased
+        let onHeldConverted = self.onHeldConverted
         let completion = TaskCompletion()
         let cancel = CancelFlag()
 
@@ -407,6 +432,7 @@ public final class BackgroundSyncCoordinator {
                                                              isCancelled: { cancel.isCancelled })
                     Self.deliver(report, heldTakes: heldTakes, generation: generation,
                                  onReleased: onReleased,
+                                 onHeldConverted: onHeldConverted,
                                  onConflicts: onConflicts,
                                  onUnverified: onUnverified,
                                  onQuarantined: onQuarantined,

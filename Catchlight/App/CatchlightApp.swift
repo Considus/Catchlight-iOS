@@ -81,6 +81,11 @@ struct CatchlightApp: App {
             // A held Take another device made a Script has left this device: its conflict goes.
             onReleased: { ids in
                 app.conflictQueue.release(ids)
+            },
+            // A held Take another device made a Script (Catchlight-Core#29): its pair can only be
+            // kept as a new Take or let go, never re-stamped into the Script.
+            onHeldConverted: { ids in
+                app.handleHeldConverted(ids)
             }
         )
         self.backgroundSync = backgroundSync
