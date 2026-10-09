@@ -110,6 +110,10 @@ private var keyboardIntroductionChecked = false
 /// hittable point (`Computed hit point {-1, -1}`) and failed; a retry passed because iOS shows it
 /// once. Measured 2026-10-01: present on every failing run, absent once dismissed.
 ///
+/// CI also writes the preference that marks the introduction as shown before the tests start
+/// ("Seed the simulator" in ci.yml), because it can arrive after the 3 s this waits; this
+/// helper is the backstop for a local run on a fresh simulator.
+///
 /// Matched on the introduction's own text, so no other "Continue" is ever tapped. Checked once,
 /// at the first keyboard presentation: if it is not there then, this simulator has already shown
 /// it and the check is not repeated.
