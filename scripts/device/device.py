@@ -227,6 +227,13 @@ def install_locked(args):
         run(["git", "-C", root, "worktree", "add", "--detach", src, sha], GIT_TIMEOUT,
             label="git worktree add")
         run(["xcodegen", "generate"], DEVICE_TIMEOUT, cwd=src, label="xcodegen")
+        # The stamp adds "+dirty" when the tree has changes, and xcodegen rewrites
+        # tracked plists: stop here, with the reason, rather than fail the stamp
+        # check after a full build.
+        changed = run(["git", "-C", src, "status", "--porcelain"], GIT_TIMEOUT, label="git status")
+        if changed.strip():
+            raise Failure("xcodegen changed tracked files, so the build would be stamped "
+                          "+dirty; commit the regenerated files on the branch first:\n" + changed.strip())
         run(["xcodebuild", "-scheme", SCHEME, "-configuration", "Debug",
              "-destination", f"platform=iOS,id={udid}", "-derivedDataPath", derived,
              "-allowProvisioningUpdates", "build"], BUILD_TIMEOUT, cwd=src, label="xcodebuild")
