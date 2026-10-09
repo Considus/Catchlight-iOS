@@ -73,6 +73,24 @@ class DiagnosticsText(unittest.TestCase):
         self.assertEqual(device.diagnostics_text([]), "")
 
 
+class MalformedLog(unittest.TestCase):
+    def test_a_bad_entry_is_shown_raw_and_sorted_last(self):
+        saved = os.environ.get("TZ")
+        os.environ["TZ"] = "UTC"
+        __import__("time").tzset()
+        try:
+            text = device.diagnostics_text([{"category": "storage"},
+                                            {"timestamp": 0, "category": "storage", "message": "ok"}])
+        finally:
+            if saved is None:
+                os.environ.pop("TZ", None)
+            else:
+                os.environ["TZ"] = saved
+            __import__("time").tzset()
+        self.assertEqual(text, '2001-01-01 00:00:00  [storage]  ok\n'
+                               '(malformed entry) {"category": "storage"}\n')
+
+
 class CrashFilter(unittest.TestCase):
     def test_keeps_only_catchlight_reports(self):
         paths = ["Catchlight-2026-10-06-120000.ips", "CatchlightWidgets-2026-10-06.ips",

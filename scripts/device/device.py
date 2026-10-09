@@ -112,14 +112,27 @@ def choose_device(devices, wanted=None):
 
 
 def entry_line(entry):
-    """One diagnostics entry as the in-app Export writes it, in local time."""
-    when = (APPLE_EPOCH + dt.timedelta(seconds=float(entry["timestamp"]))).astimezone()
-    return f"{when:%Y-%m-%d %H:%M:%S}  [{entry['category']}]  {entry['message']}"
+    """One diagnostics entry as the in-app Export writes it, in local time.
+
+    A malformed entry is shown as raw JSON rather than stopping the whole log.
+    """
+    try:
+        when = (APPLE_EPOCH + dt.timedelta(seconds=float(entry["timestamp"]))).astimezone()
+        return f"{when:%Y-%m-%d %H:%M:%S}  [{entry['category']}]  {entry['message']}"
+    except (KeyError, TypeError, ValueError):
+        return f"(malformed entry) {json.dumps(entry)}"
+
+
+def _sort_key(entry):
+    try:
+        return float(entry["timestamp"])
+    except (KeyError, TypeError, ValueError):
+        return float("inf")
 
 
 def diagnostics_text(entries):
     """The whole log as text, oldest first, the same order as the in-app Export."""
-    ordered = sorted(entries, key=lambda e: float(e["timestamp"]))
+    ordered = sorted(entries, key=_sort_key)
     return "\n".join(entry_line(e) for e in ordered) + ("\n" if ordered else "")
 
 
@@ -283,8 +296,14 @@ def cmd_logs(args):
     run(["xcrun", "devicectl", "device", "copy", "from", "--device", device["identifier"],
          "--domain-type", "appDataContainer", "--domain-identifier", BUNDLE_ID,
          "--source", DIAG_PATH, "--destination", raw], DEVICE_TIMEOUT, label="devicectl copy log")
-    with open(raw) as f:
-        entries = json.load(f)
+    try:
+        with open(raw) as f:
+            entries = json.load(f)
+    except json.JSONDecodeError:
+        # The app rewrites the file whole; a copy taken mid-write or after a crash
+        # can be truncated. Keep going so the crash reports are still collected.
+        print(f"The diagnostics log copied to {raw} is truncated or damaged; run logs again.")
+        entries = []
     text_path = os.path.join(out_dir, "catchlight-diagnostics.txt")
     with open(text_path, "w") as f:
         f.write(diagnostics_text(entries))
