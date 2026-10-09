@@ -249,6 +249,14 @@ enum Wiring {
                     UnverifiedCopy(id: lost.id, local: nil, cloud: lost),
                 ])
             }
+            // `--uitesting-converted` seeds a conflict whose other side another device has turned
+            // into a Script (Catchlight-Core#29), for the sheet's converted card: otherwise it needs
+            // two devices and a Script conversion.
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-converted"),
+               let first = try? store.allTakes().first {
+                model.conflictQueue.enqueue([(local: first, remote: first)])
+                model.conflictQueue.markConverted([first.id])
+            }
             return model
         }
         #endif

@@ -633,6 +633,15 @@ final class DailiesViewModel {
         reload()
     }
 
+    /// After a converted conflict is resolved (`ConflictQueue.resolveConverted`): the original
+    /// left this phone, so its alarms go, as for a Take a sync let go; a Take kept as new gets its
+    /// own, under its own notification id.
+    func applyConvertedChoice(released id: UUID, keptAs copy: Take?) {
+        reminders.cancelReminder(identifier: id.uuidString)
+        if let copy, let stored = try? store.take(id: copy.id) { reconcileNotification(for: stored) }
+        reload()
+    }
+
     /// Drop pending alarms whose Take no longer exists. Runs on unlock, beside the
     /// re-arm, because that is the first moment the store can say which Takes are real.
     /// A no-op on a healthy install; it exists for the ones already carrying orphans,

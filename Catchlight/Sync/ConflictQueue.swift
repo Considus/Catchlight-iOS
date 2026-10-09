@@ -23,6 +23,12 @@
 //  Unverified cloud copies stay in memory only and are not held: the engine never writes them
 //  locally, and the next sync finds them again.
 //
+//  A waiting pair whose other side another device has since turned into a Script is CONVERTED
+//  (`SyncReport.heldConverted`, Catchlight-Core#29): the phone never reads Scripts (D-315), so there
+//  is no other version to show, and the Take must never be re-stamped or written on its own id,
+//  or the next push sends the choice into the Script. The mark is kept in the pair's file until
+//  the pair is resolved, and `resolveConverted` is its only way out.
+//
 
 import Foundation
 import Observation
@@ -59,6 +65,18 @@ final class ConflictQueue {
 
     func isHeld(_ id: UUID) -> Bool { held.contains(id) }
 
+    /// Waiting pairs whose other side is now a Script on another device. Kept in each pair's file.
+    private(set) var converted: Set<UUID> = []
+
+    func isConverted(_ id: UUID) -> Bool { converted.contains(id) }
+
+    /// A choice that can't apply to the pair: a version picked for a converted pair, or the
+    /// converted choices for an ordinary one. Nothing is written.
+    struct ChoiceDoesNotFit: Error, Equatable { let id: UUID }
+
+    /// The Take changed between reading it and letting it go. Nothing is kept.
+    struct TakeChanged: Error, Equatable { let id: UUID }
+
     /// Takes whose conflict file is on disk but did not open with these keys. Held all the
     /// same, read-only, because the file may be the only copy of the other version; there is
     /// no pair to show, so they can't be resolved here.
@@ -90,15 +108,17 @@ final class ConflictQueue {
         skipped.removeAll()
         unverified.removeAll()
         unreadable.removeAll()
+        converted.removeAll()
         var loaded: [(pair: (local: Take, remote: Take), date: Date)] = []
         let files = (try? FileManager.default.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: [.creationDateKey])) ?? []
         for url in files where url.pathExtension == "conflict" {
             guard let id = UUID(uuidString: url.deletingPathExtension().lastPathComponent) else { continue }
             do {
-                let pair = try Self.open(Data(contentsOf: url), id: id, keys: keys)
+                let file = try Self.openFile(Data(contentsOf: url), id: id, keys: keys)
                 let date = (try? url.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
-                loaded.append((pair, date))
+                loaded.append((file.pair, date))
+                if file.converted { converted.insert(id) }
             } catch {
                 // Kept as it is, never deleted: it may hold the only copy of the other version.
                 // And its Take stays held, so the owner's rule holds even here.
@@ -123,6 +143,7 @@ final class ConflictQueue {
         skipped.removeAll()
         unverified.removeAll()
         unreadable.removeAll()
+        converted.removeAll()
         waitingChanged()
     }
 
@@ -137,8 +158,23 @@ final class ConflictQueue {
         guard !gone.isEmpty else { return }
         waiting.removeAll { gone.contains($0.local.id) }
         skipped.subtract(gone)
+        converted.subtract(gone)
         waitingChanged()
         for id in gone { removeFile(id) }
+    }
+
+    /// Mark waiting pairs whose other side another device has turned into a Script
+    /// (`SyncReport.heldConverted`, named on every pass while held). Written to the pair's file so
+    /// it survives a relaunch; a skipped pair is shown again, because its choices have changed. An
+    /// id with no readable pair is left alone.
+    func markConverted(_ ids: [UUID]) {
+        guard accepting else { return }
+        for id in ids where !converted.contains(id) {
+            guard let pair = waiting.first(where: { $0.local.id == id }) else { continue }
+            converted.insert(id)
+            skipped.remove(id)
+            persist(pair)
+        }
     }
 
     // MARK: - Conflicts
@@ -177,6 +213,9 @@ final class ConflictQueue {
     /// first). `store` is the RAW store: this is the one write a held Take is waiting for.
     func resolve(id: UUID, keepLocal: Bool, store: TakeStore) throws {
         guard let idx = waiting.firstIndex(where: { $0.local.id == id }) else { return }
+        // A converted pair's other side is a Script: re-stamping this Take on its own id would
+        // send the choice into it on the next push (`resolveConverted`).
+        if converted.contains(id) { throw ChoiceDoesNotFit(id: id) }
         let pair = waiting[idx]
         // This phone's version is the Take as it is NOW, as on the Mac: an edit that landed
         // in the moment before the hold took effect must not be replaced by the older copy in
@@ -195,6 +234,47 @@ final class ConflictQueue {
         skipped.remove(id)
         waitingChanged()
         removeFile(id)
+    }
+
+    /// Resolve a CONVERTED pair, whose other side is now a Script on another device. Nothing is
+    /// ever written on the Take's own id, which the folder now lists as that Script.
+    /// - `keepAsNew`: this phone's version is saved as a NEW Take, as Core's `SyncEngine.fork`
+    ///   makes one (`copy(of:)`: a new id, a new notification id, `createdAt` kept, never the
+    ///   Obie), stamped as a fresh edit so the next push uploads it. It becomes the Obie only if
+    ///   the original was, once the original has gone.
+    /// - Otherwise ("Let it go"): nothing is kept.
+    /// Either way the original leaves this phone at once with no deletion record
+    /// (`TakeStore.release`), so it can't be edited into the Script before the next pass, and the
+    /// pair, its mark and its file go. Returns the new Take, if one was made. `store` is the RAW
+    /// store. The caller cancels the original's reminders and arms the copy's.
+    @discardableResult
+    func resolveConverted(id: UUID, keepAsNew: Bool, store: TakeStore, now: Date = Date()) throws -> Take? {
+        guard let idx = waiting.firstIndex(where: { $0.local.id == id }) else { return nil }
+        guard converted.contains(id) else { throw ChoiceDoesNotFit(id: id) }
+        let pair = waiting[idx]
+        let current = try store.take(id: id)
+        var copy: Take?
+        if keepAsNew {
+            var made = Self.copy(of: current ?? pair.local)
+            made.modifiedAt = now
+            try store.upsert(made)
+            copy = made
+        }
+        if let current, try !store.release(id: id, ifNotModifiedAfter: current.modifiedAt) {
+            // Changed between the read and the release: withdraw the copy, and keep the pair.
+            if let copy { _ = try store.release(id: copy.id, ifNotModifiedAfter: copy.modifiedAt) }
+            throw TakeChanged(id: id)
+        }
+        if let made = copy, (current ?? pair.local).isObie {
+            try store.setObie(id: made.id, replaceExisting: true)
+            copy = try store.take(id: made.id) ?? made
+        }
+        waiting.remove(at: idx)
+        skipped.remove(id)
+        converted.remove(id)
+        waitingChanged()
+        removeFile(id)
+        return copy
     }
 
     /// "Skip for now": hidden until the next launch or a newer version, nothing written. The
@@ -233,7 +313,8 @@ final class ConflictQueue {
 
     // MARK: - On disk
 
-    private struct Pair: Codable { let local: Take; let remote: Take }
+    /// `converted` is absent in files written before Core 1.5, which read as not converted.
+    private struct Pair: Codable { let local: Take; let remote: Take; var converted: Bool? }
 
     private func fileURL(_ id: UUID) -> URL? {
         directory?.appendingPathComponent(id.uuidString.lowercased()).appendingPathExtension("conflict")
@@ -245,7 +326,7 @@ final class ConflictQueue {
         guard let directory, let keys, let url = fileURL(pair.local.id) else { return }
         do {
             try Self.prepare(directory)
-            try Self.seal(pair, keys: keys)
+            try Self.seal(pair, converted: converted.contains(pair.local.id), keys: keys)
                 .write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
             var values = URLResourceValues()
             values.isExcludedFromBackup = true
@@ -278,8 +359,8 @@ final class ConflictQueue {
         }
     }
 
-    static func seal(_ pair: (local: Take, remote: Take), keys: KeyHierarchy) throws -> Data {
-        let plain = try PlatformJSON.encode(Pair(local: pair.local, remote: pair.remote))
+    static func seal(_ pair: (local: Take, remote: Take), converted: Bool = false, keys: KeyHierarchy) throws -> Data {
+        let plain = try PlatformJSON.encode(Pair(local: pair.local, remote: pair.remote, converted: converted ? true : nil))
         let id = pair.local.id
         let box = try AES.GCM.seal(plain, using: keys.itemKey(takeUUID: id),
                                    authenticating: format + Data(id.uuidString.utf8))
@@ -288,11 +369,15 @@ final class ConflictQueue {
     }
 
     static func open(_ sealed: Data, id: UUID, keys: KeyHierarchy) throws -> (local: Take, remote: Take) {
+        try openFile(sealed, id: id, keys: keys).pair
+    }
+
+    static func openFile(_ sealed: Data, id: UUID, keys: KeyHierarchy) throws -> (pair: (local: Take, remote: Take), converted: Bool) {
         let box = try AES.GCM.SealedBox(combined: sealed)
         let plain = try AES.GCM.open(box, using: keys.itemKey(takeUUID: id),
                                      authenticating: format + Data(id.uuidString.utf8))
         let pair = try PlatformJSON.decode(Pair.self, from: plain)
-        return (pair.local, pair.remote)
+        return ((pair.local, pair.remote), pair.converted == true)
     }
 
     // MARK: - Unverified cloud copies (2026-09-30)

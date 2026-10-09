@@ -31898,6 +31898,118 @@
         }
       }
     },
+    "Keep this version as a new Take" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Diese Version als neuen Take behalten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conserver cette version comme nouveau Take"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conservar esta versión como un nuevo Take"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mantieni questa versione come nuovo Take"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Manter esta versão como um novo Take"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Deze versie behouden als een nieuwe Take"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Manter esta versão como um novo Take"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Zachowaj tę wersję jako nowy Take"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Behåll den här versionen som en ny Take"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Behold denne version som en ny Take"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Behold denne versjonen som en ny Take"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Säilytä tämä versio uutena Takena"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bu sürümü yeni bir Take olarak koru"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このバージョンを新しいTakeとして保持"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 버전을 새 Take로 유지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将此版本保留为新的 Take"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "將此版本保留為新的 Take"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "เก็บเวอร์ชันนี้ไว้เป็น Take ใหม่"
+          }
+        }
+      }
+    },
     "Keeping it replaces any newer edit that may exist on another device when it syncs." : {
       "localizations" : {
         "de" : {
@@ -32006,6 +32118,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "การเก็บไว้จะแทนที่การแก้ไขที่ใหม่กว่าที่อาจมีอยู่ในอุปกรณ์อื่นเมื่อทำการซิงค์"
+          }
+        }
+      }
+    },
+    "Let it go" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Verwerfen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abandonner"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Descartar"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Scarta"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Descartar"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Loslaten"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Descartar"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Odrzuć"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Släpp den"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Giv slip"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gi slipp"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Luovu"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bırak"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手放す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "놓아주기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "放弃"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "放棄"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ปล่อยไป"
           }
         }
       }
@@ -57127,6 +57351,118 @@
         }
       }
     },
+    "The Script can't be shown here. Keep this version as a new Take, or let it go." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Das Script kann hier nicht angezeigt werden. Behalte diese Version als neuen Take oder verwirf sie."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Le Script ne peut pas être affiché ici. Conservez cette version comme nouveau Take, ou abandonnez-la."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El Script no se puede mostrar aquí. Conserva esta versión como un nuevo Take o descártala."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo Script non può essere mostrato qui. Mantieni questa versione come nuovo Take oppure scartala."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "O Script não pode ser exibido aqui. Mantenha esta versão como um novo Take ou descarte-a."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Het Script kan hier niet worden weergegeven. Behoud deze versie als een nieuwe Take, of laat haar los."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "O Script não pode ser apresentado aqui. Mantenha esta versão como um novo Take ou descarte-a."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tego Scriptu nie można tu wyświetlić. Zachowaj tę wersję jako nowy Take albo ją odrzuć."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Scriptet kan inte visas här. Behåll den här versionen som en ny Take, eller släpp den."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Scriptet kan ikke vises her. Behold denne version som en ny Take, eller giv slip på den."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Scriptet kan ikke vises her. Behold denne versjonen som en ny Take, eller gi slipp på den."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Scriptiä ei voi näyttää täällä. Säilytä tämä versio uutena Takena tai luovu siitä."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Script burada gösterilemez. Bu sürümü yeni bir Take olarak koruyun ya da bırakın."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここではScriptを表示できません。このバージョンを新しいTakeとして保持するか、手放してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기에서는 Script를 표시할 수 없습니다. 이 버전을 새 Take로 유지하거나 놓아주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此处无法显示该 Script。请将此版本保留为新的 Take，或放弃它。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "這裡無法顯示該 Script。請將此版本保留為新的 Take，或放棄它。"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ไม่สามารถแสดง Script ที่นี่ได้ เก็บเวอร์ชันนี้ไว้เป็น Take ใหม่ หรือปล่อยไป"
+          }
+        }
+      }
+    },
     "These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed." : {
       "localizations" : {
         "de" : {
@@ -57795,6 +58131,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "การดำเนินการนี้จะแทนที่บัญชีในอุปกรณ์นี้ Take ที่เก็บไว้เฉพาะที่นี่จะถูกลบและไม่สามารถกู้คืนได้ หากคุณยังไม่ได้ทำ ให้ปิดหน้านี้และใช้ \"ส่งออก Take (Markdown)\" เพื่อเก็บสำเนาก่อน"
+          }
+        }
+      }
+    },
+    "This Take was turned into a Script on another device." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dieser Take wurde auf einem anderen Gerät in ein Script umgewandelt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ce Take a été transformé en Script sur un autre appareil."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este Take se convirtió en un Script en otro dispositivo."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Questo Take è stato trasformato in uno Script su un altro dispositivo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este Take foi transformado em um Script em outro dispositivo."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Deze Take is op een ander apparaat omgezet in een Script."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este Take foi transformado num Script noutro dispositivo."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ten Take został zmieniony w Script na innym urządzeniu."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Den här Taken gjordes om till ett Script på en annan enhet."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Denne Take blev lavet om til et Script på en anden enhed."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Denne Take ble gjort om til et Script på en annen enhet."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tämä Take muutettiin Scriptiksi toisella laitteella."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bu Take başka bir cihazda Script'e dönüştürüldü."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このTakeは別のデバイスでScriptに変換されました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Take가 다른 기기에서 Script로 바뀌었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此 Take 已在另一台设备上转为 Script。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "這個 Take 已在另一部裝置上轉為 Script。"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Take นี้ถูกเปลี่ยนเป็น Script บนอุปกรณ์อื่น"
           }
         }
       }
