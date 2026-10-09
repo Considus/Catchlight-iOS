@@ -46698,13 +46698,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bewerten"
+            "value" : "Prüfen"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Évaluer"
+            "value" : "Examiner"
           }
         },
         "es" : {
@@ -46716,7 +46716,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recensisci"
+            "value" : "Rivedi"
           }
         },
         "pt-BR" : {
@@ -46728,13 +46728,13 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Beoordelen"
+            "value" : "Bekijken"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Analisar"
+            "value" : "Rever"
           }
         },
         "pl" : {
@@ -46758,7 +46758,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vurder"
+            "value" : "Se gjennom"
           }
         },
         "fi" : {
@@ -46776,7 +46776,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "レビュー"
+            "value" : "確認"
           }
         },
         "ko" : {
@@ -46788,7 +46788,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "评价"
+            "value" : "查看"
           }
         },
         "zh-Hant" : {
@@ -58812,7 +58812,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tippen + erste Zeile"
+            "value" : "Typ + erste Zeile"
           }
         },
         "fr" : {
@@ -58824,13 +58824,13 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escribir + primera línea"
+            "value" : "Tipo + primera línea"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Digita + prima riga"
+            "value" : "Tipo + prima riga"
           }
         },
         "pt-BR" : {
@@ -58842,7 +58842,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Typen + eerste regel"
+            "value" : "Type + eerste regel"
           }
         },
         "pt-PT" : {
@@ -58860,19 +58860,19 @@
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skriv + första raden"
+            "value" : "Typ + första raden"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skriv + første linje"
+            "value" : "Type + første linje"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skriv + første linje"
+            "value" : "Type + første linje"
           }
         },
         "fi" : {
@@ -58890,31 +58890,31 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "入力＋1行目"
+            "value" : "種類＋1行目"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "입력 + 첫 줄"
+            "value" : "유형 + 첫 줄"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "输入 + 首行"
+            "value" : "类型 + 首行"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "輸入文字 + 第一行"
+            "value" : "類型 + 第一行"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "พิมพ์ + บรรทัดแรก"
+            "value" : "ประเภท + บรรทัดแรก"
           }
         }
       }
@@ -58924,7 +58924,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tippen + vollständiger Text"
+            "value" : "Typ + vollständiger Text"
           }
         },
         "fr" : {
@@ -58936,13 +58936,13 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escribir + texto completo"
+            "value" : "Tipo + texto completo"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Digita + testo completo"
+            "value" : "Tipo + testo completo"
           }
         },
         "pt-BR" : {
@@ -58954,7 +58954,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Typen + volledige tekst"
+            "value" : "Type + volledige tekst"
           }
         },
         "pt-PT" : {
@@ -58972,19 +58972,19 @@
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skriv + hela texten"
+            "value" : "Typ + hela texten"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skriv + fuld tekst"
+            "value" : "Type + fuld tekst"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skriv + full tekst"
+            "value" : "Type + full tekst"
           }
         },
         "fi" : {
@@ -59002,31 +59002,31 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "入力＋全文"
+            "value" : "種類＋全文"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "입력 + 전체 텍스트"
+            "value" : "유형 + 전체 텍스트"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "输入 + 全文"
+            "value" : "类型 + 全文"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "輸入文字 + 全文"
+            "value" : "類型 + 全文"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "พิมพ์ + ข้อความทั้งหมด"
+            "value" : "ประเภท + ข้อความทั้งหมด"
           }
         }
       }
@@ -59036,7 +59036,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nur tippen"
+            "value" : "Nur Typ"
           }
         },
         "fr" : {
@@ -59048,13 +59048,13 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Solo escribir"
+            "value" : "Solo el tipo"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Solo digitazione"
+            "value" : "Solo il tipo"
           }
         },
         "pt-BR" : {
@@ -59066,7 +59066,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alleen typen"
+            "value" : "Alleen type"
           }
         },
         "pt-PT" : {
@@ -59078,25 +59078,25 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tylko wpisywanie"
+            "value" : "Tylko typ"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skriv endast"
+            "value" : "Endast typ"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kun tekst"
+            "value" : "Kun type"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bare skriv"
+            "value" : "Bare type"
           }
         },
         "fi" : {
@@ -59114,31 +59114,31 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "入力のみ"
+            "value" : "種類のみ"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "입력만"
+            "value" : "유형만"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "仅输入"
+            "value" : "仅类型"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "僅輸入文字"
+            "value" : "僅類型"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "พิมพ์เฉพาะ"
+            "value" : "ประเภทเท่านั้น"
           }
         }
       }
