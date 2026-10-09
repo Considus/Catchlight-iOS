@@ -111,6 +111,29 @@ class DataAffecting(unittest.TestCase):
         self.assertEqual(device.data_affecting(["project.yml"], diff), [])
 
 
+class SameBuild(unittest.TestCase):
+    def test_different_abbreviation_lengths_match(self):
+        self.assertTrue(device.same_build("c6e80ac", "c6e80ac1f"))
+        self.assertTrue(device.same_build("C6E80AC1F", "c6e80ac"))
+
+    def test_other_commits_and_dirty_stamps_do_not(self):
+        self.assertFalse(device.same_build("c6e80ac", "c6e80ad"))
+        self.assertFalse(device.same_build("c6e80ac+dirty", "c6e80ac"))
+        self.assertFalse(device.same_build("1", "c6e80ac"))
+        self.assertFalse(device.same_build(None, "c6e80ac"))
+
+
+class FreshInstall(unittest.TestCase):
+    def test_no_app_on_the_phone_needs_no_approval(self):
+        saved = device.installed_build
+        device.installed_build = lambda _device: None
+        try:
+            args = type("Args", (), {"allow_downgrade": False, "data_change_approved": False})()
+            device.check_against_phone("/nonexistent", {}, "c6e80ac", args)
+        finally:
+            device.installed_build = saved
+
+
 class CrashFilter(unittest.TestCase):
     def test_keeps_only_catchlight_reports(self):
         paths = ["Catchlight-2026-10-06-120000.ips", "CatchlightWidgets-2026-10-06.ips",

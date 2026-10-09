@@ -211,7 +211,7 @@ def cmd_status(args):
         return 1
     version, stamp = build
     print(f"on the phone: {version} ({stamp})  ·  origin/main: {main}")
-    if stamp == main:
+    if same_build(stamp, main):
         print("The phone has the latest main.")
     else:
         try:
@@ -284,7 +284,7 @@ def install_locked(args):
         cleanup_worktree(root, src, work)
 
     build = installed_build(device)
-    if build is None or build[1] != sha:
+    if build is None or not same_build(build[1], sha):
         raise Failure(f"the phone reports build {build[1] if build else 'none'}, not {sha}: "
                       "the install did not take")
     print(f"Build {sha} ({args.ref}) is on {device['deviceProperties']['name']}.")
@@ -297,6 +297,18 @@ def install_locked(args):
     return 0
 
 
+def same_build(stamp, sha):
+    """True when the phone's stamp and a short SHA name the same commit.
+
+    Both are abbreviations, and git lengthens one when a shorter form stops being
+    unique, so compare by prefix rather than as strings. A "+dirty" stamp never matches.
+    """
+    if not stamp or not sha or "+" in stamp:
+        return False
+    a, b = stamp.lower(), sha.lower()
+    return min(len(a), len(b)) >= 7 and (a.startswith(b) or b.startswith(a))
+
+
 def check_against_phone(root, device, sha, args):
     """Refuse a downgrade, and a data-affecting change Mark has not approved.
 
@@ -305,16 +317,19 @@ def check_against_phone(root, device, sha, args):
     rewrite them. Both stop here, before the build, with what to do next.
     """
     build = installed_build(device)
-    stamp = build[1] if build else None
-    if stamp == sha:
+    if build is None:
+        print("Catchlight is not on the phone, so this install has no notes to touch")
+        return
+    stamp = build[1]
+    if same_build(stamp, sha):
         print(f"the phone already has {sha}; reinstalling it")
         return
-    known = stamp is not None and run(
+    known = run(
         ["git", "-C", root, "cat-file", "-e", f"{stamp}^{{commit}}"], GIT_TIMEOUT,
         label="git cat-file", check=False)[0] == 0
     if not known:
         if not args.data_change_approved:
-            raise Failure(f"the phone's build ({stamp or 'not installed'}) is not a commit this repo "
+            raise Failure(f"the phone's build ({stamp}) is not a commit this repo "
                           "knows, so whether this install touches Mark's data cannot be checked. "
                           "Ask Mark, then run again with --data-change-approved.")
         print(f"[approved] the phone's build {stamp!r} cannot be compared; Mark approved the install")
