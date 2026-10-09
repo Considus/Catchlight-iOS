@@ -406,7 +406,7 @@ def cmd_logs(args):
                 shutil.copy2(os.path.join(tmp, rel), os.path.join(out_dir, os.path.basename(rel)))
         print(f"{len(mine)} Catchlight crash report(s)" + (": " + ", ".join(mine) if mine else ""))
 
-    tail = diagnostics_text(entries).splitlines()[-args.tail:]
+    tail = diagnostics_text(entries).splitlines()[-args.tail:] if args.tail > 0 else []
     if tail:
         print(f"--- last {len(tail)} entries ---")
         print("\n".join(tail))
