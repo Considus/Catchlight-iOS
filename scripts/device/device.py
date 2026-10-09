@@ -181,7 +181,10 @@ def cmd_status(args):
         try:
             behind = run(["git", "-C", root, "rev-list", "--count", f"{stamp}..origin/main"],
                          GIT_TIMEOUT, label="git rev-list")
-            print(f"The phone is {behind.strip()} commits behind origin/main.")
+            if behind.strip() == "0":
+                print("The phone has everything on origin/main: it is a branch build ahead of it.")
+            else:
+                print(f"The phone is {behind.strip()} commits behind origin/main.")
         except Failure:
             print(f"The phone's build stamp {stamp!r} is not a commit this repo knows "
                   "(an incremental, dirty or archive build): install a fresh one.")
