@@ -91,6 +91,26 @@ class MalformedLog(unittest.TestCase):
                                '(malformed entry) {"category": "storage"}\n')
 
 
+class DataAffecting(unittest.TestCase):
+    def test_ui_only_change_is_safe(self):
+        self.assertEqual(device.data_affecting(["Catchlight/UI/TakeRow.swift", "AGENTS.md"], ""), [])
+
+    def test_store_and_sync_paths_are_flagged(self):
+        self.assertEqual(device.data_affecting(["Catchlight/Sync/Engine.swift",
+                                                "Catchlight/Database/Store.swift",
+                                                "Catchlight/UI/X.swift"], ""),
+                         ["Catchlight/Database/Store.swift", "Catchlight/Sync/Engine.swift"])
+
+    def test_a_core_pin_bump_is_flagged(self):
+        diff = "@@ -52,7 +52,7 @@\n   CatchlightCore:\n-    exactVersion: 1.4.0\n+    exactVersion: 1.5.0\n"
+        self.assertEqual(device.data_affecting(["project.yml"], diff),
+                         ["project.yml: a package pin (Core or AppleStorage) changed"])
+
+    def test_other_project_yml_edits_are_not(self):
+        diff = "@@ -10 +10 @@\n-    MARKETING_VERSION: 1.0.0\n+    MARKETING_VERSION: 1.0.1\n"
+        self.assertEqual(device.data_affecting(["project.yml"], diff), [])
+
+
 class CrashFilter(unittest.TestCase):
     def test_keeps_only_catchlight_reports(self):
         paths = ["Catchlight-2026-10-06-120000.ips", "CatchlightWidgets-2026-10-06.ips",

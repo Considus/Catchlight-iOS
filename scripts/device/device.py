@@ -51,8 +51,12 @@ class Failure(Exception):
     """A step that failed, with a message that says what to do about it."""
 
 
-def run(cmd, timeout, cwd=None, label=None):
-    """Run a command, print its exit code, and return its stdout. Raise on failure."""
+def run(cmd, timeout, cwd=None, label=None, check=True):
+    """Run a command and print its exit code.
+
+    Returns stdout, or (exit code, stdout) when check is False. Raises on failure
+    when check is True.
+    """
     name = label or os.path.basename(cmd[0])
     try:
         proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
@@ -62,6 +66,8 @@ def run(cmd, timeout, cwd=None, label=None):
         print(f"[{name}] exit=timeout after {timeout}s")
         raise Failure(f"{name} did not finish within {timeout}s")
     print(f"[{name}] exit={proc.returncode}")
+    if not check:
+        return proc.returncode, proc.stdout
     if proc.returncode != 0:
         # xcodebuild writes compile errors to stdout, so show the end of both streams.
         tail = []
@@ -149,6 +155,23 @@ def catchlight_crashes(paths):
                   if p.endswith(".ips") and CRASH_NAME.search(os.path.basename(p)))
 
 
+# Paths whose change can alter what is written to Mark's real notes: the store, the
+# Keychain and crypto, sync, import, and the subscription path (a sideloaded build
+# with no receipt wipes the index). A Core or AppleStorage pin change in project.yml
+# counts too, because a Core release can change what is written to disk.
+DATA_PATHS = ("Catchlight/Database/", "Catchlight/Security/", "Catchlight/Sync/",
+              "Catchlight/Import/", "Catchlight/Subscription/")
+PIN_LINE = re.compile(r"^[+-]\s*(exactVersion|from|revision|branch):", re.MULTILINE)
+
+
+def data_affecting(changed_paths, project_diff):
+    """Why a change between two builds can touch Mark's data: [] when it cannot."""
+    reasons = sorted({p for p in changed_paths if p.startswith(DATA_PATHS)})
+    if PIN_LINE.search(project_diff or ""):
+        reasons.insert(0, "project.yml: a package pin (Core or AppleStorage) changed")
+    return reasons
+
+
 # ---- commands -------------------------------------------------------------
 
 def find_device(wanted):
@@ -228,7 +251,9 @@ def install_locked(args):
     # ^{commit} so an annotated tag resolves to the commit the stamp script will see.
     sha = run(["git", "-C", root, "rev-parse", "--short", f"{args.ref}^{{commit}}"], GIT_TIMEOUT,
               label="git rev-parse").strip()
-    print(f"building {args.ref} at {sha}")
+    print(f"target: {args.ref} at {sha}")
+    check_against_phone(root, device, sha, args)
+    print(f"building {sha}")
 
     run(["git", "-C", root, "worktree", "prune"], GIT_TIMEOUT, label="git worktree prune")
     work = tempfile.mkdtemp(prefix=f"device-{sha}-", dir=BUILD_ROOT)
@@ -270,6 +295,47 @@ def install_locked(args):
     else:
         print("If Catchlight was open, swipe it away and reopen it to run the new build.")
     return 0
+
+
+def check_against_phone(root, device, sha, args):
+    """Refuse a downgrade, and a data-affecting change Mark has not approved.
+
+    Mark's real notes are on the phone. An older build may not read what a newer
+    one wrote, and a change to the store, the Keychain, sync or the Core pin can
+    rewrite them. Both stop here, before the build, with what to do next.
+    """
+    build = installed_build(device)
+    stamp = build[1] if build else None
+    if stamp == sha:
+        print(f"the phone already has {sha}; reinstalling it")
+        return
+    known = stamp is not None and run(
+        ["git", "-C", root, "cat-file", "-e", f"{stamp}^{{commit}}"], GIT_TIMEOUT,
+        label="git cat-file", check=False)[0] == 0
+    if not known:
+        if not args.data_change_approved:
+            raise Failure(f"the phone's build ({stamp or 'not installed'}) is not a commit this repo "
+                          "knows, so whether this install touches Mark's data cannot be checked. "
+                          "Ask Mark, then run again with --data-change-approved.")
+        print(f"[approved] the phone's build {stamp!r} cannot be compared; Mark approved the install")
+        return
+    older = run(["git", "-C", root, "merge-base", "--is-ancestor", sha, stamp], GIT_TIMEOUT,
+                label="git merge-base", check=False)[0] == 0
+    if older and not args.allow_downgrade:
+        raise Failure(f"{sha} is older than the phone's {stamp}: installing it is a downgrade onto "
+                      "Mark's real notes, and an older build may not read what a newer one wrote. "
+                      "Ask Mark, then run again with --allow-downgrade.")
+    changed = run(["git", "-C", root, "diff", "--name-only", stamp, sha], GIT_TIMEOUT,
+                  label="git diff names").split()
+    project = run(["git", "-C", root, "diff", stamp, sha, "--", "project.yml"], GIT_TIMEOUT,
+                  label="git diff project.yml")
+    reasons = data_affecting(changed, project)
+    if reasons and not args.data_change_approved:
+        raise Failure(f"between the phone's {stamp} and {sha} these can touch Mark's data:\n  "
+                      + "\n  ".join(reasons)
+                      + "\nAsk Mark, naming them, then run again with --data-change-approved.")
+    if reasons:
+        print("[approved] data-affecting changes, approved by Mark: " + "; ".join(reasons))
 
 
 def cleanup_worktree(root, src, work):
@@ -339,6 +405,10 @@ def main(argv=None):
     p_install = sub.add_parser("install", parents=[common], help="clean-build a ref and install it on the phone")
     p_install.add_argument("--ref", default="origin/main", help="git ref to build (default origin/main)")
     p_install.add_argument("--launch", action="store_true", help="relaunch the app on the new build")
+    p_install.add_argument("--allow-downgrade", action="store_true",
+                           help="install a build older than the phone's (only once Mark has agreed)")
+    p_install.add_argument("--data-change-approved", action="store_true",
+                           help="install across a data-affecting change (only once Mark has agreed)")
     p_logs = sub.add_parser("logs", parents=[common], help="copy the diagnostics log (and crashes) off the phone")
     p_logs.add_argument("--crashes", action="store_true", help="also copy Catchlight crash reports")
     p_logs.add_argument("--out", help="folder to write into (default ~/CatchlightBuild/device-logs/<time>)")
