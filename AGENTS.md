@@ -154,7 +154,22 @@ Capture the **before** while you are still reproducing the problem, which is whe
 
 **Mark uses this app for his real daily notes.** A data-affecting change needs a deliberate extra pass and a real backup, not just a green test run.
 
-**What cannot be checked locally:** push, StoreKit receipts and the subscription path (a sideloaded build has no receipt, and the failure mode there wipes the index), background sync scheduling, Spotlight body text on iOS 17 and later (title only, FB17330079), and anything that needs a physical device.
+### Mark's iPhone
+
+Use `scripts/device/device.py`; never ask Mark which build he has, to export diagnostics, or to read values off the screen:
+
+```bash
+python3 scripts/device/device.py status                 # which build is on the phone, against origin/main
+python3 scripts/device/device.py install --ref <ref>    # clean build of a ref, installed, stamp checked
+python3 scripts/device/device.py logs --crashes         # diagnostics log and crash reports, as text
+```
+
+- **`install` after an app change merges**, with `--ref origin/main`, so the phone runs what was merged. A clean build takes several minutes, so run it in the background (`run_in_background`), never as a foreground call that a timeout can cut short; only one install runs at a time. It builds in a throwaway worktree, never the shared checkout, and fails unless the phone then reports the commit that was built. Installing keeps Mark's data and onboarding state. Ask him first only when the build crosses a data-affecting change (a Core bump, a migration, the store or the Keychain), because his real notes are on that phone.
+- **`logs` when Mark reports a problem**, before asking him anything. It reads `catchlight-diagnostics.json` from the app container (no Take content, by design), writes it as the same text the in-app Export produces, and with `--crashes` adds Catchlight's crash reports and deletes every other app's.
+- **A value you need to see goes in the log, not on screen.** Record it as a 9xx `Notice` and read it with `logs`, rather than adding a debug banner Mark has to transcribe.
+- The phone has to be unlocked, and connected by cable or on the same Wi-Fi. If `devicectl` cannot reach it, say so and stop; do not fall back to asking Mark to export.
+
+**What cannot be checked locally:** push, StoreKit receipts and the subscription path (a sideloaded build has no receipt, and the failure mode there wipes the index), background sync scheduling, Spotlight body text on iOS 17 and later (title only, FB17330079), and anything that needs Mark's hands on the phone (`device.py` covers installing and reading the logs).
 
 ## Ship
 
