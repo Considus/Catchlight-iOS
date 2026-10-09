@@ -357,6 +357,17 @@ final class HeldConvertedTests: XCTestCase {
         XCTAssertNil(try store.take(id: local.id))
         XCTAssertEqual(try store.allTakes().map(\.primaryText), ["typed while the sheet was up"])
     }
+
+    /// Review of #339: a let-go original stays retired across a relock (a new generation). An
+    /// editor left open over the relock must not write it back under its old id.
+    func testARetiredOriginal_staysRetiredAcrossANewGeneration() {
+        let held = HeldTakes()
+        let id = UUID()
+        held.retire(id)
+        held.newGeneration()
+        XCTAssertTrue(held.isRetired(id))
+    }
+
 }
 
 /// A store that fails on cue, for the partial-failure cases.

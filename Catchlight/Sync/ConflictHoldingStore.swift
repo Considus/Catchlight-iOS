@@ -40,7 +40,7 @@ final class HeldTakes: @unchecked Sendable {
 
     /// Only the queue calls this.
     func newGeneration() {
-        lock.lock(); generationValue += 1; retiredIDs.removeAll(); lock.unlock()
+        lock.lock(); generationValue += 1; lock.unlock()
     }
 
     var current: Set<UUID> {
@@ -64,7 +64,9 @@ final class HeldTakes: @unchecked Sendable {
 
     /// Originals a converted conflict choice let go (Catchlight-Core#29): their id is now another
     /// device's Script, so the app's store refuses to write it again this session, whatever still
-    /// holds a copy (an editor left open, a stale snapshot). Forgotten at the next generation.
+    /// holds a copy (an editor left open, a stale snapshot). Kept for the whole launch, across
+    /// relocks and new generations, as on the Mac: an editor can outlive a relock, and an id from
+    /// another account can never collide with one of these.
     func retire(_ id: UUID) {
         lock.lock(); retiredIDs.insert(id); lock.unlock()
     }
