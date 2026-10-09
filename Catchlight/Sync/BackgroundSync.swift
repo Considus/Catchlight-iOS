@@ -312,9 +312,17 @@ public final class BackgroundSyncCoordinator {
     @discardableResult
     static func pass(_ engine: SyncEngine, holding heldTakes: HeldTakes?,
                      isCancelled: () -> Bool) throws -> (report: SyncReport, generation: Int?) {
+        // Counted from here until `deliver` hands the report to the main actor (or the pass
+        // fails), so a conflict choice waits for it (`HeldTakes.whenNoPassRunning`).
+        heldTakes?.beginPass()
         let snapshot = heldTakes?.snapshot
-        let report = try engine.sync(isCancelled: isCancelled, holding: snapshot?.ids ?? [])
-        return (report, snapshot?.generation)
+        do {
+            let report = try engine.sync(isCancelled: isCancelled, holding: snapshot?.ids ?? [])
+            return (report, snapshot?.generation)
+        } catch {
+            if let heldTakes { Task { @MainActor in heldTakes.endPass() } }
+            throw error
+        }
     }
 
     /// Whether a pass begun in `generation` may still deliver into the conflict queue: not if
@@ -339,14 +347,15 @@ public final class BackgroundSyncCoordinator {
             let released = report.deletedLocally
             Task { @MainActor in if isCurrent(generation, heldTakes) { onReleased(released) } }
         }
-        // One hop for both, conflicts first, so a pair queued by this pass is there to be marked.
-        if !report.conflicts.isEmpty || !report.heldConverted.isEmpty, onConflicts != nil || onHeldConverted != nil {
-            let conflicts = report.conflicts, converted = report.heldConverted
-            Task { @MainActor in
-                guard isCurrent(generation, heldTakes) else { return }
+        // One hop for both, conflicts first, so a pair queued by this pass is there to be marked;
+        // then the pass ends, releasing any conflict choice that waited for it.
+        let conflicts = report.conflicts, converted = report.heldConverted
+        Task { @MainActor in
+            if isCurrent(generation, heldTakes) {
                 if !conflicts.isEmpty { onConflicts?(conflicts) }
                 if !converted.isEmpty { onHeldConverted?(converted) }
             }
+            heldTakes?.endPass()
         }
         if let onUnverified, !report.unverified.isEmpty {
             let unverified = report.unverified

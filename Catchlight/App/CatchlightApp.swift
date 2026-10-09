@@ -85,7 +85,7 @@ struct CatchlightApp: App {
             // A held Take another device made a Script (Catchlight-Core#29): its pair can only be
             // kept as a new Take or let go, never re-stamped into the Script.
             onHeldConverted: { ids in
-                app.conflictQueue.markConverted(ids)
+                app.handleHeldConverted(ids)
             }
         )
         self.backgroundSync = backgroundSync

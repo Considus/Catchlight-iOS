@@ -636,9 +636,20 @@ final class DailiesViewModel {
     /// After a converted conflict is resolved (`ConflictQueue.resolveConverted`): the original
     /// left this phone, so its alarms go, as for a Take a sync let go; a Take kept as new gets its
     /// own, under its own notification id.
+    ///
+    /// Reminder actions tapped while it was held move to the copy and apply before its alarms are
+    /// armed, so a Dismiss or Stop reminding never comes back on it; then the same refresh as the
+    /// usual choice. Spotlight drops the original and indexes the copy.
     func applyConvertedChoice(released id: UUID, keptAs copy: Take?) {
         reminders.cancelReminder(identifier: id.uuidString)
-        if let copy, let stored = try? store.take(id: copy.id) { reconcileNotification(for: stored) }
+        spotlight.deindex(takeID: id)
+        PendingReminderActions.move(from: id, to: copy?.id)
+        applyPendingReminderActions()
+        if let copy, let stored = try? store.take(id: copy.id) {
+            spotlight.index(stored)
+            reconcileNotification(for: stored)
+        }
+        refreshRecurringSchedules()
         reload()
     }
 

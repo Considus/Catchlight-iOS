@@ -43,6 +43,7 @@ final class HeldConvertedTests: XCTestCase {
     private func syncPhone(_ queue: ConflictQueue) throws -> SyncReport {
         let engine = SyncEngine(store: phone, cloud: cloud, keys: keys, deviceId: phoneDevice)
         let (report, _) = try BackgroundSyncCoordinator.pass(engine, holding: queue.held, isCancelled: { false })
+        defer { queue.held.endPass() }   // as `deliver` does once the report is in
         queue.release(report.deletedLocally)
         queue.enqueue(report.conflicts)
         queue.markConverted(report.heldConverted)
@@ -203,5 +204,194 @@ final class HeldConvertedTests: XCTestCase {
         again.attach(keys: keys, directory: directory)
         XCTAssertFalse(again.isHeld(local.id), "resolved, nothing waits after a reload")
     }
+
+    // MARK: - Review of 33f3532
+
+    /// An unlocked app over `store`, its conflict queue kept in this test's directory.
+    private func makeApp(store: InMemoryTakeStore) async -> AppModel {
+        let subscription = SubscriptionManager()
+        subscription.forceStatusForTesting(.subscribed)
+        let keys = self.keys
+        let app = AppModel(needsOnboarding: false, initialStore: InMemoryTakeStore(),
+                           session: SessionController(), makeStoreFromKeys: { _ in store },
+                           unlockKeys: { keys }, lockState: .locked, subscription: subscription,
+                           conflictDirectory: directory)
+        await app.attemptUnlock()
+        return app
+    }
+
+    private func waitingPair(in store: InMemoryTakeStore, _ queue: ConflictQueue, text: String = "Mine") throws -> Take {
+        let local = Take(blocks: [.textLine(text)])
+        try store.upsert(local)
+        var remote = local
+        remote.primaryText = "Theirs"
+        queue.enqueue([(local: local, remote: remote)])
+        return local
+    }
+
+    /// HIGH: a choice made while a pass runs waits for the pass's report. When that report marks
+    /// the pair converted, the usual choice is refused and the original id is never re-stamped.
+    func testAChoiceDuringAPass_waitsForItsReport() throws {
+        let store = InMemoryTakeStore()
+        let queue = ConflictQueue()
+        let local = try waitingPair(in: store, queue)
+        queue.held.beginPass()
+
+        var outcome: String?
+        queue.held.whenNoPassRunning {
+            do { try queue.resolve(id: local.id, keepLocal: true, store: store); outcome = "written" }
+            catch { outcome = "refused" }
+        }
+        XCTAssertNil(outcome, "nothing runs while the pass is in flight")
+
+        queue.markConverted([local.id])   // the report the pass delivers
+        queue.held.endPass()
+
+        XCTAssertEqual(outcome, "refused")
+        XCTAssertEqual(try store.take(id: local.id), local, "the original id is not re-stamped")
+        XCTAssertTrue(queue.isConverted(local.id))
+    }
+
+    /// The fallback: the choice got in first anyway (the original id re-stamped, the pair gone).
+    /// The report's id is kept as a new Take and the original let go, so it can't go into the Script.
+    func testAChoiceThatRacedTheConversion_isKeptAsANewTake() async throws {
+        let store = InMemoryTakeStore()
+        let app = await makeApp(store: store)
+        let local = try waitingPair(in: store, app.conflictQueue)
+        try app.conflictQueue.resolve(id: local.id, keepLocal: true, store: app.dailiesVM.conflictChoiceStore)
+
+        app.handleHeldConverted([local.id])
+
+        XCTAssertNil(try store.take(id: local.id), "the original id leaves the phone")
+        let all = try store.allTakes()
+        XCTAssertEqual(all.map(\.primaryText), ["Mine"])
+        XCTAssertNotEqual(all.first?.id, local.id)
+        XCTAssertTrue(app.conflictQueue.held.isRetired(local.id))
+    }
+
+    /// A "Stop reminding" tapped while the Take was held applies to the copy, not comes back on it.
+    func testKeepAsNew_appliesAReminderActionTappedWhileHeld() async throws {
+        _ = PendingReminderActions.drainStopReminding()
+        _ = PendingReminderActions.drainDismissed()
+        defer { _ = PendingReminderActions.drainStopReminding(); _ = PendingReminderActions.drainDismissed() }
+        let store = InMemoryTakeStore()
+        let app = await makeApp(store: store)
+        var local = Take(blocks: [.textLine("Call the framer")])
+        local.timeReminder = TimeReminder(scheduledDate: Date().addingTimeInterval(3600), notificationIdentifier: local.id.uuidString)
+        try store.upsert(local)
+        app.conflictQueue.enqueue([(local: local, remote: local)])
+        app.conflictQueue.markConverted([local.id])
+        PendingReminderActions.enqueueStopReminding(takeID: local.id.uuidString)
+        app.dailiesVM.applyPendingReminderActions()   // held: it waits
+
+        let copy = try XCTUnwrap(try app.conflictQueue.resolveConverted(id: local.id, keepAsNew: true, store: app.dailiesVM.conflictChoiceStore))
+        app.dailiesVM.applyConvertedChoice(released: local.id, keptAs: copy)
+
+        XCTAssertNil(try store.take(id: copy.id)?.timeReminder, "the stop applies to the copy")
+        XCTAssertTrue(PendingReminderActions.queuedIDs().isEmpty)
+    }
+
+    /// The other device turned the Script back into a Take: the pass reports an ordinary pair and
+    /// the converted mark goes, here and on disk.
+    func testAnOrdinaryPairForAConvertedId_clearsTheMark() throws {
+        let queue = ConflictQueue()
+        queue.attach(keys: keys, directory: directory)
+        let local = try waitingPair(in: phone, queue)
+        queue.markConverted([local.id])
+        var again = local
+        again.primaryText = "A Take again"
+        queue.enqueue([(local: local, remote: again)])
+
+        XCTAssertFalse(queue.isConverted(local.id))
+        let reloaded = ConflictQueue()
+        reloaded.attach(keys: keys, directory: directory)
+        XCTAssertFalse(reloaded.isConverted(local.id))
+    }
+
+    /// A failure partway through keep-as-new leaves the pair; the retry, after a reload as after
+    /// a crash, finds the copy already made and makes no second one.
+    func testKeepAsNew_retriedAfterAFailure_makesOneCopy() throws {
+        let queue = ConflictQueue()
+        queue.attach(keys: keys, directory: directory)
+        let local = try waitingPair(in: phone, queue)
+        queue.markConverted([local.id])
+        let flaky = FlakyStore(phone, failReleases: 1)
+
+        XCTAssertThrowsError(try queue.resolveConverted(id: local.id, keepAsNew: true, store: flaky))
+        XCTAssertTrue(queue.isHeld(local.id))
+        let reloaded = ConflictQueue()
+        reloaded.attach(keys: keys, directory: directory)
+        let copy = try XCTUnwrap(try reloaded.resolveConverted(id: local.id, keepAsNew: true, store: flaky))
+
+        XCTAssertEqual(try phone.allTakes().map(\.id), [copy.id])
+    }
+
+    /// The Obie can't be handed over: the copy stands and the pair is gone, so no retry can copy again.
+    func testKeepAsNew_whenTheObieCantMove_stillEndsThePair() throws {
+        let queue = ConflictQueue()
+        let local = Take(blocks: [.textLine("Obie")], isObie: true)
+        try phone.upsert(local)
+        queue.enqueue([(local: local, remote: local)])
+        queue.markConverted([local.id])
+
+        let copy = try XCTUnwrap(try queue.resolveConverted(id: local.id, keepAsNew: true, store: FlakyStore(phone, failSetObie: true)))
+
+        XCTAssertFalse(queue.isHeld(local.id))
+        XCTAssertEqual(try phone.allTakes().map(\.id), [copy.id])
+    }
+
+    /// An inline edit still open when the sheet let the Take go: its commit is kept as a new Take,
+    /// and nothing ever writes the original id again.
+    func testAnEditorLeftOpen_afterLetItGo_neverWritesTheOriginal() async throws {
+        let store = InMemoryTakeStore()
+        let app = await makeApp(store: store)
+        let local = try waitingPair(in: store, app.conflictQueue)
+        app.conflictQueue.markConverted([local.id])
+        _ = try app.conflictQueue.resolveConverted(id: local.id, keepAsNew: false, store: app.dailiesVM.conflictChoiceStore)
+
+        var draft = local
+        draft.primaryText = "typed while the sheet was up"
+        XCTAssertEqual(app.commitEditedTake(draft), .savedAsCopy)
+        app.dailiesVM.save(draft)   // any other route is refused by the store
+
+        XCTAssertNil(try store.take(id: local.id))
+        XCTAssertEqual(try store.allTakes().map(\.primaryText), ["typed while the sheet was up"])
+    }
 }
+
+/// A store that fails on cue, for the partial-failure cases.
+private final class FlakyStore: TakeStore {
+    let base: InMemoryTakeStore
+    var failReleases: Int
+    let failSetObie: Bool
+    init(_ base: InMemoryTakeStore, failReleases: Int = 0, failSetObie: Bool = false) {
+        self.base = base; self.failReleases = failReleases; self.failSetObie = failSetObie
+    }
+    struct Failed: Error {}
+    func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool {
+        if failReleases > 0 { failReleases -= 1; throw Failed() }
+        return try base.release(id: id, ifNotModifiedAfter: cutoff)
+    }
+    func setObie(id: UUID, replaceExisting: Bool) throws {
+        if failSetObie { throw Failed() }
+        try base.setObie(id: id, replaceExisting: replaceExisting)
+    }
+    func upsert(_ take: Take) throws { try base.upsert(take) }
+    func delete(id: UUID) throws { try base.delete(id: id) }
+    func applyRemote(_ take: Take) throws -> Bool { try base.applyRemote(take) }
+    func take(id: UUID) throws -> Take? { try base.take(id: id) }
+    func allTakes() throws -> [Take] { try base.allTakes() }
+    func takesModified(since date: Date?) throws -> [Take] { try base.takesModified(since: date) }
+    func search(_ query: String) throws -> [Take] { try base.search(query) }
+    func upsert(_ sequence: CatchlightSequence) throws { try base.upsert(sequence) }
+    func sequence(id: UUID) throws -> CatchlightSequence? { try base.sequence(id: id) }
+    func allSequences() throws -> [CatchlightSequence] { try base.allSequences() }
+    func deleteSequence(id: UUID) throws { try base.deleteSequence(id: id) }
+    func currentObie() throws -> Take? { try base.currentObie() }
+    func lastSyncDate() -> Date? { base.lastSyncDate() }
+    func setLastSyncDate(_ date: Date) { base.setLastSyncDate(date) }
+    func tombstones() throws -> [Tombstone] { try base.tombstones() }
+    func purgeTombstones(ids: [UUID]) throws { try base.purgeTombstones(ids: ids) }
+}
+
 #endif

@@ -280,13 +280,16 @@ struct ConflictResolutionView: View {
     }
 
     private func resolveConverted(_ id: UUID, keepAsNew: Bool) {
-        do {
-            let copy = try queue.resolveConverted(id: id, keepAsNew: keepAsNew, store: dailies.conflictChoiceStore)
-            dailies.applyConvertedChoice(released: id, keptAs: copy)
-            // Send the new Take (if any) rather than wait for the next automatic pass.
-            dailies.onLocalChange?()
-        } catch {
-            dailies.reportStorageError(.conflictResolutionFailed)
+        // After any running pass has delivered, like every choice here.
+        queue.held.whenNoPassRunning {
+            do {
+                let copy = try queue.resolveConverted(id: id, keepAsNew: keepAsNew, store: dailies.conflictChoiceStore)
+                dailies.applyConvertedChoice(released: id, keptAs: copy)
+                // Send the new Take (if any) rather than wait for the next automatic pass.
+                dailies.onLocalChange?()
+            } catch {
+                dailies.reportStorageError(.conflictResolutionFailed)
+            }
         }
     }
 
@@ -368,21 +371,30 @@ struct ConflictResolutionView: View {
         HStack(spacing: 12) {
             DockPill(title: "Keep this version") {
                 guard let keepLocal = chosenLocal else { return }
-                do {
-                    try queue.resolve(id: pair.local.id, keepLocal: keepLocal, store: dailies.conflictChoiceStore)
-                    selection.removeValue(forKey: pair.local.id)
-                    dailies.reload()
-                    // The hold is released: push the choice rather than wait for the next
-                    // automatic pass.
-                    dailies.onLocalChange?()
-                    // Reminder actions tapped while it was held, waiting for this choice.
-                    dailies.applyPendingReminderActions()
-                    dailies.refreshRecurringSchedules()
-                } catch {
-                    // ConflictQueue writes through the store directly, bypassing
-                    // DailiesViewModel — route the failure through the timeline's
-                    // storage-error strip; the pair stays queued so the user can retry.
-                    dailies.reportStorageError(.conflictResolutionFailed)
+                // A pass running now may find this Take turned into a Script elsewhere; the choice
+                // waits until its report is in, and is then refused for a converted pair rather
+                // than re-stamped into the Script (`ConflictQueue.resolve`).
+                queue.held.whenNoPassRunning {
+                    do {
+                        try queue.resolve(id: pair.local.id, keepLocal: keepLocal, store: dailies.conflictChoiceStore)
+                        selection.removeValue(forKey: pair.local.id)
+                        dailies.reload()
+                        // The hold is released: push the choice rather than wait for the next
+                        // automatic pass.
+                        dailies.onLocalChange?()
+                        // Reminder actions tapped while it was held, waiting for this choice.
+                        dailies.applyPendingReminderActions()
+                        dailies.refreshRecurringSchedules()
+                    } catch is ConflictQueue.ChoiceDoesNotFit {
+                        // The pass that ran meanwhile found the Take turned into a Script elsewhere:
+                        // nothing was written, and the card now offers that pair's own choices.
+                        selection.removeValue(forKey: pair.local.id)
+                    } catch {
+                        // ConflictQueue writes through the store directly, bypassing
+                        // DailiesViewModel — route the failure through the timeline's
+                        // storage-error strip; the pair stays queued so the user can retry.
+                        dailies.reportStorageError(.conflictResolutionFailed)
+                    }
                 }
             }
             .disabled(chosenLocal == nil)

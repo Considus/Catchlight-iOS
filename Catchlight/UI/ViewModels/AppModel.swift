@@ -725,7 +725,7 @@ final class AppModel {
         }
         DiagnosticsLog.shared.record(.paywallDraftSaved)
         // A conflict for this Take may have arrived while the paywall was up.
-        if conflictQueue.isHeld(draft.id) {
+        if conflictQueue.isHeld(draft.id) || conflictQueue.held.isRetired(draft.id) {
             commitEditToHeldTake(draft)
             return
         }
@@ -764,7 +764,9 @@ final class AppModel {
     func commitEditedTake(_ draft: Take) -> EditCommit {
         var take = draft
         take.removeEmptyTextBlocks()
-        if conflictQueue.isHeld(take.id) { return commitEditToHeldTake(take) }
+        // Held, or let go by a converted choice while the editor was open (its id is now
+        // another device's Script): the edit is kept as a new Take, never written on its id.
+        if conflictQueue.isHeld(take.id) || conflictQueue.held.isRetired(take.id) { return commitEditToHeldTake(take) }
         if take.isBlank {
             dailiesVM.discardIfPresent(take)
             return .discarded
@@ -804,6 +806,22 @@ final class AppModel {
         dailiesVM.save(copy)
         dailiesVM.reportStorageError(.conflictEditKeptAsCopy)
         return .savedAsCopy
+    }
+
+    /// A pass found held Takes another device turned into Scripts (`SyncReport.heldConverted`,
+    /// Catchlight-Core#29). Their pairs are marked converted. An id no longer waiting was chosen
+    /// after the pass began; its choice may have re-stamped the Take on its own id, which is now
+    /// that Script, so it is let go as a converted choice would, kept as a new Take.
+    func handleHeldConverted(_ ids: [UUID]) {
+        for id in conflictQueue.markConverted(ids) {
+            do {
+                guard let copy = try conflictQueue.letGoAsConverted(id: id, store: dailiesVM.conflictChoiceStore) else { continue }
+                dailiesVM.applyConvertedChoice(released: id, keptAs: copy)
+                dailiesVM.onLocalChange?()
+            } catch {
+                dailiesVM.reportStorageError(.conflictResolutionFailed)
+            }
+        }
     }
 
     /// Returns true if the Take may be changed. A Take waiting for a conflict choice may not
