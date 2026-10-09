@@ -325,7 +325,9 @@ def check_against_phone(root, device, sha, args):
         raise Failure(f"{sha} is older than the phone's {stamp}: installing it is a downgrade onto "
                       "Mark's real notes, and an older build may not read what a newer one wrote. "
                       "Ask Mark, then run again with --allow-downgrade.")
-    changed = run(["git", "-C", root, "diff", "--name-only", stamp, sha], GIT_TIMEOUT,
+    # --no-renames lists a moved file under both its old and new path, so a file moved
+    # out of a guarded folder still counts.
+    changed = run(["git", "-C", root, "diff", "--name-only", "--no-renames", stamp, sha], GIT_TIMEOUT,
                   label="git diff names").split()
     project = run(["git", "-C", root, "diff", stamp, sha, "--", "project.yml"], GIT_TIMEOUT,
                   label="git diff project.yml")
