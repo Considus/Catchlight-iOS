@@ -184,6 +184,45 @@ jobs:
         # easy to diagnose without re-running.
         run: xcrun simctl list devices available | grep -E "iPhone|iOS" | head -30
 
+      - name: Seed the simulator so the slide-to-type introduction never shows
+        # ISSUE-006, second cause. On a fresh simulator iOS shows a one-time "slide to type"
+        # introduction over the keyboard and the editor toolbar. The UI tests dismiss it
+        # (`dismissKeyboardIntroductionIfPresent`), but that waits 3 s, and on a slow runner the
+        # introduction arrives later and covers the toolbar mid-test: measured 2026-10-09,
+        # `testImportantButton_valueFlipsOnToggle` tapped Important at "Computed hit point
+        # {-1, -1}" on two runs whose app code had passed the run before. Writing the preference
+        # iOS checks means it is never shown at all; the dismiss helper stays as the backstop.
+        env:
+          DESTINATION: ${{ matrix.destination }}
+        run: |
+          UDID=$(python3 - <<'PY'
+          import json, os, re, subprocess, sys
+          dest = dict(part.split("=", 1) for part in os.environ["DESTINATION"].split(","))
+          name, wanted = dest["name"], dest["OS"]
+          listing = subprocess.run(["xcrun", "simctl", "list", "devices", "available", "-j"],
+                                   capture_output=True, text=True, check=True).stdout
+          found = []
+          for runtime, devices in json.loads(listing)["devices"].items():
+              match = re.search(r"iOS-(\d+)-(\d+)", runtime)
+              if not match:
+                  continue
+              version = (int(match.group(1)), int(match.group(2)))
+              found += [(version, d["udid"]) for d in devices if d["name"] == name]
+          if wanted != "latest":
+              want = tuple(int(x) for x in wanted.split("."))
+              found = [f for f in found if f[0] == want]
+          if not found:
+              sys.exit(f"no available {name} simulator for OS={wanted}")
+          print(max(found)[1])
+          PY
+          )
+          echo "seeding $UDID for $DESTINATION"
+          STATE=$(xcrun simctl list devices -j | python3 -c "import json,sys; print(next(d['state'] for ds in json.load(sys.stdin)['devices'].values() for d in ds if d['udid'] == sys.argv[1]))" "$UDID")
+          if [ "$STATE" != "Booted" ]; then xcrun simctl boot "$UDID"; fi
+          xcrun simctl bootstatus "$UDID" -b | tail -1
+          xcrun simctl spawn "$UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
+          echo "DidShowContinuousPathIntroduction = $(xcrun simctl spawn "$UDID" defaults read com.apple.keyboard.preferences DidShowContinuousPathIntroduction)"
+
       - name: xcodebuild test
         # NOTE (2026-06-10): do NOT pass CODE_SIGNING_ALLOWED=NO. Simulator
         # builds use default AD-HOC signing, which needs no identities on the
