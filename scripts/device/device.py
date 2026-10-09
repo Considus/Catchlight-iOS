@@ -223,9 +223,9 @@ def install_locked(args):
     # A fresh derived-data folder per run is what applies the git-SHA stamp
     # (an incremental build leaves it at "1").
     derived = os.path.join(work, "dd")
-    run(["git", "-C", root, "worktree", "add", "--detach", src, sha], GIT_TIMEOUT,
-        label="git worktree add")
     try:
+        run(["git", "-C", root, "worktree", "add", "--detach", src, sha], GIT_TIMEOUT,
+            label="git worktree add")
         run(["xcodegen", "generate"], DEVICE_TIMEOUT, cwd=src, label="xcodegen")
         run(["xcodebuild", "-scheme", SCHEME, "-configuration", "Debug",
              "-destination", f"platform=iOS,id={udid}", "-derivedDataPath", derived,
