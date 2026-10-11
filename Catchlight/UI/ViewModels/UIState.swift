@@ -89,11 +89,12 @@ final class UIState {
     var editingTakeID: UUID?
     var isEditingInPlace: Bool { editingTakeID != nil }
 
-    /// A freshly-created blank Take handed to DailiesView to edit IN PLACE (Phase 2
-    /// 2026-06-17). The dock's + sets this instead of opening the top-anchored
-    /// overlay; DailiesView injects it into the timeline at the Order-appropriate end
-    /// (Oldest→bottom, Newest→top), focuses it, and clears this. It is NOT persisted
-    /// until the inline save (a blank one dismissed leaves nothing behind).
+    /// A Take handed to DailiesView to edit IN PLACE (Phase 2 2026-06-17); DailiesView
+    /// opens it in the editor and clears this. Usually a freshly-created blank Take: the
+    /// dock's + and a capture set it, and it is NOT persisted until the inline save (a
+    /// blank one dismissed leaves nothing behind). It can also be a draft of a Take that
+    /// already exists, handed back by `AppModel.resolvePendingEntitledSave` when the
+    /// store refused its save, so the typing is on screen again.
     var pendingInlineNewTake: Take?
 
     /// A focus-ring-fan selection handed to the in-place editor, carrying the working

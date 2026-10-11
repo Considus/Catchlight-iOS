@@ -735,6 +735,10 @@ final class AppModel {
             ? commitEditToHeldTake(draft) != .failed
             : dailiesVM.save(draft)
         guard saved else {
+            // As the capture hand-off does: out of search and filters, and out of the
+            // Storyboard the edit may have come from, so the editor is in view.
+            ui.exitToResting()
+            ui.isStoryboardPresented = false
             ui.pendingInlineNewTake = draft
             return
         }

@@ -138,9 +138,13 @@ final class FailedWriteTests: XCTestCase {
         let app = await makeUnlocked(store)
         let draft = Take(blocks: [.textLine("typed when the trial had run out")])
         app.holdDraftForPaywall(draft)
+        app.ui.isStoryboardPresented = true     // the edit came from the Storyboard
 
         store.refuseWrites = true
         app.resolvePendingEntitledSave()
+
+        XCTAssertFalse(app.ui.isStoryboardPresented,
+                       "the editor the draft goes back to must not sit hidden under the Storyboard")
 
         XCTAssertEqual(app.ui.pendingInlineNewTake?.id, draft.id,
                        "a held draft whose save failed must be handed back, not dropped")
