@@ -302,5 +302,22 @@ final class DailiesViewModelMutationTests: XCTestCase {
 
         XCTAssertEqual(try store.take(id: obie.id)?.isImportant, true)
     }
+
+    // MARK: - Stamps move forward (Core's Take.markModified, 2026-10-11)
+
+    /// A save is uploaded only when its modifiedAt is later than the version already pushed.
+    /// With the clock behind that version (set back, or a stamp from a device running ahead),
+    /// `Date()` stamped the edit earlier and it never synced.
+    func testSave_stampsLaterThanTheStoredVersion_evenWithTheClockBehind() throws {
+        let ahead = Date().addingTimeInterval(3600)
+        let stored = Take(modifiedAt: ahead, blocks: [.textLine("before")])
+        let vm = try makeVM([stored])
+        var edited = stored
+        edited.blocks = [.textLine("after")]
+
+        XCTAssertTrue(vm.save(edited))
+        XCTAssertGreaterThan(try XCTUnwrap(try vm.store.take(id: stored.id)).modifiedAt, ahead,
+                             "an edit must be stamped after the version it replaces, or it never syncs")
+    }
 }
 #endif

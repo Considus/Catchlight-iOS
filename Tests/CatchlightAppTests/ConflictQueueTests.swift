@@ -222,5 +222,26 @@ final class ConflictQueueTests: XCTestCase {
         XCTAssertTrue(queue.unverified.isEmpty)
         XCTAssertNil(try store.take(id: item.id))
     }
+
+    // MARK: - The kept version is stamped after both (2026-10-11)
+
+    /// Keeping this phone's version must stamp it after BOTH copies, or the cloud copy, if it
+    /// was stamped later, still looks newer and the conflict comes straight back.
+    func testResolve_keepLocal_stampsAfterACloudCopyStampedAhead() throws {
+        let id = UUID()
+        let ahead = Date().addingTimeInterval(3600)
+        let local = Take(id: id, blocks: [.textLine("phone")])
+        let remote = Take(id: id, modifiedAt: ahead, blocks: [.textLine("cloud")])
+        let store = InMemoryTakeStore()
+        try store.upsert(local)
+        let queue = ConflictQueue()
+        queue.enqueue([(local: local, remote: remote)])
+
+        try queue.resolve(id: id, keepLocal: true, store: store)
+
+        let kept = try XCTUnwrap(try store.take(id: id))
+        XCTAssertEqual(kept.primaryText, "phone")
+        XCTAssertGreaterThan(kept.modifiedAt, ahead)
+    }
 }
 #endif

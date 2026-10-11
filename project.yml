@@ -52,9 +52,10 @@ packages:
   # the app only through a deliberate bump here.
   CatchlightCore:
     url: https://github.com/Considus/Catchlight-Core
-    # 1.6.0: LocationTrigger.locationNameIsAuto, so a reopened place reminder's
-    # app-filled name follows the next place picked (Catchlight-Core#32).
-    exactVersion: 1.6.0
+    # 1.7.0: Take.markModified stamps strictly forward, so an edit stamped no later than
+    # the version already pushed still syncs (Catchlight-Core#33). 1.6.0 added
+    # LocationTrigger.locationNameIsAuto (Catchlight-Core#32).
+    exactVersion: 1.7.0
 
   # NOTE (2026-06-05): the previous `CArgon2` vendored package has been removed.
   # Master-key derivation now uses HKDF-SHA-256 via CryptoKit (see

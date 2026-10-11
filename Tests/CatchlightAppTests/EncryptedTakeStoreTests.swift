@@ -86,6 +86,35 @@ final class EncryptedTakeStoreTests: XCTestCase {
         return try EncryptedTakeStore(keys: keys, directoryURL: tempDir)
     }
 
+    // MARK: - Stamps move forward (Core's Take.markModified, 2026-10-11)
+    // Kept identical to Catchlight-AppleStorage's EncryptedTakeStoreTests (AGENTS.md: the two
+    // copies of the store change together).
+
+    func testUpsertingANewObie_stampsTheDemotedOneLaterThanItsOwnStamp_evenWithTheClockBehind() throws {
+        let ahead = Date().addingTimeInterval(3600)
+        let old = Take(modifiedAt: ahead, blocks: [.textLine("old Obie")], isObie: true)
+        try store.upsert(old)
+        try store.upsert(Take(blocks: [.textLine("new Obie")], isObie: true))
+
+        let demoted = try XCTUnwrap(try store.take(id: old.id))
+        XCTAssertFalse(demoted.isObie)
+        XCTAssertGreaterThan(demoted.modifiedAt, ahead,
+                             "the demotion must be stamped after the version it replaces, or it never syncs")
+    }
+
+    func testSetObie_stampsBothTakesLaterThanTheirOwnStamps_evenWithTheClockBehind() throws {
+        let ahead = Date().addingTimeInterval(3600)
+        let old = Take(modifiedAt: ahead, blocks: [.textLine("old Obie")], isObie: true)
+        let next = Take(modifiedAt: ahead, blocks: [.textLine("next")])
+        try store.upsert(old)
+        try store.upsert(next)
+
+        try store.setObie(id: next.id, replaceExisting: true)
+
+        XCTAssertGreaterThan(try XCTUnwrap(try store.take(id: old.id)).modifiedAt, ahead)
+        XCTAssertGreaterThan(try XCTUnwrap(try store.take(id: next.id)).modifiedAt, ahead)
+    }
+
     // MARK: - Serialisation precision
 
     /// Dates are stored as ISO-8601 millisecond strings — re-reading must give
