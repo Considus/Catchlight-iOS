@@ -213,13 +213,14 @@ LANGS = {
     },
     "pt-PT": {
         "name": "European Portuguese",
-        "tone": 'Informal "tu", warm and plain. Catchlight is a private notes app.',
+        "tone": 'Polite third person ("o seu", "Exporte"), warm and plain, as the app\'s European Portuguese '
+                'already reads. Catchlight is a private notes app.',
         "plural": 'Rows marked "plural: one" are used for one; "plural: other" for every other count.',
         "example": 'English "Couldn\'t load your Takes." · the European Portuguese draft · your European Portuguese · your comment',
         "notes": {},
         "glossary": [
             ("Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep in English."),
-            ("you", "tu", "Informal throughout."),
+            ("you", "você / o seu", "Polite third person throughout, never tu / teu, so new text matches what ships."),
         ],
     },
     "pl": {
@@ -279,13 +280,13 @@ LANGS = {
     },
     "tr": {
         "name": "Turkish",
-        "tone": 'Informal "sen", warm and plain. Catchlight is a private notes app.',
+        "tone": 'Polite "siz", warm and plain, as the app\'s Turkish already reads. Catchlight is a private notes app.',
         "plural": 'Rows marked "plural: one" are used for one; "plural: other" for every other count.',
         "example": 'English "Couldn\'t load your Takes." · the Turkish draft · your Turkish · your comment',
         "notes": {},
         "glossary": [
             ("Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep in English."),
-            ("you", "sen", "Informal throughout."),
+            ("you", "siz", "Polite throughout (-iniz, -ın / -in imperatives), never sen, so new text matches what ships."),
         ],
     },
 }
