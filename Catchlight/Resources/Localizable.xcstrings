@@ -65315,6 +65315,9 @@
         }
       }
     },
+    "Your Takes couldn't be read, so nothing was exported. Don't start over until an export works." : {
+
+    },
     "Your Takes stay on this device and nowhere else. Your iPhone backup won't contain them, so if the phone goes, they go with it." : {
       "localizations" : {
         "de" : {
