@@ -248,9 +248,6 @@ final class ConflictQueue {
         }
     }
 
-    /// Resolve a single conflict by writing the chosen winner to the store and releasing the
-    /// hold. No-op if the id is no longer waiting (e.g. the user resolved it on another row
-    /// first). `store` is the RAW store: this is the one write a held Take is waiting for.
     /// Stamp the version the user chose as a fresh edit strictly after every copy in play, so
     /// it wins at the cloud even when the other copy was stamped later than the clock reads
     /// (set back, or a device running ahead). Without that the other copy still looked newer
@@ -260,6 +257,9 @@ final class ConflictQueue {
         winner.markModified()
     }
 
+    /// Resolve a single conflict by writing the chosen winner to the store and releasing the
+    /// hold. No-op if the id is no longer waiting (e.g. the user resolved it on another row
+    /// first). `store` is the RAW store: this is the one write a held Take is waiting for.
     func resolve(id: UUID, keepLocal: Bool, store: TakeStore) throws {
         guard let idx = waiting.firstIndex(where: { $0.local.id == id }) else { return }
         // A converted pair's other side is a Script: re-stamping this Take on its own id would
