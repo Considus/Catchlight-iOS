@@ -546,7 +546,10 @@ final class AppModel {
             return
         }
 
-        dailiesVM.save(draft)   // real store is bound by attemptUnlock's rebind
+        // The real store is bound by attemptUnlock's rebind. A save it refuses leaves
+        // `lockedCapture` set, so the capture editor stays up with the text for a retry, as
+        // after a cancelled unlock; the save notice is already up.
+        guard dailiesVM.save(draft) else { return }
         lockedCapture = nil
     }
 
@@ -710,6 +713,10 @@ final class AppModel {
     /// Resolve the held draft when the paywall dismisses: save it if the user is
     /// now entitled, otherwise drop it (the agreed policy — no subscription, no
     /// write). Idempotent; safe to call on every paywall dismissal.
+    ///
+    /// A save the store refuses hands the draft back to the timeline's editor
+    /// (`ui.pendingInlineNewTake`, which opens new and existing Takes alike), so the
+    /// typing is on screen again with the save notice, not dropped with the paywall.
     func resolvePendingEntitledSave() {
         defer { pendingEntitledSave = nil }
         guard let draft = pendingEntitledSave,
@@ -723,13 +730,19 @@ final class AppModel {
             }
             return
         }
-        DiagnosticsLog.shared.record(.paywallDraftSaved)
         // A conflict for this Take may have arrived while the paywall was up.
-        if conflictQueue.isHeld(draft.id) || conflictQueue.held.isRetired(draft.id) {
-            commitEditToHeldTake(draft)
+        let saved = conflictQueue.isHeld(draft.id) || conflictQueue.held.isRetired(draft.id)
+            ? commitEditToHeldTake(draft) != .failed
+            : dailiesVM.save(draft)
+        guard saved else {
+            // As the capture hand-off does: out of search and filters, and out of the
+            // Storyboard the edit may have come from, so the editor is in view.
+            ui.exitToResting()
+            ui.isStoryboardPresented = false
+            ui.pendingInlineNewTake = draft
             return
         }
-        dailiesVM.save(draft)
+        DiagnosticsLog.shared.record(.paywallDraftSaved)
     }
 
     /// What `commitEditedTake` did with the draft it was handed.

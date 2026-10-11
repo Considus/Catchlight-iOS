@@ -128,6 +128,72 @@ final class FailedWriteTests: XCTestCase {
         XCTAssertEqual(app.dailiesVM.lastError, "Couldn't save that Take.")
     }
 
+    // MARK: - A draft held for the paywall, and a capture typed while locked
+
+    /// The user typed, hit the paywall, subscribed, and then the store refused the write.
+    /// The typing goes back into the timeline's editor instead of being dropped with the
+    /// paywall.
+    func testPaywallHeldDraft_refusedSave_goesBackToTheEditor() async throws {
+        let store = RefusingStore()
+        let app = await makeUnlocked(store)
+        let draft = Take(blocks: [.textLine("typed when the trial had run out")])
+        app.holdDraftForPaywall(draft)
+        app.ui.isStoryboardPresented = true     // the edit came from the Storyboard
+
+        store.refuseWrites = true
+        app.resolvePendingEntitledSave()
+
+        XCTAssertFalse(app.ui.isStoryboardPresented,
+                       "the editor the draft goes back to must not sit hidden under the Storyboard")
+
+        XCTAssertEqual(app.ui.pendingInlineNewTake?.id, draft.id,
+                       "a held draft whose save failed must be handed back, not dropped")
+        XCTAssertEqual(app.ui.pendingInlineNewTake?.plainText, "typed when the trial had run out")
+        XCTAssertTrue(try store.allTakes().isEmpty)
+        XCTAssertNil(app.pendingEntitledSave)
+        XCTAssertEqual(app.dailiesVM.lastError, "Couldn't save that Take.")
+    }
+
+    func testPaywallHeldDraft_acceptedSave_isSaved_andNothingIsHandedBack() async throws {
+        let store = RefusingStore()
+        let app = await makeUnlocked(store)
+        let draft = Take(blocks: [.textLine("typed when the trial had run out")])
+        app.holdDraftForPaywall(draft)
+
+        app.resolvePendingEntitledSave()
+
+        XCTAssertEqual(try store.allTakes().map(\.id), [draft.id])
+        XCTAssertNil(app.ui.pendingInlineNewTake)
+    }
+
+    /// Typed on the lock screen, unlocked, and the store refused the write: the capture
+    /// editor stays up with the text, as it already does when the unlock fails.
+    func testLockedCapture_refusedSave_keepsTheCaptureEditorUp() async throws {
+        let store = RefusingStore()
+        store.refuseWrites = true
+        let subscription = SubscriptionManager()
+        subscription.forceStatusForTesting(.subscribed)
+        let app = AppModel(
+            needsOnboarding: false,
+            initialStore: InMemoryTakeStore(),
+            session: SessionController(),
+            makeStoreFromKeys: { _ in store },
+            unlockKeys: { KeyHierarchy(masterKeyBytes: Data(repeating: 7, count: 32)) },
+            lockState: .locked,
+            subscription: subscription,
+            conflictDirectory: conflictDirectory
+        )
+        let draft = Take(blocks: [.textLine("typed on the lock screen")])
+        app.lockedCapture = draft
+
+        await app.saveLockedCapture()
+
+        XCTAssertEqual(app.lockState, .unlocked)
+        XCTAssertEqual(app.lockedCapture?.id, draft.id,
+                       "a capture whose save failed must stay in its editor, not vanish")
+        XCTAssertTrue(try store.allTakes().isEmpty)
+    }
+
     // MARK: - Reading the Takes for an export
 
     func testTakesForExport_unreadableStore_givesNothingToExport_andSaysSo() async throws {
