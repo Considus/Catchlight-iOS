@@ -65316,7 +65316,116 @@
       }
     },
     "Your Takes couldn't be read, so nothing was exported. Don't start over until an export works." : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dine Takes kunne ikke læses, så intet blev eksporteret. Start ikke forfra, før en eksport er lykkedes."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Takes konnten nicht gelesen werden, deshalb wurde nichts exportiert. Beginne nicht von vorn, bevor ein Export geklappt hat."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudieron leer tus Takes, así que no se ha exportado nada. No empieces de nuevo hasta que una exportación funcione."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takejasi ei voitu lukea, joten mitään ei viety. Älä aloita alusta ennen kuin vienti onnistuu."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire vos Takes, rien n’a donc été exporté. Ne recommencez pas tant qu’une exportation n’a pas réussi."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile leggere i tuoi Take, quindi non è stato esportato nulla. Non ricominciare finché un'esportazione non riesce."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takeを読み込めなかったため、何もエクスポートされていません。エクスポートが成功するまで、最初からやり直さないでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take를 읽을 수 없어 아무것도 내보내지 않았습니다. 내보내기가 성공할 때까지 처음부터 다시 시작하지 마세요."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take-ene dine kunne ikke leses, så ingenting ble eksportert. Ikke start på nytt før en eksport har lyktes."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je Takes konden niet worden gelezen, dus er is niets geëxporteerd. Begin niet opnieuw voordat een export is gelukt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie można odczytać Twoich Takes, więc nic nie zostało wyeksportowane. Nie zaczynaj od nowa, dopóki eksport się nie powiedzie."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível ler seus Takes, então nada foi exportado. Não recomece até que uma exportação dê certo."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível ler os seus Takes, por isso nada foi exportado. Não comece de novo até que uma exportação funcione."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dina Takes kunde inte läsas, så inget exporterades. Börja inte om förrän en export har lyckats."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่สามารถอ่าน Take ของคุณได้ จึงไม่มีสิ่งใดถูกส่งออก อย่าเริ่มต้นใหม่จนกว่าการส่งออกจะสำเร็จ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take'leriniz okunamadı, bu yüzden hiçbir şey dışa aktarılmadı. Dışa aktarma başarılı olana kadar baştan başlamayın."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取您的 Takes，因此没有导出任何内容。在导出成功之前，请不要重新开始。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法讀取您的 Takes，因此沒有匯出任何內容。在匯出成功之前，請不要重新開始。"
+          }
+        }
+      }
     },
     "Your Takes stay on this device and nowhere else. Your iPhone backup won't contain them, so if the phone goes, they go with it." : {
       "localizations" : {
