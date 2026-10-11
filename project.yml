@@ -52,9 +52,9 @@ packages:
   # the app only through a deliberate bump here.
   CatchlightCore:
     url: https://github.com/Considus/Catchlight-Core
-    # 1.5.0: a held Take another device turned into a Script is reported in
-    # `SyncReport.heldConverted` instead of being let go or forked (Catchlight-Core#29).
-    exactVersion: 1.5.0
+    # 1.6.0: LocationTrigger.locationNameIsAuto, so a reopened place reminder's
+    # app-filled name follows the next place picked (Catchlight-Core#32).
+    exactVersion: 1.6.0
 
   # NOTE (2026-06-05): the previous `CArgon2` vendored package has been removed.
   # Master-key derivation now uses HKDF-SHA-256 via CryptoKit (see

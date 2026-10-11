@@ -12,6 +12,7 @@
 #if canImport(Catchlight)
 import XCTest
 @testable import Catchlight
+import CatchlightCore
 
 final class LocationEditorNameGuardTests: XCTestCase {
 
@@ -53,6 +54,31 @@ final class LocationEditorNameGuardTests: XCTestCase {
         XCTAssertTrue(LocationEditor.shouldReplaceName(currentName: "Tesco Extra",
                                                        lastAutoName: "Tesco Extra"),
                       "a first search result's name must give way to a second")
+    }
+
+    /// What a saved reminder records: the name is the app's when it is the placeholder or the
+    /// name the editor filled in last, and the user's once they have typed it.
+    func testNameIsAuto_recordsWhoChoseTheName() {
+        XCTAssertTrue(LocationEditor.nameIsAuto("12 Acacia Avenue", lastAutoName: "12 Acacia Avenue"))
+        XCTAssertTrue(LocationEditor.nameIsAuto(LocationEditor.currentLocationPlaceholder, lastAutoName: nil))
+        XCTAssertFalse(LocationEditor.nameIsAuto("Home", lastAutoName: "12 Acacia Avenue"))
+        XCTAssertFalse(LocationEditor.nameIsAuto("Home", lastAutoName: nil))
+        XCTAssertFalse(LocationEditor.nameIsAuto("", lastAutoName: nil))
+    }
+
+    /// Reopening a saved reminder: an app-filled name can be replaced by the next place picked,
+    /// a typed one cannot, and one saved before the marker existed is kept (owner 2026-10-11).
+    func testReopenedReminder_anAppFilledNameCanBeReplaced_aTypedOneCannot() {
+        let auto = LocationTrigger(latitude: 51.5, longitude: -0.1, radiusMetres: 150, triggerOnArrival: true,
+                                   locationName: "12 Acacia Avenue", locationNameIsAuto: true)
+        let typed = LocationTrigger(latitude: 51.5, longitude: -0.1, radiusMetres: 150, triggerOnArrival: true,
+                                    locationName: "Home")
+        let autoLast = LocationEditor.lastAutoName(forSaved: auto)
+        XCTAssertTrue(LocationEditor.shouldReplaceName(currentName: "12 Acacia Avenue", lastAutoName: autoLast),
+                      "a saved app-filled address must give way to the place picked next")
+        let typedLast = LocationEditor.lastAutoName(forSaved: typed)
+        XCTAssertFalse(LocationEditor.shouldReplaceName(currentName: "Home", lastAutoName: typedLast))
+        XCTAssertNil(LocationEditor.lastAutoName(forSaved: nil))
     }
 
     /// Once the user has typed over the filled-in name, it is theirs.
