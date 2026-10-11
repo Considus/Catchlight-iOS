@@ -28,6 +28,10 @@ struct LocationEditor: View {
 
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var name: String
+    /// The name this editor last filled in by itself (the placeholder, a reverse-geocoded
+    /// address or a search result's title), so the next place picked can replace it. Nil
+    /// for a name the place already had when the editor opened, which is kept.
+    @State private var lastAutoName: String?
     @State private var arriveOnEntry: Bool
     @State private var alarmEnabled: Bool
     @State private var cameraPosition: MapCameraPosition
@@ -62,11 +66,15 @@ struct LocationEditor: View {
         return names
     }()
 
-    /// Whether the reverse-geocoded name may replace the current one: only when
-    /// the field is empty or still the auto placeholder, in any language. Pure so the
-    /// clobber guard is unit-testable without the view (2026-07-04).
-    static func shouldAdoptGeocodedName(currentName: String) -> Bool {
-        currentName.isEmpty || currentLocationPlaceholderInEveryLanguage.contains(currentName)
+    /// Whether a newly picked place's name may replace the current one: when the field is
+    /// empty, still the auto placeholder (in any language), or still the name this editor
+    /// filled in last. A name the user typed is never replaced (2026-07-01: re-pinning
+    /// "Home" must not rename it to the street address). Pure so the guard is unit-testable
+    /// without the view.
+    static func shouldReplaceName(currentName: String, lastAutoName: String? = nil) -> Bool {
+        currentName.isEmpty
+            || currentLocationPlaceholderInEveryLanguage.contains(currentName)
+            || currentName == lastAutoName
     }
 
     init(trigger: Binding<LocationTrigger?>) {
@@ -100,16 +108,22 @@ struct LocationEditor: View {
         // A fresh one-shot fix drops the pin on the user's spot + names it.
         .onChange(of: location.currentLocation) { _, loc in
             guard let loc else { return }
-            // Only auto-name when the user hasn't named the place (2026-07-01):
-            // the slow reverse geocode previously overwrote a chosen name — e.g.
-            // re-pinning "Home" renamed it to the street address — and writeBack
-            // persisted the clobber. The decision is factored into the pure,
-            // testable `shouldAdoptGeocodedName` (2026-07-04).
-            let currentName = name
-            apply(coordinate: loc.coordinate,
-                  name: currentName.isEmpty ? Self.currentLocationPlaceholder : currentName)
-            guard Self.shouldAdoptGeocodedName(currentName: currentName) else { return }
-            Task { if let resolved = await search.reverseGeocodedName(for: loc) { name = resolved; writeBack() } }
+            // Only auto-name when the user hasn't named the place (2026-07-01): the slow
+            // reverse geocode previously overwrote a chosen name — e.g. re-pinning "Home"
+            // renamed it to the street address — and writeBack persisted the clobber. The
+            // decision is the pure, testable `shouldReplaceName`, asked again when the
+            // geocode lands, in case the user typed a name while it ran.
+            apply(coordinate: loc.coordinate, autoName: Self.currentLocationPlaceholder)
+            // A name the user chose stays, so there is nothing for the geocode to fill in.
+            guard Self.shouldReplaceName(currentName: name, lastAutoName: lastAutoName) else { return }
+            Task {
+                // The pin may have moved while the geocode ran (a search result picked in the
+                // meantime): an address for the old spot must not rename the new place.
+                guard let resolved = await search.reverseGeocodedName(for: loc),
+                      coordinate?.latitude == loc.coordinate.latitude,
+                      coordinate?.longitude == loc.coordinate.longitude else { return }
+                adoptAutoName(resolved)
+            }
         }
         .onChange(of: name) { _, _ in writeBack() }
         .onChange(of: arriveOnEntry) { _, _ in writeBack() }
@@ -292,17 +306,28 @@ struct LocationEditor: View {
     private func select(_ result: MKLocalSearchCompletion) {
         Task {
             guard let (coord, label) = await search.resolve(result) else { return }
-            apply(coordinate: coord, name: label)
+            apply(coordinate: coord, autoName: label)
             query = ""
             search.query = ""
         }
     }
 
-    private func apply(coordinate: CLLocationCoordinate2D, name: String) {
+    /// Move the pin to a newly picked place. Its name follows unless the user has named the
+    /// place themselves (`shouldReplaceName`): "Use current location", then a search for
+    /// somewhere else, used to leave the first place's address on the new one.
+    private func apply(coordinate: CLLocationCoordinate2D, autoName: String) {
         self.coordinate = coordinate
-        if self.name.isEmpty { self.name = name }
+        adoptAutoName(autoName)
         cameraPosition = .region(Self.region(for: coordinate, radius: radiusMetres))
         writeBack()
+    }
+
+    /// Take `autoName` as the place's name if the current one may be replaced. A changed
+    /// name reaches the trigger through `onChange(of: name)`.
+    private func adoptAutoName(_ autoName: String) {
+        guard Self.shouldReplaceName(currentName: name, lastAutoName: lastAutoName) else { return }
+        name = autoName
+        lastAutoName = autoName
     }
 
     /// Compose the current selection into the bound trigger (nil while no place is chosen).
