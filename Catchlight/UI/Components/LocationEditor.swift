@@ -29,8 +29,10 @@ struct LocationEditor: View {
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var name: String
     /// The name this editor last filled in by itself (the placeholder, a reverse-geocoded
-    /// address or a search result's title), so the next place picked can replace it. Nil
-    /// for a name the place already had when the editor opened, which is kept.
+    /// address or a search result's title), so the next place picked can replace it. A
+    /// reopened reminder starts with its saved name here when the app filled that in
+    /// (`LocationTrigger.locationNameIsAuto`); a typed name, or one saved before the marker
+    /// existed, starts nil and is kept.
     @State private var lastAutoName: String?
     @State private var arriveOnEntry: Bool
     @State private var alarmEnabled: Bool
@@ -77,6 +79,20 @@ struct LocationEditor: View {
             || currentName == lastAutoName
     }
 
+    /// Whether the name being saved is one the app filled in (the placeholder, or the name
+    /// this editor filled in last) rather than one the user typed. Saved on the trigger as
+    /// `locationNameIsAuto`, so a reminder reopened later still knows (owner 2026-10-11).
+    static func nameIsAuto(_ name: String, lastAutoName: String?) -> Bool {
+        !name.isEmpty && (name == lastAutoName || currentLocationPlaceholderInEveryLanguage.contains(name))
+    }
+
+    /// The name a reopened reminder's editor may replace: the saved name when the app filled
+    /// it in. A typed name, or one saved before the marker existed, gives nil and is kept.
+    static func lastAutoName(forSaved trigger: LocationTrigger?) -> String? {
+        guard let trigger, trigger.locationNameIsAuto else { return nil }
+        return trigger.locationName
+    }
+
     init(trigger: Binding<LocationTrigger?>) {
         _trigger = trigger
         let t = trigger.wrappedValue
@@ -84,6 +100,7 @@ struct LocationEditor: View {
         let r = Self.nearestOption(to: t?.radiusMetres ?? ReminderScheduler.defaultGeofenceRadius)
         _coordinate = State(initialValue: coord)
         _name = State(initialValue: t?.locationName ?? "")
+        _lastAutoName = State(initialValue: Self.lastAutoName(forSaved: t))
         _arriveOnEntry = State(initialValue: t?.triggerOnArrival ?? true)
         _alarmEnabled = State(initialValue: t?.alarmEnabled ?? true)
         _radiusMetres = State(initialValue: r)
@@ -339,7 +356,8 @@ struct LocationEditor: View {
             radiusMetres: radiusMetres,
             triggerOnArrival: arriveOnEntry,
             locationName: name.isEmpty ? nil : name,
-            alarmEnabled: alarmEnabled)
+            alarmEnabled: alarmEnabled,
+            locationNameIsAuto: Self.nameIsAuto(name, lastAutoName: lastAutoName))
     }
 
     /// A region framing the geofence comfortably — scales with the radius so the circle
