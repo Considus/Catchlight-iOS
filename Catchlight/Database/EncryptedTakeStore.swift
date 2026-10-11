@@ -406,8 +406,10 @@ public final class EncryptedTakeStore: TakeStore {
                 // branch — a phantom "changed on another device" conflict. Matches
                 // setObie. When SYNC applies a remote Obie this can bump a Take the
                 // fleet already demoted — one redundant, converging re-upload;
-                // accepted trade-off for never losing the demotion.
-                existing.modifiedAt = Date()
+                // accepted trade-off for never losing the demotion. `markModified` stamps
+                // strictly after the demoted Take's own stamp, so a clock behind it (set
+                // back, or a stamp from a device running ahead) can't leave it unsynced.
+                existing.markModified()
                 try insertOrReplace(existing)
             }
         }
@@ -597,7 +599,7 @@ public final class EncryptedTakeStore: TakeStore {
                 }
                 var old = existing
                 old.isObie = false
-                old.modifiedAt = Date()
+                old.markModified()
                 try insertOrReplace(old)
             }
             guard let current = try takeUnlocked(id: id) else {
@@ -605,7 +607,7 @@ public final class EncryptedTakeStore: TakeStore {
             }
             var target = current
             target.isObie = true
-            target.modifiedAt = Date()
+            target.markModified()
             try insertOrReplace(target)
             try exec("COMMIT;")
             committed = true

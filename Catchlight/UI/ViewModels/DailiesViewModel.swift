@@ -323,7 +323,12 @@ final class DailiesViewModel {
             candidate.isSeeded = stored.isSeeded
             if candidate == stored { return true }
         }
-        updated.modifiedAt = Date()
+        // Strictly after the stored version's stamp, whatever the clock says, or an edit
+        // stamped no later than the version already pushed never syncs (Core's markModified).
+        // From whichever is later: the editor's copy can be older than what is stored, when a
+        // sync applied another device's newer version while the Take was open.
+        if let stored { updated.modifiedAt = max(updated.modifiedAt, stored.modifiedAt) }
+        updated.markModified()
         var notObie = false
         do {
             do {
@@ -375,7 +380,7 @@ final class DailiesViewModel {
             for (takeID, order) in values {
                 guard var take = takes.first(where: { $0.id == takeID }), take.manualOrder != order else { continue }
                 take.manualOrder = order
-                take.modifiedAt = Date()
+                take.markModified()
                 try store.upsert(take)
             }
             DiagnosticsLog.shared.record(.timelineReordered)
@@ -395,7 +400,7 @@ final class DailiesViewModel {
     /// already on screen.
     private func saveInPlace(_ take: Take) {
         var updated = take
-        updated.modifiedAt = Date()
+        updated.markModified()
         if updated.isSeeded { updated.isSeeded = false }
         updated.normaliseActivityFloor()
         let previous = obie?.id == updated.id ? obie : takes.first { $0.id == updated.id }

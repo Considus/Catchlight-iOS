@@ -248,6 +248,15 @@ final class ConflictQueue {
         }
     }
 
+    /// Stamp the version the user chose as a fresh edit strictly after every copy in play, so
+    /// it wins at the cloud even when the other copy was stamped later than the clock reads
+    /// (set back, or a device running ahead). Without that the other copy still looked newer
+    /// and the conflict came straight back.
+    private static func stampAsFreshEdit(_ winner: inout Take, after others: Take?...) {
+        winner.modifiedAt = others.compactMap { $0?.modifiedAt }.reduce(winner.modifiedAt, max)
+        winner.markModified()
+    }
+
     /// Resolve a single conflict by writing the chosen winner to the store and releasing the
     /// hold. No-op if the id is no longer waiting (e.g. the user resolved it on another row
     /// first). `store` is the RAW store: this is the one write a held Take is waiting for.
@@ -268,7 +277,7 @@ final class ConflictQueue {
         // conflict via the `(localChanged:false, remoteChanged:false)` branch. Resolving
         // then never sticks: the conflict re-surfaces on every sync. Bumping `modifiedAt`
         // makes the next sync push the winner over the remote and the pull see `keepLocal`.
-        winner.modifiedAt = Date()
+        Self.stampAsFreshEdit(&winner, after: pair.local, pair.remote)
         try store.upsert(winner)
         waiting.remove(at: idx)
         skipped.remove(id)
@@ -478,7 +487,7 @@ final class ConflictQueue {
     func keepPhone(id: UUID, store: TakeStore) throws {
         guard let idx = unverified.firstIndex(where: { $0.id == id }),
               var winner = unverified[idx].local else { return }
-        winner.modifiedAt = Date()
+        Self.stampAsFreshEdit(&winner, after: unverified[idx].cloud)
         try store.upsert(winner)
         unverified.remove(at: idx)
     }
@@ -489,7 +498,7 @@ final class ConflictQueue {
     func keepCloud(id: UUID, store: TakeStore) throws {
         guard let idx = unverified.firstIndex(where: { $0.id == id }),
               var winner = unverified[idx].cloud else { return }
-        winner.modifiedAt = Date()
+        Self.stampAsFreshEdit(&winner, after: unverified[idx].local)
         try store.upsert(winner)
         unverified.remove(at: idx)
     }
