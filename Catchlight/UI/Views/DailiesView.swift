@@ -1118,7 +1118,7 @@ struct DailiesView: View {
                                 isPresented: $showMissingPhraseExportConfirm,
                                 titleVisibility: .visible) {
                 Button("Export anyway") {
-                    let takes = (try? vm.store.allTakes()) ?? []
+                    guard let takes = vm.takesForExport() else { return }
                     ExportCoordinator.presentShareSheet(takes: takes)
                 }
                 Button("Cancel", role: .cancel) { }
@@ -1146,7 +1146,7 @@ struct DailiesView: View {
                     .lineLimit(2)
                 Spacer(minLength: 8)
                 Button {
-                    let takes = (try? vm.store.allTakes()) ?? []
+                    guard let takes = vm.takesForExport() else { return }
                     ExportCoordinator.presentShareSheet(takes: takes)
                 } label: {
                     Text("Export")
@@ -1710,14 +1710,18 @@ struct DailiesView: View {
 
     private func saveInlineEdit() {
         editFocusedBlockID = nil            // release the keyboard first
-        // V44: captured BEFORE the defer clears the editing state, so the cursor
-        // returns to the Take that was edited rather than to whatever the closing
-        // card happened to be covering.
-        focusReturnTakeID = ui.editingTakeID
-        defer { editDraft = nil; ui.endEditingInPlace() }
-        guard let t = editDraft else { return }
+        // V44: captured BEFORE the commit or the editing state can move it, so the cursor
+        // returns to the Take that was edited rather than to whatever the closing card
+        // happened to be covering.
+        let editedTakeID = ui.editingTakeID
         // Blank → discard, otherwise save or hold for the paywall: `AppModel.commitEditedTake`.
-        app.commitEditedTake(t)
+        // A save the store refused leaves the editor open with the draft in it, so the typed
+        // text survives and the user can try again; the save notice is already up. (A relock
+        // still loses it: the editor is torn down with the locked timeline.)
+        if let t = editDraft, app.commitEditedTake(t) == .failed { return }
+        focusReturnTakeID = editedTakeID
+        editDraft = nil
+        ui.endEditingInPlace()
     }
 
     /// Discard the edits (owner 2026-06-17 — via the row's long-press menu): drop the

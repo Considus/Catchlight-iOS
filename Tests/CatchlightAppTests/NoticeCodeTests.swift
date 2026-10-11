@@ -45,6 +45,7 @@ final class NoticeCodeTests: XCTestCase {
             "conflictResolutionFailed": 211,
             "privacyPhraseMissing": 212,
             "readOnlyLapsed": 213,
+            "exportFailed": 214,
             "conflictsChanged": 301,
             "conflictsUnverified": 302,
             "takeAwaitingConflict": 303,

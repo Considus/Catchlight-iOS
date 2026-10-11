@@ -56,6 +56,7 @@ enum NoticeCode: Int, CaseIterable {
     case conflictResolutionFailed = 211     // Couldn't save a conflict resolution.
     case privacyPhraseMissing = 212         // Banner: this device holds a key but no Privacy phrase; Takes can't be recovered elsewhere.
     case readOnlyLapsed = 213               // Banner: subscription lapsed, the app is read-only.
+    case exportFailed = 214                 // Couldn't read the Takes for an export; nothing was exported.
 
     // 3xx conflicts
     case conflictsChanged = 301             // N Takes changed on another device.
@@ -105,7 +106,7 @@ enum Notice: Equatable {
     case loadFailed, saveFailed, saveInPlaceFailed, reorderFailed, importFailed, deleteFailed
     case cleanupFailed, setObieFailed, replaceObieFailed
     case conflictChoiceFailed, conflictResolutionFailed
-    case privacyPhraseMissing, readOnlyLapsed
+    case privacyPhraseMissing, readOnlyLapsed, exportFailed
 
     case conflictsChanged(Int), conflictsUnverified(Int)
     case takeAwaitingConflict, conflictEditKeptAsCopy, savedNotAsObie, obieAwaitingConflict
@@ -153,6 +154,7 @@ enum Notice: Equatable {
         case .conflictResolutionFailed: return .conflictResolutionFailed
         case .privacyPhraseMissing: return .privacyPhraseMissing
         case .readOnlyLapsed: return .readOnlyLapsed
+        case .exportFailed: return .exportFailed
         case .watermarkPrepareFailed: return .watermarkPrepareFailed
         case .watermarkStepFailed: return .watermarkStepFailed
         case .libraryOpenFailed: return .libraryOpenFailed
@@ -243,6 +245,8 @@ enum Notice: Equatable {
             return String(localized: "No privacy phrase on this device. Export now, then Settings > Start over.")
         case .readOnlyLapsed:
             return String(localized: "Read-only. Your data is still yours.")
+        case .exportFailed:
+            return String(localized: "Your Takes couldn't be read, so nothing was exported. Don't start over until an export works.")
         case .conflictsChanged(let n):
             return String(localized: "\(n) Takes changed on another device.")
         case .conflictsUnverified(let n):

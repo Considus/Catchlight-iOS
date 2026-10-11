@@ -269,6 +269,20 @@ final class DailiesViewModel {
         return take
     }
 
+    /// Every Take, for an export, or nil (with the notice up) when the store can't be read.
+    /// Never an empty list in place of a failure: an empty export the user trusts as a backup
+    /// is worse than none, above all on the way to Start over, where exporting is the only
+    /// way back. The three export buttons (Settings, Start over, the missing-phrase banner)
+    /// all read through here.
+    func takesForExport() -> [Take]? {
+        do {
+            return try store.allTakes()
+        } catch {
+            report(.exportFailed)
+            return nil
+        }
+    }
+
     /// Persist edits to an existing Take (or a new one). Bumps `modifiedAt` and
     /// clears the seed flag on first edit (UX §12).
     ///
