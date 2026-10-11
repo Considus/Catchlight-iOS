@@ -117,7 +117,12 @@ struct LocationEditor: View {
             // A name the user chose stays, so there is nothing for the geocode to fill in.
             guard Self.shouldReplaceName(currentName: name, lastAutoName: lastAutoName) else { return }
             Task {
-                if let resolved = await search.reverseGeocodedName(for: loc) { adoptAutoName(resolved) }
+                // The pin may have moved while the geocode ran (a search result picked in the
+                // meantime): an address for the old spot must not rename the new place.
+                guard let resolved = await search.reverseGeocodedName(for: loc),
+                      coordinate?.latitude == loc.coordinate.latitude,
+                      coordinate?.longitude == loc.coordinate.longitude else { return }
+                adoptAutoName(resolved)
             }
         }
         .onChange(of: name) { _, _ in writeBack() }
@@ -317,12 +322,12 @@ struct LocationEditor: View {
         writeBack()
     }
 
-    /// Take `autoName` as the place's name if the current one may be replaced.
+    /// Take `autoName` as the place's name if the current one may be replaced. A changed
+    /// name reaches the trigger through `onChange(of: name)`.
     private func adoptAutoName(_ autoName: String) {
         guard Self.shouldReplaceName(currentName: name, lastAutoName: lastAutoName) else { return }
         name = autoName
         lastAutoName = autoName
-        writeBack()
     }
 
     /// Compose the current selection into the bound trigger (nil while no place is chosen).

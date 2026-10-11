@@ -15,9 +15,9 @@ import XCTest
 
 final class LocationEditorNameGuardTests: XCTestCase {
 
-    /// Adopt the geocoded name only when the field is empty or still the auto
-    /// placeholder this editor writes on a fresh pin.
-    func testAdoptsGeocodedName_whenEmptyOrPlaceholder() {
+    /// Replace the name when the field is empty or still the auto placeholder this editor
+    /// writes on a fresh pin.
+    func testReplacesName_whenEmptyOrPlaceholder() {
         XCTAssertTrue(LocationEditor.shouldReplaceName(currentName: ""))
         XCTAssertTrue(LocationEditor.shouldReplaceName(
             currentName: LocationEditor.currentLocationPlaceholder))
@@ -25,7 +25,7 @@ final class LocationEditorNameGuardTests: XCTestCase {
 
     /// The placeholder is saved as the place name, so a pin dropped under one language
     /// must still read as unnamed after the device language changes.
-    func testAdoptsGeocodedName_forPlaceholderInEveryBundledLanguage() {
+    func testReplacesName_forPlaceholderInEveryBundledLanguage() {
         XCTAssertTrue(LocationEditor.shouldReplaceName(currentName: "Current location"))
         for language in Bundle.main.localizations {
             guard let path = Bundle.main.path(forResource: language, ofType: "lproj"),
