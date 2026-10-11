@@ -325,6 +325,9 @@ final class DailiesViewModel {
         }
         // Strictly after the stored version's stamp, whatever the clock says, or an edit
         // stamped no later than the version already pushed never syncs (Core's markModified).
+        // From whichever is later: the editor's copy can be older than what is stored, when a
+        // sync applied another device's newer version while the Take was open.
+        if let stored { updated.modifiedAt = max(updated.modifiedAt, stored.modifiedAt) }
         updated.markModified()
         var notObie = false
         do {
