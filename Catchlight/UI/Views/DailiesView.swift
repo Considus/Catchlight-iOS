@@ -1710,13 +1710,16 @@ struct DailiesView: View {
 
     private func saveInlineEdit() {
         editFocusedBlockID = nil            // release the keyboard first
+        // V44: captured BEFORE the commit or the editing state can move it, so the cursor
+        // returns to the Take that was edited rather than to whatever the closing card
+        // happened to be covering.
+        let editedTakeID = ui.editingTakeID
         // Blank → discard, otherwise save or hold for the paywall: `AppModel.commitEditedTake`.
         // A save the store refused leaves the editor open with the draft in it, so the typed
-        // text survives and the user can try again; the save notice is already up.
+        // text survives and the user can try again; the save notice is already up. (A relock
+        // still loses it: the editor is torn down with the locked timeline.)
         if let t = editDraft, app.commitEditedTake(t) == .failed { return }
-        // V44: captured BEFORE the editing state clears, so the cursor returns to the Take
-        // that was edited rather than to whatever the closing card happened to be covering.
-        focusReturnTakeID = ui.editingTakeID
+        focusReturnTakeID = editedTakeID
         editDraft = nil
         ui.endEditingInPlace()
     }

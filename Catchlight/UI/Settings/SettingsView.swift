@@ -167,8 +167,7 @@ struct SettingsView: View {
         } message: {
             Text(importResultMessage ?? "")
         }
-        .alert("Export", isPresented: Binding(get: { exportFailedMessage != nil },
-                                              set: { if !$0 { exportFailedMessage = nil } })) {
+        .alert("Export", isPresented: exportFailedAlertPresented) {
             Button("OK", role: .cancel) { exportFailedMessage = nil }
         } message: {
             Text(exportFailedMessage ?? "")
@@ -931,10 +930,17 @@ struct SettingsView: View {
         // can't be read exports nothing and says so here, over Settings, where the
         // timeline's strip can't be seen.
         guard let takes = app.dailiesVM.takesForExport() else {
+            // Said here once, so the timeline doesn't repeat it after Settings closes.
             exportFailedMessage = Notice.exportFailed.message
+            if app.dailiesVM.lastError == exportFailedMessage { app.dailiesVM.clearError() }
             return
         }
         ExportCoordinator.presentShareSheet(takes: takes)
+    }
+
+    private var exportFailedAlertPresented: Binding<Bool> {
+        Binding(get: { exportFailedMessage != nil },
+                set: { if !$0 { exportFailedMessage = nil } })
     }
 
     private var importAlertPresented: Binding<Bool> {

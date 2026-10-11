@@ -809,7 +809,9 @@ final class AppModel {
             holdDraftForPaywall(copy)
             return .heldForPaywall
         }
-        dailiesVM.save(copy)
+        // A refused write leaves the save notice up, not "kept as a new Take", which would
+        // be untrue, and the caller keeps the editor open on the typing.
+        guard dailiesVM.save(copy) else { return .failed }
         dailiesVM.reportStorageError(.conflictEditKeptAsCopy)
         return .savedAsCopy
     }

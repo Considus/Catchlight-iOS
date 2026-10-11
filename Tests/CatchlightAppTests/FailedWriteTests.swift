@@ -51,7 +51,21 @@ private final class RefusingStore: TakeStore {
 @MainActor
 final class FailedWriteTests: XCTestCase {
 
-    /// An unlocked, onboarded, entitled AppModel over `store`.
+    private var conflictDirectory: URL!
+
+    override func setUp() {
+        super.setUp()
+        conflictDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("FailedWriteTests-\(UUID().uuidString)", isDirectory: true)
+    }
+
+    override func tearDown() {
+        try? FileManager.default.removeItem(at: conflictDirectory)
+        super.tearDown()
+    }
+
+    /// An unlocked, onboarded, entitled AppModel over `store`, its conflict queue kept in
+    /// this test's directory.
     private func makeUnlocked(_ store: RefusingStore) async -> AppModel {
         let subscription = SubscriptionManager()
         subscription.forceStatusForTesting(.subscribed)
@@ -62,7 +76,8 @@ final class FailedWriteTests: XCTestCase {
             makeStoreFromKeys: { _ in store },
             unlockKeys: { KeyHierarchy(masterKeyBytes: Data(repeating: 7, count: 32)) },
             lockState: .locked,
-            subscription: subscription
+            subscription: subscription,
+            conflictDirectory: conflictDirectory
         )
         await app.attemptUnlock()
         XCTAssertEqual(app.lockState, .unlocked)
@@ -93,6 +108,24 @@ final class FailedWriteTests: XCTestCase {
 
         XCTAssertEqual(app.commitEditedTake(draft), .saved)
         XCTAssertEqual(try store.allTakes().map(\.plainText), ["an ordinary edit"])
+    }
+
+    /// The editor was open when a conflict arrived for its Take, so the edit is kept as a new
+    /// Take. If that write is refused too, the editor must stay open on the typing, and the
+    /// strip must not claim the edit was kept.
+    func testCommitEditedTake_onAHeldTake_refusedCopy_reportsFailed() async throws {
+        let store = RefusingStore()
+        let stored = Take(blocks: [.textLine("original")])
+        try store.upsert(stored)
+        let app = await makeUnlocked(store)
+        app.conflictQueue.enqueue([(local: stored, remote: Take(id: stored.id, blocks: [.textLine("from the other device")]))])
+        var draft = stored
+        draft.blocks = [.textLine("typed before the conflict arrived")]
+
+        store.refuseWrites = true
+        XCTAssertEqual(app.commitEditedTake(draft), .failed)
+        XCTAssertEqual(try store.allTakes().map(\.plainText), ["original"])
+        XCTAssertEqual(app.dailiesVM.lastError, "Couldn't save that Take.")
     }
 
     // MARK: - Reading the Takes for an export
