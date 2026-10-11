@@ -45,6 +45,8 @@ struct SettingsView: View {
     @State private var vm = SettingsViewModel()
     /// The Import-result message; non-nil presents the confirmation alert (owner 2026-06-22).
     @State private var importResultMessage: String?
+    /// Set when an export couldn't read the Takes, so nothing was exported.
+    @State private var exportFailedMessage: String?
     /// Presents the Notice History sheet (D-085) — a SHIPPING feature, so this
     /// must live outside the `#if DEBUG` block (it was declared inside it, which
     /// compiled in Debug but broke every Release/Archive build — 2026-07-01).
@@ -164,6 +166,12 @@ struct SettingsView: View {
             Button("OK", role: .cancel) { importResultMessage = nil }
         } message: {
             Text(importResultMessage ?? "")
+        }
+        .alert("Export", isPresented: Binding(get: { exportFailedMessage != nil },
+                                              set: { if !$0 { exportFailedMessage = nil } })) {
+            Button("OK", role: .cancel) { exportFailedMessage = nil }
+        } message: {
+            Text(exportFailedMessage ?? "")
         }
         // Folder "Import notes" re-scans the whole Import folder, so re-imports anything
         // still in it that was imported before. Warn, then import only on Proceed.
@@ -919,8 +927,13 @@ struct SettingsView: View {
         // Reads through the live DailiesViewModel's store so the export reflects
         // whatever the user can see in the timeline (one store, one source of
         // truth). `allTakes()` already returns `createdAt` ascending; the
-        // exporter re-sorts defensively. Markdown only (owner 2026-07-02).
-        let takes = (try? app.dailiesVM.store.allTakes()) ?? []
+        // exporter re-sorts defensively. Markdown only (owner 2026-07-02). A store that
+        // can't be read exports nothing and says so here, over Settings, where the
+        // timeline's strip can't be seen.
+        guard let takes = app.dailiesVM.takesForExport() else {
+            exportFailedMessage = Notice.exportFailed.message
+            return
+        }
         ExportCoordinator.presentShareSheet(takes: takes)
     }
 

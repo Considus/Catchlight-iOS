@@ -459,14 +459,17 @@ struct StoryboardView: View {
     /// Commit the focused edit through the same `AppModel.commitEditedTake` the timeline
     /// uses, then clear focus.
     private func commitEdit() {
-        ui.commitInlineEdit = nil           // this edit is over — deregister from relock
         editFocusedBlockID = nil
-        guard let t = editDraft else { return }
-        withAnimation(reduceMotion ? nil : UIState.fanFade) { editDraft = nil }
+        guard let t = editDraft else { ui.commitInlineEdit = nil; return }
         // The Shot List can empty a Take (delete the last check item), so this can be a
         // blank draft. Blank → discard, otherwise save or hold for the paywall: the same
         // `AppModel.commitEditedTake` the timeline uses, so the two screens cannot disagree.
-        app.commitEditedTake(t)
+        // A save the store refused leaves the editor open with the draft in it, still
+        // registered for the relock auto-save, so the typed text survives; the save notice
+        // is already up.
+        guard app.commitEditedTake(t) != .failed else { return }
+        ui.commitInlineEdit = nil           // this edit is over — deregister from relock
+        withAnimation(reduceMotion ? nil : UIState.fanFade) { editDraft = nil }
     }
 
     /// Discard the focused edit — revert the Take to its pre-edit state (the store

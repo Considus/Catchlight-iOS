@@ -745,6 +745,10 @@ final class AppModel {
         case refusedForConflict
         /// The Take is waiting for a conflict choice; the edit was saved as a new Take.
         case savedAsCopy
+        /// The store refused the write, so nothing changed on disk and the save notice is
+        /// up. The caller keeps the editor open with the draft in it: closing it here is
+        /// what used to lose the user's typing.
+        case failed
     }
 
     /// Commit a Take that was being edited in place, from the timeline or the Storyboard.
@@ -760,6 +764,9 @@ final class AppModel {
     /// A Take waiting for a conflict choice is never written (owner 2026-10-07). An edit made
     /// to it before the conflict arrived is kept as a new Take instead of being lost with the
     /// editor (`commitEditToHeldTake`).
+    ///
+    /// A write the store refuses comes back `.failed`, and the caller keeps the editor open
+    /// with the draft in it rather than closing it on the user's typing.
     @discardableResult
     func commitEditedTake(_ draft: Take) -> EditCommit {
         var take = draft
@@ -775,8 +782,7 @@ final class AppModel {
             holdDraftForPaywall(take)
             return .heldForPaywall
         }
-        dailiesVM.save(take)
-        return .saved
+        return dailiesVM.save(take) ? .saved : .failed
     }
 
     /// An edit to a Take that is waiting for a conflict choice. The Take itself stays as it is.

@@ -295,6 +295,20 @@ final class DailiesViewModel {
     /// store refuses. The text must never be lost to that, so the Take is saved without the
     /// Obie designation and the user is told.
     ///
+    /// Every Take, for an export, or nil (with the notice up) when the store can't be read.
+    /// Never an empty list in place of a failure: an empty export the user trusts as a backup
+    /// is worse than none, above all on the way to Start over, where exporting is the only
+    /// way back. The three export buttons (Settings, Start over, the missing-phrase banner)
+    /// all read through here.
+    func takesForExport() -> [Take]? {
+        do {
+            return try store.allTakes()
+        } catch {
+            report(.exportFailed)
+            return nil
+        }
+    }
+
     /// - Returns: whether the Take is in the store as asked (or was already), so a caller that
     ///   clears a queue only after a save can tell.
     @discardableResult
