@@ -15,7 +15,7 @@ name: Catchlight
 options:
   bundleIdPrefix: com.considus
   deploymentTarget:
-    iOS: "18.0"            # brief §3.1 — iOS 18.0 minimum (D-039, 2026-06-14; raised
+    iOS: "18.0"            # brief §3.1 — iOS 18.0 minimum (2026-06-14; raised
                           # from 17.0: owner has no iOS 17 device, and the 17.x sim
                           # was unreliable for the block-editor/Angle UI tests). Secure
                           # Enclave still guaranteed across all supported devices.
@@ -27,7 +27,7 @@ settings:
     # iPhone-only (owner 2026-07-23): iPad is not yet in scope — nothing has been
     # designed or validated for it, and XcodeGen's default ("1,2") silently opted
     # us into iPad App Review + iPad screenshot requirements.
-    # D-139 (2026-07-26): this project-level value is NOT sufficient on its own.
+    # This project-level value is NOT sufficient on its own.
     # XcodeGen writes its own TARGETED_DEVICE_FAMILY = "1,2" into every target,
     # and target level beats project level in Xcode, so the lock was inert from
     # 2026-07-23 until 2026-07-26. Each target below repeats it. If you add a
@@ -136,8 +136,7 @@ targets:
         UIApplicationSupportsIndirectInputEvents: true
         # Face ID is the biometric for the app-entry unlock (the master key is
         # `.userPresence`-gated). Without this usage string iOS refuses Face ID and
-        # silently falls back to the device passcode (D-042 — this was the cause of
-        # "passcode prompt, not Face ID").
+        # silently falls back to the device passcode.
         NSFaceIDUsageDescription: "Catchlight uses Face ID to unlock your encrypted Takes."
         # Location reminders (owner 2026-06-23): "When In Use" is sufficient — the system's
         # notification daemon monitors the geofence for UNLocationNotificationTrigger, so the
@@ -152,8 +151,7 @@ targets:
         # before public release. No CCATS, no annual self-classification report.
         # PREREQUISITE: GitHub repos must be public + TSU email sent before submission.
         # If shipping closed-source instead, switch basis to mass-market 740.17(b)(1)
-        # (annual self-classification report). See
-        # 04_GoToMarket/Export_Compliance_and_DSA_v1.0.md and DECISIONS D-005.
+        # (annual self-classification report).
         ITSAppUsesNonExemptEncryption: true
         # Required so BGTaskScheduler will register the sync refresh task —
         # without this, BackgroundTasks rejects the registration at launch
@@ -217,7 +215,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight   # brief §3.1
-        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base (D-139)
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base
         CODE_SIGN_ENTITLEMENTS: Catchlight/Resources/Catchlight.entitlements
         # Pin signing to Automatic so the Xcode UI can't silently flip the app
         # target to Manual on a future fix-warning prompt. Pre-archive audit
@@ -304,7 +302,7 @@ targets:
         # target does not have an Info.plist file…" (hit 2026-06-06 on iPhone 17).
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.tests
-        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base (D-139)
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base
     dependencies:
       - target: Catchlight
       - package: CatchlightCore
@@ -324,7 +322,7 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.uitests
-        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base (D-139)
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base
     dependencies:
       - target: Catchlight
 
@@ -371,7 +369,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.widgets
-        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base (D-139)
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base
         CODE_SIGN_ENTITLEMENTS: CatchlightWidgets/CatchlightWidgets.entitlements
         CODE_SIGN_STYLE: Automatic
         # The extension has no UIKit app delegate / launch storyboard.
@@ -438,7 +436,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.share
-        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base (D-139)
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone-only — see settings.base
         CODE_SIGN_ENTITLEMENTS: CatchlightShare/CatchlightShare.entitlements
         CODE_SIGN_STYLE: Automatic
         # Hand-written Info.plist above (the extension point + activation rule), so

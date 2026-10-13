@@ -184,14 +184,14 @@ extension Color {
     /// gives 4.9:1 on Paper and 5.4:1 on white. Night is UNCHANGED (resolves to
     /// Ember). Raw `ckEmber` / `ckAdd` remain the FILL colour (Add droplet,
     /// selection borders, pill fills), where Ember is correct.
-    /// (Accessibility audit 7.6 / D-027 follow-up 2026-06-13.)
+    /// (Accessibility audit 7.6, 2026-06-13.)
     static let ckAccent = Color(uiColor: UITheme.accent)
 
     /// Foreground drawn ON an Ember fill (the Add "+", active filter glyphs):
     /// Ink in BOTH modes. Night was already Ink-coloured (it used `ckBackground`
     /// = Ink), so this is unchanged there; in Daylight it replaces Paper-on-Ember
     /// (2.04:1, fails) with Ink-on-Ember (8.62:1). Use for amber-filled chrome
-    /// controls. NOTE: the locked D-022 primary CTAs (DockPill, Paywall) are a
+    /// controls. NOTE: the locked primary CTAs (DockPill, Paywall) are a
     /// separate owner call (see audit C4) and are NOT switched here.
     static let ckOnAccent = Color(uiColor: UITheme.onAccent)
 
@@ -209,7 +209,7 @@ extension Color {
     //
     // The Take card surface is `ckSurface` (White Daylight / Dusk Night). These
     // tokens cover the two variant treatments v1.7 layers on top. Added 2026-06-14
-    // (fix pass 1, D-040).
+    // (fix pass 1).
 
     /// Obie card BACKGROUND — a warm tint distinct from the plain surface so the
     /// pinned Take reads as special. Daylight #FBF8F3 (Ember @8% blended onto
@@ -352,13 +352,13 @@ enum IrisDepth {
 // Note=top, Task=right, Remind=left, Reserved=bottom). Daylight values are the
 // HiFi v1.6.9 `--q-*` swatches (the canonical look the owner reviews). v1.6.9
 // moved the Ember accent from Remind onto TASK, so Task is the warm quadrant
-// and Remind is the lighter amber. (D-042; supersedes the DS §5.2 Ink-tint
-// Daylight values — flagged for DS reconciliation, sub-decision D-S1.)
+// and Remind is the lighter amber. (Supersedes the DS §5.2 Ink-tint
+// Daylight values — flagged for DS reconciliation.)
 enum Quadrant {
     // Daylight fills raised 2026-06-18 (owner-approved) to meet WCAG 1.4.11 (≥3:1 on
     // the white card): Note #BCBCBB→#8C8C8C (~1.9→~3.1:1), Task Ember #C9A96E→#A8843E
     // (~2→~3.5:1), Remind #B5A283→#8A7A58 (~2→~3.7:1). Night values unchanged (already
-    // light-on-dark). Supersedes the v1.6.9 `--q-*` swatches for Daylight (D-042).
+    // light-on-dark). Supersedes the v1.6.9 `--q-*` swatches for Daylight.
     //
     // The Daylight fills are named here so they live in ONE editable place rather
     // than as inline magic numbers inside each accessor.
@@ -589,7 +589,7 @@ enum CatchlightFont {
 
     /// UIKit DM Sans — the `ui()` counterpart for `UIViewRepresentable` text
     /// surfaces (the block editor's `UITextView` rows). Take content is DM Sans,
-    /// never the display face (DS §2.2 / D-042). Scales via UIFontMetrics(.body).
+    /// never the display face (DS §2.2). Scales via UIFontMetrics(.body).
     static func uiBody(size: CGFloat, weight: Font.Weight = .regular) -> UIFont {
         let candidates: [String]
         switch weight {
@@ -650,7 +650,7 @@ enum CatchlightLayout {
     /// markers align to the same x (`spineX + circleDiameter/2`). Trailing/bottom
     /// stay at the standard 14.
     static let cardTextLeadingPad: CGFloat = circleDiameter / 2 + cardSpineInset
-    /// The card's standard TRAILING text pad. Tokenised 2026-08-15 (D-195) because the
+    /// The card's standard TRAILING text pad. Tokenised 2026-08-15 because the
     /// manual-order drag handle has to inset the body text by exactly enough to clear
     /// itself, and a literal 14 in two files would drift the moment either moved.
     /// Unchanged in value — this is the same 14 the card has always used.
@@ -691,7 +691,7 @@ enum CatchlightLayout {
     /// the device top inset (≈ 14 top pad + ~24 title + 2 + 12 fade). The
     /// timeline's top content padding is `deviceTopInset + headingClearance` so
     /// the first row always clears the heading and the fade on large-inset
-    /// devices (iPhone 17 / iOS 26.5.1 — section 4 / D-041). The previous fixed
+    /// devices (iPhone 17 / iOS 26.5.1). The previous fixed
     /// `52` ignored the inset, tucking the first Take under the fade.
     /// The gap between the heading block's bottom and the first Take / pinned Obie. Was
     /// implicit inside the 68 above; named in round 2 (2026-09-04) so the clearance can be

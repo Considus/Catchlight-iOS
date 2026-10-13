@@ -1,6 +1,6 @@
 //
 //  ExpandedTakesTests.swift
-//  CatchlightAppTests — "Expand Take" (owner 2026-08-11, D-194)
+//  CatchlightAppTests — "Expand Take" (owner 2026-08-11)
 //
 //  The per-Take override of the Settings "Preview" length is stored device-local as a
 //  comma-joined UUID string in UserDefaults (`@AppStorage` carries String, not Set<UUID>).

@@ -274,7 +274,7 @@ public final class EncryptedTakeStore: TakeStore {
             func arrJSON<T: Decodable>(_ idx: Int32, _ type: T.Type) -> [T] {
                 (try? decoder.decode([T].self, from: Data(columnText(stmt, idx).utf8))) ?? []
             }
-            // v1 → block model upgrade (D-035), mirroring `Take.init(from:)`:
+            // v1 → block model upgrade, mirroring `Take.init(from:)`:
             // the legacy body becomes one prose block, then any checklist items
             // become check blocks. The legacy `is_task`/`is_complete` flags are
             // derived from the resulting blocks, so they are not carried across.
@@ -465,7 +465,7 @@ public final class EncryptedTakeStore: TakeStore {
     public func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool {
         try queue.sync {
             // Read and delete inside one queue.sync and one transaction, and no tombstone
-            // row: see the protocol for why both matter (D-315).
+            // row: see the protocol for why both matter.
             try exec("BEGIN IMMEDIATE;")
             var committed = false
             defer { if !committed { try? exec("ROLLBACK;") } }

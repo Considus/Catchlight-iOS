@@ -43,7 +43,7 @@
 //  refuses, the intent stays in the background, and the text goes to the queue. The Take
 //  appears at the next unlock and Siri asks for no unlock.
 //
-//  BOTH DECLARATIONS STAY. The app floor is iOS 18.0 (D-039) and `supportedModes` is iOS 26.
+//  BOTH DECLARATIONS STAY. The app floor is iOS 18.0 and `supportedModes` is iOS 26.
 //  One type holds both: the new property sits behind `@available(iOS 26.0, *)`, and each
 //  system reads the property it knows. iOS 18 keeps today's behaviour, so a locked phone
 //  still demands Face ID there. The owner accepts this.

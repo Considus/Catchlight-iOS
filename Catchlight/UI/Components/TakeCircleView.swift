@@ -203,7 +203,7 @@ struct TakeCircleView: View {
     /// travels up the screen (see `TakeCircleView.specularOffset`).
     ///
     /// NOT `SwiftUI.Angle`: `Angle` in this module is Catchlight's own domain type (the
-    /// per-Take presentation layer, D-033), so the unqualified name resolves to that and
+    /// per-Take presentation layer), so the unqualified name resolves to that and
     /// the code will not build. Radians sidestep the clash rather than papering over it
     /// with `SwiftUI.Angle` everywhere.
     private var lightRadians: Double { (225 + specularOffset) * .pi / 180 }
@@ -281,7 +281,7 @@ struct TakeCircleView: View {
         .overlay(Circle().strokeBorder(edge, lineWidth: rimLine))
         // Obie ring — a larger gold ring OUTSIDE the shutter with a gap (owner 2026-07-04,
         // "as it was before"). In an overlay sized to `diameter + gap`, so — like the
-        // old obieDecorations (D-042) — the larger ring can't inflate the disc's layout.
+        // old obieDecorations — the larger ring can't inflate the disc's layout.
         .overlay {
             if take.isObie {
                 Circle()

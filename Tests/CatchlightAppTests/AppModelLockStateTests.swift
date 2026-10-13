@@ -1,6 +1,6 @@
 //
 //  AppModelLockStateTests.swift
-//  CatchlightAppTests — D-042
+//  CatchlightAppTests
 //
 //  Unit coverage for the app-entry lock-state machine on `AppModel`. The unlock
 //  step is injected (`unlockKeys` / `makeStoreFromKeys`), so these tests exercise

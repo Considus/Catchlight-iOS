@@ -1,6 +1,6 @@
 //
 //  PhraseKeyboardEntry.swift
-//  Catchlight (iOS app target) — restore-phrase entry, UIKit-backed (D-103)
+//  Catchlight (iOS app target) — restore-phrase entry, UIKit-backed
 //
 //  The 12 phrase fields are UIKit `UITextField`s so they can vend a keyboard-docked
 //  `inputAccessoryView` — the SAME mechanism the editor toolbar and search bar use to
@@ -172,9 +172,9 @@ struct PhraseTextField: UIViewRepresentable {
         tf.autocapitalizationType = .none
         tf.autocorrectionType = .no
         tf.spellCheckingType = .no
-        // 🚨 HARD OFF, and deliberately NOT wired to the D-246 Settings switch.
+        // 🚨 HARD OFF, and deliberately NOT wired to the Writing Tools Settings switch.
         //
-        // D-246 specifies the switch for "the editor's text views". This field is not
+        // The switch is for "the editor's text views". This field is not
         // one of them and must never follow it: the twelve words ARE the key. Handing
         // them to a writing service — remote or on-device — is not a trade-off a user
         // could sensibly opt into, so there is no lever to offer.

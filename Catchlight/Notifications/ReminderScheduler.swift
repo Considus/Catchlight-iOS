@@ -6,8 +6,7 @@
 //  notification body is the ONLY place Take content appears outside the encrypted
 //  app boundary — an accepted, user-chosen risk documented in the threat model.
 //
-//  LOCATION-BASED REMINDERS ARE IMPLEMENTED (D-081, 2026-06-23; this header
-//  previously denied it — corrected 2026-07-01): `scheduleLocationReminder`
+//  LOCATION-BASED REMINDERS ARE IMPLEMENTED: `scheduleLocationReminder`
 //  registers a `UNLocationNotificationTrigger` geofence for a Take's
 //  `locationReminder`. The security claim above covers BOTH kinds — a location
 //  notification's title is the same single boundary-crossing as a time one.

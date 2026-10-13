@@ -191,7 +191,7 @@ private struct DeviceTopInsetKey: EnvironmentKey {
 /// `deviceTopInset` (the app runs full-bleed via `.ignoresSafeArea(.container)`,
 /// so SwiftUI's own safe-area plumbing reports zero inside). Read by the bottom
 /// dock and the onboarding/paywall pill row so they rest ABOVE the home
-/// indicator rather than inside it (section 4 / D-041). Default ~34 matches the
+/// indicator rather than inside it. Default ~34 matches the
 /// home-indicator inset on a notched/Dynamic-Island device so previews and any
 /// pre-capture frame are sensible.
 private struct DeviceBottomInsetKey: EnvironmentKey {
@@ -214,7 +214,7 @@ extension EnvironmentValues {
     ///
     /// Measured from the top of the SCREEN, like the editor's own keyboard maths: when a notice
     /// strip sits above the page, its height is included, because the heading and its fade are
-    /// pushed down by it (ISSUE-005).
+    /// pushed down by it.
     var headingClearance: CGFloat {
         get { self[HeadingClearanceKey.self] }
         set { self[HeadingClearanceKey.self] = newValue }

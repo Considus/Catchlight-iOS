@@ -48,7 +48,7 @@ enum ExportCoordinator {
         present(activityVC)
     }
 
-    /// Share the content-free diagnostics text (D-085) as a `.txt` via the system share sheet.
+    /// Share the content-free diagnostics text as a `.txt` via the system share sheet.
     /// A user-initiated export — the placeholder for the future web Report-an-issue form, which
     /// will reuse this producer. The log holds no Take content, so no special protection class.
     static func presentDiagnostics(_ text: String) {

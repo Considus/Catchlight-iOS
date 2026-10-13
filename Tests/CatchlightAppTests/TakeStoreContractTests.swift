@@ -340,7 +340,7 @@ class TakeStoreContractTests: XCTestCase {
         XCTAssertEqual(store.lastSyncDate(), stamp)
     }
 
-    // MARK: - release (D-315): let a Take go without a tombstone
+    // MARK: - release: let a Take go without a tombstone
 
     func testContract_release_unmodifiedTake_removesItAndRecordsNoTombstone() throws {
         let t0 = ISO8601.date(from: "2026-05-01T09:00:00.000Z")!

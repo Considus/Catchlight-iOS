@@ -44,7 +44,7 @@ struct CloudStorageView: View {
     // the body ran over the nav title, the primary button truncated, and the only
     // vertical gesture DISMISSED the sheet, so cloud setup could not be completed
     // at accessibility sizes at all (owner device report, bench-reproduced). Gate
-    // matches DockPillRow's D-030 threshold (> .large), like the onboarding
+    // matches DockPillRow's CTA-growth threshold (> .large), like the onboarding
     // scaffold (DT6): at default sizes the layout is byte-identical to before.
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
@@ -212,7 +212,7 @@ struct CloudStorageView: View {
     /// through Files, so the install-and-sign-in note applies to all of them.
     ///
     /// The tested list is named here rather than in the heading, and it is phrased as
-    /// "tested with" rather than "works with" on purpose (D-064): it is a dated
+    /// "tested with" rather than "works with" on purpose: it is a dated
     /// observation, not a guarantee, and the enumeration has already been wrong twice.
     /// A provider greys out in the picker when its Files extension cannot hand an app
     /// a whole folder, which is the provider's decision and not ours, so saying so
@@ -328,7 +328,7 @@ struct CloudStorageView: View {
     private func handlePickedFolder(_ url: URL) {
         // Save the bookmark AND fire the first sync via the shared AppModel path
         // (also used by the post-restore guidance card) so connect-then-sync behaves
-        // identically from both entry points. D-103.
+        // identically from both entry points.
         if let error = app.connectCloudFolder(url) {
             errorText = error
         } else {

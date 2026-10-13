@@ -3,7 +3,7 @@
 //  Catchlight (iOS app target)
 //
 //  The 12-field privacy-phrase entry grid, shared by the onboarding restore branch
-//  ("I already use Catchlight") and the Settings "Second device" flow (D-103). Owner
+//  ("I already use Catchlight") and the Settings "Second device" flow. Owner
 //  2026-07-02 (option B): twelve discrete numbered fields — explicit positions, sturdy
 //  for a once-a-year action — with NO per-word validity signal (correctness is a
 //  whole-phrase check on submit, matching onboarding's "reveal nothing granular"
@@ -20,7 +20,7 @@ struct PhraseEntryGrid: View {
     /// Called on every field change — the parent clears its inline error as the user edits.
     var onEdit: () -> Void = {}
     /// The shared keyboard-docked accessory (Restore/Back) each field vends so the pills
-    /// ride the keyboard (D-103). Supplied by the parent's `RestoreBarBridge`.
+    /// ride the keyboard. Supplied by the parent's `RestoreBarBridge`.
     var accessory: UIView? = nil
 
     /// Focus is driven by a plain index (the UIKit fields become/resign first responder

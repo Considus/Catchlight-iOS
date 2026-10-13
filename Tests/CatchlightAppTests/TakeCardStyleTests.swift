@@ -2,7 +2,7 @@
 //  TakeCardStyleTests.swift
 //  CatchlightAppTests — 2026-07-02 review-audit follow-up
 //
-//  First direct coverage for the D-044 card colour precedence
+//  First direct coverage for the card colour precedence
 //  (overdue ruby → Obie gold → done grey → Task/Remind quadrant → none),
 //  including the 2026-07-01 place/time parity branch: a location reminder
 //  takes the Remind border like a time one, and — having no due instant —

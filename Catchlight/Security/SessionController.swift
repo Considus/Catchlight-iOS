@@ -54,7 +54,7 @@ public final class SessionController: ObservableObject {
 
     /// Drop the privacy curtain immediately on a successful unlock, so the overlay
     /// raised by the Face ID sheet's `.inactive` can't linger and flash over the
-    /// timeline before the next `.active` event clears it (D-042).
+    /// timeline before the next `.active` event clears it.
     public func clearObscured() { isObscured = false }
 
     /// Drop the live key material on demand — e.g. the device locked

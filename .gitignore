@@ -52,7 +52,7 @@ AuthKey_*.p8
 # Deliberately NOT committed: project.yml globs Tests/CatchlightUITests so it
 # still compiles for local 7.12 runs, but it must not enter the public repo or
 # the CI `xcodebuild test` scheme. Delete file + this rule after the 7.12 pass
-# is signed off (Decision D-024).
+# is signed off.
 Tests/CatchlightUITests/OSFloorTourUITests.swift
 
 # scripts/l10n/pseudo_locale.py keeps the real catalogs here while a pseudo locale is applied

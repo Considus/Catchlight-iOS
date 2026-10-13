@@ -120,7 +120,7 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
     var body: some View {
-        // Audit 2026-08, DT6: gate on the SAME threshold as DockPillRow's D-030 pill
+        // Audit 2026-08, DT6: gate on the SAME threshold as DockPillRow's pill
         // growth (`> .large`) - the old `isAccessibilitySize` gate left xLarge-xxxLarge
         // growing content with no scroll recovery.
         if dynamicSize > .large {
@@ -186,7 +186,7 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
 // MARK: - Intro chapter (shared brand mark)
 
 // `IntroBrandMark` now lives in its own file (IntroBrandMark.swift) so the
-// app-entry `LockView` can reuse the exact same mark + position (D-042). It is
+// app-entry `LockView` can reuse the exact same mark + position. It is
 // drawn ONCE here, hoisted above the per-step crossfade in `OnboardingView`, so it
 // never fades between screens; each step reserves its space with a hidden copy and
 // only the splash draws its own via `IntroChapterScaffold(drawsBrandMark: true)`.
@@ -244,7 +244,7 @@ private struct SplashFooterPill: View {
             .lineLimit(1)
             // Round 2 (device, max size): `maxHeight: .infinity` made this a CIRCLE above
             // Large. Below Large `DockPillRow` wraps the row in a fixed 44pt frame so the
-            // capsule could never grow; the D-030 full-width branch above Large sets only a
+            // capsule could never grow; the full-width branch above Large sets only a
             // minHeight, so an unbounded child took all the offered height and the capsule's
             // corner radius (half the SHORTER side) grew until it met the width. A minimum,
             // not a maximum: the pill hugs its text and never rounds into a circle.
@@ -278,7 +278,7 @@ struct WelcomeContent: View {
     enum Mode { case splash, welcome }
     let mode: Mode
     var onPrimary: () -> Void = {}
-    /// Welcome only — "I already use Catchlight" (restore an existing phrase). D-103.
+    /// Welcome only — "I already use Catchlight" (restore an existing phrase).
     var onSecondary: () -> Void = {}
 
     private var isWelcome: Bool { mode == .welcome }
@@ -310,7 +310,7 @@ struct WelcomeContent: View {
             // 2026-06-16) — keeps the splash's bottom edge anchored like the others.
             if isWelcome {
                 VStack(spacing: 12) {
-                    // Secondary path (owner 2026-07-02, D-103): adopt an existing identity by
+                    // Secondary path (owner 2026-07-02): adopt an existing identity by
                     // entering its phrase — styled as a link in ckTextObie (the Restore token).
                     Button(action: onSecondary) {
                         Text("I already use Catchlight")
@@ -378,7 +378,7 @@ struct WelcomeContent: View {
     }
 }
 
-// MARK: - Post-restore: connect the cloud folder (3c, D-103)
+// MARK: - Post-restore: connect the cloud folder (3c)
 
 /// Shown AFTER a restore completes (the account is keyed on this device but the Takes
 /// live in the cloud folder). A full onboarding-style screen — brand mark, hero + subtext
@@ -428,7 +428,7 @@ struct RestoreFolderView: View {
     }
 }
 
-// MARK: - Restore: "I already use Catchlight" — enter an existing phrase (D-103)
+// MARK: - Restore: "I already use Catchlight" — enter an existing phrase
 
 private struct RestoreEntryStep: View {
     @Environment(OnboardingViewModel.self) private var vm
@@ -449,7 +449,7 @@ private struct RestoreEntryStep: View {
     /// accessory bar (docked flush on the keyboard); when it's down they sit in the
     /// bottom dock. `keyboardUp` hides the bottom copy so there's never two rows.
     @State private var keyboardUp = false
-    /// Owns the shared keyboard accessory each phrase field vends (D-103).
+    /// Owns the shared keyboard accessory each phrase field vends.
     @State private var bridge = RestoreBarBridge()
 
     var body: some View {
@@ -688,7 +688,7 @@ private struct LocalWarningStep: View {
 /// so a truncated word is not a legibility problem — it is an AMBIGUITY one. Measured
 /// at AX5 on the bench: `exhibit` and `exhaust` BOTH render as `exh…`, so a careful and
 /// accurate transcription still produces an unusable phrase, and the user does not find
-/// out until their phone dies (D-249: the phrase is the only key; the master key is
+/// out until their phone dies (the phrase is the only key; the master key is
 /// Secure-Enclave-wrapped, device-only and cannot be re-derived).
 ///
 /// Measured against the app's own wordlist (`bip39-english.txt`, 2048 words): the longest
@@ -703,7 +703,7 @@ private struct LocalWarningStep: View {
 /// hard-coded 3-column grid — owner device report 2026-09-04, item 4.
 func phraseColumnCount(for size: DynamicTypeSize) -> Int {
     if size >= .accessibility1 { return 1 }   // one word per row: widest possible
-    if size > .large { return 2 }             // same threshold as DT6 / D-030
+    if size > .large { return 2 }             // same threshold as DT6 / DockPillRow
     return 3                                  // owner 2026-06-15 3×4 grid, unchanged
 }
 
@@ -919,7 +919,7 @@ private struct ConfirmStep: View {
                 }
             }
         }
-        // V34 (audit §15af, D-260): the failure card carries `.accessibilityLabel(failure)`
+        // V34 (audit §15af): the failure card carries `.accessibilityLabel(failure)`
         // and nothing focuses it, so a VoiceOver user got SILENCE — and 600ms later
         // `validateSlots()` clears the slots and the bank underneath them, also unannounced.
         //
@@ -980,7 +980,7 @@ private struct ConfirmStep: View {
                     : ""
                 ZStack {
                     // C5 (audit 2026-08): the error state used raw ckEmber on the
-                    // light surface (~2:1) — the exact pattern D-027/D-028 replaced
+                    // light surface (~2:1) — the exact pattern replaced
                     // with ckAccent elsewhere and never propagated here. ckAccent
                     // keeps Night identical (Ember) and gives Daylight #856539.
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -1010,7 +1010,7 @@ private struct ConfirmStep: View {
                 .frame(minHeight: 44)
                 .frame(maxWidth: .infinity)
                 .animation(.easeInOut(duration: 0.18), value: vm.flashError)
-                // V7 (audit 2026-08, D-228): the label below promised "Double-tap to
+                // V7 (audit 2026-08): the label below promised "Double-tap to
                 // deselect" with no behaviour behind it — for anyone, not only
                 // VoiceOver. The tap gesture serves sighted fingers; the explicit
                 // `.accessibilityAction` serves VoiceOver's double-tap, because a
@@ -1022,13 +1022,13 @@ private struct ConfirmStep: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityAction { vm.deselectSlot(at: i) }
                 .accessibilityLabel(
-                    // V35 (audit §15af, D-260): `positionLabel` is NOT a slot index — it comes
+                    // V35 (audit §15af): `positionLabel` is NOT a slot index — it comes
                     // from `targetPositionsForDisplay`, so it is the word's position in the
                     // twelve-word phrase. "Slot 3" contradicted the prompt directly above it
                     // ("Tap words 3, 7 and 11 from your phrase, in order"). Wording only: the
                     // visible UI was already correct and is unchanged.
                     //
-                    // "Double-tap to deselect." stays in the LABEL, not the hint — D-228:
+                    // "Double-tap to deselect." stays in the LABEL, not the hint:
                     // hints can be switched off and the promise must not be.
                     value.map { "Word \(positionLabel) of your phrase: \($0). Double-tap to deselect." }
                     ?? "Word \(positionLabel) of your phrase, empty"

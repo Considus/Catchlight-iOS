@@ -44,7 +44,7 @@ final class AppModel {
     /// the non-blocking ruby error strip in `DailiesView`. nil = no current error.
     /// Set by BackgroundSync via `reportSyncError(_:)`; cleared by the strip's
     /// Dismiss button or its 8-second auto-dismiss timer. Each non-nil value is recorded to
-    /// the content-free diagnostics log (D-085) for Notice History + export.
+    /// the content-free diagnostics log for Notice History + export.
     private(set) var lastSyncError: String?
 
     /// Show a sync notice in the strip and record it, with its reference code, to the log.
@@ -89,7 +89,7 @@ final class AppModel {
     var syncAfterSave: (() -> Void)?
 
     /// Set true when a cross-device RESTORE completes with no cloud folder yet
-    /// configured (chunk 3c, D-103). A restore lands on an empty timeline — the real
+    /// configured (chunk 3c). A restore lands on an empty timeline — the real
     /// Takes live in the cloud folder — so the empty state shows a guidance card that
     /// walks the user to connect that folder rather than the generic "first Take is
     /// waiting" line. Cleared once a folder is connected or the user dismisses.
@@ -99,19 +99,19 @@ final class AppModel {
 
     private(set) var needsOnboarding: Bool
 
-    /// D-253: this install holds a master key but NO privacy phrase. The app works —
+    /// This install holds a master key but NO privacy phrase. The app works —
     /// the master key still decrypts everything — but the Takes cannot be recovered
-    /// anywhere else, and until now nothing said so (D-249: "the app never said so").
+    /// anywhere else, and until now nothing said so.
     /// `MnemonicKeychain.exists()` was consulted in exactly one place, Settings →
     /// Privacy phrase, so only a user who happened to open that screen ever learned.
     /// The two secrets are separate keychain items and can diverge after a correct
-    /// write, so the safe write order (D-253) does not make this check redundant.
+    /// write, so the safe write order (phrase first) does not make this check redundant.
     private(set) var phraseMissing: Bool = false {
         // The banner shows on the main screen, so it goes in Notice History once per onset.
         didSet { NoticeOnset.update(.privacyPhraseMissing, active: phraseMissing) }
     }
 
-    /// Set once "Start over" has wiped the device (D-253, owner 2026-09-04). The app is then
+    /// Set once "Start over" has wiped the device (owner 2026-09-04). The app is then
     /// holding no master key and no store, so it must not render its normal UI: every branch
     /// below would be reading things that no longer exist. `RootView` shows a terminal screen
     /// instead and the user relaunches.
@@ -142,7 +142,7 @@ final class AppModel {
     }
     private(set) var onboardingVM: OnboardingViewModel?
 
-    /// App-entry lock state for an ONBOARDED user (D-042 lock screen). The
+    /// App-entry lock state for an ONBOARDED user (the lock screen). The
     /// encrypted store is no longer opened eagerly at launch — an onboarded user
     /// starts `.locked`, `RootView` shows the branded `LockView`, and the store is
     /// bound only after `attemptUnlock()` succeeds (one iOS `.userPresence` prompt,
@@ -160,14 +160,14 @@ final class AppModel {
     /// `LockView`. Nil = the normal lock screen. The single Face ID fires in
     /// `saveLockedCapture`, the first moment the encrypted store is actually needed.
     ///
-    /// DELIBERATELY IN-MEMORY ONLY (D-130, owner 2026-07-16). It survives suspend/resume, but an
+    /// DELIBERATELY IN-MEMORY ONLY (owner 2026-07-16). It survives suspend/resume, but an
     /// abandoned draft dies with the process — a crash, a force-quit, or (the realistic one) iOS
     /// reclaiming the suspended app after someone jots on the lock screen and walks away. That is
     /// ACCEPTED, not an oversight: persisting it can't be done cleanly, because this whole feature
     /// exists so you can jot WITHOUT unlocking, so while the draft is live the keys aren't in hand.
     /// Plaintext at rest breaks the privacy claim; encrypting needs Face ID and defeats the point;
     /// the Keychain would work but puts note content outside the app's own encryption and would
-    /// need a privacy-policy line. Don't "fix" this without re-reading D-130.
+    /// need a privacy-policy line.
     var lockedCapture: Take?
 
     /// Set when onboarding completes but the store hasn't opened yet (the user
@@ -232,7 +232,7 @@ final class AppModel {
         self.lockState = lockState
         self.subscription = subscription
         self.spotlight = spotlight
-        // Apply the persisted Spotlight/Siri exposure (D-110) so per-save indexing
+        // Apply the persisted Spotlight/Siri exposure so per-save indexing
         // honours it from launch. Default `.none` — index nothing until opted in.
         spotlight.exposure = SpotlightExposure.current()
         // One-time migration for the 2026-07-24 body-level lock: a user who had
@@ -271,7 +271,7 @@ final class AppModel {
 
     /// Re-index every stored Take at the current Spotlight exposure. No-op while
     /// locked (the placeholder store is empty) or at `.none` (`index(_:)` skips).
-    /// Shared by lapse-recovery and the Settings exposure change (D-110).
+    /// Shared by lapse-recovery and the Settings exposure change.
     private func reindexAllTakes() {
         guard lockState == .unlocked, let takes = try? dailiesVM.store.allTakes() else {
             DiagnosticsLog.shared.record(.spotlightReindexSkipped)
@@ -284,7 +284,7 @@ final class AppModel {
         takes.forEach { spotlight.index($0) }
     }
 
-    /// Apply a new Spotlight/Siri exposure level (Settings › Security, D-110): set it
+    /// Apply a new Spotlight/Siri exposure level (Settings › Security): set it
     /// on the indexer, clear items indexed at the OLD level, then re-index at the new
     /// level — unless `.none`, locked, or lapsed (a lapsed user's Takes stay hidden
     /// from system search, matching the lapse deindex).
@@ -305,12 +305,12 @@ final class AppModel {
     /// Takes locally would (a) show examples the user never wanted and (b) push those
     /// examples UP into their real data the moment the folder is connected. So a
     /// restore lands on an empty timeline that fills in once the folder is connected
-    /// (chunk 3, D-103). Applies to BOTH the immediate open and the seed-on-next-unlock
+    /// (chunk 3). Applies to BOTH the immediate open and the seed-on-next-unlock
     /// fallback below.
     private func completeOnboarding(with masterKeyData: Data, isRestore: Bool) {
         onboardingVM = nil
         needsOnboarding = false
-        // Both secrets have just been written (phrase first, D-253) — re-check rather
+        // Both secrets have just been written (phrase first) — re-check rather
         // than assume, so a partial write surfaces immediately instead of next launch.
         refreshPhrasePresence()
         // Open the store directly from the key we JUST derived — no Keychain read,
@@ -349,7 +349,7 @@ final class AppModel {
     /// app-active / background / the Sync Now button, so a freshly-connected folder
     /// would sit idle. Firing here is also what PULLS a restored user's Takes down
     /// (`pullInbound`'s manifest-HMAC check is the right-phrase-for-this-folder gate).
-    /// Returns a user-readable error string on failure, nil on success. D-103.
+    /// Returns a user-readable error string on failure, nil on success.
     @discardableResult
     func connectCloudFolder(_ url: URL) -> String? {
         do {
@@ -369,7 +369,7 @@ final class AppModel {
         }
     }
 
-    // MARK: - Second device (Settings re-key, D-103)
+    // MARK: - Second device (Settings re-key)
 
     /// Re-key THIS device to the account behind `words`, in process. Destructive by
     /// necessity: to be in Settings the device is already onboarded, so its local
@@ -400,7 +400,7 @@ final class AppModel {
 
         // 2. Install the new secrets (overwrites the current account's key + mnemonic).
         do {
-            // D-253: phrase first — see `OnboardingViewModel.finishOnboarding`. The
+            // Phrase first — see `OnboardingViewModel.finishOnboarding`. The
             // two secrets are separate keychain items and `onboarded` reads only the
             // master key, so the key must never be the one that lands alone.
             try MnemonicKeychain.store(cleaned)
@@ -464,7 +464,7 @@ final class AppModel {
         }
     }
 
-    // MARK: - D-042 — app-entry lock screen
+    // MARK: - App-entry lock screen
 
     /// Drive the unlock for an onboarded user: present the iOS `.userPresence`
     /// prompt (run OFF the main actor so the lock screen never freezes), then bind

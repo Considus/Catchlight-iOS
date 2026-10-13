@@ -1,6 +1,6 @@
 //
 //  BlockEditorUITests.swift
-//  CatchlightUITests — Phase 2 block editor (D-035)
+//  CatchlightUITests — Phase 2 block editor
 //
 //  The core editor flow: turn prose into a checklist via the Focus ring,
 //  Return-continues the list, Return on an empty item exits it, tap to tick, and
@@ -24,7 +24,7 @@ final class BlockEditorUITests: XCTestCase {
 
     override func setUp() {
         continueAfterFailure = false
-        // The iOS-18 gate is gone (D-039): the deployment floor is now iOS 18, so
+        // The deployment floor is iOS 18, so
         // the block-editor / Angle UI flows are first-class on every supported
         // runtime. (They were previously skipped on the iOS 17 simulator, where
         // the synthesized Focus-ring dim-commit and the UITextView snapshots were

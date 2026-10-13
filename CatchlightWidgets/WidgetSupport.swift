@@ -90,7 +90,7 @@ enum WidgetPalette {
 // + UIAppFonts). Variable TTFs only expose their default-instance PostScript name
 // to UIFont, so — like `CatchlightFont` — we probe a candidate list and fall back
 // to the system font. Widget chrome is all UI text → DM Sans (Take content is
-// never the display face, DS §2.2 / D-042).
+// never the display face, DS §2.2).
 
 enum WidgetFont {
     private static let lightCandidates = ["DMSans-Light", "DMSans18pt-Light", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"]

@@ -107,17 +107,17 @@ struct TakeRowView: View {
         return parts.filter { !$0.isEmpty }.joined(separator: ". ")
     }
 
-    /// VC1 (audit 2026-08, D-217): Voice Control builds a row's spoken name from this
+    /// VC1 (audit 2026-08): Voice Control builds a row's spoken name from this
     /// label and strips the punctuation out of it, so a raw URL becomes an utterance
     /// no person can say — the Take cannot be addressed by voice at all. The spoken
     /// line is the user's own words with the web links removed, then
     /// "Link to <domain>" (`www.` stripped) — his words first, then the domain.
     /// The visible card is untouched; this is the spoken label only.
     ///
-    /// Tier 2 of D-217 (the page title) is deliberately NOT built: the title is never
+    /// Naming a link by its page title is deliberately NOT built: the title is never
     /// saved, and re-fetching it is ruled out — a data change behind a separate feature.
     ///
-    /// VC4 (D-227): an email takes the same shape as a link — the address leaves the
+    /// VC4: an email takes the same shape as a link — the address leaves the
     /// spoken words and "Email to bob at example.com" is appended. The spoken "at"
     /// (never "@") is the point: it survives Voice Control's punctuation stripping,
     /// so the utterance stays sayable. A line with no link and no email returns
@@ -170,7 +170,7 @@ struct TakeRowView: View {
     /// The intro already says "Obie: your pinned Take", so the activity list is
     /// asked to leave the word out (fix 6, audit 2026-08 §15i: it spoke twice).
     static func irisAccessibilityLabel(for take: Take) -> String {
-        // VC2 (audit 2026-08, D-231): the Iris is named for its Take — "Iris, Buy
+        // VC2 (audit 2026-08): the Iris is named for its Take — "Iris, Buy
         // film" — so Voice Control can address ONE Iris on a timeline where every
         // Iris otherwise announces identically. The borrowed text is the row's own
         // spoken first line (VC1's link-safe form), truncated hard: this label
@@ -187,7 +187,7 @@ struct TakeRowView: View {
         return parts.joined(separator: ". ")
     }
 
-    /// D-231's length guard: the borrowed first line is cut word-safe at 40
+    /// Length guard: the borrowed first line is cut word-safe at 40
     /// characters so the Iris label stays sayable next to the Obie intro and the
     /// activity list.
     static func irisNameTruncated(_ text: String, limit: Int = 40) -> String {
@@ -226,8 +226,8 @@ struct TakeRowView: View {
             parts.append(String(localized: "Reminder set"))
             // V4 (audit 2026-08): the visible ruby "OVERDUE"/"SNOOZED" lane is
             // accessibility-hidden on the promise that the row label speaks the
-            // state — this is that promise. Snoozed wins over Overdue (D-058/D-060:
-            // a snoozed overdue reminder reads SNOOZED). `isOverdue(now:)` is the
+            // state — this is that promise. Snoozed wins over Overdue (a
+            // snoozed overdue reminder reads SNOOZED). `isOverdue(now:)` is the
             // single overdue rule (the card edge uses the same one); a repeating
             // reminder is never overdue by that rule.
             if isSnoozed {
@@ -258,7 +258,7 @@ struct TakeRowView: View {
         // the 44pt Iris touch frame.
         // Explicit `.zIndex` pins the paint order (card < occluder < Iris < wire <
         // dots). Without it, when the card REPAINTS on a state change — e.g. the
-        // border recolouring on "mark done" (D-044, [[catchlight-take-colour-system]])
+        // border recolouring on "mark done"
         // — SwiftUI could momentarily reshuffle these siblings, and the freshly drawn
         // card painted over the Iris's lower half (which overlaps the card's top-left
         // corner) for a beat before the Iris re-composited. Pinning the order keeps
@@ -485,7 +485,7 @@ struct TakeCardSurface: View {
     var linksInteractive: Bool = true
     /// EXTRA trailing padding for the card's CONTENT, on top of the standard
     /// `cardTextTrailingPad`. The card's surface is unaffected and keeps its full width.
-    /// Used by the manual-order timeline (D-195): the drag handle is drawn just inside
+    /// Used by the manual-order timeline: the drag handle is drawn just inside
     /// the card's trailing edge, and this is what stops the body text running underneath
     /// it (owner 2026-08-15 — the handle sits IN the card, and the card is full width).
     var trailingContentInset: CGFloat = 0
@@ -677,8 +677,7 @@ struct TakeCardSurface: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(displayBody)
-                // DM Sans 14 (.tt) — Take content is never the display face
-                // (DS §2.2 / D-042). Was Cormorant display 20 italic.
+                // DM Sans 14 (.tt) — Take content is never the display face.
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
                 // Body + link colours are carried on the AttributedString (`displayBody`)
                 // so detected URLs render accent; `.tint` colours the link's tap state.

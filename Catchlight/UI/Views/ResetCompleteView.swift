@@ -2,7 +2,7 @@
 //  ResetCompleteView.swift
 //  Catchlight
 //
-//  The terminal screen after "Start over" (D-253, owner 2026-09-04).
+//  The terminal screen after "Start over" (owner 2026-09-04).
 //
 //  The app has just deleted its own master key, phrase and store, so it is holding nothing it
 //  can render a timeline from. Rather than quit the process — against Apple's HIG, and

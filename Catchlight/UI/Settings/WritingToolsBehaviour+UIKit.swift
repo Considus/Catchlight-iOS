@@ -2,7 +2,7 @@
 //  WritingToolsBehaviour+UIKit.swift
 //  Catchlight (iOS app target)
 //
-//  Maps the user's D-246 choice onto UIKit. Lives in the app target so
+//  Maps the user's Writing Tools choice onto UIKit. Lives in the app target so
 //  `CatchlightCore` stays free of UIKit and the model stays unit-testable.
 //
 
@@ -14,7 +14,7 @@ extension WritingToolsBehaviour {
     ///
     /// 🚨 `.off` must map to `.none`, never to "leave it unset". An unset
     /// `writingToolsBehavior` INHERITS `.complete` from the trait environment,
-    /// which is the whole reason D-246 exists — the editor had Writing Tools
+    /// which is the whole reason the setting exists — the editor had Writing Tools
     /// nobody added and nobody chose.
     var uiBehavior: UIWritingToolsBehavior {
         switch self {

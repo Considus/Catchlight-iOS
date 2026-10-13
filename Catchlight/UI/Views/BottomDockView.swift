@@ -58,7 +58,7 @@ struct BottomDockView: View {
     /// uses its Iris quadrant colour, which is scheme-dependent.
     @Environment(\.colorScheme) private var scheme
     /// Bottom safe-area inset (home-indicator zone), captured at the window root.
-    /// Section 4 / D-041 — the full-bleed dock never re-added the bottom inset,
+    /// The full-bleed dock never re-added the bottom inset,
     /// so on a device with a home indicator it sat ~8pt off the physical edge,
     /// inside the indicator zone. Padding by `deviceBottomInset + 8` rests it
     /// above the indicator.
@@ -73,7 +73,7 @@ struct BottomDockView: View {
 
     private let buttonSize: CGFloat = CatchlightLayout.minTouchTarget
 
-    /// The Add hint's text, in ONE place. V36 (audit §15af, D-260) folds it into the Add
+    /// The Add hint's text, in ONE place. V36 (audit §15af) folds it into the Add
     /// button's own accessibility label while the hint shows, and the label and the visible
     /// bubble must never drift apart — two literals would let them.
 
@@ -168,11 +168,10 @@ struct BottomDockView: View {
         .animation(.easeInOut(duration: 0.2), value: ui.dockMode)
         .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
         .padding(.top, 10)
-        // Section 4 / D-041 — rest above the home indicator (was a bare 8).
+        // Rest above the home indicator.
         .padding(.bottom, deviceBottomInset + CatchlightLayout.dockBottomPadding)
         // Soft bottom edge (HiFi §1 / v1.6 owner directive: "the toolbar has no
         // hard edge that the Takes disappear behind" — they fade beneath it).
-        // D-042; was a solid Color.ckBackground fill.
         .dockFadeBackground()
         // Settings: swipe up anywhere on the dock (owner redesign 2026-06-11 —
         // replaces the long-press on Dailies; not a screen-edge gesture, so it
@@ -218,7 +217,7 @@ struct BottomDockView: View {
         } label: {
             ZStack {
                 // HiFi `.db.add` is an OUTLINE button — a stronger Ember border,
-                // NOT a fill (D-042 follow-up, owner 2026-06-14). The only filled
+                // NOT a fill (owner 2026-06-14). The only filled
                 // dock state is a SELECTED FILTER TOGGLE (see toggleLabel .on/.mod);
                 // Add and active-Dailies are distinguished by the 0.55 border, not
                 // a fill. Was a filled ckAdd droplet with an Ink "+".
@@ -329,7 +328,7 @@ struct BottomDockView: View {
 
     /// One toolbar colour (owner, cosmetic baseline): every dock icon is Ember,
     /// at the light weight from the refined icon set. (Daylight resolves Ember
-    /// to the accessible #856539 via `ckAccent` — D-028.)
+    /// to the accessible #856539 via `ckAccent`.)
     private func navIcon(_ system: String) -> some View {
         ZStack {
             dockRing()   // .db — Ember border @35% (Sequence / Search resting)

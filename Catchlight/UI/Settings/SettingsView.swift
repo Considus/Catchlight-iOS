@@ -47,11 +47,11 @@ struct SettingsView: View {
     @State private var importResultMessage: String?
     /// Set when an export couldn't read the Takes, so nothing was exported.
     @State private var exportFailedMessage: String?
-    /// Presents the Notice History sheet (D-085) — a SHIPPING feature, so this
+    /// Presents the Notice History sheet — a SHIPPING feature, so this
     /// must live outside the `#if DEBUG` block (it was declared inside it, which
     /// compiled in Debug but broke every Release/Archive build — 2026-07-01).
     @State private var showNoticeHistory = false
-    /// Second-device restore (D-103): the destructive warning gate, then the phrase-
+    /// Second-device restore: the destructive warning gate, then the phrase-
     /// entry sheet. Two bools so the warning always precedes entry and each dismisses
     /// independently.
     @State private var showSecondDeviceWarning = false
@@ -66,14 +66,14 @@ struct SettingsView: View {
         return false
         #endif
     }()
-    /// Presents the Files document picker for the offline "Import from a file" path (D-104).
+    /// Presents the Files document picker for the offline "Import from a file" path.
     @State private var showFileImporter = false
     /// Confirm gate for the folder "Import notes" path: re-scanning the Import folder
     /// re-imports everything in it, including files imported on a previous run (there is
     /// no per-file "already imported" tracking), so warn before proceeding.
     @State private var showImportConfirm = false
 
-    /// Start over (D-253). Three deliberate steps: device-owner auth, an export off-ramp,
+    /// Start over. Three deliberate steps: device-owner auth, an export off-ramp,
     /// then the destructive confirmation.
     ///
     /// 🚨 NOT inside `#if DEBUG`. These were added anchored to the DEBUG reset's own gate and
@@ -144,7 +144,7 @@ struct SettingsView: View {
         .sheet(isPresented: $showSecondDeviceEntry) {
             SecondDeviceRestoreView()
         }
-        // Second-device warning (D-103): the re-key is destructive because an onboarded
+        // Second-device warning: the re-key is destructive because an onboarded
         // device already holds Takes under its current key — a new phrase can't decrypt
         // them, so they're removed. Continue only leads to phrase entry; the wipe/re-key
         // happens on Restore there (a bad phrase destroys nothing).
@@ -154,7 +154,7 @@ struct SettingsView: View {
         } message: {
             Text("Enter your Privacy phrase to bring your Takes onto this device. Any Takes stored only on this device will be removed. To keep a copy first, cancel and use Export Takes (Markdown), or make sure they're already in your cloud folder.")
         }
-        // Offline "Import from a file" (D-104): pick any exported file from Files.
+        // Offline "Import from a file": pick any exported file from Files.
         .fileImporter(isPresented: $showFileImporter,
                       allowedContentTypes: Self.importableFileTypes,
                       allowsMultipleSelection: true) { result in
@@ -289,7 +289,7 @@ struct SettingsView: View {
                 }
             }
 
-            // Timeline arrangement — Date or Manual (D-195, owner 2026-08-14). Sits
+            // Timeline arrangement — Date or Manual (owner 2026-08-14). Sits
             // directly under Order because the two read together: Order still says which
             // end is "now" while Manual is on, and that is what decides where a newly
             // created Take lands in a hand-arranged timeline.
@@ -501,8 +501,8 @@ struct SettingsView: View {
 
     private var securitySection: some View {
         Section {
-            // Lock after — the background grace window before a return re-locks
-            // (D-042). The app ALWAYS locks on cold launch and when the phone locks
+            // Lock after — the background grace window before a return re-locks.
+            // The app ALWAYS locks on cold launch and when the phone locks
             // while Catchlight is in front; this only governs the in-background grace.
             menuPickerRow(icon: "lock",
                           label: "Lock after",
@@ -567,7 +567,7 @@ struct SettingsView: View {
                         action: { vm.isPhraseSheetPresented = true })
                 .accessibilityHint("Double-tap to view your phrase. Face ID or passcode required.")
 
-            // Second device (D-103) — re-key this device to another account's phrase
+            // Second device — re-key this device to another account's phrase
             // to pull its Takes from the shared cloud folder. Destructive (it replaces
             // this device's account), so a warning gates entry.
             SettingsRow(icon: "iphone.and.arrow.forward",
@@ -577,7 +577,7 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings-second-device")
                 .accessibilityHint("Restore your Takes onto this device from your Privacy phrase.")
 
-            // Spotlight & Siri exposure (owner D-110): how much of each Take iOS may
+            // Spotlight & Siri exposure: how much of each Take iOS may
             // index for system search. Default None; anything past the TYPE label puts
             // decrypted text into the on-device OS index (readable by iOS search + Siri).
             // Sits at the BOTTOM of Security (owner 2026-07-03). The SelectorRow picker
@@ -622,7 +622,7 @@ struct SettingsView: View {
             }
             .listRowBackground(Color.ckSurface)
 
-            // Writing Tools (D-246). The direct sibling of the selector above:
+            // Writing Tools. The direct sibling of the selector above:
             // same section, same shape, private option as the default.
             //
             // 🚨 This was never a feature anyone added. The editor is a plain
@@ -817,7 +817,7 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings-import-notes")
                     .accessibilityHint("Import .md, .txt or .rtf files from the Import folder of your sync location as new Takes.")
             }
-            // Import from a file (D-104) — the offline route: pick an exported file from
+            // Import from a file — the offline route: pick an exported file from
             // anywhere in Files (On My iPhone, AirDrop, etc.), no cloud folder needed. A
             // Catchlight export splits back into its Takes; a foreign note imports as one.
             SettingsRow(icon: "doc.badge.plus",
@@ -867,7 +867,7 @@ struct SettingsView: View {
 
     /// Its own section below System (owner 2026-06-21). With no analytics or crash
     /// reporting, the prefilled web report form + the diagnostics export are our
-    /// only inbound signal (D-091).
+    /// only inbound signal.
     private var supportSection: some View {
         Section {
             SettingsRow(icon: "ladybug",
@@ -877,7 +877,7 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings-report-issue")
                 .accessibilityHint("Opens the Catchlight report form, prefilled with your app and iOS version.")
 
-            // Notice History (D-085): the recent sync / storage / conflict / quarantine
+            // Notice History: the recent sync / storage / conflict / quarantine
             // notices, so an auto-dismissed banner isn't lost.
             SettingsRow(icon: "list.bullet.rectangle",
                         label: "Notice History",
@@ -886,7 +886,7 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings-notice-history")
                 .accessibilityHint("Recent sync, storage and conflict notices.")
 
-            // Export diagnostics (D-085): a content-free plain-text log to attach to a report.
+            // Export diagnostics: a content-free plain-text log to attach to a report.
             SettingsRow(icon: "square.and.arrow.up",
                         label: "Export diagnostics",
                         chevron: false,
@@ -900,7 +900,7 @@ struct SettingsView: View {
 
     /// Open the web Report-an-issue form (`catchlight.app/support`), pre-filled
     /// with the platform, app version (+build) and iOS version via query params
-    /// so the report carries the basics without the user retyping them (D-091).
+    /// so the report carries the basics without the user retyping them.
     /// Replaces the old `mailto:` — one web form is the single cross-platform
     /// intake. The form lets the user optionally attach the content-free
     /// diagnostics export (the "Export diagnostics" row below, which the form
@@ -991,7 +991,7 @@ struct SettingsView: View {
         return types
     }()
 
-    /// Import one or more files picked from Files (offline path, D-104). No cloud folder
+    /// Import one or more files picked from Files (offline path). No cloud folder
     /// needed — a Catchlight export splits into its Takes; each foreign note imports as
     /// one, so picking several separate note files yields one Take per file.
     @MainActor

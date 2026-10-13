@@ -91,7 +91,7 @@ struct StoryboardView: View {
     /// keyboard toolbar's bag button), bound to the live draft so its ticks ride
     /// the same save.
     @State private var anglePresented = false
-    /// D-239: the keyboard bell's reminder picker, mirroring DailiesView's pair.
+    /// The keyboard bell's reminder picker, mirroring DailiesView's pair.
     @State private var editingReminder = false
     @State private var reminderReturnFocus: UUID?
 
@@ -115,7 +115,7 @@ struct StoryboardView: View {
     /// Every task-bearing Take that still has work to do, in plain timeline Order — NO
     /// reordering (owner 2026-06-19: "they sit in timeline order"). Excluded: any Take
     /// whose tasks are ALL complete (`isComplete` — nothing left to plan, owner
-    /// 2026-06-19). The Obie is INCLUDED under the same rule (D-226, owner 2026-08-25):
+    /// 2026-06-19). The Obie is INCLUDED under the same rule (owner 2026-08-25):
     /// an Obie with an open task appears here like any other Take — `vm.takes` omits it
     /// (its pinned home is Dailies), so it joins the candidates from `vm.obie`. No
     /// pinned position here: it sorts with everything else.
@@ -124,7 +124,7 @@ struct StoryboardView: View {
     private var storyboardTakes: [Take] {
         let candidates = vm.takes + [vm.obie].compactMap { $0 }
         let open = candidates.filter { $0.isTask && !$0.isComplete }
-        // MANUAL arrangement (D-195): the Storyboard is a filter over the same Takes and
+        // MANUAL arrangement: the Storyboard is a filter over the same Takes and
         // has always sat "in timeline order", so it honours a hand-arranged timeline too —
         // reverting to date order here would read as a bug. There is no drag on this
         // screen; the arrangement is made on Dailies and reflected here.
@@ -165,7 +165,7 @@ struct StoryboardView: View {
             .safeAreaInset(edge: .top, spacing: 0) { topChrome }
             // The keyboard toolbar's bag → the full-screen Shot List on the draft.
             .fullScreenCover(isPresented: $anglePresented) { angleCover }
-            // Reminder editor from the keyboard's slot-2 bell (D-239): the same
+            // Reminder editor from the keyboard's slot-2 bell: the same
             // picker Dailies presents, applied straight to this editor's draft —
             // a task previously had NO route to edit its reminder from either
             // toolbar, and the ring's blade toggles rather than edits.
@@ -185,7 +185,7 @@ struct StoryboardView: View {
                 // Transparent catcher: a tap ANYWHERE off the editor commits. It sits above the
                 // dimmed list, so the read cards' own tap handlers no longer have to serve as
                 // commit targets (they still do, harmlessly, if one ever gets through).
-                // D-214 pattern (audit 2026-08, V2). Measured 2026-08-20 before this
+                // The LockedCaptureView catcher pattern (audit 2026-08, V2). Measured 2026-08-20 before this
                 // change: the bare label DID surface as an element on iOS 18.6 — the
                 // "label without .accessibilityElement() is a no-op" caution did not
                 // reproduce. `.accessibilityElement()` is added anyway so the element
@@ -225,7 +225,7 @@ struct StoryboardView: View {
                 editFocusedBlockID = nil   // drop the keyboard before the cover
                 anglePresented = true
             },
-            // D-239: the task toolbar's slot-2 bell — same picker Dailies hosts,
+            // The task toolbar's slot-2 bell — same picker Dailies hosts,
             // same focus park/restore around the sheet.
             onEditReminder: { presentReminderEditor() },
             // The keyboard × DISCARDS (owner 2026-07-04, consistent with the timeline +
@@ -235,7 +235,7 @@ struct StoryboardView: View {
     }
 
     /// The in-editor reminder picker, seeded from the draft's current reminder —
-    /// DailiesView's `reminderEditorSheet`, against THIS editor's draft (D-239).
+    /// DailiesView's `reminderEditorSheet`, against THIS editor's draft.
     @ViewBuilder
     private var reminderEditorSheet: some View {
         let existing = editDraft?.timeReminder

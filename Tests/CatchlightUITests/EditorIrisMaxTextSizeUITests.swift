@@ -2,7 +2,7 @@
 //  EditorIrisMaxTextSizeUITests.swift
 //  CatchlightUITests
 //
-//  ISSUE-005: at the largest accessibility text size, editing an EXISTING, long
+//  At the largest accessibility text size, editing an EXISTING, long
 //  Take with the software keyboard up, the editing card's Iris ("editor-shape")
 //  was reported missing on device. The element can stay in the accessibility
 //  tree while the heading mask paints over it, so existence alone proves

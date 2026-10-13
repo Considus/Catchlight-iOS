@@ -22,7 +22,7 @@ final class DailiesViewModel {
     /// The single current Obie, pinned at the top of the list (nil if none).
     private(set) var obie: Take?
     /// Surfaced to the UI when a store operation fails; views may show a quiet note. Each
-    /// non-nil value is also recorded to the content-free diagnostics log (D-085) so it shows
+    /// non-nil value is also recorded to the content-free diagnostics log so it shows
     /// in Notice History and the export. These messages are static/generic — no Take content.
     private(set) var lastError: String?
 
@@ -286,7 +286,7 @@ final class DailiesViewModel {
     /// Persist edits to an existing Take (or a new one). Bumps `modifiedAt` and
     /// clears the seed flag on first edit (UX §12).
     ///
-    /// A SAVE THAT CHANGES NOTHING IS NOT A SAVE (2026-09-03, D-250). Every commit route
+    /// A SAVE THAT CHANGES NOTHING IS NOT A SAVE (2026-09-03). Every commit route
     /// funnels here, and `saveInlineEdit` tests only whether the Take is BLANK — never
     /// whether anything changed — so opening a Take to read it and tapping away wrote a
     /// new `modifiedAt`. That desynchronised the Take from its cloud copy, and the next
@@ -355,7 +355,7 @@ final class DailiesViewModel {
         }
     }
 
-    /// Move a Take to `destination` in the MANUAL arrangement (D-195) and persist it.
+    /// Move a Take to `destination` in the MANUAL arrangement and persist it.
     ///
     /// `destination` is an index into the canonical oldest-first arrangement WITHOUT the
     /// moved Take — see `ManualOrder.reorder`, which owns the arithmetic and normally
@@ -530,7 +530,7 @@ final class DailiesViewModel {
     func toggleComplete(_ take: Take) {
         guard take.isTask else { return }
         var updated = take
-        // Take-level completion (D-035): ticking the Take ticks every item; one
+        // Take-level completion: ticking the Take ticks every item; one
         // untouched item leaves the Take incomplete, so toggling drives all items
         // to the same new state.
         updated.setAllItemsComplete(!take.isComplete)

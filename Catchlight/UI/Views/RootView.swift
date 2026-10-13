@@ -96,7 +96,7 @@ struct RootView: View {
                     // 2026-06-23). The editor's content then simply appears on it.
                     Color.ckBackground.ignoresSafeArea()
                 } else {
-                    // D-042: an onboarded-but-locked user sees the branded LockView
+                    // An onboarded-but-locked user sees the branded LockView
                     // INSTEAD of the timeline — so `mainApp`'s side effects (paywall
                     // .task, sync) don't run against the locked placeholder store, and
                     // the (empty) timeline is never visible or interactive.
@@ -218,7 +218,7 @@ struct RootView: View {
         // Opt the whole surface OUT of SwiftUI's automatic keyboard avoidance. Nothing
         // needs it: the search bar rides the keyboard as a UIKit inputAccessoryView
         // (OS-positioned) and the edit-in-place editor pins its caret by driving the
-        // timeline scroll offset directly (D-048). Without this, native avoidance flung
+        // timeline scroll offset directly. Without this, native avoidance flung
         // the bottom-aligned resting dock up to the heading whenever it happened to be
         // showing while a keyboard was up — the stray-toolbar bug (owner 2026-06-20).
         .ignoresSafeArea(.keyboard, edges: .bottom)

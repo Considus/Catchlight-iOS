@@ -9,7 +9,7 @@ name: Core pin
 # PR's head commit and satisfy branch protection. The Claude review skips a PR a
 # bot opened, so the person merging reviews the diff themselves. The repo (and the org)
 # allow Actions to open PRs for this workflow alone (owner, 2026-10-03);
-# Considus-Ops/repo-baseline.py keeps every other repo off.
+# The org's baseline settings keep every other repo off.
 
 on:
   schedule:

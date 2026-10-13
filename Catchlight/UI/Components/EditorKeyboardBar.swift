@@ -82,7 +82,7 @@ struct EditorKeyboardBar: View {
             }
             .frame(maxWidth: .infinity)
 
-            // 2 — the REMINDER bell, on BOTH editors (audit round 9, D-239): edit
+            // 2 — the REMINDER bell, on BOTH editors (audit round 9): edit
             // the time on a reminder Take, or add one, without the Focus-ring
             // detour. A task previously had NO route to its reminder at all — the
             // Angle sat here, and the ring's Reminders blade TOGGLES (one tap turns
@@ -91,10 +91,10 @@ struct EditorKeyboardBar: View {
             // Falls back to the greyed Angle only where the host can't present the
             // picker (`onReminder == nil`).
             //
-            // NO state tint (audit C10 / D-235, supersedes D-204): the
+            // NO state tint (audit C10): the
             // Ember-vs-accent distinction never existed in Night — the two tokens
             // are the SAME hex there (1.00:1, photographed). The LABEL still
-            // carries the state ("Add" vs "Edit"), per D-218.
+            // carries the state ("Add" vs "Edit").
             if let onReminder = config.onReminder {
                 slot(enabled: true, identifier: "reminder-button",
                      label: config.hasReminder ? "Edit reminder" : "Add reminder",
@@ -111,7 +111,7 @@ struct EditorKeyboardBar: View {
                 .frame(maxWidth: .infinity)
             }
 
-            // 3 — a TASK gets the Shot List here (D-239: Discard · bell · Shot
+            // 3 — a TASK gets the Shot List here (Discard · bell · Shot
             // List · Done); a note keeps Important. Important LEAVES the task
             // toolbar — it stays reachable from the Focus ring and the row's
             // long-press menu, and the four-slot bar has no fifth slot to give.
@@ -126,7 +126,7 @@ struct EditorKeyboardBar: View {
                 .frame(maxWidth: .infinity)
             } else {
                 // Important: the app's Important glyph, an exclamation "!".
-                // NO state tint (C10 / D-235) — the VALUE below carries on/off.
+                // NO state tint (C10) — the VALUE below carries on/off.
                 // Disabled on the Obie, with a hint saying why (the SettingsRow pattern).
                 slot(enabled: !config.importantLocked, label: "Important",
                      value: config.isImportant ? "on" : "off",
@@ -145,7 +145,7 @@ struct EditorKeyboardBar: View {
             slot(enabled: config.doneEnabled,
                  label: config.isDone ? "Mark not done" : "Mark done",
                  action: config.onToggleDone) {
-                // A plain tick (no circle), NO state tint (C10 / D-235) — the
+                // A plain tick (no circle), NO state tint (C10) — the
                 // LABEL above carries done/not-done.
                 dockSymbol("checkmark",
                            tint: .ckAccent,

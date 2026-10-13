@@ -57,7 +57,7 @@ final class OverlayContainmentUITests: XCTestCase {
     }
 
     /// RV-4/VC3 (Dailies): while an edit is open, the rows must be out of the
-    /// tree — but the D-214 save catcher must stay reachable.
+    /// tree — but the tap-away save catcher must stay reachable.
     func testEditor_sealsRows_keepsSaveCatcher() {
         let app = launchAppForUITesting()
         let addButton = app.buttons["add-button"]

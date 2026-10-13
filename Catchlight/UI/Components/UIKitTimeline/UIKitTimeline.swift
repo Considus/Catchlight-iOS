@@ -31,7 +31,7 @@ enum TimelineRow: Hashable {
     }
 }
 
-/// Geometry of the manual-order drag handle (D-195). Shared between the SwiftUI cell that
+/// Geometry of the manual-order drag handle. Shared between the SwiftUI cell that
 /// DRAWS the handle and the view controller that decides whether a touch landed on one —
 /// the VC works the zone out from the cell's width rather than asking SwiftUI where it put
 /// the glyph, so the two must agree on one number.
@@ -81,7 +81,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// Tap a month divider → filter to that creation month; tap the lit one again → clear.
     var onToggleMonthFilter: (String) -> Void = { _ in }
     /// Takes whose overdue reminder is SNOOZED — their label lane reads "SNOOZED" instead of
-    /// "OVERDUE" (D-058/D-060). Not derivable from the Take: snooze lives in the view model
+    /// "OVERDUE". Not derivable from the Take: snooze lives in the view model
     /// (`vm.snoozedReminderIDs`), which is exactly why the rebuild lost it (see the VC's
     /// `snoozedIDs`).
     var snoozedIDs: Set<UUID> = []
@@ -124,7 +124,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// no change, and the whole path is inert unless VoiceOver is running.
     var focusTargetID: UUID? = nil
     var onFocusHandled: () -> Void = {}
-    /// MANUAL arrangement (D-195): show the drag handle and allow interactive moves. False
+    /// MANUAL arrangement: show the drag handle and allow interactive moves. False
     /// in date order, and false whenever the timeline is filtered or searched — you cannot
     /// honestly arrange a list whose middle is hidden (see `DailiesView.canReorder`).
     var isReorderable: Bool = false
@@ -220,8 +220,8 @@ struct TimelineReadCell: View {
     let take: Take
     let spineX: CGFloat
     let cardGap: CGFloat
-    /// Overdue reminder currently SNOOZED → the label lane reads "SNOOZED" not "OVERDUE"
-    /// (D-058/D-060). It can't be read off the Take — snooze lives in the view model — so it has
+    /// Overdue reminder currently SNOOZED → the label lane reads "SNOOZED" not "OVERDUE".
+    /// It can't be read off the Take — snooze lives in the view model — so it has
     /// to be threaded down. The rebuild simply never passed it, and every snoozed Take on the new
     /// timeline said OVERDUE (found 2026-07-16 while re-anchoring the Feature Register).
     var isSnoozed: Bool = false
@@ -247,7 +247,7 @@ struct TimelineReadCell: View {
     /// window (driven by the VC's `flashingID` via reconfigure). The card overlays
     /// a brief ember tint; `.animation(value:)` fades both edges.
     var isSpotlightTarget: Bool = false
-    /// MANUAL arrangement (D-195) — draw the drag handle and offer the VoiceOver moves.
+    /// MANUAL arrangement — draw the drag handle and offer the VoiceOver moves.
     var showsDragHandle: Bool = false
     /// VoiceOver move: -1 up, +1 down, in DISPLAY order.
     var onNudge: (Take, Int) -> Void = { _, _ in }
@@ -603,7 +603,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     var onExport: (Take) -> Void = { _ in }
     var onTapText: (Take) -> Void = { _ in }
     var onTapBackground: () -> Void = {}
-    /// MANUAL arrangement (D-195). Gates the handle, the recognizer and the data source's
+    /// MANUAL arrangement. Gates the handle, the recognizer and the data source's
     /// reordering handlers together, so date order cannot be dragged by any route.
     var isReorderable: Bool = false {
         didSet { if isReorderable != oldValue { reconfigureAllRows() } }
@@ -738,7 +738,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         backgroundTap.delegate = self
         collectionView.addGestureRecognizer(backgroundTap)
 
-        // Manual-order drag (D-195). Gated to the handle strip in `shouldReceive`.
+        // Manual-order drag. Gated to the handle strip in `shouldReceive`.
         reorderPress = UILongPressGestureRecognizer(target: self,
                                                     action: #selector(handleReorderPress))
         reorderPress.minimumPressDuration = TimelineDragHandle.liftDelay
@@ -867,7 +867,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
             // During V40 a diffable APPLY was the leading candidate for the focus jump:
             // focus left the Add button within a second, five times out of five, landing
             // on the FIRST COLLECTION CELL with no accessibility post anywhere near it.
-            // The actual cause turned out to be V30's sort priority on the dock (D-263),
+            // The actual cause turned out to be V30's sort priority on the dock,
             // so this is kept as the next place to look if the jumps are ever seen again.
             lastItems = items
             var snapshot = NSDiffableDataSourceSnapshot<Int, TimelineRow>()

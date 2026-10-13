@@ -117,10 +117,10 @@ enum Wiring {
     // NOTE (2026-07-01): the no-arg `makeStore()` variant — which retrieved the
     // master key itself and would have re-prompted Face ID — was DELETED (owner-
     // approved). It had zero callers, and reviving it would reintroduce the
-    // double-prompt D-042 eliminated. `makeStore(keys:)` below is the only path.
+    // double-prompt. `makeStore(keys:)` below is the only path.
 
     /// Open the production store from an ALREADY-unlocked key hierarchy — no
-    /// Keychain access, so no Face ID/passcode prompt (D-042). The app-entry
+    /// Keychain access, so no Face ID/passcode prompt. The app-entry
     /// unlock path uses this after `SessionController.unlock()` so the single
     /// `.userPresence` prompt belongs to `unlock()` alone (no double-prompt).
     /// Primes `sessionKeys` so foreground sync reuses the same keys.
@@ -140,7 +140,7 @@ enum Wiring {
         }
     }
 
-    /// Drop the cached session keys (D-042 re-lock). Called by `AppModel.relock()`
+    /// Drop the cached session keys (re-lock). Called by `AppModel.relock()`
     /// when the device locks, so a subsequent foreground sync can't reuse stale
     /// keys and must wait for a fresh unlock.
     static func clearSessionKeys() { sessionKeys = nil }
@@ -220,15 +220,15 @@ enum Wiring {
             // `--uitesting-restore` lands the run on the second-device restore
             // sheet (audit 2026-08, V8/T7): the phrase grid is otherwise
             // unreachable under test — onboarding is skipped and Settings opens
-            // by a gesture. Same test-seam rationale as `--uitesting-locked-capture`
-            // (D-214). SettingsView reads the same argument to raise its sheet.
+            // by a gesture. Same test-seam rationale as `--uitesting-locked-capture`.
+            // SettingsView reads the same argument to raise its sheet.
             if ProcessInfo.processInfo.arguments.contains("--uitesting-restore") {
                 model.ui.isSettingsPresented = true
             }
             // The same blank one-block draft `makeCaptureDraft` builds for a blank
             // launcher — the editor needs a focusable block for the caret/keyboard.
             if startOnLockedCapture { model.lockedCapture = Take(blocks: [.textLine("")]) }
-            // `--uitesting-notice` raises the quarantine notice strip above the page (ISSUE-005):
+            // `--uitesting-notice` raises the quarantine notice strip above the page:
             // the strip pushes the heading and its fade down, and the editor card must stop below
             // where they actually are. Otherwise unreachable under test, since it needs a cloud
             // copy that fails verification.
@@ -261,7 +261,7 @@ enum Wiring {
         }
         #endif
         let onboarded = MasterKeyKeychain.exists()
-        // D-042: an onboarded user starts LOCKED with a non-writable placeholder —
+        // An onboarded user starts LOCKED with a non-writable placeholder —
         // the store is NOT opened eagerly here (that fired the `.userPresence`
         // prompt at launch and, on cancel, silently handed back a writable empty
         // InMemoryTakeStore whose contents were lost). The real store is bound by
@@ -283,9 +283,9 @@ enum Wiring {
             subscription: SubscriptionManager(defaults: subscriptionDefaults),
             spotlight: CoreSpotlightIndexer()
         )
-        // D-253: establish phrase presence at launch, so an install holding a master
+        // Establish phrase presence at launch, so an install holding a master
         // key but no phrase is told — without opening Settings → Privacy phrase, which
-        // is the only place that ever checked (D-249: "the app never said so").
+        // is the only place that ever checked.
         model.refreshPhrasePresence()
         return model
     }
@@ -325,8 +325,8 @@ enum Wiring {
         // first sync, on existing setups too (owner 2026-06-22). Idempotent; runs
         // before the keys guard since folder creation needs no master key.
         cloud.ensureSubfolder(ImportCoordinator.importFolderName)
-        // Sync NEVER authenticates — only the app-entry unlock owns the Face ID prompt
-        // (D-042). Reuse the keys the unlock cached; if the app isn't unlocked yet
+        // Sync NEVER authenticates — only the app-entry unlock owns the Face ID prompt.
+        // Reuse the keys the unlock cached; if the app isn't unlocked yet
         // (`sessionKeys` nil), SKIP this sync pass rather than retrieving the master key
         // ourselves. That fallback fired a SECOND Face ID sheet ("Sync your Takes") when
         // a launch sync raced ahead of the unlock on a cold start with a cloud folder
