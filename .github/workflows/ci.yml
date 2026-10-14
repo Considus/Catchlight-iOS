@@ -75,7 +75,7 @@ jobs:
         run: |
           XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE" ]; then
-            echo "::error::No Xcode 26 on this image. The app needs the iOS 26 SDK (D-202)."
+            echo "::error::No Xcode 26 on this image. The app needs the iOS 26 SDK."
             exit 1
           fi
           echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
@@ -144,7 +144,7 @@ jobs:
         run: |
           XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE" ]; then
-            echo "::error::No Xcode 26 on this image. The app needs the iOS 26 SDK (D-202)."
+            echo "::error::No Xcode 26 on this image. The app needs the iOS 26 SDK."
             exit 1
           fi
           echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
