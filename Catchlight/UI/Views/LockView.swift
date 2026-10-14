@@ -1,6 +1,6 @@
 //
 //  LockView.swift
-//  Catchlight (iOS app target) — D-042
+//  Catchlight (iOS app target)
 //
 //  The branded app-entry lock screen. `RootView` shows it whenever an onboarded
 //  user's `AppModel.lockState` is not `.unlocked`. It replaces the old silent

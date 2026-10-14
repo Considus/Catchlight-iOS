@@ -36,7 +36,7 @@ final class CloudStorageSettingsUITests: XCTestCase {
 
         // Locate the Cloud Storage row. It lives in the System section (owner 2026-06-21
         // — Sync folded into System), below Appearance + Security, so it falls below the
-        // fold once those sections grow — and the D-110 Spotlight cell grew Security,
+        // fold once those sections grow — and the Spotlight cell grew Security,
         // pushing it near the very bottom. SwiftUI's lazy List keeps off-screen rows OUT
         // of the a11y tree, so scroll it in.
         //

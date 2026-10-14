@@ -10,7 +10,7 @@ The encryption architecture had specialist sign-off on 2026-06-05 and was revise
 
 ## Development setup
 
-The iOS app target needs full Xcode, not just the Command Line Tools, and it needs **Xcode 26 or later** as of 2026-08-15. The App Intents declare `supportedModes` behind `@available(iOS 26.0, *)` (D-202), and `IntentModes` is not in the iOS 18 SDK, so Xcode 16 cannot compile the app. Note what this does not change. The deployment floor is still iOS 18.0 (D-039), so the app runs on iOS 18 and only builds against the iOS 26 SDK.
+The iOS app target needs full Xcode, not just the Command Line Tools, and it needs **Xcode 26 or later** as of 2026-08-15. The App Intents declare `supportedModes` behind `@available(iOS 26.0, *)`, and `IntentModes` is not in the iOS 18 SDK, so Xcode 16 cannot compile the app. Note what this does not change. The deployment floor is still iOS 18.0, so the app runs on iOS 18 and only builds against the iOS 26 SDK.
 
 Keep build output outside the source tree, as described under "Keep build output out of the source tree" in `README.md`.
 

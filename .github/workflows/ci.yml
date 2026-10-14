@@ -61,7 +61,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Xcode 26 is REQUIRED, and the image default is NOT it (2026-08-15). The App
-      # Intents declare `supportedModes` behind `@available(iOS 26.0, *)` ([[D-202]]),
+      # Intents declare `supportedModes` behind `@available(iOS 26.0, *)`,
       # and `IntentModes` does not exist in the iOS 18 SDK. Xcode 16.4, the macos-15
       # default, therefore cannot compile the app at all. This is a hard requirement of
       # the source, not a preference: PR #146 went red on exactly this.
@@ -75,7 +75,7 @@ jobs:
         run: |
           XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE" ]; then
-            echo "::error::No Xcode 26 on this image. The app needs the iOS 26 SDK (D-202)."
+            echo "::error::No Xcode 26 on this image. The app needs the iOS 26 SDK."
             exit 1
           fi
           echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
@@ -107,7 +107,7 @@ jobs:
     name: iOS (xcodebuild test)
     runs-on: macos-15
     strategy:
-      # D-039 (2026-06-14): the deployment floor is iOS 18, so test the FLOOR
+      # The deployment floor is iOS 18, so test the FLOOR
       # (iOS 18) and CURRENT (OS=latest) — the iOS 17 legs are dropped. fail-fast
       # off so a failure on one runtime still reports the other.
       fail-fast: false
@@ -130,7 +130,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Xcode 26 is REQUIRED, and the image default is NOT it (2026-08-15). The App
-      # Intents declare `supportedModes` behind `@available(iOS 26.0, *)` ([[D-202]]),
+      # Intents declare `supportedModes` behind `@available(iOS 26.0, *)`,
       # and `IntentModes` does not exist in the iOS 18 SDK. Xcode 16.4, the macos-15
       # default, therefore cannot compile the app at all. This is a hard requirement of
       # the source, not a preference: PR #146 went red on exactly this.
@@ -144,7 +144,7 @@ jobs:
         run: |
           XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE" ]; then
-            echo "::error::No Xcode 26 on this image. The app needs the iOS 26 SDK (D-202)."
+            echo "::error::No Xcode 26 on this image. The app needs the iOS 26 SDK."
             exit 1
           fi
           echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
@@ -185,7 +185,7 @@ jobs:
         run: xcrun simctl list devices available | grep -E "iPhone|iOS" | head -30
 
       - name: Seed the simulator so the slide-to-type introduction never shows
-        # ISSUE-006, second cause. On a fresh simulator iOS shows a one-time "slide to type"
+        # On a fresh simulator iOS shows a one-time "slide to type"
         # introduction over the keyboard and the editor toolbar. The UI tests dismiss it
         # (`dismissKeyboardIntroductionIfPresent`), but that waits 3 s, and on a slow runner the
         # introduction arrives later and covers the toolbar mid-test: measured 2026-10-09,
@@ -231,7 +231,7 @@ jobs:
         # fails with errSecMissingEntitlement (-34018) on current runtimes,
         # taking the PIN/mnemonic keychain suites down with it.
         #
-        # Destinations come from the matrix: the iOS 18 deployment floor (D-039)
+        # Destinations come from the matrix: the iOS 18 deployment floor
         # and OS=latest. FileProtectionTests self-skips on simulator via XCTSkip.
         #
         # The Catchlight scheme's test action runs BOTH `CatchlightTests`
@@ -241,7 +241,7 @@ jobs:
         # 7.5). The scheme is declared explicitly in project.yml because
         # XcodeGen's auto-scheme does NOT include the `bundle.ui-testing` target.
         #
-        # NO RETRY (2026-10-01, ISSUE-006). `-retry-tests-on-failure -test-iterations 2` used to
+        # NO RETRY (2026-10-01). `-retry-tests-on-failure -test-iterations 2` used to
         # rerun a failed UI test once. It carried a reproducible failure through at least three
         # merges behind a green check: `A11yStateUITests.testImportantButton_valueFlipsOnToggle`
         # failed the first attempt of every run because iOS's one-time "slide to type"

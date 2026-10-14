@@ -20,13 +20,13 @@ import SwiftUI
 
 /// The standard dock-geometry button label: Ember capsule + ckOnAccent (Ink)
 /// text (primary), or a ckTextPrimary@40% outline (secondary). The primary
-/// label is Ink in both modes (D-028) — Paper-on-Ember fails WCAG in Daylight.
+/// label is Ink in both modes — Paper-on-Ember fails WCAG in Daylight.
 struct DockPill: View {
     let title: LocalizedStringKey
     var secondary: Bool = false
     let action: () -> Void
 
-    // D-030 (+ owner refinement: Default is the floor): at any size ABOVE the
+    // CTA growth (Default is the floor): at any size ABOVE the
     // default (.xLarge and up, through AX5) the CTA label may wrap to two lines
     // and grows instead of shrinking, defining the pill height itself (≥44pt) —
     // so the label is never rendered smaller than at the default size. At the
@@ -97,13 +97,13 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
         self.trailing = trailing()
     }
 
-    // D-030 (+ owner refinement: Default is the floor): above the default text
+    // CTA growth (Default is the floor): above the default text
     // size (.xLarge and up) the locked dock-slot grid (fixed 44pt height,
     // slot-aligned widths) would force the CTA labels to shrink below their
     // default size. Abandon exact dock alignment there and let the pills grow
     // full-width instead. At the default size and below, the grid is unchanged.
     @Environment(\.dynamicTypeSize) private var dynamicSize
-    /// Bottom safe-area inset — section 4 / D-041. The onboarding/paywall pill
+    /// Bottom safe-area inset. The onboarding/paywall pill
     /// row mirrors the resting dock's geometry, so it must lift by the same
     /// home-indicator inset to line up with the dock at rest.
     @Environment(\.deviceBottomInset) private var deviceBottomInset

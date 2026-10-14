@@ -82,10 +82,10 @@ final class OnboardingViewModel {
     private let bip39: BIP39
     /// Carries the just-derived 32-byte master key so the app can open the store
     /// directly (no Keychain read, hence no Face ID/passcode prompt right after
-    /// onboarding). D-042. The `isRestore` flag distinguishes a fresh generate
+    /// onboarding). The `isRestore` flag distinguishes a fresh generate
     /// (seed the starter Takes) from a cross-device restore (skip seeding — the
     /// real Takes arrive from the cloud folder, and seeding here would push five
-    /// example Takes UP into the user's real data on first sync). D-103.
+    /// example Takes UP into the user's real data on first sync).
     private let onComplete: (Data, _ isRestore: Bool) -> Void
 
     init(onComplete: @escaping (Data, _ isRestore: Bool) -> Void) {
@@ -182,7 +182,7 @@ final class OnboardingViewModel {
         tapBankWord(at: index)
     }
 
-    /// V7 (audit 2026-08, D-228): tapping a filled slot deselects it — the slot's
+    /// V7 (audit 2026-08): tapping a filled slot deselects it — the slot's
     /// label promised this to everyone and did nothing for anyone. The word goes
     /// BACK TO THE BANK (one used tile showing it is freed), never lost; the freed
     /// slot is the next to fill, so a mis-placed word is fixed in place. The
@@ -218,7 +218,7 @@ final class OnboardingViewModel {
         }
     }
 
-    // MARK: - Restore (existing phrase — cross-device recovery, D-103)
+    // MARK: - Restore (existing phrase — cross-device recovery)
 
     /// Inline error under the restore field ("that phrase isn't valid …"); nil when clean.
     private(set) var restoreError: String?
@@ -256,7 +256,7 @@ final class OnboardingViewModel {
             return
         }
         do {
-            // D-253: phrase first, same reasoning as `finishOnboarding` — the
+            // Phrase first, same reasoning as `finishOnboarding` — the
             // `onboarded` gate keys off the master key alone, so the key must not
             // land before the phrase. Less acute on this path (the user typed the
             // phrase and still has it), but the resulting state is identical.
@@ -292,12 +292,12 @@ final class OnboardingViewModel {
     func finishOnboarding() {
         do {
             let masterKeyData = MasterKeyDerivation.deriveRaw(from: mnemonic)
-            // D-253: the PHRASE IS STORED FIRST, deliberately. `Wiring.swift` decides
+            // The PHRASE IS STORED FIRST, deliberately. `Wiring.swift` decides
             // `onboarded` from `MasterKeyKeychain.exists()` ALONE, so the moment the
             // master key lands this install counts as onboarded on the next launch.
             // With the old order — key first, phrase second — any failure or kill
             // between the two left a working app holding a master key, NO phrase, and
-            // no warning: exactly the condition recorded as D-249, and unrecoverable,
+            // no warning, and that is unrecoverable,
             // because the phrase is the only key and this one has never been shown to
             // anyone yet. Storing the phrase first means the app cannot come to believe
             // it is onboarded until the phrase is already safe; a failure here simply
@@ -305,7 +305,7 @@ final class OnboardingViewModel {
             //
             // Persists the mnemonic so Settings → Privacy phrase can re-display it
             // (Task 3.12). Carries `.userPresence` access control — the fresh iOS
-            // auth is the whole gate (the in-app PIN was removed by D-042). (The
+            // auth is the whole gate (there is no in-app PIN). (The
             // Argon2 metadata salt is no longer written — HKDF derivation uses a
             // fixed domain salt.)
             try MnemonicKeychain.store(mnemonic)

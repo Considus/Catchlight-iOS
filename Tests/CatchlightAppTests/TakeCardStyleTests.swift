@@ -2,7 +2,7 @@
 //  TakeCardStyleTests.swift
 //  CatchlightAppTests — 2026-07-02 review-audit follow-up
 //
-//  First direct coverage for the D-044 card colour precedence
+//  First direct coverage for the card colour precedence
 //  (overdue ruby → Obie gold → done grey → Task/Remind quadrant → none),
 //  including the 2026-07-01 place/time parity branch: a location reminder
 //  takes the Remind border like a time one, and — having no due instant —
@@ -60,7 +60,7 @@ final class TakeCardStyleTests: XCTestCase {
         let s = style(take)
         XCTAssertTrue(s.isOverdue)
         XCTAssertEqual(s.border, Color.ckCardOverdueBorder,
-                       "overdue ruby outranks even the Obie gold (D-044)")
+                       "overdue ruby outranks even the Obie gold")
     }
 
     func testDonePlace_takesDoneGrey() {
@@ -75,14 +75,14 @@ final class TakeCardStyleTests: XCTestCase {
         var take = Take(blocks: [.checkItem("x", isComplete: true)], isObie: true)
         take.setAllItemsComplete(true)
         XCTAssertEqual(style(take).border, Color.ckCardObieBorder,
-                       "Obie gold outranks the done grey (D-044)")
+                       "Obie gold outranks the done grey")
     }
 
     func testTask_beatsReminder_inQuadrantTier() {
         var take = Take(blocks: [.checkItem("x", isComplete: false)])
         take.locationReminder = place()
         XCTAssertEqual(style(take).border, Quadrant.task(.dark),
-                       "a Task-and-reminder Take borders as Task (D-044 order)")
+                       "a Task-and-reminder Take borders as Task (border order)")
     }
 }
 #endif

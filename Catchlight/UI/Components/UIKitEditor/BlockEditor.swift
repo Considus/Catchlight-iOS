@@ -12,7 +12,7 @@ import CatchlightCore
 /// Built as a drop-in for `InlineTakeEditCard` so all three hosts (`DailiesView`,
 /// `StoryboardView`, `LockedCaptureView`) could keep the same seam — they all took it,
 /// and that view is gone as of M7. Hosts wrap this in `TakeEditCard` rather than using it
-/// raw. See `03_Engineering/UIKit_Pillar1_Editor_Design_v1.0.md`.
+/// raw.
 struct BlockEditor: UIViewControllerRepresentable {
     /// Single source of truth. Mutate ONLY through `Take`'s block mutators so
     /// the derived flags (`isTask`/`isComplete`/`checkItems`/`isMarkedDone`)

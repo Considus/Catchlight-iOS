@@ -4,7 +4,7 @@
 //
 //  The persistent brand mark — icon over wordmark — shared by the opening chapter
 //  (splash · Welcome · Storage · Local warning · Reveal · Confirm · Complete) and the
-//  app-entry LockView (D-042). It is drawn at an IDENTICAL position everywhere so the
+//  app-entry LockView. It is drawn at an IDENTICAL position everywhere so the
 //  mark reads as STATIC across crossfades and the OS launch → splash → Welcome / Lock
 //  handoff never jumps.
 //
@@ -49,7 +49,7 @@ struct IntroBrandMark: View {
         // at all and this label is the only thing left to read.
         //
         // Same shape as the tour tooltip, which vended twice for the same reason
-        // (#241). ⚠️ And D-221 in reverse: the icon's `.accessibilityHidden(true)`
+        // (#241). ⚠️ And the decorative-hide lesson in reverse: the icon's `.accessibilityHidden(true)`
         // is REMOVED rather than kept, because a hide on a shape-bearing view has
         // twice in this codebase materialised an element instead of removing one.
         // With `.ignore` above it there is nothing left for it to do.

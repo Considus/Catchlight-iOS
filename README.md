@@ -53,7 +53,7 @@ The core has its own repo, [Catchlight-Core](https://github.com/Considus/Catchli
 
 ### The full XCTest suite and the iOS app, which need full Xcode
 
-You need **Xcode 26 or later**, and that has been true since 2026-08-15. The App Intents declare `supportedModes` behind `@available(iOS 26.0, *)` (D-202), and `IntentModes` is not in the iOS 18 SDK at all, so Xcode 16 cannot compile the app. Note what this does not change. The deployment floor is still iOS 18.0 (D-039), so the app still runs on iOS 18 and only builds against the iOS 26 SDK.
+You need **Xcode 26 or later**, and that has been true since 2026-08-15. The App Intents declare `supportedModes` behind `@available(iOS 26.0, *)`, and `IntentModes` is not in the iOS 18 SDK at all, so Xcode 16 cannot compile the app. Note what this does not change. The deployment floor is still iOS 18.0, so the app still runs on iOS 18 and only builds against the iOS 26 SDK.
 
 ```bash
 brew install xcodegen

@@ -93,7 +93,7 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
             intentIdentifiers: [],
             options: [])
         // A REPEATING reminder's actions name the this-occurrence / whole-series
-        // difference in WORDS (audit 2026-08, S3 — owner decision D-232): "Dismiss
+        // difference in WORDS (audit 2026-08, S3): "Dismiss
         // this one" and "Turn off reminder". Same identifiers, so the handler is
         // untouched; the one-shot category above keeps the plain "Dismiss" (it has
         // no series to distinguish).

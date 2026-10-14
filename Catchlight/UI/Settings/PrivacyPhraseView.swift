@@ -7,10 +7,8 @@
 //  The 12-word BIP-39 mnemonic is the user's only recovery path. We treat its
 //  re-display as security-sensitive. The real gate is the device's own
 //  `.userPresence` auth (Face ID / passcode), which `MnemonicKeychain.retrieve()`
-//  forces on every read — so an unlocked app is NEVER enough to reveal the phrase
-//  (D-042):
-//    1. The fresh iOS auth alone gates the reveal (the in-app PIN was REMOVED
-//       by D-042; this comment previously described it — corrected 2026-07-01).
+//  forces on every read — so an unlocked app is NEVER enough to reveal the phrase:
+//    1. The fresh iOS auth alone gates the reveal (there is no in-app PIN).
 //    2. The phrase only loads after MnemonicKeychain's iOS prompt.
 //    3. Words appear in a numbered 3-column grid, blurred by default.
 //       "Press and hold to reveal" — the `LongPressGesture(minimumDuration: 0)`
@@ -36,7 +34,7 @@ struct PrivacyPhraseView: View {
 
     init() {
         // The reveal is gated solely by the fresh iOS auth that MnemonicKeychain
-        // forces (D-042 — the in-app PIN was removed). Either the phrase exists and
+        // forces (there is no in-app PIN). Either the phrase exists and
         // we authenticate to show it, or it was never persisted on this device.
         _stage = State(initialValue: MnemonicKeychain.exists() ? .authenticate : .missingPhrase)
     }
@@ -210,7 +208,7 @@ private struct PhraseRevealGrid: View {
         .padding(.top, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.ckBackground)
-        // Dock-geometry position for the hold control (D-022 button system,
+        // Dock-geometry position for the hold control (the pill button system,
         // applied to Settings sub-screens 2026-06-12).
         .safeAreaInset(edge: .bottom) {
             DockPillRow { holdButton }
@@ -284,7 +282,7 @@ private struct PhraseRevealGrid: View {
             }
             // Audit 2026-08, V18: the element announced as static text, and the
             // promised double-tap toggle relied on the hold gesture, which does
-            // not carry onto the element (the V2/D-214 lesson). Button trait +
+            // not carry onto the element (the V2 lesson). Button trait +
             // an explicit default activation make the hint true.
             .accessibilityAddTraits(.isButton)
             .accessibilityAction {

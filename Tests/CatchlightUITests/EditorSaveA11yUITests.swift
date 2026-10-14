@@ -4,7 +4,7 @@
 //
 //  Accessibility audit 2026-08, findings V2 (fix 3) and V1 (fix 4) — the
 //  tap-away save catchers on the Dailies and Storyboard editors, and the
-//  Storyboard row labels. Companion to LockedCaptureUITests (D-214 pattern).
+//  Storyboard row labels. Companion to LockedCaptureUITests.
 //
 //  Fixture note (per the fix prompt): the Storyboard lists only Takes that
 //  carry a task and excludes the Obie. The --uitesting fixture seeds two plain

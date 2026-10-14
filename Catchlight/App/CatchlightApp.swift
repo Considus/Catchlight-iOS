@@ -118,7 +118,7 @@ struct CatchlightApp: App {
         }
         // Detect an unexpected termination of the PREVIOUS run and stamp this launch. Must run
         // before anything can crash us, and reads/sets the flag `markCleanExit` clears on an
-        // orderly background (owner 2026-07-16, D-085 extension). Content-free: build + OS +
+        // orderly background. Content-free: build + OS +
         // device only — never anything about the user's Takes.
         DiagnosticsLog.shared.recordLaunch(build: Self.buildStamp,
                                            systemVersion: UIDevice.current.systemVersion,
@@ -172,7 +172,7 @@ struct CatchlightApp: App {
         app.ui.exitToResting()
         // Verify the Take still exists; fail silently if not. Only checkable
         // while UNLOCKED — a cold Spotlight tap lands on the LOCKED app, where
-        // the store is still the empty placeholder (D-042). Set the target
+        // the store is still the empty placeholder. Set the target
         // anyway in that case: the timeline's reveal stays pending until the
         // row appears after unlock, and never fires for a Take that's gone
         // (Spotlight may surface a deleted item before its deindex propagates).
@@ -187,7 +187,7 @@ struct CatchlightApp: App {
     /// Control / a Shortcut (2026-06-23). Every "open Catchlight and capture"
     /// surface funnels through `CaptureRouting`'s App-Group hand-off and lands here.
     ///
-    /// LOCK (D-042 / zero-Face-ID, owner 2026-06-23): if the app is UNLOCKED the
+    /// LOCK (zero-Face-ID, owner 2026-06-23): if the app is UNLOCKED the
     /// capture opens the normal inline editor. If LOCKED, it lands in a blank
     /// in-memory editor IMMEDIATELY (`app.lockedCapture`) — no app-lock prompt
     /// before typing — and the single Face ID is deferred to save
@@ -386,7 +386,7 @@ struct CatchlightApp: App {
                 // Cover decrypted content before the app-switcher snapshot — but
                 // ONLY when unlocked. While locked, LockView is already on screen and
                 // reveals nothing, so the overlay would just flash over it during the
-                // unlock sheet (D-042).
+                // unlock sheet.
                 if session.isObscured && app.lockState == .unlocked {
                     PrivacyOverlay()
                 }
@@ -402,7 +402,7 @@ struct CatchlightApp: App {
             // dock above the keyboard while searching.
             .ignoresSafeArea(.container)
             .environment(\.deviceTopInset, rootGeo.safeAreaInsets.top)
-            // Section 4 / D-041 — mirror of deviceTopInset for the BOTTOM edge
+            // Mirror of deviceTopInset for the BOTTOM edge
             // (home-indicator zone). The app runs full-bleed, so this is the one
             // place the real bottom inset is visible; the dock + onboarding pill
             // row read it from the environment to rest above the home indicator.
@@ -454,7 +454,7 @@ struct CatchlightApp: App {
                 for: NotificationPresenter.revealRequested)) { _ in
                 drainPendingReveal()
             }
-            // D-042 — re-lock when the DEVICE locks (auto-lock or manual), not on
+            // Re-lock when the DEVICE locks (auto-lock or manual), not on
             // mere app-switching. `protectedDataWillBecomeUnavailable` fires on
             // device lock only; the app drops its keys + encrypted store and the
             // next foreground shows LockView. Re-lock cadence thus follows the
@@ -470,8 +470,7 @@ struct CatchlightApp: App {
             if newPhase == .background {
                 // Mark an ORDERLY exit: if this flag is still set at the next launch, the run died
                 // (crash / watchdog / jetsam) and `recordLaunch` logs it. The diagnostics log is
-                // in-process, so it can never witness its own death — only its absence afterwards
-                // (owner 2026-07-16, D-085 extension).
+                // in-process, so it can never witness its own death — only its absence afterwards.
                 DiagnosticsLog.shared.markCleanExit()
                 // Push this session's edits out before suspension (runs under
                 // a background-task assertion with the in-memory keys), then
@@ -592,7 +591,7 @@ struct JailbreakBanner: View {
 /// system snapshot never captures decrypted Take content (Encryption Architecture
 /// §12.2). Mirrors the splash / lock screen — the brand mark centred on the adaptive
 /// Paper/Ink background — so the app-switcher card reads as Catchlight, on-brand in
-/// both appearances (D-042: was a plain dark "catchlight" wordmark).
+/// both appearances.
 struct PrivacyOverlay: View {
     var body: some View {
         ZStack {

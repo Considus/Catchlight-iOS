@@ -132,9 +132,7 @@ struct AboutView: View {
 
     /// External links, grouped in one card (matches the licences card). Privacy +
     /// Terms reuse the paywall's URLs; Website is the marketing/guides hub; Support
-    /// opens the `/support/` web form — the single cross-platform intake
-    /// (D-091/D-092; the old placeholder `mailto:` contradicted that decision
-    /// and pointed at an unconfirmed address — 2026-07-01).
+    /// opens the `/support/` web form — the single cross-platform intake.
     private var links: some View {
         VStack(spacing: 0) {
             linkRow("Privacy Policy", url: "https://catchlight.app/privacy/")

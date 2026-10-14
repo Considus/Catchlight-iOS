@@ -1,9 +1,9 @@
 //
 //  Angle.swift
-//  Catchlight (iOS app target) — Phase 3 list Angle (D-033)
+//  Catchlight (iOS app target) — Phase 3 list Angle
 //
 //  An Angle is a per-Take, ephemeral, TOGGLED alternative presentation of the
-//  SAME Take (D-033 / Take_Blocks spec §6) — not a setting you leave on, not a
+//  SAME Take — not a setting you leave on, not a
 //  content or colour change. You enter an Angle, use it, and exit back to where
 //  you were; the Take's data is untouched except by the ordinary block edits the
 //  Angle performs (tick / reorder), which persist like any edit.

@@ -2,7 +2,7 @@
 //  OnboardingConfirmGateTests.swift
 //  CatchlightTests
 //
-//  The confirm gate's selection model — V7 (audit 2026-08, D-228): a filled slot
+//  The confirm gate's selection model — V7 (audit 2026-08): a filled slot
 //  deselects on tap. This screen guards the recovery phrase, so the behaviour is
 //  proved here rather than eyeballed: a word that leaves a slot must return to
 //  the bank, and the gate must still pass after a mistake is corrected.
@@ -30,7 +30,7 @@ final class OnboardingConfirmGateTests: XCTestCase {
         vm.targetPositions.map { vm.mnemonic[$0] }
     }
 
-    // MARK: - The deselect (D-228)
+    // MARK: - The deselect
 
     func testDeselect_returnsTheWordToTheBank() {
         let vm = makeConfirmVM()

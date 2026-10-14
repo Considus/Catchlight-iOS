@@ -49,7 +49,7 @@ final class SettingsViewModel {
     }
 
     /// "Lock after" grace — how long Catchlight may sit in the background before a
-    /// return re-locks it (D-042). Read by `AppModel.relockIfAwayTooLong()`. The app
+    /// return re-locks it. Read by `AppModel.relockIfAwayTooLong()`. The app
     /// ALWAYS re-locks on cold launch and when the phone locks while Catchlight is in
     /// the foreground — this only governs the background-grace window.
     enum LockAfter: String, CaseIterable, Identifiable, StoredPreference {
@@ -232,7 +232,7 @@ final class SettingsViewModel {
         }
     }
 
-    /// How the timeline is ARRANGED: by date, or by hand (D-195, owner 2026-08-14).
+    /// How the timeline is ARRANGED: by date, or by hand (owner 2026-08-14).
     /// A peer of `TakeSort`, deliberately NOT a third case of it — the owner kept
     /// oldest/newest adjustable in both arrangements, and folding Manual into that
     /// picker would have made the direction unreachable exactly when it decides
@@ -312,7 +312,7 @@ final class SettingsViewModel {
     /// (owner 2026-08-11): show one Take in full without moving the whole timeline to
     /// "All", and have that survive a restart.
     ///
-    /// DEVICE-LOCAL BY DECISION (owner 2026-08-11, D-194). This is a view preference, not
+    /// DEVICE-LOCAL BY DECISION (owner 2026-08-11). This is a view preference, not
     /// content, so it stays out of `Take`: no encrypted-payload change, no sync schema bump,
     /// nothing to migrate. The trade-off is accepted and real — expanding a Take here does
     /// NOT carry to a second device, and a reinstall forgets it.
@@ -465,7 +465,7 @@ final class SettingsViewModel {
     }
 }
 
-// MARK: - Spotlight exposure (Settings › Security, D-110)
+// MARK: - Spotlight exposure (Settings › Security)
 
 extension SpotlightExposure {
     /// UserDefaults key the Settings picker writes via `@AppStorage`.

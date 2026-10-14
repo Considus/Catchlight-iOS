@@ -87,7 +87,7 @@ final class TakeRowViewTests: XCTestCase {
     func testIrisLabel_obieNote_saysObieExactlyOnce() {
         let take = Take(blocks: [.textLine("the star")], isObie: true)
         let label = TakeRowView.irisAccessibilityLabel(for: take)
-        // D-231 (VC2): the Iris is named for its Take, name first.
+        // VC2: the Iris is named for its Take, name first.
         XCTAssertEqual(label, "Iris, the star. Obie: your pinned Take. Important, Note", "got: \(label)")
         XCTAssertEqual(occurrences(of: "Obie", in: label), 1, "got: \(label)")
     }
@@ -108,7 +108,7 @@ final class TakeRowViewTests: XCTestCase {
     }
 
     func testIrisLabel_standardTake_namedForItsTake() {
-        // D-231 (VC2): "Iris, <first line>" so Voice Control can address one Iris.
+        // VC2: "Iris, <first line>" so Voice Control can address one Iris.
         XCTAssertEqual(TakeRowView.irisAccessibilityLabel(for: Take(blocks: [.textLine("a")])),
                        "Iris, a. Note")
     }
@@ -119,7 +119,7 @@ final class TakeRowViewTests: XCTestCase {
     }
 
     func testIrisName_truncatesWordSafeAtLimit() {
-        // D-231's length guard: cut word-safe at 40 characters, ellipsis appended.
+        // VC2's length guard: cut word-safe at 40 characters, ellipsis appended.
         let long = "Pick up the developed rolls from the lab on Thursday afternoon"
         let name = TakeRowView.irisNameTruncated(long)
         XCTAssertTrue(name.count <= 41, "got \(name.count): \(name)")
@@ -147,7 +147,7 @@ final class TakeRowViewTests: XCTestCase {
         XCTAssertFalse(TakeRowView.irisAccessibilityHint(for: standard).contains("Long press"))
     }
 
-    // MARK: - VC1 (audit 2026-08, D-217): a link Take must be addressable by voice
+    // MARK: - VC1 (audit 2026-08): a link Take must be addressable by voice
 
     func testLabel_noLink_byteIdenticalToToday() {
         // The case that must not move: a linkless Take announces exactly as before.
@@ -186,7 +186,7 @@ final class TakeRowViewTests: XCTestCase {
                        "compare and. Link to a.com and 1 more link. Note")
     }
 
-    // MARK: - VC4 (audit 2026-08, D-227): an email speaks as "Email to bob at example.com"
+    // MARK: - VC4 (audit 2026-08): an email speaks as "Email to bob at example.com"
 
     func testLabel_email_speaksAtNotSymbol() {
         // The spoken "at" survives Voice Control's punctuation stripping; the raw
@@ -210,7 +210,7 @@ final class TakeRowViewTests: XCTestCase {
     }
 
     func testLabel_twoEmails_collapseLikeLinks() {
-        // The same shape as the link rule's multi collapse (D-227 "same shape");
+        // The same shape as the link rule's multi collapse;
         // the exact multi-email wording is the owner's to overrule.
         let take = Take(blocks: [.textLine("ask bob@example.com or sue@example.org")])
         XCTAssertEqual(TakeRowView.accessibilityLabel(for: take),

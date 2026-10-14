@@ -45,7 +45,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
     private var checkRowIDs: Set<UUID> = []
     private var desiredFocus: UUID?
     private var focusInFlight = false
-    /// The caret at the moment a nil `focusedBlockID` resigned the keyboard (D-240). When focus
+    /// The caret at the moment a nil `focusedBlockID` resigned the keyboard. When focus
     /// returns to the SAME block, the caret goes back to this exact offset — not to the end of
     /// the document, which is where a returning edit mid-sentence must never land. Cleared on
     /// the next focus either way: a restore is only valid for the resign it was captured at.
@@ -255,7 +255,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         updateCheckVisuals(blocks)
 
         desiredFocus = focusedBlockID
-        // A nil focus target DROPS the keyboard (D-240). The guard in `applyFocusNow` returns on
+        // A nil focus target DROPS the keyboard. The guard in `applyFocusNow` returns on
         // nil without resigning, so before this, clearing `focusedBlockID` moved nothing — the
         // ring opened over a live keyboard (V33). Capture the caret first so the return trip can
         // put it back where it was.
@@ -347,7 +347,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         return false
     }
 
-    /// Matches the current `BlockTextEditor` styling exactly (D-042 DM Sans). A
+    /// Matches the current `BlockTextEditor` styling exactly (DM Sans). A
     /// `BackspaceTextView` so an empty-backspace merges with the block above.
     private func makeTextView(id: UUID, text: String, isComplete: Bool) -> BackspaceTextView {
         let tv = BackspaceTextView()
@@ -362,7 +362,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         tv.textColor = UIColor(isComplete ? Color.ckTextComplete : Color.ckTextPrimary)
         tv.tintColor = UIColor(Color.ckAccent)
         tv.delegate = self
-        // Writing Tools (D-246). The editor is a plain `UITextView`, so with this
+        // Writing Tools. The editor is a plain `UITextView`, so with this
         // unset iOS applies `.complete` BY INHERITANCE and a Take can be sent to
         // Private Cloud Compute — nobody added that, and nobody chose it. The user's
         // Settings choice decides; the default is Off.
@@ -449,7 +449,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         textViews[id]?.accessibilityCustomActions = nil
     }
 
-    /// V3 (audit 2026-08, D-224): every check row carries "Move up" / "Move down" as
+    /// V3 (audit 2026-08): every check row carries "Move up" / "Move down" as
     /// custom accessibility actions — the spoken route to reorder, matching the Shot
     /// List's actions and its sentence case. They live on the row's TEXT VIEW, the
     /// element VoiceOver lands on (the handle image is not an element and must not
@@ -650,7 +650,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
 
     /// Caret placement on focus: end of the document (the "continue / append" position, owner
     /// 2026-06-17) — UNLESS this focus is the return trip of a resign that captured a caret for
-    /// this same block (D-240: ring closed, reminder sheet closed), in which case the caret goes
+    /// this same block (ring closed, reminder sheet closed), in which case the caret goes
     /// back to the exact offset it left, clamped in case the text changed underneath.
     private func placeCaret(in tv: UITextView, blockID id: UUID) {
         defer { caretToRestore = nil }
@@ -814,7 +814,7 @@ private extension UITextView {
 /// since the handle sits at the row's trailing edge). The pan recognizer lives on
 /// this view, so the expanded area feeds the drag directly. NOT an accessibility
 /// element (V3 puts the spoken route on the text view), and no `.accessibilityHidden`
-/// here — on a bare image view that modifier MATERIALISES an element (D-221).
+/// here — on a bare image view that modifier MATERIALISES an element.
 private final class ReorderHandleView: UIImageView {
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         let dx = max(0, 44 - bounds.width)        // all growth to the LEADING side

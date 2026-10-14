@@ -621,7 +621,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func testSchedule_titleKeepsBlockOrderAcrossInterleavedProse() {
-        // Blocks interleave freely (D-035), so the title must not hoist items to the end.
+        // Blocks interleave freely, so the title must not hoist items to the end.
         let id = UUID()
         let reminder = TimeReminder(scheduledDate: now.addingTimeInterval(3600),
                                     notificationIdentifier: id.uuidString)

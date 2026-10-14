@@ -2,7 +2,7 @@
 //  EditorIrisMaxTextSizeUITests.swift
 //  CatchlightUITests
 //
-//  ISSUE-005: at the largest accessibility text size, editing an EXISTING, long
+//  At the largest accessibility text size, editing an EXISTING, long
 //  Take with the software keyboard up, the editing card's Iris ("editor-shape")
 //  was reported missing on device. The element can stay in the accessibility
 //  tree while the heading mask paints over it, so existence alone proves
@@ -101,7 +101,7 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
         // 3. The loop is only valid with the SOFTWARE keyboard up.
         let keyboard = app.keyboards.firstMatch
         XCTAssertTrue(keyboard.waitForExistence(timeout: 5),
-                      "Software keyboard did not appear: this run cannot test ISSUE-005")
+                      "Software keyboard did not appear: this run cannot test the Iris text-size cap")
         sleep(1) // let the grow-up cap settle against the live keyboard top
 
         // 4. Measure the Iris.
@@ -110,13 +110,13 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
         let iris = irises.firstMatch
         let shot = XCUIScreen.main.screenshot()
         let attachment = XCTAttachment(screenshot: shot)
-        attachment.name = "issue-005-editor-\(name)"
+        attachment.name = "iris-max-text-editor-\(name)"
         attachment.lifetime = .keepAlways
         add(attachment)
 
         let frame = iris.frame
         let visible = visibleShareOfUpperHalf(of: frame, in: shot.image)
-        let report = String(format: "[ISSUE-005] \(name) iris=%@ keyboardTop=%.1f window=%@ visibleUpperHalf=%.2f",
+        let report = String(format: "[iris-max-text] \(name) iris=%@ keyboardTop=%.1f window=%@ visibleUpperHalf=%.2f",
                             NSCoder.string(for: frame), keyboard.frame.minY,
                             NSCoder.string(for: app.windows.firstMatch.frame), visible)
         print(report)

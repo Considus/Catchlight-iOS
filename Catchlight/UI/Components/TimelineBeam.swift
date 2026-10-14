@@ -2,8 +2,7 @@
 //  TimelineBeam.swift
 //  Catchlight (iOS app target)
 //
-//  The timeline's wire, as a BEAM of light rather than a drawn line (owner
-//  2026-08-16, D-207). This supersedes the three dotted tracks of D-112: the spine
+//  The timeline's wire, as a BEAM of light rather than a drawn line. The spine
 //  is no longer a drawn line with a screen-fixed dotted overlay, it is a shaft of
 //  light with a hot core, a bloom, and haze in the air around it.
 //

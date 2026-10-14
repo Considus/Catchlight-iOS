@@ -24,7 +24,7 @@
 //  locally, and the next sync finds them again.
 //
 //  A waiting pair whose other side another device has since turned into a Script is CONVERTED
-//  (`SyncReport.heldConverted`, Catchlight-Core#29): the phone never reads Scripts (D-315), so there
+//  (`SyncReport.heldConverted`, Catchlight-Core#29): the phone never reads Scripts, so there
 //  is no other version to show, and the Take must never be re-stamped or written on its own id,
 //  or the next push sends the choice into the Script. The mark is kept in the pair's file until
 //  the pair is resolved, and `resolveConverted` is its only way out.
@@ -240,7 +240,7 @@ final class ConflictQueue {
             persist(pair)
         }
         waitingChanged()
-        // Record newly-surfaced conflicts to the content-free diagnostics log (D-085) — a
+        // Record newly-surfaced conflicts to the content-free diagnostics log — a
         // count only, no Take content (the banner shows the same count).
         if added > 0 {
             // Shown in Notice History, so recorded in the device language.

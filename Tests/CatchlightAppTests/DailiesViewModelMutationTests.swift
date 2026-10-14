@@ -179,7 +179,7 @@ final class DailiesViewModelMutationTests: XCTestCase {
         XCTAssertNil(vm.tasksCompletedTakeID)
     }
 
-    // MARK: - No-op save (2026-09-03, D-250)
+    // MARK: - No-op save (2026-09-03)
 
     /// THE REPRODUCTION. Saving a Take that has not changed must NOT bump `modifiedAt`.
     /// Opening a Take to read it and tapping away runs the same commit path, and the bump

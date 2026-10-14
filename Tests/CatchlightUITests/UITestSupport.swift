@@ -98,7 +98,7 @@ func typeWhenReady(_ element: XCUIElement, _ text: String, timeout: TimeInterval
     element.typeText(text)
 }
 
-// MARK: - The keyboard's one-time "slide to type" introduction (ISSUE-006)
+// MARK: - The keyboard's one-time "slide to type" introduction
 
 /// Set once the first keyboard presentation of this test run has been checked. The UI tests
 /// share one runner process, so this spans the whole run.

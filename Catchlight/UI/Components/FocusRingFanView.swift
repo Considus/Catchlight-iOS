@@ -579,8 +579,7 @@ struct FocusRingFanView: View {
                 // Explicit `.zIndex` pins fill < ring < glyph: toggling `active`
                 // recolours the fill AND the ring together, and without a pinned
                 // order SwiftUI could momentarily paint the fresh fill over the ring
-                // (the same repaint reshuffle fixed in TakeRowView — D-044,
-                // [[catchlight-take-colour-system]]).
+                // (the same repaint reshuffle fixed in TakeRowView).
                 Circle().fill(active ? kind.activeFill(scheme) : Color.ckBackground)
                     .zIndex(0)
                 Circle().strokeBorder(

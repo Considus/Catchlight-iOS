@@ -4,7 +4,7 @@
 //
 //  Catchlight-Core#29: a Take waiting for a conflict choice that another device then turns into a
 //  Script is never let go or forked by sync. Core names it in `SyncReport.heldConverted` on every
-//  pass, and the queue marks the pair converted. The phone never reads the Script (D-315), and
+//  pass, and the queue marks the pair converted. The phone never reads the Script, and
 //  resolving the pair must never write the Take's own id: the usual choice re-stamps the kept
 //  version, and the next push would send it into the Script.
 //

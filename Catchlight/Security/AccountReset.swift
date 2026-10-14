@@ -2,12 +2,12 @@
 //  AccountReset.swift
 //  Catchlight
 //
-//  The shipping "Start over" wipe (D-253, owner 2026-09-04).
+//  The shipping "Start over" wipe (owner 2026-09-04).
 //
 //  WHY THIS EXISTS. `Wiring` computes `onboarded = MasterKeyKeychain.exists()`, and iOS
 //  keychain items survive app deletion, so once a master key exists a user can never reach
 //  onboarding again — not by deleting the app, not by any control in Settings. That is fine
-//  until the master key is present WITHOUT its privacy phrase (D-253): the app works, but the
+//  until the master key is present WITHOUT its privacy phrase: the app works, but the
 //  account can never be recovered, and there was no way out. This is the way out.
 //
 //  🚨 WHAT A RESET DESTROYS, and why the export is the only route back. Every key derives

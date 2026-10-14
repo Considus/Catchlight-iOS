@@ -9,7 +9,7 @@
 //  until a version is kept (owner 2026-10-07, `ConflictQueue`).
 //
 //  A CONVERTED pair (another device has since turned the Take into a Script, which the phone
-//  never reads, D-315) shows only this phone's version: keep it as a new Take, or let it go
+//  never reads) shows only this phone's version: keep it as a new Take, or let it go
 //  (`ConflictQueue.resolveConverted`). Picking a version would re-stamp the Take on its own id and
 //  send the choice into the Script, so it is not offered.
 //
@@ -347,7 +347,7 @@ struct ConflictResolutionView: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     // Adaptive accent (ember Night / #856539 Daylight) so the 2pt
                     // selection border clears 3:1 contrast on the near-white Daylight
-                    // panel — raw ckEmber failed it (owner 2026-06-29, D-027).
+                    // panel — raw ckEmber failed it (owner 2026-06-29).
                     .strokeBorder(selected ? Color.ckAccent : Color.ckSpine,
                                   lineWidth: selected ? 2 : 1)
             )
@@ -408,7 +408,7 @@ struct ConflictResolutionView: View {
         // Match the onboarding pill size/shape (44pt capsules) — the pills fill
         // this height; kept inline, NOT docked at the toolbar (owner 2026-07-02).
         // Audit 2026-08, DT5: a MINIMUM, not a fixed height — the pills grow with
-        // Dynamic Type (D-030) and a fixed slot made them overflow it.
+        // Dynamic Type and a fixed slot made them overflow it.
         .frame(minHeight: CatchlightLayout.minTouchTarget)
     }
 

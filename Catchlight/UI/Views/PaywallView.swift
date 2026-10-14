@@ -30,7 +30,7 @@ struct PaywallView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppModel.self) private var app
-    // D-030 (+ owner refinement: Default is the floor). Above the default text
+    // CTA growth (Default is the floor). Above the default text
     // size the inline CTA's label wraps to two lines and the button grows
     // instead of shrinking the text.
     @Environment(\.dynamicTypeSize) private var dynamicSize
@@ -186,7 +186,7 @@ struct PaywallView: View {
     /// Inline primary CTA (owner 2026-06-21): a full content-width Ember capsule
     /// with a fixed, substantial height, sitting directly under the price rather
     /// than pinned at the bottom in dock geometry. Ember fill, ckOnAccent (Ink)
-    /// label both modes (D-028): Paper-on-Ember fails WCAG in Daylight.
+    /// label both modes: Paper-on-Ember fails WCAG in Daylight.
     private var primaryCTA: some View {
         Button {
             Task {

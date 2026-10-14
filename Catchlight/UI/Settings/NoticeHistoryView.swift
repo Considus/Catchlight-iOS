@@ -2,7 +2,7 @@
 //  NoticeHistoryView.swift
 //  Catchlight (iOS app target)
 //
-//  Settings → Support → Notice History (owner 2026-06-28, D-085). A read-only, newest-first
+//  Settings → Support → Notice History. A read-only, newest-first
 //  list of the user-facing notices (sync / storage / conflict / quarantine) the app recorded —
 //  so a banner that auto-dismissed before it was read isn't lost. Reads the content-free
 //  `DiagnosticsLog`; the full log (incl. internal breadcrumbs) goes out via "Export diagnostics".

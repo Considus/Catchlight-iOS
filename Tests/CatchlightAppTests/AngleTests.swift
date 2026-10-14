@@ -1,6 +1,6 @@
 //
 //  AngleTests.swift
-//  CatchlightTests (app module) — Phase 3 list Angle (D-033)
+//  CatchlightTests (app module) — Phase 3 list Angle
 //
 //  Covers the Angle abstraction's applicability predicate and registry. The
 //  Angle type lives in the app target (its presentation is SwiftUI), so this is

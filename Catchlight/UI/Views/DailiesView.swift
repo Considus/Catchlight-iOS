@@ -186,11 +186,11 @@ struct DailiesView: View {
     /// holds the keyboard. `ui.editingTakeID` is the matching focus flag (shared so
     /// RootView can mask the dock). Both clear on save/discard. The draft is committed
     /// through the same `vm.save` chokepoint the top-anchored editor uses.
-    /// D-253: gates the plaintext-export confirmation on the missing-phrase banner.
+    /// Gates the plaintext-export confirmation on the missing-phrase banner.
     @State private var showMissingPhraseExportConfirm = false
     @State private var editDraft: Take?
     @State private var editFocusedBlockID: UUID?
-    /// Where the keyboard goes back to after the Focus ring (D-240). Opening the ring over a
+    /// Where the keyboard goes back to after the Focus ring. Opening the ring over a
     /// live editor drops the keyboard — the ring is a decision you stop to make (owner) — and
     /// this holds the focused block so closing the ring returns the edit. A COMMIT consumes it
     /// in `applyInlineFanCommand` (which may prefer a freshly-added task entry); a plain
@@ -336,7 +336,7 @@ struct DailiesView: View {
         // against the heading too, and must not use a different number (2026-09-04). The editor
         // measures from the top of the SCREEN, so the heading's own screen offset rides along: a
         // notice strip above the page moves the heading and its fade down, and the card has to
-        // stop below where they actually are (ISSUE-005). 0 without a strip, so nothing moves.
+        // stop below where they actually are. 0 without a strip, so nothing moves.
         rootStack
             .environment(\.headingClearance, headingClearance + max(0, headingBlockScreenY))
     }
@@ -370,7 +370,7 @@ struct DailiesView: View {
 
             // The spine: a hairline behind the rows, at the circle centre. It
             // STARTS at the first Iris's top edge (HiFi §1 "the spine terminates at
-            // THE BEAM (owner 2026-08-16, D-207) — supersedes D-112's three dotted
+            // THE BEAM (owner 2026-08-16) — supersedes the earlier three dotted
             // tracks, and the single Ember-tinted line before those. ONE view serves the
             // gutter run and the segment crossing each Iris, for the same reason the old
             // spine single-sourced its colour: the two must not drift.
@@ -454,7 +454,7 @@ struct DailiesView: View {
                 // outside it. See the fix-12 measurement before changing this.
                 ZStack {
                     // Exposed as a real accessibility element (audit 2026-08, V2 — the
-                    // D-214 pattern from LockedCaptureView): before this, the only
+                    // pattern from LockedCaptureView): before this, the only
                     // VoiceOver save route was the accidental heading tap, which
                     // announces as a plain header. `.accessibilityElement()` must come
                     // first — a label on a bare `Color.clear` is a no-op without it.
@@ -583,7 +583,7 @@ struct DailiesView: View {
             applyInlineFanCommand(command)
             ui.inlineFanCommand = nil
         }
-        // The ring closed WITHOUT committing — give the keyboard back where it was (D-240).
+        // The ring closed WITHOUT committing — give the keyboard back where it was.
         // Deferred one runloop turn on purpose: a COMMIT closes the fan and posts its command
         // in the same transaction, and `applyInlineFanCommand` (synchronous, above) consumes
         // `ringReturnFocus` before this block runs — so this only ever fires for a dismiss.
@@ -613,7 +613,7 @@ struct DailiesView: View {
                 if ui.revealTargetTakeID == target { ui.revealTargetTakeID = nil }
             }
         }
-        // Manual arrangement hides the month dividers (D-195), and the LIT divider is the
+        // Manual arrangement hides the month dividers, and the LIT divider is the
         // only way to clear a month filter from the resting timeline — `timelineBackgroundTap`
         // exits filtering and searching, not this. Switching to Manual with one set would
         // therefore strand the user in a filtered timeline with no affordance to leave it, so
@@ -785,7 +785,7 @@ struct DailiesView: View {
     @Environment(\.deviceTopInset) private var deviceTopInset
 
     /// The device's BOTTOM safe-area inset (home-indicator zone), captured at the
-    /// window root (section 4 / D-041). Used to lift the timeline's last-row
+    /// window root. Used to lift the timeline's last-row
     /// dock clearance so the final Take still clears the now-raised dock.
     @Environment(\.deviceBottomInset) private var deviceBottomInset
 
@@ -1034,7 +1034,7 @@ struct DailiesView: View {
 
     /// At accessibility text sizes a notice strip wraps to several large lines, and with the
     /// keyboard up there is no room for it AND the editor below the heading: the card's minimum
-    /// height wins and it grows under the fade, hiding its Iris (ISSUE-005, measured: a 169pt strip
+    /// height wins and it grows under the fade, hiding its Iris (measured: a 169pt strip
     /// leaving 42pt of room). So the strips stand down while typing at those sizes and return when
     /// the keyboard goes (owner's choice 2026-09-30). Default sizes keep them while typing.
     private var topStripsStandDown: Bool {
@@ -1055,11 +1055,11 @@ struct DailiesView: View {
             || app.quarantinedCount > 0
     }
 
-    /// D-253: this install holds a master key but NO privacy phrase, so its Takes
+    /// This install holds a master key but NO privacy phrase, so its Takes
     /// cannot be recovered anywhere else. The app WORKS — the master key still
     /// decrypts everything — which is exactly why the state went unreported: nothing
     /// is broken to the eye, and `MnemonicKeychain.exists()` was consulted only in
-    /// Settings → Privacy phrase. D-249's wording is the brief: **the product defect
+    /// Settings → Privacy phrase. **The product defect
     /// is the SILENCE, not the missing phrase.**
     ///
     /// It offers Export because that is the ONLY mitigation that exists today, and it
@@ -1070,7 +1070,7 @@ struct DailiesView: View {
     /// as new entries rather than restoring this account.
     ///
     /// ⚠️ COPY IS A DRAFT — the wording of the banner and of both truths in the
-    /// confirmation is the owner's to settle (D-253).
+    /// confirmation is the owner's to settle.
     @ViewBuilder
     private var missingPhraseBanner: some View {
         if app.phraseMissing {
@@ -1340,8 +1340,8 @@ struct DailiesView: View {
             onToggleMonthFilter: { key in
                 withAnimation(.easeInOut(duration: 0.2)) { ui.toggleMonthFilter(key) }
             },
-            // Snoozed overdue Takes read "SNOOZED" rather than "OVERDUE" in the label lane
-            // (D-058/D-060). Not derivable from the Take, so it has to be handed over.
+            // Snoozed overdue Takes read "SNOOZED" rather than "OVERDUE" in the label lane.
+            // Not derivable from the Take, so it has to be handed over.
             snoozedIDs: vm.snoozedReminderIDs,
             topInset: newTimelineTopInset,
             bottomInset: CatchlightLayout.dockClearance + deviceBottomInset,
@@ -1412,7 +1412,7 @@ struct DailiesView: View {
             // V44: focus-only return after the editor closes (see `focusReturnTakeID`).
             focusTargetID: focusReturnTakeID,
             onFocusHandled: { focusReturnTakeID = nil },
-            // Manual arrangement (D-195) — the drag handle and interactive move.
+            // Manual arrangement — the drag handle and interactive move.
             isReorderable: canReorder,
             onReorder: { movedID, displayOrder in
                 guard app.ensureEditable(movedID) else { return }
@@ -1821,7 +1821,7 @@ struct DailiesView: View {
         editDraft = d
 
         // Restore the editor keyboard after the ring (and its reminder picker) — the
-        // ring-open path dropped it (D-240), so re-assert it here. A freshly-added task
+        // ring-open path dropped it, so re-assert it here. A freshly-added task
         // entry takes the caret (it's empty and wants its first character); otherwise the
         // block that held the keyboard when the ring opened takes it back — the editor's
         // controller returns the caret to its saved offset within it. First block only as
@@ -2071,7 +2071,7 @@ struct DailiesView: View {
     }()
 
     private var monthGroups: [MonthGroup] {
-        // MANUAL mode hides the dividers entirely (D-195). They are derived from
+        // MANUAL mode hides the dividers entirely. They are derived from
         // `createdAt`, so the moment a Take is dragged out of its month a divider states
         // something untrue — and the owner chose hiding them over restricting drags to
         // within a month. One group, no title: `UIKitTimeline.apply` suppresses the first
