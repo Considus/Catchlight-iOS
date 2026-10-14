@@ -4,8 +4,7 @@ import CatchlightCore
 
 /// Pillar 2 (`feature/uikit-timeline`): the recycling `UICollectionView` timeline that
 /// replaces the eager SwiftUI `ScrollView`+`VStack`. Recycling returns lazy-load WITH
-/// exact geometry (self-sizing cells). See
-/// `03_Engineering/UIKit_Pillar2_Timeline_Design_v1.0.md`.
+/// exact geometry (self-sizing cells).
 ///
 /// STATUS: P2-M2 — read-only. Real Takes, month DIVIDER rows (a row in the flow, like the
 /// real timeline — centred between Takes, at the text column), Iris + wire. The pinned

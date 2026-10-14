@@ -15,7 +15,7 @@
 //  which only those two implement — every other cloud greys out in the picker.
 //  The paste-a-URL fallback was removed 2026-06-22; a typed path can never gain
 //  iOS write access (the grant must come through the picker), so it only ever
-//  failed. See 03_Engineering/Cloud_Provider_Sync_Compatibility.md.
+//  failed.
 //
 //  This view does NOT perform iCloud sync — it only configures the destination.
 //

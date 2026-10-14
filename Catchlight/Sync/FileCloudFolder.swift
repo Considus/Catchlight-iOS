@@ -6,7 +6,7 @@
 //  user picks a folder once via `UIDocumentPickerViewController`; we persist a
 //  security-scoped bookmark and re-resolve it for ongoing `FileManager` access. The
 //  app is cloud-AGNOSTIC — any provider that exposes a folder through Files works
-//  (iCloud Drive is the primary v1.0 case; see Cloud_Provider_Sync_Compatibility.md).
+//  (iCloud Drive is the primary v1.0 case).
 //
 //  Conforms to `CatchlightCore.CloudFolder`, so the entire cloud-agnostic SyncEngine
 //  drives it unchanged. File coordination (`NSFileCoordinator`) is used so reads and
