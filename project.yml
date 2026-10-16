@@ -153,6 +153,9 @@ targets:
         # If shipping closed-source instead, switch basis to mass-market 740.17(b)(1)
         # (annual self-classification report).
         ITSAppUsesNonExemptEncryption: true
+        # Apple's code for the approved encryption declaration (standard algorithms,
+        # available in France), so each build stops asking the export questions.
+        ITSEncryptionExportComplianceCode: 36f6df9c-75d8-42b5-8d1b-fd8813a48a81
         # Required so BGTaskScheduler will register the sync refresh task —
         # without this, BackgroundTasks rejects the registration at launch
         # ("com.considus.catchlight.sync is not advertised in the application's
