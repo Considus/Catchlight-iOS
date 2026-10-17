@@ -6,7 +6,7 @@
 //  results and the edit footer) that encodes a Take's active types at a glance.
 //
 //  REDESIGN 2026-07 — the Iris is now a SIX-BLADE CAMERA SHUTTER (geometry from
-//  `02_Design/.../Shutter-Aperture.svg`, normalised to a unit circle). It reads as
+//  the design's shutter aperture drawing, normalised to a unit circle). It reads as
 //  an aperture: six overlapping blades leaving a hexagonal centre, one shared
 //  outline drawn on every blade — which, traced end to end, also outlines the hex.
 //  Pure rendering; callers attach taps/long-presses. Size, position, and the
