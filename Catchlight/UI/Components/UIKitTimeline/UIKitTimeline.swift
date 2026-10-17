@@ -415,7 +415,7 @@ struct TimelineReadCell: View {
             Button {
                 onToggleDone(take)
             } label: {
-                Label(take.isMarkedDone ? "Mark Not Done" : "Mark Done",
+                Label(take.isMarkedDone ? "Mark not done" : "Mark done",
                       systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
             }
         }

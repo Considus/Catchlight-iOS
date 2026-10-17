@@ -506,7 +506,7 @@ struct StoryboardView: View {
             guard app.ensureEditable(take.id) else { return }
             vm.toggleDone(take)
         } label: {
-            Label(take.isMarkedDone ? "Mark Not Done" : "Mark Done",
+            Label(take.isMarkedDone ? "Mark not done" : "Mark done",
                   systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
         }
         // No Important item on the Obie: an Obie is always Important (owner 2026-10-03).

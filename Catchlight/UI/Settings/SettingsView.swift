@@ -331,10 +331,14 @@ struct SettingsView: View {
     /// menu's label (owner 2026-06-29 standardisation) so the Settings pickers and the
     /// reminder Quick Set share ONE selector look + 44pt height. The chooser is the
     /// passed `picker()`, presented inside a `Menu`; the value shows in the row.
+    /// `accessibilityValue` is what VoiceOver says for the value when it differs from
+    /// the text shown (the snooze row's "15 mins" is spoken "15 minutes"); it defaults to
+    /// `selectionLabel`.
     private func menuPickerRow<P: View>(icon: String,
                                         label: LocalizedStringKey,
                                         accessibilityLabel: LocalizedStringKey,
                                         selectionLabel: String,
+                                        accessibilityValue: String? = nil,
                                         @ViewBuilder picker: () -> P) -> some View {
         Menu {
             picker().labelsHidden()
@@ -351,7 +355,7 @@ struct SettingsView: View {
         // serves every menu picker in Settings, so the split fixes all of them at
         // once — matching `cloudStorageRow`, which already did it this way.
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(selectionLabel)
+        .accessibilityValue(accessibilityValue ?? selectionLabel)
     }
 
     /// The scheme to FORCE on the Settings sheet. Night/Daylight map directly; System
@@ -441,10 +445,13 @@ struct SettingsView: View {
             menuPickerRow(icon: "zzz",
                           label: "Snooze Duration",
                           accessibilityLabel: "Snooze duration",
-                          selectionLabel: snoozeDurationBinding.wrappedValue.label) {
+                          selectionLabel: snoozeDurationBinding.wrappedValue.label,
+                          accessibilityValue: snoozeDurationBinding.wrappedValue.spokenLabel) {
                 Picker("Snooze", selection: snoozeDurationBinding) {
                     ForEach(SettingsViewModel.SnoozeDuration.allCases) { option in
-                        Text(option.label).tag(option)
+                        Text(option.label)
+                            .accessibilityLabel(option.spokenLabel)
+                            .tag(option)
                     }
                 }
             }
