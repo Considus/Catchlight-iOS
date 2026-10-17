@@ -6,12 +6,12 @@ How to write a test here and prove a change with it. The commands are in [`AGENT
 
 - **Agree the seams first.** Name the public interface each new test will cross, and confirm it before writing the test. Never test private methods, the database behind a store's back or a mocked internal collaborator: a test that breaks on a refactor that changed no behaviour was testing the implementation.
 - **Take an expected value from outside the code under test:** a known-good literal, a worked example, the spec, or a fixture captured from a real run. An assertion that recomputes the answer the way the code does passes by construction.
-- **One slice at a time.** One test, the least code that passes it, then the next; watch each new test fail before making it pass. Writing every test first tests an imagined shape.
+- **One slice at a time.** One test, the least code that passes it, then the next. Watch each new test fail before making it pass. Writing every test first tests an imagined shape.
 
 ## UI tests
 
 - **Accessibility identifiers are a contract with XCUITest.** Renaming or removing one breaks a test that queries it. An identifier on a container is not exposed on iOS 17. Query type-agnostically, not through a concrete element type.
-- **Keyboard entry and search are device-only.** A test that depends on either can't be trusted from the simulator; CI turns the simulator's hardware keyboard off for this reason.
+- **Keyboard entry and search are device-only.** A test that depends on either can't be trusted from the simulator. CI turns the simulator's hardware keyboard off for this reason.
 - **The `--uitesting` fixture is not how the app is used.** It starts at the default text size, with the "Created on" stamp off, no notice strips and two short Takes. Before trusting a layout result, set the condition the change is about:
 
   | Condition | Launch argument |
