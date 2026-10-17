@@ -30,7 +30,7 @@ xcodebuild test -scheme Catchlight -derivedDataPath "$BUILD_DIR/DerivedData" \
 
 ## Ship
 
-1. Once per clone: `git config core.hooksPath hooks`. `hooks/pre-commit` refuses a commit on `main`; `hooks/commit-msg` refuses a Claude attribution footer.
+1. Once per clone: `git config core.hooksPath hooks`. `hooks/pre-commit` refuses a commit on `main`; `hooks/commit-msg` refuses a Claude attribution footer or an em or en dash.
 2. Check nobody is on the work; branch from `origin/main`:
 
    ```bash
