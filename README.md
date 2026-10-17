@@ -73,4 +73,4 @@ open Catchlight.xcodeproj  # set DEVELOPMENT_TEAM, then build/run on a device
 - `kSecAttrSynchronizable: false` on every Keychain item (`Keychain.swift`, `PINService.swift`).
 - Encryption is always on. Never optional, never toggleable.
 - Offline-first, so everything works with no network at all. Sync is additive, and local-only is a real way to run it.
-- The cloud folder holds platform-agnostic JSON envelopes and one plaintext metadata file, nothing else.
+- The cloud folder holds encrypted JSON envelopes and one plaintext metadata file, nothing else. Their format stays Apple-shaped: Windows and Android are worked out as each one is built, not designed for in advance.

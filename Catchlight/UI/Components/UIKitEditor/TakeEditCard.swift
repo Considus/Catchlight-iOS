@@ -362,6 +362,13 @@ struct KeyboardTakeEditor: View {
     /// Bottom-anchored, riding the system keyboard. NO custom keyboard animation — it rides in sync
     /// with `BlockEditor`'s own handling (a custom rise desynced and scrolled the text off-screen,
     /// the first M5a attempt).
+    ///
+    /// Never move the editor yourself in answer to the keyboard. Driving it from
+    /// `keyboardWillChangeFrameNotification` with a constraint animation of its own hard-locked the
+    /// device, and only a reboot recovered it: that animation deadlocks against `BlockEditor`'s own
+    /// keyboard handling. `BlockEditor` owns the keyboard. This view only reads the keyboard's top
+    /// edge to set its bottom padding, adds no animation, and caps the card at the room above the
+    /// keyboard (`maxHeight`) so the editor's own scrolling starts before the caret reaches it.
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
