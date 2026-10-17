@@ -14,9 +14,10 @@
 //  widget, the Control and the Action button are for; they still fire the launcher intents.
 //
 //  Every phrase MUST contain `\(.applicationName)` (an App Intents requirement).
-//  Up to 10 App Shortcuts are allowed per app; we ship one now (New Take) and
-//  the richer read/write actions (Search, Mark Done, Obie) join later with the
-//  Take `AppEntity`.
+//  Up to 10 App Shortcuts are allowed per app; we ship two now (Dictate a Take,
+//  Dictate an Obie) and the richer read/write actions (Search, Mark done) join
+//  later with the Take `AppEntity`. Their short titles say "Dictate" because they
+//  run the capture intents; the launcher intents keep "New Take" / "New Obie".
 //
 
 import AppIntents
@@ -37,7 +38,7 @@ struct CatchlightAppShortcuts: AppShortcutsProvider {
                 "New \(.applicationName) Take",
                 "Start a Take in \(.applicationName)"
             ],
-            shortTitle: "New Take",
+            shortTitle: "Dictate a Take",
             systemImageName: "plus.circle"
         )
         AppShortcut(
@@ -48,7 +49,7 @@ struct CatchlightAppShortcuts: AppShortcutsProvider {
                 "New \(.applicationName) Obie",
                 "Start an Obie in \(.applicationName)"
             ],
-            shortTitle: "New Obie",
+            shortTitle: "Dictate an Obie",
             systemImageName: "circle.circle"
         )
     }
