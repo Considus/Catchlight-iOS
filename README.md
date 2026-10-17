@@ -30,9 +30,9 @@ CatchlightApp/
 
 ### The core and the app, and why they are split
 
-`CatchlightCore` holds everything that has to behave identically on every platform Catchlight ever reaches (Roadmap §4), so the data model, the platform-agnostic JSON file format, and the whole crypto chain (CryptoKit HKDF plus AES-256-GCM). Every platform-specific dependency, and that means Keychain, NSFileProtection, SQLite3, `UNUserNotificationCenter`, `BGTaskScheduler` and the Files API, is injected through a protocol and implemented over in the `Catchlight/` app target.
+`CatchlightCore` holds everything that has to behave identically on every platform Catchlight reaches, so the data model, the JSON file format, and the whole crypto chain (CryptoKit HKDF plus AES-256-GCM). Every platform-specific dependency, and that means Keychain, NSFileProtection, SQLite3, `UNUserNotificationCenter`, `BGTaskScheduler` and the Files API, is injected through a protocol and implemented over in the `Catchlight/` app target.
 
-That split is what makes "platform-agnostic from day one" a structural fact rather than a promise. The iOS app depends on the core and never the other way round, so the future Web, Android and Mac clients re-implement the thin app layer and nothing else.
+The iOS app depends on the core and never the other way round, and the Mac app shares the same core. Other platforms are worked out as each one is built.
 
 `CatchlightCore` lives in its own repo, [Catchlight-Core](https://github.com/Considus/Catchlight-Core). The app pulls it in as a Swift package at the exact version pinned in `project.yml`.
 
@@ -73,4 +73,4 @@ open Catchlight.xcodeproj  # set DEVELOPMENT_TEAM, then build/run on a device
 - `kSecAttrSynchronizable: false` on every Keychain item (`Keychain.swift`, `PINService.swift`).
 - Encryption is always on. Never optional, never toggleable.
 - Offline-first, so everything works with no network at all. Sync is additive, and local-only is a real way to run it.
-- The cloud folder holds platform-agnostic JSON envelopes and one plaintext metadata file, nothing else.
+- The cloud folder holds your encrypted Takes and their encrypted index, plus three kinds of small unencrypted file, none holding anything you wrote: one with the format version, the account's creation date and the app version; a sync lock naming the device syncing and since when; and pairing files that exist for 15 minutes while a second device is set up. Their format stays Apple-shaped: Windows and Android are worked out as each one is built, not designed for in advance.
