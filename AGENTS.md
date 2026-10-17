@@ -25,6 +25,7 @@ xcodebuild test -scheme Catchlight -derivedDataPath "$BUILD_DIR/DerivedData" \
 
 - **Read the test count, not the word "passed":** the scheme runs the unit and UI tests, and one silently dropped still reports success.
 - **Write and prove tests by [`Tests/README.md`](Tests/README.md):** seams, fixtures, simulators and evidence.
+- **Give a change that affects stored or synced data a deliberate extra pass and a real backup, not only a green test run:** people keep their real notes in this app. That covers `Catchlight/Database`, `Security`, `Sync`, `Import`, `Subscription` and a package pin in `project.yml`.
 
 **Not checkable locally:** push, StoreKit receipts and the subscription path (a sideloaded build has no receipt, and that failure wipes the index), background sync scheduling, and Spotlight body text on iOS 17 and later (title only, FB17330079).
 
