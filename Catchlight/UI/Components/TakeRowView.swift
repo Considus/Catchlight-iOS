@@ -386,7 +386,7 @@ struct TakeRowView: View {
             Button {
                 onToggleComplete()
             } label: {
-                Label(take.isMarkedDone ? "Mark Not Done" : "Mark Done",
+                Label(take.isMarkedDone ? "Mark not done" : "Mark done",
                       systemImage: take.isMarkedDone ? "circle" : "checkmark.circle")
             }
         }
@@ -442,7 +442,7 @@ struct TakeRowView: View {
     private var rowAccessibilityActions: some View {
         ExpandTakeMenuButton(take: take)
         if take.canBeMarkedDone, let onToggleComplete {
-            Button(take.isMarkedDone ? "Mark Not Done" : "Mark Done") { onToggleComplete() }
+            Button(take.isMarkedDone ? "Mark not done" : "Mark done") { onToggleComplete() }
         }
         if let onSetImportant, take.canChangeImportant {
             Button(take.isImportant ? "Remove Important" : "Make Important") { onSetImportant() }
