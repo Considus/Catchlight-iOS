@@ -169,12 +169,17 @@ struct ShareSheetView: View {
 
     /// Fetch the shared link's title and image.
     ///
-    /// ⚠️ THE ONLY NETWORK REQUEST CATCHLIGHT MAKES. `LPMetadataProvider` contacts the shared URL
-    /// directly, so that site sees a request from this device. Owner-authorised 2026-08-11 on the
-    /// reasoning that the user is sharing content they are already looking at — true for the
-    /// common case, but NOT for forwarding a link you never opened, which is why the privacy
-    /// policy states it outright. Metadata only, nothing about the user is sent, and none of it
-    /// is persisted: only the text is queued.
+    /// ⚠️ THE ONLY NETWORK REQUEST CATCHLIGHT MAKES TO A SERVER THAT ISN'T APPLE'S. Every other
+    /// request goes to Apple: StoreKit asks the App Store about the subscription
+    /// (`SubscriptionManager`), and a location reminder loads map tiles, place search results and
+    /// a reverse-geocoded name through MapKit and Core Location (`LocationEditor`).
+    /// `LPMetadataProvider` contacts the shared URL directly, so that site sees a request from
+    /// this device. `shouldFetchSubresources` is left at its default of true, so the provider also
+    /// downloads the page's icon and preview image, which can sit on another host.
+    /// Owner-authorised 2026-08-11 on the reasoning that the user is sharing content they are
+    /// already looking at. That holds for the common case but NOT for forwarding a link you never
+    /// opened, which is why the privacy policy states it outright. Nothing the user wrote is
+    /// sent, and none of what comes back is persisted: only the text is queued.
     ///
     /// THE BUG THAT MADE THIS LOOK DEAD: the provider was created as a throwaway temporary
     /// (`LPMetadataProvider().startFetchingMetadata(...)`), so nothing owned it for the life of
