@@ -42,7 +42,7 @@ struct SequenceGlyph: View {
 }
 
 /// The Obie identity glyph — the Catchlight Obie brand logo (solid italic "O" +
-/// catch-dot, `obie-glyph` asset from 01_Brand/Logo/Custom Glyphs/Obie_Glyph.svg).
+/// catch-dot, `obie-glyph` asset made from the brand's Obie glyph drawing).
 /// Replaced the earlier ring-and-dot Mark glyph app-wide (owner 2026-06-30), so
 /// the in-app Obie matches the widget/brand mark. Template image: tint via
 /// `.foregroundStyle` (callers use `ckTextObie`). The glyph is taller than wide;

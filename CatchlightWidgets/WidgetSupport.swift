@@ -204,7 +204,7 @@ extension View {
 // MARK: - Brand letter-marks (the logo glyphs — `Assets.xcassets`)
 //
 // The Catchlight "C" and Obie "O" logos (italic letter + catch-dot), from
-// 01_Brand/Logo/Custom Glyphs/{Catchlight,Obie}_Glyph.svg. Each is imported TWICE:
+// the brand's Catchlight and Obie glyph drawings. Each is imported TWICE:
 //   • a vector TEMPLATE IMAGE (`*Glyph`) for the home widgets + lock-screen
 //     accessories (full SwiftUI — a solid silhouette survives the lock-screen
 //     monochrome flattening, where the in-app Mark could not);
