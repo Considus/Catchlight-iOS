@@ -138,8 +138,9 @@ final class SettingsViewModel {
             }
         }
 
-        // "mins" (not "minutes") so the notification action "Snooze for 15 mins" stays on
-        // one line like the hours; the hours fit already (owner 2026-06-20).
+        // What the screen shows: "mins" (not "minutes") so the notification action
+        // "Snooze for 15 mins" stays on one line like the hours; the hours fit already
+        // (owner 2026-06-20). VoiceOver reads `spokenLabel` instead (owner 2026-10-17).
         var label: String {
             switch self {
             case .fiveMinutes:     return String(localized: "5 mins")
@@ -149,6 +150,17 @@ final class SettingsViewModel {
             case .sixHours:        return String(localized: "6 hours")
             case .twelveHours:     return String(localized: "12 hours")
             case .twentyFourHours: return String(localized: "24 hours")
+            }
+        }
+
+        /// What VoiceOver says: the minutes in full, so "mins" is never read out as a word.
+        /// The hours are already full words, so they reuse `label`.
+        var spokenLabel: String {
+            switch self {
+            case .fiveMinutes:     return String(localized: "5 minutes")
+            case .fifteenMinutes:  return String(localized: "15 minutes")
+            case .thirtyMinutes:   return String(localized: "30 minutes")
+            case .oneHour, .sixHours, .twelveHours, .twentyFourHours: return label
             }
         }
     }
