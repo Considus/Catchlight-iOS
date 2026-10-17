@@ -745,6 +745,10 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         collectionView.addGestureRecognizer(reorderPress)
         view.addSubview(collectionView)
 
+        // A cell hosts the read card only, never the editor. `BlockEditor` is a
+        // `UIViewControllerRepresentable`, which `UIHostingConfiguration` does not support: inside a
+        // cell it renders SwiftUI's yellow "unavailable" placeholder. Editing happens in the plain
+        // SwiftUI overlay (`KeyboardTakeEditor`) above this collection.
         let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, TimelineRow> {
             [weak self] cell, _, row in
             guard let self else { return }
