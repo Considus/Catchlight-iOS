@@ -87,7 +87,7 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
         tapUntil(addButton, appears: body)
         let lines = (1...lineCount).map { "Line \($0) of a long existing Take" }
         typeWhenReady(body, lines.joined(separator: "\n"))
-        tapWhenReady(anyElement(in: app, id: "dailies-save"))
+        tapSaveCatcher(in: app, above: body)
         XCTAssertTrue(body.waitForNonExistence(timeout: 5), "Editor did not close on save")
 
         // 2. Re-open it: an existing Take, with its creation stamp.
