@@ -49,6 +49,23 @@ func anyElement(in app: XCUIApplication, id: String) -> XCUIElement {
     app.descendants(matching: .any).matching(identifier: id).firstMatch
 }
 
+/// Tap the full-screen save catcher (`dailies-save`) at a point clear of the editor card.
+/// The catcher is drawn under the card, and `.tap()` aims at the catcher's centre, which a tall
+/// card covers (iPhone 17, iOS 27: a 14-line card spans y 206 to 473 and the centre is y 437),
+/// so the tap lands in the text and the editor stays open. The card's Iris (`editor-shape`)
+/// straddles the card's top edge at every text size, so this aims 24pt above the Iris. The text
+/// view's own frame is no guide: at the largest text size it scrolls up under the heading.
+func tapSaveCatcher(in app: XCUIApplication, above editor: XCUIElement,
+                    file: StaticString = #file, line: UInt = #line) {
+    XCTAssertTrue(anyElement(in: app, id: "dailies-save").waitForExistence(timeout: 5),
+                  "tapSaveCatcher: dailies-save did not appear", file: file, line: line)
+    let iris = anyElement(in: app, id: "editor-shape")
+    let cardTop = iris.waitForExistence(timeout: 2) ? iris.frame.minY : editor.frame.minY
+    let point = CGPoint(x: app.frame.midX, y: max(60, cardTop - 24))
+    app.coordinate(withNormalizedOffset: .zero)
+        .withOffset(CGVector(dx: point.x, dy: point.y)).tap()
+}
+
 /// Wait for `element` to exist (default 5s), then tap it. Returns the element.
 @discardableResult
 func tapWhenReady(_ element: XCUIElement, timeout: TimeInterval = 5,
