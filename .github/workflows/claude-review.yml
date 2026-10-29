@@ -102,7 +102,7 @@ jobs:
           { echo 'REVIEW_CONTEXT<<__REVIEW_CONTEXT__'; printf '\n%s\n' "$ctx"; echo '__REVIEW_CONTEXT__'; } >> "$GITHUB_ENV"
 
       - id: review
-        uses: anthropics/claude-code-action@db77d4d3c98f3f6380e7cd45ffba2342a3dbde3c # v1.0.254
+        uses: anthropics/claude-code-action@8041f1d17e0e7d2f2cfe35002962e9f26237c0bb # v1.0.263
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: ${{ format('{0}{1}', env.REVIEW_PROMPT, env.REVIEW_CONTEXT) }}
@@ -151,7 +151,7 @@ jobs:
       - id: retry
         name: Review again, once, because the first pass posted nothing
         if: ${{ !cancelled() && steps.first.outputs.n == '0' }}
-        uses: anthropics/claude-code-action@db77d4d3c98f3f6380e7cd45ffba2342a3dbde3c # v1.0.254
+        uses: anthropics/claude-code-action@8041f1d17e0e7d2f2cfe35002962e9f26237c0bb # v1.0.263
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: ${{ format('{0}{1}', env.REVIEW_PROMPT, env.REVIEW_CONTEXT) }}
