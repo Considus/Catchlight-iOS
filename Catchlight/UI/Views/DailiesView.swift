@@ -1197,7 +1197,7 @@ struct DailiesView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
-                Text("Notifications are off, so your reminders won't show.")
+                Text("Enable Notifications")
                     .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(2)
