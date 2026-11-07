@@ -18,9 +18,17 @@ import CatchlightCore
 final class DailiesViewModel {
     /// All non-Obie Takes, newest first (the timeline reads top-down, most recent
     /// at the top beneath the pinned Obie).
-    private(set) var takes: [Take] = []
+    private(set) var takes: [Take] = [] { didSet { refreshAnyAlerting() } }
     /// The single current Obie, pinned at the top of the list (nil if none).
-    private(set) var obie: Take?
+    private(set) var obie: Take? { didSet { refreshAnyAlerting() } }
+    /// Whether any Take, the Obie included, has a reminder set to alert. Kept here rather
+    /// than computed in the view, so the timeline doesn't walk every Take on each render.
+    private(set) var anyAlertingReminder = false
+
+    private func refreshAnyAlerting() {
+        let now = ReminderScheduler.anyAlerting(takes + (obie.map { [$0] } ?? []))
+        if now != anyAlertingReminder { anyAlertingReminder = now }
+    }
     /// Surfaced to the UI when a store operation fails; views may show a quiet note. Each
     /// non-nil value is also recorded to the content-free diagnostics log so it shows
     /// in Notice History and the export. These messages are static/generic — no Take content.
