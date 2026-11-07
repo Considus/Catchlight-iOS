@@ -178,6 +178,42 @@ final class EncryptedTakeStoreTests: XCTestCase {
                        "the sync watermark must survive a store close/reopen")
     }
 
+    // MARK: - A delete on another connection is never undone by sync (R5)
+
+    /// Sync opens its own `EncryptedTakeStore` while the timeline holds another, so the two
+    /// connections share no `queue`. A delete committed on the timeline's connection between
+    /// sync's tombstone check and its write used to land, and the write then brought the Take
+    /// back and erased its tombstone. The check now runs inside the write transaction, so the
+    /// delete waits for it and wins.
+    func testApplyRemote_aDeleteOnAnotherConnectionMidApply_staysDeleted() throws {
+        let original = Take(blocks: [.textLine("Delete me")])
+        try store.upsert(original)
+        var remote = original
+        remote.blocks = [.textLine("Edited on another device")]
+        remote.modifiedAt = original.modifiedAt.addingTimeInterval(-60)   // older than the delete
+
+        let timeline = try EncryptedTakeStore(keys: keys, directoryURL: tempDir)
+        let deleted = DispatchGroup()
+        var deleteError: Error?
+        store.afterTombstoneCheckForTesting = {
+            deleted.enter()
+            DispatchQueue.global().async {
+                do { try timeline.delete(id: original.id) } catch { deleteError = error }
+                deleted.leave()
+            }
+            // Give the delete the chance to land here, as it did before the fix. With the check
+            // inside the transaction it is held off until the write commits.
+            _ = deleted.wait(timeout: .now() + 0.5)
+        }
+        _ = try store.applyRemote(remote)
+        store.afterTombstoneCheckForTesting = nil
+        _ = deleted.wait(timeout: .now() + 10)
+
+        XCTAssertNil(deleteError)
+        XCTAssertNil(try timeline.take(id: original.id), "the deleted Take came back")
+        XCTAssertEqual(try timeline.tombstones().map(\.id), [original.id], "the tombstone was erased")
+    }
+
     /// Tombstones are persisted too — a deletion recorded before a relaunch is
     /// still pending propagation after it.
     func testEncryptedStore_tombstones_surviveReopen() throws {

@@ -59,6 +59,12 @@ public final class EncryptedTakeStore: TakeStore {
     private let keys: KeyHierarchy
     private let queue = DispatchQueue(label: "com.considus.catchlight.store")
 
+    #if DEBUG
+    /// Test seam (R5): runs inside `applyRemote` after the tombstone check and before the write,
+    /// so a test can land a delete from a second connection at exactly that moment.
+    var afterTombstoneCheckForTesting: (() -> Void)?
+    #endif
+
     private static let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     private static let schemaVersion: Int32 = 2
 
@@ -352,37 +358,56 @@ public final class EncryptedTakeStore: TakeStore {
 
     public func applyRemote(_ take: Take) throws -> Bool {
         try queue.sync {
-            // Tombstone check and write INSIDE one queue.sync so a concurrent
-            // delete (main thread) cannot land between them — the pull loop's
-            // own guard reads a pull-start snapshot and cannot see a mid-pull
-            // delete (the delete-resurrection bug, closed 2026-07-23). Deletion
-            // wins ties (`>=`), matching the pull guard: a remote edit STRICTLY
-            // after the deletion still resurrects.
-            let sel = try prepare("SELECT deleted_at FROM tombstones WHERE id = ?1;")
-            defer { sqlite3_finalize(sel) }
-            bindText(sel, 1, take.id.uuidString)
-            if sqlite3_step(sel) == SQLITE_ROW {
-                guard let deletedAt = ISO8601.date(from: columnText(sel, 0)) else {
-                    throw StorageError.corruptRow("tombstone row has unparseable date")
+            // Tombstone check and write INSIDE one write transaction (R5, 2026-11-07). The
+            // queue serialises this connection only, and sync opens its own store
+            // (`Wiring.makeSyncEngine`) beside the timeline's, so a delete from the other
+            // connection could commit between a check made before `BEGIN IMMEDIATE` and the
+            // write, and the write then brought the Take back and erased its tombstone.
+            // `BEGIN IMMEDIATE` takes SQLite's write lock first, so a delete on any connection
+            // either committed before the check (and is seen) or waits for this commit (and
+            // wins). The pull loop's own guard reads a pull-start snapshot and cannot see a
+            // mid-pull delete (the delete-resurrection bug, closed 2026-07-23). Deletion wins
+            // ties (`>=`), matching the pull guard: a remote edit STRICTLY after the deletion
+            // still resurrects.
+            try inWriteTransaction {
+                let sel = try prepare("SELECT deleted_at FROM tombstones WHERE id = ?1;")
+                defer { sqlite3_finalize(sel) }
+                bindText(sel, 1, take.id.uuidString)
+                if sqlite3_step(sel) == SQLITE_ROW {
+                    guard let deletedAt = ISO8601.date(from: columnText(sel, 0)) else {
+                        throw StorageError.corruptRow("tombstone row has unparseable date")
+                    }
+                    if deletedAt >= take.modifiedAt { return false }
                 }
-                if deletedAt >= take.modifiedAt { return false }
+                #if DEBUG
+                afterTombstoneCheckForTesting?()
+                #endif
+                try writeTakeInTransaction(take)
+                return true
             }
-            try upsertHoldingQueue(take)
-            return true
         }
+    }
+
+    /// Run `body` inside `BEGIN IMMEDIATE … COMMIT`, rolling back if it throws or returns
+    /// early through an error. NOT serialised — callers hold the queue.
+    private func inWriteTransaction<T>(_ body: () throws -> T) throws -> T {
+        try exec("BEGIN IMMEDIATE;")
+        var committed = false
+        defer { if !committed { try? exec("ROLLBACK;") } }
+        let result = try body()
+        try exec("COMMIT;")
+        committed = true
+        return result
     }
 
     /// The upsert body. NOT serialised — callers hold the queue.
     private func upsertHoldingQueue(_ take: Take) throws {
-        try exec("BEGIN IMMEDIATE;")
-        var committed = false
-        defer { if !committed { try? exec("ROLLBACK;") } }
-        // Single-Obie invariant under last-write-wins: an incoming Obie
-        // (e.g. applied from another device by sync) demotes any existing
-        // one. Without this, the partial unique index rejected the row with
-        // an opaque writeFailed and the whole upsert rolled back — and the
-        // in-memory store (no index) silently accepted it, so the two
-        // implementations diverged on the same input.
+        try inWriteTransaction { try writeTakeInTransaction(take) }
+    }
+
+    /// Write `take`, demoting any other Obie and clearing its tombstone. Callers hold the
+    /// queue and an open write transaction.
+    private func writeTakeInTransaction(_ take: Take) throws {
         if take.isObie {
             // Demote any existing Obie. The is_obie COLUMN is only an index — a
             // Take's isObie ALSO lives inside its encrypted PAYLOAD, which
@@ -419,8 +444,6 @@ public final class EncryptedTakeStore: TakeStore {
         defer { sqlite3_finalize(ts) }
         bindText(ts, 1, take.id.uuidString)
         guard sqlite3_step(ts) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
-        try exec("COMMIT;")
-        committed = true
     }
 
     /// Shared by upsert and migration. NOT serialised — callers hold the queue
