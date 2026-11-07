@@ -85,7 +85,8 @@ public final class ReminderScheduler {
     ///
     /// Only writes on a CHANGE, so calling it on every foreground can't flood the log. Content-free
     /// (a permission state), and `.lifecycle` so it stays export-only, not a new user-facing notice.
-    public static func recordAuthorizationStatusIfChanged(defaults: UserDefaults = .standard) async {
+    @discardableResult
+    public static func recordAuthorizationStatusIfChanged(defaults: UserDefaults = .standard) async -> UNAuthorizationStatus {
         let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
         let name: String
         switch status {
@@ -97,10 +98,28 @@ public final class ReminderScheduler {
         @unknown default:          name = "unknown(\(status.rawValue))"
         }
         let key = "catchlight.diagnostics.lastNotificationAuth"
-        guard defaults.string(forKey: key) != name else { return }
+        guard defaults.string(forKey: key) != name else { return status }
         defaults.set(name, forKey: key)
         let willFire = !(status == .denied || status == .notDetermined)
         DiagnosticsLog.shared.record(.notificationPermission(state: name, remindersWillFire: willFire))
+        return status
+    }
+
+    /// Whether the timeline should say reminders are silenced: iOS notifications are turned
+    /// off for Catchlight while at least one Take has a reminder set to alert. Only `.denied`
+    /// counts. Before the user is asked (`.notDetermined`), setting a reminder is what asks them.
+    static func remindersSilenced(status: UNAuthorizationStatus, anyAlerting: Bool) -> Bool {
+        status == .denied && anyAlerting
+    }
+
+    /// Whether any of these Takes has a reminder that would raise a notification if iOS
+    /// allowed it: a time or place reminder with its alert on and not marked done.
+    static func anyAlerting(_ takes: [Take]) -> Bool {
+        takes.contains { take in
+            if let time = take.timeReminder, time.alarmEnabled, !time.isDone { return true }
+            if let place = take.locationReminder, place.alarmEnabled, !place.isDone { return true }
+            return false
+        }
     }
 
     public static let categoryIdentifier = "TAKE_REMINDER"

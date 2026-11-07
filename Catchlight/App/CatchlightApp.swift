@@ -506,7 +506,16 @@ struct CatchlightApp: App {
                 // Settings silently kills every time-reminder, and nothing else in the app would
                 // ever tell us. Foreground is the only moment we can see it; it writes only on a
                 // CHANGE, so this can't flood despite .active firing often.
-                Task { await ReminderScheduler.recordAuthorizationStatusIfChanged() }
+                Task { @MainActor in
+                    let status = await ReminderScheduler.recordAuthorizationStatusIfChanged()
+                    #if DEBUG
+                    // The UI-test fixture sets `.denied` itself (see Wiring); the simulator's
+                    // real answer must not overwrite it.
+                    if ProcessInfo.processInfo.arguments.contains("--uitesting-notifications-off") { return }
+                    #endif
+                    app.notificationStatus = status
+                    app.refreshRemindersSilencedOnset()
+                }
                 // Refresh which reminders are currently snoozed (owner 2026-06-21) so
                 // the timeline shows "SNOOZED" not "OVERDUE". Reads the OS pending queue
                 // (no key needed), so it's fine here regardless of lock state.
@@ -541,6 +550,8 @@ struct CatchlightApp: App {
             // launch, with no second Face ID prompt (owner 2026-06-20).
             if newState == .unlocked {
                 backgroundSync.syncNow(trigger: .appBecameActive)
+                // Activation may have read a refusal while still locked (2026-11-07).
+                app.refreshRemindersSilencedOnset()
                 // Apply any "Dismiss" taps made while locked (owner 2026-06-22) BEFORE the
                 // rebuild below — turning the reminder's alarm off in the store, so the
                 // re-arm doesn't resurrect a reminder the user just dismissed.

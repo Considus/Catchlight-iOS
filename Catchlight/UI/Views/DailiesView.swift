@@ -597,6 +597,8 @@ struct DailiesView: View {
         }
         // Dock + requested a new Take (Phase 2): create it in place at the
         // Order-appropriate end and focus it.
+        // The first reminder set to alert while notifications are off raises the strip now.
+        .onChange(of: vm.anyAlertingReminder) { _, _ in app.refreshRemindersSilencedOnset() }
         .onChange(of: ui.pendingInlineNewTake) { _, take in
             guard let take else { return }
             beginNewInlineEdit(take)
@@ -1018,6 +1020,7 @@ struct DailiesView: View {
             conflictBanner
             missingPhraseBanner
             lapseBanner
+            remindersSilencedBanner
             storageErrorStrip
             syncErrorStrip
             quarantineNoticeStrip
@@ -1050,6 +1053,7 @@ struct DailiesView: View {
         conflicts.attentionCount > 0
             || app.phraseMissing
             || app.subscriptionStatus == .lapsed
+            || remindersSilenced
             || vm.lastError != nil
             || app.lastSyncError != nil
             || app.quarantinedCount > 0
@@ -1166,6 +1170,52 @@ struct DailiesView: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("lapse-banner-subscribe")
                 .accessibilityLabel("Resubscribe to Catchlight")
+            }
+            .padding(.horizontal, 16)
+            .frame(minHeight: 44)
+            .frame(maxWidth: .infinity)
+            .background(scheme == .dark
+                        ? Color.ckGlow.opacity(0.12)
+                        : Color.ckEmber.opacity(0.15))
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .accessibilityElement(children: .contain)
+        }
+    }
+
+    /// iOS notifications are off for Catchlight while a Take has a reminder set to alert, so
+    /// that reminder will never show. Turning them off in iOS Settings used to stop every
+    /// reminder with nothing said in the app (only the diagnostics log recorded it). The
+    /// button opens Catchlight's page in iOS Settings, where notifications are turned on.
+    private var remindersSilenced: Bool {
+        ReminderScheduler.remindersSilenced(status: app.notificationStatus,
+                                            anyAlerting: vm.anyAlertingReminder)
+    }
+
+    @ViewBuilder
+    private var remindersSilencedBanner: some View {
+        if remindersSilenced {
+            HStack(spacing: 10) {
+                Image(systemName: "bell.slash")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(Color.ckAccent)
+                    .accessibilityHidden(true)
+                Text("Enable Notifications")
+                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .lineLimit(2)
+                Spacer(minLength: 8)
+                Button {
+                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                    UIApplication.shared.open(url)
+                } label: {
+                    Text("Turn on")
+                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .foregroundStyle(Color.ckAccent)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("reminders-silenced-turn-on")
+                .accessibilityLabel("Turn on notifications")
+                .accessibilityHint("Opens iOS Settings.")
             }
             .padding(.horizontal, 16)
             .frame(minHeight: 44)

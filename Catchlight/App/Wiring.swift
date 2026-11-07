@@ -249,6 +249,17 @@ enum Wiring {
                     UnverifiedCopy(id: lost.id, local: nil, cloud: lost),
                 ])
             }
+            // `--uitesting-notifications-off` raises the reminders-silenced strip: iOS
+            // notifications refused, and a Take with a reminder set to alert. Otherwise it needs
+            // notifications turned off in iOS Settings.
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-notifications-off"),
+               var first = try? store.allTakes().first {
+                first.timeReminder = TimeReminder(scheduledDate: Date().addingTimeInterval(24 * 3600),
+                                                  notificationIdentifier: first.id.uuidString)
+                try? store.upsert(first)
+                model.dailiesVM.reload()
+                model.notificationStatus = .denied
+            }
             // `--uitesting-converted` seeds a conflict whose other side another device has turned
             // into a Script (Catchlight-Core#29), for the sheet's converted card: otherwise it needs
             // two devices and a Script conversion.
