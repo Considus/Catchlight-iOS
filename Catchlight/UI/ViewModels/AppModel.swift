@@ -439,8 +439,12 @@ final class AppModel {
         do {
             try accountSecrets.storePhrase(cleaned)
         } catch {
-            // If this write fails too, the Keychain is refusing every write and nothing here
-            // can repair it; the user sees the same message and the library is untouched.
+            // If this write fails too, the Keychain holds the NEW key beside this device's old
+            // phrase, and the library is still sealed under the old key: after a relaunch the
+            // stored key opens none of it. This session still holds the old key, though, so the
+            // app keeps working and trying again (the user's natural move on this error) writes
+            // the new key and phrase and completes the switch. Only quitting before that leaves
+            // the Takes unreadable. Three Keychain failures around one success is the case left.
             try? accountSecrets.storeMasterKey(previousKey)
             return String(localized: "Couldn't secure your account on this device.")
         }
