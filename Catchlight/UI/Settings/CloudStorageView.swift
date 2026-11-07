@@ -109,6 +109,8 @@ struct CloudStorageView: View {
 
             pickerSection
 
+            recommendation
+
             finePrint
 
             divider
@@ -206,6 +208,17 @@ struct CloudStorageView: View {
                 }
             }
         }
+    }
+
+    /// iCloud Drive is the recommended default (an internal product decision). It's built into the iPhone, so it's
+    /// the one provider with no app to install and no Files extension that can regress.
+    /// A recommendation, not a requirement: every provider in the fine print still works.
+    private var recommendation: some View {
+        Text("Not sure which to choose? iCloud Drive is built into your iPhone, so there's no app to install.")
+            .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+            .foregroundStyle(Color.ckTextPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("cloud-icloud-recommendation")
     }
 
     /// Every provider except iCloud needs its own app present to expose the folder
