@@ -506,7 +506,15 @@ struct CatchlightApp: App {
                 // Settings silently kills every time-reminder, and nothing else in the app would
                 // ever tell us. Foreground is the only moment we can see it; it writes only on a
                 // CHANGE, so this can't flood despite .active firing often.
-                Task { await ReminderScheduler.recordAuthorizationStatusIfChanged() }
+                Task { @MainActor in
+                    let status = await ReminderScheduler.recordAuthorizationStatusIfChanged()
+                    #if DEBUG
+                    // The UI-test fixture sets `.denied` itself (see Wiring); the simulator's
+                    // real answer must not overwrite it.
+                    if ProcessInfo.processInfo.arguments.contains("--uitesting-notifications-off") { return }
+                    #endif
+                    app.notificationStatus = status
+                }
                 // Refresh which reminders are currently snoozed (owner 2026-06-21) so
                 // the timeline shows "SNOOZED" not "OVERDUE". Reads the OS pending queue
                 // (no key needed), so it's fine here regardless of lock state.

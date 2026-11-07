@@ -24932,6 +24932,9 @@
         }
       }
     },
+    "Enable Notifications" : {
+
+    },
     "Enabled" : {
       "localizations" : {
         "de" : {
@@ -39972,6 +39975,9 @@
           }
         }
       }
+    },
+    "Opens iOS Settings." : {
+
     },
     "Opens the Catchlight report form, prefilled with your app and iOS version." : {
       "localizations" : {
@@ -59366,6 +59372,12 @@
           }
         }
       }
+    },
+    "Turn on" : {
+
+    },
+    "Turn on notifications" : {
+
     },
     "Type + first line" : {
       "localizations" : {
