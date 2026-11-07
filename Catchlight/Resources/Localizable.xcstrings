@@ -24932,6 +24932,9 @@
         }
       }
     },
+    "Enable Notifications" : {
+
+    },
     "Enabled" : {
       "localizations" : {
         "de" : {
@@ -37620,9 +37623,6 @@
           }
         }
       }
-    },
-    "Notifications are off, so your reminders won't show." : {
-
     },
     "Notifications disabled. Opens iOS Settings." : {
       "localizations" : {
