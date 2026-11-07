@@ -214,7 +214,7 @@ struct CloudStorageView: View {
     /// the one provider with no app to install and no Files extension that can regress.
     /// A recommendation, not a requirement: every provider in the fine print still works.
     private var recommendation: some View {
-        Text("Not sure which to choose? iCloud Drive is built into your iPhone, so there's no app to install.")
+        Text("Easiest to set up is iCloud Drive, it's built in.")
             .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
             .foregroundStyle(Color.ckTextPrimary)
             .fixedSize(horizontal: false, vertical: true)
