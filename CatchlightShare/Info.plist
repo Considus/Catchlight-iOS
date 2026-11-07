@@ -39,5 +39,9 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).ShareViewController</string>
 	</dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>DMSans[opsz,wght].ttf</string>
+	</array>
 </dict>
 </plist>
