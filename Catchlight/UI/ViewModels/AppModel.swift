@@ -371,6 +371,25 @@ final class AppModel {
 
     // MARK: - Second device (Settings re-key)
 
+    /// The two Keychain writes the Second-device re-key makes, and the master key it can put
+    /// back if the second write fails. Injected so a test can fail either write without the
+    /// real Keychain or a Face ID prompt.
+    struct AccountSecrets {
+        /// The master key this device is unlocked with, from the session cache. Reading it
+        /// needs no Keychain access, so no prompt.
+        var currentMasterKey: () -> Data?
+        var storePhrase: ([String]) throws -> Void
+        var storeMasterKey: (Data) throws -> Void
+
+        static let keychain = AccountSecrets(
+            currentMasterKey: { Wiring.currentSessionKeys()?.masterKey.withUnsafeBytes { Data($0) } },
+            storePhrase: { try MnemonicKeychain.store($0) },
+            storeMasterKey: { try MasterKeyKeychain.store($0) })
+    }
+
+    var accountSecrets = AccountSecrets.keychain
+
+
     /// Re-key THIS device to the account behind `words`, in process. Destructive by
     /// necessity: to be in Settings the device is already onboarded, so its local
     /// Takes are sealed under the CURRENT master key. Installing a new key would leave
@@ -382,8 +401,10 @@ final class AppModel {
     ///
     /// Returns a user-readable error string on failure (nil on success):
     ///   • a bad phrase → inline message, NOTHING destroyed (validation is first);
-    ///   • a Keychain / store-open fault → message, and the app is left locked so a
-    ///     relaunch retries the unlock (the new key is already stored by then).
+    ///   • a Keychain fault → message, and this device keeps its own key and phrase
+    ///     (the new key is written first and put back if the phrase write fails);
+    ///   • a store-open fault → message, and the app is left locked so a relaunch
+    ///     retries the unlock (the new key and phrase are both stored by then).
     @discardableResult
     func replaceAccountForSecondDevice(_ words: [String]) -> String? {
         let cleaned = words
@@ -399,13 +420,32 @@ final class AppModel {
         catch { return String(localized: "That doesn't look right. Check the words and try again.") }
 
         // 2. Install the new secrets (overwrites the current account's key + mnemonic).
+        //    KEY FIRST, then the phrase, and if the phrase write fails the old key goes back
+        //    (R8, 2026-11-07). Phrase-first left this device on its old key with the NEW
+        //    account's phrase when the key write failed: the old phrase was gone, and Settings ›
+        //    Privacy phrase then showed words that decrypt none of this device's Takes. The old
+        //    key can be put back without a prompt because the session holds it; the old phrase
+        //    can't, so it must be the second write. (First-time setup keeps phrase-first, in
+        //    `OnboardingViewModel`: there is no old key, and `onboarded` reads the key alone.)
+        //    Without the old key in hand nothing is written, so a failure can always roll back.
+        guard let previousKey = accountSecrets.currentMasterKey() else {
+            return String(localized: "Couldn't secure your account on this device.")
+        }
         do {
-            // Phrase first — see `OnboardingViewModel.finishOnboarding`. The
-            // two secrets are separate keychain items and `onboarded` reads only the
-            // master key, so the key must never be the one that lands alone.
-            try MnemonicKeychain.store(cleaned)
-            try MasterKeyKeychain.store(masterKeyData)
+            try accountSecrets.storeMasterKey(masterKeyData)
         } catch {
+            return String(localized: "Couldn't secure your account on this device.")
+        }
+        do {
+            try accountSecrets.storePhrase(cleaned)
+        } catch {
+            // If this write fails too, the Keychain holds the NEW key beside this device's old
+            // phrase, and the library is still sealed under the old key: after a relaunch the
+            // stored key opens none of it. This session still holds the old key, though, so the
+            // app keeps working and trying again (the user's natural move on this error) writes
+            // the new key and phrase and completes the switch. Only quitting before that leaves
+            // the Takes unreadable. Three Keychain failures around one success is the case left.
+            try? accountSecrets.storeMasterKey(previousKey)
             return String(localized: "Couldn't secure your account on this device.")
         }
 
