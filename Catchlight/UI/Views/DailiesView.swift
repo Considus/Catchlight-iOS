@@ -597,6 +597,8 @@ struct DailiesView: View {
         }
         // Dock + requested a new Take (Phase 2): create it in place at the
         // Order-appropriate end and focus it.
+        // The first reminder set to alert while notifications are off raises the strip now.
+        .onChange(of: vm.anyAlertingReminder) { _, _ in app.refreshRemindersSilencedOnset() }
         .onChange(of: ui.pendingInlineNewTake) { _, take in
             guard let take else { return }
             beginNewInlineEdit(take)

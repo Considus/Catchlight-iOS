@@ -514,6 +514,7 @@ struct CatchlightApp: App {
                     if ProcessInfo.processInfo.arguments.contains("--uitesting-notifications-off") { return }
                     #endif
                     app.notificationStatus = status
+                    app.refreshRemindersSilencedOnset()
                 }
                 // Refresh which reminders are currently snoozed (owner 2026-06-21) so
                 // the timeline shows "SNOOZED" not "OVERDUE". Reads the OS pending queue
@@ -549,6 +550,8 @@ struct CatchlightApp: App {
             // launch, with no second Face ID prompt (owner 2026-06-20).
             if newState == .unlocked {
                 backgroundSync.syncNow(trigger: .appBecameActive)
+                // Activation may have read a refusal while still locked (2026-11-07).
+                app.refreshRemindersSilencedOnset()
                 // Apply any "Dismiss" taps made while locked (owner 2026-06-22) BEFORE the
                 // rebuild below — turning the reminder's alarm off in the store, so the
                 // re-arm doesn't resurrect a reminder the user just dismissed.

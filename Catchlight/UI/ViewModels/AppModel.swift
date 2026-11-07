@@ -127,16 +127,20 @@ final class AppModel {
     /// and a reminder set to alert, the timeline says reminders are silenced: turning
     /// notifications off in iOS Settings otherwise stops every reminder without a word.
     ///
-    /// The strip goes in Notice History once per onset, judged here at activation rather than
-    /// in the view: the locked placeholder store holds no Takes, so a view-side check would
-    /// clear and re-record the onset at every unlock.
-    var notificationStatus: UNAuthorizationStatus = .notDetermined {
-        didSet {
-            guard lockState == .unlocked, !needsOnboarding else { return }
-            NoticeOnset.update(.remindersSilenced,
-                               active: ReminderScheduler.remindersSilenced(
-                                   status: notificationStatus,
-                                   anyAlerting: dailiesVM.anyAlertingReminder))
+    var notificationStatus: UNAuthorizationStatus = .notDetermined
+
+    /// Put the strip in Notice History once per onset. Called at activation (after the status
+    /// is read), at unlock and when the first reminder set to alert appears, because each can
+    /// be the moment the strip first shows. Nothing is judged while locked: the placeholder
+    /// store holds no Takes. The onset ends only when notifications are allowed again, never
+    /// because the timeline is empty, so a relock and unlock don't record it a second time.
+    func refreshRemindersSilencedOnset(defaults: UserDefaults = .standard,
+                                       log: DiagnosticsLog = .shared) {
+        guard lockState == .unlocked, !needsOnboarding else { return }
+        if notificationStatus != .denied {
+            NoticeOnset.update(.remindersSilenced, active: false, defaults: defaults, log: log)
+        } else if dailiesVM.anyAlertingReminder {
+            NoticeOnset.update(.remindersSilenced, active: true, defaults: defaults, log: log)
         }
     }
 
