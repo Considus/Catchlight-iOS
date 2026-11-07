@@ -196,12 +196,17 @@ final class EncryptedTakeStoreTests: XCTestCase {
         let deleted = DispatchGroup()
         var deleteError: Error?
         store.afterTombstoneCheckForTesting = {
+            let started = DispatchSemaphore(value: 0)
             deleted.enter()
             DispatchQueue.global().async {
+                started.signal()
                 do { try timeline.delete(id: original.id) } catch { deleteError = error }
                 deleted.leave()
             }
-            // Give the delete the chance to land here, as it did before the fix. With the check
+            // Wait until the delete is under way, however late the queue starts it, so a slow
+            // start can't let the write through first and pass the test without the race.
+            started.wait()
+            // Then give it the chance to land here, as it did before the fix. With the check
             // inside the transaction it is held off until the write commits.
             _ = deleted.wait(timeout: .now() + 0.5)
         }
