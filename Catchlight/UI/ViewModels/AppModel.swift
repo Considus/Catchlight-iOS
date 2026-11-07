@@ -17,6 +17,7 @@
 
 import SwiftUI
 import Observation
+import UserNotifications
 import CatchlightCore
 
 @Observable
@@ -121,6 +122,23 @@ final class AppModel {
     /// owner chose the relaunch prompt over that surgery for a path taken at most once.
     /// Deliberately NOT persisted: a relaunch must clear it.
     private(set) var awaitingRelaunchAfterReset: Bool = false
+
+    /// iOS's notification permission for Catchlight, read at each activation. With `.denied`
+    /// and a reminder set to alert, the timeline says reminders are silenced: turning
+    /// notifications off in iOS Settings otherwise stops every reminder without a word.
+    ///
+    /// The strip goes in Notice History once per onset, judged here at activation rather than
+    /// in the view: the locked placeholder store holds no Takes, so a view-side check would
+    /// clear and re-record the onset at every unlock.
+    var notificationStatus: UNAuthorizationStatus = .notDetermined {
+        didSet {
+            guard lockState == .unlocked, !needsOnboarding else { return }
+            NoticeOnset.update(.remindersSilenced,
+                               active: ReminderScheduler.remindersSilenced(
+                                   status: notificationStatus,
+                                   anyAlerting: dailiesVM.anyAlertingReminder))
+        }
+    }
 
     /// Wipe this device and enter the terminal state. Irreversible.
     @MainActor
