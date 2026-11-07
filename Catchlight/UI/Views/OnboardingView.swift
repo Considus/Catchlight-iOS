@@ -597,7 +597,10 @@ private struct StorageChoiceStep: View {
 
                     StorageOptionCard(
                         title: "Cloud: backed up and restorable",
-                        description: "Connect a cloud folder you control. Your Takes stay encrypted, we never see them, and your 12 words are what open them again on a new phone."
+                        description: "Connect a cloud folder you control. Your Takes stay encrypted, we never see them, and your 12 words are what open them again on a new phone.",
+                        // The iCloud Drive recommendation, in the same words as Settings ›
+                        // Cloud Storage (owner 2026-11-07), so it shares that translated key.
+                        note: "Easiest to set up is iCloud Drive, it's built in."
                     ) { vm.chooseStorage(.cloud) }
                 }
 
@@ -612,6 +615,9 @@ private struct StorageChoiceStep: View {
 private struct StorageOptionCard: View {
     let title: LocalizedStringKey
     let description: LocalizedStringKey
+    /// A line under the description in the primary text colour, so a recommendation reads apart
+    /// from the explanation above it.
+    var note: LocalizedStringKey? = nil
     let action: () -> Void
     var body: some View {
         Button(action: action) {
@@ -628,6 +634,13 @@ private struct StorageOptionCard: View {
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
+                if let note {
+                    Text(note)
+                        .font(CatchlightFont.ui(.regular, size: 16, relativeTo: .body))
+                        .foregroundStyle(Color.ckTextPrimary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
@@ -639,7 +652,12 @@ private struct StorageOptionCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title). \(description)")
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var accessibilityText: Text {
+        guard let note else { return Text("\(title). \(description)") }
+        return Text("\(title). \(description)") + Text(verbatim: " ") + Text(note)
     }
 }
 
