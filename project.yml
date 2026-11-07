@@ -400,6 +400,13 @@ targets:
       # `UITheme`/`Palette` are code-defined colours, not asset-catalog entries — the same
       # reason the widget extension can share the capture intents.
       - path: Catchlight/UI/Theme/CatchlightTheme.swift
+      # DM Sans, which every `CatchlightFont.ui` call on the sheet asks for. Without the file
+      # and the `UIAppFonts` entry below, iOS quietly drew the sheet in the system face. Only
+      # DM Sans (and its licence): the sheet sets no Cormorant Garamond.
+      - path: Catchlight/Resources/Fonts/DMSans[opsz,wght].ttf
+        buildPhase: resources
+      - path: Catchlight/Resources/Fonts/OFL-DMSans.txt
+        buildPhase: resources
     info:
       # ⚠️ XcodeGen REWRITES this file from the properties below on every `generate`.
       # A hand-written CatchlightShare/Info.plist is silently replaced — that is not a
@@ -412,6 +419,8 @@ targets:
         # The name the SHARE SHEET shows. Without it iOS falls back to the executable
         # name and the row reads "CatchlightShare".
         CFBundleDisplayName: Catchlight
+        UIAppFonts:
+          - "DMSans[opsz,wght].ttf"
         # App Store validation requires an extension's version strings to MATCH the
         # app's; the widgets hit exactly this as an archive rejection on 2026-07-01,
         # and XcodeGen's defaults ("1.0"/"1") reintroduce it on every new target.
