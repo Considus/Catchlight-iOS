@@ -14,10 +14,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import device  # noqa: E402
 
 
-def phone(name, ident, udid, platform="iOS", pairing="paired"):
+def phone(name, ident, udid, platform="iOS", pairing="paired", reality="physical"):
     return {"identifier": ident,
             "deviceProperties": {"name": name},
-            "hardwareProperties": {"platform": platform, "udid": udid},
+            "hardwareProperties": {"platform": platform, "udid": udid, "reality": reality},
             "connectionProperties": {"pairingState": pairing, "tunnelState": "connected"}}
 
 
@@ -38,6 +38,18 @@ class ChooseDevice(unittest.TestCase):
             device.choose_device(devices)
         self.assertEqual(device.choose_device(devices, "b")["identifier"], "2")
         self.assertEqual(device.choose_device(devices, "u1")["identifier"], "1")
+
+    def test_simulators_are_not_phones(self):
+        # Since Xcode 27, `devicectl list devices` also lists simulators, as paired iOS devices
+        # with reality "simulated". Counted as phones, two of them stopped every command.
+        sims = [phone("iPhone 17", "3B5F", "3B5F", reality="simulated"),
+                phone("iPhone 18 Pro", "00A5", "00A5", reality="simulated")]
+        with self.assertRaisesRegex(device.Failure, "no paired iPhone"):
+            device.choose_device(sims)
+        self.assertEqual(device.choose_device(sims + [phone("Mark's iPhone", "68C8", "0000-A")])["identifier"],
+                         "68C8")
+        with self.assertRaisesRegex(device.Failure, "no single paired"):
+            device.choose_device(sims, "iphone 17")
 
     def test_part_of_a_name_matches(self):
         devices = [phone("Mark\u2019s iPhone 17", "68C8", "0000-A"), phone("Spare iPad", "11AA", "0000-B")]
