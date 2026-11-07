@@ -96,8 +96,10 @@ def choose_device(devices, wanted=None):
     `wanted` matches a device's identifier or UDID, or part of its name. Without it, the single
     paired iPhone is used, and anything else is an error rather than a guess.
     """
+    # Simulators come back too (Xcode 27 lists them as paired iOS devices), marked "simulated".
     phones = [d for d in devices
               if d.get("hardwareProperties", {}).get("platform") == "iOS"
+              and d.get("hardwareProperties", {}).get("reality") != "simulated"
               and d.get("connectionProperties", {}).get("pairingState") == "paired"]
     if wanted:
         w = wanted.lower()
