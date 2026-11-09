@@ -729,7 +729,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, TimelineRow> {
             [weak self] cell, _, row in
             guard let self else { return }
-            // Don't clip: the Iris straddles above the card (render-only overhang).
+            // Don't clip, so nothing drawn at a card's edge is cut off.
             cell.clipsToBounds = false
             cell.contentView.clipsToBounds = false
             switch row {

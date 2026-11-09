@@ -570,7 +570,9 @@ enum CatchlightLayout {
     /// The shortest a Take card may be: room for the Iris with `irisInset` above and below.
     static let cardMinHeight: CGFloat = irisInset * 2 + circleDiameter
     /// The spacing setting's gaps were tuned with the old Iris's top half hanging into them.
-    static let retiredIrisOverhang: CGFloat = circleDiameter / 2
+    /// A fixed 22, not `circleDiameter / 2`: it is what the old Iris took up, so a future
+    /// Iris resize must not change anyone's spacing.
+    static let retiredIrisOverhang: CGFloat = 22
     /// The smallest visible gap between two Take cards.
     static let minCardGap: CGFloat = 10
     /// The visible gap between two Take cards for a stored spacing setting: the setting less

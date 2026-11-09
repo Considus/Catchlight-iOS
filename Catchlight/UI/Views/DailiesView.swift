@@ -109,9 +109,6 @@ struct DailiesView: View {
     private var takeSpacing: SettingsViewModel.TakeSpacing {
         SettingsViewModel.TakeSpacing(rawValue: takeSpacingRaw) ?? .default
     }
-    /// Stack spacing + the Obie gap. `gap − 12` because each row adds 6pt top
-    /// and 6pt bottom of its own; the result is the extra space between cards.
-    private var interCardSpacing: CGFloat { max(0, cardGap - 12) }
     /// The visible gap between two cards for the user's spacing setting.
     private var cardGap: CGFloat { CatchlightLayout.visibleCardGap(for: takeSpacing.gap) }
 
