@@ -1242,10 +1242,10 @@ struct DailiesView: View {
             // Iris tap → bloom the Focus row at the tapped Iris (window coords
             // match RootView's full-screen overlay). No edit-in-place on the new
             // timeline yet (M4), so the SwiftUI row's editing branches don't apply.
-            onTapCircle: { take, irisCentre in
+            onTapCircle: { take, cardFrame in
                 // A Take waiting for a conflict choice is read-only: no Focus row.
                 guard app.ensureNotHeld(take.id) else { return }
-                ui.openFocusRow(for: take, origin: irisCentre)
+                ui.openFocusRow(for: take, cardFrame: cardFrame)
             },
             // Iris long-press toggles Obie (owner 2026-07-04): demote is not gated,
             // designate is. Mirrors DailiesView.rowContent's onLongPressCircle.
@@ -1373,12 +1373,12 @@ struct DailiesView: View {
             // shaping and its commit routes back through the draft rather than the store
             // (owner 2026-06-17; `RootView` keys that off `ui.editingTakeID`). Drop the keyboard
             // first, exactly as the old timeline's row does before blooming the fan.
-            onTapIris: { irisCentre in
+            onTapIris: { cardFrame in
                 ringReturnFocus = editFocusedBlockID
                 editFocusedBlockID = nil
                 // No spotlight card — this IS the editor (owner 2026-07-16). The fan still blooms
                 // at the Iris; it just doesn't redraw the Take as a read card over the veil.
-                ui.openFocusRow(for: editDraft ?? Take(), origin: irisCentre, showsCard: false)
+                ui.openFocusRow(for: editDraft ?? Take(), cardFrame: cardFrame, showsCard: false)
             }
         )
     }
@@ -1747,7 +1747,7 @@ struct DailiesView: View {
             // reminder, task glyph update as you shape) — owner point 6, contextual
             // features stay live. Other rows render their stored state.
             take: isEditingThis ? (editDraft ?? take) : take,
-            onTapCircle: { irisCentre in
+            onTapCircle: { cardFrame in
                 // While another Take is focused, any tap outside it commits and exits.
                 if editingActive && !isEditingThis { saveInlineEdit(); return }
                 // Release the editor's keyboard BEFORE the Focus row opens (owner
@@ -1767,7 +1767,7 @@ struct DailiesView: View {
                 // editor the context, and the spotlight's READ card over it reads as the Take
                 // shrinking (owner 2026-07-16; the new timeline's editing card behaves the same).
                 ui.openFocusRow(for: isEditingThis ? (editDraft ?? take) : take,
-                                    origin: irisCentre, showsCard: !isEditingThis)
+                                    cardFrame: cardFrame, showsCard: !isEditingThis)
             },
             onLongPressCircle: {
                 // Iris long-press is disabled during editing (discard moved to the

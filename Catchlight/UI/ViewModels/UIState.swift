@@ -75,7 +75,9 @@ final class UIState {
 
     // Focus row.
     var focusRowTake: Take?
-    var focusRowOrigin: CGPoint = .zero
+    /// The tapped Take's card in window coordinates (`.zero` when unknown). The Focus row
+    /// derives its hub from it and runs along its bottom edge.
+    var focusRowCardFrame: CGRect = .zero
     var isFocusRowPresented: Bool { focusRowTake != nil }
 
     // Take editor — edit-in-place (the top-anchored overlay editor was retired in
@@ -335,14 +337,14 @@ final class UIState {
     /// the spotlight would draw a READ card (shorter than the editing card, and Preview-capped)
     /// over it — which reads as the Take shrinking (owner 2026-07-16).
     ///
-    /// This used to be inferred in `RootView` from `focusRowOrigin != .zero`, i.e. "a real
+    /// This used to be inferred in `RootView` from a non-zero Iris origin, i.e. "a real
     /// Iris origin ⇒ came from the timeline". That proxy broke when the EDITING card grew a
     /// tappable Iris of its own (M5b): a real origin, but the editor is the context. Explicit now.
     var focusRowShowsCard = false
 
-    func openFocusRow(for take: Take, origin: CGPoint = .zero, showsCard: Bool = true) {
-        focusRowOrigin = origin
-        focusRowShowsCard = showsCard && origin != .zero
+    func openFocusRow(for take: Take, cardFrame: CGRect = .zero, showsCard: Bool = true) {
+        focusRowCardFrame = cardFrame
+        focusRowShowsCard = showsCard && cardFrame != .zero
         withAnimation(Self.gatedFanFade) { focusRowTake = take }
     }
 

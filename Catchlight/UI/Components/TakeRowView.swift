@@ -18,12 +18,12 @@ import CatchlightCore
 
 struct TakeRowView: View {
     let take: Take
-    /// Tap on the Iris. The `CGPoint` is the Iris's centre in WINDOW (global)
-    /// coordinates, captured by the tap recognizer, so the caller can bloom the
-    /// Focus row in place at the tapped Iris rather than at the screen centre
-    /// (section 8). The window coordinate space matches the full-screen Focus row
-    /// overlay's space in RootView.
-    var onTapCircle: (CGPoint) -> Void = { _ in }
+    /// Tap on the Iris. The `CGRect` is the card's frame in WINDOW coordinates: the
+    /// tap recognizer reports the Iris centre there, and the card's measured size
+    /// completes it (`FocusRowView.cardFrame`). The caller blooms the Focus row along
+    /// that card's bottom edge. The window coordinate space matches the full-screen
+    /// Focus row overlay's space in RootView.
+    var onTapCircle: (CGRect) -> Void = { _ in }
     var onLongPressCircle: () -> Void = {}
     var onTapText: () -> Void = {}
     /// Optional row actions (2026-06-10): when supplied, a context menu on the
@@ -266,6 +266,7 @@ struct TakeRowView: View {
         // the timeline cell alone was rebuilt.
         ZStack(alignment: .topLeading) {
             cardColumn
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { cardSize = $0 }
                 .offset(x: cardSwipeOffset)
                 .zIndex(0)
             // Gestures sit above the drawing, in their own 44pt frame, so the drawing
@@ -277,6 +278,9 @@ struct TakeRowView: View {
         }
         .padding(.vertical, 6)
     }
+
+    /// The card's measured size, for the frame `onTapCircle` reports.
+    @State private var cardSize: CGSize = .zero
 
     /// The Iris drawing, part of the card so the long-press menu's lifted preview shows it
     /// (owner, slice 1: the Iris vanished while a card was held). Pure drawing: no hit
@@ -309,7 +313,7 @@ struct TakeRowView: View {
         .overlay(
             TapAndLongPressRecognizer(
                 minimumDuration: 0.45,
-                onTap: onTapCircle,
+                onTap: { onTapCircle(FocusRowView.cardFrame(irisCentre: $0, cardSize: cardSize)) },
                 onLongPress: onLongPressCircle
             )
         )

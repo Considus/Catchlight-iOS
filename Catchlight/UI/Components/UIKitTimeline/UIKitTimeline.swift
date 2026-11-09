@@ -90,9 +90,9 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// Swipe actions (native), wired to the host's entitlement-gated Take actions.
     var onToggleDone: (Take) -> Void = { _ in }
     var onDelete: (Take) -> Void = { _ in }
-    /// Iris tap → open the Focus row at the given WINDOW-coord centre; long-press
+    /// Iris tap → open the Focus row on the tapped card (its WINDOW-coord frame); long-press
     /// → toggle Obie. Wired to the same `ui`/`vm` the SwiftUI timeline uses.
-    var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
+    var onTapCircle: (Take, CGRect) -> Void = { _, _ in }
     var onLongPressCircle: (Take) -> Void = { _ in }
     /// Card context-menu actions (resting-row set). Mark-done/Delete reuse the swipe
     /// closures above; these three are the menu-only extras.
@@ -223,12 +223,12 @@ struct TimelineReadCell: View {
     /// to be threaded down. The rebuild simply never passed it, and every snoozed Take on the new
     /// timeline said OVERDUE (found 2026-07-16 while re-anchoring the Feature Register).
     var isSnoozed: Bool = false
-    /// Iris tap → the CGPoint is the Iris centre in WINDOW (global) coords, so the
-    /// host can bloom the Focus row in place (matches `RootView`'s full-screen
-    /// `ignoresSafeArea` overlay space). Long-press → toggle Obie. Both reuse the
+    /// Iris tap → the CGRect is the card's frame in WINDOW (global) coords, so the
+    /// host can bloom the Focus row in place along its bottom edge (matches `RootView`'s
+    /// full-screen `ignoresSafeArea` overlay space). Long-press → toggle Obie. Both reuse the
     /// existing `TapAndLongPressRecognizer` from `TakeRowView` (built to survive the
     /// move to a UIKit-hosted cell).
-    var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
+    var onTapCircle: (Take, CGRect) -> Void = { _, _ in }
     var onLongPressCircle: (Take) -> Void = { _ in }
     /// Card context-menu actions (mirrors `TakeRowView.rowMenuItems`, resting variant).
     /// Mark-done / Delete reuse the swipe closures; the menu-delete is thus recurring-
@@ -252,6 +252,8 @@ struct TimelineReadCell: View {
 
     @Environment(\.colorScheme) private var scheme
     private let d = CatchlightLayout.circleDiameter
+    /// The card's measured size, for the frame `onTapCircle` reports.
+    @State private var cardSize: CGSize = .zero
 
     // MARK: Iris
     //
@@ -270,7 +272,7 @@ struct TimelineReadCell: View {
             .overlay(
                 TapAndLongPressRecognizer(
                     minimumDuration: 0.45,
-                    onTap: { onTapCircle(take, $0) },
+                    onTap: { onTapCircle(take, FocusRowView.cardFrame(irisCentre: $0, cardSize: cardSize)) },
                     onLongPress: { onLongPressCircle(take) }
                 )
             )
@@ -311,6 +313,7 @@ struct TimelineReadCell: View {
                         .animation(.easeInOut(duration: 0.4), value: isSpotlightTarget)
                         .allowsHitTesting(false)
                 )
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { cardSize = $0 }
                 // The Iris, inside the card's top-left, drawn BY the card so the long-press
                 // menu's lifted preview carries it (owner, slice 1: it vanished while a card
                 // was held). Pure drawing; `irisHitTarget` keeps the gesture and VoiceOver.
@@ -451,7 +454,7 @@ struct TimelineSwipeCell: View {
     @Bindable var swipeState: TimelineSwipeState
     let onToggleDone: (Take) -> Void
     let onDelete: (Take) -> Void
-    var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
+    var onTapCircle: (Take, CGRect) -> Void = { _, _ in }
     var onLongPressCircle: (Take) -> Void = { _ in }
     var onSetImportant: (Take) -> Void = { _ in }
     var onMakeObie: (Take) -> Void = { _ in }
@@ -577,7 +580,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     var bottomInset: CGFloat = 0
     var onToggleDone: (Take) -> Void = { _ in }
     var onDelete: (Take) -> Void = { _ in }
-    var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
+    var onTapCircle: (Take, CGRect) -> Void = { _, _ in }
     var onLongPressCircle: (Take) -> Void = { _ in }
     var onSetImportant: (Take) -> Void = { _ in }
     var onMakeObie: (Take) -> Void = { _ in }
