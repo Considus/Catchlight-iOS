@@ -15,7 +15,7 @@
 //
 //  TRIED AND REMOVED (device round 4):
 //    • SHAPING PILLS (Obie / Important / Task). Built as asked, then cut on sight: "too
-//      off-brand". Shaping stays in the app, where the Focus ring does it properly.
+//      off-brand". Shaping stays in the app, where the Focus row does it properly.
 //
 //  RICH LINK PREVIEWS are IN, and were briefly removed by mistake — "no rich text/image on URLs"
 //  was a bug report, read as a removal request. Restored with the actual fault fixed; see
