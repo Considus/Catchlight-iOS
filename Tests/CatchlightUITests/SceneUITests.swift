@@ -55,13 +55,20 @@ final class SceneUITests: XCTestCase {
                                 file: StaticString = #filePath, line: UInt = #line) {
         let deadline = Date().addingTimeInterval(3)
         var drawn = (0, 0, 0)
+        var shot = XCUIScreen.main.screenshot()
         let e = (Int(expected >> 16 & 0xFF), Int(expected >> 8 & 0xFF), Int(expected & 0xFF))
         repeat {
             let point = CGPoint(x: sheet.frame.minX + 6, y: sheet.frame.minY + sheet.frame.height / 3)
-            drawn = pixel(at: point, of: XCUIScreen.main.screenshot().image)
+            shot = XCUIScreen.main.screenshot()
+            drawn = pixel(at: point, of: shot.image)
             if abs(drawn.0 - e.0) <= 3 && abs(drawn.1 - e.1) <= 3 && abs(drawn.2 - e.2) <= 3 { return }
             Thread.sleep(forTimeInterval: 0.2)
         } while Date() < deadline
+        // Keep what the screen showed, so a failure can be read from the result bundle.
+        let attachment = XCTAttachment(screenshot: shot)
+        attachment.name = "\(label) mismatch"
+        attachment.lifetime = .keepAlways
+        add(attachment)
         XCTFail("\(label): the sheet's margin drew \(drawn), expected \(e)", file: file, line: line)
     }
 
