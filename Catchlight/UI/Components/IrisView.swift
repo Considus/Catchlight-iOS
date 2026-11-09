@@ -131,7 +131,8 @@ struct IrisView: View {
             let s = min(size.width, size.height) / 44
             let outline = Self.outline(scale: s)
 
-            context.fill(outline, with: .color(.ckCard))
+            // The fill matches the card the Iris sits on: Important and Obie cards are raised.
+            context.fill(outline, with: .color(take.isImportant ? .ckCardObieSurface : .ckCard))
 
             for (index, kind) in IrisLight.allCases.enumerated() {
                 let isLit = lit[kind] == true

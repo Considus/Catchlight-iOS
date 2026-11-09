@@ -207,7 +207,7 @@ struct TimelineCardHitShape: Shape {
     func path(in rect: CGRect) -> Path {
         let live = CGRect(x: rect.minX, y: rect.minY,
                           width: max(0, rect.width - trailingInset), height: rect.height)
-        return Path(roundedRect: live, cornerRadius: 12, style: .continuous)
+        return Path(roundedRect: live, cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
     }
 }
 
@@ -306,7 +306,7 @@ struct TimelineReadCell: View {
                 // not a notification (same treatment as the pinned Obie's flash in
                 // DailiesView.rowContent). Render-only.
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                         .fill(Color.ckEmber.opacity(isSpotlightTarget ? 0.18 : 0))
                         .animation(.easeInOut(duration: 0.4), value: isSpotlightTarget)
                         .allowsHitTesting(false)

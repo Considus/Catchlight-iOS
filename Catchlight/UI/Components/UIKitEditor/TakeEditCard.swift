@@ -168,14 +168,14 @@ struct TakeEditCard: View {
                                 bottom: CatchlightLayout.cardPadding,
                                 trailing: CatchlightLayout.cardPadding))
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                     .fill(style.surface)
                     // A Take-card carries the same lift EVERYWHERE it is drawn (owner 2026-07-16).
                     // See the standard on `TakeCardStyle`.
                     .daylightCardShadow(strong: style.isOverdue && !draft.isObie)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                     .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
             )
 

@@ -336,7 +336,7 @@ struct TakeRowView: View {
                 .contextMenu { rowMenuItems }
         } else {
             TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: linksInteractive)
-                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous))
                 .onTapGesture { onTapText() }
                 // iOS's standard long-press lift: the card rises cleanly (its own
                 // shape + shadow, no platter, no duplicate). The Iris is a separate
@@ -739,14 +739,14 @@ struct TakeCardSurface: View {
                             trailing: CatchlightLayout.cardTextTrailingPad + trailingContentInset))
         .frame(maxWidth: .infinity, minHeight: CatchlightLayout.cardMinHeight, alignment: .topLeading)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                 .fill(style.surface)
                 // Daylight elevation only; Night is tonal (surface lighter than
                 // bg). Overdue gets the slightly stronger shadow.
                 .daylightCardShadow(strong: style.isOverdue && !take.isObie)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                 .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
         )
         // The label lane hugs the card's left edge, in the `irisInset` strip left of

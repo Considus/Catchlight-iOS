@@ -115,7 +115,6 @@ enum SceneToken {
 extension Color {
     static let ckGround = Color(uiColor: SceneToken.ground)
     static let ckCard = Color(uiColor: SceneToken.card)
-    static let ckRaised = Color(uiColor: SceneToken.raised)
     static let ckLine = Color(uiColor: SceneToken.line)
     static let ckLit = Color(uiColor: SceneToken.lit)
 }
@@ -133,10 +132,9 @@ enum UITheme {
     static let surface       = SceneToken.card
     static let textPrimary   = SceneToken.text
     static let textSecondary = SceneToken.muted
-    /// Receded "done" grey — Fog @76% (Night) / #746E68 (Daylight). Mirrors `ckTextComplete`.
-    /// It is text, so it clears WCAG 4.5:1 on every surface it sits on (owner 2026-10-03):
-    /// Night 5.22 on a card, 4.58 on an Obie; Daylight 5.03 on a card, 4.59 on Paper. Fog at any
-    /// opacity can't pass on White, hence a solid grey in Daylight. `DoneTextContrastTests` holds it.
+    /// "Done" text. Mirrors `ckTextComplete`. It is text, so it clears WCAG 4.5:1 on every
+    /// surface it sits on (owner 2026-10-03); `DoneTextContrastTests` measures it against the
+    /// Scene tokens.
     static let textComplete  = SceneToken.muted
     /// Raw Ember FILL (both modes) — the Add droplet / Restore fill.
     static let add           = SceneToken.accent
