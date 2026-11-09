@@ -456,7 +456,8 @@ struct RootView: View {
                             ui.closeFocusRow()
                         }
                     },
-                    onDismiss: { ui.closeFocusRow() }
+                    onDismiss: { ui.closeFocusRow() },
+                    onReminderPickerShownChange: { ui.focusRowPickerShown = $0 }
                 )
             }
             .ignoresSafeArea()
