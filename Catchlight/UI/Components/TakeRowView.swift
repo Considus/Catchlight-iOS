@@ -2,8 +2,8 @@
 //  TakeRowView.swift
 //  Catchlight (iOS app target) — Phase 6 UI
 //
-//  A single Take on the timeline: the quadrant circle (aligned to the spine) on the
-//  left, the Take's first line of text on the right. Reminder Takes show their alarm
+//  A single Take on the timeline: the Iris in the card's top-left, the Take's
+//  first line of text on the right. Reminder Takes show their alarm
 //  time as a small Fog label beside the circle. Gestures:
 //    • tap circle      → open the focus-ring fan (activity-type selector)
 //    • long-press circle → designate as Obie (caller handles replacement confirm)
@@ -57,18 +57,17 @@ struct TakeRowView: View {
     /// editor's footer Iris did (tap = open the Focus ring), so the test contract and
     /// the semantic carry over.
     var irisIdentifier: String = "take-iris"
-    /// Horizontal swipe offset applied to the CARD only (not the Iris). The Iris
-    /// stays anchored on the spine so the timeline "wire" is unbroken while a Take
-    /// is swiped for its actions — and so the future rings-on-a-wire still reads.
-    /// Driven by `SwipeActionRow`; 0 everywhere the row isn't swipeable.
+    /// Horizontal swipe offset applied to the card and the Iris inside it, so the
+    /// Iris moves with its card. Driven by `SwipeActionRow`; 0 everywhere the row
+    /// isn't swipeable.
     var cardSwipeOffset: CGFloat = 0
     /// This Take's reminder currently has a pending snoozed re-nudge — the edge reads
     /// "SNOOZED" instead of "OVERDUE" (owner 2026-06-21). Defaults false everywhere the
     /// snooze state isn't tracked.
     var isSnoozed: Bool = false
     /// Edit-in-place (2026-06-17): when supplied, the read-only `TakeCardSurface` in
-    /// the card slot is replaced by this live editor, IN POSITION — the Iris, spine,
-    /// and card geometry are untouched (owner point 6). nil everywhere a row is at
+    /// the card slot is replaced by this live editor, IN POSITION: the Iris and card
+    /// geometry are untouched (owner point 6). nil everywhere a row is at
     /// rest. The editor owns its own gestures + accessibility, so the row's tap /
     /// combined-element wrapping is dropped while editing.
     /// Whether detected URLs in this row's resting card are tappable (owner 2026-06-27).
@@ -251,57 +250,40 @@ struct TakeRowView: View {
     }
 
     var body: some View {
-        // Section 5 (HiFi v1.7 .card) — the text column rides a card SURFACE; the
-        // Iris stays on the spine to its left, overlapping the card's leading
-        // edge (`position:absolute; left:6px` in v1.7). The Iris is drawn on TOP
-        // so its long-press still wins hit-testing; the card's text taps clear
-        // the 44pt Iris touch frame.
-        // Explicit `.zIndex` pins the paint order (card < occluder < Iris < wire <
-        // dots). Without it, when the card REPAINTS on a state change — e.g. the
-        // border recolouring on "mark done"
-        // — SwiftUI could momentarily reshuffle these siblings, and the freshly drawn
-        // card painted over the Iris's lower half (which overlaps the card's top-left
-        // corner) for a beat before the Iris re-composited. Pinning the order keeps
-        // the Iris above the card through any redraw (owner 2026-06-18).
+        // The Iris sits inside the card's top-left, `irisInset` from its top and leading
+        // edges, and moves with the card when it swipes. It is drawn on TOP of the card so
+        // its long-press still wins hit-testing; the card's text column starts at
+        // `cardTextLeadingPad`, clear of the Iris's 44pt touch frame.
+        // Explicit `.zIndex` pins the paint order (card < Iris < touch frame). Without it,
+        // when the card REPAINTS on a state change (e.g. the border recolouring on "mark
+        // done") SwiftUI could momentarily reshuffle these siblings and paint the card over
+        // the Iris for a beat (owner 2026-06-18).
         ZStack(alignment: .topLeading) {
-            // The card fills from the row's leading edge, which DailiesView places
-            // `cardSpineInset` (24) left of the spine — so the opaque card covers
-            // the spine and the Iris nests into its top-left corner (HiFi §1). The
-            // Iris is offset right to centre on the spine and UP by its radius to
-            // STRADDLE the card's top edge (HiFi `.iw top:-18`): half sits in the
-            // gap above, half over the corner; the card's 24pt top pad clears the
-            // lower half so text never collides with it. Both offsets derive from
-            // `cardSpineInset` + `circleDiameter`, so the card stays put when the
-            // Iris is resized (previously the card was padded by the Iris diameter,
-            // so enlarging the Iris pushed it right and narrowed it).
             cardColumn
-                // Only the card slides on swipe; the Iris (below) keeps its spine
-                // position so the wire stays threaded through it.
                 .offset(x: cardSwipeOffset)
                 .zIndex(0)
-            // The Iris on the line, in ONE view shared with the recycling timeline cell.
-            // It keeps its spine position (no `cardSwipeOffset`) so it stays on the line
-            // while the card swipes out from under it.
+            // The Iris, drawn by the same view the recycling timeline cell uses.
             //
             // 🚨 THIS ROW IS THE PINNED OBIE. It is easy to read as dead code — nothing
             // but its own previews constructs it directly — but `DailiesView.rowContent`
             // builds it for the Obie, which is why the Obie was once left behind when
             // the timeline cell alone was rebuilt.
-            TimelineIris(take: take)
-                .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
-                        y: -CatchlightLayout.circleDiameter / 2)
+            IrisView(take: take)
+                .allowsHitTesting(false)
+                .offset(x: CatchlightLayout.irisInset + cardSwipeOffset,
+                        y: CatchlightLayout.irisInset)
                 .zIndex(2)
             // Gestures sit above the drawing, in their own 44pt frame, so the drawing
             // cannot swallow the tap or produce a second VoiceOver element.
             irisColumn
-                .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
-                        y: -CatchlightLayout.circleDiameter / 2)
+                .offset(x: CatchlightLayout.irisInset + cardSwipeOffset,
+                        y: CatchlightLayout.irisInset)
                 .zIndex(3)
         }
         .padding(.vertical, 6)
     }
 
-    /// The Iris circle on the spine — a 44pt disc filling its 44pt touch frame.
+    /// The Iris's touch frame, 44pt, matching the Iris it sits over.
     /// Gestures are UIKit recognizers (2026-06-10): SwiftUI's `LongPressGesture`
     /// (plain or simultaneous, with or without a Button) never fires for
     /// synthesized presses inside this ScrollView on the current runtime — while
@@ -310,7 +292,7 @@ struct TakeRowView: View {
     /// original exclusive semantics.
     private var irisColumn: some View {
         ZStack {
-            // Touch + VoiceOver only. `TimelineIris` above draws the Iris.
+            // Touch + VoiceOver only. `IrisView` above draws the Iris.
             Color.clear
         }
         .frame(width: CatchlightLayout.circleDiameter,
@@ -748,26 +730,27 @@ struct TakeCardSurface: View {
                     .padding(.top, 2)
             }
         }
-        // v1.7 .card padding: 24px top (clears the overlapping Iris) / 14 sides /
-        // 14 bottom. Leading uses the shared token so the DAILIES heading + month
-        // markers align to this same text column (owner 2026-06-16).
-        .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
-                            bottom: 14,
+        // Card padding: `cardPadding` top, bottom and trailing; the leading pad clears
+        // the Iris in the top-left, and the DAILIES heading + month markers align to this
+        // same text column (owner 2026-06-16). The minimum height fits the Iris.
+        .padding(EdgeInsets(top: CatchlightLayout.cardPadding,
+                            leading: CatchlightLayout.cardTextLeadingPad,
+                            bottom: CatchlightLayout.cardPadding,
                             trailing: CatchlightLayout.cardTextTrailingPad + trailingContentInset))
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.cardMinHeight, alignment: .topLeading)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(style.surface)
                 // Daylight elevation only; Night is tonal (surface lighter than
                 // bg). Overdue gets the slightly stronger shadow.
                 .daylightCardShadow(strong: style.isOverdue && !take.isObie)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
         )
-        // The label lane hugs the card's left edge, in the clear strip before the
-        // Iris (owner 2026-06-18). Rides with the card (incl. swipe).
+        // The label lane hugs the card's left edge, in the `irisInset` strip left of
+        // the Iris (owner 2026-06-18). Rides with the card (incl. swipe).
         .overlay(alignment: .leading) {
             TakeLabelLane(content: laneContent)
         }

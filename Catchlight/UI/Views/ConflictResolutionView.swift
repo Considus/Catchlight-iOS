@@ -348,7 +348,7 @@ struct ConflictResolutionView: View {
                     // Adaptive accent (ember Night / #856539 Daylight) so the 2pt
                     // selection border clears 3:1 contrast on the near-white Daylight
                     // panel — raw ckEmber failed it (owner 2026-06-29).
-                    .strokeBorder(selected ? Color.ckAccent : Color.ckSpine,
+                    .strokeBorder(selected ? Color.ckAccent : Color.ckLine,
                                   lineWidth: selected ? 2 : 1)
             )
             .daylightCardShadow()   // DS §4.1 — same lift as Take cards (owner 2026-07-02)

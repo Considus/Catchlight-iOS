@@ -4,7 +4,7 @@
 //
 //  A slim "label lane" hugging a Take card's LEFT edge — the owner's reusable
 //  container for at-a-glance labels. It occupies the strip between the card's left
-//  edge and the Iris (so the Iris + spine always stay in the clear), runs the card's
+//  edge and the Iris (so the Iris always stays in the clear), runs the card's
 //  height, and mirrors the card's left corner radii on its right side (a slim rounded
 //  pill, not cut flat).
 //
@@ -35,8 +35,8 @@ struct TakeLabelLane: View {
 
     var content: Content
     /// Lane width = the strip from the card's left edge to the Iris's left edge
-    /// (`cardSpineInset` − Iris radius), so the lane never reaches the Iris/spine.
-    var width: CGFloat = CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2
+    /// (`irisInset`), so the lane never reaches the Iris.
+    var width: CGFloat = CatchlightLayout.irisInset
     /// The colour chip's inset — equal on left, top, and bottom (owner 2026-06-18).
     static let chipGap: CGFloat = 4
 

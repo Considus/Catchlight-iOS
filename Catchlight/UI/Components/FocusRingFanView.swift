@@ -371,9 +371,9 @@ struct FocusRingFanView: View {
     // overlay/window space) using the same layout constants DailiesView lays the row
     // out with, so the lit copy lands exactly over the real (now-dimmed) card.
 
-    /// Card leading edge: the Iris centre is `cardSpineInset` right of it (the Iris
+    /// Card leading edge: the Iris centre is `cardLeadingOffset` right of it (the Iris
     /// nests into the card's top-left corner, on the spine).
-    private var focusCardLeading: CGFloat { hubCentre.x - CatchlightLayout.cardSpineInset }
+    private var focusCardLeading: CGFloat { hubCentre.x - CatchlightLayout.cardLeadingOffset }
     /// Card top edge: the Iris straddles it, so its centre sits exactly there.
     private var focusCardTop: CGFloat { hubCentre.y }
     /// Card width: from the leading edge out to the row's 20pt trailing margin.
@@ -480,7 +480,7 @@ struct FocusRingFanView: View {
                 // non-interactive, so a tap here falls through to the veil (commit &
                 // close), exactly like tapping any other dimmed area. Positioned from
                 // `hubCentre`: the Iris centre sits on the card's top edge and is
-                // `cardSpineInset` right of the card's leading edge, and the card runs
+                // `cardLeadingOffset` right of the card's leading edge, and the card runs
                 // to the 20pt trailing margin — the same geometry DailiesView lays the
                 // row out with. Drawn BEFORE the marks so they still pass above it.
                 if showsFocusCard, focusCardWidth > 0 {

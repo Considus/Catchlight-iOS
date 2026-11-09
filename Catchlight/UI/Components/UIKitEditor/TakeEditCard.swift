@@ -12,8 +12,8 @@
 //                            UPWARD, carrying the owner-tuned descent/drop geometry.
 //
 //  Who uses what:
-//    - `DailiesView`       → `KeyboardTakeEditor` (Iris on the spine)
-//    - `StoryboardView`    → `KeyboardTakeEditor` (no Iris — no spine there, owner 2026-06-19)
+//    - `DailiesView`       → `KeyboardTakeEditor` (Iris in the card's top-left)
+//    - `StoryboardView`    → `KeyboardTakeEditor` (no Iris there, owner 2026-06-19)
 //    - `LockedCaptureView` → `TakeEditCard` directly, TOP-anchored under its header (proven
 //                            stable; the lock-screen capture has no timeline to sit against).
 //
@@ -42,8 +42,8 @@ struct TakeEditCard: View {
     var minContent: CGFloat = 0
     /// Floor for the editor frame, so a one-line Take is still a proper editing surface.
     var minEditorHeight: CGFloat = 60
-    /// The Iris on the card's spine. Dailies yes; the Storyboard and the lock-screen capture have
-    /// no spine.
+    /// The Iris in the card's top-left. Dailies yes; the Storyboard and the lock-screen capture
+    /// have none.
     var showsIris: Bool = false
 
     var onOpenAngle: (() -> Void)? = nil
@@ -88,16 +88,18 @@ struct TakeEditCard: View {
     /// A cap change bigger than this re-applies the editor height; smaller is keyboard settling.
     static let capJumpThreshold: CGFloat = 12
 
-    /// The card's own chrome above and below the `BlockEditor` frame: the 24pt top pad (which
-    /// clears the overlapping Iris) + the 14pt bottom pad, PLUS the "Created on" stamp row when
-    /// the setting shows it (11pt text + its 6pt top pad ≈ 20).
+    /// The card's own chrome above and below the `BlockEditor` frame: the `cardPadding` top and
+    /// bottom pads, PLUS the "Created on" stamp row when the setting shows it (11pt text + its
+    /// 6pt top pad ≈ 20).
     ///
     /// A host that computes a grow-up cap must discount THIS, not a guess: `KeyboardTakeEditor`
-    /// carried a flat 38 — exactly the stamp-OFF value — so with the stamp on (Editor or Always,
+    /// carried a flat 38, exactly the stamp-OFF value at the time, so with the stamp on (Editor or Always,
     /// and Always is the busier default) the card came out 20pt taller than its own cap intended
     /// and its top overshot the limit by that much. Half of the "Iris behind the fade" report
     /// (owner 2026-08-11); `irisReserve` is the other half.
-    static func chrome(showsStamp: Bool) -> CGFloat { showsStamp ? 58 : 38 }
+    static func chrome(showsStamp: Bool) -> CGFloat {
+        CatchlightLayout.cardPadding * 2 + (showsStamp ? 20 : 0)
+    }
 
     /// The content height the frame should honour — the floor while short, the real content after.
     private var effectiveContent: CGFloat { max(editorContentHeight, minContent) }
@@ -105,7 +107,7 @@ struct TakeEditCard: View {
     var body: some View {
         let style = TakeCardStyle(take: draft, scheme: scheme)
         let d = CatchlightLayout.circleDiameter
-        let inset = CatchlightLayout.cardSpineInset
+        let irisInset = CatchlightLayout.irisInset
         return ZStack(alignment: .topLeading) {
             VStack(alignment: .leading, spacing: 0) {
                 BlockEditor(
@@ -159,10 +161,12 @@ struct TakeEditCard: View {
                         .padding(.top, 6)
                 }
             }
-            // v1.7 card text inset: 24 top (clears the overlapping Iris) / text column leading /
-            // 14 bottom+trailing — matches TakeCardSurface, so read↔edit don't shift.
-            .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
-                                bottom: 14, trailing: 14))
+            // Card text inset: `cardPadding` top, bottom and trailing / text column leading,
+            // clear of the Iris. Matches TakeCardSurface, so read↔edit don't shift.
+            .padding(EdgeInsets(top: CatchlightLayout.cardPadding,
+                                leading: CatchlightLayout.cardTextLeadingPad,
+                                bottom: CatchlightLayout.cardPadding,
+                                trailing: CatchlightLayout.cardPadding))
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(style.surface)
@@ -177,10 +181,11 @@ struct TakeEditCard: View {
 
             if showsIris {
                 // The SAME Iris the timeline rows use, from the same view. This card is
-                // a row's stand-in: identical spine inset, identical card padding, Iris
-                // straddling the card's top edge in the same place.
-                TimelineIris(take: draft)
-                    .offset(x: inset - d / 2, y: -d / 2)
+                // a row's stand-in: identical card padding, Iris inside the card's
+                // top-left in the same place.
+                IrisView(take: draft)
+                    .allowsHitTesting(false)
+                    .offset(x: irisInset, y: irisInset)
                 // The touch and VoiceOver surface, separate from the drawing.
                 Color.clear
                     .frame(width: d, height: d)
@@ -213,7 +218,7 @@ struct TakeEditCard: View {
                     // V10 (audit 2026-08): announce as a button like the Obie row's
                     // Iris — the same control must not read differently per host.
                     .accessibilityAddTraits(.isButton)
-                    .offset(x: inset - d / 2, y: -d / 2)
+                    .offset(x: irisInset, y: irisInset)
             }
         }
     }
@@ -241,9 +246,9 @@ struct KeyboardTakeEditor: View {
     @Binding var draft: Take
     @Binding var focusedBlockID: UUID?
 
-    /// The Iris on the card's spine. Dailies yes; the Storyboard has no spine (owner 2026-06-19).
+    /// The Iris in the card's top-left. Dailies yes; the Storyboard has none (owner 2026-06-19).
     var showsIris: Bool = true
-    /// The card's left edge — the host's spine column (`spineX - cardSpineInset`).
+    /// The card's left edge (`spineX - cardLeadingOffset`).
     var leadingInset: CGFloat
     /// Passed through to the card's `BlockEditor` (audit 2026-08, V31).
     var axHidden: Bool = false
@@ -308,27 +313,23 @@ struct KeyboardTakeEditor: View {
         return span * (1 - phase)
     }
 
-    /// How much room above the card's TOP EDGE the Iris needs. It straddles that edge — `TakeEditCard`
-    /// offsets it by `-circleDiameter / 2`, so half the Iris is drawn ABOVE the card and the card's
-    /// top is NOT the topmost pixel. The cap below treated it as if it were, so at full extension the
-    /// card stopped at the limit and the Iris carried on into the pinned heading.
+    /// How far below the cap's limit the card's TOP EDGE stops, so the Iris inside it keeps
+    /// `irisHeadroom` clear of the pinned heading.
     ///
     /// That heading is drawn AFTER this card in `DailiesView`'s ZStack and takes taps across its whole
     /// frame (`contentShape` + `timelineBackgroundTap`), so an overlapped Iris isn't merely hidden
-    /// under the fade — it's dead: a tap meant for the Focus ring commits the edit instead. Hence a
-    /// hard reserve rather than a cosmetic nudge (owner 2026-08-11).
+    /// under the fade, it's dead: a tap meant for the Focus ring commits the edit instead (owner
+    /// 2026-08-11). The Iris sits `irisInset` below the card's top, so the card itself needs only
+    /// the rest of the headroom.
     private var irisReserve: CGFloat {
-        showsIris ? CatchlightLayout.circleDiameter / 2 + Self.irisHeadroom : 0
+        showsIris ? max(0, Self.irisHeadroom - CatchlightLayout.irisInset) : 0
     }
 
-    /// Breathing room ABOVE the Iris, beyond its own radius (owner 2026-08-11, device round 2).
-    ///
-    /// The radius alone is what stops the Iris disappearing under the heading — that was the bug.
-    /// This is a separate, purely visual allowance: with the radius only, the Iris cleared the
-    /// fade but sat hard against it and read as crowded ("sits a little high still"). An
-    /// OWNER-TUNED number like the descent / drop geometry below; push it either way rather than
-    /// re-deriving it. Each point costs a point of editor height, but only once the card is at
-    /// full extension.
+    /// Breathing room between the heading's limit and the Iris's top edge (owner 2026-08-11,
+    /// device round 2): with less, the Iris cleared the fade but sat hard against it and read as
+    /// crowded ("sits a little high still"). An OWNER-TUNED number like the descent / drop
+    /// geometry below; push it either way rather than re-deriving it. Each point costs a point of
+    /// editor height, but only once the card is at full extension.
     private static let irisHeadroom: CGFloat = 18
 
     /// The grow-UP cap: how tall the card may get before its TOP reaches the heading, past which

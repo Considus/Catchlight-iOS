@@ -100,13 +100,13 @@ struct StoryboardView: View {
 
     /// Card-column geometry, matched to Dailies (owner 2026-06-19) so the Storyboard
     /// cards — and the heading above them — sit in the SAME column as the timeline.
-    /// Dailies insets each row leading by `spineX − cardSpineInset` and trailing by
+    /// Dailies insets each row leading by `spineX − cardLeadingOffset` and trailing by
     /// 20 (DailiesView), and the card's own `cardTextLeadingPad` then lands the text
     /// at the heading's column. Full-screen, so the screen width is the container
     /// width (matches DailiesView's spineX fallback).
     private var cardLeading: CGFloat {
         CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
-            - CatchlightLayout.cardSpineInset
+            - CatchlightLayout.cardLeadingOffset
     }
     private let cardTrailing: CGFloat = 20
 

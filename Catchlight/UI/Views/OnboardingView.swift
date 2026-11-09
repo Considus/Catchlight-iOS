@@ -1002,7 +1002,7 @@ private struct ConfirmStep: View {
                     // with ckAccent elsewhere and never propagated here. ckAccent
                     // keeps Night identical (Ember) and gives Daylight #856539.
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(vm.flashError ? Color.ckAccent : Color.ckSpine, lineWidth: 1.5)
+                        .stroke(vm.flashError ? Color.ckAccent : Color.ckLine, lineWidth: 1.5)
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .fill(vm.flashError ? Color.ckAccent.opacity(0.18) : Color.ckSurface.opacity(0.6))
