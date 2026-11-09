@@ -226,6 +226,9 @@ struct FocusRowView: View {
         p < 0.5 ? 4 * p * p * p : 1 - pow(-2 * p + 2, 3) / 2
     }
 
+    /// A mark takes taps only past this share of its rise, when it is visibly out from the Iris.
+    private static let hitTestRise = 0.5
+
     /// How far along a mark is at time t of the open: `rise` 0 under the Iris to 1 on the
     /// card's edge, `spread` 0 stacked to 1 in its slot (overshooting a little past 1).
     private struct MarkProgress {
@@ -426,6 +429,10 @@ struct FocusRowView: View {
                             .scaleEffect(Choreo.startScale + (1 - Choreo.startScale) * p.rise)
                             .offset(x: slot * p.spread, y: -Self.irisCentreInset * p.rise)
                             .opacity(p.rise)
+                            // A mark takes taps only once it has risen visibly out from under the
+                            // Iris, on the open and again on the close: a very early tap used to
+                            // toggle a mark still hidden under the Iris.
+                            .allowsHitTesting(p.rise > Self.hitTestRise)
                     }
 
                     // Hub: the Iris itself, previewing the working selection live.
