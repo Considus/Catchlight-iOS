@@ -51,11 +51,11 @@ private extension UIColor {
 
 extension Color {
     // Night-mode (dark) palette — the brand's core.
-    static let ckInk = Color(uiColor: SceneToken.ground)
+    static let ckInk = Color(SceneColor(\.ground))
     static let ckDusk = Color(hex: 0x1C1A16)
     static let ckCatchlight = Color(hex: 0xF5EDD8)   // "catchlightCream"
-    static let ckGlow = Color(uiColor: SceneToken.lit)
-    static let ckEmber = Color(uiColor: SceneToken.accent)
+    static let ckGlow = Color(SceneColor(\.lit))
+    static let ckEmber = Color(SceneColor(\.accent))
     static let ckFog = Color(hex: 0xB8B0A3)
     static let ckShadow = Color(hex: 0x0A0908)
 
@@ -90,39 +90,126 @@ private enum Palette {
     static let emberText = UIColor(hex: 0x856539)
 }
 
-// MARK: - Scene tokens (redesign, Cobalt)
+// MARK: - The stored Scene
+
+extension CatchlightScene {
+    /// The key the chosen Scene is stored under, as its raw value.
+    static let defaultsKey = "catchlight.scene"
+
+    /// The app group store, so the share sheet (and later the widgets) read the same choice.
+    /// One instance, so a write from `SceneChoice.select` reaches the Settings row's
+    /// `@AppStorage`, which watches this same object. A missing App Group is a setup error
+    /// (as in `AppGroup.containerURL()`): debug builds stop, and a release build falls back
+    /// to the standard store, so the row and the applied Scene still share one store.
+    static let sharedDefaults: UserDefaults = {
+        guard let group = UserDefaults(suiteName: AppGroup.identifier) else {
+            assertionFailure("App Group \(AppGroup.identifier) is not configured: check entitlements.")
+            return .standard
+        }
+        return group
+    }()
+
+    /// The stored Scene, or Cobalt when the key is absent or holds an unknown value.
+    static func stored(in defaults: UserDefaults? = sharedDefaults) -> CatchlightScene {
+        defaults?.string(forKey: defaultsKey).flatMap(CatchlightScene.init(rawValue:)) ?? .default
+    }
+}
+
+// MARK: - The Scene trait
+
+/// The chosen Scene, carried as a UIKit trait so every dynamic `SceneToken` colour reads it.
+struct SceneTrait: UITraitDefinition {
+    static let defaultValue = CatchlightScene.default
+    static let identifier = "app.catchlight.scene"
+    static let name = "CatchlightScene"
+}
+
+/// The same Scene in SwiftUI's environment, bridged both ways to `SceneTrait`, so every
+/// hosting controller reads the trait its window carries.
+struct SceneEnvironmentKey: EnvironmentKey, UITraitBridgedEnvironmentKey {
+    static let defaultValue = CatchlightScene.default
+    static func read(from traitCollection: UITraitCollection) -> CatchlightScene {
+        traitCollection[SceneTrait.self]
+    }
+    static func write(to mutableTraits: inout UIMutableTraits, value: CatchlightScene) {
+        mutableTraits[SceneTrait.self] = value
+    }
+}
+
+extension EnvironmentValues {
+    var catchlightScene: CatchlightScene {
+        get { self[SceneEnvironmentKey.self] }
+        set { self[SceneEnvironmentKey.self] = newValue }
+    }
+}
+
+/// A Scene colour role for SwiftUI. It resolves from the environment's Scene and colour
+/// scheme, which SwiftUI tracks, so a Scene change repaints every `ck*` colour. Do not build
+/// a `ck*` colour as `Color(uiColor:)` on a `SceneToken`: SwiftUI can keep that resolved
+/// value when only the custom trait changes, and the open Settings sheet then stays on the
+/// old Scene.
+struct SceneColor: ShapeStyle, Hashable {
+    let role: KeyPath<ScenePalette, UInt32>
+    var opacity: Double = 1
+
+    init(_ role: KeyPath<ScenePalette, UInt32>, opacity: Double = 1) {
+        self.role = role
+        self.opacity = opacity
+    }
+
+    func resolve(in environment: EnvironmentValues) -> Color.Resolved {
+        let hex = environment.catchlightScene.palette(dark: environment.colorScheme == .dark)[keyPath: role]
+        return Color.Resolved(colorSpace: .sRGB,
+                              red: Float((hex >> 16) & 0xFF) / 255,
+                              green: Float((hex >> 8) & 0xFF) / 255,
+                              blue: Float(hex & 0xFF) / 255,
+                              opacity: Float(opacity))
+    }
+}
+
+// MARK: - Scene tokens
 //
-// The redesign's colour roles for the Cobalt Scene, Dark and Light, from
-// `Brand_System/tokens.json` in the workspace. Every semantic token below now
-// resolves through these. The other four Scenes and the Scene picker arrive in the
-// next slice, which generates this table from the JSON instead of hand-copying it.
+// The redesign's colour roles. Each resolves per Scene and appearance from the generated
+// palettes in `SceneTokens.generated.swift`, reading the Scene from `SceneTrait`, so a
+// Scene change re-resolves every colour in place. Every semantic token below resolves
+// through these.
 
 enum SceneToken {
-    static let ground   = UIColor.adaptive(dark: UIColor(hex: 0x0B0E2A), light: UIColor(hex: 0xF4F5FA))
-    static let surface  = UIColor.adaptive(dark: UIColor(hex: 0x131840), light: UIColor(hex: 0xE8EAF5))
-    static let card     = UIColor.adaptive(dark: UIColor(hex: 0x131840), light: UIColor(hex: 0xFFFFFF))
-    static let raised   = UIColor.adaptive(dark: UIColor(hex: 0x1C2356), light: UIColor(hex: 0xFFFFFF))
+    static let ground   = role(\.ground)
+    static let surface  = role(\.surface)
+    static let card     = role(\.card)
+    static let raised   = role(\.raised)
     /// Dividers and card edges only.
-    static let line     = UIColor.adaptive(dark: UIColor(hex: 0x283066), light: UIColor(hex: 0xD6DAEE))
-    /// Unlit Iris lights and field outlines: 3:1 on every surface.
-    static let outline  = UIColor.adaptive(dark: UIColor(hex: 0x6A7097), light: UIColor(hex: 0x81849C))
-    static let text     = UIColor.adaptive(dark: UIColor(hex: 0xF6F7FF), light: UIColor(hex: 0x0B0E2A))
-    static let muted    = UIColor.adaptive(dark: UIColor(hex: 0xAEB4E3), light: UIColor(hex: 0x4A5078))
+    static let line     = role(\.line)
+    /// Field outlines: 3:1 on every surface.
+    static let outline  = role(\.outline)
+    /// Unlit Iris lights: softer than `outline`, 2:1 on every surface.
+    static let unlit    = role(\.unlit)
+    static let text     = role(\.text)
+    static let muted    = role(\.muted)
     /// Text that recedes at about 4.6:1: done Task text and placeholders.
-    static let faint    = UIColor.adaptive(dark: UIColor(hex: 0x888DBB), light: UIColor(hex: 0x616689))
-    static let accent   = UIColor.adaptive(dark: UIColor(hex: 0xFF8AD0), light: UIColor(hex: 0x2C41E8))
-    static let onAccent = UIColor.adaptive(dark: UIColor(hex: 0x0B0E2A), light: UIColor(hex: 0xFFFFFF))
-    static let accentText = UIColor.adaptive(dark: UIColor(hex: 0xFFA3DA), light: UIColor(hex: 0x2C41E8))
+    static let faint    = role(\.faint)
+    static let accent   = role(\.accent)
+    static let onAccent = role(\.onAccent)
+    static let accentText = role(\.accentText)
     /// "This is on": lit lights, the Obie square and the Focus row marks. Nothing else.
-    static let lit      = UIColor.adaptive(dark: UIColor(hex: 0xFFA3DA), light: UIColor(hex: 0x2C41E8))
+    static let lit      = role(\.lit)
+
+    private static func role(_ key: KeyPath<ScenePalette, UInt32>) -> UIColor {
+        UIColor { traits in
+            let palette = traits[SceneTrait.self].palette(dark: traits.userInterfaceStyle == .dark)
+            return UIColor(hex: palette[keyPath: key])
+        }
+    }
 }
 
 extension Color {
-    static let ckGround = Color(uiColor: SceneToken.ground)
-    static let ckCard = Color(uiColor: SceneToken.card)
-    static let ckLine = Color(uiColor: SceneToken.line)
-    static let ckOutline = Color(uiColor: SceneToken.outline)
-    static let ckLit = Color(uiColor: SceneToken.lit)
+    static let ckGround = Color(SceneColor(\.ground))
+    static let ckCard = Color(SceneColor(\.card))
+    static let ckLine = Color(SceneColor(\.line))
+    static let ckOutline = Color(SceneColor(\.outline))
+    static let ckUnlit = Color(SceneColor(\.unlit))
+    static let ckLit = Color(SceneColor(\.lit))
 }
 
 // MARK: - UIKit-facing semantic tokens (single source, shared with SwiftUI)
@@ -159,20 +246,20 @@ enum UITheme {
 
 extension Color {
     /// Screen background — Ink (Night) / Paper (Daylight).
-    static let ckBackground = Color(uiColor: UITheme.background)
+    static let ckBackground = Color(SceneColor(\.ground))
 
     /// Elevated surface (cards, edit sheet) — Dusk (Night) / White (Daylight).
-    static let ckSurface = Color(uiColor: UITheme.surface)
+    static let ckSurface = Color(SceneColor(\.card))
 
     /// Primary text — Catchlight cream (Night) / Ink (Daylight).
-    static let ckTextPrimary = Color(uiColor: UITheme.textPrimary)
+    static let ckTextPrimary = Color(SceneColor(\.text))
 
     /// Obie-emphasis text — Glow (Night) / Ember Text #856539 (Daylight, WCAG AA on Paper).
-    static let ckTextObie = Color(uiColor: SceneToken.lit)
+    static let ckTextObie = Color(SceneColor(\.lit))
 
     /// Secondary / muted text — Fog (Night) / Slate #5C5650 (Daylight, WCAG AA on Paper).
     /// Fog (#B8B0A3) fails WCAG AA for body text on Paper; Slate is the accessible replacement.
-    static let ckTextSecondary = Color(uiColor: UITheme.textSecondary)
+    static let ckTextSecondary = Color(SceneColor(\.muted))
 
     /// Completed-Task text — the receded "done" treatment (colour ONLY, no
     /// strikethrough). Tuned 2026-06-18 (owner): the original (Fog@55% / full Fog) was
@@ -182,16 +269,16 @@ extension Color {
     /// distinct from active. Raised 2026-10-03 to clear WCAG 4.5:1 (owner: contrast
     /// minimums regardless): Fog @ 76% (Night) / #746E68 (Daylight), see `UITheme.textComplete`. Single token: the Angle, the inline editor, and the
     /// timeline card all recede by the same amount.
-    static let ckTextComplete = Color(uiColor: UITheme.textComplete)
+    static let ckTextComplete = Color(SceneColor(\.faint))
 
     /// The Add button — Ember (both).
-    static let ckAdd = Color(uiColor: UITheme.add)
+    static let ckAdd = Color(SceneColor(\.accent))
 
     /// Active navigation icon — Ember (both).
-    static let ckNavActive = Color(uiColor: SceneToken.accentText)
+    static let ckNavActive = Color(SceneColor(\.accentText))
 
     /// Inactive navigation icon — Catchlight @ 55% (Night) / Fog (Daylight).
-    static let ckNavInactive = Color(uiColor: SceneToken.muted)
+    static let ckNavInactive = Color(SceneColor(\.muted))
 
     /// Amber accent for FOREGROUND content (text or iconography) drawn on a
     /// background SURFACE — Ember (Night) / Ember Text #856539 (Daylight).
@@ -203,7 +290,7 @@ extension Color {
     /// Ember). Raw `ckEmber` / `ckAdd` remain the FILL colour (Add droplet,
     /// selection borders, pill fills), where Ember is correct.
     /// (Accessibility audit 7.6, 2026-06-13.)
-    static let ckAccent = Color(uiColor: UITheme.accent)
+    static let ckAccent = Color(SceneColor(\.accentText))
 
     /// Foreground drawn ON an Ember fill (the Add "+", active filter glyphs):
     /// Ink in BOTH modes. Night was already Ink-coloured (it used `ckBackground`
@@ -211,14 +298,14 @@ extension Color {
     /// (2.04:1, fails) with Ink-on-Ember (8.62:1). Use for amber-filled chrome
     /// controls. NOTE: the locked primary CTAs (DockPill, Paywall) are a
     /// separate owner call (see audit C4) and are NOT switched here.
-    static let ckOnAccent = Color(uiColor: UITheme.onAccent)
+    static let ckOnAccent = Color(SceneColor(\.onAccent))
 
     /// The veil — the ONE obscuring overlay for the Focus row, the editor, and the
     /// Settings backdrop (owner decision 2026-06-11: solid 90% background veil
     /// everywhere; no blur, no dark tint in Daylight). Ink @ 90% (Night) /
     /// Paper @ 90% (Daylight). The screens beneath stay full-opacity — the
     /// veil alone provides the recede.
-    static let ckDim = Color(uiColor: SceneToken.ground.withAlphaComponent(0.90))
+    static let ckDim = Color(SceneColor(\.ground, opacity: 0.90))
 
     // MARK: - Take card variants (HiFi v1.7 .card — section 5)
     //
@@ -229,11 +316,11 @@ extension Color {
     /// Obie card BACKGROUND — a warm tint distinct from the plain surface so the
     /// pinned Take reads as special. Daylight #FBF8F3 (Ember @8% blended onto
     /// White, solid to prevent spine bleed) / Night #2D2921. (HiFi v1.7 .obie-card)
-    static let ckCardObieSurface = Color(uiColor: SceneToken.raised)
+    static let ckCardObieSurface = Color(SceneColor(\.raised))
 
     /// Obie card BORDER — Ember @65% (Daylight) / Glow @65% (Night). The Ember
     /// border is reserved EXCLUSIVELY for the Obie. (HiFi v1.7 .obie-card)
-    static let ckCardObieBorder = Color(uiColor: SceneToken.lit)
+    static let ckCardObieBorder = Color(SceneColor(\.lit))
 
     /// Overdue card BORDER (reminder date passed). RUBY (owner 2026-06-18 — the Take
     /// border/colour system): overdue now reads as an ALERT, not warm amber, and ruby
@@ -255,7 +342,7 @@ extension Color {
     /// grey, built from the same token so the two can't drift: "done" recedes by the same
     /// amount whether it's the edge or the words (owner 2026-06-18, reaffirmed 2026-10-03
     /// when the grey was darkened for contrast). `DoneTextContrastTests` holds it.
-    static let ckCardDoneBorder = Color(uiColor: UITheme.textComplete)
+    static let ckCardDoneBorder = Color(SceneColor(\.faint))
 
     /// Error / warning accent — used by the non-blocking error strips on the
     /// timeline (Task 3.9). Same hue in both modes so the strip reads as an

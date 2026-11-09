@@ -6,7 +6,7 @@
 //  the conflict view and the edit card) that shows a Take's types at a glance.
 //
 //  A flat rounded square whose outline is cut into six equal lights. A lit light
-//  is a thicker `ckLit` stroke, an unlit one a thin `ckOutline` stroke (3:1). Clockwise from
+//  is a thicker `ckLit` stroke, an unlit one a thin `ckUnlit` stroke (2:1). Clockwise from
 //  the top: Important, Task, Audio, Note, Image, Reminder. Inside sits one shape:
 //  the Take's single type, four dots for two or more types, the Note shape for
 //  none. An Obie adds an inner rounded square in `ckLit`.
@@ -33,6 +33,9 @@ struct IrisView: View {
     var diameter: CGFloat = CatchlightLayout.circleDiameter
 
     // MARK: State
+
+    /// The stroke of an unlit light: the softer `unlit` role, 2:1 on every surface.
+    static let unlitLightColor: Color = .ckUnlit
 
     /// Which lights are lit for `take`.
     static func lights(for take: Take) -> [IrisLight: Bool] {
@@ -137,7 +140,7 @@ struct IrisView: View {
             for (index, kind) in IrisLight.allCases.enumerated() {
                 let isLit = lit[kind] == true
                 context.stroke(Self.light(index, of: outline),
-                               with: .color(isLit ? .ckLit : .ckOutline),
+                               with: .color(isLit ? .ckLit : Self.unlitLightColor),
                                style: StrokeStyle(lineWidth: (isLit ? 3 : 1.5) * s, lineCap: .round))
             }
 

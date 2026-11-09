@@ -28,6 +28,7 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @AppStorage(SettingsViewModel.appearanceDefaultsKey) private var appearanceModeRaw: String = SettingsViewModel.AppearanceMode.system.rawValue
+    @AppStorage(SettingsViewModel.SceneChoice.defaultsKey, store: CatchlightScene.sharedDefaults) private var sceneRaw: String = CatchlightScene.default.rawValue
     @AppStorage(SettingsViewModel.LockAfter.defaultsKey) private var lockAfterRaw: String = SettingsViewModel.LockAfter.default.rawValue
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey) private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
     @AppStorage(SettingsViewModel.TakeSort.defaultsKey) private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue
@@ -250,6 +251,19 @@ struct SettingsView: View {
                 }
             }
 
+            // Colour Scene, straight under Mode: the names only, applied the moment one
+            // is chosen.
+            menuPickerRow(icon: "paintpalette",
+                          label: "Scene",
+                          accessibilityLabel: "Scene",
+                          selectionLabel: sceneBinding.wrappedValue.name) {
+                Picker("Scene", selection: sceneBinding) {
+                    ForEach(CatchlightScene.allCases) { scene in
+                        Text(scene.name).tag(scene)
+                    }
+                }
+            }
+
             // Timeline density — the gap between Takes on Dailies (owner 2026-06-16).
             menuPickerRow(icon: "arrow.up.and.down.text.horizontal",
                           label: "View",
@@ -265,7 +279,7 @@ struct SettingsView: View {
             // Take preview length — how much of a collapsed Take's body shows on the
             // timeline (owner 2026-06-16). Independent of "View" density; the reminder
             // time label always shows regardless. Ordered before Order (owner: Mode,
-            // View, Preview, Order, Scenes).
+            // Scene, View, Preview, Order).
             menuPickerRow(icon: "text.alignleft",
                           label: "Preview",
                           accessibilityLabel: "Take preview length",
@@ -315,13 +329,6 @@ struct SettingsView: View {
                     }
                 }
             }
-
-            SettingsRow(icon: "paintpalette",
-                        label: "Scenes",
-                        disabled: true) {
-                SettingsDetailLabel(text: String(localized: "Coming soon"))
-            }
-            .accessibilityHint("Coming soon.")
         } header: {
             sectionHeader("Appearance")
         }
@@ -369,6 +376,14 @@ struct SettingsView: View {
         case .system:
             return UIScreen.main.traitCollection.userInterfaceStyle == .dark ? .dark : .light
         }
+    }
+
+    /// Choosing a Scene stores it and applies it to the window at once (`SceneChoice.select`).
+    private var sceneBinding: Binding<CatchlightScene> {
+        Binding(
+            get: { CatchlightScene(rawValue: sceneRaw) ?? .default },
+            set: { SettingsViewModel.SceneChoice.select($0) }
+        )
     }
 
     private var appearanceBinding: Binding<SettingsViewModel.AppearanceMode> {

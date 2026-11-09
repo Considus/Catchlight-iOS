@@ -48,6 +48,49 @@ final class SettingsViewModel {
         }
     }
 
+    /// The chosen colour Scene (Settings → Appearance → Scene), stored as the Scene's raw value
+    /// in the app group store, which the share sheet reads too.
+    /// It goes onto every window scene's `traitOverrides` as `SceneTrait`, which UIKit's
+    /// `SceneToken` colours read, and which SwiftUI reads as the bridged `catchlightScene`
+    /// environment value for its `ck*` colours. A change re-resolves every colour in place:
+    /// no view is rebuilt, the Settings sheet stays open and an edit in progress is kept.
+    enum SceneChoice {
+        static let defaultsKey = CatchlightScene.defaultsKey
+
+        /// Apply `scene` to every connected window scene, push the trait through every window
+        /// and presented controller at once, then store it. The trait lands first so the
+        /// SwiftUI redraw the stored value triggers already resolves the new colours.
+        static func select(_ scene: CatchlightScene, defaults: UserDefaults? = CatchlightScene.sharedDefaults) {
+            for case let windowScene as UIWindowScene in UIApplication.shared.connectedScenes {
+                windowScene.traitOverrides[SceneTrait.self] = scene
+                for window in windowScene.windows {
+                    window.updateTraitsIfNeeded()
+                    var controller = window.rootViewController
+                    while let current = controller {
+                        current.updateTraitsIfNeeded()
+                        controller = current.presentedViewController
+                    }
+                }
+            }
+            defaults?.set(scene.rawValue, forKey: defaultsKey)
+        }
+
+        /// Apply the stored Scene to each window scene as it connects, before its first frame.
+        static func applyOnConnect() {
+            NotificationCenter.default.addObserver(forName: UIScene.willConnectNotification,
+                                                   object: nil, queue: .main) { note in
+                MainActor.assumeIsolated {
+                    (note.object as? UIWindowScene)?.traitOverrides[SceneTrait.self] = current()
+                }
+            }
+        }
+
+        /// The stored Scene, or Cobalt when the key is absent or holds an unknown value.
+        static func current(_ defaults: UserDefaults? = CatchlightScene.sharedDefaults) -> CatchlightScene {
+            CatchlightScene.stored(in: defaults)
+        }
+    }
+
     /// "Lock after" grace — how long Catchlight may sit in the background before a
     /// return re-locks it. Read by `AppModel.relockIfAwayTooLong()`. The app
     /// ALWAYS re-locks on cold launch and when the phone locks while Catchlight is in

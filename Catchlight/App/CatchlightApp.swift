@@ -101,6 +101,9 @@ struct CatchlightApp: App {
         // The delegate is weakly held by UNUserNotificationCenter, so this installs
         // a process-lifetime singleton — set early, before any delivery.
         NotificationPresenter.install()
+        // The stored colour Scene goes onto each window scene as it connects, before its
+        // first frame, so nobody who chose another Scene sees Cobalt flash first.
+        SettingsViewModel.SceneChoice.applyOnConnect()
         // Hide scroll indicators app-wide (owner 2026-06-21). SwiftUI ScrollView and
         // List are both UIScrollView-backed, so the appearance proxy is the single
         // point that covers every current AND future scroll surface — no per-view
