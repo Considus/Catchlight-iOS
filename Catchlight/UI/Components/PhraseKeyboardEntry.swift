@@ -70,10 +70,10 @@ final class RestoreKeyboardAccessory: UIView {
         applyFadeColors()
         buildLayout()
         setReady(false)
-        // Re-resolve the CGColor-backed border/fade on a Night/Daylight change
-        // (iOS 17+ trait-change registration; replaces the deprecated
-        // `traitCollectionDidChange` override).
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (bar: RestoreKeyboardAccessory, _) in
+        // Re-resolve the CGColor-backed border/fade on a Light/Dark or Scene change,
+        // including when the bar first joins a window. The bar lives for the app's
+        // lifetime, so a Scene chosen after it was built must still reach it.
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, SceneTrait.self]) { (bar: RestoreKeyboardAccessory, _) in
             bar.refreshDynamicColors()
         }
     }
@@ -103,12 +103,19 @@ final class RestoreKeyboardAccessory: UIView {
         restoreButton.alpha = ready ? 1 : 0.5
     }
 
+    /// CGColors don't follow traits, so resolve them against the bar's own traits.
     private func applyFadeColors() {
+        let page = Self.pageBackground.resolvedColor(with: traitCollection)
         fade.colors = [
-            Self.pageBackground.withAlphaComponent(0).cgColor,
-            Self.pageBackground.withAlphaComponent(0.85).cgColor,
-            Self.pageBackground.cgColor,
+            page.withAlphaComponent(0).cgColor,
+            page.withAlphaComponent(0.85).cgColor,
+            page.cgColor,
         ]
+    }
+
+    /// The Back pill's border colour for the bar's current traits.
+    private var backBorder: CGColor {
+        Self.textPrimary.resolvedColor(with: traitCollection).withAlphaComponent(0.4).cgColor
     }
 
     private func buildLayout() {
@@ -138,15 +145,15 @@ final class RestoreKeyboardAccessory: UIView {
         } else {
             button.backgroundColor = .clear
             button.layer.borderWidth = 1
-            button.layer.borderColor = Self.textPrimary.withAlphaComponent(0.4).cgColor
+            button.layer.borderColor = backBorder
             button.setTitleColor(Self.textPrimary, for: .normal)
         }
     }
 
-    /// CGColors don't auto-resolve for the Scene — refresh the adaptive ones.
+    /// CGColors don't follow traits: re-resolve them for the new appearance or Scene.
     /// Called by the trait-change registration in `init`.
     private func refreshDynamicColors() {
-        backButton.layer.borderColor = Self.textPrimary.withAlphaComponent(0.4).cgColor
+        backButton.layer.borderColor = backBorder
         backButton.setTitleColor(Self.textPrimary, for: .normal)
         applyFadeColors()
     }

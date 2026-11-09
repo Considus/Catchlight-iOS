@@ -152,10 +152,10 @@ final class SearchBarAccessory: UIView {
         layer.insertSublayer(fade, at: 0)
         applyFadeColors()
         buildLayout()
-        // Re-resolve the CGColor-backed borders/fade on a Night/Daylight change
-        // (iOS 17+ trait-change registration; replaces the deprecated
-        // `traitCollectionDidChange` override).
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (bar: SearchBarAccessory, _) in
+        // Re-resolve the CGColor-backed borders/fade on a Light/Dark or Scene change,
+        // including when the bar first joins a window. The bar lives for the app's
+        // lifetime, so a Scene chosen after it was built must still reach it.
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, SceneTrait.self]) { (bar: SearchBarAccessory, _) in
             bar.refreshDynamicColors()
         }
     }
@@ -169,14 +169,20 @@ final class SearchBarAccessory: UIView {
         fade.frame = bounds
     }
 
-    /// CGColors don't auto-resolve for the Scene, so set them explicitly (and refresh
-    /// in `traitCollectionDidChange`).
+    /// CGColors don't follow traits, so resolve them against the bar's own traits (and
+    /// refresh on a trait change, registered in `init`).
     private func applyFadeColors() {
+        let page = Self.pageBackground.resolvedColor(with: traitCollection)
         fade.colors = [
-            Self.pageBackground.withAlphaComponent(0).cgColor,
-            Self.pageBackground.withAlphaComponent(0.85).cgColor,
-            Self.pageBackground.cgColor,
+            page.withAlphaComponent(0).cgColor,
+            page.withAlphaComponent(0.85).cgColor,
+            page.cgColor,
         ]
+    }
+
+    /// The ember border colour for the bar's current traits.
+    private var emberBorder: CGColor {
+        Self.ember.resolvedColor(with: traitCollection).withAlphaComponent(0.55).cgColor
     }
 
     // Dock grid (matches BottomDockView / CatchlightLayout exactly so × lands where +
@@ -219,7 +225,7 @@ final class SearchBarAccessory: UIView {
         // Same ring as the buttons (owner 2026-06-20: makes the bar feel sturdier) —
         // Ember @ 0.55, 1.5pt, matching `configureCircleButton` / the dock's `dockRing`.
         field.layer.borderWidth = 1.5
-        field.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
+        field.layer.borderColor = emberBorder
         field.textColor = Self.textPrimary
         // Adaptive accent caret (2026-07-01): the fixed #C9A96E was the raw Night
         // Ember — the exact low-contrast-on-Paper case ckAccent exists to avoid;
@@ -289,19 +295,19 @@ final class SearchBarAccessory: UIView {
         button.tintColor = Self.ember
         button.layer.cornerRadius = Self.circle / 2
         button.layer.borderWidth = 1.5
-        button.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
+        button.layer.borderColor = emberBorder
         NSLayoutConstraint.activate([
             button.widthAnchor.constraint(equalToConstant: Self.circle),
             button.heightAnchor.constraint(equalToConstant: Self.circle),
         ])
     }
 
-    /// Re-resolve the dynamic colours for the new Scene (CGColor doesn't adapt).
+    /// Re-resolve the CGColors for the new appearance or Scene.
     /// Called by the trait-change registration in `init`.
     private func refreshDynamicColors() {
-        cancelButton.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
-        dismissButton.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
-        field.layer.borderColor = Self.ember.withAlphaComponent(0.55).cgColor
+        cancelButton.layer.borderColor = emberBorder
+        dismissButton.layer.borderColor = emberBorder
+        field.layer.borderColor = emberBorder
         applyFadeColors()
     }
 }
