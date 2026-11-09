@@ -7,7 +7,7 @@ import CatchlightCore
 /// exact geometry (self-sizing cells).
 ///
 /// STATUS: P2-M2 — read-only. Real Takes, month DIVIDER rows (a row in the flow, like the
-/// real timeline — centred between Takes, at the text column), Iris + wire. The pinned
+/// real timeline, centred between Takes, at the text column), each with its Iris. The pinned
 /// Obie is rendered by the host above this view. Gestures and edit-in-place are later.
 
 /// A month group: id (yyyy-MM), display title (LLLL yyyy), and its Takes.
@@ -211,10 +211,9 @@ struct TimelineCardHitShape: Shape {
     }
 }
 
-/// One read-only timeline row — the same layering as `TakeRowView` (card < occluder <
-/// Iris < wire segment < dots), so the wire threads the Iris identically. Offsets are
-/// `cardSpineInset`-relative (the ZStack origin is the card's top-left, after the leading
-/// pad). The gutter wire between rows is the screen-fixed line drawn behind the collection.
+/// One read-only timeline row, with the same layering as `TakeRowView` (card < Iris < touch
+/// frame). The ZStack origin is the card's top-left, after the leading pad, and the Iris
+/// sits `irisInset` in from it.
 struct TimelineReadCell: View {
     let take: Take
     let spineX: CGFloat
@@ -252,14 +251,12 @@ struct TimelineReadCell: View {
     var onNudge: (Take, Int) -> Void = { _, _ in }
 
     @Environment(\.colorScheme) private var scheme
-    private let inset = CatchlightLayout.cardSpineInset
     private let d = CatchlightLayout.circleDiameter
 
     // MARK: Iris
     //
-    // The drawing lives in `TimelineIris`, NOT here: the pinned Obie is drawn by a
-    // different view (`TakeRowView`) and needs exactly the same treatment. Keeping it
-    // in one place is what stops the two rows drifting.
+    // The drawing is `IrisView`, the same view the pinned Obie's `TakeRowView` uses, so
+    // the two rows cannot drift apart.
 
     /// The Iris's touch and VoiceOver surface, kept separate from the drawing so it
     /// cannot produce a second accessibility element or swallow the gesture.
@@ -288,7 +285,7 @@ struct TimelineReadCell: View {
             // V10 (audit 2026-08): the pinned Obie row's Iris carries .isButton; this
             // one didn't, so the same control announced differently on one screen.
             .accessibilityAddTraits(.isButton)
-            .offset(x: inset - d / 2, y: -d / 2)
+            .offset(x: CatchlightLayout.irisInset, y: CatchlightLayout.irisInset)
     }
 
     var body: some View {
@@ -348,19 +345,16 @@ struct TimelineReadCell: View {
                         Button("Move down") { onNudge(take, 1) }
                     }
                 }
-            // ── The Iris on the line ─────────────────────────────────────────────
-            //
-            //   card → Iris (flat, its filled inside hides the line) → hit target
-            //
-            TimelineIris(take: take)
-                .offset(x: inset - d / 2, y: -d / 2)
+            // ── The Iris, inside the card's top-left ─────────────────────────────
+            IrisView(take: take)
+                .allowsHitTesting(false)
+                .offset(x: CatchlightLayout.irisInset, y: CatchlightLayout.irisInset)
             irisHitTarget                                                              // gestures + VoiceOver
         }
-        .padding(.leading, spineX - inset)
+        .padding(.leading, spineX - CatchlightLayout.cardLeadingOffset)
         .padding(.trailing, 20)
         // SYMMETRIC so the card is centred in the cell — a swipe action fill then centres
-        // on the CARD, not the cell (the Iris overhang is render-only `.offset`, so it
-        // doesn't grow the layout; the cell must simply not clip).
+        // on the CARD, not the cell.
         .padding(.vertical, cardGap / 2)
         // AFTER the paddings, deliberately, so the overlay aligns to the CELL's trailing
         // edge and `.frame(width: stripWidth).padding(.trailing, trailingMargin)` puts the
@@ -488,7 +482,7 @@ struct TimelineSwipeCell: View {
                                       ? .standard : .destructive,
                                   perform: { onDelete(take) }),
             openRowID: $swipeState.openRowID,
-            leadingInset: spineX - CatchlightLayout.cardSpineInset,
+            leadingInset: spineX - CatchlightLayout.cardLeadingOffset,
             trailingInset: 20,
             contentVerticalInset: cardGap / 2,
             centersActionLabel: true    // centre glyph/label in the revealed button, not hugged to the screen edge
@@ -564,7 +558,7 @@ struct TimelineMonthDivider: View {
                 .onTapGesture(perform: onTapBlank)
                 .accessibilityHidden(true)
         }
-        .padding(.leading, spineX - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad)
+        .padding(.leading, spineX - CatchlightLayout.cardLeadingOffset + CatchlightLayout.cardTextLeadingPad)
         .padding(.trailing, 20)
     }
 }

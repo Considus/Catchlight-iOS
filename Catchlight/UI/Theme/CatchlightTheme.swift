@@ -185,9 +185,6 @@ extension Color {
     /// timeline card all recede by the same amount.
     static let ckTextComplete = Color(uiColor: UITheme.textComplete)
 
-    /// The timeline spine — Catchlight @ 18% (Night) / Ink @ 13% (Daylight).
-    static let ckSpine = Color(uiColor: SceneToken.line)
-
     /// The Add button — Ember (both).
     static let ckAdd = Color(uiColor: UITheme.add)
 
@@ -261,20 +258,6 @@ extension Color {
     /// when the grey was darkened for contrast). `DoneTextContrastTests` holds it.
     static let ckCardDoneBorder = Color(uiColor: UITheme.textComplete)
 
-    /// Iris OFF-quadrant annular fill (HiFi v1.7 `--q-off` — section 7). The
-    /// faint backing band that makes the Iris read as a complete RING (with a
-    /// hollow centre aperture) even when only some quadrants are active. Daylight
-    /// #F1F1F0 / Night #1B1916. Replaces the old solid base disc, which filled the
-    /// centre and defeated the hollow-aperture read.
-    static let ckIrisOff = Color(uiColor: SceneToken.line)
-
-    /// Iris OUTER ring. Raised 2026-06-18 (owner-approved) to meet WCAG 1.4.11
-    /// non-text contrast (≥3:1): Daylight #8C8C8C ≈ 3.1:1 on the white card (was the
-    /// v1.7 hairline #E7E7E7 ≈ 1.2:1); Night Catchlight @ 45% ≈ 3.9:1 on Ink (was 18%).
-    /// The Iris reads bolder/clearer now — a deliberate move from the v1.7 soft rim to
-    /// a legible-without-VoiceOver control.
-    static let ckIrisRing = Color(uiColor: SceneToken.line)
-
     /// Error / warning accent — used by the non-blocking error strips on the
     /// timeline (Task 3.9). Same hue in both modes so the strip reads as an
     /// alert regardless of theme; brightness chosen to remain WCAG AA against
@@ -331,12 +314,6 @@ enum Quadrant {
     /// auto-flags Important; owner wants the flag visible there alongside the ring).
     static func important(_ scheme: ColorScheme) -> Color {
         scheme == .dark ? .ckStone : .ckShadow
-    }
-
-    /// Obie ring around the whole circle — Glow (Night) / Ember (Daylight).
-    /// Also the colour of the Obie specular-dot core (DS §5.4).
-    static func obieRing(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? .ckGlow : .ckEmber
     }
 }
 
@@ -575,24 +552,33 @@ enum CatchlightLayout {
     /// (Search/sequence results reuse the timeline row; the edit footer, conflict
     /// view, and focus-ring fan pass their own explicit diameters and are unaffected.)
     static let circleDiameter: CGFloat = 44
-    /// The Take card's leading edge sits this far LEFT of the spine. Two things ride
-    /// on it together (which is what keeps the Iris ON the spine): the row's leading
-    /// padding is `spineX − cardSpineInset` (the card's left edge), and TakeRowView
-    /// offsets the Iris by `cardSpineInset − circleDiameter/2` so the Iris re-centres
-    /// on the spine. Owner 2026-06-16: raised 24 → 38 so the card's LEFT margin
-    /// (`spineX − 38` ≈ 20pt) matches the 20pt RIGHT margin — the card grows ~14pt
-    /// wider and the Iris nests a little deeper into its top-left region (the Iris
-    /// stays pinned to the spine under the + button). Deliberately independent of
-    /// `circleDiameter` so resizing the Iris never moves or narrows the card.
-    static let cardSpineInset: CGFloat = 38
-    /// The Take card's internal LEADING text padding — sized so the text column
-    /// begins exactly at the Iris's EASTERN edge, leaving the Iris in a clear left
-    /// gutter with NO text left of the spine (owner 2026-06-16). card-left is
-    /// `spineX − cardSpineInset`, the Iris east edge is `spineX + circleDiameter/2`,
-    /// so the pad = circleDiameter/2 + cardSpineInset. The DAILIES heading + month
-    /// markers align to the same x (`spineX + circleDiameter/2`). Trailing/bottom
-    /// stay at the standard 14.
-    static let cardTextLeadingPad: CGFloat = circleDiameter / 2 + cardSpineInset
+    /// The distance from the dock's first column centre (`spineX`) to the Take card's
+    /// leading edge: the card starts at `spineX − cardLeadingOffset`, about 20pt from
+    /// the screen edge, matching the 20pt trailing margin. The timeline line that once
+    /// ran down `spineX` is gone (owner 2026-11-09); the Add button still sits there.
+    static let cardLeadingOffset: CGFloat = 38
+    /// The Take card's inner padding on every side.
+    static let cardPadding: CGFloat = 14
+    /// The Iris's top and leading offset inside its card.
+    static let irisInset: CGFloat = 14
+    /// The gap between the Iris's trailing edge and the card's text column.
+    static let irisTextGap: CGFloat = 12
+    /// The Take card's internal LEADING text padding: the text column starts clear of
+    /// the Iris in the card's top-left. The DAILIES heading and month markers align to
+    /// the same column.
+    static let cardTextLeadingPad: CGFloat = irisInset + circleDiameter + irisTextGap
+    /// The shortest a Take card may be: room for the Iris with `irisInset` above and below.
+    static let cardMinHeight: CGFloat = irisInset * 2 + circleDiameter
+    /// The spacing setting's gaps were tuned with the old Iris's top half hanging into them.
+    static let retiredIrisOverhang: CGFloat = circleDiameter / 2
+    /// The smallest visible gap between two Take cards.
+    static let minCardGap: CGFloat = 10
+    /// The visible gap between two Take cards for a stored spacing setting: the setting less
+    /// the room the old straddling Iris took, so each setting looks as it did, never below
+    /// `minCardGap`. Dailies and the Storyboard both use it, so they stay equal.
+    static func visibleCardGap(for setting: CGFloat) -> CGFloat {
+        max(minCardGap, setting - retiredIrisOverhang)
+    }
     /// The card's standard TRAILING text pad. Tokenised 2026-08-15 because the
     /// manual-order drag handle has to inset the body text by exactly enough to clear
     /// itself, and a literal 14 in two files would drift the moment either moved.
@@ -612,20 +598,6 @@ enum CatchlightLayout {
         dockHorizontalPadding + (containerWidth - 2 * dockHorizontalPadding) / 8
     }
 
-    /// Snap a coordinate to the device's pixel grid.
-    ///
-    /// `spineX` divides the screen by 8, so on most widths it lands part-way into a
-    /// device pixel. A big shape absorbs that — the Add button's 44pt ring reads as
-    /// centred regardless — but a NARROW symmetric shape does not: a 2.8pt beam core
-    /// centred on a fractional pixel rasterises with more energy on one side, and the
-    /// eye reads the whole shaft as sitting a pixel off the button it points at (owner,
-    /// on device 2026-08-16). Measured concentric on a 402pt simulator, where the same
-    /// arithmetic happens to land on a clean half-pixel — which is exactly why this
-    /// needs snapping rather than trusting one screen width.
-    static func snappedToPixel(_ x: CGFloat) -> CGFloat {
-        let scale = max(1, UIScreen.main.scale)
-        return (x * scale).rounded() / scale
-    }
     /// Minimum touch target per HIG / accessibility.
     static let minTouchTarget: CGFloat = 44
     /// Standard dim-overlay opacity is baked into Color.ckDim.
