@@ -88,6 +88,27 @@ final class SceneTokensTests: XCTestCase {
         XCTAssertEqual(SettingsViewModel.SceneChoice.current(defaults), .jade, "known")
     }
 
+    /// With no store named, the choice is read from the app group, where the share sheet
+    /// (and later the widgets) can read it too. The app's own standard defaults don't count.
+    func testStoredChoice_isReadFromTheAppGroup_andFallsBackToCobalt() throws {
+        let group = try XCTUnwrap(UserDefaults(suiteName: AppGroup.identifier))
+        let key = SettingsViewModel.SceneChoice.defaultsKey
+        let previousGroup = group.object(forKey: key), previousStandard = UserDefaults.standard.object(forKey: key)
+        defer {
+            group.set(previousGroup, forKey: key)
+            UserDefaults.standard.set(previousStandard, forKey: key)
+        }
+
+        group.removeObject(forKey: key)
+        UserDefaults.standard.set("onyx", forKey: key)
+        XCTAssertEqual(SettingsViewModel.SceneChoice.current(), .cobalt, "missing from the app group")
+        group.set("vermilion", forKey: key)
+        XCTAssertEqual(SettingsViewModel.SceneChoice.current(), .cobalt, "unknown in the app group")
+        group.set("jade", forKey: key)
+        XCTAssertEqual(SettingsViewModel.SceneChoice.current(), .jade, "known in the app group")
+        XCTAssertEqual(CatchlightScene.stored(), .jade, "the share sheet's reader agrees")
+    }
+
     // MARK: - Switching re-resolves in place
 
     /// Choosing a Scene stores it and sets it on the app's window scene, pushing the trait

@@ -28,7 +28,7 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @AppStorage(SettingsViewModel.appearanceDefaultsKey) private var appearanceModeRaw: String = SettingsViewModel.AppearanceMode.system.rawValue
-    @AppStorage(SettingsViewModel.SceneChoice.defaultsKey) private var sceneRaw: String = CatchlightScene.default.rawValue
+    @AppStorage(SettingsViewModel.SceneChoice.defaultsKey, store: CatchlightScene.sharedDefaults) private var sceneRaw: String = CatchlightScene.default.rawValue
     @AppStorage(SettingsViewModel.LockAfter.defaultsKey) private var lockAfterRaw: String = SettingsViewModel.LockAfter.default.rawValue
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey) private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
     @AppStorage(SettingsViewModel.TakeSort.defaultsKey) private var takeSortRaw: String = SettingsViewModel.TakeSort.default.rawValue

@@ -90,6 +90,21 @@ private enum Palette {
     static let emberText = UIColor(hex: 0x856539)
 }
 
+// MARK: - The stored Scene
+
+extension CatchlightScene {
+    /// The key the chosen Scene is stored under, as its raw value.
+    static let defaultsKey = "catchlight.scene"
+
+    /// The app group store, so the share sheet (and later the widgets) read the same choice.
+    static var sharedDefaults: UserDefaults? { UserDefaults(suiteName: AppGroup.identifier) }
+
+    /// The stored Scene, or Cobalt when the key is absent or holds an unknown value.
+    static func stored(in defaults: UserDefaults? = sharedDefaults) -> CatchlightScene {
+        defaults?.string(forKey: defaultsKey).flatMap(CatchlightScene.init(rawValue:)) ?? .default
+    }
+}
+
 // MARK: - The Scene trait
 
 /// The chosen Scene, carried as a UIKit trait so every dynamic `SceneToken` colour reads it.

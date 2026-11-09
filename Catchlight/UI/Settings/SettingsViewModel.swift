@@ -48,18 +48,19 @@ final class SettingsViewModel {
         }
     }
 
-    /// The chosen colour Scene (Settings → Appearance → Scene), stored as the Scene's raw value.
+    /// The chosen colour Scene (Settings → Appearance → Scene), stored as the Scene's raw value
+    /// in the app group store, which the share sheet reads too.
     /// It goes onto every window scene's `traitOverrides` as `SceneTrait`, which UIKit's
     /// `SceneToken` colours read, and which SwiftUI reads as the bridged `catchlightScene`
     /// environment value for its `ck*` colours. A change re-resolves every colour in place:
     /// no view is rebuilt, the Settings sheet stays open and an edit in progress is kept.
     enum SceneChoice {
-        static let defaultsKey = "catchlight.scene"
+        static let defaultsKey = CatchlightScene.defaultsKey
 
         /// Apply `scene` to every connected window scene, push the trait through every window
         /// and presented controller at once, then store it. The trait lands first so the
         /// SwiftUI redraw the stored value triggers already resolves the new colours.
-        static func select(_ scene: CatchlightScene, defaults: UserDefaults = .standard) {
+        static func select(_ scene: CatchlightScene, defaults: UserDefaults? = CatchlightScene.sharedDefaults) {
             for case let windowScene as UIWindowScene in UIApplication.shared.connectedScenes {
                 windowScene.traitOverrides[SceneTrait.self] = scene
                 for window in windowScene.windows {
@@ -71,7 +72,7 @@ final class SettingsViewModel {
                     }
                 }
             }
-            defaults.set(scene.rawValue, forKey: defaultsKey)
+            defaults?.set(scene.rawValue, forKey: defaultsKey)
         }
 
         /// Apply the stored Scene to each window scene as it connects, before its first frame.
@@ -85,8 +86,8 @@ final class SettingsViewModel {
         }
 
         /// The stored Scene, or Cobalt when the key is absent or holds an unknown value.
-        static func current(_ defaults: UserDefaults = .standard) -> CatchlightScene {
-            defaults.string(forKey: defaultsKey).flatMap(CatchlightScene.init(rawValue:)) ?? .default
+        static func current(_ defaults: UserDefaults? = CatchlightScene.sharedDefaults) -> CatchlightScene {
+            CatchlightScene.stored(in: defaults)
         }
     }
 

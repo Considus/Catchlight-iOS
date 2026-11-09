@@ -402,6 +402,8 @@ targets:
       - path: Catchlight/UI/Theme/CatchlightTheme.swift
       # The Scene palettes the theme reads, generated from design/tokens.json.
       - path: Catchlight/UI/Theme/SceneTokens.generated.swift
+      # The app group identifier, where the theme reads the chosen Scene.
+      - path: Catchlight/AppGroup.swift
       # DM Sans, which every `CatchlightFont.ui` call on the sheet asks for. Without the file
       # and the `UIAppFonts` entry below, iOS quietly drew the sheet in the system face. Only
       # DM Sans (and its licence): the sheet sets no Cormorant Garamond.

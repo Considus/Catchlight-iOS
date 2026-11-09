@@ -35,6 +35,8 @@ final class ShareViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .clear
+        // The sheet draws in the Scene chosen in the app, read from the app group store.
+        traitOverrides[SceneTrait.self] = CatchlightScene.stored()
 
         let root = ShareSheetView(
             load: { [weak self] in await self?.extractSharedText() ?? [] },
