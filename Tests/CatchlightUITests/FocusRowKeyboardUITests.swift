@@ -2,11 +2,11 @@
 //  FocusRowKeyboardUITests.swift
 //  CatchlightUITests
 //
-//  Opening the Focus row from the editor's Iris dropped the keyboard, and the editing card,
-//  anchored on the keyboard, fell to the bottom of the screen (owner, slice 1). The keyboard
-//  has to stay up while the row is open, so the card stays where it was. The Remind mark's
-//  picker is the one exception: it fills the screen, so the keyboard steps down while it shows
-//  and comes back when it closes.
+//  Tapping the Iris of the Take being edited puts the keyboard away before the Focus row
+//  opens: a keyboard left up under the row fought the overlay and the Remind picker (owner
+//  lockup 2026-06-18). Committing the row (a tap on its dimmed area) brings the keyboard back
+//  to the block it was in, with the typed text intact. The redesign changes how the app looks,
+//  not how this works (owner 2026-11-09).
 //
 
 import XCTest
@@ -18,84 +18,87 @@ final class FocusRowKeyboardUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testFocusRowFromEditor_keepsTheKeyboardUp_andTheCardInPlace() throws {
-        let app = launchAppForUITesting()
+    /// Opens a new Take, types into it and waits for the keyboard. Returns the editor body.
+    private func openEditor(_ app: XCUIApplication, typing text: String) -> XCUIElement {
         let addButton = app.buttons["add-button"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 10), "Dock did not load")
         let body = app.textViews["take-edit-body"]
         tapUntil(addButton, appears: body)
-        typeWhenReady(body, "Pack the tripod")
+        typeWhenReady(body, text)
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
                       "Software keyboard did not appear")
         sleep(1) // let the card settle on the keyboard
-
-        let iris = anyElement(in: app, id: "editor-shape")
-        XCTAssertTrue(iris.waitForExistence(timeout: 5), "editor-shape not in the tree")
-        let before = iris.frame
-
-        iris.tap()
-        let taskMark = anyElement(in: app, id: "focus-row-mark-task")
-        XCTAssertTrue(taskMark.waitForExistence(timeout: 5), "Focus row did not open")
-        sleep(1) // let any keyboard dismissal and card drop finish
-
-        let shot = XCUIScreen.main.screenshot()
-        let a = XCTAttachment(screenshot: shot)
-        a.name = "focus-row-from-editor"
-        a.lifetime = .keepAlways
-        add(a)
-
-        let open = iris.exists ? iris.frame : .null
-        let report = "[focus-row-keyboard] keyboards=\(app.keyboards.count) irisBefore=\(NSCoder.string(for: before)) irisOpen=\(NSCoder.string(for: open)) markTask=\(NSCoder.string(for: taskMark.frame)) keyboard=\(NSCoder.string(for: app.keyboards.firstMatch.frame))"
-        print(report)
-        let note = XCTAttachment(string: report)
-        note.lifetime = .keepAlways
-        add(note)
-
-        XCTAssertGreaterThan(app.keyboards.count, 0,
-                             "The keyboard dropped when the Focus row opened from the editor")
-        XCTAssertFalse(open.isNull, "The editing card's Iris is not readable while the row is open")
-        XCTAssertEqual(open.minY, before.minY, accuracy: 2,
-                       "The editing card moved: Iris top \(before.minY) before, \(open.minY) with the row open")
+        return body
     }
 
-    func testReminderPickerFromEditor_dropsTheKeyboard_andGivesItBackOnClose() throws {
-        let app = launchAppForUITesting()
-        let addButton = app.buttons["add-button"]
-        XCTAssertTrue(addButton.waitForExistence(timeout: 10), "Dock did not load")
-        let body = app.textViews["take-edit-body"]
-        tapUntil(addButton, appears: body)
-        typeWhenReady(body, "Pack the tripod")
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
-                      "Software keyboard did not appear")
-        sleep(1)
+    /// Commits the open row with one tap on its dimmed area near the top of the screen,
+    /// clear of the marks and the card.
+    private func commitRow(_ app: XCUIApplication, closing mark: XCUIElement) {
+        let dim = anyElement(in: app, id: "focus-row-dim")
+        XCTAssertTrue(dim.waitForExistence(timeout: 3), "focus-row-dim not in the tree")
+        dim.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+        XCTAssertTrue(mark.waitForNonExistence(timeout: 5), "The Focus row did not close")
+    }
 
-        let iris = anyElement(in: app, id: "editor-shape")
-        XCTAssertTrue(iris.waitForExistence(timeout: 5), "editor-shape not in the tree")
-        iris.tap()
+    /// The keyboard is back and its caret is in the block it left: typing carries on the text.
+    private func assertKeyboardBackInBlock(_ app: XCUIApplication, _ body: XCUIElement,
+                                           continuing text: String,
+                                           file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
+                      "The keyboard did not come back after the row committed", file: file, line: line)
+        sleep(1)
+        app.typeText(" now")
+        XCTAssertEqual(body.value as? String, text + " now",
+                       "The caret did not return to the end of the block it was in", file: file, line: line)
+    }
+
+    func testIrisTapInEditor_putsTheKeyboardAway_andCommitBringsItBack() throws {
+        let app = launchAppForUITesting()
+        let body = openEditor(app, typing: "Pack the tripod")
+
+        tapWhenReady(anyElement(in: app, id: "editor-shape"))
+        let taskMark = anyElement(in: app, id: "focus-row-mark-task")
+        XCTAssertTrue(taskMark.waitForExistence(timeout: 5), "Focus row did not open")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5),
+                      "The keyboard stayed up when the editor's Iris was tapped")
+
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = "focus-row-from-editor"
+        shot.lifetime = .keepAlways
+        add(shot)
+
+        commitRow(app, closing: taskMark)
+        XCTAssertTrue(body.exists, "The editor closed with the row")
+        assertKeyboardBackInBlock(app, body, continuing: "Pack the tripod")
+    }
+
+    /// The Remind mark's picker opens with the keyboard already away, leaves it away when it
+    /// closes, and the row's commit brings the keyboard back.
+    func testReminderPickerFromEditor_keyboardReturnsAfterTheRowCommits() throws {
+        let app = launchAppForUITesting()
+        let body = openEditor(app, typing: "Pack the tripod")
+
+        tapWhenReady(anyElement(in: app, id: "editor-shape"))
         let remind = anyElement(in: app, id: "focus-row-mark-remind")
         XCTAssertTrue(remind.waitForExistence(timeout: 5), "Focus row did not open")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5),
+                      "The keyboard stayed up when the editor's Iris was tapped")
         remind.tap()
         let cancel = app.buttons["Cancel"]
         XCTAssertTrue(cancel.waitForExistence(timeout: 5), "Reminder picker did not open")
-        sleep(1)
-        let shot = XCUIScreen.main.screenshot()
-        let a = XCTAttachment(screenshot: shot)
-        a.name = "reminder-picker-from-editor"
-        a.lifetime = .keepAlways
-        add(a)
         XCTAssertEqual(app.keyboards.count, 0, "The keyboard covers the reminder picker")
-
         cancel.tap()
         XCTAssertTrue(cancel.waitForNonExistence(timeout: 5), "Reminder picker did not close")
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
-                      "The keyboard did not come back when the picker closed")
         XCTAssertTrue(remind.exists, "The Focus row closed with the picker")
+
+        commitRow(app, closing: remind)
+        assertKeyboardBackInBlock(app, body, continuing: "Pack the tripod")
     }
 
-    /// Editing the pinned Obie: tapping its Iris must keep the keyboard up too (the same
-    /// report as any other Take). While any edit is open the pinned slot stands down
+    /// Editing the pinned Obie: tapping its Iris puts the keyboard away too, and the commit
+    /// brings it back. While any edit is open the pinned slot stands down
     /// (`DailiesView.pinnedObieStandsDown`), so the Obie's Iris on screen is the editing card's.
-    func testFocusRowWhileEditingTheObie_keepsTheKeyboardUp() throws {
+    func testIrisTapWhileEditingTheObie_putsTheKeyboardAway_andCommitBringsItBack() throws {
         let app = launchAppForUITesting()
         let row = takeRow(in: app, withLabelStarting: "Buy film")
         XCTAssertTrue(row.waitForExistence(timeout: 10), "Seeded Take not on the timeline")
@@ -116,56 +119,24 @@ final class FocusRowKeyboardUITests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
                       "Software keyboard did not appear")
         sleep(1)
+        let text = body.value as? String ?? ""
 
         // The stood-down pinned slot is invisible and takes no touches, but stays in the
         // accessibility tree with the same identifier, so take the lower Iris: the editing card's.
         let irises = app.descendants(matching: .any).matching(identifier: "editor-shape")
         XCTAssertTrue(irises.firstMatch.waitForExistence(timeout: 5), "editor-shape not in the tree")
-        let all = irises.allElementsBoundByIndex
-        print("[focus-row-keyboard] obie editor-shape frames: \(all.map { NSCoder.string(for: $0.frame) })")
-        let iris = all.max { $0.frame.minY < $1.frame.minY }!
-        let before = iris.frame
+        let iris = irises.allElementsBoundByIndex.max { $0.frame.minY < $1.frame.minY }!
         iris.tap()
-        XCTAssertTrue(anyElement(in: app, id: "focus-row-mark-task").waitForExistence(timeout: 5),
-                      "Focus row did not open")
-        sleep(1)
-        XCTAssertGreaterThan(app.keyboards.count, 0,
-                             "The keyboard dropped when the Focus row opened while editing the Obie")
-        XCTAssertEqual(iris.frame.minY, before.minY, accuracy: 2, "The Obie's editing card moved")
-    }
-
-    /// While the row is open, the editor's keyboard toolbar must not act underneath it: its
-    /// Discard does what a tap on the dimmed area does (save the row's choice and close it).
-    func testToolbarDiscard_whileTheFocusRowIsOpen_doesNotDiscard() throws {
-        let app = launchAppForUITesting()
-        let addButton = app.buttons["add-button"]
-        XCTAssertTrue(addButton.waitForExistence(timeout: 10), "Dock did not load")
-        let body = app.textViews["take-edit-body"]
-        tapUntil(addButton, appears: body)
-        typeWhenReady(body, "Pack the tripod")
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
-                      "Software keyboard did not appear")
-        sleep(1)
-        let discard = app.buttons["Discard changes"]
-        XCTAssertTrue(discard.waitForExistence(timeout: 5), "Keyboard toolbar not showing")
-        let discardFrame = discard.frame
-        let discardCentre = app.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: discardFrame.midX, dy: discardFrame.midY))
-
-        anyElement(in: app, id: "editor-shape").tap()
         let taskMark = anyElement(in: app, id: "focus-row-mark-task")
         XCTAssertTrue(taskMark.waitForExistence(timeout: 5), "Focus row did not open")
-        // VoiceOver must not announce toolbar actions that no longer run while the row is open.
-        XCTAssertTrue(discard.waitForNonExistence(timeout: 3),
-                       "VoiceOver still offers \"Discard changes\" while the Focus row is open")
-        // A sighted tap where the button sits still saves the row's choice and closes it.
-        discardCentre.tap()
-        sleep(1)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5),
+                      "The keyboard stayed up when the Obie's Iris was tapped while editing")
 
-        XCTAssertTrue(taskMark.waitForNonExistence(timeout: 5), "The Focus row did not close")
-        XCTAssertTrue(body.exists, "The editor closed: the Take was discarded under the Focus row")
-        XCTAssertEqual(body.value as? String, "Pack the tripod", "The edit was lost")
-        XCTAssertTrue(discard.waitForExistence(timeout: 3),
-                      "VoiceOver did not get the keyboard toolbar back after the Focus row closed")
+        commitRow(app, closing: taskMark)
+        // The caret returns to the block it was in; where in it depends on where the tap put it,
+        // so only check the keyboard and that nothing was lost.
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
+                      "The keyboard did not come back after the row committed")
+        XCTAssertEqual(body.value as? String, text, "The Obie's text changed")
     }
 }

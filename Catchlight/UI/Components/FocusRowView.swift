@@ -6,20 +6,23 @@
 //  follows the Iris prototype's `openMarks` and `.mk` styles.
 //
 //  LAYOUT: four 44pt rounded-square marks, Note, Task, Reminder and Important from
-//  left to right, sit in a row along the Take card's bottom edge, their centres 8pt below
-//  it so their tops line up with the card's bottom padding, clear of its last line of
-//  text (`rowY`). Where that would put the row below the visible area (behind the dock,
-//  or under the keyboard from the editor), the row lifts to stay on screen. The first
-//  mark is 52pt right of the Iris centre and each next one 52pt further. On a narrow
-//  screen the gap shrinks evenly so the last mark stays 8pt inside the screen; the marks
-//  never shrink (`slotX`).
+//  left to right, 16pt apart, their centres 60, 120, 180 and 240pt right of the Iris
+//  centre. While the row is open the tapped card grows 22pt (half a mark) at the
+//  bottom, and the cards below move down with it; the marks' centres sit exactly on the
+//  grown bottom edge, so they clear its last line of text (`rowY`). Where that would put
+//  the row below the visible area (behind the dock, or above the bottom of the screen
+//  while editing), the row lifts to stay on screen. On a screen too narrow for the full
+//  row the gap shrinks evenly so the last mark stays 8pt inside the screen; the marks
+//  never shrink or overlap (`slotX`).
 //
-//  MOTION: the marks start stacked under the Iris at 85% size, invisible. They drop
-//  straight down to the card's bottom edge over 340ms (easeInOutCubic), growing to full
-//  size and fading in, then each slides right to its slot over 280ms, 50ms after the one
-//  before, with a small easeOutBack overshoot. Closing plays each mark's own open
-//  backwards, 1.25 times faster, as the prototype does. Reduce Motion and UI tests skip
-//  straight to the end state.
+//  MOTION (`Timing`): the marks start stacked under the Iris at 85% size, invisible.
+//  They drop straight down to the card's grown bottom edge over 340ms (easeInOutCubic),
+//  while the card grows on the same curve, reaching full size with the drop and fading
+//  in over its first 80ms. The far marks peel off first and slide right to their slots while still
+//  dropping (Important at 120ms, Reminder 185, Task 250, Note 340), each slide lasting
+//  3.9ms per point travelled and at least 280ms, with a small easeOutBack overshoot:
+//  about 1.06s in all. Closing plays the whole open backwards, 1.25 times faster. Reduce
+//  Motion and UI tests skip straight to the end state.
 //
 //  STYLE: an off mark is a ground-coloured square with a half-strength lit border and a
 //  lit line glyph; an on mark is filled with the Scene accent and its glyph takes the
@@ -58,11 +61,10 @@ struct FocusRowView: View {
     /// 2026-06-18) — undefined/ignored when `hasReminder` is false.
     let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ reminderWeekdays: Set<Int>, _ reminderLocation: LocationTrigger?, _ isImportant: Bool) -> Void
     let onDismiss: () -> Void
-    /// The Remind mark's picker opened (true) or closed (false).
-    var onReminderPickerShownChange: (Bool) -> Void = { _ in }
-    /// Each change asks the row to save and close, exactly as a tap on the veil does, and
-    /// only while the veil itself would take that tap.
-    var commitRequests: Int = 0
+    /// Grow (true) or shrink back (false) the tapped card over this many seconds (nil: at
+    /// once), on the drop's curve. Only called when `showsFocusCard`: the row runs along a
+    /// timeline card or the pinned Obie.
+    var onCardGrowth: (_ grown: Bool, _ duration: Double?) -> Void = { _, _ in }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -71,8 +73,23 @@ struct FocusRowView: View {
     /// animation (a known flake source). Mirrors the app-wide
     /// `UIView.setAnimationsEnabled(false)` that UI-test launches set for UIKit.
     private var instantMotion: Bool {
-        reduceMotion || ProcessInfo.processInfo.arguments.contains("--uitesting")
+        reduceMotion || (ProcessInfo.processInfo.arguments.contains("--uitesting") && Self.uiTestTimeScale == nil)
     }
+
+    /// UI tests only: `--uitesting -catchlight.focusRowTimeScale <n>` plays the choreography
+    /// n times slower instead of skipping it, so a test can tap the row mid-open.
+    /// Compiled out of Release, like the `--uitesting` store in `Wiring`.
+    private static let uiTestTimeScale: Double? = {
+        #if DEBUG
+        guard ProcessInfo.processInfo.arguments.contains("--uitesting") else { return nil }
+        let scale = UserDefaults.standard.double(forKey: "catchlight.focusRowTimeScale")
+        return scale > 0 ? scale : nil
+        #else
+        return nil
+        #endif
+    }()
+    /// Real seconds per choreography second: 1 outside that UI-test hook.
+    private static var timeScale: Double { uiTestTimeScale ?? 1 }
 
     /// Default "when" a freshly-added reminder opens to — now a user preference
     /// (Settings → Reminders → Default timing (hrs); owner 2026-06-18). Read at call
@@ -132,8 +149,7 @@ struct FocusRowView: View {
          showsFocusCard: Bool = false,
          onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, TimeReminder.Recurrence, Set<Int>, LocationTrigger?, Bool) -> Void,
          onDismiss: @escaping () -> Void,
-         onReminderPickerShownChange: @escaping (Bool) -> Void = { _ in },
-         commitRequests: Int = 0) {
+         onCardGrowth: @escaping (Bool, Double?) -> Void = { _, _ in }) {
         self.take = take
         self.cardFrame = cardFrame
         self.containerWidth = containerWidth
@@ -141,8 +157,7 @@ struct FocusRowView: View {
         self.showsFocusCard = showsFocusCard
         self.onCommit = onCommit
         self.onDismiss = onDismiss
-        self.onReminderPickerShownChange = onReminderPickerShownChange
-        self.commitRequests = commitRequests
+        self.onCardGrowth = onCardGrowth
         _isNote = State(initialValue: take.isNote)
         _isTask = State(initialValue: take.isTask)
         _hasReminder = State(initialValue: take.timeReminder != nil)
@@ -159,7 +174,7 @@ struct FocusRowView: View {
     // MARK: - Marks
 
     /// The four marks, in row order from left to right.
-    private enum MarkKind: Int, CaseIterable {
+    enum MarkKind: Int, CaseIterable {
         case note, task, remind, important
         var title: String {
             switch self {
@@ -186,16 +201,16 @@ struct FocusRowView: View {
     static let markSize: CGFloat = 44
     /// Buttons take radius 10 in the redesign, never circles or pills.
     static let markCornerRadius: CGFloat = 10
-    /// Centre-to-centre spacing on a screen with room for it (the prototype's 50 for its
-    /// 40px marks, widened for 44pt touch targets).
-    static let markSpacing: CGFloat = 52
+    /// Centre-to-centre spacing on a screen with room for it: a 16pt gap between 44pt marks.
+    static let markSpacing: CGFloat = markSize + 16
     /// The least room kept between the last mark and the screen's trailing edge.
     static let screenMargin: CGFloat = 8
     /// How far the Iris centre sits in from its card's top and leading edges (36).
     static let irisCentreInset = CatchlightLayout.irisInset + CatchlightLayout.circleDiameter / 2
-    /// How far below the card's bottom edge the row's centre sits (8): it puts the marks'
-    /// tops on the card's bottom padding line, so they clear its last line of text.
-    static let belowEdge: CGFloat = markSize / 2 - CatchlightLayout.cardPadding
+    /// How much the tapped card grows at the bottom while the row is open (22, half a
+    /// mark): the marks sit centred on its grown bottom edge, so this keeps them clear of
+    /// its last line of text.
+    static let cardGrowth: CGFloat = markSize / 2
 
     /// The Iris centre of a card: `irisCentreInset` in from its top and leading edges.
     static func hubCentre(of cardFrame: CGRect) -> CGPoint {
@@ -209,11 +224,11 @@ struct FocusRowView: View {
                width: cardSize.width, height: cardSize.height)
     }
 
-    /// The row's resting y offset from the Iris centre: `belowEdge` under the card's bottom
-    /// edge, lifted so a mark's bottom stays at or above `visibleBottom` (0 = no clamp), and
-    /// never above the Iris centre.
+    /// The row's resting y offset from the Iris centre: exactly on the card's bottom edge
+    /// once it has grown by `cardGrowth`, lifted so a mark's bottom stays at or above
+    /// `visibleBottom` (0 = no clamp), and never above the Iris centre.
     static func rowY(cardFrame: CGRect, visibleBottom: CGFloat) -> CGFloat {
-        let y = cardFrame.height - irisCentreInset + belowEdge
+        let y = cardFrame.height + cardGrowth - irisCentreInset
         guard visibleBottom > 0 else { return y }
         let lowest = visibleBottom - markSize / 2 - hubCentre(of: cardFrame).y
         return max(0, min(y, lowest))
@@ -221,14 +236,16 @@ struct FocusRowView: View {
 
     /// A mark's resting x offset from the Iris centre. Marks sit `markSpacing` apart;
     /// when the last one would cross `screenMargin`, the spacing shrinks evenly so it
-    /// lands on the margin. `containerWidth` 0 means unknown (previews): no squeeze.
+    /// lands on the margin, but never below `markSize`, so the marks never overlap. With
+    /// the Iris at its real place that starts below about 319pt wide, narrower than any
+    /// supported phone. `containerWidth` 0 means unknown (previews): no squeeze.
     static func slotX(for index: Int, hubX: CGFloat, containerWidth: CGFloat) -> CGFloat {
         let count = CGFloat(MarkKind.allCases.count)
         var spacing = markSpacing
         if containerWidth > 0 {
             let limit = containerWidth - screenMargin - markSize / 2
             if hubX + count * markSpacing > limit {
-                spacing = (limit - hubX) / count
+                spacing = max(markSize, (limit - hubX) / count)
             }
         }
         return CGFloat(index + 1) * spacing
@@ -236,68 +253,133 @@ struct FocusRowView: View {
 
     // MARK: - Choreography (the Iris prototype's `openMarks`)
 
-    private enum Choreo {
-        /// All four marks drop together from under the Iris to the card's bottom edge.
-        static let rise: Double = 0.340
-        /// Each mark starts its slide this much after the one to its left.
-        static let spreadStagger: Double = 0.050
-        /// How long each mark takes to slide right to its slot.
-        static let spread: Double = 0.280
-        /// Size the marks start at, under the Iris.
+    /// When each part of the open happens, in seconds from the tap. The close plays the
+    /// whole open backwards, `closeSpeed` times faster.
+    enum Timing {
+        /// All four marks drop together from under the Iris to the card's grown bottom edge,
+        /// and the card grows, on easeInOutCubic.
+        static let drop: Double = 0.340
+        /// The marks fade in, linearly, over this first part of the drop.
+        static let fadeIn: Double = 0.080
+        /// Size the marks start at, under the Iris; they reach full size with the drop.
         static let startScale: CGFloat = 0.85
-        /// Exit plays the mirror this much faster.
+        /// The close plays the open backwards this much faster.
         static let closeSpeed: Double = 1.25
+
+        /// When a mark starts sliding right to its slot: the far marks peel off first, while
+        /// the drop is still running, and Note last, as the drop ends.
         static func spreadStart(_ kind: MarkKind) -> Double {
-            rise + spreadStagger * Double(kind.rawValue)
+            switch kind {
+            case .important: return 0.120
+            case .remind: return 0.185
+            case .task: return 0.250
+            case .note: return 0.340
+            }
         }
-        /// When a mark lands in its slot (seconds from open start).
-        static func landing(_ kind: MarkKind) -> Double { spreadStart(kind) + spread }
-        /// Open end: the last mark lands (770ms).
-        static var total: Double {
-            MarkKind.allCases.map(landing).max() ?? 1
+        /// The shortest slide.
+        static let minSpread: Double = 0.280
+        /// A slide lasts this long per point travelled, so far marks travel at the pace of
+        /// near ones (Note 280, Task 468, Reminder 702, Important 936ms at the phone slots).
+        static let spreadPerPoint: Double = 0.0039
+        /// How long a mark takes to slide `travel` points to its slot.
+        static func spreadDuration(travel: CGFloat) -> Double {
+            max(minSpread, Double(abs(travel)) * spreadPerPoint)
         }
+        /// When the open ends: the last mark lands. `slots` are the marks' x offsets from the
+        /// Iris centre, in `MarkKind` order.
+        static func openDuration(slots: [CGFloat]) -> Double {
+            MarkKind.allCases.map { spreadStart($0) + spreadDuration(travel: slots[$0.rawValue]) }.max() ?? drop
+        }
+        static func closeDuration(slots: [CGFloat]) -> Double { openDuration(slots: slots) / closeSpeed }
+        /// The point of the open every mark shows `elapsed` seconds into the close: the whole
+        /// open backwards, so the marks retrace their paths in step and the card shrinks last.
+        static func closeTime(elapsed: Double, slots: [CGFloat]) -> Double {
+            openDuration(slots: slots) - elapsed * closeSpeed
+        }
+
+        /// The marks' opacity at time t of the open.
+        static func markOpacity(at t: Double) -> Double { clamp(t / fadeIn) }
+        /// The marks' scale at time t of the open.
+        static func markScale(at t: Double) -> CGFloat {
+            startScale + (1 - startScale) * CGFloat(easeInOutCubic(clamp(t / drop)))
+        }
+        /// How far the marks have dropped, and the card grown, at time t of the open (0 to 1).
+        static func dropProgress(at t: Double) -> Double { easeInOutCubic(clamp(t / drop)) }
+        /// How far a mark has slid to its slot at time t of the open (0 to 1, overshooting a little).
+        static func spreadProgress(_ kind: MarkKind, at t: Double, travel: CGFloat) -> Double {
+            easeOutBack(clamp((t - spreadStart(kind)) / spreadDuration(travel: travel)))
+        }
+
+        private static func clamp(_ x: Double) -> Double { min(max(x, 0), 1) }
+    }
+
+    /// The marks' x offsets from the Iris centre, in `MarkKind` order.
+    private var slots: [CGFloat] {
+        MarkKind.allCases.map { Self.slotX(for: $0.rawValue, hubX: hubCentre.x, containerWidth: containerWidth) }
     }
 
     // Easings — identical curves to the prototype.
-    private static func easeOutBack(_ p: Double) -> Double {
+    static func easeOutBack(_ p: Double) -> Double {
         let s = 1.15
         return 1 + (s + 1) * pow(p - 1, 3) + s * pow(p - 1, 2)
     }
-    private static func easeInOutCubic(_ p: Double) -> Double {
+    static func easeInOutCubic(_ p: Double) -> Double {
         p < 0.5 ? 4 * p * p * p : 1 - pow(-2 * p + 2, 3) / 2
     }
 
     /// A mark takes taps only past this share of its rise, when it is visibly out from the Iris.
     private static let hitTestRise = 0.5
 
-    /// How far along a mark is at time t of the open: `rise` 0 under the Iris to 1 on the
-    /// card's edge, `spread` 0 stacked to 1 in its slot (overshooting a little past 1).
+    /// How a mark is drawn at a point of the open.
     private struct MarkProgress {
+        /// 0 under the Iris to 1 on the card's edge: the drop.
         var rise: Double
+        /// 0 stacked to 1 in its slot (overshooting a little past 1).
         var spread: Double
+        var opacity: Double
+        var scale: CGFloat
+
+        static let rest = MarkProgress(rise: 1, spread: 1, opacity: 1, scale: 1)
+        static let hidden = MarkProgress(rise: 0, spread: 0, opacity: 0, scale: Timing.startScale)
     }
 
-    private static func openProgress(_ kind: MarkKind, at t: Double) -> MarkProgress {
-        let rise = easeInOutCubic(min(max(t / Choreo.rise, 0), 1))
-        let slide = min(max((t - Choreo.spreadStart(kind)) / Choreo.spread, 0), 1)
-        return MarkProgress(rise: rise, spread: easeOutBack(slide))
+    private func openProgress(_ kind: MarkKind, at t: Double) -> MarkProgress {
+        MarkProgress(rise: Timing.dropProgress(at: t),
+                     spread: Timing.spreadProgress(kind, at: t, travel: slots[kind.rawValue]),
+                     opacity: Timing.markOpacity(at: t),
+                     scale: Timing.markScale(at: t))
     }
 
-    /// The close plays each mark's own open backwards at `closeSpeed`, as the prototype
-    /// reverses each mark's animation, so every mark starts back at once.
+    /// The close plays the open backwards at `Timing.closeSpeed`.
     private func markProgress(_ kind: MarkKind, now: Date) -> MarkProgress {
         switch phase {
         case .opening(let start):
-            return Self.openProgress(kind, at: now.timeIntervalSince(start))
+            return openProgress(kind, at: now.timeIntervalSince(start) / Self.timeScale)
         case .open:
-            return MarkProgress(rise: 1, spread: 1)
+            return .rest
         case .closing(let start, _):
-            let mirrored = Choreo.landing(kind) - now.timeIntervalSince(start) * Choreo.closeSpeed
-            return Self.openProgress(kind, at: mirrored)
+            let elapsed = now.timeIntervalSince(start) / Self.timeScale
+            return openProgress(kind, at: Timing.closeTime(elapsed: elapsed, slots: slots))
         case .dismissed:
-            return MarkProgress(rise: 0, spread: 0)
+            return .hidden
         }
     }
+
+    /// How far the tapped card has grown, 0 to 1: on the drop's own curve and timing, and on
+    /// the close with the whole open played backwards, so it shrinks as the marks lift.
+    private func growProgress(now: Date) -> Double {
+        let t: Double
+        switch phase {
+        case .opening(let start): t = now.timeIntervalSince(start) / Self.timeScale
+        case .open: return 1
+        case .closing(let start, _):
+            t = Timing.openDuration(slots: slots)
+                - now.timeIntervalSince(start) / Self.timeScale * Timing.closeSpeed
+        case .dismissed: return 0
+        }
+        return Timing.dropProgress(at: t)
+    }
+
 
     /// Only the live phases drive the TimelineView; `.open` and `.dismissed` are
     /// static so it pauses (and `.dismissed` lets the overlay be removed).
@@ -321,15 +403,15 @@ struct FocusRowView: View {
     /// `.open` holds solid; Reduce Motion (phase jumps straight to `.open`) keeps the
     /// overlay's plain transition.
     private func veilOpacity(now: Date) -> Double {
-        let dur = Choreo.total / Choreo.closeSpeed
+        let dur = Timing.closeDuration(slots: slots)
         switch phase {
         case .opening(let start):
-            let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
+            let p = min(max(now.timeIntervalSince(start) / Self.timeScale / dur, 0), 1)
             return Self.easeInOutCubic(p)
         case .open:
             return 1
         case .closing(let start, _):
-            let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
+            let p = min(max(now.timeIntervalSince(start) / Self.timeScale / dur, 0), 1)
             return 1 - Self.easeInOutCubic(p)
         case .dismissed:
             return 0
@@ -358,17 +440,16 @@ struct FocusRowView: View {
         }
         // A smooth, minimal-bounce spring approximating the iOS sheet present/dismiss.
         .animation(.spring(response: 0.52, dampingFraction: 0.9), value: showingReminderPicker)
-        .onChange(of: showingReminderPicker) { _, shown in onReminderPickerShownChange(shown) }
-        .onChange(of: commitRequests) { _, _ in
-            guard veilIsInteractive, !showingReminderPicker else { return }
-            retractAndDismiss(commit: true)
-        }
         .onAppear {
             if instantMotion { phase = .open }
             else { phase = .opening(start: .now) }
+            if showsFocusCard {
+                onCardGrowth(true, instantMotion ? nil : Timing.drop * Self.timeScale)
+            }
             // Settle into the static .open phase once the choreography ends so
             // the TimelineView stops ticking.
-            DispatchQueue.main.asyncAfter(deadline: .now() + Choreo.total + 0.05) {
+            // The veil takes the closing tap once the open has finished.
+            DispatchQueue.main.asyncAfter(deadline: .now() + (Timing.openDuration(slots: slots) + 0.05) * Self.timeScale) {
                 if case .opening = phase { phase = .open }
             }
         }
@@ -438,8 +519,11 @@ struct FocusRowView: View {
                 // frame, so it lands exactly over it. Drawn BEFORE the marks so they pass
                 // above it.
                 if showsFocusCard, cardFrame.width > 0 {
-                    TakeCardSurface(take: take)
-                        .frame(width: cardFrame.width, height: cardFrame.height, alignment: .topLeading)
+                    // Grows over the real card, which keeps its size, on the drop's curve; the
+                    // cards below move down with it (`onCardGrowth`).
+                    let growth = Self.cardGrowth * growProgress(now: now)
+                    TakeCardSurface(take: take, extraBottomPadding: growth)
+                        .frame(width: cardFrame.width, height: cardFrame.height + growth, alignment: .topLeading)
                         .offset(x: cardFrame.minX, y: cardFrame.minY)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         // Fades out with the veil on close (owner 2026-06-17) so the
@@ -453,23 +537,27 @@ struct FocusRowView: View {
                 let rowY = Self.rowY(cardFrame: cardFrame, visibleBottom: visibleBottom)
                 ZStack {
                     // Drawn before the hub so the marks come out from beneath the Iris.
-                    // Later marks stack on top while gathered, as in the prototype.
-                    ForEach(MarkKind.allCases, id: \.rawValue) { kind in
+                    // Reversed, as before the redesign, so Note is drawn last and sits on top
+                    // of the gathered marks: a tap on the stack toggles Note.
+                    ForEach(MarkKind.allCases.reversed(), id: \.rawValue) { kind in
                         let p = markProgress(kind, now: now)
                         let slot = Self.slotX(for: kind.rawValue, hubX: hubCentre.x,
                                               containerWidth: containerWidth)
                         mark(kind)
-                            .scaleEffect(Choreo.startScale + (1 - Choreo.startScale) * p.rise)
+                            .scaleEffect(p.scale)
                             .offset(x: slot * p.spread, y: rowY * p.rise)
-                            .opacity(p.rise)
+                            .opacity(p.opacity)
                             // A mark takes taps only once it has risen visibly out from under the
                             // Iris, on the open and again on the close: a very early tap used to
                             // toggle a mark still hidden under the Iris.
                             .allowsHitTesting(p.rise > Self.hitTestRise)
                     }
 
-                    // Hub: the Iris itself, previewing the working selection live.
+                    // Hub: the Iris itself, previewing the working selection live. It takes no
+                    // taps, so a tap anywhere on it reaches the veil (save and close), as the
+                    // hollow-centred Iris before the redesign let it.
                     IrisView(take: workingTake, diameter: CatchlightLayout.circleDiameter)
+                        .allowsHitTesting(false)
                         .accessibilityLabel("Selected: \(IrisView.activityDescription(for: workingTake))")
                 }
                 .position(hubCentre)
@@ -640,11 +728,23 @@ struct FocusRowView: View {
             return
         }
         if instantMotion {
+            if showsFocusCard { onCardGrowth(false, nil) }
             finish(commit: commit)
             return
         }
         phase = .closing(start: .now, commit: commit)
-        let closeDuration = (Choreo.total / Choreo.closeSpeed) + 0.05
+        if showsFocusCard {
+            // The drop opened the row, so the card shrinks back over the close's last stretch.
+            let shrink = Timing.drop / Timing.closeSpeed * Self.timeScale
+            let wait = (Timing.openDuration(slots: slots) - Timing.drop) / Timing.closeSpeed * Self.timeScale
+            DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
+                // Only while this close is still running: a row removed another way has
+                // already reset the growth, and must not leave a stale Take behind.
+                guard case .closing = phase else { return }
+                onCardGrowth(false, shrink)
+            }
+        }
+        let closeDuration = (Timing.closeDuration(slots: slots) + 0.05) * Self.timeScale
         DispatchQueue.main.asyncAfter(deadline: .now() + closeDuration) {
             if case .closing(_, let c) = phase { finish(commit: c) }
         }

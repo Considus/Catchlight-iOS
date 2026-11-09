@@ -432,7 +432,7 @@ struct RootView: View {
                                 isImportant: isImportant
                             )
                             // Remove the fan overlay INSTANTLY first, THEN trigger the
-                            // command's card-grow/caret relayout — so no fan
+                            // command's card-grow/keyboard/caret relayout, so no fan
                             // removal transition runs through that relayout (which
                             // stranded the hub Iris as an orphan glyph, owner 2026-07-11).
                             ui.closeFocusRow(animated: false)
@@ -457,8 +457,9 @@ struct RootView: View {
                         }
                     },
                     onDismiss: { ui.closeFocusRow() },
-                    onReminderPickerShownChange: { ui.focusRowPickerShown = $0 },
-                    commitRequests: ui.focusRowCommitRequests
+                    onCardGrowth: { grown, duration in
+                        ui.focusRowGrowth.set(grown, for: take.id, duration: duration)
+                    }
                 )
             }
             .ignoresSafeArea()

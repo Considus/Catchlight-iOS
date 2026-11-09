@@ -135,6 +135,8 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// DISPLAY order. A handle that can only be dragged is a handle a VoiceOver user does
     /// not have, the same reason the Iris's Obie long-press carries a named action.
     var onNudge: (Take, Int) -> Void = { _, _ in }
+    /// The card under an open Focus row grows by this (see `FocusRowGrowth`).
+    var focusGrowth: FocusRowGrowth? = nil
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
@@ -159,6 +161,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.isReorderable = isReorderable
         vc.onReorder = onReorder
         vc.onNudge = onNudge
+        if let focusGrowth { vc.focusGrowth = focusGrowth }
         return vc
     }
 
@@ -571,7 +574,8 @@ struct TimelineMonthDivider: View {
     }
 }
 
-final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDelegate {
+final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDelegate,
+                                         UICollectionViewDelegate {
     var spineX: CGFloat = 0
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
     var activeMonthKey: String?
@@ -596,6 +600,118 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     var onNudge: (Take, Int) -> Void = { _, _ in }
 
     private let swipeState = TimelineSwipeState()
+    /// The host's Focus row growth. While the row is open on a Take, every cell below that
+    /// Take moves down by the growth, on the row's own curve; with the pinned Obie (not in
+    /// this collection) under the row, every cell does. The tapped card itself keeps its
+    /// size: the row's lit copy, drawn over it, is the one that grows.
+    var focusGrowth = FocusRowGrowth()
+
+    /// A Take cell's content.
+    private func takeConfiguration(for take: Take) -> UIHostingConfiguration<TimelineSwipeCell, EmptyView> {
+        UIHostingConfiguration {
+            TimelineSwipeCell(take: take, spineX: self.spineX, cardGap: self.cardGap,
+                              isSnoozed: self.snoozedIDs.contains(take.id),
+                              swipeState: self.swipeState,
+                              onToggleDone: { self.onToggleDone($0) },
+                              onDelete: { self.onDelete($0) },
+                              onTapCircle: { self.onTapCircle($0, $1) },
+                              onLongPressCircle: { self.onLongPressCircle($0) },
+                              onSetImportant: { self.onSetImportant($0) },
+                              onMakeObie: { self.onMakeObie($0) },
+                              onExport: { self.onExport($0) },
+                              onTapText: { [weak self] tapped in
+                                  self?.onTapText(tapped)
+                              },
+                              isSpotlightTarget: self.flashingID == take.id,
+                              showsDragHandle: self.isReorderable,
+                              onNudge: { self.onNudge($0, $1) })
+        }
+        .margins(.all, 0)
+    }
+
+    private func observeFocusGrowth() {
+        withObservationTracking {
+            _ = focusGrowth.amount
+            _ = focusGrowth.takeID
+        } onChange: { [weak self] in
+            // Fires before the change lands: act on the next turn, then watch again.
+            DispatchQueue.main.async {
+                self?.applyFocusGrowth()
+                self?.observeFocusGrowth()
+            }
+        }
+    }
+
+    /// The shift of the cells below the grown Take, moving from `shiftFrom` to `shiftTo` over
+    /// `shiftDuration` from `shiftStart`, stepped by `shiftLink` each frame.
+    private var shiftFrom: CGFloat = 0
+    private var shiftTo: CGFloat = 0
+    private var shiftStart: CFTimeInterval = 0
+    private var shiftDuration: Double = 0
+    private var shiftLink: CADisplayLink?
+    private var shiftNow: CGFloat = 0
+
+    /// Moves the cells below the grown Take by the growth, over the change's duration on the
+    /// row's curve (at once for a zero duration). Stepped frame by frame rather than with a
+    /// UIKit animation: measured in a slowed UI test, a running property animator on these
+    /// cells made the Focus row's marks drop taps.
+    private func applyFocusGrowth() {
+        shiftFrom = shiftNow
+        shiftTo = focusGrowth.amount
+        shiftDuration = focusGrowth.duration
+        shiftStart = CACurrentMediaTime()
+        shiftLink?.invalidate()
+        shiftLink = nil
+        guard shiftDuration > 0, shiftFrom != shiftTo else { setShift(shiftTo); return }
+        let link = CADisplayLink(target: self, selector: #selector(stepShift))
+        link.add(to: .main, forMode: .common)
+        shiftLink = link
+    }
+
+    /// The display link holds this controller: stop it when the timeline leaves the screen,
+    /// landing the shift where it was heading.
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        guard shiftLink != nil else { return }
+        shiftLink?.invalidate()
+        shiftLink = nil
+        setShift(shiftTo)
+    }
+
+    deinit { shiftLink?.invalidate() }
+
+    /// A cell kept off screen (prefetched, or scrolled away and back) is neither reconfigured
+    /// nor reused, so it takes the current shift here as it returns.
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell,
+                        forItemAt indexPath: IndexPath) {
+        (cell as? TimelineCell)?.focusShift = focusShift(at: indexPath)
+    }
+
+    @objc private func stepShift() {
+        let p = min(max((CACurrentMediaTime() - shiftStart) / shiftDuration, 0), 1)
+        setShift(shiftFrom + (shiftTo - shiftFrom) * CGFloat(FocusRowView.easeInOutCubic(p)))
+        if p >= 1 { shiftLink?.invalidate(); shiftLink = nil }
+    }
+
+    /// Moves every visible cell below the grown Take (every cell, for the pinned Obie) down by
+    /// `shift`, and the rest back to rest. Cells configured or reused later take theirs from
+    /// `focusShift(at:)` in the cell registration.
+    private func setShift(_ shift: CGFloat) {
+        shiftNow = shift
+        guard let collectionView else { return }
+        for path in collectionView.indexPathsForVisibleItems {
+            (collectionView.cellForItem(at: path) as? TimelineCell)?.focusShift = focusShift(at: path)
+        }
+    }
+
+    /// The current shift for the row at `path`: `shiftNow` below the grown Take, 0 above it.
+    private func focusShift(at path: IndexPath) -> CGFloat {
+        guard shiftNow != 0, let dataSource else { return 0 }
+        guard let id = focusGrowth.takeID, let grown = dataSource.indexPath(for: .take(id)) else {
+            return shiftNow                     // the pinned Obie: every row is below it
+        }
+        return path > grown ? shiftNow : 0
+    }
     private var collectionView: UICollectionView!
     private var reorderPress: UILongPressGestureRecognizer!
     private var dataSource: UICollectionViewDiffableDataSource<Int, TimelineRow>!
@@ -709,6 +825,8 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         // collection behind it, interactive tracking contributed to keyboard re-placement
         // thrash (caps-flash, attempt 1). Nothing here needs scroll-to-dismiss.
         collectionView.keyboardDismissMode = .none
+        // Only for `willDisplay`, which gives a cell coming back on screen the current shift.
+        collectionView.delegate = self
         // Tap the EMPTY timeline → the host's background action (clear a filter / close search).
         // The old SwiftUI timeline did this with a `.background` catcher behind its VStack; this
         // collection covers that area and eats the tap, so the exit was lost in the rebuild —
@@ -734,34 +852,18 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         // `UIViewControllerRepresentable`, which `UIHostingConfiguration` does not support: inside a
         // cell it renders SwiftUI's yellow "unavailable" placeholder. Editing happens in the plain
         // SwiftUI overlay (`KeyboardTakeEditor`) above this collection.
-        let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, TimelineRow> {
-            [weak self] cell, _, row in
+        let cellReg = UICollectionView.CellRegistration<TimelineCell, TimelineRow> {
+            [weak self] cell, indexPath, row in
             guard let self else { return }
+            // Configured or reused while the Focus row is open: take the current shift.
+            cell.focusShift = self.focusShift(at: indexPath)
             // Don't clip, so nothing drawn at a card's edge is cut off.
             cell.clipsToBounds = false
             cell.contentView.clipsToBounds = false
             switch row {
             case .take(let id):
                 guard let take = self.takesByID[id] else { return }
-                cell.contentConfiguration = UIHostingConfiguration {
-                    TimelineSwipeCell(take: take, spineX: self.spineX, cardGap: self.cardGap,
-                                      isSnoozed: self.snoozedIDs.contains(id),
-                                      swipeState: self.swipeState,
-                                      onToggleDone: { self.onToggleDone($0) },
-                                      onDelete: { self.onDelete($0) },
-                                      onTapCircle: { self.onTapCircle($0, $1) },
-                                      onLongPressCircle: { self.onLongPressCircle($0) },
-                                      onSetImportant: { self.onSetImportant($0) },
-                                      onMakeObie: { self.onMakeObie($0) },
-                                      onExport: { self.onExport($0) },
-                                      onTapText: { [weak self] tapped in
-                                          self?.onTapText(tapped)
-                                      },
-                                      isSpotlightTarget: self.flashingID == id,
-                                      showsDragHandle: self.isReorderable,
-                                      onNudge: { self.onNudge($0, $1) })
-                }
-                .margins(.all, 0)
+                cell.contentConfiguration = self.takeConfiguration(for: take)
             case .month(let key):
                 cell.contentConfiguration = UIHostingConfiguration {
                     TimelineMonthDivider(title: self.groupTitles[key] ?? "",
@@ -794,6 +896,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
             self.lastItems = order
             self.onReorder(moved, order.compactMap(\.takeID))
         }
+        observeFocusGrowth()
     }
 
     override func viewSafeAreaInsetsDidChange() {
@@ -1027,4 +1130,27 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         collectionView.accessibilityElementsHidden = hidden
     }
 
+}
+
+/// A timeline row's cell. Carries the Focus row's shift of the cards below the tapped one
+/// (`UIKitTimelineViewController.setShift`) as its transform, and puts it back whenever the
+/// collection view re-applies the cell's layout attributes, which reset the transform.
+final class TimelineCell: UICollectionViewListCell {
+    var focusShift: CGFloat = 0 {
+        didSet { if focusShift != oldValue { applyFocusShift() } }
+    }
+
+    override func apply(_ layoutAttributes: UICollectionViewLayoutAttributes) {
+        super.apply(layoutAttributes)
+        applyFocusShift()
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        focusShift = 0
+    }
+
+    private func applyFocusShift() {
+        transform = focusShift == 0 ? .identity : CGAffineTransform(translationX: 0, y: focusShift)
+    }
 }

@@ -78,15 +78,10 @@ final class UIState {
     /// The tapped Take's card in window coordinates (`.zero` when unknown). The Focus row
     /// derives its hub from it and runs along its bottom edge.
     var focusRowCardFrame: CGRect = .zero
-    /// True while the Remind mark's picker fills the screen over the Focus row. The editor
-    /// lowers its keyboard for it and raises it again when it closes (owner 2026-11-09: the
-    /// keyboard otherwise stays up while the row is open).
-    var focusRowPickerShown = false
-    /// Bumped to ask an open Focus row to save and close, as a tap on its dimmed area does.
-    /// The editor's keyboard toolbar sends it while the row is open over the editor.
-    var focusRowCommitRequests = 0
-    func requestFocusRowCommit() { focusRowCommitRequests += 1 }
     var isFocusRowPresented: Bool { focusRowTake != nil }
+    /// How much the Take under an open Focus row has grown at the bottom. Shared with the
+    /// UIKit timeline's cells, which do not see this state's environment.
+    let focusRowGrowth = FocusRowGrowth()
 
     // Take editor — edit-in-place (the top-anchored overlay editor was retired in
     // Phase 3, 2026-06-17; all create/edit happens in the timeline now).
@@ -358,12 +353,13 @@ final class UIState {
 
     /// Dismiss the Focus row. `animated: false` removes the overlay WITHOUT the
     /// opacity transition — required on the edit-in-place commit path, where committing
-    /// immediately grows the card and scrolls the caret (the keyboard stays up): a
+    /// immediately grows the card, re-raises the keyboard and scrolls the caret: a
     /// fade-out running THROUGH that relayout left SwiftUI unable to complete the removal
     /// transition and stranded the fan's screen-positioned hub Iris as an orphan glyph
     /// (owner 2026-07-11). With no transition there is nothing to strand.
     func closeFocusRow(animated: Bool = true) {
-        focusRowPickerShown = false
+        // The row's close has already shrunk the card back; this covers any other way out.
+        focusRowGrowth.reset()
         if animated {
             withAnimation(Self.gatedFanFade) { focusRowTake = nil }
         } else {
@@ -388,5 +384,31 @@ final class UIState {
 
     func endEditingInPlace() {
         withAnimation(Self.gatedFanFade) { editingTakeID = nil }
+    }
+}
+
+/// The tapped card's growth while the Focus row is open on it (`FocusRowView.cardGrowth`
+/// when fully open, 0 otherwise). The row's lit copy of the card draws the growth on the
+/// row's own clock; the timeline moves the cards below by it (`UIKitTimelineViewController`).
+@Observable
+final class FocusRowGrowth {
+    private(set) var takeID: UUID?
+    private(set) var amount: CGFloat = 0
+    /// How long the latest change animates over (0: at once), on the drop's curve. The
+    /// timeline moves the cards below by it.
+    private(set) var duration: Double = 0
+
+    /// Grow or shrink the Take's card over `duration` seconds (nil: at once).
+    func set(_ grown: Bool, for id: UUID, duration: Double?) {
+        self.duration = duration ?? 0
+        takeID = id
+        amount = grown ? FocusRowView.cardGrowth : 0
+    }
+
+    func reset() {
+        guard amount != 0 || takeID != nil else { return }
+        duration = 0
+        amount = 0
+        takeID = nil
     }
 }

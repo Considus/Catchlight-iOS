@@ -112,8 +112,14 @@ struct CatchlightApp: App {
         // UI tests: kill UIKit animations so XCUITest doesn't race the keyboard slide,
         // the UIKit pan/scroll coordination, or view transitions — a known flake source.
         // SwiftUI animations (the Focus row) are handled separately by forcing
-        // reduce-motion in `body`. No effect on shipping builds.
-        if ProcessInfo.processInfo.arguments.contains("--uitesting") {
+        // reduce-motion in `body`. No effect on shipping builds. A test that plays the Focus
+        // row slowly (`-catchlight.focusRowTimeScale`, Debug only) keeps them, so the timeline
+        // moves with it.
+        var playsFocusRowSlowly = false
+        #if DEBUG
+        playsFocusRowSlowly = UserDefaults.standard.double(forKey: "catchlight.focusRowTimeScale") > 0
+        #endif
+        if ProcessInfo.processInfo.arguments.contains("--uitesting"), !playsFocusRowSlowly {
             UIView.setAnimationsEnabled(false)
         }
         // Detect an unexpected termination of the PREVIOUS run and stamp this launch. Must run

@@ -2,10 +2,12 @@
 //  FocusRowLayoutTests.swift
 //  CatchlightTests (app module)
 //
-//  Covers where the Focus row's four marks land: 52pt apart to the right of the
-//  Iris on a standard phone, squeezed evenly (never shrunk) when the row would
-//  otherwise run past the screen's 8pt margin, and 8pt below the card's bottom
-//  edge, lifted to stay above the keyboard or the dock.
+//  Covers where the Focus row's four marks land: 44pt marks with 16pt gaps, centres
+//  60, 120, 180 and 240pt right of the Iris on a phone, squeezed evenly (never shrunk,
+//  never overlapping) when the row would otherwise run past the screen's 8pt margin.
+//  The tapped card grows 22pt at the bottom while the row is open, and the marks'
+//  centres sit exactly on its grown bottom edge, lifted to stay above the keyboard or
+//  the dock.
 //
 
 import XCTest
@@ -17,19 +19,35 @@ final class FocusRowLayoutTests: XCTestCase {
         (0..<4).map { FocusRowView.slotX(for: $0, hubX: hubX, containerWidth: width) }
     }
 
-    /// 393pt wide with the Iris at the real card position: four marks at 52, 104, 156, 208.
-    func testStandardWidth_marksSit52Apart() {
-        let hubX = CatchlightLayout.spineX(containerWidth: 393)
-        XCTAssertEqual(slots(hubX: hubX, width: 393), [52, 104, 156, 208])
+    /// 44pt marks with 16pt gaps between them.
+    func testMarksAre44WithA16Gap() {
+        XCTAssertEqual(FocusRowView.markSize, 44)
+        XCTAssertEqual(FocusRowView.markSpacing - FocusRowView.markSize, 16)
     }
 
-    /// The narrowest supported phone keeps the last mark at least 8pt inside the screen,
-    /// with equal gaps.
-    func testNarrowestPhone_lastMarkStaysInsideTheMargin() {
+    /// 393pt wide with the Iris at the real card position: four marks at 60, 120, 180, 240.
+    func testStandardWidth_marksSit60Apart() {
+        let hubX = CatchlightLayout.spineX(containerWidth: 393)
+        XCTAssertEqual(slots(hubX: hubX, width: 393), [60, 120, 180, 240])
+    }
+
+    /// The narrowest supported phone (375) has room for the full spacing.
+    func testNarrowestPhone_keepsTheFullSpacing() {
         let width: CGFloat = 375
         let hubX = CatchlightLayout.spineX(containerWidth: width)
         let xs = slots(hubX: hubX, width: width)
+        XCTAssertEqual(xs, [60, 120, 180, 240])
         XCTAssertLessThanOrEqual(hubX + xs[3] + FocusRowView.markSize / 2, width - 8)
+    }
+
+    /// The squeeze starts below 318.9pt wide with the Iris at the real card position: at
+    /// 320 the last mark's edge (49 + 240 + 22 = 311) is inside the margin (312); at 318
+    /// it is not (48.75 + 262 = 310.75 > 310), so the gap shrinks.
+    func testSqueezeThreshold() {
+        XCTAssertEqual(slots(hubX: CatchlightLayout.spineX(containerWidth: 320), width: 320),
+                       [60, 120, 180, 240])
+        let xs = slots(hubX: CatchlightLayout.spineX(containerWidth: 318), width: 318)
+        XCTAssertLessThan(xs[0], 60)
         assertEqualGaps(xs)
     }
 
@@ -37,11 +55,16 @@ final class FocusRowLayoutTests: XCTestCase {
     /// shrinks evenly so the last mark's right edge lands exactly on the 8pt margin.
     func testOverflow_gapShrinksEvenlyToTheMargin() {
         let width: CGFloat = 375
-        let hubX: CGFloat = 200
+        let hubX: CGFloat = 160
         let xs = slots(hubX: hubX, width: width)
         XCTAssertEqual(hubX + xs[3] + FocusRowView.markSize / 2, width - 8, accuracy: 0.0001)
-        XCTAssertLessThan(xs[0], 52)
+        XCTAssertLessThan(xs[0], 60)
         assertEqualGaps(xs)
+    }
+
+    /// However little room there is, the marks never overlap: 44pt apart at the least.
+    func testSqueeze_neverOverlaps() {
+        XCTAssertEqual(slots(hubX: 200, width: 300), [44, 88, 132, 176])
     }
 
     /// The mark is never resized to fit: it stays a 44pt touch target.
@@ -63,29 +86,30 @@ final class FocusRowLayoutTests: XCTestCase {
                        CGRect(x: 20, y: 200, width: 353, height: 140))
     }
 
-    /// A 72pt card: its bottom edge is 72 - 36 = 36 below the Iris centre, and the row's
-    /// centre sits 8 below that, 44 below the Iris centre.
-    func testRowY_shortCard_sits8BelowTheBottomEdge() {
+    /// The open row grows the tapped card by half a mark at the bottom, so the marks,
+    /// centred on its edge, clear the last line of text.
+    func testCardGrowth_isHalfAMark() {
+        XCTAssertEqual(FocusRowView.cardGrowth, 22)
+    }
+
+    /// A 72pt card grows to 94: its grown bottom edge is 94 - 36 = 58 below the Iris centre,
+    /// and the marks' centres sit exactly on it.
+    func testRowY_shortCard_sitsOnTheGrownBottomEdge() {
         let card = CGRect(x: 20, y: 200, width: 353, height: 72)
-        XCTAssertEqual(FocusRowView.rowY(cardFrame: card, visibleBottom: 852), 44)
+        XCTAssertEqual(FocusRowView.rowY(cardFrame: card, visibleBottom: 852), 58)
+        XCTAssertEqual(FocusRowView.hubCentre(of: card).y + 58, card.maxY + 22)
     }
 
-    /// A 140pt card: bottom edge 140 - 36 = 104 below the Iris centre, the row 112.
-    func testRowY_tallCard_sits8BelowTheBottomEdge() {
+    /// A 140pt card grows to 162: the marks' centres 162 - 36 = 126 below the Iris centre.
+    func testRowY_tallCard_sitsOnTheGrownBottomEdge() {
         let card = CGRect(x: 20, y: 200, width: 353, height: 140)
-        XCTAssertEqual(FocusRowView.rowY(cardFrame: card, visibleBottom: 852), 112)
+        XCTAssertEqual(FocusRowView.rowY(cardFrame: card, visibleBottom: 852), 126)
+        XCTAssertEqual(FocusRowView.hubCentre(of: card).y + 126, card.maxY + 22)
     }
 
-    /// With the marks 44 tall, an 8pt drop puts their top edge on the card's 14pt bottom
-    /// padding line, clear of the last line of text.
-    func testRowY_marksTopSitsOnTheCardsBottomPaddingLine() {
-        XCTAssertEqual(FocusRowView.belowEdge, 8)
-        XCTAssertEqual(FocusRowView.belowEdge - FocusRowView.markSize / 2, -CatchlightLayout.cardPadding)
-    }
-
-    /// A card whose bottom edge runs past the visible area: Iris centre at 636, row centre
-    /// would be 636 + 112 = 748, but the lowest a 44pt mark can sit with the visible area
-    /// ending at 700 is 678, so the row lifts to 42 below the Iris centre.
+    /// A card whose grown bottom edge runs past the visible area: Iris centre at 636, row
+    /// centre would be 636 + 126 = 762, but the lowest a 44pt mark can sit with the visible
+    /// area ending at 700 is 678, so the row lifts to 42 below the Iris centre.
     func testRowY_clampsAboveTheVisibleBottom() {
         let card = CGRect(x: 20, y: 600, width: 353, height: 140)
         XCTAssertEqual(FocusRowView.rowY(cardFrame: card, visibleBottom: 700), 42)
