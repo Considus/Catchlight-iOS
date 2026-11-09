@@ -12,6 +12,7 @@
 
 import XCTest
 import UIKit
+import SwiftUI
 @testable import Catchlight
 
 final class SceneTokensTests: XCTestCase {
@@ -89,9 +90,10 @@ final class SceneTokensTests: XCTestCase {
 
     // MARK: - Switching re-resolves in place
 
-    /// Choosing a Scene stores it and sets it on the app's window scene. A UIKit view's
-    /// existing `SceneToken.card` background then resolves to the new Scene's card: the
-    /// same view and the same colour object, nothing rebuilt.
+    /// Choosing a Scene stores it and sets it on the app's window scene, pushing the trait
+    /// through at once. A UIKit view's existing `SceneToken.card` background then resolves
+    /// to the new Scene's card with no further prompt: the same view and the same colour
+    /// object, nothing rebuilt.
     func testSelectingAScene_reResolvesAUIKitColour_onTheSameView() throws {
         try withSceneWindow { window, defaults in
             let view = UIView(frame: window.bounds)
@@ -99,10 +101,8 @@ final class SceneTokensTests: XCTestCase {
             window.addSubview(view)
 
             SettingsViewModel.SceneChoice.select(.cobalt, defaults: defaults)
-            view.updateTraitsIfNeeded()
             let before = try XCTUnwrap(view.backgroundColor?.resolvedColor(with: view.traitCollection))
             SettingsViewModel.SceneChoice.select(.jade, defaults: defaults)
-            view.updateTraitsIfNeeded()
             let after = try XCTUnwrap(view.backgroundColor?.resolvedColor(with: view.traitCollection))
 
             XCTAssertEqual(hex(before), "#131840", "Cobalt Dark card")
@@ -111,6 +111,21 @@ final class SceneTokensTests: XCTestCase {
             XCTAssertTrue(view.superview === window, "the same view")
             XCTAssertEqual(defaults.string(forKey: SettingsViewModel.SceneChoice.defaultsKey), "jade")
         }
+    }
+
+    /// SwiftUI's `ck*` colours resolve from the environment's Scene, which SwiftUI bridges
+    /// from `SceneTrait` on every hosting controller and tracks, so a Scene change repaints them.
+    func testSwiftUIColour_resolvesFromTheEnvironmentsScene() {
+        var env = EnvironmentValues()
+        env.colorScheme = .dark
+        env.catchlightScene = .cobalt
+        let cobalt = Color.ckSurface.resolve(in: env)
+        env.catchlightScene = .jade
+        let jade = Color.ckSurface.resolve(in: env)
+        XCTAssertEqual(hex(UIColor(Color(cobalt))), "#131840")
+        XCTAssertEqual(hex(UIColor(Color(jade))), "#13201A")
+        env.colorScheme = .light
+        XCTAssertEqual(hex(UIColor(Color(Color.ckSurface.resolve(in: env)))), "#FFFFFF", "Jade Light card")
     }
 
     // MARK: - Helpers

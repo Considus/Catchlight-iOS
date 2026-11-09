@@ -176,6 +176,8 @@ enum Wiring {
             // a UI test controls its own environment — so force newest-first here.
             UserDefaults.standard.set(SettingsViewModel.TakeSort.newestFirst.rawValue,
                                       forKey: SettingsViewModel.TakeSort.defaultsKey)
+            // Every UI test starts on the default Scene, whatever an earlier test chose.
+            UserDefaults.standard.removeObject(forKey: SettingsViewModel.SceneChoice.defaultsKey)
             let store = InMemoryTakeStore()
             // Explicit creation times 1s apart: timestamps are truncated to
             // millisecond precision (wire resolution), so two back-to-back

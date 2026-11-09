@@ -49,18 +49,29 @@ final class SettingsViewModel {
     }
 
     /// The chosen colour Scene (Settings → Appearance → Scene), stored as the Scene's raw value.
-    /// It reaches the colours as `SceneTrait` on every window scene's `traitOverrides`, so a
-    /// change re-resolves every `SceneToken` colour in SwiftUI and UIKit in place: no view is
-    /// rebuilt, the Settings sheet stays open and an edit in progress is kept.
+    /// It goes onto every window scene's `traitOverrides` as `SceneTrait`, which UIKit's
+    /// `SceneToken` colours read, and which SwiftUI reads as the bridged `catchlightScene`
+    /// environment value for its `ck*` colours. A change re-resolves every colour in place:
+    /// no view is rebuilt, the Settings sheet stays open and an edit in progress is kept.
     enum SceneChoice {
         static let defaultsKey = "catchlight.scene"
 
-        /// Store `scene` and apply it to every connected window scene at once.
+        /// Apply `scene` to every connected window scene, push the trait through every window
+        /// and presented controller at once, then store it. The trait lands first so the
+        /// SwiftUI redraw the stored value triggers already resolves the new colours.
         static func select(_ scene: CatchlightScene, defaults: UserDefaults = .standard) {
-            defaults.set(scene.rawValue, forKey: defaultsKey)
             for case let windowScene as UIWindowScene in UIApplication.shared.connectedScenes {
                 windowScene.traitOverrides[SceneTrait.self] = scene
+                for window in windowScene.windows {
+                    window.updateTraitsIfNeeded()
+                    var controller = window.rootViewController
+                    while let current = controller {
+                        current.updateTraitsIfNeeded()
+                        controller = current.presentedViewController
+                    }
+                }
             }
+            defaults.set(scene.rawValue, forKey: defaultsKey)
         }
 
         /// Apply the stored Scene to each window scene as it connects, before its first frame.

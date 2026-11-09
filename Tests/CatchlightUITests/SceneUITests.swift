@@ -42,6 +42,34 @@ final class SceneUITests: XCTestCase {
         assertMarginIs(0x0B0E2A, "Cobalt Dark ground", in: app, sheet: sheet)
     }
 
+    /// Thirty switches in one launch, cycling every Scene, with no pause beyond the
+    /// colour check: each must repaint the open sheet. Every miss is listed, not only the first.
+    func testManySwitches_eachRepaintsTheOpenSheet() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting", "-appearanceMode", "night"]
+        app.launch()
+
+        swipeUpWhenReady(app.descendants(matching: .any).matching(identifier: "angle-tab").firstMatch)
+        let sheet = app.descendants(matching: .any).matching(identifier: "settings-sheet").firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout: 3), "Settings did not open")
+        let picker = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "Scene")).firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 5), "No Scene row in Settings")
+
+        let grounds: [(String, UInt32)] = [("Jade", 0x0C1511), ("Cobalt", 0x0B0E2A), ("Onyx", 0x05070A),
+                                           ("Graphite", 0x111214), ("Tanzanite", 0x101028)]
+        var misses: [String] = []
+        for i in 0..<30 {
+            let (name, ground) = grounds[i % grounds.count]
+            choose(name, from: picker, in: app)
+            if let miss = marginMismatch(ground, sheet: sheet) {
+                misses.append("switch \(i + 1) to \(name): \(miss)")
+            }
+        }
+        choose("Cobalt", from: picker, in: app)
+        XCTAssertTrue(misses.isEmpty, "\(misses.count) of 30 switches left the sheet stale:\n" + misses.joined(separator: "\n"))
+    }
+
     // MARK: - Helpers
 
     private func choose(_ name: String, from picker: XCUIElement, in app: XCUIApplication) {
@@ -53,6 +81,14 @@ final class SceneUITests: XCTestCase {
     /// list's margin, where the sheet's ground shows.
     private func assertMarginIs(_ expected: UInt32, _ label: String, in app: XCUIApplication, sheet: XCUIElement,
                                 file: StaticString = #filePath, line: UInt = #line) {
+        if let miss = marginMismatch(expected, sheet: sheet) {
+            XCTFail("\(label): \(miss)", file: file, line: line)
+        }
+    }
+
+    /// Nil once the margin shows `expected` (polled for up to 3 s), else what it drew. A
+    /// miss attaches the screen, so a failure can be read from the result bundle.
+    private func marginMismatch(_ expected: UInt32, sheet: XCUIElement) -> String? {
         let deadline = Date().addingTimeInterval(3)
         var drawn = (0, 0, 0)
         var shot = XCUIScreen.main.screenshot()
@@ -61,15 +97,14 @@ final class SceneUITests: XCTestCase {
             let point = CGPoint(x: sheet.frame.minX + 6, y: sheet.frame.minY + sheet.frame.height / 3)
             shot = XCUIScreen.main.screenshot()
             drawn = pixel(at: point, of: shot.image)
-            if abs(drawn.0 - e.0) <= 3 && abs(drawn.1 - e.1) <= 3 && abs(drawn.2 - e.2) <= 3 { return }
+            if abs(drawn.0 - e.0) <= 3 && abs(drawn.1 - e.1) <= 3 && abs(drawn.2 - e.2) <= 3 { return nil }
             Thread.sleep(forTimeInterval: 0.2)
         } while Date() < deadline
-        // Keep what the screen showed, so a failure can be read from the result bundle.
         let attachment = XCTAttachment(screenshot: shot)
-        attachment.name = "\(label) mismatch"
+        attachment.name = "margin drew \(drawn), expected \(e)"
         attachment.lifetime = .keepAlways
         add(attachment)
-        XCTFail("\(label): the sheet's margin drew \(drawn), expected \(e)", file: file, line: line)
+        return "the sheet's margin drew \(drawn), expected \(e)"
     }
 
     private func pixel(at point: CGPoint, of image: UIImage) -> (Int, Int, Int) {
