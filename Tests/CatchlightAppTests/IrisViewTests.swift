@@ -8,6 +8,7 @@
 //
 
 import XCTest
+import SwiftUI
 import CatchlightCore
 @testable import Catchlight
 
@@ -79,5 +80,18 @@ final class IrisViewTests: XCTestCase {
         let take = Take(blocks: [.textLine("bare")], isNote: false)
         XCTAssertEqual(IrisView.innerShape(for: take), .note)
         XCTAssertEqual(litLights(take), [])
+    }
+
+    /// Unlit lights draw in the softer `unlit` role (2:1), not the 3:1 field `outline`.
+    func testUnlitLights_drawInTheUnlitRole() {
+        for scene in CatchlightScene.allCases {
+            for scheme in [ColorScheme.dark, .light] {
+                var env = EnvironmentValues()
+                env.colorScheme = scheme
+                env.catchlightScene = scene
+                XCTAssertEqual(IrisView.unlitLightColor.resolve(in: env), Color.ckUnlit.resolve(in: env),
+                               "\(scene.rawValue) \(scheme == .dark ? "Dark" : "Light")")
+            }
+        }
     }
 }

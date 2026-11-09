@@ -4,7 +4,8 @@
 //
 //  Every Scene, in Dark and Light, measured on the surfaces a card or the page can be
 //  (ground, card, raised). Text, muted and faint text reach 4.5:1, with faint below muted.
-//  Unlit Iris outlines and lit marks are shapes, so they reach 3:1 (WCAG 1.4.11). The
+//  Field outlines and lit marks are shapes, so they reach 3:1 (WCAG 1.4.11). Unlit Iris
+//  lights are deliberately softer, at 2:1 on every surface including `surface`. The
 //  foreground on an accent fill reaches 4.5:1. The accent also reaches 3:1 as a line,
 //  except Graphite Light, whose yellow accent is fill-only by design.
 //
@@ -35,9 +36,21 @@ final class SceneContrastTests: XCTestCase {
         }
     }
 
-    func testUnlitLightOutline_reaches3to1_onEverySurface() {
+    func testFieldOutline_reaches3to1_onEverySurface() {
         forEverySurface { label, surface, t in
             assertRatio(SceneToken.outline, surface, t, 3.0, "outline on \(label)")
+        }
+    }
+
+    func testUnlitLight_reaches2to1_onEverySurfaceIncludingSurface() {
+        let all = surfaces + [("surface", SceneToken.surface)]
+        for scene in CatchlightScene.allCases {
+            for style in styles {
+                for (surfaceName, surface) in all {
+                    assertRatio(SceneToken.unlit, surface, sceneTraits(scene, style), 2.0,
+                                "unlit on \(surfaceName), \(name(scene, style))")
+                }
+            }
         }
     }
 

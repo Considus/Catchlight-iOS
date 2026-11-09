@@ -173,8 +173,10 @@ enum SceneToken {
     static let raised   = role(\.raised)
     /// Dividers and card edges only.
     static let line     = role(\.line)
-    /// Unlit Iris lights and field outlines: 3:1 on every surface.
+    /// Field outlines: 3:1 on every surface.
     static let outline  = role(\.outline)
+    /// Unlit Iris lights: softer than `outline`, 2:1 on every surface.
+    static let unlit    = role(\.unlit)
     static let text     = role(\.text)
     static let muted    = role(\.muted)
     /// Text that recedes at about 4.6:1: done Task text and placeholders.
@@ -198,6 +200,7 @@ extension Color {
     static let ckCard = Color(SceneColor(\.card))
     static let ckLine = Color(SceneColor(\.line))
     static let ckOutline = Color(SceneColor(\.outline))
+    static let ckUnlit = Color(SceneColor(\.unlit))
     static let ckLit = Color(SceneColor(\.lit))
 }
 

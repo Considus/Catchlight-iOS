@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 SOURCE = os.path.join(ROOT, 'design', 'tokens.json')
 OUTPUT = os.path.join(ROOT, 'Catchlight', 'UI', 'Theme', 'SceneTokens.generated.swift')
 ROLES = ['ground', 'surface', 'card', 'raised', 'line', 'outline', 'text', 'muted', 'faint',
-         'accent', 'accentText', 'onAccent', 'lit']
+         'accent', 'accentText', 'onAccent', 'lit', 'unlit']
 HEX = re.compile(r'^#[0-9A-Fa-f]{6}$')
 IDENT = re.compile(r'^[a-z][A-Za-z0-9]*$')
 
