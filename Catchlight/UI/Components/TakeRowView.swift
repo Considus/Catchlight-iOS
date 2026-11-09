@@ -182,7 +182,7 @@ struct TakeRowView: View {
         let head = name.isEmpty ? String(localized: "Iris") : String(localized: "Iris, \(name)")
         var parts = [head]
         if take.isObie { parts.append(String(localized: "Obie: your pinned Take")) }
-        let activity = TakeCircleView.activityDescription(for: take, includesObie: false)
+        let activity = IrisView.activityDescription(for: take, includesObie: false)
         if !activity.isEmpty { parts.append(activity) }
         return parts.joined(separator: ". ")
     }
@@ -279,25 +279,20 @@ struct TakeRowView: View {
                 // position so the wire stays threaded through it.
                 .offset(x: cardSwipeOffset)
                 .zIndex(0)
-            // The threaded shutter — shadow, far half, beam, near half — in ONE view
-            // shared with the recycling timeline cell (owner 2026-08-16). The Iris keeps
-            // its spine position (no `cardSwipeOffset`) so the beam stays threaded while
-            // the card swipes out from under it.
+            // The Iris on the line, in ONE view shared with the recycling timeline cell.
+            // It keeps its spine position (no `cardSwipeOffset`) so it stays on the line
+            // while the card swipes out from under it.
             //
             // 🚨 THIS ROW IS THE PINNED OBIE. It is easy to read as dead code — nothing
             // but its own previews constructs it directly — but `DailiesView.rowContent`
-            // builds it for the Obie, which is why the Obie was left with a flat Iris and
-            // the old dotted wire when the timeline cell alone was rebuilt.
-            TimelineBeamOccluder()
-                .offset(x: CatchlightLayout.cardSpineInset - TimelineBeam.width / 2,
-                        y: -CatchlightLayout.circleDiameter / 2)
-                .zIndex(1)
-            ThreadedIris(take: take)
+            // builds it for the Obie, which is why the Obie was once left behind when
+            // the timeline cell alone was rebuilt.
+            TimelineIris(take: take)
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
                 .zIndex(2)
-            // Gestures sit above the drawing, in their own 44pt frame, so splitting the
-            // shutter in two cannot swallow the tap or produce two VoiceOver elements.
+            // Gestures sit above the drawing, in their own 44pt frame, so the drawing
+            // cannot swallow the tap or produce a second VoiceOver element.
             irisColumn
                 .offset(x: CatchlightLayout.cardSpineInset - CatchlightLayout.circleDiameter / 2,
                         y: -CatchlightLayout.circleDiameter / 2)
@@ -315,9 +310,7 @@ struct TakeRowView: View {
     /// original exclusive semantics.
     private var irisColumn: some View {
         ZStack {
-            // Touch + VoiceOver only. `ThreadedIris` above draws the shutter, because
-            // the drawing has to be split in two with the beam between the halves —
-            // which a single view carrying the gesture could not be.
+            // Touch + VoiceOver only. `TimelineIris` above draws the Iris.
             Color.clear
         }
         .frame(width: CatchlightLayout.circleDiameter,

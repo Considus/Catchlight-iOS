@@ -368,17 +368,10 @@ struct DailiesView: View {
                 .onPreferenceChange(SpineContainerBottomKey.self) { spineContainerBottomY = $0 }
                 .allowsHitTesting(false)
 
-            // The spine: a hairline behind the rows, at the circle centre. It
-            // STARTS at the first Iris's top edge (HiFi §1 "the spine terminates at
-            // THE BEAM (owner 2026-08-16) — supersedes the earlier three dotted
-            // tracks, and the single Ember-tinted line before those. ONE view serves the
-            // gutter run and the segment crossing each Iris, for the same reason the old
-            // spine single-sourced its colour: the two must not drift.
-            //
+            // The spine: one flat 1.5pt line behind the rows, at the Iris centre.
             // Runs the full height of the container, so it carries north into the
-            // heading fade rather than ending at the device inset, and terminates on the
-            // Add button's ring at the bottom.
-            TimelineBeam()
+            // heading fade, and terminates on the Add button's ring at the bottom.
+            TimelineLine()
                 // Fully hidden while editing in place (owner 2026-06-17): a thin line
                 // reads as a "remnant" even at the 0.12 row-mask — especially once the
                 // Obie card (which used to cover it) goes invisible, exposing the spine
@@ -386,7 +379,7 @@ struct DailiesView: View {
                 // "part of the timeline" feel; the connecting wire isn't needed in focus.
                 .opacity(ui.isEditingInPlace ? 0 : 1)
                 .frame(maxHeight: .infinity)
-                // Runs to the very top of the container so the beam carries on NORTH and
+                // Runs to the very top of the container so the line carries on NORTH and
                 // dissolves into the heading fade, rather than starting at the device
                 // inset with a visible end (owner 2026-08-16; extends the 2026-07-04
                 // intent, which stopped short of it).
@@ -403,21 +396,9 @@ struct DailiesView: View {
                 // than snapping (owner 2026-07-10).
                 .animation(.easeOut(duration: 0.56), value: keyboardTopY)
                 // Placed by its CENTRE: the container is `.topLeading`, so a bare
-                // `spineX` would put the beam's left edge on the spine and hang the
-                // whole shaft to the right of the Iris it is meant to pass through.
-                .offset(x: CatchlightLayout.snappedToPixel(spineX) - TimelineBeam.width / 2)
-
-            // The dust in the beam. It belongs HERE, in the screen-fixed spine layer
-            // behind the cards, and nowhere else: dust hangs in the room, so it must
-            // hold still while the timeline scrolls past it. Same footprint and terminus
-            // as the beam it lives in.
-            BeamDust()
-                .opacity(ui.isEditingInPlace ? 0 : 1)
-                .frame(maxHeight: .infinity)
-                .padding(.top, 0)                 // north with the beam it lives in
-                .padding(.bottom, spineBottomInset)
-                .animation(.easeOut(duration: 0.56), value: keyboardTopY)
-                .offset(x: CatchlightLayout.snappedToPixel(spineX) - TimelineBeam.width / 2)
+                // `spineX` would put the line's left edge on the spine and hang it
+                // to the right of the Iris it is meant to pass through.
+                .offset(x: CatchlightLayout.snappedToPixel(spineX) - TimelineLine.width / 2)
 
             // A first-launch-empty store shows the Fog line; but when a dock
             // filter is active the timeline (with its own filter-empty line)

@@ -255,16 +255,14 @@ struct TimelineReadCell: View {
     private let inset = CatchlightLayout.cardSpineInset
     private let d = CatchlightLayout.circleDiameter
 
-    // MARK: Iris depth (owner 2026-08-16) — see the paint-order note in `body`
+    // MARK: Iris
     //
-    // The drawing lives in `ThreadedIris` and `TimelineBeamOccluder`, NOT here: the
-    // pinned Obie is drawn by a different view (`TakeRowView`) and needs exactly the
-    // same treatment. Keeping it in one place is what stops the two rows drifting —
-    // they already did once, leaving the Obie flat while every scrolling row was
-    // rebuilt.
+    // The drawing lives in `TimelineIris`, NOT here: the pinned Obie is drawn by a
+    // different view (`TakeRowView`) and needs exactly the same treatment. Keeping it
+    // in one place is what stops the two rows drifting.
 
-    /// The Iris's touch and VoiceOver surface, kept separate from the two drawn halves
-    /// so the split cannot produce two accessibility elements or swallow the gesture.
+    /// The Iris's touch and VoiceOver surface, kept separate from the drawing so it
+    /// cannot produce a second accessibility element or swallow the gesture.
     private var irisHitTarget: some View {
         Color.clear
             .frame(width: d, height: d)
@@ -350,26 +348,11 @@ struct TimelineReadCell: View {
                         Button("Move down") { onNudge(take, 1) }
                     }
                 }
-            // ── The shutter, threaded ────────────────────────────────────────────
+            // ── The Iris on the line ─────────────────────────────────────────────
             //
-            // 🚨 THE PAINT ORDER IS THE WHOLE FIX (owner 2026-08-16). What shipped
-            // before was card → Iris → wire, while the card ALSO hid the wire below
-            // its top edge: the wire in front of the Iris, the Iris in front of the
-            // card, the card in front of the wire. That is a Penrose triangle. The eye
-            // cannot build a solid out of it, so it stops trying and reads the whole
-            // timeline as a diagram — which is why no amount of shading had ever made
-            // it feel like anything. The order below is a real one, and the shading
-            // only started to pay once it was.
+            //   card → Iris (flat, its filled inside hides the line) → hit target
             //
-            //   card → shadow → shutter FAR half → beam → shutter NEAR half
-            //
-            // The old background-coloured occluder is GONE with it. Its job was to stop
-            // the dotted spine bleeding up through the hollow aperture — but seeing the
-            // wire through the hole is precisely what threading means. Putting it back
-            // re-breaks the order.
-            TimelineBeamOccluder()                                                     // one beam, not two
-                .offset(x: inset - TimelineBeam.width / 2, y: -d / 2)
-            ThreadedIris(take: take)                                                   // shadow, halves, beam
+            TimelineIris(take: take)
                 .offset(x: inset - d / 2, y: -d / 2)
             irisHitTarget                                                              // gestures + VoiceOver
         }

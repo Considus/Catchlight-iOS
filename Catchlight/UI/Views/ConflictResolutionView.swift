@@ -319,7 +319,7 @@ struct ConflictResolutionView: View {
                         .foregroundStyle(Color.ckTextSecondary)
                         .textCase(.uppercase)
                     Spacer()
-                    TakeCircleView(take: take, diameter: 20)
+                    IrisView(take: take, diameter: 20)
                 }
                 Text(relativeDate(take.modifiedAt))
                     .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))

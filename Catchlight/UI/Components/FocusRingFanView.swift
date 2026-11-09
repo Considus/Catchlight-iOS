@@ -510,14 +510,14 @@ struct FocusRingFanView: View {
                     // marker line rides the rotation and lands horizontal at
                     // open (UX §6).
                     ZStack {
-                        TakeCircleView(take: workingTake, diameter: 44)   // match the timeline Iris (owner 2026-06-15)
+                        IrisView(take: workingTake, diameter: 44)   // match the timeline Iris (owner 2026-06-15)
                         Capsule()
                             .fill(Color.ckEmber.opacity(0.6))
                             .frame(width: 1.5, height: 17)   // scaled with the 36→44 hub
                             .opacity(hubRotation(now: now) / 90 * 0.9)
                     }
                     .rotationEffect(.degrees(hubRotation(now: now)))
-                    .accessibilityLabel("Selected: \(TakeCircleView.activityDescription(for: workingTake))")
+                    .accessibilityLabel("Selected: \(IrisView.activityDescription(for: workingTake))")
                 }
                 .position(hubCentre)
                 .accessibilityElement(children: .contain)

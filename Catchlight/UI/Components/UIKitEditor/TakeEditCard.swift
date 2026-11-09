@@ -176,20 +176,10 @@ struct TakeEditCard: View {
             )
 
             if showsIris {
-                // The SAME treatment the timeline rows use, from the same view (owner
-                // 2026-08-16). This card is a row's stand-in: identical spine inset,
-                // identical card padding, Iris straddling the card's top edge in the
-                // same place — so the gutter beam runs behind it exactly as it runs
-                // behind a read row, and a flat Iris here read as the one that had been
-                // missed. The lean and the cast shadow come with it; `ThreadedIris`
-                // carries its own shadow, so the Daylight-only `.shadow` that used to
-                // sit here is gone with it.
-                //
-                // The FOCUS RING and the CONFLICT view keep a plain `TakeCircleView`,
-                // deliberately: they already have the new lighting, because that lives
-                // in `TakeCircleView` itself, but neither has a beam threading it and a
-                // lean without one is a squashed mark for no reason.
-                ThreadedIris(take: draft, showsBeam: false)
+                // The SAME Iris the timeline rows use, from the same view. This card is
+                // a row's stand-in: identical spine inset, identical card padding, Iris
+                // straddling the card's top edge in the same place.
+                TimelineIris(take: draft)
                     .offset(x: inset - d / 2, y: -d / 2)
                 // The touch and VoiceOver surface, separate from the drawing.
                 Color.clear

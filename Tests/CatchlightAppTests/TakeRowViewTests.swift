@@ -133,7 +133,7 @@ final class TakeRowViewTests: XCTestCase {
         // Every existing caller (editor footer included) uses the default and
         // must not change.
         let take = Take(blocks: [.textLine("the star")], isObie: true)
-        XCTAssertEqual(TakeCircleView.activityDescription(for: take), "Obie, Important, Note")
+        XCTAssertEqual(IrisView.activityDescription(for: take), "Obie, Important, Note")
     }
 
     func testIrisHint_namesTheRotorRoute_neverTheGesture() {
