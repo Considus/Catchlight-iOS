@@ -13829,6 +13829,7 @@
       }
     },
     "Cobalt" : {
+      "comment" : "Product name: keep in English.",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -29191,6 +29192,7 @@
       }
     },
     "Graphite" : {
+      "comment" : "Product name: keep in English.",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -32572,6 +32574,7 @@
       }
     },
     "Jade" : {
+      "comment" : "Product name: keep in English.",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -39863,6 +39866,7 @@
       }
     },
     "Onyx" : {
+      "comment" : "Product name: keep in English.",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -48263,59 +48267,60 @@
       }
     },
     "Scene" : {
+      "comment" : "Product name: keep in English.",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Szene"
+            "value" : "Scene"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scène"
+            "value" : "Scene"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escena"
+            "value" : "Scene"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scena"
+            "value" : "Scene"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cena"
+            "value" : "Scene"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scène"
+            "value" : "Scene"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cena"
+            "value" : "Scene"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scena"
+            "value" : "Scene"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scen"
+            "value" : "Scene"
           }
         },
         "da" : {
@@ -48333,43 +48338,43 @@
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kohtaus"
+            "value" : "Scene"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sahne"
+            "value" : "Scene"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "シーン"
+            "value" : "Scene"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "장면"
+            "value" : "Scene"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "场景"
+            "value" : "Scene"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "場景"
+            "value" : "Scene"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ฉาก"
+            "value" : "Scene"
           }
         }
       }
@@ -56334,6 +56339,7 @@
       }
     },
     "Tanzanite" : {
+      "comment" : "Product name: keep in English.",
       "localizations" : {
         "de" : {
           "stringUnit" : {

@@ -12,7 +12,7 @@ Every string a person sees or hears goes through a String Catalog: `Localizable.
 - **Dates come from formatters and templates** (`setLocalizedDateFormatFromTemplate`, `DateComponentsFormatter`), never a fixed `dateFormat` for anything shown. Machine formats keep `en_US_POSIX`.
 - **Core values the app shows are worded in `Catchlight/UI/CoreLabels.swift`.** Core's own `label`s stay English and carry no translations.
 
-**What stays English on purpose:** the product nouns (Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard), still routed through the catalog so a translator sees them in context and keeps them; the 12 recovery-phrase words, which are the BIP-39 English wordlist and part of the key; developer-only diagnostics (the `lifecycle` category and scheduling failures, which never show in Notice History); and the `Import` folder name in the cloud folder. Notice History lines are recorded in the device language, like the notices themselves.
+**What stays English on purpose:** the product nouns (Take, Obie, Iris, Dailies, Sequence, Angle, Shot List, Storyboard, Scene and the Scene names), still routed through the catalog so a translator sees them in context and keeps them; the 12 recovery-phrase words, which are the BIP-39 English wordlist and part of the key; developer-only diagnostics (the `lifecycle` category and scheduling failures, which never show in Notice History); and the `Import` folder name in the cloud folder. Notice History lines are recorded in the device language, like the notices themselves.
 
 ## Testing in another language
 
