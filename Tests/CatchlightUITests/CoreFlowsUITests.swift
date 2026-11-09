@@ -64,7 +64,7 @@ final class CoreFlowsUITests: XCTestCase {
     /// `retractAndDismiss()` with the default `commit: false`, silently
     /// dropping every Focus row edit. The dim-tap is now the commit gesture
     /// (`commit: true`), wired through `onCommit → applyActivityTypes`.
-    func testFlow2_shapeTake_focusRingEditsCommitToTheRow() {
+    func testFlow2_shapeTake_focusRowEditsCommitToTheRow() {
         let app = launchAppForUITesting()
 
         // Dailies sorts newest-first, so the second upsert ("Call the framer back")

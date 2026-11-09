@@ -50,7 +50,7 @@ final class BlockEditorUITests: XCTestCase {
     /// commit tap: a second tap would land on the editor's own dim (exposed once
     /// the fan closes) and dismiss the editor. The wait is generous because the
     /// close choreography is slower on older simulator runtimes (e.g. iOS 17.0).
-    private func toggleTaskOnViaFocusRing(_ app: XCUIApplication) throws {
+    private func toggleTaskOnViaFocusRow(_ app: XCUIApplication) throws {
         // "editor-shape" is the footer Iris — a SwiftUI `.accessibilityElement()`
         // that surfaces as `.other` (not `.button`) on iOS 18.x, so query it by
         // identifier regardless of type.
@@ -110,13 +110,13 @@ final class BlockEditorUITests: XCTestCase {
     /// Type prose, then Focus row → Task ON. Owner 2026-06-17: the existing prose
     /// is preserved as a text row, and exactly ONE empty check item is added (the
     /// first task entry) — Task no longer converts the lines already written.
-    func testFocusRing_makeTask_keepsProseAddsEmptyEntry() throws {
+    func testFocusRow_makeTask_keepsProseAddsEmptyEntry() throws {
         let app = launchAppForUITesting()
         let body = openNewEditor(app)
         body.tap()
         body.typeText("milk\neggs\nbread")
 
-        try toggleTaskOnViaFocusRing(app)
+        try toggleTaskOnViaFocusRow(app)
         try requireChecklistRendered(app)
 
         XCTAssertTrue(waitForCount(checkFields(app), 1),
@@ -135,7 +135,7 @@ final class BlockEditorUITests: XCTestCase {
         // Task ON yields one empty, focused check item (owner 2026-06-17 — Task no
         // longer fills items from prose). Type into it so it's NON-empty, then
         // Return continues the list.
-        try toggleTaskOnViaFocusRing(app)
+        try toggleTaskOnViaFocusRow(app)
         try requireChecklistRendered(app)
         XCTAssertTrue(waitForCount(checkFields(app), 1))
 
@@ -154,7 +154,7 @@ final class BlockEditorUITests: XCTestCase {
         _ = openNewEditor(app)
 
         // Toggle Task on with an empty body → one empty, focused check item.
-        try toggleTaskOnViaFocusRing(app)
+        try toggleTaskOnViaFocusRow(app)
         try requireChecklistRendered(app)
         XCTAssertTrue(waitForCount(checkFields(app), 1))
 
@@ -177,7 +177,7 @@ final class BlockEditorUITests: XCTestCase {
         body.tap()
         body.typeText("call the framer")
 
-        try toggleTaskOnViaFocusRing(app)
+        try toggleTaskOnViaFocusRow(app)
         try requireChecklistRendered(app)
         let box = checkboxes(app).firstMatch
         XCTAssertTrue(box.waitForExistence(timeout: 3))
@@ -201,7 +201,7 @@ final class BlockEditorUITests: XCTestCase {
         // Build a two-item checklist via the new Task flow (owner 2026-06-17): Task
         // ON gives one empty entry; type the first, Return to continue, type the
         // second — Task no longer splits pre-existing prose into items.
-        try toggleTaskOnViaFocusRing(app)
+        try toggleTaskOnViaFocusRow(app)
         try requireChecklistRendered(app)
         let firstField = checkFields(app).firstMatch
         tapWhenReady(firstField)

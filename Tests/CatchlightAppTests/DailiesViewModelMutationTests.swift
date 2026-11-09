@@ -291,7 +291,7 @@ final class DailiesViewModelMutationTests: XCTestCase {
     }
 
     /// The Focus row's commit with its Important Mark off still saves an Obie Important.
-    func testApplyFocusRing_importantOffOnObie_persistsImportant() throws {
+    func testApplyFocusRow_importantOffOnObie_persistsImportant() throws {
         let obie = Take(blocks: [.textLine("the one")], isObie: true)
         let store = InMemoryTakeStore()
         try store.upsert(obie)

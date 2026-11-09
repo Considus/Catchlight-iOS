@@ -31,8 +31,8 @@ final class OverlayContainmentUITests: XCTestCase {
     }
 
     /// V5: while the Focus row is open, the timeline rows must be out of the
-    /// tree, and must return when the ring closes.
-    func testFocusRing_sealsRows_andRestoresOnClose() throws {
+    /// tree, and must return when the Focus row closes.
+    func testFocusRow_sealsRows_andRestoresOnClose() throws {
         let app = launchAppForUITesting()
         XCTAssertTrue(anyElement(in: app, id: "take-row").waitForExistence(timeout: 5),
                       "Timeline did not load")
