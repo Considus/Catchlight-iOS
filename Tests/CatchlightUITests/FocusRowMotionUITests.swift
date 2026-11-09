@@ -31,10 +31,24 @@ final class FocusRowMotionUITests: XCTestCase {
     }
 
     /// Before the redesign Note was drawn on top of the gathered marks, so a tap on the stack,
-    /// once the marks are past half their drop and before Note slides out (about 230ms in,
-    /// device time), toggles Note.
+    /// once the marks are past half their drop (170ms) and before the far marks slide away
+    /// (about 230ms in, device time), toggles Note. With the old order it toggled Important.
+    ///
+    /// The tap is sent at 230ms and must arrive by 245ms. Simulator timing can push it later,
+    /// so an attempt that misses that window starts again on a fresh launch (up to three), and
+    /// only an attempt inside the window is judged. (Measured: taps from about 255ms on were
+    /// not taken by any mark, cause unknown, so the window is not widened.)
     func testTapOnTheGatheredMarks_togglesNote() throws {
+        for attempt in 1...3 {
+            if try tapTheStack(attempt: attempt) { return }
+        }
+        XCTFail("No attempt tapped the stack inside its 230 to 245ms window")
+    }
+
+    /// One attempt. Returns false, judging nothing, when the tap missed its window.
+    private func tapTheStack(attempt: Int) throws -> Bool {
         let app = launchSlowRow()
+        defer { app.terminate() }
         let iris = anyElement(in: app, id: "take-iris")
         XCTAssertTrue(iris.waitForExistence(timeout: 10), "No Take on the timeline")
         let hub = CGPoint(x: iris.frame.midX, y: iris.frame.midY)
@@ -64,17 +78,18 @@ final class FocusRowMotionUITests: XCTestCase {
         let tapAt = Date().timeIntervalSince(opened) / timeScale
         tap(app, at: CGPoint(x: hub.x, y: hub.y + 40))
         let tapDone = Date().timeIntervalSince(opened) / timeScale
-        let report = String(format: "[focus-row-motion] stack tap sent %.0f-%.0fms device time; note=%@ task=%@ important=%@ row open=%@",
-                            tapAt * 1000, tapDone * 1000, String(describing: note.value),
+        let report = String(format: "[focus-row-motion] attempt %d: stack tap sent %.0f-%.0fms device time; note=%@ task=%@ important=%@ row open=%@",
+                            attempt, tapAt * 1000, tapDone * 1000, String(describing: note.value),
                             String(describing: task.value), String(describing: important.value),
                             String(describing: dim.exists))
         print(report)
         let a = XCTAttachment(string: report)
         a.lifetime = .keepAlways
         add(a)
-        XCTAssertLessThan(tapDone, 0.245, "The tap landed too late: the marks may have spread")
+        guard tapDone < 0.245 else { return false }
         XCTAssertTrue(dim.exists, "The row closed: the tap did not reach a mark")
         XCTAssertEqual(important.value as? String, "inactive", "The tap toggled Important, not Note")
         XCTAssertEqual(note.value as? String, "inactive", "The tap did not toggle Note")
+        return true
     }
 }

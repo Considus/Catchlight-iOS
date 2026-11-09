@@ -1695,10 +1695,10 @@ struct DailiesView: View {
         d.normaliseActivityFloor()
         editDraft = d
 
-        // Restore the editor keyboard after the ring (and its reminder picker) — the
+        // Restore the editor keyboard after the ring (and its reminder picker): the
         // ring-open path dropped it, so re-assert it here. A freshly-added task
         // entry takes the caret (it's empty and wants its first character); otherwise the
-        // block that held the keyboard when the ring opened takes it back — the editor's
+        // block that held the keyboard when the ring opened takes it back, and the editor's
         // controller returns the caret to its saved offset within it. First block only as
         // a last resort (the return block can vanish if the commit reshaped it away).
         let returnBlock = ringReturnFocus.flatMap { r in
@@ -1755,7 +1755,7 @@ struct DailiesView: View {
                 if editingActive && !isEditingThis { saveInlineEdit(); return }
                 // Release the editor's keyboard BEFORE the Focus row opens (owner
                 // lockup 2026-06-18). Leaving the editor first-responder while the ring
-                // + reminder picker sit on top made the keyboard fight the overlay —
+                // + reminder picker sit on top made the keyboard fight the overlay:
                 // Done re-raised it / needed a second tap. The ring owns the
                 // interaction; the commit re-focuses (applyInlineFanCommand).
                 // A Take waiting for a conflict choice is read-only: no Focus row.

@@ -78,10 +78,15 @@ struct FocusRowView: View {
 
     /// UI tests only: `--uitesting -catchlight.focusRowTimeScale <n>` plays the choreography
     /// n times slower instead of skipping it, so a test can tap the row mid-open.
+    /// Compiled out of Release, like the `--uitesting` store in `Wiring`.
     private static let uiTestTimeScale: Double? = {
+        #if DEBUG
         guard ProcessInfo.processInfo.arguments.contains("--uitesting") else { return nil }
         let scale = UserDefaults.standard.double(forKey: "catchlight.focusRowTimeScale")
         return scale > 0 ? scale : nil
+        #else
+        return nil
+        #endif
     }()
     /// Real seconds per choreography second: 1 outside that UI-test hook.
     private static var timeScale: Double { uiTestTimeScale ?? 1 }
@@ -286,9 +291,9 @@ struct FocusRowView: View {
             MarkKind.allCases.map { spreadStart($0) + spreadDuration(travel: slots[$0.rawValue]) }.max() ?? drop
         }
         static func closeDuration(slots: [CGFloat]) -> Double { openDuration(slots: slots) / closeSpeed }
-        /// The point of the open a mark shows `elapsed` seconds into the close: the whole open
-        /// backwards, so every mark retraces its path in step and the card shrinks last.
-        static func closeTime(_ kind: MarkKind, elapsed: Double, slots: [CGFloat]) -> Double {
+        /// The point of the open every mark shows `elapsed` seconds into the close: the whole
+        /// open backwards, so the marks retrace their paths in step and the card shrinks last.
+        static func closeTime(elapsed: Double, slots: [CGFloat]) -> Double {
             openDuration(slots: slots) - elapsed * closeSpeed
         }
 
@@ -354,7 +359,7 @@ struct FocusRowView: View {
             return .rest
         case .closing(let start, _):
             let elapsed = now.timeIntervalSince(start) / Self.timeScale
-            return openProgress(kind, at: Timing.closeTime(kind, elapsed: elapsed, slots: slots))
+            return openProgress(kind, at: Timing.closeTime(elapsed: elapsed, slots: slots))
         case .dismissed:
             return .hidden
         }

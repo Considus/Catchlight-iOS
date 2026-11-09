@@ -398,9 +398,6 @@ final class FocusRowGrowth {
     /// timeline moves the cards below by it.
     private(set) var duration: Double = 0
 
-    /// The growth for one Take: 0 for every Take but the one under the row.
-    func amount(for id: UUID) -> CGFloat { takeID == id ? amount : 0 }
-
     /// Grow or shrink the Take's card over `duration` seconds (nil: at once).
     func set(_ grown: Bool, for id: UUID, duration: Double?) {
         self.duration = duration ?? 0

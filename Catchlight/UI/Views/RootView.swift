@@ -432,7 +432,7 @@ struct RootView: View {
                                 isImportant: isImportant
                             )
                             // Remove the fan overlay INSTANTLY first, THEN trigger the
-                            // command's card-grow/keyboard/caret relayout — so no fan
+                            // command's card-grow/keyboard/caret relayout, so no fan
                             // removal transition runs through that relayout (which
                             // stranded the hub Iris as an orphan glyph, owner 2026-07-11).
                             ui.closeFocusRow(animated: false)

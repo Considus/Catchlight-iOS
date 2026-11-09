@@ -60,12 +60,10 @@ final class FocusRowTimingTests: XCTestCase {
     /// The close plays the whole open backwards at 1.25 times: 1056 / 1.25 = 844.8ms.
     func testClose_playsTheWholeOpenBackwards() {
         XCTAssertEqual(T.closeDuration(slots: slots), 0.8448, accuracy: 1e-9)
-        for kind in FocusRowView.MarkKind.allCases {
-            XCTAssertEqual(T.closeTime(kind, elapsed: 0, slots: slots), 1.056, accuracy: 1e-9,
-                           "\(kind) does not start the close at the end of the open")
-            XCTAssertEqual(T.closeTime(kind, elapsed: 0.4, slots: slots), 0.556, accuracy: 1e-9,
-                           "\(kind) does not follow the whole open backwards")
-        }
+        XCTAssertEqual(T.closeTime(elapsed: 0, slots: slots), 1.056, accuracy: 1e-9,
+                       "The close does not start at the end of the open")
+        XCTAssertEqual(T.closeTime(elapsed: 0.4, slots: slots), 0.556, accuracy: 1e-9,
+                       "The close does not follow the whole open backwards")
     }
 
     /// Marks slide while still dropping: Important starts at 120ms, inside the 340ms drop.
