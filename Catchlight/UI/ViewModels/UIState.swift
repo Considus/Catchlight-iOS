@@ -394,8 +394,8 @@ final class UIState {
 final class FocusRowGrowth {
     private(set) var takeID: UUID?
     private(set) var amount: CGFloat = 0
-    /// How long the latest change animates over (0: at once), on the row's curve
-    /// (`FocusRowView.growTimingCurve`). The timeline moves the cards below by it.
+    /// How long the latest change animates over (0: at once), on the drop's curve. The
+    /// timeline moves the cards below by it.
     private(set) var duration: Double = 0
 
     /// The growth for one Take: 0 for every Take but the one under the row.

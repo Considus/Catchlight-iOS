@@ -641,33 +641,49 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         }
     }
 
+    /// The shift of the cells below the grown Take, moving from `shiftFrom` to `shiftTo` over
+    /// `shiftDuration` from `shiftStart`, stepped by `shiftLink` each frame.
+    private var shiftFrom: CGFloat = 0
+    private var shiftTo: CGFloat = 0
+    private var shiftStart: CFTimeInterval = 0
+    private var shiftDuration: Double = 0
+    private var shiftLink: CADisplayLink?
+    private var shiftNow: CGFloat = 0
+
     /// Moves the cells below the grown Take by the growth, over the change's duration on the
-    /// row's curve (at once for a zero duration).
+    /// row's curve (at once for a zero duration). Stepped frame by frame rather than with a
+    /// UIKit animation: measured in a slowed UI test, a running property animator on these
+    /// cells made the Focus row's marks drop taps.
     private func applyFocusGrowth() {
+        shiftFrom = shiftNow
+        shiftTo = focusGrowth.amount
+        shiftDuration = focusGrowth.duration
+        shiftStart = CACurrentMediaTime()
+        shiftLink?.invalidate()
+        shiftLink = nil
+        guard shiftDuration > 0, shiftFrom != shiftTo else { setShift(shiftTo); return }
+        let link = CADisplayLink(target: self, selector: #selector(stepShift))
+        link.add(to: .main, forMode: .common)
+        shiftLink = link
+    }
+
+    @objc private func stepShift() {
+        let p = min(max((CACurrentMediaTime() - shiftStart) / shiftDuration, 0), 1)
+        setShift(shiftFrom + (shiftTo - shiftFrom) * CGFloat(FocusRowView.easeInOutCubic(p)))
+        if p >= 1 { shiftLink?.invalidate(); shiftLink = nil }
+    }
+
+    /// Moves every visible cell below the grown Take (every cell, for the pinned Obie) down by
+    /// `shift`, and the rest back to rest.
+    private func setShift(_ shift: CGFloat) {
+        shiftNow = shift
         guard let dataSource, let collectionView else { return }
-        let shift = focusGrowth.amount
-        let below: (IndexPath) -> Bool
-        if let id = focusGrowth.takeID, let grown = dataSource.indexPath(for: .take(id)) {
-            below = { $0 > grown }
-        } else {
-            below = { _ in true }
+        let grown = focusGrowth.takeID.flatMap { dataSource.indexPath(for: .take($0)) }
+        for path in collectionView.indexPathsForVisibleItems {
+            guard let cell = collectionView.cellForItem(at: path) else { continue }
+            let moves = shift != 0 && grown.map { path > $0 } ?? true
+            cell.transform = moves ? CGAffineTransform(translationX: 0, y: shift) : .identity
         }
-        let cells = collectionView.indexPathsForVisibleItems.compactMap { path in
-            collectionView.cellForItem(at: path).map { ($0, below(path)) }
-        }
-        let change = {
-            for (cell, moves) in cells {
-                cell.transform = moves && shift != 0 ? CGAffineTransform(translationX: 0, y: shift) : .identity
-            }
-        }
-        let duration = focusGrowth.duration
-        guard duration > 0 else { change(); return }
-        let curve = FocusRowView.growTimingCurve
-        let animator = UIViewPropertyAnimator(
-            duration: duration,
-            timingParameters: UICubicTimingParameters(controlPoint1: curve.0, controlPoint2: curve.1))
-        animator.addAnimations(change)
-        animator.startAnimation()
     }
     private var collectionView: UICollectionView!
     private var reorderPress: UILongPressGestureRecognizer!

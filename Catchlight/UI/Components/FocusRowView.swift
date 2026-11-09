@@ -60,7 +60,7 @@ struct FocusRowView: View {
     let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ reminderWeekdays: Set<Int>, _ reminderLocation: LocationTrigger?, _ isImportant: Bool) -> Void
     let onDismiss: () -> Void
     /// Grow (true) or shrink back (false) the tapped card over this many seconds (nil: at
-    /// once), on `growTimingCurve`. Only called when `showsFocusCard`: the row runs along a
+    /// once), on the drop's curve. Only called when `showsFocusCard`: the row runs along a
     /// timeline card or the pinned Obie.
     var onCardGrowth: (_ grown: Bool, _ duration: Double?) -> Void = { _, _ in }
 
@@ -273,7 +273,7 @@ struct FocusRowView: View {
         let s = 1.15
         return 1 + (s + 1) * pow(p - 1, 3) + s * pow(p - 1, 2)
     }
-    private static func easeInOutCubic(_ p: Double) -> Double {
+    static func easeInOutCubic(_ p: Double) -> Double {
         p < 0.5 ? 4 * p * p * p : 1 - pow(-2 * p + 2, 3) / 2
     }
 
@@ -323,9 +323,6 @@ struct FocusRowView: View {
         return Self.easeInOutCubic(min(max(t / Choreo.rise, 0), 1))
     }
 
-    /// The drop's curve, easeInOutCubic, as cubic Bezier control points, for the cards below
-    /// the grown one, which UIKit moves.
-    static let growTimingCurve = (CGPoint(x: 0.65, y: 0), CGPoint(x: 0.35, y: 1))
 
     /// Only the live phases drive the TimelineView; `.open` and `.dismissed` are
     /// static so it pauses (and `.dismissed` lets the overlay be removed).
