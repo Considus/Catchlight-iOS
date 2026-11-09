@@ -102,9 +102,14 @@ enum SceneToken {
     static let surface  = UIColor.adaptive(dark: UIColor(hex: 0x131840), light: UIColor(hex: 0xE8EAF5))
     static let card     = UIColor.adaptive(dark: UIColor(hex: 0x131840), light: UIColor(hex: 0xFFFFFF))
     static let raised   = UIColor.adaptive(dark: UIColor(hex: 0x1C2356), light: UIColor(hex: 0xFFFFFF))
+    /// Dividers and card edges only.
     static let line     = UIColor.adaptive(dark: UIColor(hex: 0x283066), light: UIColor(hex: 0xD6DAEE))
+    /// Unlit Iris lights and field outlines: 3:1 on every surface.
+    static let outline  = UIColor.adaptive(dark: UIColor(hex: 0x6A7097), light: UIColor(hex: 0x81849C))
     static let text     = UIColor.adaptive(dark: UIColor(hex: 0xF6F7FF), light: UIColor(hex: 0x0B0E2A))
     static let muted    = UIColor.adaptive(dark: UIColor(hex: 0xAEB4E3), light: UIColor(hex: 0x4A5078))
+    /// Text that recedes at about 4.6:1: done Task text and placeholders.
+    static let faint    = UIColor.adaptive(dark: UIColor(hex: 0x888DBB), light: UIColor(hex: 0x616689))
     static let accent   = UIColor.adaptive(dark: UIColor(hex: 0xFF8AD0), light: UIColor(hex: 0x2C41E8))
     static let onAccent = UIColor.adaptive(dark: UIColor(hex: 0x0B0E2A), light: UIColor(hex: 0xFFFFFF))
     static let accentText = UIColor.adaptive(dark: UIColor(hex: 0xFFA3DA), light: UIColor(hex: 0x2C41E8))
@@ -116,6 +121,7 @@ extension Color {
     static let ckGround = Color(uiColor: SceneToken.ground)
     static let ckCard = Color(uiColor: SceneToken.card)
     static let ckLine = Color(uiColor: SceneToken.line)
+    static let ckOutline = Color(uiColor: SceneToken.outline)
     static let ckLit = Color(uiColor: SceneToken.lit)
 }
 
@@ -135,21 +141,16 @@ enum UITheme {
     /// "Done" text. Mirrors `ckTextComplete`. It is text, so it clears WCAG 4.5:1 on every
     /// surface it sits on (owner 2026-10-03); `DoneTextContrastTests` measures it against the
     /// Scene tokens.
-    static let textComplete  = SceneToken.muted
+    static let textComplete  = SceneToken.faint
     /// Raw Ember FILL (both modes) — the Add droplet / Restore fill.
     static let add           = SceneToken.accent
     /// Amber FOREGROUND accent — Ember (Night) / Ember-text #856539 (Daylight, WCAG AA).
     static let accent        = SceneToken.accentText
     /// Foreground drawn ON an Ember fill — Ink in both modes.
     static let onAccent      = SceneToken.onAccent
-    /// Placeholder text on an input surface (audit C6 re-tune, owner 2026-08-28):
-    /// EQUAL ratio in both schemes, passing small-text AA with a little margin,
-    /// and deliberately receded — "equal and passing, not maximal". Derived from
-    /// the fog family: Daylight = fog darkened toward Ink to 4.62:1 on the white
-    /// capsule; Night = fog dimmed toward Dusk to 4.62:1 on the dusk capsule.
-    /// (The first C6 fix used textSecondary — 7.24:1/8.09:1 — which the owner
-    /// read as too prominent for a placeholder.)
-    static let placeholder   = SceneToken.muted
+    /// Placeholder text on an input surface: receded but passing AA, at about 4.6:1
+    /// (owner 2026-08-28: secondary text read as too prominent for a placeholder).
+    static let placeholder   = SceneToken.faint
 }
 
 // MARK: - Semantic, adaptive colours (Night / Daylight)
