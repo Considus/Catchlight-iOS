@@ -246,6 +246,18 @@ struct DailiesView: View {
         // notice strip above the page moves the heading and its fade down, and the card has to
         // stop below where they actually are. 0 without a strip, so nothing moves.
         rootStack
+            // Kept off `rootStack`'s modifier chain, which is at the Release type-checker's limit.
+            // The Remind picker fills the screen over the ring, so the editor's keyboard steps
+            // down while it shows and comes back to the block it was in when it closes; the ring
+            // is still open then, and the keyboard stays up with it (owner 2026-11-09).
+            .onChange(of: ui.focusRowPickerShown) { _, shown in
+                guard editDraft != nil, ui.isFocusRowPresented else { return }
+                if shown {
+                    editFocusedBlockID = nil
+                } else if let back = ringReturnFocus {
+                    editFocusedBlockID = back
+                }
+            }
             .environment(\.headingClearance, headingClearance + max(0, headingBlockScreenY))
     }
 
@@ -426,17 +438,6 @@ struct DailiesView: View {
             guard let command, ui.editingTakeID != nil else { return }
             applyInlineFanCommand(command)
             ui.inlineFanCommand = nil
-        }
-        // The Remind picker fills the screen over the ring, so the editor's keyboard steps down
-        // while it shows and comes back to the block it was in when it closes; the ring is still
-        // open then, and the keyboard stays up with it (owner 2026-11-09).
-        .onChange(of: ui.focusRowPickerShown) { _, shown in
-            guard editDraft != nil, ui.isFocusRowPresented else { return }
-            if shown {
-                editFocusedBlockID = nil
-            } else if let back = ringReturnFocus {
-                editFocusedBlockID = back
-            }
         }
         // The ring closed WITHOUT committing — give the keyboard back where it was.
         // Deferred one runloop turn on purpose: a COMMIT closes the fan and posts its command
