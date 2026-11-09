@@ -3,7 +3,7 @@
 //  Catchlight (iOS app target) — Phase 6 UI
 //
 //  The homepage timeline — the ONE surface (dock redesign 2026-06-10). A vertical
-//  scroll of TakeRowViews threaded by a 2px spine aligned to each circle's centre.
+//  scroll of Take cards, each with its Iris in the card's top-left.
 //  The Obie (if any) is pinned at the top with a small gap before the regular
 //  list — ALWAYS, even when it doesn't match the active filter. A persistent
 //  month divider (label + hairline) separates Takes by creation month. First-launch
@@ -16,8 +16,8 @@
 //  In FILTERING, tapping empty timeline background (not rows/Irises) exits to
 //  RESTING and clears all filters.
 //
-//  Focus-ring fan and edit surfaces are presented by the parent RootView via the shared
-//  UIState, so this view stays focused on layout + the spine geometry.
+//  Focus row and edit surfaces are presented by the parent RootView via the shared
+//  UIState, so this view stays focused on layout.
 //
 //  Task 3.9: Error and edge-case states — three quiet, non-blocking strips are
 //  inserted above the timeline via `.safeAreaInset(edge: .top)`: storage error,
@@ -84,13 +84,10 @@ struct DailiesView: View {
     @State private var containerHeight: CGFloat = 0
 
 
-    /// Horizontal centre of the circles == x of the spine == the dock's Add
-    /// button centre. Both derive from `CatchlightLayout.spineX(containerWidth:)`
-    /// — the same four-equal-columns formula BottomDockView lays out with — so
-    /// the spine sits exactly on the + vertical at every device width
-    /// (2026-06-10 fix: the previous fixed 32pt constant never matched the
-    /// dock). The screen width stands in before the first layout pass so the
-    /// spine doesn't flash at a wrong x.
+    /// The dock's Add button centre, from `CatchlightLayout.spineX(containerWidth:)`
+    /// (the same four-equal-columns formula BottomDockView lays out with). The card
+    /// column hangs off it (`spineX − cardLeadingOffset`). The screen width stands in
+    /// before the first layout pass so the cards don't flash at a wrong x.
     private var spineX: CGFloat {
         CatchlightLayout.spineX(
             containerWidth: containerWidth > 0 ? containerWidth : UIScreen.main.bounds.width
@@ -98,25 +95,22 @@ struct DailiesView: View {
     }
 
     /// Left edge of the Take TEXT column — the card's left edge (`spineX −
-    /// cardSpineInset`) plus the card's internal leading pad. The DAILIES heading and
+    /// cardLeadingOffset`) plus the card's internal leading pad. The DAILIES heading and
     /// the ghosted month markers align to this so they sit directly above the body
     /// text (owner 2026-06-16; was `spineX + 22`, which floated them right of the text).
     private var textColumnLeading: CGFloat {
-        spineX - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad
+        spineX - CatchlightLayout.cardLeadingOffset + CatchlightLayout.cardTextLeadingPad
     }
 
-    /// Reads the user's timeline-density choice live. The inter-card stack
-    /// spacing is the chosen clear gap MINUS the two 6pt row paddings each card
-    /// already carries (`.padding(.vertical, 6)`), so the visible card-to-card gap
-    /// equals `TakeSpacing.gap`.
+    /// Reads the user's timeline-density choice live. `cardGap` turns it into the
+    /// visible card-to-card gap.
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey)
     private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
     private var takeSpacing: SettingsViewModel.TakeSpacing {
         SettingsViewModel.TakeSpacing(rawValue: takeSpacingRaw) ?? .default
     }
-    /// Stack spacing + the Obie gap. `gap − 12` because each row adds 6pt top
-    /// and 6pt bottom of its own; the result is the extra space between cards.
-    private var interCardSpacing: CGFloat { max(0, takeSpacing.gap - 12) }
+    /// The visible gap between two cards for the user's spacing setting.
+    private var cardGap: CGFloat { CatchlightLayout.visibleCardGap(for: takeSpacing.gap) }
 
     /// Timeline order (owner 2026-06-16). Default Oldest first: oldest at the top,
     /// newer Takes accrue below. The Obie stays pinned above the list regardless.
@@ -138,31 +132,9 @@ struct DailiesView: View {
         arrangement == .manual && ui.dockMode == .resting && activeFilter.isEmpty
     }
 
-    /// "Rings on a wire" texture (owner idea 2026-06-16): a STATIC dotted line laid
-    /// over the solid spine. As the rings scroll past the fixed dots, the eye reads
-    /// them sliding over a marked wire (relative motion at the true 1× scroll speed) —
-    /// no animation, the spine layer doesn't scroll, so static dots are all it takes.
-    ///
-    /// The dotted frame is anchored to `spineTopInset` — the SAME top as the solid
-    /// spine, so it begins exactly at the top Take (owner 2026-06-16). To keep the
-    /// dots screen-static even while that frame top tracks the first row (the no-Obie
-    /// case), the dash phase compensates by `+spineTopInset`: a dash lands at
-    /// screen-y `frameTop + (−phase + k·period)` = `k·period`, independent of the
-    /// frame top, so the dots hold fixed positions while the line still starts at the
-    /// top Take. (With an Obie, `spineTopInset` is constant and this is just a static
-    /// offset.) The sign MUST be `+`: `−` advances the phase the wrong way and the
-    /// dots slide at ~2× — the bug that put two dotted wires on screen at once.
-    // The spine now begins at `deviceTopInset` (up behind the heading, dissolving in
-    // its fade — owner 2026-07-04), a per-device constant, so the dots are naturally
-    // screen-static. Phase = the frame's top so a dot lands on the same global-Y grid
-    // as the through-Iris wire (which phases off its own screen minY).
     /// The row currently showing its swipe actions (Delete / Mark done), if any.
     /// Shared across rows so opening one closes the rest (`SwipeActionRow`).
     @State private var openSwipeRowID: UUID?
-    /// The first row's top Y in the "dailies" space, published by the first row so
-    /// the spine starts exactly at the first Iris (handles the pinned-Obie vs
-    /// invisible-month-marker offset). `nil` until the first layout pass.
-    @State private var firstRowTop: CGFloat?
     /// The pinned Obie's NATURAL height — measured inside its scroll, so it is the row's
     /// own height and never the capped frame's (no feedback loop). 0 ⇒ no Obie / not measured.
     @State private var pinnedObieNaturalHeight: CGFloat = 0
@@ -190,11 +162,11 @@ struct DailiesView: View {
     @State private var showMissingPhraseExportConfirm = false
     @State private var editDraft: Take?
     @State private var editFocusedBlockID: UUID?
-    /// Where the keyboard goes back to after the Focus ring. Opening the ring over a
+    /// Where the keyboard goes back to after the Focus row. Opening the ring over a
     /// live editor drops the keyboard — the ring is a decision you stop to make (owner) — and
     /// this holds the focused block so closing the ring returns the edit. A COMMIT consumes it
     /// in `applyInlineFanCommand` (which may prefer a freshly-added task entry); a plain
-    /// DISMISS restores it via the `isFocusRingFanPresented` watcher. The caret OFFSET is not
+    /// DISMISS restores it via the `isFocusRowPresented` watcher. The caret OFFSET is not
     /// held here: `BlockEditorViewController` captures it at resign and restores it when focus
     /// returns to the same block.
     @State private var ringReturnFocus: UUID?
@@ -247,30 +219,6 @@ struct DailiesView: View {
     /// keyboard frame reports the inputAccessoryView too). `.greatestFiniteMagnitude`
     /// when the keyboard is down, so the caret pin below never fires at rest.
     @State private var keyboardTopY: CGFloat = .greatestFiniteMagnitude
-    /// The spine container's actual bottom edge in SCREEN coords (captured live via a
-    /// GeometryReader). Used to place the search-mode wire terminus on the × ring without
-    /// assuming how SwiftUI sizes the container under the keyboard (2026-07-11).
-    @State private var spineContainerBottomY: CGFloat = 0
-
-    /// Where the spine's top edge sits: the first Iris's top edge. Prefer the
-    /// MEASURED first-row top; before the first layout, fall back to the constant
-    /// estimate (no month marker). Row top → card top (+6, the Iris straddles the
-    /// top edge so its centre is there) → Iris top (−radius).
-    private var spineTopInset: CGFloat {
-        let radius = CatchlightLayout.circleDiameter / 2
-        // With an Obie, it's PINNED at the standard first-item position
-        // (`deviceTopInset + headingClearance`), so the wire begins right there — the
-        // same formula as the no-row fallback. Without one, it starts at the first
-        // scrolling row.
-        if vm.obie != nil {
-            return deviceTopInset + headingClearance + 6 - radius
-        }
-        if let t = firstRowTop, t.isFinite {
-            return max(0, t + 6 - radius)
-        }
-        return deviceTopInset + headingClearance + 6 - radius
-    }
-
     /// The scroll's top inset. Without an Obie it's the plain heading clearance.
     /// With one, it clears the pinned Obie row AND leaves the same visible gap the
     /// "View" setting puts between two Takes — each card's 6pt top/bottom padding
@@ -278,7 +226,7 @@ struct DailiesView: View {
     private var timelineTopInset: CGFloat {
         let base = deviceTopInset + headingClearance
         guard vm.obie != nil, pinnedObieZoneHeight > 0 else { return base }
-        return base + pinnedObieZoneHeight + max(0, takeSpacing.gap - 12)
+        return base + pinnedObieZoneHeight + max(0, cardGap - 12)
     }
 
     /// The NEW timeline's top inset. `timelineTopInset` is written for the OLD rows, which carry a
@@ -288,47 +236,7 @@ struct DailiesView: View {
     /// `cardGap/2 - 6` too low at the scroll origin (owner 2026-07-15). Subtract the difference so
     /// the first card lands exactly where the old timeline puts it.
     private var newTimelineTopInset: CGFloat {
-        max(0, timelineTopInset + 6 - takeSpacing.gap / 2)
-    }
-
-    /// Distance from the SCREEN BOTTOM to the spine's bottom terminus.
-    ///
-    /// At rest the wire plugs into the TOP of the Add "+" ring: the ring's top sits
-    /// `dockBottomPadding + minTouchTarget` above the device bottom inset (the resting
-    /// terminus below). In SEARCH with the keyboard up, the "+" is gone — the search
-    /// bar's × cancel ring rides the keyboard at the SAME x (KeyboardSearchBar lays its
-    /// grid so × lands exactly where + sits at rest). Left alone, the wire kept
-    /// subtracting the resting-dock allowance and ended ~80pt ABOVE the raised bar,
-    /// reading as "disconnected" (owner 2026-07-10). So while the search bar is on the
-    /// keyboard we re-anchor the terminus to the TOP OUTER EDGE of that × ring instead.
-    ///
-    /// `keyboardTopY` is the keyboard's top edge in screen coords and INCLUDES the
-    /// docked search bar (its inputAccessoryView) — so it IS the bar's top. The × ring
-    /// sits `searchBarTopPad` below that (SearchBarAccessory: 10 top + 44 circle + 8),
-    /// so the ring's top is `keyboardTopY + searchBarTopPad` from the screen top, i.e.
-    /// `screenHeight - keyboardTopY - searchBarTopPad` up from the bottom. `max(resting…)`
-    /// keeps it from ever terminating BELOW the resting position, and the guard falls
-    /// back to resting the instant the bar isn't on the keyboard (keyboard lowered →
-    /// `keyboardTopY` resets to the screen height).
-    private var spineBottomInset: CGFloat {
-        let resting = deviceBottomInset
-            + CatchlightLayout.dockBottomPadding
-            + CatchlightLayout.minTouchTarget
-        guard ui.dockMode == .searching, ui.searchKeyboardUp,
-              keyboardTopY < UIScreen.main.bounds.height,
-              spineContainerBottomY > 0 else { return resting }
-        // Place the wire's bottom on the × cancel ring's top edge. `keyboardTopY` (incl. the
-        // docked search bar) IS the bar's top; the ring sits `ringTopOffset` below it. The
-        // inset is measured from the spine container's ACTUAL bottom edge
-        // (`spineContainerBottomY`, captured live), so it self-corrects to however SwiftUI
-        // sizes the container under the keyboard — no assumptions about screen/keyboard math
-        // (the source of the earlier "no change" miss). `ringTopOffset` is the only tunable;
-        // calibrated in-sim 2026-07-11, owner may nudge on device.
-        // = SearchBarAccessory.topPad: on the real keyboard `keyboardTopY` is the accessory's
-        // true top, so the × ring's top outer edge sits exactly `topPad` below it (device-
-        // calibrated 2026-07-11; the sim's no-keyboard quirk wanted a larger value).
-        let ringTopOffset: CGFloat = 10
-        return spineContainerBottomY - (keyboardTopY + ringTopOffset)
+        max(0, timelineTopInset + 6 - cardGap / 2)
     }
 
     var body: some View {
@@ -354,70 +262,6 @@ struct DailiesView: View {
                     else { return }
                     keyboardTopY = frame.origin.y
                 }
-
-            // Full-container probe (NO padding) → the spine container's true bottom edge in
-            // screen coords, so the search-mode wire terminus can anchor to it without any
-            // screen/keyboard assumptions. Kept separate from the padded spine so its
-            // padding can't feed back into the measurement (2026-07-11).
-            Color.clear
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(GeometryReader { g in
-                    Color.clear.preference(key: SpineContainerBottomKey.self,
-                                           value: g.frame(in: .global).maxY)
-                })
-                .onPreferenceChange(SpineContainerBottomKey.self) { spineContainerBottomY = $0 }
-                .allowsHitTesting(false)
-
-            // The spine: a hairline behind the rows, at the circle centre. It
-            // STARTS at the first Iris's top edge (HiFi §1 "the spine terminates at
-            // THE BEAM (owner 2026-08-16) — supersedes the earlier three dotted
-            // tracks, and the single Ember-tinted line before those. ONE view serves the
-            // gutter run and the segment crossing each Iris, for the same reason the old
-            // spine single-sourced its colour: the two must not drift.
-            //
-            // Runs the full height of the container, so it carries north into the
-            // heading fade rather than ending at the device inset, and terminates on the
-            // Add button's ring at the bottom.
-            TimelineBeam()
-                // Fully hidden while editing in place (owner 2026-06-17): a thin line
-                // reads as a "remnant" even at the 0.12 row-mask — especially once the
-                // Obie card (which used to cover it) goes invisible, exposing the spine
-                // at the empty Obie position. The faint masked CARDS carry the
-                // "part of the timeline" feel; the connecting wire isn't needed in focus.
-                .opacity(ui.isEditingInPlace ? 0 : 1)
-                .frame(maxHeight: .infinity)
-                // Runs to the very top of the container so the beam carries on NORTH and
-                // dissolves into the heading fade, rather than starting at the device
-                // inset with a visible end (owner 2026-08-16; extends the 2026-07-04
-                // intent, which stopped short of it).
-                .padding(.top, 0)
-                // Terminate the spine at the TOP EDGE of the Add button's ring rather
-                // than running full-bleed under the dock (owner 2026-06-16: it was
-                // visible through the +'s hollow ring). At rest the ring's top sits
-                // `dockBottomPadding + minTouchTarget` above the device bottom inset so
-                // the wire plugs into the top of the +; in search-with-keyboard it
-                // re-anchors to the raised × ring instead (see `spineBottomInset`).
-                .padding(.bottom, spineBottomInset)
-                // Ride the terminus up/down WITH the keyboard, at the same gentle pace
-                // the new-Take card uses, so the wire glides onto the search bar rather
-                // than snapping (owner 2026-07-10).
-                .animation(.easeOut(duration: 0.56), value: keyboardTopY)
-                // Placed by its CENTRE: the container is `.topLeading`, so a bare
-                // `spineX` would put the beam's left edge on the spine and hang the
-                // whole shaft to the right of the Iris it is meant to pass through.
-                .offset(x: CatchlightLayout.snappedToPixel(spineX) - TimelineBeam.width / 2)
-
-            // The dust in the beam. It belongs HERE, in the screen-fixed spine layer
-            // behind the cards, and nowhere else: dust hangs in the room, so it must
-            // hold still while the timeline scrolls past it. Same footprint and terminus
-            // as the beam it lives in.
-            BeamDust()
-                .opacity(ui.isEditingInPlace ? 0 : 1)
-                .frame(maxHeight: .infinity)
-                .padding(.top, 0)                 // north with the beam it lives in
-                .padding(.bottom, spineBottomInset)
-                .animation(.easeOut(duration: 0.56), value: keyboardTopY)
-                .offset(x: CatchlightLayout.snappedToPixel(spineX) - TimelineBeam.width / 2)
 
             // A first-launch-empty store shows the Fog line; but when a dock
             // filter is active the timeline (with its own filter-empty line)
@@ -448,7 +292,7 @@ struct DailiesView: View {
             // the card below, so the card stays editable above it.
             if ui.isEditingInPlace {
                 // One wrapper around the catcher and the card — the SAME containment
-                // mechanism the Focus-ring fan uses (`.isModal`, RootView). Both
+                // mechanism the Focus row uses (`.isModal`, RootView). Both
                 // children are full-size, so the ZStack is layout-neutral; it exists
                 // so the modal trait covers the whole editing ensemble and nothing
                 // outside it. See the fix-12 measurement before changing this.
@@ -575,7 +419,7 @@ struct DailiesView: View {
             ledger.recordAsked(at: now, version: version)
             requestReview()
         }
-        // The Focus ring committed while a Take is edited in place — apply it to the
+        // The Focus row committed while a Take is edited in place — apply it to the
         // live draft (edit-in-place 2026-06-17). Guarded on `editingTakeID` so the
         // (behind) timeline ignores commits meant for the top-anchored new-Take editor.
         .onChange(of: ui.inlineFanCommand) { _, command in
@@ -587,7 +431,7 @@ struct DailiesView: View {
         // Deferred one runloop turn on purpose: a COMMIT closes the fan and posts its command
         // in the same transaction, and `applyInlineFanCommand` (synchronous, above) consumes
         // `ringReturnFocus` before this block runs — so this only ever fires for a dismiss.
-        .onChange(of: ui.isFocusRingFanPresented) { _, presented in
+        .onChange(of: ui.isFocusRowPresented) { _, presented in
             guard !presented else { return }
             DispatchQueue.main.async {
                 guard let back = ringReturnFocus, editDraft != nil else { return }
@@ -708,7 +552,7 @@ struct DailiesView: View {
         }
         // Reminder editor from the keyboard's slot-2 button (owner 2026-06-21): edit a
         // reminder Take's time/cadence, or add one to a note, in place — the same picker
-        // the Focus ring uses, applied straight to the editing draft.
+        // the Focus row uses, applied straight to the editing draft.
         .sheet(isPresented: $editingReminder) {
             reminderEditorSheet
         }
@@ -721,7 +565,7 @@ struct DailiesView: View {
     private var reminderEditorSheet: some View {
         let existing = editDraft?.timeReminder
         ReminderPickerSheet(
-            initialDate: existing?.scheduledDate ?? FocusRingFanView.defaultReminderDate,
+            initialDate: existing?.scheduledDate ?? FocusRowView.defaultReminderDate,
             initialAlarm: existing?.alarmEnabled ?? true,
             initialAllDay: existing?.isAllDay ?? false,
             initialRecurrence: existing?.recurrence ?? .none,
@@ -936,18 +780,11 @@ struct DailiesView: View {
         if let obie = vm.obie {
             // The Obie's own card is OPAQUE, so it alone hides Takes scrolling up
             // behind it — no solid backing and no fade (both read as a page-coloured
-            // band obscuring the timeline + spine; owner 2026-06-16).
-            // 🚨 A ScrollView CLIPS to its bounds, and the Iris straddles the card's TOP edge
-            // (it hangs `circleDiameter/2` above it — see `spineTopInset`). Wrapping the row
-            // unconditionally sliced the glyph in half at EVERY text size (owner device report
-            // 2026-09-04, round 2). A ScrollView is also GREEDY: left unframed it takes the
-            // whole viewport, so "wrap it but disable the scroll" is not a no-op either.
-            //
-            // So the scroll must not EXIST unless the Obie actually overflows the cap. Below
-            // the cap — every ordinary Obie, at every text size — this is the original view,
-            // unwrapped and unclipped. Only an over-tall Obie takes the scrolling branch, and
-            // there the Iris overhang is padded back in so the clip edge falls above the glyph.
-            let irisOverhang = CatchlightLayout.circleDiameter / 2
+            // band obscuring the timeline; owner 2026-06-16).
+            // A ScrollView is GREEDY: left unframed it takes the whole viewport, so "wrap it
+            // but disable the scroll" is not a no-op. So the scroll must not EXIST unless the
+            // Obie actually overflows the cap. Below the cap (every ordinary Obie, at every
+            // text size) this is the plain view; only an over-tall Obie scrolls.
             let overflows = pinnedObieNaturalHeight > 0
                 && pinnedObieZoneHeight > 0
                 && pinnedObieNaturalHeight > pinnedObieZoneHeight + 0.5
@@ -956,7 +793,7 @@ struct DailiesView: View {
             // otherwise stretch this to fill the screen out here. Measured unconstrained (in
             // the scrolling branch the content still lays out naturally), so the measurement
             // never feeds back on the frame derived from it.
-            let measuredRow = row(for: obie, isFirst: false)
+            let measuredRow = row(for: obie)
                 .fixedSize(horizontal: false, vertical: true)
                 .id(obie.id)
                 .background(
@@ -971,12 +808,11 @@ struct DailiesView: View {
             Group {
                 if overflows {
                     ScrollView {
-                        measuredRow.padding(.top, irisOverhang)
+                        measuredRow
                     }
                     .scrollBounceBehavior(.basedOnSize)
                     .scrollIndicators(.hidden)
-                    .frame(height: pinnedObieZoneHeight + irisOverhang)
-                    .padding(.top, -irisOverhang)
+                    .frame(height: pinnedObieZoneHeight)
                 } else {
                     measuredRow
                 }
@@ -1379,13 +1215,13 @@ struct DailiesView: View {
     }
 
     /// THE timeline (Pillar 2, default since M7): the recycling UIKit collection, fed the real
-    /// month groups, spine column, density gap, and heading/dock insets. The pinned Obie, heading,
-    /// and gutter spine still come from the surrounding body.
+    /// month groups, card column, density gap, and heading/dock insets. The pinned Obie and
+    /// heading still come from the surrounding body.
     private var timeline: some View {
         UIKitTimeline(
             groups: monthGroups.map { TimelineMonthGroup(id: $0.key, title: $0.month, takes: $0.takes) },
             spineX: spineX,
-            cardGap: takeSpacing.gap,
+            cardGap: cardGap,
             activeMonthKey: ui.filterMonth,
             onToggleMonthFilter: { key in
                 withAnimation(.easeInOut(duration: 0.2)) { ui.toggleMonthFilter(key) }
@@ -1403,13 +1239,13 @@ struct DailiesView: View {
                 guard app.ensureEditable(take.id) else { return }
                 requestDelete(take)
             },
-            // Iris tap → bloom the Focus-ring fan at the tapped Iris (window coords
+            // Iris tap → bloom the Focus row at the tapped Iris (window coords
             // match RootView's full-screen overlay). No edit-in-place on the new
             // timeline yet (M4), so the SwiftUI row's editing branches don't apply.
             onTapCircle: { take, irisCentre in
-                // A Take waiting for a conflict choice is read-only: no Focus ring.
+                // A Take waiting for a conflict choice is read-only: no Focus row.
                 guard app.ensureNotHeld(take.id) else { return }
-                ui.openFocusRingFan(for: take, origin: irisCentre)
+                ui.openFocusRow(for: take, origin: irisCentre)
             },
             // Iris long-press toggles Obie (owner 2026-07-04): demote is not gated,
             // designate is. Mirrors DailiesView.rowContent's onLongPressCircle.
@@ -1449,10 +1285,10 @@ struct DailiesView: View {
             // through to the save catcher). Covers both existing-edit and new-Take.
             isEditing: ui.isEditingInPlace,
             // Rows leave the accessibility tree behind EITHER overlay (audit
-            // 2026-08: RV-4/VC3 for the editor, V5 for the Focus-ring fan) —
+            // 2026-08: RV-4/VC3 for the editor, V5 for the Focus row) —
             // set at the UIKit level, where the row elements are actually
             // vended; the SwiftUI wrapper modifier was measured not to reach them.
-            axHidden: ui.isEditingInPlace || ui.isFocusRingFanPresented,
+            axHidden: ui.isEditingInPlace || ui.isFocusRowPresented,
             // Task 6.19 (re-wired 2026-07-23): the Spotlight deep-link target. The
             // pinned Obie never enters the collection — its flash rides rowContent's
             // background and is cleared by the onChange below — so it's filtered out
@@ -1524,16 +1360,16 @@ struct DailiesView: View {
         KeyboardTakeEditor(
             draft: editDraftBinding,
             focusedBlockID: $editFocusedBlockID,
-            leadingInset: spineX - CatchlightLayout.cardSpineInset,
+            leadingInset: spineX - CatchlightLayout.cardLeadingOffset,
             // Seal the UIKit text view while the fan is up (audit 2026-08, V31): the
             // fan's RootView-level hide covers this card's SwiftUI elements but does
             // not reach the UIKit-vended text, so VoiceOver focus landed on the text
             // behind the veil. Same channel as the timeline rows.
-            axHidden: ui.isFocusRingFanPresented,
+            axHidden: ui.isFocusRowPresented,
             onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
             onEditReminder: { presentReminderEditor() },
             onDiscard: { discardInlineEdit() },
-            // Iris tap → the Focus-ring fan, against the LIVE DRAFT so it reflects unsaved
+            // Iris tap → the Focus row, against the LIVE DRAFT so it reflects unsaved
             // shaping and its commit routes back through the draft rather than the store
             // (owner 2026-06-17; `RootView` keys that off `ui.editingTakeID`). Drop the keyboard
             // first, exactly as the old timeline's row does before blooming the fan.
@@ -1542,13 +1378,13 @@ struct DailiesView: View {
                 editFocusedBlockID = nil
                 // No spotlight card — this IS the editor (owner 2026-07-16). The fan still blooms
                 // at the Iris; it just doesn't redraw the Take as a read card over the veil.
-                ui.openFocusRingFan(for: editDraft ?? Take(), origin: irisCentre, showsCard: false)
+                ui.openFocusRow(for: editDraft ?? Take(), origin: irisCentre, showsCard: false)
             }
         )
     }
 
 
-    private func row(for take: Take, isFirst: Bool = false) -> some View {
+    private func row(for take: Take) -> some View {
         // Swipe actions (2026-06-16): swipe LEFT → Delete (all rows), swipe RIGHT →
         // Mark done (Tasks only — `complete` has no meaning on a plain Note). The
         // same mutations stay on the long-press context menu as the VoiceOver /
@@ -1602,31 +1438,17 @@ struct DailiesView: View {
                 }
             ),
             openRowID: $openSwipeRowID,
-            leadingInset: spineX - CatchlightLayout.cardSpineInset,
+            leadingInset: spineX - CatchlightLayout.cardLeadingOffset,
             trailingInset: 20,
             contentVerticalInset: 6
         ) { swipeOffset in
             // BOTH margins live inside the content so the wrapper spans the full
             // screen width — letting each action fill reach its screen edge. The
-            // card's leading edge is `cardSpineInset` left of the spine (the card
-            // covers the spine; the Iris nests in its corner). `swipeOffset` slides
-            // the CARD only — TakeRowView keeps the Iris on the spine.
-            rowContent(for: take, cardSwipeOffset: swipeOffset, isFirst: isFirst)
-                .padding(.leading, spineX - CatchlightLayout.cardSpineInset)
+            // card's leading edge is `cardLeadingOffset` left of `spineX`. `swipeOffset`
+            // slides the card and the Iris inside it.
+            rowContent(for: take, cardSwipeOffset: swipeOffset)
+                .padding(.leading, spineX - CatchlightLayout.cardLeadingOffset)
                 .padding(.trailing, 20)
-        }
-        .background(alignment: .top) {
-            // The first row publishes its top Y (shared "dailies" space) so the
-            // spine starts exactly at the first Iris — whether that's the pinned
-            // Obie or a row sitting under an invisible month marker.
-            if isFirst {
-                GeometryReader { geo in
-                    Color.clear.preference(
-                        key: FirstRowTopKey.self,
-                        value: geo.frame(in: .named("dailies")).minY
-                    )
-                }
-            }
         }
         // Edit-in-place (owner 2026-06-17): mask every row except the one under
         // focus — the "Iris-touch focus" applied to editing. The timeline still
@@ -1753,7 +1575,7 @@ struct DailiesView: View {
             && !ui.isEditingInPlace && ui.pendingInlineNewTake == nil
             && !ui.isSettingsPresented && !ui.isPaywallPresented
             && !ui.isConflictSheetPresented && !ui.isStoryboardPresented
-            && !ui.isFocusRingFanPresented && ui.dockMode == .resting
+            && !ui.isFocusRowPresented && ui.dockMode == .resting
             && vm.tasksCompletedTakeID == nil
             && !ProcessInfo.processInfo.arguments.contains("--uitesting")
     }
@@ -1821,7 +1643,7 @@ struct DailiesView: View {
         vm.delete(take)
     }
 
-    /// Apply a Focus-ring selection to the inline draft. The draft is the single
+    /// Apply a Focus row selection to the inline draft. The draft is the single
     /// source of truth while editing, so the selection rides the inline save (fixing
     /// the Obie revert: the
     /// fan used to write the store, then the stale draft overwrote it). The Task Mark
@@ -1888,7 +1710,7 @@ struct DailiesView: View {
     }
 
     /// "Make Obie" from the editing long-press menu (owner 2026-07-06 — replaced "Make
-    /// Important" there; Important now lives on the Focus ring). Applies to the live draft
+    /// Important" there; Important now lives on the Focus row). Applies to the live draft
     /// so it rides the inline save. If another Obie already exists, warn first — exactly
     /// like the timeline long-press — leaving the flag off until confirmed.
     private func makeInlineObie() {
@@ -1917,7 +1739,7 @@ struct DailiesView: View {
 
     /// The row's visual content (Iris + card). `cardSwipeOffset` slides the card
     /// (only) for its swipe actions, supplied live by the enclosing `SwipeActionRow`.
-    private func rowContent(for take: Take, cardSwipeOffset: CGFloat = 0, isFirst: Bool = false) -> some View {
+    private func rowContent(for take: Take, cardSwipeOffset: CGFloat = 0) -> some View {
         let isEditingThis = ui.editingTakeID == take.id
         let editingActive = ui.isEditingInPlace
         return TakeRowView(
@@ -1928,12 +1750,12 @@ struct DailiesView: View {
             onTapCircle: { irisCentre in
                 // While another Take is focused, any tap outside it commits and exits.
                 if editingActive && !isEditingThis { saveInlineEdit(); return }
-                // Release the editor's keyboard BEFORE the Focus ring opens (owner
+                // Release the editor's keyboard BEFORE the Focus row opens (owner
                 // lockup 2026-06-18). Leaving the editor first-responder while the ring
                 // + reminder picker sit on top made the keyboard fight the overlay —
                 // Done re-raised it / needed a second tap. The ring owns the
                 // interaction; the commit re-focuses (applyInlineFanCommand).
-                // A Take waiting for a conflict choice is read-only: no Focus ring.
+                // A Take waiting for a conflict choice is read-only: no Focus row.
                 if !isEditingThis { guard app.ensureNotHeld(take.id) else { return } }
                 if isEditingThis { ringReturnFocus = editFocusedBlockID; editFocusedBlockID = nil }
                 // Section 8 — bloom the fan in place at the tapped Iris (window
@@ -1944,7 +1766,7 @@ struct DailiesView: View {
                 // Spotlight card only when this row ISN'T the one being edited — editing makes the
                 // editor the context, and the spotlight's READ card over it reads as the Take
                 // shrinking (owner 2026-07-16; the new timeline's editing card behaves the same).
-                ui.openFocusRingFan(for: isEditingThis ? (editDraft ?? take) : take,
+                ui.openFocusRow(for: isEditingThis ? (editDraft ?? take) : take,
                                     origin: irisCentre, showsCard: !isEditingThis)
             },
             onLongPressCircle: {
@@ -2022,7 +1844,7 @@ struct DailiesView: View {
                 ExportCoordinator.presentShareSheet(takes: [isEditingThis ? (editDraft ?? take) : take])
             },
             onDiscard: isEditingThis ? { discardInlineEdit() } : nil,
-            // The editing row's Iris is the shape control (tap = Focus ring), so it
+            // The editing row's Iris is the shape control (tap = Focus row), so it
             // carries the retired editor's "editor-shape" id for tests + semantics.
             irisIdentifier: isEditingThis ? "editor-shape" : "take-iris",
             cardSwipeOffset: cardSwipeOffset,
@@ -2144,24 +1966,6 @@ struct DailiesView: View {
         }
     }
 
-}
-
-/// The first timeline row's top Y (in the "dailies" space) — drives where the spine
-/// begins. Only the `isFirst` row publishes; `min` keeps the topmost if more than
-/// one ever reports during a transition. `.infinity` default ⇒ "not measured yet".
-private struct FirstRowTopKey: PreferenceKey {
-    static let defaultValue: CGFloat = .infinity
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = min(value, nextValue())
-    }
-}
-
-/// Publishes the spine container's bottom edge (screen coords) for the search-terminus math.
-private struct SpineContainerBottomKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
 }
 
 // MARK: - UIScrollView capture (caret pin)

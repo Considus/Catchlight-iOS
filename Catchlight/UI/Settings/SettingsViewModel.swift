@@ -83,7 +83,7 @@ final class SettingsViewModel {
 
     /// How many HOURS ahead a freshly-added reminder defaults to (owner 2026-06-18 — a
     /// user preference shown as a segmented control of 1/6/12/24/48). The raw value IS
-    /// the hour count. `FocusRingFanView.defaultReminderDate` reads `current` when seeding
+    /// the hour count. `FocusRowView.defaultReminderDate` reads `current` when seeding
     /// the picker; the user always refines from there.
     enum DefaultReminderHours: String, CaseIterable, Identifiable, StoredPreference {
         case one = "1", six = "6", twelve = "12", twentyFour = "24", fortyEight = "48"
@@ -190,10 +190,9 @@ final class SettingsViewModel {
     }
 
     /// Timeline density — how much clear space sits between consecutive Takes on
-    /// Dailies (owner 2026-06-16). Changes ONLY the inter-card gap; the cards, Iris,
-    /// and spine are untouched. `gap` is the clear distance from one card's bottom to
-    /// the next card's top, sized so the lower card's Iris (which straddles its top
-    /// edge, poking up one radius ≈ 22pt) never overlaps the card above. Read by
+    /// Dailies (owner 2026-06-16). Changes ONLY the inter-card gap. `gap` is the stored
+    /// value, kept as it was when the Iris straddled each card's top edge;
+    /// `CatchlightLayout.visibleCardGap(for:)` turns it into the visible gap. Read by
     /// `DailiesView` via `@AppStorage`.
     enum TakeSpacing: String, CaseIterable, Identifiable, StoredPreference {
         case compact, standard, comfort

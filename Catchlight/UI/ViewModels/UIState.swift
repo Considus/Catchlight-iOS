@@ -6,7 +6,7 @@
 //  children. The app has ONE surface — the timeline — and the bottom dock MORPHS
 //  between three states (resting / filtering / searching) instead of switching
 //  tabs. This class owns the dock mode, the live filter toggles, and the search
-//  query, plus the focus-ring fan / editor / settings / paywall / conflict / spotlight
+//  query, plus the Focus row / editor / settings / paywall / conflict / spotlight
 //  presentation state. @Observable (iOS 17+). It owns NO domain data — the feature
 //  view models do — so it stays a thin coordinator any screen can read via the
 //  environment.
@@ -73,10 +73,10 @@ final class UIState {
     /// dock bar raises it again. Only meaningful while `dockMode == .searching`.
     var searchKeyboardUp = false
 
-    // Focus-ring fan.
-    var focusRingFanTake: Take?
-    var focusRingFanOrigin: CGPoint = .zero
-    var isFocusRingFanPresented: Bool { focusRingFanTake != nil }
+    // Focus row.
+    var focusRowTake: Take?
+    var focusRowOrigin: CGPoint = .zero
+    var isFocusRowPresented: Bool { focusRowTake != nil }
 
     // Take editor — edit-in-place (the top-anchored overlay editor was retired in
     // Phase 3, 2026-06-17; all create/edit happens in the timeline now).
@@ -97,7 +97,7 @@ final class UIState {
     /// store refused its save, so the typing is on screen again.
     var pendingInlineNewTake: Take?
 
-    /// A focus-ring-fan selection handed to the in-place editor, carrying the working
+    /// A Focus row selection handed to the in-place editor, carrying the working
     /// activity-type set. Reshapes the editor's live block DRAFT — the Task Mark
     /// reshapes the on-screen blocks, never the stored copy — so a make-checklist
     /// toggle lands on what the user is typing, not a stale row. Carries a token so
@@ -123,8 +123,8 @@ final class UIState {
         let isImportant: Bool
     }
 
-    /// The Focus-ring selection for the IN-PLACE editor (edit-in-place redesign
-    /// 2026-06-17). When the Focus ring is opened from a Take being edited inline,
+    /// The Focus row selection for the IN-PLACE editor (edit-in-place redesign
+    /// 2026-06-17). When the Focus row is opened from a Take being edited inline,
     /// its commit must reshape that editor's live draft — not the stored copy — so
     /// the selection (incl. an Important change) rides the inline save instead of being
     /// silently reverted when the draft is written back. DailiesView consumes it.
@@ -310,9 +310,9 @@ final class UIState {
         }
     }
 
-    // MARK: - Focus-ring fan / editor
+    // MARK: - Focus row / editor
 
-    /// Animation for the surrounding-content fade when the focus-ring fan appears or
+    /// Animation for the surrounding-content fade when the Focus row appears or
     /// dismisses. Driven from the mutation site via `withAnimation` rather than a
     /// `.animation(_:value:)` view modifier, so the fade animates without coupling the
     /// views to a value-observing modifier (which tripped SwiftUI's type-checker).
@@ -335,35 +335,35 @@ final class UIState {
     /// the spotlight would draw a READ card (shorter than the editing card, and Preview-capped)
     /// over it — which reads as the Take shrinking (owner 2026-07-16).
     ///
-    /// This used to be inferred in `RootView` from `focusRingFanOrigin != .zero`, i.e. "a real
+    /// This used to be inferred in `RootView` from `focusRowOrigin != .zero`, i.e. "a real
     /// Iris origin ⇒ came from the timeline". That proxy broke when the EDITING card grew a
     /// tappable Iris of its own (M5b): a real origin, but the editor is the context. Explicit now.
-    var focusRingFanShowsCard = false
+    var focusRowShowsCard = false
 
-    func openFocusRingFan(for take: Take, origin: CGPoint = .zero, showsCard: Bool = true) {
-        focusRingFanOrigin = origin
-        focusRingFanShowsCard = showsCard && origin != .zero
-        withAnimation(Self.gatedFanFade) { focusRingFanTake = take }
+    func openFocusRow(for take: Take, origin: CGPoint = .zero, showsCard: Bool = true) {
+        focusRowOrigin = origin
+        focusRowShowsCard = showsCard && origin != .zero
+        withAnimation(Self.gatedFanFade) { focusRowTake = take }
     }
 
-    /// Dismiss the focus-ring fan. `animated: false` removes the overlay WITHOUT the
+    /// Dismiss the Focus row. `animated: false` removes the overlay WITHOUT the
     /// opacity transition — required on the edit-in-place commit path, where committing
     /// immediately grows the card, re-raises the keyboard and scrolls the caret: a
     /// fade-out running THROUGH that relayout left SwiftUI unable to complete the removal
     /// transition and stranded the fan's screen-positioned hub Iris as an orphan glyph
     /// (owner 2026-07-11). With no transition there is nothing to strand.
-    func closeFocusRingFan(animated: Bool = true) {
+    func closeFocusRow(animated: Bool = true) {
         if animated {
-            withAnimation(Self.gatedFanFade) { focusRingFanTake = nil }
+            withAnimation(Self.gatedFanFade) { focusRowTake = nil }
         } else {
             var tx = Transaction()
             tx.disablesAnimations = true
-            withTransaction(tx) { focusRingFanTake = nil }
+            withTransaction(tx) { focusRowTake = nil }
         }
     }
 
     /// Enter in-place editing on a timeline Take (edit-in-place redesign). The fade
-    /// matches the focus-ring fan's, so masking the surrounding timeline reads the same as
+    /// matches the Focus row's, so masking the surrounding timeline reads the same as
     /// the Iris-touch focus.
     func beginEditingInPlace(_ take: Take) {
         // Editing and searching cannot coexist (owner 2026-06-22 bug): tapping a

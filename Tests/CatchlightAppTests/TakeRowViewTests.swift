@@ -133,16 +133,16 @@ final class TakeRowViewTests: XCTestCase {
         // Every existing caller (editor footer included) uses the default and
         // must not change.
         let take = Take(blocks: [.textLine("the star")], isObie: true)
-        XCTAssertEqual(TakeCircleView.activityDescription(for: take), "Obie, Important, Note")
+        XCTAssertEqual(IrisView.activityDescription(for: take), "Obie, Important, Note")
     }
 
     func testIrisHint_namesTheRotorRoute_neverTheGesture() {
         let obie = Take(blocks: [.textLine("x")], isObie: true)
         let standard = Take(blocks: [.textLine("x")])
         XCTAssertEqual(TakeRowView.irisAccessibilityHint(for: standard),
-                       "Opens the Focus ring. Use the actions rotor to make this your Obie.")
+                       "Opens the Focus row. Use the actions rotor to make this your Obie.")
         XCTAssertEqual(TakeRowView.irisAccessibilityHint(for: obie),
-                       "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take.")
+                       "Opens the Focus row. Use the actions rotor to turn this back into a standard Take.")
         XCTAssertFalse(TakeRowView.irisAccessibilityHint(for: obie).contains("Long press"))
         XCTAssertFalse(TakeRowView.irisAccessibilityHint(for: standard).contains("Long press"))
     }

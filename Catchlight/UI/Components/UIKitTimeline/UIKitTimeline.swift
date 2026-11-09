@@ -7,7 +7,7 @@ import CatchlightCore
 /// exact geometry (self-sizing cells).
 ///
 /// STATUS: P2-M2 — read-only. Real Takes, month DIVIDER rows (a row in the flow, like the
-/// real timeline — centred between Takes, at the text column), Iris + wire. The pinned
+/// real timeline, centred between Takes, at the text column), each with its Iris. The pinned
 /// Obie is rendered by the host above this view. Gestures and edit-in-place are later.
 
 /// A month group: id (yyyy-MM), display title (LLLL yyyy), and its Takes.
@@ -90,7 +90,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// Swipe actions (native), wired to the host's entitlement-gated Take actions.
     var onToggleDone: (Take) -> Void = { _ in }
     var onDelete: (Take) -> Void = { _ in }
-    /// Iris tap → open the Focus-ring fan at the given WINDOW-coord centre; long-press
+    /// Iris tap → open the Focus row at the given WINDOW-coord centre; long-press
     /// → toggle Obie. Wired to the same `ui`/`vm` the SwiftUI timeline uses.
     var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
     var onLongPressCircle: (Take) -> Void = { _ in }
@@ -110,7 +110,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// otherwise sits above the SwiftUI veil for hit-testing — tap-between-Takes was dead).
     var isEditing: Bool = false
     /// Audit 2026-08 (V5 + RV-4/VC3): remove the rows from the accessibility tree
-    /// while an overlay covers them (in-place editor OR the Focus-ring fan).
+    /// while an overlay covers them (in-place editor OR the Focus row).
     /// Distinct from `isEditing`, which also dims — the fan case hides without
     /// the editing dim (its own veil does the visual recede).
     var axHidden: Bool = false
@@ -207,14 +207,13 @@ struct TimelineCardHitShape: Shape {
     func path(in rect: CGRect) -> Path {
         let live = CGRect(x: rect.minX, y: rect.minY,
                           width: max(0, rect.width - trailingInset), height: rect.height)
-        return Path(roundedRect: live, cornerRadius: 12, style: .continuous)
+        return Path(roundedRect: live, cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
     }
 }
 
-/// One read-only timeline row — the same layering as `TakeRowView` (card < occluder <
-/// Iris < wire segment < dots), so the wire threads the Iris identically. Offsets are
-/// `cardSpineInset`-relative (the ZStack origin is the card's top-left, after the leading
-/// pad). The gutter wire between rows is the screen-fixed line drawn behind the collection.
+/// One read-only timeline row, with the same layering as `TakeRowView` (card < Iris < touch
+/// frame). The ZStack origin is the card's top-left, after the leading pad, and the Iris
+/// sits `irisInset` in from it.
 struct TimelineReadCell: View {
     let take: Take
     let spineX: CGFloat
@@ -225,7 +224,7 @@ struct TimelineReadCell: View {
     /// timeline said OVERDUE (found 2026-07-16 while re-anchoring the Feature Register).
     var isSnoozed: Bool = false
     /// Iris tap → the CGPoint is the Iris centre in WINDOW (global) coords, so the
-    /// host can bloom the Focus-ring fan in place (matches `RootView`'s full-screen
+    /// host can bloom the Focus row in place (matches `RootView`'s full-screen
     /// `ignoresSafeArea` overlay space). Long-press → toggle Obie. Both reuse the
     /// existing `TapAndLongPressRecognizer` from `TakeRowView` (built to survive the
     /// move to a UIKit-hosted cell).
@@ -252,24 +251,20 @@ struct TimelineReadCell: View {
     var onNudge: (Take, Int) -> Void = { _, _ in }
 
     @Environment(\.colorScheme) private var scheme
-    private let inset = CatchlightLayout.cardSpineInset
     private let d = CatchlightLayout.circleDiameter
 
-    // MARK: Iris depth (owner 2026-08-16) — see the paint-order note in `body`
+    // MARK: Iris
     //
-    // The drawing lives in `ThreadedIris` and `TimelineBeamOccluder`, NOT here: the
-    // pinned Obie is drawn by a different view (`TakeRowView`) and needs exactly the
-    // same treatment. Keeping it in one place is what stops the two rows drifting —
-    // they already did once, leaving the Obie flat while every scrolling row was
-    // rebuilt.
+    // The drawing is `IrisView`, the same view the pinned Obie's `TakeRowView` uses, so
+    // the two rows cannot drift apart.
 
-    /// The Iris's touch and VoiceOver surface, kept separate from the two drawn halves
-    /// so the split cannot produce two accessibility elements or swallow the gesture.
+    /// The Iris's touch and VoiceOver surface, kept separate from the drawing so it
+    /// cannot produce a second accessibility element or swallow the gesture.
     private var irisHitTarget: some View {
         Color.clear
             .frame(width: d, height: d)
             .contentShape(Rectangle())
-            // Tap → Focus-ring fan, long-press (0.45s, .began) → toggle Obie. Same
+            // Tap → Focus row, long-press (0.45s, .began) → toggle Obie. Same
             // recognizer the SwiftUI row uses; `convert(_:to: nil)` yields the Iris
             // centre in window coords.
             .overlay(
@@ -290,7 +285,7 @@ struct TimelineReadCell: View {
             // V10 (audit 2026-08): the pinned Obie row's Iris carries .isButton; this
             // one didn't, so the same control announced differently on one screen.
             .accessibilityAddTraits(.isButton)
-            .offset(x: inset - d / 2, y: -d / 2)
+            .offset(x: CatchlightLayout.irisInset, y: CatchlightLayout.irisInset)
     }
 
     var body: some View {
@@ -311,7 +306,7 @@ struct TimelineReadCell: View {
                 // not a notification (same treatment as the pinned Obie's flash in
                 // DailiesView.rowContent). Render-only.
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                         .fill(Color.ckEmber.opacity(isSpotlightTarget ? 0.18 : 0))
                         .animation(.easeInOut(duration: 0.4), value: isSpotlightTarget)
                         .allowsHitTesting(false)
@@ -350,34 +345,16 @@ struct TimelineReadCell: View {
                         Button("Move down") { onNudge(take, 1) }
                     }
                 }
-            // ── The shutter, threaded ────────────────────────────────────────────
-            //
-            // 🚨 THE PAINT ORDER IS THE WHOLE FIX (owner 2026-08-16). What shipped
-            // before was card → Iris → wire, while the card ALSO hid the wire below
-            // its top edge: the wire in front of the Iris, the Iris in front of the
-            // card, the card in front of the wire. That is a Penrose triangle. The eye
-            // cannot build a solid out of it, so it stops trying and reads the whole
-            // timeline as a diagram — which is why no amount of shading had ever made
-            // it feel like anything. The order below is a real one, and the shading
-            // only started to pay once it was.
-            //
-            //   card → shadow → shutter FAR half → beam → shutter NEAR half
-            //
-            // The old background-coloured occluder is GONE with it. Its job was to stop
-            // the dotted spine bleeding up through the hollow aperture — but seeing the
-            // wire through the hole is precisely what threading means. Putting it back
-            // re-breaks the order.
-            TimelineBeamOccluder()                                                     // one beam, not two
-                .offset(x: inset - TimelineBeam.width / 2, y: -d / 2)
-            ThreadedIris(take: take)                                                   // shadow, halves, beam
-                .offset(x: inset - d / 2, y: -d / 2)
+            // ── The Iris, inside the card's top-left ─────────────────────────────
+            IrisView(take: take)
+                .allowsHitTesting(false)
+                .offset(x: CatchlightLayout.irisInset, y: CatchlightLayout.irisInset)
             irisHitTarget                                                              // gestures + VoiceOver
         }
-        .padding(.leading, spineX - inset)
+        .padding(.leading, spineX - CatchlightLayout.cardLeadingOffset)
         .padding(.trailing, 20)
         // SYMMETRIC so the card is centred in the cell — a swipe action fill then centres
-        // on the CARD, not the cell (the Iris overhang is render-only `.offset`, so it
-        // doesn't grow the layout; the cell must simply not clip).
+        // on the CARD, not the cell.
         .padding(.vertical, cardGap / 2)
         // AFTER the paddings, deliberately, so the overlay aligns to the CELL's trailing
         // edge and `.frame(width: stripWidth).padding(.trailing, trailingMargin)` puts the
@@ -505,7 +482,7 @@ struct TimelineSwipeCell: View {
                                       ? .standard : .destructive,
                                   perform: { onDelete(take) }),
             openRowID: $swipeState.openRowID,
-            leadingInset: spineX - CatchlightLayout.cardSpineInset,
+            leadingInset: spineX - CatchlightLayout.cardLeadingOffset,
             trailingInset: 20,
             contentVerticalInset: cardGap / 2,
             centersActionLabel: true    // centre glyph/label in the revealed button, not hugged to the screen edge
@@ -581,7 +558,7 @@ struct TimelineMonthDivider: View {
                 .onTapGesture(perform: onTapBlank)
                 .accessibilityHidden(true)
         }
-        .padding(.leading, spineX - CatchlightLayout.cardSpineInset + CatchlightLayout.cardTextLeadingPad)
+        .padding(.leading, spineX - CatchlightLayout.cardLeadingOffset + CatchlightLayout.cardTextLeadingPad)
         .padding(.trailing, 20)
     }
 }
@@ -752,7 +729,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, TimelineRow> {
             [weak self] cell, _, row in
             guard let self else { return }
-            // Don't clip: the Iris straddles above the card (render-only overhang).
+            // Don't clip, so nothing drawn at a card's edge is cut off.
             cell.clipsToBounds = false
             cell.contentView.clipsToBounds = false
             switch row {
@@ -1031,7 +1008,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     }
 
     /// Audit 2026-08, V5 + RV-4/VC3: while an overlay (the in-place editor or the
-    /// Focus-ring fan) is up, the rows must LEAVE the accessibility tree, not just
+    /// Focus row) is up, the rows must LEAVE the accessibility tree, not just
     /// dim — `alpha` and `isUserInteractionEnabled` do not remove elements, so
     /// VoiceOver could still reach a background Take and Voice Control still spoke
     /// its name. Set at the UIKit level because the row elements are vended by

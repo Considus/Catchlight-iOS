@@ -67,13 +67,10 @@ struct StoryboardView: View {
         SettingsViewModel.TimelineArrangement(rawValue: arrangementRaw) ?? .default
     }
 
-    /// The inter-card gap. The "View" setting's gap is tuned for Dailies, where each
-    /// card's Iris straddles its top edge — the Iris's top HALF (its radius, 22pt of
-    /// the 44pt circle) sits up in the gap. The Storyboard has no Iris, so we reclaim
-    /// exactly that radius from every gap (owner 2026-06-19), keeping the perceived
-    /// rhythm identical to Dailies. Floored at 0 so Compact can't go negative.
+    /// The inter-card gap: the same visible gap Dailies shows for the "View" setting,
+    /// so the two keep the same rhythm (owner 2026-06-19).
     private var storyboardGap: CGFloat {
-        max(0, takeSpacing.gap - CatchlightLayout.circleDiameter / 2)
+        CatchlightLayout.visibleCardGap(for: takeSpacing.gap)
     }
 
     /// The Take a delete confirmation is currently asking about (owner 2026-08-16). The
@@ -100,13 +97,13 @@ struct StoryboardView: View {
 
     /// Card-column geometry, matched to Dailies (owner 2026-06-19) so the Storyboard
     /// cards — and the heading above them — sit in the SAME column as the timeline.
-    /// Dailies insets each row leading by `spineX − cardSpineInset` and trailing by
+    /// Dailies insets each row leading by `spineX − cardLeadingOffset` and trailing by
     /// 20 (DailiesView), and the card's own `cardTextLeadingPad` then lands the text
     /// at the heading's column. Full-screen, so the screen width is the container
     /// width (matches DailiesView's spineX fallback).
     private var cardLeading: CGFloat {
         CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
-            - CatchlightLayout.cardSpineInset
+            - CatchlightLayout.cardLeadingOffset
     }
     private let cardTrailing: CGFloat = 20
 
@@ -240,7 +237,7 @@ struct StoryboardView: View {
     private var reminderEditorSheet: some View {
         let existing = editDraft?.timeReminder
         ReminderPickerSheet(
-            initialDate: existing?.scheduledDate ?? FocusRingFanView.defaultReminderDate,
+            initialDate: existing?.scheduledDate ?? FocusRowView.defaultReminderDate,
             initialAlarm: existing?.alarmEnabled ?? true,
             initialAllDay: existing?.isAllDay ?? false,
             initialRecurrence: existing?.recurrence ?? .none,

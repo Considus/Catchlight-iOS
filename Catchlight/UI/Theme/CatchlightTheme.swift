@@ -51,11 +51,11 @@ private extension UIColor {
 
 extension Color {
     // Night-mode (dark) palette — the brand's core.
-    static let ckInk = Color(hex: 0x0F0E0C)
+    static let ckInk = Color(uiColor: SceneToken.ground)
     static let ckDusk = Color(hex: 0x1C1A16)
     static let ckCatchlight = Color(hex: 0xF5EDD8)   // "catchlightCream"
-    static let ckGlow = Color(hex: 0xEDD9A3)
-    static let ckEmber = Color(hex: 0xC9A96E)
+    static let ckGlow = Color(uiColor: SceneToken.lit)
+    static let ckEmber = Color(uiColor: SceneToken.accent)
     static let ckFog = Color(hex: 0xB8B0A3)
     static let ckShadow = Color(hex: 0x0A0908)
 
@@ -90,6 +90,41 @@ private enum Palette {
     static let emberText = UIColor(hex: 0x856539)
 }
 
+// MARK: - Scene tokens (redesign, Cobalt)
+//
+// The redesign's colour roles for the Cobalt Scene, Dark and Light, from
+// `Brand_System/tokens.json` in the workspace. Every semantic token below now
+// resolves through these. The other four Scenes and the Scene picker arrive in the
+// next slice, which generates this table from the JSON instead of hand-copying it.
+
+enum SceneToken {
+    static let ground   = UIColor.adaptive(dark: UIColor(hex: 0x0B0E2A), light: UIColor(hex: 0xF4F5FA))
+    static let surface  = UIColor.adaptive(dark: UIColor(hex: 0x131840), light: UIColor(hex: 0xE8EAF5))
+    static let card     = UIColor.adaptive(dark: UIColor(hex: 0x131840), light: UIColor(hex: 0xFFFFFF))
+    static let raised   = UIColor.adaptive(dark: UIColor(hex: 0x1C2356), light: UIColor(hex: 0xFFFFFF))
+    /// Dividers and card edges only.
+    static let line     = UIColor.adaptive(dark: UIColor(hex: 0x283066), light: UIColor(hex: 0xD6DAEE))
+    /// Unlit Iris lights and field outlines: 3:1 on every surface.
+    static let outline  = UIColor.adaptive(dark: UIColor(hex: 0x6A7097), light: UIColor(hex: 0x81849C))
+    static let text     = UIColor.adaptive(dark: UIColor(hex: 0xF6F7FF), light: UIColor(hex: 0x0B0E2A))
+    static let muted    = UIColor.adaptive(dark: UIColor(hex: 0xAEB4E3), light: UIColor(hex: 0x4A5078))
+    /// Text that recedes at about 4.6:1: done Task text and placeholders.
+    static let faint    = UIColor.adaptive(dark: UIColor(hex: 0x888DBB), light: UIColor(hex: 0x616689))
+    static let accent   = UIColor.adaptive(dark: UIColor(hex: 0xFF8AD0), light: UIColor(hex: 0x2C41E8))
+    static let onAccent = UIColor.adaptive(dark: UIColor(hex: 0x0B0E2A), light: UIColor(hex: 0xFFFFFF))
+    static let accentText = UIColor.adaptive(dark: UIColor(hex: 0xFFA3DA), light: UIColor(hex: 0x2C41E8))
+    /// "This is on": lit lights, the Obie square and the Focus row marks. Nothing else.
+    static let lit      = UIColor.adaptive(dark: UIColor(hex: 0xFFA3DA), light: UIColor(hex: 0x2C41E8))
+}
+
+extension Color {
+    static let ckGround = Color(uiColor: SceneToken.ground)
+    static let ckCard = Color(uiColor: SceneToken.card)
+    static let ckLine = Color(uiColor: SceneToken.line)
+    static let ckOutline = Color(uiColor: SceneToken.outline)
+    static let ckLit = Color(uiColor: SceneToken.lit)
+}
+
 // MARK: - UIKit-facing semantic tokens (single source, shared with SwiftUI)
 //
 // UIKit views (the custom keyboards, the block editor) can't read the SwiftUI
@@ -99,31 +134,23 @@ private enum Palette {
 // than re-hard-coding hex in the views. (Scene-engine Phase 1.)
 
 enum UITheme {
-    static let background    = UIColor.adaptive(dark: Palette.ink,        light: Palette.paper)
-    static let surface       = UIColor.adaptive(dark: Palette.dusk,       light: Palette.white)
-    static let textPrimary   = UIColor.adaptive(dark: Palette.catchlight, light: Palette.ink)
-    static let textSecondary = UIColor.adaptive(dark: Palette.fog,        light: Palette.slate)
-    /// Receded "done" grey — Fog @76% (Night) / #746E68 (Daylight). Mirrors `ckTextComplete`.
-    /// It is text, so it clears WCAG 4.5:1 on every surface it sits on (owner 2026-10-03):
-    /// Night 5.22 on a card, 4.58 on an Obie; Daylight 5.03 on a card, 4.59 on Paper. Fog at any
-    /// opacity can't pass on White, hence a solid grey in Daylight. `DoneTextContrastTests` holds it.
-    static let textComplete  = UIColor.adaptive(dark: Palette.fog.withAlphaComponent(0.76),
-                                                light: UIColor(hex: 0x746E68))
+    static let background    = SceneToken.ground
+    static let surface       = SceneToken.card
+    static let textPrimary   = SceneToken.text
+    static let textSecondary = SceneToken.muted
+    /// "Done" text. Mirrors `ckTextComplete`. It is text, so it clears WCAG 4.5:1 on every
+    /// surface it sits on (owner 2026-10-03); `DoneTextContrastTests` measures it against the
+    /// Scene tokens.
+    static let textComplete  = SceneToken.faint
     /// Raw Ember FILL (both modes) — the Add droplet / Restore fill.
-    static let add           = UIColor.adaptive(dark: Palette.ember, light: Palette.ember)
+    static let add           = SceneToken.accent
     /// Amber FOREGROUND accent — Ember (Night) / Ember-text #856539 (Daylight, WCAG AA).
-    static let accent        = UIColor.adaptive(dark: Palette.ember, light: Palette.emberText)
+    static let accent        = SceneToken.accentText
     /// Foreground drawn ON an Ember fill — Ink in both modes.
-    static let onAccent      = UIColor.adaptive(dark: Palette.ink, light: Palette.ink)
-    /// Placeholder text on an input surface (audit C6 re-tune, owner 2026-08-28):
-    /// EQUAL ratio in both schemes, passing small-text AA with a little margin,
-    /// and deliberately receded — "equal and passing, not maximal". Derived from
-    /// the fog family: Daylight = fog darkened toward Ink to 4.62:1 on the white
-    /// capsule; Night = fog dimmed toward Dusk to 4.62:1 on the dusk capsule.
-    /// (The first C6 fix used textSecondary — 7.24:1/8.09:1 — which the owner
-    /// read as too prominent for a placeholder.)
-    static let placeholder   = UIColor.adaptive(dark: UIColor(hex: 0x898378),
-                                                light: UIColor(hex: 0x7A746C))
+    static let onAccent      = SceneToken.onAccent
+    /// Placeholder text on an input surface: receded but passing AA, at about 4.6:1
+    /// (owner 2026-08-28: secondary text read as too prominent for a placeholder).
+    static let placeholder   = SceneToken.faint
 }
 
 // MARK: - Semantic, adaptive colours (Night / Daylight)
@@ -141,7 +168,7 @@ extension Color {
     static let ckTextPrimary = Color(uiColor: UITheme.textPrimary)
 
     /// Obie-emphasis text — Glow (Night) / Ember Text #856539 (Daylight, WCAG AA on Paper).
-    static let ckTextObie = Color(uiColor: .adaptive(dark: Palette.glow, light: Palette.emberText))
+    static let ckTextObie = Color(uiColor: SceneToken.lit)
 
     /// Secondary / muted text — Fog (Night) / Slate #5C5650 (Daylight, WCAG AA on Paper).
     /// Fog (#B8B0A3) fails WCAG AA for body text on Paper; Slate is the accessible replacement.
@@ -157,23 +184,14 @@ extension Color {
     /// timeline card all recede by the same amount.
     static let ckTextComplete = Color(uiColor: UITheme.textComplete)
 
-    /// The timeline spine — Catchlight @ 18% (Night) / Ink @ 13% (Daylight).
-    static let ckSpine = Color(uiColor: .adaptive(
-        dark: Palette.catchlight.withAlphaComponent(0.18),
-        light: Palette.ink.withAlphaComponent(0.13)
-    ))
-
     /// The Add button — Ember (both).
     static let ckAdd = Color(uiColor: UITheme.add)
 
     /// Active navigation icon — Ember (both).
-    static let ckNavActive = Color(uiColor: .adaptive(dark: Palette.ember, light: Palette.ember))
+    static let ckNavActive = Color(uiColor: SceneToken.accentText)
 
     /// Inactive navigation icon — Catchlight @ 55% (Night) / Fog (Daylight).
-    static let ckNavInactive = Color(uiColor: .adaptive(
-        dark: Palette.catchlight.withAlphaComponent(0.55),
-        light: Palette.fog
-    ))
+    static let ckNavInactive = Color(uiColor: SceneToken.muted)
 
     /// Amber accent for FOREGROUND content (text or iconography) drawn on a
     /// background SURFACE — Ember (Night) / Ember Text #856539 (Daylight).
@@ -195,15 +213,12 @@ extension Color {
     /// separate owner call (see audit C4) and are NOT switched here.
     static let ckOnAccent = Color(uiColor: UITheme.onAccent)
 
-    /// The veil — the ONE obscuring overlay for the Focus-ring, the editor, and the
+    /// The veil — the ONE obscuring overlay for the Focus row, the editor, and the
     /// Settings backdrop (owner decision 2026-06-11: solid 90% background veil
     /// everywhere; no blur, no dark tint in Daylight). Ink @ 90% (Night) /
     /// Paper @ 90% (Daylight). The screens beneath stay full-opacity — the
     /// veil alone provides the recede.
-    static let ckDim = Color(uiColor: .adaptive(
-        dark: Palette.ink.withAlphaComponent(0.90),
-        light: Palette.paper.withAlphaComponent(0.90)
-    ))
+    static let ckDim = Color(uiColor: SceneToken.ground.withAlphaComponent(0.90))
 
     // MARK: - Take card variants (HiFi v1.7 .card — section 5)
     //
@@ -214,17 +229,11 @@ extension Color {
     /// Obie card BACKGROUND — a warm tint distinct from the plain surface so the
     /// pinned Take reads as special. Daylight #FBF8F3 (Ember @8% blended onto
     /// White, solid to prevent spine bleed) / Night #2D2921. (HiFi v1.7 .obie-card)
-    static let ckCardObieSurface = Color(uiColor: .adaptive(
-        dark: UIColor(hex: 0x2D2921),
-        light: UIColor(hex: 0xFBF8F3)
-    ))
+    static let ckCardObieSurface = Color(uiColor: SceneToken.raised)
 
     /// Obie card BORDER — Ember @65% (Daylight) / Glow @65% (Night). The Ember
     /// border is reserved EXCLUSIVELY for the Obie. (HiFi v1.7 .obie-card)
-    static let ckCardObieBorder = Color(uiColor: .adaptive(
-        dark: Palette.glow.withAlphaComponent(0.65),
-        light: Palette.ember.withAlphaComponent(0.65)
-    ))
+    static let ckCardObieBorder = Color(uiColor: SceneToken.lit)
 
     /// Overdue card BORDER (reminder date passed). RUBY (owner 2026-06-18 — the Take
     /// border/colour system): overdue now reads as an ALERT, not warm amber, and ruby
@@ -248,26 +257,6 @@ extension Color {
     /// when the grey was darkened for contrast). `DoneTextContrastTests` holds it.
     static let ckCardDoneBorder = Color(uiColor: UITheme.textComplete)
 
-    /// Iris OFF-quadrant annular fill (HiFi v1.7 `--q-off` — section 7). The
-    /// faint backing band that makes the Iris read as a complete RING (with a
-    /// hollow centre aperture) even when only some quadrants are active. Daylight
-    /// #F1F1F0 / Night #1B1916. Replaces the old solid base disc, which filled the
-    /// centre and defeated the hollow-aperture read.
-    static let ckIrisOff = Color(uiColor: .adaptive(
-        dark: UIColor(hex: 0x1B1916),
-        light: UIColor(hex: 0xF1F1F0)
-    ))
-
-    /// Iris OUTER ring. Raised 2026-06-18 (owner-approved) to meet WCAG 1.4.11
-    /// non-text contrast (≥3:1): Daylight #8C8C8C ≈ 3.1:1 on the white card (was the
-    /// v1.7 hairline #E7E7E7 ≈ 1.2:1); Night Catchlight @ 45% ≈ 3.9:1 on Ink (was 18%).
-    /// The Iris reads bolder/clearer now — a deliberate move from the v1.7 soft rim to
-    /// a legible-without-VoiceOver control.
-    static let ckIrisRing = Color(uiColor: .adaptive(
-        dark: Palette.catchlight.withAlphaComponent(0.45),
-        light: UIColor(hex: 0x8C8C8C)
-    ))
-
     /// Error / warning accent — used by the non-blocking error strips on the
     /// timeline (Task 3.9). Same hue in both modes so the strip reads as an
     /// alert regardless of theme; brightness chosen to remain WCAG AA against
@@ -277,70 +266,6 @@ extension Color {
         light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
     ))
 
-    // MARK: Iris depth (owner 2026-08-16)
-    //
-    // One light for the whole timeline: from the TOP LEFT, warm. Every round thing
-    // obeys it. Before this pass nothing did — the blades were six flat fills and the
-    // spine one flat tint, which is why the timeline read as a diagram rather than as
-    // objects. See `IrisDepth` below for the geometry that goes with these.
-
-    /// The shadow the Iris drops onto the card it sits on.
-    ///
-    /// 🚨 This is a DELIBERATE exception to DS §4 "no shadows in Night", owner-approved
-    /// 2026-08-16, and the reasoning is the part to keep: §4 forbids shadows against the
-    /// DARK GROUND, where they cannot be seen and only muddy the page. This shadow lands
-    /// on the CARD (Dusk #1C1A16), which is lighter than the page (Ink #0F0E0C), so it
-    /// registers. Where it falls past the card onto Ink it is near-black on near-black
-    /// and disappears on its own — no clipping needed, the tones do it.
-    static let ckIrisShade = Color(uiColor: .adaptive(
-        dark: UIColor(red: 0.02, green: 0.016, blue: 0.012, alpha: 0.62),
-        light: UIColor(hex: 0x0F0E0C).withAlphaComponent(0.20)
-    ))
-
-}
-
-// MARK: - Iris depth geometry (owner 2026-08-16)
-
-/// The numbers behind the Iris's third dimension. Tokenised rather than inlined
-/// because they are tuned against each other: change the tilt and the cast shadow
-/// must follow it, or the shutter leans while its shadow does not.
-enum IrisDepth {
-    /// Backward tilt off the card plane. Owner settled on 24° from 18/24/30 on
-    /// 2026-08-16. Drives the foreshortening AND the cast shadow below.
-    static let tiltDegrees: CGFloat = 24
-    /// Perspective distance for the tilt. Small enough that the near rim genuinely
-    /// widens rather than the shutter simply squashing.
-    static let perspective: CGFloat = 200
-
-    /// Vertical squash from the tilt: the shutter's projected height factor.
-    static var foreshorten: CGFloat { cos(tiltDegrees * .pi / 180) }
-    /// How far the near (lower) rim stands off the card once tilted, in points.
-    /// This is what lengthens and softens the shadow as the angle opens.
-    static func standoff(diameter: CGFloat) -> CGFloat {
-        (diameter / 2) * sin(tiltDegrees * .pi / 180)
-    }
-
-    /// Blade shading strength. An INACTIVE blade takes `inactiveFactor` of it: all six
-    /// are the same metal, but an off blade shaded as hard as a lit one stops reading
-    /// as empty, which is the entire job of the off tone. Worst on Paper, where the
-    /// fills are already pale — hence the much lower Daylight figure.
-    static func leafShade(_ scheme: ColorScheme) -> (dark: CGFloat, light: CGFloat) {
-        scheme == .dark ? (0.34, 0.10) : (0.12, 0.10)
-    }
-    static let inactiveFactor: CGFloat = 0.45
-
-    /// How far the rim catchlight swings between the top of the screen and the bottom,
-    /// in degrees either side of the resting ten-o'clock position.
-    ///
-    /// The DIRECTION is the physics and is easy to get backwards (it was, first time).
-    /// The light sits off the top-left of the SCREEN, so a Take high up is roughly level
-    /// with it and is lit from the SIDE — its highlight sits at its most WESTERLY. The
-    /// further down the screen a Take is, the more the light is above it rather than
-    /// beside it, so the highlight swings NORTH. West at the top, north at the bottom.
-    ///
-    /// Kept well short of due west and due north at both ends: the light is off the
-    /// corner, not at infinity in either axis.
-    static let specularTravelDegrees: Double = 26
 }
 
 // MARK: - Quadrant / mark fills (mode-dependent — resolved by the caller)
@@ -348,7 +273,7 @@ enum IrisDepth {
 // These need the active colour scheme because the same activity reads differently
 // per mode. Views pass their `@Environment(\.colorScheme)` in.
 
-// Per-TYPE fill colours (position is set by TakeCircleView's N/E/S/W diamond —
+// Per-TYPE fill colours (position was set by the old Iris's N/E/S/W diamond —
 // Note=top, Task=right, Remind=left, Reserved=bottom). Daylight values are the
 // HiFi v1.6.9 `--q-*` swatches (the canonical look the owner reviews). v1.6.9
 // moved the Ember accent from Remind onto TASK, so Task is the warm quadrant
@@ -388,12 +313,6 @@ enum Quadrant {
     /// auto-flags Important; owner wants the flag visible there alongside the ring).
     static func important(_ scheme: ColorScheme) -> Color {
         scheme == .dark ? .ckStone : .ckShadow
-    }
-
-    /// Obie ring around the whole circle — Glow (Night) / Ember (Daylight).
-    /// Also the colour of the Obie specular-dot core (DS §5.4).
-    static func obieRing(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? .ckGlow : .ckEmber
     }
 }
 
@@ -630,26 +549,37 @@ enum CatchlightLayout {
     /// 36. Row spacing is unaffected (the touch frame was already 44). The spine
     /// and Add-button alignment math below is parametric on this, so it follows.
     /// (Search/sequence results reuse the timeline row; the edit footer, conflict
-    /// view, and focus-ring fan pass their own explicit diameters and are unaffected.)
+    /// view, and Focus row pass their own explicit diameters and are unaffected.)
     static let circleDiameter: CGFloat = 44
-    /// The Take card's leading edge sits this far LEFT of the spine. Two things ride
-    /// on it together (which is what keeps the Iris ON the spine): the row's leading
-    /// padding is `spineX − cardSpineInset` (the card's left edge), and TakeRowView
-    /// offsets the Iris by `cardSpineInset − circleDiameter/2` so the Iris re-centres
-    /// on the spine. Owner 2026-06-16: raised 24 → 38 so the card's LEFT margin
-    /// (`spineX − 38` ≈ 20pt) matches the 20pt RIGHT margin — the card grows ~14pt
-    /// wider and the Iris nests a little deeper into its top-left region (the Iris
-    /// stays pinned to the spine under the + button). Deliberately independent of
-    /// `circleDiameter` so resizing the Iris never moves or narrows the card.
-    static let cardSpineInset: CGFloat = 38
-    /// The Take card's internal LEADING text padding — sized so the text column
-    /// begins exactly at the Iris's EASTERN edge, leaving the Iris in a clear left
-    /// gutter with NO text left of the spine (owner 2026-06-16). card-left is
-    /// `spineX − cardSpineInset`, the Iris east edge is `spineX + circleDiameter/2`,
-    /// so the pad = circleDiameter/2 + cardSpineInset. The DAILIES heading + month
-    /// markers align to the same x (`spineX + circleDiameter/2`). Trailing/bottom
-    /// stay at the standard 14.
-    static let cardTextLeadingPad: CGFloat = circleDiameter / 2 + cardSpineInset
+    /// The distance from the dock's first column centre (`spineX`) to the Take card's
+    /// leading edge: the card starts at `spineX − cardLeadingOffset`, about 20pt from
+    /// the screen edge, matching the 20pt trailing margin. The timeline line that once
+    /// ran down `spineX` is gone (owner 2026-11-09); the Add button still sits there.
+    static let cardLeadingOffset: CGFloat = 38
+    /// The Take card's inner padding on every side.
+    static let cardPadding: CGFloat = 14
+    /// The Iris's top and leading offset inside its card.
+    static let irisInset: CGFloat = 14
+    /// The gap between the Iris's trailing edge and the card's text column.
+    static let irisTextGap: CGFloat = 12
+    /// The Take card's internal LEADING text padding: the text column starts clear of
+    /// the Iris in the card's top-left. The DAILIES heading and month markers align to
+    /// the same column.
+    static let cardTextLeadingPad: CGFloat = irisInset + circleDiameter + irisTextGap
+    /// The shortest a Take card may be: room for the Iris with `irisInset` above and below.
+    static let cardMinHeight: CGFloat = irisInset * 2 + circleDiameter
+    /// The spacing setting's gaps were tuned with the old Iris's top half hanging into them.
+    /// A fixed 22, not `circleDiameter / 2`: it is what the old Iris took up, so a future
+    /// Iris resize must not change anyone's spacing.
+    static let retiredIrisOverhang: CGFloat = 22
+    /// The smallest visible gap between two Take cards.
+    static let minCardGap: CGFloat = 10
+    /// The visible gap between two Take cards for a stored spacing setting: the setting less
+    /// the room the old straddling Iris took, so each setting looks as it did, never below
+    /// `minCardGap`. Dailies and the Storyboard both use it, so they stay equal.
+    static func visibleCardGap(for setting: CGFloat) -> CGFloat {
+        max(minCardGap, setting - retiredIrisOverhang)
+    }
     /// The card's standard TRAILING text pad. Tokenised 2026-08-15 because the
     /// manual-order drag handle has to inset the body text by exactly enough to clear
     /// itself, and a literal 14 in two files would drift the moment either moved.
@@ -669,20 +599,6 @@ enum CatchlightLayout {
         dockHorizontalPadding + (containerWidth - 2 * dockHorizontalPadding) / 8
     }
 
-    /// Snap a coordinate to the device's pixel grid.
-    ///
-    /// `spineX` divides the screen by 8, so on most widths it lands part-way into a
-    /// device pixel. A big shape absorbs that — the Add button's 44pt ring reads as
-    /// centred regardless — but a NARROW symmetric shape does not: a 2.8pt beam core
-    /// centred on a fractional pixel rasterises with more energy on one side, and the
-    /// eye reads the whole shaft as sitting a pixel off the button it points at (owner,
-    /// on device 2026-08-16). Measured concentric on a 402pt simulator, where the same
-    /// arithmetic happens to land on a clean half-pixel — which is exactly why this
-    /// needs snapping rather than trusting one screen width.
-    static func snappedToPixel(_ x: CGFloat) -> CGFloat {
-        let scale = max(1, UIScreen.main.scale)
-        return (x * scale).rounded() / scale
-    }
     /// Minimum touch target per HIG / accessibility.
     static let minTouchTarget: CGFloat = 44
     /// Standard dim-overlay opacity is baked into Color.ckDim.

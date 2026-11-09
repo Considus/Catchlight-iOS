@@ -18,18 +18,19 @@ final class DoneTextContrastTests: XCTestCase {
 
     private let minimum = 4.5   // WCAG 2.x 1.4.3, normal-size text
 
-    func testDoneTextClearsMinimumInNight() {
+    // The surfaces come from the Scene tokens, so a palette change is measured, not assumed.
+    func testDoneTextClearsMinimumInDark() {
         let done = resolved(UITheme.textComplete, .dark)
-        assertContrast(done, on: 0x1C1A16, "Night card (Dusk)")
-        assertContrast(done, on: 0x2D2921, "Night Obie card")
-        assertContrast(done, on: 0x0F0E0C, "Night page (Ink)")
+        assertContrast(done, on: resolved(SceneToken.card, .dark), "Dark card")
+        assertContrast(done, on: resolved(SceneToken.raised, .dark), "Dark Obie card")
+        assertContrast(done, on: resolved(SceneToken.ground, .dark), "Dark page")
     }
 
-    func testDoneTextClearsMinimumInDaylight() {
+    func testDoneTextClearsMinimumInLight() {
         let done = resolved(UITheme.textComplete, .light)
-        assertContrast(done, on: 0xFFFFFF, "Daylight card (White)")
-        assertContrast(done, on: 0xFBF8F3, "Daylight Obie card")
-        assertContrast(done, on: 0xF7F4EF, "Daylight page (Paper)")
+        assertContrast(done, on: resolved(SceneToken.card, .light), "Light card")
+        assertContrast(done, on: resolved(SceneToken.raised, .light), "Light Obie card")
+        assertContrast(done, on: resolved(SceneToken.ground, .light), "Light page")
     }
 
     /// "Done" recedes by the same amount whether it's the edge or the words (owner
@@ -49,19 +50,17 @@ final class DoneTextContrastTests: XCTestCase {
         color.resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
     }
 
-    private func assertContrast(_ fg: UIColor, on bgHex: UInt32, _ label: String,
+    private func assertContrast(_ fg: UIColor, on bgColor: UIColor, _ label: String,
                                 file: StaticString = #filePath, line: UInt = #line) {
-        let bg = rgb(bgHex)
+        var br: CGFloat = 0, bgG: CGFloat = 0, bb: CGFloat = 0, ba: CGFloat = 0
+        XCTAssertTrue(bgColor.getRed(&br, green: &bgG, blue: &bb, alpha: &ba), "\(label): background not RGB", file: file, line: line)
+        let bg = (br, bgG, bb)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         XCTAssertTrue(fg.getRed(&r, green: &g, blue: &b, alpha: &a), "\(label): not an RGB colour", file: file, line: line)
         // An alpha grey is what the eye sees once composited onto its background.
         let shown = (r * a + bg.0 * (1 - a), g * a + bg.1 * (1 - a), b * a + bg.2 * (1 - a))
         let ratio = contrast(shown, bg)
         XCTAssertGreaterThanOrEqual(ratio, minimum, "\(label): done text is \(String(format: "%.2f", ratio)):1", file: file, line: line)
-    }
-
-    private func rgb(_ hex: UInt32) -> (CGFloat, CGFloat, CGFloat) {
-        (CGFloat((hex >> 16) & 0xFF) / 255, CGFloat((hex >> 8) & 0xFF) / 255, CGFloat(hex & 0xFF) / 255)
     }
 
     private func luminance(_ c: (CGFloat, CGFloat, CGFloat)) -> Double {

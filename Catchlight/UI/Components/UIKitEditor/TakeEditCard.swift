@@ -12,8 +12,8 @@
 //                            UPWARD, carrying the owner-tuned descent/drop geometry.
 //
 //  Who uses what:
-//    - `DailiesView`       → `KeyboardTakeEditor` (Iris on the spine)
-//    - `StoryboardView`    → `KeyboardTakeEditor` (no Iris — no spine there, owner 2026-06-19)
+//    - `DailiesView`       → `KeyboardTakeEditor` (Iris in the card's top-left)
+//    - `StoryboardView`    → `KeyboardTakeEditor` (no Iris there, owner 2026-06-19)
 //    - `LockedCaptureView` → `TakeEditCard` directly, TOP-anchored under its header (proven
 //                            stable; the lock-screen capture has no timeline to sit against).
 //
@@ -42,18 +42,18 @@ struct TakeEditCard: View {
     var minContent: CGFloat = 0
     /// Floor for the editor frame, so a one-line Take is still a proper editing surface.
     var minEditorHeight: CGFloat = 60
-    /// The Iris on the card's spine. Dailies yes; the Storyboard and the lock-screen capture have
-    /// no spine.
+    /// The Iris in the card's top-left. Dailies yes; the Storyboard and the lock-screen capture
+    /// have none.
     var showsIris: Bool = false
 
     var onOpenAngle: (() -> Void)? = nil
     var onEditReminder: (() -> Void)? = nil
     /// The keyboard × discards (revert); save is the host's tap-away.
     var onDiscard: (() -> Void)? = nil
-    /// Tap the Iris → open the Focus-ring fan against the LIVE DRAFT (owner 2026-06-17, so the
+    /// Tap the Iris → open the Focus row against the LIVE DRAFT (owner 2026-06-17, so the
     /// fan reflects unsaved shaping and its commit routes back to the draft — `RootView` does
     /// that routing off `ui.editingTakeID`). The `CGPoint` is the Iris centre in WINDOW coords,
-    /// which is the Focus-ring overlay's space. Only meaningful with `showsIris`.
+    /// which is the Focus row overlay's space. Only meaningful with `showsIris`.
     ///
     /// Iris LONG-press is deliberately absent: it's disabled during editing (discard moved to the
     /// Take's long-press menu — owner 2026-06-17), matching the old timeline's row.
@@ -61,7 +61,7 @@ struct TakeEditCard: View {
     /// Reports the RAW (uncapped) content height, for a host that sizes itself off it.
     var onContentHeightChange: ((CGFloat) -> Void)? = nil
     /// Seals the UIKit text view out of the accessibility tree while an overlay covers this
-    /// card (audit 2026-08, V31 — the Focus-ring fan opened from the Iris). See `BlockEditor`.
+    /// card (audit 2026-08, V31 — the Focus row opened from the Iris). See `BlockEditor`.
     var axHidden: Bool = false
     /// Hides the "Created on" stamp even when the setting shows it. `KeyboardTakeEditor` sets this
     /// at accessibility text sizes while the keyboard is up (owner 2026-09-30).
@@ -88,16 +88,18 @@ struct TakeEditCard: View {
     /// A cap change bigger than this re-applies the editor height; smaller is keyboard settling.
     static let capJumpThreshold: CGFloat = 12
 
-    /// The card's own chrome above and below the `BlockEditor` frame: the 24pt top pad (which
-    /// clears the overlapping Iris) + the 14pt bottom pad, PLUS the "Created on" stamp row when
-    /// the setting shows it (11pt text + its 6pt top pad ≈ 20).
+    /// The card's own chrome above and below the `BlockEditor` frame: the `cardPadding` top and
+    /// bottom pads, PLUS the "Created on" stamp row when the setting shows it (11pt text + its
+    /// 6pt top pad ≈ 20).
     ///
     /// A host that computes a grow-up cap must discount THIS, not a guess: `KeyboardTakeEditor`
-    /// carried a flat 38 — exactly the stamp-OFF value — so with the stamp on (Editor or Always,
+    /// carried a flat 38, exactly the stamp-OFF value at the time, so with the stamp on (Editor or Always,
     /// and Always is the busier default) the card came out 20pt taller than its own cap intended
     /// and its top overshot the limit by that much. Half of the "Iris behind the fade" report
     /// (owner 2026-08-11); `irisReserve` is the other half.
-    static func chrome(showsStamp: Bool) -> CGFloat { showsStamp ? 58 : 38 }
+    static func chrome(showsStamp: Bool) -> CGFloat {
+        CatchlightLayout.cardPadding * 2 + (showsStamp ? 20 : 0)
+    }
 
     /// The content height the frame should honour — the floor while short, the real content after.
     private var effectiveContent: CGFloat { max(editorContentHeight, minContent) }
@@ -105,7 +107,7 @@ struct TakeEditCard: View {
     var body: some View {
         let style = TakeCardStyle(take: draft, scheme: scheme)
         let d = CatchlightLayout.circleDiameter
-        let inset = CatchlightLayout.cardSpineInset
+        let irisInset = CatchlightLayout.irisInset
         return ZStack(alignment: .topLeading) {
             VStack(alignment: .leading, spacing: 0) {
                 BlockEditor(
@@ -159,43 +161,36 @@ struct TakeEditCard: View {
                         .padding(.top, 6)
                 }
             }
-            // v1.7 card text inset: 24 top (clears the overlapping Iris) / text column leading /
-            // 14 bottom+trailing — matches TakeCardSurface, so read↔edit don't shift.
-            .padding(EdgeInsets(top: 24, leading: CatchlightLayout.cardTextLeadingPad,
-                                bottom: 14, trailing: 14))
+            // Card text inset: `cardPadding` top, bottom and trailing / text column leading,
+            // clear of the Iris. Matches TakeCardSurface, so read↔edit don't shift.
+            .padding(EdgeInsets(top: CatchlightLayout.cardPadding,
+                                leading: CatchlightLayout.cardTextLeadingPad,
+                                bottom: CatchlightLayout.cardPadding,
+                                trailing: CatchlightLayout.cardPadding))
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                     .fill(style.surface)
                     // A Take-card carries the same lift EVERYWHERE it is drawn (owner 2026-07-16).
                     // See the standard on `TakeCardStyle`.
                     .daylightCardShadow(strong: style.isOverdue && !draft.isObie)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                     .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
             )
 
             if showsIris {
-                // The SAME treatment the timeline rows use, from the same view (owner
-                // 2026-08-16). This card is a row's stand-in: identical spine inset,
-                // identical card padding, Iris straddling the card's top edge in the
-                // same place — so the gutter beam runs behind it exactly as it runs
-                // behind a read row, and a flat Iris here read as the one that had been
-                // missed. The lean and the cast shadow come with it; `ThreadedIris`
-                // carries its own shadow, so the Daylight-only `.shadow` that used to
-                // sit here is gone with it.
-                //
-                // The FOCUS RING and the CONFLICT view keep a plain `TakeCircleView`,
-                // deliberately: they already have the new lighting, because that lives
-                // in `TakeCircleView` itself, but neither has a beam threading it and a
-                // lean without one is a squashed mark for no reason.
-                ThreadedIris(take: draft, showsBeam: false)
-                    .offset(x: inset - d / 2, y: -d / 2)
+                // The SAME Iris the timeline rows use, from the same view. This card is
+                // a row's stand-in: identical card padding, Iris inside the card's
+                // top-left in the same place.
+                IrisView(take: draft)
+                    .allowsHitTesting(false)
+                    .offset(x: irisInset, y: irisInset)
                 // The touch and VoiceOver surface, separate from the drawing.
                 Color.clear
                     .frame(width: d, height: d)
                     .contentShape(Rectangle())
-                    // Tap → the Focus-ring fan, as on a read card. This card's Iris was purely
+                    // Tap → the Focus row, as on a read card. This card's Iris was purely
                     // DECORATIVE from M4.7 until 2026-07-16: on the old timeline the row's own
                     // Iris stays beside the editor and carries the gesture, so nothing was lost
                     // until M5a routed every edit through this floating card. Reuses the row's
@@ -207,7 +202,7 @@ struct TakeEditCard: View {
                                                       onLongPress: {})
                         }
                     }
-                    // ⚠️ TEST CONTRACT: the XCUITests open the Focus ring through "editor-shape"
+                    // ⚠️ TEST CONTRACT: the XCUITests open the Focus row through "editor-shape"
                     // (the EDITING card's Iris) — the retired row-hosted editor published it, and
                     // it moved here with the card. Queried type-agnostically (`anyElement`), since
                     // a SwiftUI a11y element surfaces as .other on some runtimes and .button on
@@ -219,11 +214,11 @@ struct TakeEditCard: View {
                     // said what the Take is. Reads the DRAFT, so it follows the shape
                     // as the user changes it.
                     .accessibilityLabel(TakeRowView.irisAccessibilityLabel(for: draft))
-                    .accessibilityHint("Opens the Focus ring to change what this Take is.")
+                    .accessibilityHint("Opens the Focus row to change what this Take is.")
                     // V10 (audit 2026-08): announce as a button like the Obie row's
                     // Iris — the same control must not read differently per host.
                     .accessibilityAddTraits(.isButton)
-                    .offset(x: inset - d / 2, y: -d / 2)
+                    .offset(x: irisInset, y: irisInset)
             }
         }
     }
@@ -251,9 +246,9 @@ struct KeyboardTakeEditor: View {
     @Binding var draft: Take
     @Binding var focusedBlockID: UUID?
 
-    /// The Iris on the card's spine. Dailies yes; the Storyboard has no spine (owner 2026-06-19).
+    /// The Iris in the card's top-left. Dailies yes; the Storyboard has none (owner 2026-06-19).
     var showsIris: Bool = true
-    /// The card's left edge — the host's spine column (`spineX - cardSpineInset`).
+    /// The card's left edge (`spineX - cardLeadingOffset`).
     var leadingInset: CGFloat
     /// Passed through to the card's `BlockEditor` (audit 2026-08, V31).
     var axHidden: Bool = false
@@ -262,7 +257,7 @@ struct KeyboardTakeEditor: View {
     var onOpenAngle: (() -> Void)? = nil
     var onEditReminder: (() -> Void)? = nil
     var onDiscard: (() -> Void)? = nil
-    /// Tap the Iris → the Focus-ring fan at the given WINDOW-coord centre (see `TakeEditCard`).
+    /// Tap the Iris → the Focus row at the given WINDOW-coord centre (see `TakeEditCard`).
     var onTapIris: ((CGPoint) -> Void)? = nil
 
     @Environment(\.deviceTopInset) private var deviceTopInset
@@ -318,27 +313,23 @@ struct KeyboardTakeEditor: View {
         return span * (1 - phase)
     }
 
-    /// How much room above the card's TOP EDGE the Iris needs. It straddles that edge — `TakeEditCard`
-    /// offsets it by `-circleDiameter / 2`, so half the Iris is drawn ABOVE the card and the card's
-    /// top is NOT the topmost pixel. The cap below treated it as if it were, so at full extension the
-    /// card stopped at the limit and the Iris carried on into the pinned heading.
+    /// How far below the cap's limit the card's TOP EDGE stops, so the Iris inside it keeps
+    /// `irisHeadroom` clear of the pinned heading.
     ///
     /// That heading is drawn AFTER this card in `DailiesView`'s ZStack and takes taps across its whole
     /// frame (`contentShape` + `timelineBackgroundTap`), so an overlapped Iris isn't merely hidden
-    /// under the fade — it's dead: a tap meant for the Focus ring commits the edit instead. Hence a
-    /// hard reserve rather than a cosmetic nudge (owner 2026-08-11).
+    /// under the fade, it's dead: a tap meant for the Focus row commits the edit instead (owner
+    /// 2026-08-11). The Iris sits `irisInset` below the card's top, so the card itself needs only
+    /// the rest of the headroom.
     private var irisReserve: CGFloat {
-        showsIris ? CatchlightLayout.circleDiameter / 2 + Self.irisHeadroom : 0
+        showsIris ? max(0, Self.irisHeadroom - CatchlightLayout.irisInset) : 0
     }
 
-    /// Breathing room ABOVE the Iris, beyond its own radius (owner 2026-08-11, device round 2).
-    ///
-    /// The radius alone is what stops the Iris disappearing under the heading — that was the bug.
-    /// This is a separate, purely visual allowance: with the radius only, the Iris cleared the
-    /// fade but sat hard against it and read as crowded ("sits a little high still"). An
-    /// OWNER-TUNED number like the descent / drop geometry below; push it either way rather than
-    /// re-deriving it. Each point costs a point of editor height, but only once the card is at
-    /// full extension.
+    /// Breathing room between the heading's limit and the Iris's top edge (owner 2026-08-11,
+    /// device round 2): with less, the Iris cleared the fade but sat hard against it and read as
+    /// crowded ("sits a little high still"). An OWNER-TUNED number like the descent / drop
+    /// geometry below; push it either way rather than re-deriving it. Each point costs a point of
+    /// editor height, but only once the card is at full extension.
     private static let irisHeadroom: CGFloat = 18
 
     /// The grow-UP cap: how tall the card may get before its TOP reaches the heading, past which

@@ -1,67 +1,50 @@
 //
-//  FocusRingFanView.swift
-//  Catchlight (iOS app target) — Phase 6 UI · constellation redesign 2026-06-11
+//  FocusRowView.swift
+//  Catchlight (iOS app target)
 //
-//  The activity-type selector — the signature Catchlight interaction, rebuilt to
-//  the owner-approved constellation (HiFi v1.6 §10, "organic peel"):
+//  The Focus row: the activity-type selector, opened by tapping a Take's Iris. It
+//  follows the Iris prototype's `openMarks` and `.mk` styles.
 //
-//  LAYOUT — marks settle on an arc to the RIGHT of the timeline: angles
-//  −80° / −26.7° / +26.7° / +80° from horizontal (screen frame, y down), all at
-//  R = 68pt from the Iris centre; order Notes · Tasks · Reminders · Important
-//  top→bottom (the fourth Mark was the Obie designation until 2026-07-06; it now
-//  toggles the Important flag — Obie stays on the Iris long-press). Marks are 44pt — they FILL their 44pt touch circles, to
-//  match the dock buttons + timeline Iris (owner 2026-06-15; the hub Iris and R
-//  were scaled 36→44 / 56→68 in step so the Focus ring keeps its spacing:
-//  adjacent chord 61 > 44; Iris clearance 68 > 44). Marks deliberately pass ABOVE
-//  the Take card. On the Obie row the fan covers the page heading — approved.
+//  LAYOUT: four 44pt rounded-square marks, Note, Task, Reminder and Important from
+//  left to right, sit in a row centred on the Take card's top edge. The first is 52pt
+//  right of the Iris centre and each next one 52pt further. On a narrow screen the gap
+//  shrinks evenly so the last mark stays 8pt inside the screen; the marks never shrink
+//  (`slotX`).
 //
-//  MOTION — one fluid action in two distinct movements:
-//    1 "emergence": the stacked deck (Notes on top, the others invisibly
-//      beneath) rises STRAIGHT UP out of the Iris to R at −90°, easeInOutCubic,
-//      340ms. The Iris does not rotate yet — the buttons "live" in the Iris.
-//    2 "spread": the Iris rotation (90° CW, 700ms, overshooting ~6° then
-//      settling) begins at the first peel, and Obie/Reminders/Tasks peel off
-//      the deck DURING the rise (peels at 120/185/250ms), each spiralling
-//      outward along its own arc (radius blends to R over 520ms) while
-//      sweeping clockwise at ~5.5ms/° with easeOutBack (s 1.15) landings —
-//      cascading arrivals, soft ~6–8° overshoot. Notes alone rides the deck
-//      to the top, then nudges its final 10°.
-//  CLOSE — the TRUE time-mirror of the open played 1.25× faster (exits are
-//  quicker than entrances): marks kick slightly outward (the reversed
-//  overshoot), spiral back into the descending deck, and the Iris reverses its
-//  OWN turn on the SAME mirrored clock (it nudges to ~96° then sweeps back to 0 —
-//  the open's soft-catch run backwards), so hub and Marks land together rather
-//  than the Iris finishing first. Reduce Motion replaces all of it with a fade.
+//  MOTION: the marks start stacked under the Iris at 85% size, invisible. They rise
+//  straight up to the card's top edge over 340ms (easeInOutCubic), growing to full size
+//  and fading in, then each slides right to its slot over 280ms, 50ms after the one
+//  before, with a small easeOutBack overshoot. Closing plays each mark's own open
+//  backwards, 1.25 times faster, as the prototype does. Reduce Motion and UI tests skip
+//  straight to the end state.
 //
-//  STYLE — marks share the dock-button language: background-colour face
-//  (readable above cards), 1.5pt Ember@35% ring, no shadow, Ember glyphs at
-//  the light weight; the Important mark draws the "!" glyph in the same Ember/
-//  ckAccent language as the others. Active marks reverse like the dock toggles
-//  (per-type fill + background glyph). The veil is ckDim (background @90%, no blur): it recedes
-//  everything beneath it, then the TAPPED Take's card is lifted back LIT above
-//  the veil (owner 2026-06-16) so only that Take, its Iris (the rotating hub),
-//  and the Focus-ring stay readable while the rest of the timeline + chrome dim
-//  away (`showsFocusCard` / `TakeCardSurface`). From the editor footer there is
-//  no spotlight card — the editor is the context there.
+//  STYLE: an off mark is a ground-coloured square with a half-strength lit border and a
+//  lit line glyph; an on mark is filled with the Scene accent and its glyph takes the
+//  on-accent colour. The lit colour marks the Focus marks and nothing else.
 //
-//  Mark taps toggle the working selection; tapping the veil COMMITS and
-//  closes (unchanged semantics — Note remains the floor).
+//  The veil (ckDim) dims everything beneath; the tapped Take's card is lifted back lit
+//  above it (`showsFocusCard` / `TakeCardSurface`). From the editor footer there is no
+//  lifted card: the editor is the context there.
+//
+//  Mark taps toggle the working selection; tapping the veil commits and closes. Note is
+//  the floor.
 //
 
 import SwiftUI
 import CatchlightCore
 
-struct FocusRingFanView: View {
+struct FocusRowView: View {
     let take: Take
-    /// Screen-space point of the hub (centre of the tapped circle).
+    /// Screen-space point of the hub (centre of the tapped Iris).
     let hubCentre: CGPoint
-    /// Full overlay width (screen width) — used to reconstruct the tapped Take's
-    /// card frame so a LIT copy can be lifted above the dim veil. See `focusCard`.
+    /// Full overlay width (screen width): used to keep the row on screen and to
+    /// reconstruct the tapped Take's card frame so a lit copy can be lifted above the
+    /// dim veil. See `focusCard`.
     var containerWidth: CGFloat = 0
     /// Whether to lift the tapped Take's card above the veil (owner 2026-06-16).
-    /// True when the fan blooms from a timeline Iris (`hubCentre` is a real row);
-    /// false from the editor footer (origin = screen centre — the editor IS the
-    /// context there, so no card to spotlight).
+    /// True when the row opens from a timeline Iris (`hubCentre` is a real row);
+    /// false from the editor footer (the editor IS the context there, so no card to
+    /// spotlight).
     var showsFocusCard: Bool = false
     /// `reminderDate` carries the time chosen in the picker (nil when no Reminder).
     /// `reminderAlarm` / `reminderAllDay` carry the model-C picker choices (owner
@@ -70,11 +53,10 @@ struct FocusRingFanView: View {
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var scheme
 
-    /// Collapse the fan's 340–700ms choreography to an instant open/close when the
-    /// user has Reduce Motion on — OR under `--uitesting`, so XCUITest doesn't race
-    /// the animation (a known flake source). Mirrors the app-wide
+    /// Collapse the row's choreography to an instant open/close when the user has
+    /// Reduce Motion on — OR under `--uitesting`, so XCUITest doesn't race the
+    /// animation (a known flake source). Mirrors the app-wide
     /// `UIView.setAnimationsEnabled(false)` that UI-test launches set for UIKit.
     private var instantMotion: Bool {
         reduceMotion || ProcessInfo.processInfo.arguments.contains("--uitesting")
@@ -94,7 +76,7 @@ struct FocusRingFanView: View {
     @State private var hasReminder: Bool
     /// The Important flag — the fourth Mark toggles it (owner 2026-07-06; replaced the
     /// Obie Mark). Orthogonal to the type Marks: an Important Take can be any type.
-    /// Obie stays reachable via the Iris long-press; the fan no longer changes it.
+    /// Obie stays reachable via the Iris long-press; the row never changes it.
     @State private var isImportant: Bool
     /// The working Reminder time. Seeded from the Take's existing reminder (or the
     /// +24h default) and edited by the picker that pops when the Reminder Mark is
@@ -115,22 +97,21 @@ struct FocusRingFanView: View {
     /// Drives the date/time picker sheet the Reminder Mark pops.
     @State private var showingReminderPicker = false
 
-    private enum FanPhase: Equatable {
+    private enum RowPhase: Equatable {
         case opening(start: Date)
         case open
         case closing(start: Date, commit: Bool)
-        /// Terminal STATIC state, set the instant the fan commits — BEFORE the overlay
+        /// Terminal STATIC state, set the instant the row commits — BEFORE the overlay
         /// is removed. `.closing` keeps the TimelineView animating, which prevented
-        /// SwiftUI from tearing the view down when `focusRingFanTake` went nil: the veil
+        /// SwiftUI from tearing the view down when `focusRowTake` went nil: the veil
         /// lingered in `.closing` and ate every tap, stranding the user over a
         /// perfectly-fine editor (owner-reported lockup 2026-06-18, confirmed via an
-        /// on-device state trace: `FAN:nil/closing`). `.dismissed` is non-animating
-        /// (TimelineView pauses → the view can be removed) and renders fully
-        /// retracted/invisible, matching the close animation's end frame so there's no
-        /// flash.
+        /// on-device state trace). `.dismissed` is non-animating (TimelineView pauses →
+        /// the view can be removed) and renders fully retracted/invisible, matching the
+        /// close animation's end frame so there's no flash.
         case dismissed
     }
-    @State private var phase: FanPhase
+    @State private var phase: RowPhase
 
     init(take: Take,
          hubCentre: CGPoint,
@@ -159,28 +140,9 @@ struct FocusRingFanView: View {
 
     // MARK: - Marks
 
+    /// The four marks, in row order from left to right.
     private enum MarkKind: Int, CaseIterable {
         case note, task, remind, important
-        /// Final screen-frame angle in degrees (y down; −90 = straight up).
-        var finalAngle: Double {
-            switch self {
-            case .note:      return -80
-            case .task:      return -80 + 160.0 / 3
-            case .remind:    return -80 + 320.0 / 3
-            case .important: return 80
-            }
-        }
-        /// When this mark leaves the rising deck (seconds from open start).
-        var peel: Double {
-            switch self {
-            case .note:      return Choreo.rise   // rides the deck to the top
-            case .task:      return 0.250
-            case .remind:    return 0.185
-            case .important: return 0.120
-            }
-        }
-        var sweep: Double { finalAngle - Choreo.riseAngle }
-        var sweepDuration: Double { max(0.28, sweep * 0.0055) }   // ~5.5ms/°
         var title: String {
             switch self {
             case .note: return String(localized: "Note")
@@ -189,15 +151,7 @@ struct FocusRingFanView: View {
             case .important: return String(localized: "Important")
             }
         }
-        var systemImage: String? {
-            switch self {
-            case .note:      return "note.text"
-            case .task:      return "checkmark.square"
-            case .remind:    return "bell"
-            case .important: return nil   // ImportantGlyph (the "!" mark)
-            }
-        }
-        /// Stable suffix for the XCUITest accessibilityIdentifier ("focus-ring-mark-task" etc.).
+        /// Stable suffix for the XCUITest accessibilityIdentifier ("focus-row-mark-task" etc.).
         var identifierSuffix: String {
             switch self {
             case .note: return "note"
@@ -206,31 +160,60 @@ struct FocusRingFanView: View {
             case .important: return "important"
             }
         }
-        /// ON-state fill = the SAME colour the Iris uses for this type, matching the
-        /// Sequence filter toggles (owner 2026-06-29). Important uses the Iris's North-wedge
-        /// Important colour (Stone Night / Shadow Daylight); Note/Task/Remind use their quadrant fills.
-        func activeFill(_ scheme: ColorScheme) -> Color {
-            switch self {
-            case .note:      return Quadrant.note(scheme)
-            case .task:      return Quadrant.task(scheme)
-            case .remind:    return Quadrant.reminder(scheme)
-            case .important: return Quadrant.important(scheme)
-            }
-        }
     }
 
-    // MARK: - Choreography (constants from the approved HiFi v1.6 §10 mode B)
+    // MARK: - Row geometry
+
+    /// Each mark's side: a full touch target, never shrunk to fit.
+    static let markSize: CGFloat = 44
+    /// Buttons take radius 10 in the redesign, never circles or pills.
+    static let markCornerRadius: CGFloat = 10
+    /// Centre-to-centre spacing on a screen with room for it (the prototype's 50 for its
+    /// 40px marks, widened for 44pt touch targets).
+    static let markSpacing: CGFloat = 52
+    /// The least room kept between the last mark and the screen's trailing edge.
+    static let screenMargin: CGFloat = 8
+    /// How far the Iris centre sits in from its card's top and leading edges (36): the
+    /// row rises by this much to sit centred on the card's top edge, and the lit card
+    /// copy starts this far up and left of the hub.
+    static let irisCentreInset = CatchlightLayout.irisInset + CatchlightLayout.circleDiameter / 2
+
+    /// A mark's resting x offset from the Iris centre. Marks sit `markSpacing` apart;
+    /// when the last one would cross `screenMargin`, the spacing shrinks evenly so it
+    /// lands on the margin. `containerWidth` 0 means unknown (previews): no squeeze.
+    static func slotX(for index: Int, hubX: CGFloat, containerWidth: CGFloat) -> CGFloat {
+        let count = CGFloat(MarkKind.allCases.count)
+        var spacing = markSpacing
+        if containerWidth > 0 {
+            let limit = containerWidth - screenMargin - markSize / 2
+            if hubX + count * markSpacing > limit {
+                spacing = (limit - hubX) / count
+            }
+        }
+        return CGFloat(index + 1) * spacing
+    }
+
+    // MARK: - Choreography (the Iris prototype's `openMarks`)
 
     private enum Choreo {
-        static let riseAngle: Double = -90
-        static let radius: CGFloat = 68     // owner 2026-06-15: 56 → 68, scaled with the 44pt hub/Marks
-        static let startRadius: CGFloat = 8
-        static let rise: Double = 0.340          // phase-1 emergence
-        static let radialBlend: Double = 0.520   // spiral: radius reaches R over this
-        static let irisTurn: Double = 0.700      // hub rotation incl. ±6° overshoot
-        static let closeSpeed: Double = 1.25     // exit plays the mirror this much faster
-        static var total: Double {               // open end (last mark settles)
-            MarkKind.allCases.map { $0.peel + $0.sweepDuration }.max() ?? 1
+        /// All four marks rise together from under the Iris to the card's top edge.
+        static let rise: Double = 0.340
+        /// Each mark starts its slide this much after the one to its left.
+        static let spreadStagger: Double = 0.050
+        /// How long each mark takes to slide right to its slot.
+        static let spread: Double = 0.280
+        /// Size the marks start at, under the Iris.
+        static let startScale: CGFloat = 0.85
+        /// Exit plays the mirror this much faster.
+        static let closeSpeed: Double = 1.25
+        static func spreadStart(_ kind: MarkKind) -> Double {
+            rise + spreadStagger * Double(kind.rawValue)
+        }
+        /// When a mark lands in its slot (seconds from open start).
+        static func landing(_ kind: MarkKind) -> Double { spreadStart(kind) + spread }
+        /// Open end: the last mark lands (770ms).
+        static var total: Double {
+            MarkKind.allCases.map(landing).max() ?? 1
         }
     }
 
@@ -239,90 +222,39 @@ struct FocusRingFanView: View {
         let s = 1.15
         return 1 + (s + 1) * pow(p - 1, 3) + s * pow(p - 1, 2)
     }
-    private static func easeOutCubic(_ p: Double) -> Double { 1 - pow(1 - p, 3) }
-    private static func easeInCubic(_ p: Double) -> Double { p * p * p }
     private static func easeInOutCubic(_ p: Double) -> Double {
         p < 0.5 ? 4 * p * p * p : 1 - pow(-2 * p + 2, 3) / 2
     }
 
-    private struct MarkState {
-        var angle: Double
-        var radius: CGFloat
-        var opacity: Double
+    /// A mark takes taps only past this share of its rise, when it is visibly out from the Iris.
+    private static let hitTestRise = 0.5
+
+    /// How far along a mark is at time t of the open: `rise` 0 under the Iris to 1 on the
+    /// card's edge, `spread` 0 stacked to 1 in its slot (overshooting a little past 1).
+    private struct MarkProgress {
+        var rise: Double
+        var spread: Double
     }
 
-    /// Pure open-kinematics for a mark at time t. The close evaluates this at
-    /// mirrored time (TOTAL − t·closeSpeed) — a strict reverse incl. the
-    /// outward kick from the reversed overshoot.
-    private static func openState(_ kind: MarkKind, at t: Double) -> MarkState {
-        if t < kind.peel {
-            // Riding the deck — rising straight up out of the Iris.
-            let g = easeInOutCubic(min(max(t / Choreo.rise, 0), 1))
-            return MarkState(
-                angle: Choreo.riseAngle,
-                radius: Choreo.startRadius + (Choreo.radius - Choreo.startRadius) * g,
-                opacity: min(t / 0.08, 1)
-            )
-        }
-        // Peeled off — sweeping clockwise while the radius blends out (spiral).
-        let q = min((t - kind.peel) / kind.sweepDuration, 1)
-        let rPeel = Choreo.startRadius + (Choreo.radius - Choreo.startRadius)
-            * easeInOutCubic(min(kind.peel / Choreo.rise, 1))
-        let rq = min((t - kind.peel) / min(Choreo.radialBlend, kind.sweepDuration), 1)
-        return MarkState(
-            angle: Choreo.riseAngle + kind.sweep * easeOutBack(q),
-            radius: rPeel + (Choreo.radius - rPeel) * easeOutCubic(rq),
-            opacity: 1
-        )
+    private static func openProgress(_ kind: MarkKind, at t: Double) -> MarkProgress {
+        let rise = easeInOutCubic(min(max(t / Choreo.rise, 0), 1))
+        let slide = min(max((t - Choreo.spreadStart(kind)) / Choreo.spread, 0), 1)
+        return MarkProgress(rise: rise, spread: easeOutBack(slide))
     }
 
-    private func markState(_ kind: MarkKind, now: Date) -> MarkState {
+    /// The close plays each mark's own open backwards at `closeSpeed`, as the prototype
+    /// reverses each mark's animation, so every mark starts back at once.
+    private func markProgress(_ kind: MarkKind, now: Date) -> MarkProgress {
         switch phase {
         case .opening(let start):
-            let t = now.timeIntervalSince(start)
-            return Self.openState(kind, at: t)
+            return Self.openProgress(kind, at: now.timeIntervalSince(start))
         case .open:
-            return MarkState(angle: kind.finalAngle, radius: Choreo.radius, opacity: 1)
+            return MarkProgress(rise: 1, spread: 1)
         case .closing(let start, _):
-            let tm = Choreo.total - now.timeIntervalSince(start) * Choreo.closeSpeed
-            if tm <= 0 { return MarkState(angle: Choreo.riseAngle, radius: Choreo.startRadius, opacity: 0) }
-            return Self.openState(kind, at: tm)
+            let mirrored = Choreo.landing(kind) - now.timeIntervalSince(start) * Choreo.closeSpeed
+            return Self.openProgress(kind, at: mirrored)
         case .dismissed:
-            return MarkState(angle: Choreo.riseAngle, radius: Choreo.startRadius, opacity: 0)
-        }
-    }
-
-    /// Open-time hub rotation with the marks' soft-catch character: ~6° past the
-    /// mark, then settle — nothing moves precisely between two points. Factored out
-    /// so the CLOSE can evaluate it at the mirrored time (below), making the hub a
-    /// strict time-reverse of the open IN STEP with the marks (owner 2026-06-16:
-    /// the close used to drive the hub on its OWN faster clock, so the Iris finished
-    /// its turn well before the Marks had spiralled back into it).
-    private static func openHubRotation(at t: Double) -> Double {
-        func turn(_ p: Double, from a: Double, over b: Double, to c: Double) -> Double {
-            // two-segment keyframe: a → b (72%, ease-out) → c (settle)
-            if p < 0.72 { return a + (b - a) * easeOutCubic(p / 0.72) }
-            return b + (c - b) * easeInOutCubic((p - 0.72) / 0.28)
-        }
-        let tt = t - MarkKind.important.peel   // the hub starts turning at the first peel
-        guard tt > 0 else { return 0 }
-        return turn(min(tt / Choreo.irisTurn, 1), from: 0, over: 96, to: 90)
-    }
-
-    private func hubRotation(now: Date) -> Double {
-        switch phase {
-        case .opening(let start):
-            return Self.openHubRotation(at: now.timeIntervalSince(start))
-        case .open:
-            return 90
-        case .closing(let start, _):
-            // Same mirrored clock the marks use (markState .closing) — a strict
-            // reverse of the open, so hub and Marks land together.
-            let tm = Choreo.total - now.timeIntervalSince(start) * Choreo.closeSpeed
-            if tm <= 0 { return 0 }
-            return Self.openHubRotation(at: tm)
-        case .dismissed:
-            return 0
+            return MarkProgress(rise: 0, spread: 0)
         }
     }
 
@@ -335,18 +267,16 @@ struct FocusRingFanView: View {
         }
     }
 
-    /// The veil commits-and-closes only while the ring is OPEN. See the `.allowsHitTesting`
+    /// The veil commits-and-closes only while the row is OPEN. See the `.allowsHitTesting`
     /// note on the veil — gating this prevents a lingering veil from eating taps.
     private var veilIsInteractive: Bool {
         if case .open = phase { return true }
         return false
     }
 
-    /// The dim veil's opacity, ramped on the fan's OWN clock so the veil dissolves
+    /// The dim veil's opacity, ramped on the row's OWN clock so the veil dissolves
     /// symmetrically — fade IN over the open, fade OUT over the close, both at the
-    /// same `dur` (owner 2026-06-17: the close felt right and the open should match
-    /// its slower pace; previously the open leaned on the 0.2s `fanFade` transition
-    /// while the close ramped over ~0.84s). The lit focus card rides the same value.
+    /// same `dur` (owner 2026-06-17). The lit focus card rides the same value.
     /// `.open` holds solid; Reduce Motion (phase jumps straight to `.open`) keeps the
     /// overlay's plain transition.
     private func veilOpacity(now: Date) -> Double {
@@ -371,11 +301,10 @@ struct FocusRingFanView: View {
     // overlay/window space) using the same layout constants DailiesView lays the row
     // out with, so the lit copy lands exactly over the real (now-dimmed) card.
 
-    /// Card leading edge: the Iris centre is `cardSpineInset` right of it (the Iris
-    /// nests into the card's top-left corner, on the spine).
-    private var focusCardLeading: CGFloat { hubCentre.x - CatchlightLayout.cardSpineInset }
-    /// Card top edge: the Iris straddles it, so its centre sits exactly there.
-    private var focusCardTop: CGFloat { hubCentre.y }
+    /// Card leading edge: the Iris centre is `irisCentreInset` right of it.
+    private var focusCardLeading: CGFloat { hubCentre.x - Self.irisCentreInset }
+    /// Card top edge: the Iris centre is `irisCentreInset` below it.
+    private var focusCardTop: CGFloat { hubCentre.y - Self.irisCentreInset }
     /// Card width: from the leading edge out to the row's 20pt trailing margin.
     private var focusCardWidth: CGFloat { containerWidth - 20 - focusCardLeading }
 
@@ -383,27 +312,23 @@ struct FocusRingFanView: View {
 
     var body: some View {
         ZStack {
-            fanContent
-            // The reminder "when" editor rides INSIDE the fan's own hierarchy, NOT a
-            // system `.sheet`. Presenting a sheet from within this Focus-ring overlay
-            // (itself a conditionally-rendered `.overlay` in RootView) left the ring
+            rowContent
+            // The reminder "when" editor rides INSIDE the row's own hierarchy, NOT a
+            // system `.sheet`. Presenting a sheet from within this Focus row overlay
+            // (itself a conditionally-rendered `.overlay` in RootView) left the row
             // wedged after the picker dismissed — the veil's commit tap went dead and
-            // the ring could not be closed, stranding the user (owner-reported lockup,
+            // the row could not be closed, stranding the user (owner-reported lockup,
             // 2026-06-18). A modal presented from inside such an overlay isn't reliably
             // torn down by UIKit, so its gesture/first-responder state never restores.
             // An in-hierarchy layer sidesteps that entirely.
             if showingReminderPicker {
                 reminderPickerLayer
-                    // Slide UP from the bottom like a system sheet (owner 2026-06-18:
-                    // "I like the sheet's motion"). Purely the layer's transition — the
-                    // robustness fix (veil hit-testing + `.dismissed` teardown) is
-                    // independent, so the sheet-like motion costs no stability.
+                    // Slide UP from the bottom like a system sheet (owner 2026-06-18).
                     .transition(.move(edge: .bottom))
                     .zIndex(2)
             }
         }
         // A smooth, minimal-bounce spring approximating the iOS sheet present/dismiss.
-        // Slowed to feel more deliberate in BOTH directions (owner 2026-06-18).
         .animation(.spring(response: 0.52, dampingFraction: 0.9), value: showingReminderPicker)
         .onAppear {
             if instantMotion { phase = .open }
@@ -416,7 +341,7 @@ struct FocusRingFanView: View {
         }
     }
 
-    /// The reminder "when" editor, drawn as an opaque layer over the fan (see `body`
+    /// The reminder "when" editor, drawn as an opaque layer over the row (see `body`
     /// for why it is NOT a system sheet). Save/Cancel hide it by clearing
     /// `showingReminderPicker`; `ReminderPickerSheet`'s own `dismiss()` is an inert
     /// no-op in this in-place context, so these closures own the hide.
@@ -451,7 +376,7 @@ struct FocusRingFanView: View {
         // Background now lives inside ReminderPickerSheet itself (owner 2026-06-29).
     }
 
-    private var fanContent: some View {
+    private var rowContent: some View {
         TimelineView(.animation(minimumInterval: nil, paused: !isAnimating)) { context in
             let now = context.date
             ZStack {
@@ -463,26 +388,23 @@ struct FocusRingFanView: View {
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture { retractAndDismiss(commit: true) }
-                    // The veil only catches taps while the ring is genuinely OPEN.
+                    // The veil only catches taps while the row is genuinely OPEN.
                     // Once it's opening/closing/dismissed, taps fall THROUGH to the
                     // editor beneath — so a veil that lingers mid-teardown can never
                     // strand the user (owner lockup 2026-06-18).
                     .allowsHitTesting(veilIsInteractive)
-                    .accessibilityIdentifier("focus-ring-dim")
+                    .accessibilityIdentifier("focus-row-dim")
                     .accessibilityLabel("Save and close")
                     .accessibilityHint("Double-tap to apply your selection and close.")
                     .accessibilityAddTraits(.isButton)
 
-                // The tapped Take, lifted LIT above the veil (owner 2026-06-16). The
-                // veil dims everything; this restores the one Take the fan acts on so
-                // it stays clearly readable while its Iris (the hub below) and the
-                // Focus-ring sit on top. A pure-visual copy of the real row's card —
-                // non-interactive, so a tap here falls through to the veil (commit &
-                // close), exactly like tapping any other dimmed area. Positioned from
-                // `hubCentre`: the Iris centre sits on the card's top edge and is
-                // `cardSpineInset` right of the card's leading edge, and the card runs
-                // to the 20pt trailing margin — the same geometry DailiesView lays the
-                // row out with. Drawn BEFORE the marks so they still pass above it.
+                // The tapped Take, lifted LIT above the veil (owner 2026-06-16). A
+                // pure-visual copy of the real row's card — non-interactive, so a tap
+                // here falls through to the veil (commit & close), exactly like tapping
+                // any other dimmed area. Positioned from `hubCentre`: the Iris centre is
+                // `irisCentreInset` in from the card's top and leading edges, and the
+                // card runs to the 20pt trailing margin — the same geometry DailiesView
+                // lays the row out with. Drawn BEFORE the marks so they pass above it.
                 if showsFocusCard, focusCardWidth > 0 {
                     TakeCardSurface(take: take)
                         .frame(width: focusCardWidth, alignment: .leading)
@@ -497,27 +419,25 @@ struct FocusRingFanView: View {
                 }
 
                 ZStack {
-                    ForEach(MarkKind.allCases.reversed(), id: \.rawValue) { kind in
-                        // Reversed so Notes stacks on top during the emergence.
-                        let s = markState(kind, now: now)
-                        let rad = s.angle * .pi / 180
+                    // Drawn before the hub so the marks come out from beneath the Iris.
+                    // Later marks stack on top while gathered, as in the prototype.
+                    ForEach(MarkKind.allCases, id: \.rawValue) { kind in
+                        let p = markProgress(kind, now: now)
+                        let slot = Self.slotX(for: kind.rawValue, hubX: hubCentre.x,
+                                              containerWidth: containerWidth)
                         mark(kind)
-                            .offset(x: cos(rad) * s.radius, y: sin(rad) * s.radius)
-                            .opacity(s.opacity)
+                            .scaleEffect(Choreo.startScale + (1 - Choreo.startScale) * p.rise)
+                            .offset(x: slot * p.spread, y: -Self.irisCentreInset * p.rise)
+                            .opacity(p.rise)
+                            // A mark takes taps only once it has risen visibly out from under the
+                            // Iris, on the open and again on the close: a very early tap used to
+                            // toggle a mark still hidden under the Iris.
+                            .allowsHitTesting(p.rise > Self.hitTestRise)
                     }
 
-                    // Hub — the Iris itself, rotating in place. A vertical
-                    // marker line rides the rotation and lands horizontal at
-                    // open (UX §6).
-                    ZStack {
-                        TakeCircleView(take: workingTake, diameter: 44)   // match the timeline Iris (owner 2026-06-15)
-                        Capsule()
-                            .fill(Color.ckEmber.opacity(0.6))
-                            .frame(width: 1.5, height: 17)   // scaled with the 36→44 hub
-                            .opacity(hubRotation(now: now) / 90 * 0.9)
-                    }
-                    .rotationEffect(.degrees(hubRotation(now: now)))
-                    .accessibilityLabel("Selected: \(TakeCircleView.activityDescription(for: workingTake))")
+                    // Hub: the Iris itself, previewing the working selection live.
+                    IrisView(take: workingTake, diameter: CatchlightLayout.circleDiameter)
+                        .accessibilityLabel("Selected: \(IrisView.activityDescription(for: workingTake))")
                 }
                 .position(hubCentre)
                 .accessibilityElement(children: .contain)
@@ -531,7 +451,7 @@ struct FocusRingFanView: View {
         var t = take
         t.isNote = isNote
         t.setTask(isTask)
-        // The fan no longer sets Obie — leave the Take's own designation intact. An Obie
+        // The row never sets Obie — leave the Take's own designation intact. An Obie
         // implies Important (model invariant), so OR it in for the live Iris preview.
         t.isImportant = isImportant || t.isObie
         // Either/or (owner 2026-06-24): a location reminder takes precedence and clears the
@@ -569,54 +489,33 @@ struct FocusRingFanView: View {
     @ViewBuilder
     private func mark(_ kind: MarkKind) -> some View {
         let active = isActive(kind)
+        let face = RoundedRectangle(cornerRadius: Self.markCornerRadius)
         Button {
             toggle(kind)
         } label: {
             ZStack {
-                // Dock-button language: background face + Ember@35% ring;
-                // active reverses (Ember fill + background glyph), exactly
-                // like the filter toggles.
-                // Explicit `.zIndex` pins fill < ring < glyph: toggling `active`
-                // recolours the fill AND the ring together, and without a pinned
-                // order SwiftUI could momentarily paint the fresh fill over the ring
-                // (the same repaint reshuffle fixed in TakeRowView).
-                Circle().fill(active ? kind.activeFill(scheme) : Color.ckBackground)
+                // Off: ground face, lit border at half strength, lit glyph. On: the
+                // Scene accent fills the face and the border takes the same colour, so
+                // there is no separate rim, and the glyph turns on-accent.
+                // Explicit `.zIndex` pins fill < border < glyph: toggling `active`
+                // recolours them together, and without a pinned order SwiftUI could
+                // momentarily paint the fresh fill over the border.
+                face.fill(active ? Color.ckAdd : Color.ckGround)
                     .zIndex(0)
-                Circle().strokeBorder(
-                    // ON: ring = the per-type fill colour, so the active Mark is a
-                    // solid filled circle (fill edge IS the border) exactly like the
-                    // Sequence toggles — no separate rim.
-                    // OFF: ckAccent @ 0.55, matching the dock / editor bar / search
-                    // (owner 2026-06-29; was ckEmber @ 0.35 — too faint, and ckEmber
-                    // stayed the low-contrast #C9A96E in Daylight where ckAccent
-                    // resolves to the WCAG-safe #856539).
-                    active ? kind.activeFill(scheme) : Color.ckAccent.opacity(0.55),
-                    lineWidth: 1.5
-                )
-                .zIndex(1)
-                Group {
-                    if let symbol = kind.systemImage {
-                        Image(systemName: symbol)
-                            .font(.system(size: 22, weight: .light))   // dense glyph → 22 (owner 2026-06-29, glyph-size pass; matches the dock toggles)
-                            // Off glyph = ckAccent, matching the dock/editor/search off icons.
-                            .foregroundStyle(active ? Color.ckBackground : Color.ckAccent)
-                    } else {
-                        // The Important "!" glyph (owner 2026-07-06; replaced the Obie brand
-                        // mark). Off = ckAccent, on = background, exactly like the three SF
-                        // Symbol Marks — no special-casing now that it's a plain type toggle.
-                        ImportantGlyph(size: 22)
-                            .foregroundStyle(active ? Color.ckBackground : Color.ckAccent)
-                    }
-                }
-                .zIndex(2)
+                face.strokeBorder(active ? Color.ckAdd : Color.ckLit.opacity(0.5), lineWidth: 1.5)
+                    .zIndex(1)
+                MarkGlyph(kind: kind)
+                    .foregroundStyle(active ? Color.ckOnAccent : Color.ckLit)
+                    .zIndex(2)
             }
-            .frame(width: 44, height: 44)
-            .frame(minWidth: CatchlightLayout.minTouchTarget,
-                   minHeight: CatchlightLayout.minTouchTarget)
-            .contentShape(Circle())
+            .frame(width: Self.markSize, height: Self.markSize)
+            // A plain rectangle: with the rounded face as the content shape the mark
+            // stopped taking taps, and they fell through to the veil (measured in
+            // CoreFlowsUITests Flow 2, 2026-11-09).
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("focus-ring-mark-\(kind.identifierSuffix)")
+        .accessibilityIdentifier("focus-row-mark-\(kind.identifierSuffix)")
         .accessibilityLabel(kind.title)
         .accessibilityValue(isActive(kind) ? "active" : "inactive")
         .accessibilityHint(kind == .important && !take.canChangeImportant
@@ -625,6 +524,47 @@ struct FocusRingFanView: View {
                     ? "Double-tap to remove \(kind.title)."
                     : "Double-tap to add \(kind.title)."))
         .accessibilityAddTraits(isActive(kind) ? [.isSelected, .isButton] : [.isButton])
+    }
+
+    /// A mark's line icon, drawn on the redesign's 24-unit icon grid at 24pt.
+    private struct MarkGlyph: View {
+        let kind: MarkKind
+
+        var body: some View {
+            ZStack {
+                strokes.stroke(style: StrokeStyle(lineWidth: 1.9, lineCap: .round))
+                if kind == .important {
+                    Path(ellipseIn: CGRect(x: 12 - 1.3, y: 17.2 - 1.3, width: 2.6, height: 2.6))
+                        .fill()
+                }
+            }
+            .frame(width: 24, height: 24)
+        }
+
+        private var strokes: Path {
+            var p = Path()
+            func line(_ x1: CGFloat, _ y1: CGFloat, _ x2: CGFloat, _ y2: CGFloat) {
+                p.move(to: CGPoint(x: x1, y: y1))
+                p.addLine(to: CGPoint(x: x2, y: y2))
+            }
+            switch kind {
+            case .note:
+                line(7, 8.5, 17, 8.5)
+                line(7, 12, 17, 12)
+                line(7, 15.5, 13, 15.5)
+            case .task:
+                p.move(to: CGPoint(x: 7, y: 12.4))
+                p.addLine(to: CGPoint(x: 10.4, y: 15.8))
+                p.addLine(to: CGPoint(x: 17, y: 8.6))
+            case .remind:
+                p.addEllipse(in: CGRect(x: 12 - 7, y: 12 - 7, width: 14, height: 14))
+                line(12, 12, 12, 8)
+                line(12, 12, 15, 13.6)
+            case .important:
+                line(12, 6.5, 12, 13.5)
+            }
+            return p
+        }
     }
 
     // MARK: - Toggle (Note is the floor)
@@ -679,7 +619,7 @@ struct FocusRingFanView: View {
 
     private func finish(commit: Bool) {
         // Go STATIC before removing the overlay so the TimelineView pauses and SwiftUI
-        // can actually tear the fan down — a still-animating subtree lingered as a
+        // can actually tear the row down — a still-animating subtree lingered as a
         // tap-eating ghost veil (owner lockup 2026-06-18). `.dismissed` matches the
         // close animation's end frame, so there's no flash.
         phase = .dismissed
@@ -693,9 +633,9 @@ struct FocusRingFanView: View {
 
 /// The Reminder "when" editor — model C (owner 2026-06-18). A "when" is a scheduled
 /// date with two selectable properties: whether it ALSO rings (`alarm`) and whether
-/// it's a date-only placement (`allDay`). Popped by the Focus-ring's Reminder Mark
+/// it's a date-only placement (`allDay`). Popped by the Focus row's Reminder Mark
 /// (set the "when" at creation) and reusable to change it later. The caller owns what
-/// Save/Cancel mean for its own state (the Focus ring uses Cancel to REMOVE a
+/// Save/Cancel mean for its own state (the Focus row uses Cancel to REMOVE a
 /// just-added reminder).
 ///
 /// LAYOUT (owner 2026-06-18): quick presets → options (all-day + alarm) → calendar.
@@ -706,7 +646,7 @@ struct FocusRingFanView: View {
 struct ReminderPickerSheet: View {
     let initialDate: Date
     let onSave: (_ date: Date, _ alarm: Bool, _ allDay: Bool, _ recurrence: TimeReminder.Recurrence, _ weekdays: Set<Int>, _ location: LocationTrigger?) -> Void
-    /// Optional — the Focus-ring uses Cancel to REMOVE a just-added reminder; the
+    /// Optional — the Focus row uses Cancel to REMOVE a just-added reminder; the
     /// editor leaves it nil (Cancel keeps the existing time untouched).
     var onCancel: () -> Void = {}
 
@@ -1169,11 +1109,12 @@ private extension View {
     }
 }
 
-#Preview("Focus-ring fan — Night") {
+#Preview("Focus row, Night") {
     GeometryReader { geo in
-        FocusRingFanView(
+        FocusRowView(
             take: Take(blocks: [.checkItem("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
+            containerWidth: geo.size.width,
             onCommit: { _, _, _, _, _, _, _, _, _, _ in },
             onDismiss: {}
         )
@@ -1182,11 +1123,12 @@ private extension View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("Focus-ring fan — Daylight") {
+#Preview("Focus row, Daylight") {
     GeometryReader { geo in
-        FocusRingFanView(
+        FocusRowView(
             take: Take(blocks: [.textLine("Shape me")]),
             hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
+            containerWidth: geo.size.width,
             onCommit: { _, _, _, _, _, _, _, _, _, _ in },
             onDismiss: {}
         )

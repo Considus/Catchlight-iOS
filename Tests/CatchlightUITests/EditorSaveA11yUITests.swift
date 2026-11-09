@@ -9,7 +9,7 @@
 //  Fixture note (per the fix prompt): the Storyboard lists only Takes that
 //  carry a task and excludes the Obie. The --uitesting fixture seeds two plain
 //  notes, so tests first shape the top row ("Call the framer back") into a
-//  Task via its Iris + Focus ring — the Flow 2 idiom — without touching the
+//  Task via its Iris + Focus row — the Flow 2 idiom — without touching the
 //  Obie state.
 //
 
@@ -26,19 +26,19 @@ final class EditorSaveA11yUITests: XCTestCase {
 
     /// Shape the top seeded Take into a Task from the timeline (Flow 2 idiom):
     /// Iris → Task mark → dim-commit. Skip-guarded like BlockEditorUITests:
-    /// the synthesized Focus-ring choreography is unreliable on some older
+    /// the synthesized Focus row choreography is unreliable on some older
     /// simulator runtimes.
     private func shapeTopRowIntoTask(_ app: XCUIApplication) throws {
         let iris = anyElement(in: app, id: "take-iris")
         tapWhenReady(iris)
-        let taskMark = app.buttons["focus-ring-mark-task"]
+        let taskMark = app.buttons["focus-row-mark-task"]
         try XCTSkipUnless(taskMark.waitForExistence(timeout: 3),
-                          "Focus ring did not open under synthesized gestures on this runtime.")
+                          "Focus row did not open under synthesized gestures on this runtime.")
         taskMark.tap()
         // Commit via the dim — a corner coordinate far from any mark (Flow 2).
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.12)).tap()
         try XCTSkipUnless(taskMark.waitForNonExistence(timeout: 3),
-                          "Focus-ring dim-commit not delivered on this runtime.")
+                          "Focus row dim-commit not delivered on this runtime.")
     }
 
     /// Open the Storyboard and its editor on the (single) task row.

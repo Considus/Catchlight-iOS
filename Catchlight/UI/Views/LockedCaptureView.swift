@@ -117,7 +117,7 @@ struct LockedCaptureView: View {
     /// TOP-anchored (under the header), NOT the keyboard-riding `KeyboardTakeEditor` the other two
     /// hosts use: the lock-screen capture has no timeline to sit against, and top-anchored is the
     /// proven-stable arrangement here. So it takes the card directly and supplies its own cap.
-    /// No Iris (no spine) and no descent floor (that's a new-Take affordance on the timeline).
+    /// No Iris and no descent floor (that's a new-Take affordance on the timeline).
     private func editCard(draft: Binding<Take>) -> some View {
         TakeEditCard(
             draft: draft,
