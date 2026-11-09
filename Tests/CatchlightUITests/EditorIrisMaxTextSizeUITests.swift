@@ -6,9 +6,9 @@
 //  Take with the software keyboard up, the editing card's Iris ("editor-shape")
 //  was reported missing on device. The element can stay in the accessibility
 //  tree while the heading mask paints over it, so existence alone proves
-//  nothing: this test measures what share of the Iris's upper half (the part
-//  that straddles the card's top edge, where the mask would cover it) actually
-//  differs from the background colour on screen.
+//  nothing. Each scenario checks the Iris frame sits inside the window and above
+//  the keyboard, then samples the Iris's outline ring on screen: a drawn ring
+//  differs from the card fill just inside it, a covered one does not.
 //
 
 import XCTest
@@ -115,14 +115,19 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
         add(attachment)
 
         let frame = iris.frame
-        let visible = visibleShareOfUpperHalf(of: frame, in: shot.image)
-        let report = String(format: "[iris-max-text] \(name) iris=%@ keyboardTop=%.1f window=%@ visibleUpperHalf=%.2f",
+        let window = app.windows.firstMatch.frame
+        let ring = ringShare(of: frame, in: shot.image)
+        let report = String(format: "[iris-max-text] \(name) iris=%@ keyboardTop=%.1f window=%@ ring=%.2f",
                             NSCoder.string(for: frame), keyboard.frame.minY,
-                            NSCoder.string(for: app.windows.firstMatch.frame), visible)
+                            NSCoder.string(for: window), ring)
         print(report)
         let note = XCTAttachment(string: report)
         note.lifetime = .keepAlways
         add(note)
+
+        XCTAssertTrue(window.contains(frame), "Editor Iris frame \(frame) is outside the window \(window)")
+        XCTAssertLessThanOrEqual(frame.maxY, keyboard.frame.minY,
+                                 "Editor Iris is under the keyboard (Iris bottom \(frame.maxY)pt, keyboard top \(keyboard.frame.minY)pt)")
 
         // A long Take should fill the room once the strip stands down. Measured: the Iris sits at
         // 169-172pt when the card is full height, and at 323pt when the card stayed at its floor.
@@ -140,15 +145,16 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
             XCTAssertEqual(stampShown, expectStamp,
                            "Stamp \(expectStamp ? "should" : "should not") show while typing at this size")
         }
-        // Measured on these scenarios: a hidden Iris reads 0-3%, a visible one 48-67% (the higher
-        // figures include the dimmed timeline Iris showing faintly behind it), so 30% splits them.
-        XCTAssertGreaterThanOrEqual(visible, 0.3,
-                                    "Editor Iris is hidden: only \(Int(visible * 100))% of its upper half differs from the background")
+        // The ring is drawn in six lights with gaps between them, so a visible Iris reads well below
+        // 100%. Measured on these scenarios: a visible Iris reads 90%, so 50% splits it from a hidden one.
+        XCTAssertGreaterThanOrEqual(ring, 0.5,
+                                    "Editor Iris is hidden: only \(Int(ring * 100))% of its outline ring differs from the card fill")
     }
 
-    /// Share of pixels in the inner square of the Iris's upper half that differ from the
-    /// background colour, sampled just outside the Iris's top-left corner.
-    private func visibleShareOfUpperHalf(of frame: CGRect, in image: UIImage) -> Double {
+    /// Share of sample points along the Iris's four straight edges where the ring (1.5 units in
+    /// from the edge, the centre of the stroke) differs from the card fill 8 units in, clear of
+    /// the ring, the inner shape and the Obie square. Geometry is the Iris's 44-unit space.
+    private func ringShare(of frame: CGRect, in image: UIImage) -> Double {
         guard let cg = image.cgImage else { return 0 }
         let scale = CGFloat(cg.width) / image.size.width
         let w = cg.width, h = cg.height
@@ -158,25 +164,29 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return 0 }
         ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
 
-        func rgb(_ x: Int, _ y: Int) -> (Int, Int, Int) {
-            let cx = min(max(x, 0), w - 1), cy = min(max(y, 0), h - 1)
+        func rgb(_ point: CGPoint) -> (Int, Int, Int) {
+            let cx = min(max(Int(point.x * scale), 0), w - 1)
+            let cy = min(max(Int(point.y * scale), 0), h - 1)
             let i = (cy * w + cx) * 4
             return (Int(pixels[i]), Int(pixels[i + 1]), Int(pixels[i + 2]))
         }
-        let bg = rgb(Int((frame.minX - 2) * scale), Int((frame.minY - 2) * scale))
-
-        let inset = frame.width * 0.2
-        let x0 = Int((frame.minX + inset) * scale), x1 = Int((frame.maxX - inset) * scale)
-        let y0 = Int((frame.minY + inset) * scale), y1 = Int(frame.midY * scale)
-        guard x1 > x0, y1 > y0 else { return 0 }
+        let u = frame.width / 44
         var differing = 0, total = 0
-        for y in stride(from: y0, to: y1, by: 2) {
-            for x in stride(from: x0, to: x1, by: 2) {
-                let p = rgb(x, y)
-                if abs(p.0 - bg.0) + abs(p.1 - bg.1) + abs(p.2 - bg.2) > 30 { differing += 1 }
+        // t runs along each edge between the rounded corners (units 11 to 33).
+        for step in 0...20 {
+            let t = (11 + 22 * CGFloat(step) / 20) * u
+            let samples: [(ring: CGPoint, fill: CGPoint)] = [
+                (CGPoint(x: frame.minX + t, y: frame.minY + 1.5 * u), CGPoint(x: frame.minX + t, y: frame.minY + 8 * u)),
+                (CGPoint(x: frame.maxX - 1.5 * u, y: frame.minY + t), CGPoint(x: frame.maxX - 8 * u, y: frame.minY + t)),
+                (CGPoint(x: frame.minX + t, y: frame.maxY - 1.5 * u), CGPoint(x: frame.minX + t, y: frame.maxY - 8 * u)),
+                (CGPoint(x: frame.minX + 1.5 * u, y: frame.minY + t), CGPoint(x: frame.minX + 8 * u, y: frame.minY + t)),
+            ]
+            for sample in samples {
+                let r = rgb(sample.ring), f = rgb(sample.fill)
+                if abs(r.0 - f.0) + abs(r.1 - f.1) + abs(r.2 - f.2) > 30 { differing += 1 }
                 total += 1
             }
         }
-        return total == 0 ? 0 : Double(differing) / Double(total)
+        return Double(differing) / Double(total)
     }
 }
