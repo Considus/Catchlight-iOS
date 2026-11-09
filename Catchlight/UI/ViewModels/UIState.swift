@@ -358,7 +358,7 @@ final class UIState {
 
     /// Dismiss the Focus row. `animated: false` removes the overlay WITHOUT the
     /// opacity transition — required on the edit-in-place commit path, where committing
-    /// immediately grows the card, re-raises the keyboard and scrolls the caret: a
+    /// immediately grows the card and scrolls the caret (the keyboard stays up): a
     /// fade-out running THROUGH that relayout left SwiftUI unable to complete the removal
     /// transition and stranded the fan's screen-positioned hub Iris as an orphan glyph
     /// (owner 2026-07-11). With no transition there is nothing to strand.

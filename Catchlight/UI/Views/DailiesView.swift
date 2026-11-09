@@ -1711,7 +1711,7 @@ struct DailiesView: View {
 
         // Where the caret goes after the ring. A freshly-added task entry takes it (it's empty
         // and wants its first character); otherwise the block that held the keyboard when the
-        // ring opened keeps or takes it back — the editor's controller returns the caret to its
+        // ring opened keeps or takes it back: the editor's controller returns the caret to its
         // saved offset within it. First block only as a last resort (the return block can
         // vanish if the commit reshaped it away).
         let returnBlock = ringReturnFocus.flatMap { r in

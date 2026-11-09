@@ -146,17 +146,26 @@ final class FocusRowKeyboardUITests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
                       "Software keyboard did not appear")
         sleep(1)
+        let discard = app.buttons["Discard changes"]
+        XCTAssertTrue(discard.waitForExistence(timeout: 5), "Keyboard toolbar not showing")
+        let discardFrame = discard.frame
+        let discardCentre = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: discardFrame.midX, dy: discardFrame.midY))
 
         anyElement(in: app, id: "editor-shape").tap()
         let taskMark = anyElement(in: app, id: "focus-row-mark-task")
         XCTAssertTrue(taskMark.waitForExistence(timeout: 5), "Focus row did not open")
-        let discard = app.buttons["Discard changes"]
-        XCTAssertTrue(discard.waitForExistence(timeout: 5), "Keyboard toolbar not showing")
-        discard.tap()
+        // VoiceOver must not announce toolbar actions that no longer run while the row is open.
+        XCTAssertTrue(discard.waitForNonExistence(timeout: 3),
+                       "VoiceOver still offers \"Discard changes\" while the Focus row is open")
+        // A sighted tap where the button sits still saves the row's choice and closes it.
+        discardCentre.tap()
         sleep(1)
 
         XCTAssertTrue(taskMark.waitForNonExistence(timeout: 5), "The Focus row did not close")
         XCTAssertTrue(body.exists, "The editor closed: the Take was discarded under the Focus row")
         XCTAssertEqual(body.value as? String, "Pack the tripod", "The edit was lost")
+        XCTAssertTrue(discard.waitForExistence(timeout: 3),
+                      "VoiceOver did not get the keyboard toolbar back after the Focus row closed")
     }
 }
