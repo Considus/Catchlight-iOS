@@ -91,4 +91,72 @@ final class FocusRowKeyboardUITests: XCTestCase {
                       "The keyboard did not come back when the picker closed")
         XCTAssertTrue(remind.exists, "The Focus row closed with the picker")
     }
+
+    /// Editing the pinned Obie: tapping its Iris must keep the keyboard up too (the same
+    /// report as any other Take). While any edit is open the pinned slot stands down
+    /// (`DailiesView.pinnedObieStandsDown`), so the Obie's Iris on screen is the editing card's.
+    func testFocusRowWhileEditingTheObie_keepsTheKeyboardUp() throws {
+        let app = launchAppForUITesting()
+        let row = takeRow(in: app, withLabelStarting: "Buy film")
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "Seeded Take not on the timeline")
+        // The card's long-press menu, not the Iris press (synthesized leading-edge long
+        // presses are not delivered on the simulator, see CoreFlows Flow 4).
+        row.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.5)).press(forDuration: 1.2)
+        let makeObie = app.buttons["Make Obie"]
+        XCTAssertTrue(makeObie.waitForExistence(timeout: 5), "Long-press menu did not appear")
+        makeObie.tap()
+        let obieRow = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "take-row", "Obie"))
+            .firstMatch
+        XCTAssertTrue(obieRow.waitForExistence(timeout: 5), "No pinned Obie")
+
+        let body = app.textViews["take-edit-body"]
+        tapUntil(obieRow, appears: body)
+        if !app.keyboards.firstMatch.waitForExistence(timeout: 2) { body.tap() }
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
+                      "Software keyboard did not appear")
+        sleep(1)
+
+        // The stood-down pinned slot is invisible and takes no touches, but stays in the
+        // accessibility tree with the same identifier, so take the lower Iris: the editing card's.
+        let irises = app.descendants(matching: .any).matching(identifier: "editor-shape")
+        XCTAssertTrue(irises.firstMatch.waitForExistence(timeout: 5), "editor-shape not in the tree")
+        let all = irises.allElementsBoundByIndex
+        print("[focus-row-keyboard] obie editor-shape frames: \(all.map { NSCoder.string(for: $0.frame) })")
+        let iris = all.max { $0.frame.minY < $1.frame.minY }!
+        let before = iris.frame
+        iris.tap()
+        XCTAssertTrue(anyElement(in: app, id: "focus-row-mark-task").waitForExistence(timeout: 5),
+                      "Focus row did not open")
+        sleep(1)
+        XCTAssertGreaterThan(app.keyboards.count, 0,
+                             "The keyboard dropped when the Focus row opened while editing the Obie")
+        XCTAssertEqual(iris.frame.minY, before.minY, accuracy: 2, "The Obie's editing card moved")
+    }
+
+    /// While the row is open, the editor's keyboard toolbar must not act underneath it: its
+    /// Discard does what a tap on the dimmed area does (save the row's choice and close it).
+    func testToolbarDiscard_whileTheFocusRowIsOpen_doesNotDiscard() throws {
+        let app = launchAppForUITesting()
+        let addButton = app.buttons["add-button"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 10), "Dock did not load")
+        let body = app.textViews["take-edit-body"]
+        tapUntil(addButton, appears: body)
+        typeWhenReady(body, "Pack the tripod")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
+                      "Software keyboard did not appear")
+        sleep(1)
+
+        anyElement(in: app, id: "editor-shape").tap()
+        let taskMark = anyElement(in: app, id: "focus-row-mark-task")
+        XCTAssertTrue(taskMark.waitForExistence(timeout: 5), "Focus row did not open")
+        let discard = app.buttons["Discard changes"]
+        XCTAssertTrue(discard.waitForExistence(timeout: 5), "Keyboard toolbar not showing")
+        discard.tap()
+        sleep(1)
+
+        XCTAssertTrue(taskMark.waitForNonExistence(timeout: 5), "The Focus row did not close")
+        XCTAssertTrue(body.exists, "The editor closed: the Take was discarded under the Focus row")
+        XCTAssertEqual(body.value as? String, "Pack the tripod", "The edit was lost")
+    }
 }

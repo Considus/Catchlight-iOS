@@ -1377,6 +1377,10 @@ struct DailiesView: View {
             // not reach the UIKit-vended text, so VoiceOver focus landed on the text
             // behind the veil. Same channel as the timeline rows.
             axHidden: ui.isFocusRowPresented,
+            // The keyboard stays up while the Focus row is open, and with it the editor's
+            // toolbar, above the row's dimmed area. Its buttons then act as that dimmed area
+            // does (save the row's choice and close it), never underneath the row.
+            toolbarInterceptor: ui.isFocusRowPresented ? { ui.requestFocusRowCommit() } : nil,
             onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
             onEditReminder: { presentReminderEditor() },
             onDiscard: { discardInlineEdit() },
@@ -1768,14 +1772,14 @@ struct DailiesView: View {
             onTapCircle: { cardFrame in
                 // While another Take is focused, any tap outside it commits and exits.
                 if editingActive && !isEditingThis { saveInlineEdit(); return }
-                // Release the editor's keyboard BEFORE the Focus row opens (owner
-                // lockup 2026-06-18). Leaving the editor first-responder while the ring
-                // + reminder picker sit on top made the keyboard fight the overlay —
-                // Done re-raised it / needed a second tap. The ring owns the
-                // interaction; the commit re-focuses (applyInlineFanCommand).
                 // A Take waiting for a conflict choice is read-only: no Focus row.
                 if !isEditingThis { guard app.ensureNotHeld(take.id) else { return } }
-                if isEditingThis { ringReturnFocus = editFocusedBlockID; editFocusedBlockID = nil }
+                // Editing THIS Take: the keyboard stays up, as from the editing card's Iris
+                // (owner 2026-11-09). This slot is the pinned Obie, stood down while it is
+                // edited but still reachable through VoiceOver. The keyboard once fought the
+                // Remind picker over the ring (owner lockup 2026-06-18); the picker now lowers
+                // it while it shows (`ui.focusRowPickerShown`).
+                if isEditingThis { ringReturnFocus = editFocusedBlockID }
                 // Section 8 — bloom the fan in place at the tapped Iris (window
                 // coords match the full-screen overlay space). The .zero fallback
                 // (screen centre) only survives as a last resort. While editing THIS

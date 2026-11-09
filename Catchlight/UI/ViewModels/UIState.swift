@@ -82,6 +82,10 @@ final class UIState {
     /// lowers its keyboard for it and raises it again when it closes (owner 2026-11-09: the
     /// keyboard otherwise stays up while the row is open).
     var focusRowPickerShown = false
+    /// Bumped to ask an open Focus row to save and close, as a tap on its dimmed area does.
+    /// The editor's keyboard toolbar sends it while the row is open over the editor.
+    var focusRowCommitRequests = 0
+    func requestFocusRowCommit() { focusRowCommitRequests += 1 }
     var isFocusRowPresented: Bool { focusRowTake != nil }
 
     // Take editor — edit-in-place (the top-anchored overlay editor was retired in

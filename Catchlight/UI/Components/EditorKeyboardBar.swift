@@ -58,6 +58,11 @@ struct EditorToolbarConfig {
     ///
     /// Default no-op (the keyboard still resigns).
     var onDismiss: () -> Void = {}
+    /// While set, every button runs this INSTEAD of its own action. The Focus row sets it
+    /// while it is open over the editor with the keyboard up: a tap here then does what a tap
+    /// on the row's dimmed area does (save the row's choice and close it), never a discard or
+    /// a second action underneath the row (owner 2026-11-09).
+    var interceptor: (() -> Void)? = nil
 }
 
 struct EditorKeyboardBar: View {
@@ -188,7 +193,7 @@ struct EditorKeyboardBar: View {
                                    hint: LocalizedStringKey? = nil,
                                    action: @escaping () -> Void,
                                    @ViewBuilder glyph: () -> Glyph) -> some View {
-        Button(action: action) {
+        Button(action: config.interceptor ?? action) {
             ZStack {
                 Circle()
                     .strokeBorder(Color.ckAccent.opacity(0.55), lineWidth: 1.5)

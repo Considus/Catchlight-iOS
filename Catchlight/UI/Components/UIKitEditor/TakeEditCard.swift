@@ -65,6 +65,9 @@ struct TakeEditCard: View {
     /// Seals the UIKit text view out of the accessibility tree while an overlay covers this
     /// card (audit 2026-08, V31 — the Focus row opened from the Iris). See `BlockEditor`.
     var axHidden: Bool = false
+    /// Passed through to the card's `BlockEditor`: replaces every keyboard-toolbar action while
+    /// the Focus row is open over this card.
+    var toolbarInterceptor: (() -> Void)? = nil
     /// Hides the "Created on" stamp even when the setting shows it. `KeyboardTakeEditor` sets this
     /// at accessibility text sizes while the keyboard is up (owner 2026-09-30).
     var hidesStamp: Bool = false
@@ -128,6 +131,7 @@ struct TakeEditCard: View {
                     // Take's caret off-screen (device 2026-07-15).
                     atMaxHeight: effectiveContent + Self.editorLineLead >= maxHeight,
                     axHidden: axHidden,
+                    toolbarInterceptor: toolbarInterceptor,
                     onContentHeightChange: { h in
                         editorContentHeight = h
                         onContentHeightChange?(h)
@@ -257,6 +261,8 @@ struct KeyboardTakeEditor: View {
     var leadingInset: CGFloat
     /// Passed through to the card's `BlockEditor` (audit 2026-08, V31).
     var axHidden: Bool = false
+    /// Passed through to the card (see `TakeEditCard.toolbarInterceptor`).
+    var toolbarInterceptor: (() -> Void)? = nil
     var trailingInset: CGFloat = 20
 
     var onOpenAngle: (() -> Void)? = nil
@@ -381,6 +387,7 @@ struct KeyboardTakeEditor: View {
                 onTapIris: onTapIris,
                 onContentHeightChange: { editorContentHeight = $0 },
                 axHidden: axHidden,
+                toolbarInterceptor: toolbarInterceptor,
                 hidesStamp: hidesStampForRoom
             )
             .padding(.leading, leadingInset)
