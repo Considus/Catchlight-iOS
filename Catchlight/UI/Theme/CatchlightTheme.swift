@@ -569,6 +569,16 @@ enum CatchlightLayout {
     static let cardTextLeadingPad: CGFloat = irisInset + circleDiameter + irisTextGap
     /// The shortest a Take card may be: room for the Iris with `irisInset` above and below.
     static let cardMinHeight: CGFloat = irisInset * 2 + circleDiameter
+    /// The spacing setting's gaps were tuned with the old Iris's top half hanging into them.
+    static let retiredIrisOverhang: CGFloat = circleDiameter / 2
+    /// The smallest visible gap between two Take cards.
+    static let minCardGap: CGFloat = 10
+    /// The visible gap between two Take cards for a stored spacing setting: the setting less
+    /// the room the old straddling Iris took, so each setting looks as it did, never below
+    /// `minCardGap`. Dailies and the Storyboard both use it, so they stay equal.
+    static func visibleCardGap(for setting: CGFloat) -> CGFloat {
+        max(minCardGap, setting - retiredIrisOverhang)
+    }
     /// The card's standard TRAILING text pad. Tokenised 2026-08-15 because the
     /// manual-order drag handle has to inset the body text by exactly enough to clear
     /// itself, and a literal 14 in two files would drift the moment either moved.

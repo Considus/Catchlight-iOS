@@ -33,4 +33,17 @@ final class CardLayoutTests: XCTestCase {
         let leading = CatchlightLayout.spineX(containerWidth: 375) - CatchlightLayout.cardLeadingOffset
         XCTAssertEqual(leading, 17.875, accuracy: 0.0001)
     }
+
+    /// The default spacing setting stores 44; the old Iris's top half (22) no
+    /// longer hangs into the gap, so the visible gap is 44 - 22 = 22.
+    func testVisibleGap_defaultSetting_dropsTheOldIrisOverhang() {
+        XCTAssertEqual(SettingsViewModel.TakeSpacing.default.gap, 44)
+        XCTAssertEqual(CatchlightLayout.visibleCardGap(for: SettingsViewModel.TakeSpacing.default.gap), 22)
+    }
+
+    /// Compact stores 26; 26 - 22 = 4 is below the 10pt floor, so it shows 10.
+    func testVisibleGap_neverBelowTheFloor() {
+        XCTAssertEqual(CatchlightLayout.visibleCardGap(for: 26), 10)
+        XCTAssertEqual(CatchlightLayout.visibleCardGap(for: 0), 10)
+    }
 }

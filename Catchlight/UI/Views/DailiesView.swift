@@ -102,10 +102,8 @@ struct DailiesView: View {
         spineX - CatchlightLayout.cardLeadingOffset + CatchlightLayout.cardTextLeadingPad
     }
 
-    /// Reads the user's timeline-density choice live. The inter-card stack
-    /// spacing is the chosen clear gap MINUS the two 6pt row paddings each card
-    /// already carries (`.padding(.vertical, 6)`), so the visible card-to-card gap
-    /// equals `TakeSpacing.gap`.
+    /// Reads the user's timeline-density choice live. `cardGap` turns it into the
+    /// visible card-to-card gap.
     @AppStorage(SettingsViewModel.TakeSpacing.defaultsKey)
     private var takeSpacingRaw: String = SettingsViewModel.TakeSpacing.default.rawValue
     private var takeSpacing: SettingsViewModel.TakeSpacing {
@@ -113,7 +111,9 @@ struct DailiesView: View {
     }
     /// Stack spacing + the Obie gap. `gap − 12` because each row adds 6pt top
     /// and 6pt bottom of its own; the result is the extra space between cards.
-    private var interCardSpacing: CGFloat { max(0, takeSpacing.gap - 12) }
+    private var interCardSpacing: CGFloat { max(0, cardGap - 12) }
+    /// The visible gap between two cards for the user's spacing setting.
+    private var cardGap: CGFloat { CatchlightLayout.visibleCardGap(for: takeSpacing.gap) }
 
     /// Timeline order (owner 2026-06-16). Default Oldest first: oldest at the top,
     /// newer Takes accrue below. The Obie stays pinned above the list regardless.
@@ -229,7 +229,7 @@ struct DailiesView: View {
     private var timelineTopInset: CGFloat {
         let base = deviceTopInset + headingClearance
         guard vm.obie != nil, pinnedObieZoneHeight > 0 else { return base }
-        return base + pinnedObieZoneHeight + max(0, takeSpacing.gap - 12)
+        return base + pinnedObieZoneHeight + max(0, cardGap - 12)
     }
 
     /// The NEW timeline's top inset. `timelineTopInset` is written for the OLD rows, which carry a
@@ -239,7 +239,7 @@ struct DailiesView: View {
     /// `cardGap/2 - 6` too low at the scroll origin (owner 2026-07-15). Subtract the difference so
     /// the first card lands exactly where the old timeline puts it.
     private var newTimelineTopInset: CGFloat {
-        max(0, timelineTopInset + 6 - takeSpacing.gap / 2)
+        max(0, timelineTopInset + 6 - cardGap / 2)
     }
 
     var body: some View {
@@ -1224,7 +1224,7 @@ struct DailiesView: View {
         UIKitTimeline(
             groups: monthGroups.map { TimelineMonthGroup(id: $0.key, title: $0.month, takes: $0.takes) },
             spineX: spineX,
-            cardGap: takeSpacing.gap,
+            cardGap: cardGap,
             activeMonthKey: ui.filterMonth,
             onToggleMonthFilter: { key in
                 withAnimation(.easeInOut(duration: 0.2)) { ui.toggleMonthFilter(key) }

@@ -67,13 +67,10 @@ struct StoryboardView: View {
         SettingsViewModel.TimelineArrangement(rawValue: arrangementRaw) ?? .default
     }
 
-    /// The inter-card gap. The "View" setting's gap is tuned for Dailies, where each
-    /// card's Iris straddles its top edge — the Iris's top HALF (its radius, 22pt of
-    /// the 44pt circle) sits up in the gap. The Storyboard has no Iris, so we reclaim
-    /// exactly that radius from every gap (owner 2026-06-19), keeping the perceived
-    /// rhythm identical to Dailies. Floored at 0 so Compact can't go negative.
+    /// The inter-card gap: the same visible gap Dailies shows for the "View" setting,
+    /// so the two keep the same rhythm (owner 2026-06-19).
     private var storyboardGap: CGFloat {
-        max(0, takeSpacing.gap - CatchlightLayout.circleDiameter / 2)
+        CatchlightLayout.visibleCardGap(for: takeSpacing.gap)
     }
 
     /// The Take a delete confirmation is currently asking about (owner 2026-08-16). The
