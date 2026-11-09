@@ -6,14 +6,17 @@
 //  follows the Iris prototype's `openMarks` and `.mk` styles.
 //
 //  LAYOUT: four 44pt rounded-square marks, Note, Task, Reminder and Important from
-//  left to right, sit in a row centred on the Take card's top edge. The first is 52pt
-//  right of the Iris centre and each next one 52pt further. On a narrow screen the gap
-//  shrinks evenly so the last mark stays 8pt inside the screen; the marks never shrink
-//  (`slotX`).
+//  left to right, sit in a row along the Take card's bottom edge, their centres 8pt below
+//  it so their tops line up with the card's bottom padding, clear of its last line of
+//  text (`rowY`). Where that would put the row below the visible area (behind the dock,
+//  or under the keyboard from the editor), the row lifts to stay on screen. The first
+//  mark is 52pt right of the Iris centre and each next one 52pt further. On a narrow
+//  screen the gap shrinks evenly so the last mark stays 8pt inside the screen; the marks
+//  never shrink (`slotX`).
 //
-//  MOTION: the marks start stacked under the Iris at 85% size, invisible. They rise
-//  straight up to the card's top edge over 340ms (easeInOutCubic), growing to full size
-//  and fading in, then each slides right to its slot over 280ms, 50ms after the one
+//  MOTION: the marks start stacked under the Iris at 85% size, invisible. They drop
+//  straight down to the card's bottom edge over 340ms (easeInOutCubic), growing to full
+//  size and fading in, then each slides right to its slot over 280ms, 50ms after the one
 //  before, with a small easeOutBack overshoot. Closing plays each mark's own open
 //  backwards, 1.25 times faster, as the prototype does. Reduce Motion and UI tests skip
 //  straight to the end state.
@@ -35,12 +38,16 @@ import CatchlightCore
 
 struct FocusRowView: View {
     let take: Take
-    /// Screen-space point of the hub (centre of the tapped Iris).
-    let hubCentre: CGPoint
-    /// Full overlay width (screen width): used to keep the row on screen and to
-    /// reconstruct the tapped Take's card frame so a lit copy can be lifted above the
-    /// dim veil. See `focusCard`.
+    /// The tapped Take's card, in the overlay's (window) space. The hub sits on its Iris,
+    /// the row runs along its bottom edge, and the lit copy is drawn over it.
+    let cardFrame: CGRect
+    /// Full overlay width (screen width): used to keep the row on screen.
     var containerWidth: CGFloat = 0
+    /// The lowest y the row may reach: the top of the keyboard or the dock. 0 is unknown
+    /// (previews): no clamp.
+    var visibleBottom: CGFloat = 0
+    /// Screen-space point of the hub (centre of the tapped Iris).
+    private var hubCentre: CGPoint { Self.hubCentre(of: cardFrame) }
     /// Whether to lift the tapped Take's card above the veil (owner 2026-06-16).
     /// True when the row opens from a timeline Iris (`hubCentre` is a real row);
     /// false from the editor footer (the editor IS the context there, so no card to
@@ -51,6 +58,11 @@ struct FocusRowView: View {
     /// 2026-06-18) — undefined/ignored when `hasReminder` is false.
     let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ reminderWeekdays: Set<Int>, _ reminderLocation: LocationTrigger?, _ isImportant: Bool) -> Void
     let onDismiss: () -> Void
+    /// The Remind mark's picker opened (true) or closed (false).
+    var onReminderPickerShownChange: (Bool) -> Void = { _ in }
+    /// Each change asks the row to save and close, exactly as a tap on the veil does, and
+    /// only while the veil itself would take that tap.
+    var commitRequests: Int = 0
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -114,17 +126,23 @@ struct FocusRowView: View {
     @State private var phase: RowPhase
 
     init(take: Take,
-         hubCentre: CGPoint,
+         cardFrame: CGRect,
          containerWidth: CGFloat = 0,
+         visibleBottom: CGFloat = 0,
          showsFocusCard: Bool = false,
          onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, TimeReminder.Recurrence, Set<Int>, LocationTrigger?, Bool) -> Void,
-         onDismiss: @escaping () -> Void) {
+         onDismiss: @escaping () -> Void,
+         onReminderPickerShownChange: @escaping (Bool) -> Void = { _ in },
+         commitRequests: Int = 0) {
         self.take = take
-        self.hubCentre = hubCentre
+        self.cardFrame = cardFrame
         self.containerWidth = containerWidth
+        self.visibleBottom = visibleBottom
         self.showsFocusCard = showsFocusCard
         self.onCommit = onCommit
         self.onDismiss = onDismiss
+        self.onReminderPickerShownChange = onReminderPickerShownChange
+        self.commitRequests = commitRequests
         _isNote = State(initialValue: take.isNote)
         _isTask = State(initialValue: take.isTask)
         _hasReminder = State(initialValue: take.timeReminder != nil)
@@ -173,10 +191,33 @@ struct FocusRowView: View {
     static let markSpacing: CGFloat = 52
     /// The least room kept between the last mark and the screen's trailing edge.
     static let screenMargin: CGFloat = 8
-    /// How far the Iris centre sits in from its card's top and leading edges (36): the
-    /// row rises by this much to sit centred on the card's top edge, and the lit card
-    /// copy starts this far up and left of the hub.
+    /// How far the Iris centre sits in from its card's top and leading edges (36).
     static let irisCentreInset = CatchlightLayout.irisInset + CatchlightLayout.circleDiameter / 2
+    /// How far below the card's bottom edge the row's centre sits (8): it puts the marks'
+    /// tops on the card's bottom padding line, so they clear its last line of text.
+    static let belowEdge: CGFloat = markSize / 2 - CatchlightLayout.cardPadding
+
+    /// The Iris centre of a card: `irisCentreInset` in from its top and leading edges.
+    static func hubCentre(of cardFrame: CGRect) -> CGPoint {
+        CGPoint(x: cardFrame.minX + irisCentreInset, y: cardFrame.minY + irisCentreInset)
+    }
+
+    /// A card's frame from its Iris centre (as the Iris's tap recognizer reports it, in
+    /// window coordinates) and the card's measured size.
+    static func cardFrame(irisCentre: CGPoint, cardSize: CGSize) -> CGRect {
+        CGRect(x: irisCentre.x - irisCentreInset, y: irisCentre.y - irisCentreInset,
+               width: cardSize.width, height: cardSize.height)
+    }
+
+    /// The row's resting y offset from the Iris centre: `belowEdge` under the card's bottom
+    /// edge, lifted so a mark's bottom stays at or above `visibleBottom` (0 = no clamp), and
+    /// never above the Iris centre.
+    static func rowY(cardFrame: CGRect, visibleBottom: CGFloat) -> CGFloat {
+        let y = cardFrame.height - irisCentreInset + belowEdge
+        guard visibleBottom > 0 else { return y }
+        let lowest = visibleBottom - markSize / 2 - hubCentre(of: cardFrame).y
+        return max(0, min(y, lowest))
+    }
 
     /// A mark's resting x offset from the Iris centre. Marks sit `markSpacing` apart;
     /// when the last one would cross `screenMargin`, the spacing shrinks evenly so it
@@ -196,7 +237,7 @@ struct FocusRowView: View {
     // MARK: - Choreography (the Iris prototype's `openMarks`)
 
     private enum Choreo {
-        /// All four marks rise together from under the Iris to the card's top edge.
+        /// All four marks drop together from under the Iris to the card's bottom edge.
         static let rise: Double = 0.340
         /// Each mark starts its slide this much after the one to its left.
         static let spreadStagger: Double = 0.050
@@ -295,19 +336,6 @@ struct FocusRowView: View {
         }
     }
 
-    // MARK: - Focus card geometry
-    //
-    // Reconstructs the tapped row's card frame from `hubCentre` (the Iris centre in
-    // overlay/window space) using the same layout constants DailiesView lays the row
-    // out with, so the lit copy lands exactly over the real (now-dimmed) card.
-
-    /// Card leading edge: the Iris centre is `irisCentreInset` right of it.
-    private var focusCardLeading: CGFloat { hubCentre.x - Self.irisCentreInset }
-    /// Card top edge: the Iris centre is `irisCentreInset` below it.
-    private var focusCardTop: CGFloat { hubCentre.y - Self.irisCentreInset }
-    /// Card width: from the leading edge out to the row's 20pt trailing margin.
-    private var focusCardWidth: CGFloat { containerWidth - 20 - focusCardLeading }
-
     // MARK: - Body
 
     var body: some View {
@@ -330,6 +358,11 @@ struct FocusRowView: View {
         }
         // A smooth, minimal-bounce spring approximating the iOS sheet present/dismiss.
         .animation(.spring(response: 0.52, dampingFraction: 0.9), value: showingReminderPicker)
+        .onChange(of: showingReminderPicker) { _, shown in onReminderPickerShownChange(shown) }
+        .onChange(of: commitRequests) { _, _ in
+            guard veilIsInteractive, !showingReminderPicker else { return }
+            retractAndDismiss(commit: true)
+        }
         .onAppear {
             if instantMotion { phase = .open }
             else { phase = .opening(start: .now) }
@@ -401,14 +434,13 @@ struct FocusRowView: View {
                 // The tapped Take, lifted LIT above the veil (owner 2026-06-16). A
                 // pure-visual copy of the real row's card — non-interactive, so a tap
                 // here falls through to the veil (commit & close), exactly like tapping
-                // any other dimmed area. Positioned from `hubCentre`: the Iris centre is
-                // `irisCentreInset` in from the card's top and leading edges, and the
-                // card runs to the 20pt trailing margin — the same geometry DailiesView
-                // lays the row out with. Drawn BEFORE the marks so they pass above it.
-                if showsFocusCard, focusCardWidth > 0 {
+                // any other dimmed area. Drawn at `cardFrame`, the real card's measured
+                // frame, so it lands exactly over it. Drawn BEFORE the marks so they pass
+                // above it.
+                if showsFocusCard, cardFrame.width > 0 {
                     TakeCardSurface(take: take)
-                        .frame(width: focusCardWidth, alignment: .leading)
-                        .offset(x: focusCardLeading, y: focusCardTop)
+                        .frame(width: cardFrame.width, height: cardFrame.height, alignment: .topLeading)
+                        .offset(x: cardFrame.minX, y: cardFrame.minY)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         // Fades out with the veil on close (owner 2026-06-17) so the
                         // lit Take resolves back into the brightening timeline rather
@@ -418,6 +450,7 @@ struct FocusRowView: View {
                         .accessibilityHidden(true)
                 }
 
+                let rowY = Self.rowY(cardFrame: cardFrame, visibleBottom: visibleBottom)
                 ZStack {
                     // Drawn before the hub so the marks come out from beneath the Iris.
                     // Later marks stack on top while gathered, as in the prototype.
@@ -427,7 +460,7 @@ struct FocusRowView: View {
                                               containerWidth: containerWidth)
                         mark(kind)
                             .scaleEffect(Choreo.startScale + (1 - Choreo.startScale) * p.rise)
-                            .offset(x: slot * p.spread, y: -Self.irisCentreInset * p.rise)
+                            .offset(x: slot * p.spread, y: rowY * p.rise)
                             .opacity(p.rise)
                             // A mark takes taps only once it has risen visibly out from under the
                             // Iris, on the open and again on the close: a very early tap used to
@@ -1113,7 +1146,8 @@ private extension View {
     GeometryReader { geo in
         FocusRowView(
             take: Take(blocks: [.checkItem("Shape me")]),
-            hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
+            cardFrame: CGRect(x: 24, y: geo.size.height / 2 - 36,
+                              width: geo.size.width - 44, height: 72),
             containerWidth: geo.size.width,
             onCommit: { _, _, _, _, _, _, _, _, _, _ in },
             onDismiss: {}
@@ -1127,7 +1161,8 @@ private extension View {
     GeometryReader { geo in
         FocusRowView(
             take: Take(blocks: [.textLine("Shape me")]),
-            hubCentre: CGPoint(x: 60, y: geo.size.height / 2),
+            cardFrame: CGRect(x: 24, y: geo.size.height / 2 - 36,
+                              width: geo.size.width - 44, height: 72),
             containerWidth: geo.size.width,
             onCommit: { _, _, _, _, _, _, _, _, _, _ in },
             onDismiss: {}

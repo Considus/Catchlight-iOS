@@ -52,17 +52,22 @@ struct TakeEditCard: View {
     var onDiscard: (() -> Void)? = nil
     /// Tap the Iris → open the Focus row against the LIVE DRAFT (owner 2026-06-17, so the
     /// fan reflects unsaved shaping and its commit routes back to the draft — `RootView` does
-    /// that routing off `ui.editingTakeID`). The `CGPoint` is the Iris centre in WINDOW coords,
-    /// which is the Focus row overlay's space. Only meaningful with `showsIris`.
+    /// that routing off `ui.editingTakeID`). The `CGRect` is this card's frame in WINDOW coords
+    /// (the recognizer's Iris centre plus the card's measured size), which is the Focus row
+    /// overlay's space: the row runs along the card's bottom edge. Only meaningful with
+    /// `showsIris`.
     ///
     /// Iris LONG-press is deliberately absent: it's disabled during editing (discard moved to the
     /// Take's long-press menu — owner 2026-06-17), matching the old timeline's row.
-    var onTapIris: ((CGPoint) -> Void)? = nil
+    var onTapIris: ((CGRect) -> Void)? = nil
     /// Reports the RAW (uncapped) content height, for a host that sizes itself off it.
     var onContentHeightChange: ((CGFloat) -> Void)? = nil
     /// Seals the UIKit text view out of the accessibility tree while an overlay covers this
     /// card (audit 2026-08, V31 — the Focus row opened from the Iris). See `BlockEditor`.
     var axHidden: Bool = false
+    /// Passed through to the card's `BlockEditor`: replaces every keyboard-toolbar action while
+    /// the Focus row is open over this card.
+    var toolbarInterceptor: (() -> Void)? = nil
     /// Hides the "Created on" stamp even when the setting shows it. `KeyboardTakeEditor` sets this
     /// at accessibility text sizes while the keyboard is up (owner 2026-09-30).
     var hidesStamp: Bool = false
@@ -72,6 +77,8 @@ struct TakeEditCard: View {
     /// The editor's live frame height, and the content height it last reported.
     @State private var editorHeight: CGFloat = 60
     @State private var editorContentHeight: CGFloat = 30
+    /// The card's measured size, for the frame `onTapIris` reports.
+    @State private var cardSize: CGSize = .zero
 
     /// The "Creation date" setting — the editor shows the stamp for `.editor` and `.always` (both
     /// include the editing surface), matching `InlineTakeEditCard`.
@@ -124,6 +131,7 @@ struct TakeEditCard: View {
                     // Take's caret off-screen (device 2026-07-15).
                     atMaxHeight: effectiveContent + Self.editorLineLead >= maxHeight,
                     axHidden: axHidden,
+                    toolbarInterceptor: toolbarInterceptor,
                     onContentHeightChange: { h in
                         editorContentHeight = h
                         onContentHeightChange?(h)
@@ -178,6 +186,7 @@ struct TakeEditCard: View {
                 RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                     .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
             )
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { cardSize = $0 }
 
             if showsIris {
                 // The SAME Iris the timeline rows use, from the same view. This card is
@@ -198,7 +207,7 @@ struct TakeEditCard: View {
                     .overlay {
                         if let onTapIris {
                             TapAndLongPressRecognizer(minimumDuration: 0.45,
-                                                      onTap: onTapIris,
+                                                      onTap: { onTapIris(FocusRowView.cardFrame(irisCentre: $0, cardSize: cardSize)) },
                                                       onLongPress: {})
                         }
                     }
@@ -252,13 +261,15 @@ struct KeyboardTakeEditor: View {
     var leadingInset: CGFloat
     /// Passed through to the card's `BlockEditor` (audit 2026-08, V31).
     var axHidden: Bool = false
+    /// Passed through to the card (see `TakeEditCard.toolbarInterceptor`).
+    var toolbarInterceptor: (() -> Void)? = nil
     var trailingInset: CGFloat = 20
 
     var onOpenAngle: (() -> Void)? = nil
     var onEditReminder: (() -> Void)? = nil
     var onDiscard: (() -> Void)? = nil
-    /// Tap the Iris → the Focus row at the given WINDOW-coord centre (see `TakeEditCard`).
-    var onTapIris: ((CGPoint) -> Void)? = nil
+    /// Tap the Iris → the Focus row on this card's WINDOW-coord frame (see `TakeEditCard`).
+    var onTapIris: ((CGRect) -> Void)? = nil
 
     @Environment(\.deviceTopInset) private var deviceTopInset
     /// Measured, so the grow-up cap tracks a heading that has grown with the text size.
@@ -376,6 +387,7 @@ struct KeyboardTakeEditor: View {
                 onTapIris: onTapIris,
                 onContentHeightChange: { editorContentHeight = $0 },
                 axHidden: axHidden,
+                toolbarInterceptor: toolbarInterceptor,
                 hidesStamp: hidesStampForRoom
             )
             .padding(.leading, leadingInset)

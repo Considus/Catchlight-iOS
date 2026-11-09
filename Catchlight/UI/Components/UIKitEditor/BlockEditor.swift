@@ -40,6 +40,8 @@ struct BlockEditor: UIViewControllerRepresentable {
     /// timeline rows), so VoiceOver focus landed on the text behind the fan's veil.
     /// Set at the UIKit level, the channel the timeline's rows already use.
     var axHidden: Bool = false
+    /// Replaces every keyboard-toolbar action while set (see `EditorToolbarConfig.interceptor`).
+    var toolbarInterceptor: (() -> Void)? = nil
     /// Reports the editor's intrinsic content height, so a host can size a card to
     /// the content (up to an available max, then the editor scrolls internally).
     var onContentHeightChange: ((CGFloat) -> Void)? = nil
@@ -138,7 +140,8 @@ struct BlockEditor: UIViewControllerRepresentable {
                 onToggleDone: { [weak self] in
                     self?.parent.draft.toggleMarkedDoneAdvancingRecurring(now: Date())
                 },
-                onDismiss: { [weak self] in self?.parent.onDiscard?() }
+                onDismiss: { [weak self] in self?.parent.onDiscard?() },
+                interceptor: parent.toolbarInterceptor
             )
         }
     }

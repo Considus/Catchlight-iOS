@@ -23,6 +23,11 @@ struct RootView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.deviceBottomInset) private var deviceBottomInset
+
+    /// The software keyboard's top edge in screen coordinates (off screen when it is down),
+    /// so the Focus row, opened from the editor with the keyboard up, stays above it.
+    @State private var keyboardTopY: CGFloat = .greatestFiniteMagnitude
 
     /// Branded splash shown on every cold launch (owner 2026-06-14). `.task` runs
     /// once per RootView lifetime, so warm resumes from the background don't
@@ -222,6 +227,12 @@ struct RootView: View {
         // the bottom-aligned resting dock up to the heading whenever it happened to be
         // showing while a keyboard was up — the stray-toolbar bug (owner 2026-06-20).
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onReceive(NotificationCenter.default.publisher(
+            for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+            guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+            else { return }
+            keyboardTopY = frame.origin.y
+        }
         .overlay { focusRowOverlay }
         .sheet(isPresented: $ui.isSettingsPresented) {
             SettingsView()
@@ -385,10 +396,14 @@ struct RootView: View {
             GeometryReader { geo in
                 FocusRowView(
                     take: take,
-                    hubCentre: ui.focusRowOrigin == .zero
-                        ? CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-                        : ui.focusRowOrigin,
+                    // No card measured: the hub sits at the screen centre (a last resort).
+                    cardFrame: ui.focusRowCardFrame == .zero
+                        ? CGRect(x: geo.size.width / 2 - FocusRowView.irisCentreInset,
+                                 y: geo.size.height / 2 - FocusRowView.irisCentreInset,
+                                 width: 0, height: CatchlightLayout.cardMinHeight)
+                        : ui.focusRowCardFrame,
                     containerWidth: geo.size.width,
+                    visibleBottom: focusRowVisibleBottom(screenHeight: geo.size.height),
                     // Lift the tapped Take lit above the veil only when the fan blooms from a
                     // TIMELINE Iris. Decided at the call site (`ui.openFocusRow`), not inferred
                     // from the origin: the editing card has a real Iris origin of its own since
@@ -417,7 +432,7 @@ struct RootView: View {
                                 isImportant: isImportant
                             )
                             // Remove the fan overlay INSTANTLY first, THEN trigger the
-                            // command's card-grow/keyboard/caret relayout — so no fan
+                            // command's card-grow/caret relayout — so no fan
                             // removal transition runs through that relayout (which
                             // stranded the hub Iris as an orphan glyph, owner 2026-07-11).
                             ui.closeFocusRow(animated: false)
@@ -441,7 +456,9 @@ struct RootView: View {
                             ui.closeFocusRow()
                         }
                     },
-                    onDismiss: { ui.closeFocusRow() }
+                    onDismiss: { ui.closeFocusRow() },
+                    onReminderPickerShownChange: { ui.focusRowPickerShown = $0 },
+                    commitRequests: ui.focusRowCommitRequests
                 )
             }
             .ignoresSafeArea()
@@ -451,6 +468,16 @@ struct RootView: View {
             // Belt to the braces of the timeline/dock AX-hiding above.
             .accessibilityAddTraits(.isModal)
         }
+    }
+
+    /// The lowest the Focus row may reach. While editing, the dock is hidden and the keyboard
+    /// (when up) is the limit; otherwise the row stays above the dock, the same clearance
+    /// the timeline's last Take keeps.
+    private func focusRowVisibleBottom(screenHeight: CGFloat) -> CGFloat {
+        if ui.isEditingInPlace {
+            return min(keyboardTopY, screenHeight - deviceBottomInset)
+        }
+        return screenHeight - CatchlightLayout.dockClearance - deviceBottomInset
     }
 
     // MARK: - New item actions
