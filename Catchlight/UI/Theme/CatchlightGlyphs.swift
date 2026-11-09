@@ -149,7 +149,7 @@ enum MenuGlyph {
     static let removeImportant = bake(ImportantGlyphSlashed(size: glyphSize))
     // The solid brand "O" reads heavier than the line glyphs, so it's rendered a
     // touch smaller *within* the shared `glyphSize` slot (so it still aligns) — the
-    // SAME 26→22 (≈0.85×) reduction applied to the focus-ring-fan Obie Mark (owner 2026-07-01).
+    // SAME 26→22 (≈0.85×) reduction applied to the Focus row Obie Mark (owner 2026-07-01).
     static let obie = bake(ObieGlyph(size: glyphSize * 22 / 26))
 
     /// Rendered a touch larger than the dock glyphs — menu icons read small.

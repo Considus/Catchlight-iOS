@@ -214,7 +214,7 @@ extension Color {
     /// separate owner call (see audit C4) and are NOT switched here.
     static let ckOnAccent = Color(uiColor: UITheme.onAccent)
 
-    /// The veil — the ONE obscuring overlay for the Focus-ring, the editor, and the
+    /// The veil — the ONE obscuring overlay for the Focus row, the editor, and the
     /// Settings backdrop (owner decision 2026-06-11: solid 90% background veil
     /// everywhere; no blur, no dark tint in Daylight). Ink @ 90% (Night) /
     /// Paper @ 90% (Daylight). The screens beneath stay full-opacity — the
@@ -550,7 +550,7 @@ enum CatchlightLayout {
     /// 36. Row spacing is unaffected (the touch frame was already 44). The spine
     /// and Add-button alignment math below is parametric on this, so it follows.
     /// (Search/sequence results reuse the timeline row; the edit footer, conflict
-    /// view, and focus-ring fan pass their own explicit diameters and are unaffected.)
+    /// view, and Focus row pass their own explicit diameters and are unaffected.)
     static let circleDiameter: CGFloat = 44
     /// The distance from the dock's first column centre (`spineX`) to the Take card's
     /// leading edge: the card starts at `spineX − cardLeadingOffset`, about 20pt from

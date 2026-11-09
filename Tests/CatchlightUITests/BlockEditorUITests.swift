@@ -2,13 +2,13 @@
 //  BlockEditorUITests.swift
 //  CatchlightUITests — Phase 2 block editor
 //
-//  The core editor flow: turn prose into a checklist via the Focus ring,
+//  The core editor flow: turn prose into a checklist via the Focus row,
 //  Return-continues the list, Return on an empty item exits it, tap to tick, and
 //  (best-effort) drag-to-reorder. These assert the structural outcomes (rows
 //  appearing / changing kind / completion state), not caret positions.
 //
 //  Runtime note: the flow is deterministic on iOS 26 (all assertions run), but
-//  the iOS 17.0 SIMULATOR delivers the Focus-ring dim-commit and the rapid
+//  the iOS 17.0 SIMULATOR delivers the Focus row dim-commit and the rapid
 //  block-restructure unreliably under synthesized gestures (the same class of
 //  limitation that makes CoreFlowsUITests Flow 4 XCTSkip a synthesized long-press
 //  on the sim). So the synthesized PRECONDITIONS — the ring committing and the
@@ -27,7 +27,7 @@ final class BlockEditorUITests: XCTestCase {
         // The deployment floor is iOS 18, so
         // the block-editor / Angle UI flows are first-class on every supported
         // runtime. (They were previously skipped on the iOS 17 simulator, where
-        // the synthesized Focus-ring dim-commit and the UITextView snapshots were
+        // the synthesized Focus row dim-commit and the UITextView snapshots were
         // unreliable.)
     }
 
@@ -44,8 +44,8 @@ final class BlockEditorUITests: XCTestCase {
         return body
     }
 
-    /// Open the Focus ring from the editor footer, toggle Task on, and commit by
-    /// tapping the fan's dim (identifier "focus-ring-dim") near the TOP of the screen —
+    /// Open the Focus row from the editor footer, toggle Task on, and commit by
+    /// tapping the fan's dim (identifier "focus-row-dim") near the TOP of the screen —
     /// clear of the marks, which fan out around the footer hub. Exactly ONE
     /// commit tap: a second tap would land on the editor's own dim (exposed once
     /// the fan closes) and dismiss the editor. The wait is generous because the
@@ -55,12 +55,12 @@ final class BlockEditorUITests: XCTestCase {
         // that surfaces as `.other` (not `.button`) on iOS 18.x, so query it by
         // identifier regardless of type.
         tapWhenReady(anyElement(in: app, id: "editor-shape"))
-        let taskMark = app.buttons["focus-ring-mark-task"]
+        let taskMark = app.buttons["focus-row-mark-task"]
         try XCTSkipUnless(taskMark.waitForExistence(timeout: 3),
-                          "Focus ring did not open under synthesized gestures on this runtime.")
+                          "Focus row did not open under synthesized gestures on this runtime.")
         taskMark.tap()
 
-        let dim = app.descendants(matching: .any).matching(identifier: "focus-ring-dim").firstMatch
+        let dim = app.descendants(matching: .any).matching(identifier: "focus-row-dim").firstMatch
         _ = dim.waitForExistence(timeout: 3)
         // Commit. Retry only on a GENUINE miss: each attempt waits 3s (longer
         // than the close choreography), so we never re-tap while the fan is
@@ -73,7 +73,7 @@ final class BlockEditorUITests: XCTestCase {
             if taskMark.waitForNonExistence(timeout: 3) { closed = true; break }
         }
         try XCTSkipUnless(closed,
-            "Focus-ring dim-commit not delivered on this simulator runtime (deterministic on iOS 26; covered by unit tests + on-device QA).")
+            "Focus row dim-commit not delivered on this simulator runtime (deterministic on iOS 26; covered by unit tests + on-device QA).")
         try XCTSkipUnless(anyElement(in: app, id: "editor-shape").waitForExistence(timeout: 3),
             "Editor not present after the synthesized commit on this runtime.")
     }
@@ -105,9 +105,9 @@ final class BlockEditorUITests: XCTestCase {
         app.buttons.matching(identifier: "take-edit-checkbox")
     }
 
-    // MARK: - Focus ring begins a checklist without eating prose
+    // MARK: - Focus row begins a checklist without eating prose
 
-    /// Type prose, then Focus-ring → Task ON. Owner 2026-06-17: the existing prose
+    /// Type prose, then Focus row → Task ON. Owner 2026-06-17: the existing prose
     /// is preserved as a text row, and exactly ONE empty check item is added (the
     /// first task entry) — Task no longer converts the lines already written.
     func testFocusRing_makeTask_keepsProseAddsEmptyEntry() throws {

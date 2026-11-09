@@ -5,7 +5,7 @@
 //  The top-level composition for the product UI. Decides onboarding vs. the main
 //  app, hosts the ONE surface (the timeline — the dock morphs instead of tabs
 //  switching, redesign 2026-06-10), the persistent bottom dock, and the modal
-//  overlays (focus-ring fan, Take editor). All view models arrive via the environment
+//  overlays (Focus row, Take editor). All view models arrive via the environment
 //  from Wiring; this view owns no domain logic.
 //
 //  Spine ↔ dock alignment: the timeline spine and the dock's Add button share the
@@ -222,7 +222,7 @@ struct RootView: View {
         // the bottom-aligned resting dock up to the heading whenever it happened to be
         // showing while a keyboard was up — the stray-toolbar bug (owner 2026-06-20).
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .overlay { focusRingFanOverlay }
+        .overlay { focusRowOverlay }
         .sheet(isPresented: $ui.isSettingsPresented) {
             SettingsView()
         }
@@ -294,7 +294,7 @@ struct RootView: View {
     // `mainApp` ZStack) so each ViewBuilder stays simple enough for SwiftUI's
     // type-checker.
 
-    /// Opacity for the DOCK while a focus surface is up. Behind the focus-ring fan the
+    /// Opacity for the DOCK while a focus surface is up. Behind the Focus row the
     /// fan's own ckDim veil does the timeline recede; while editing in place the
     /// timeline masks itself (DailiesView), and the dock recedes + goes inert here so
     /// it can't start a competing action mid-edit (owner 2026-06-17).
@@ -308,8 +308,8 @@ struct RootView: View {
 
     private var fanOpacity: Double {
         // Editing / search hide the dock OUTRIGHT — and this is checked BEFORE the fan
-        // dim (owner 2026-06-21): a Focus ring opened FROM the editor sets BOTH
-        // `isEditingInPlace` and `isFocusRingFanPresented`, and if the fan check won the dock
+        // dim (owner 2026-06-21): a Focus row opened FROM the editor sets BOTH
+        // `isEditingInPlace` and `isFocusRowPresented`, and if the fan check won the dock
         // re-appeared at 18% and the keyboard's safe-area avoidance shoved it mid-screen
         // — the "ghostly toolbar" bug. While editing, the keyboard toolbar replaces the
         // dock, so hide it outright regardless of the fan. (The original reason still
@@ -317,23 +317,23 @@ struct RootView: View {
         if ui.isEditingInPlace || searchKeyboardUp { return 0 }
         // The 0.18 dim is for a fan opened from the RESTING timeline (dock recedes
         // behind the veil but stays visible).
-        if ui.isFocusRingFanPresented { return 0.18 }
+        if ui.isFocusRowPresented { return 0.18 }
         return 1
     }
 
     /// The ONE surface — the timeline. The dock's filtering/searching states
     /// narrow it live via `ui.activeTimelineFilter` (read inside DailiesView).
     ///
-    /// AX-hidden while the Focus-ring fan is up (audit 2026-08, V5 — Blocker):
+    /// AX-hidden while the Focus row is up (audit 2026-08, V5 — Blocker):
     /// the fan's veil only DIMS the surface, and neither opacity nor
     /// `allowsHitTesting(false)` removes it from the accessibility tree, so
-    /// VoiceOver could escape the open ring and create a Take underneath it.
+    /// VoiceOver could escape the open row and create a Take underneath it.
     /// Conditional, so everything returns the moment the fan closes. The
     /// while-EDITING row hiding lives inside DailiesView (the editor and its
     /// save catcher are its children and must stay reachable — RV-4/VC3).
     private var timeline: some View {
         DailiesView().environment(app.dailiesVM)
-            .accessibilityHidden(ui.isFocusRingFanPresented)
+            .accessibilityHidden(ui.isFocusRowPresented)
     }
 
     /// The persistent bottom dock (morphs between resting / filtering / searching).
@@ -348,7 +348,7 @@ struct RootView: View {
             // AX-hidden behind BOTH overlays (V5 + RV-4/VC3): visually it dims to
             // 18% behind the fan and 0 while editing, but stayed fully present in
             // the accessibility tree — the escape hatch V5 walked through.
-            .accessibilityHidden(ui.isFocusRingFanPresented || ui.isEditingInPlace)
+            .accessibilityHidden(ui.isFocusRowPresented || ui.isEditingInPlace)
             // Read LAST (audit 2026-08, V30): the dock vends in the same flattened
             // container as DailiesView's heading + pinned Obie, BEFORE the nested
             // timeline collection — so VoiceOver read Obie, then the dock, then the
@@ -380,25 +380,25 @@ struct RootView: View {
     // MARK: - Overlays
 
     @ViewBuilder
-    private var focusRingFanOverlay: some View {
-        if let take = ui.focusRingFanTake {
+    private var focusRowOverlay: some View {
+        if let take = ui.focusRowTake {
             GeometryReader { geo in
-                FocusRingFanView(
+                FocusRowView(
                     take: take,
-                    hubCentre: ui.focusRingFanOrigin == .zero
+                    hubCentre: ui.focusRowOrigin == .zero
                         ? CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-                        : ui.focusRingFanOrigin,
+                        : ui.focusRowOrigin,
                     containerWidth: geo.size.width,
                     // Lift the tapped Take lit above the veil only when the fan blooms from a
-                    // TIMELINE Iris. Decided at the call site (`ui.openFocusRingFan`), not inferred
+                    // TIMELINE Iris. Decided at the call site (`ui.openFocusRow`), not inferred
                     // from the origin: the editing card has a real Iris origin of its own since
                     // M5b, but the editor is already the context there — and the spotlight draws a
                     // READ card, so it read as the Take shrinking (owner 2026-07-16).
-                    showsFocusCard: ui.focusRingFanShowsCard,
+                    showsFocusCard: ui.focusRowShowsCard,
                     onCommit: { isNote, isTask, hasReminder, reminderDate, reminderAlarm, reminderAllDay, reminderRecurrence, reminderWeekdays, reminderLocation, isImportant in
-                        // Task 6.20: focus-ring-fan commit is a mutation — gate it.
+                        // Task 6.20: Focus row commit is a mutation — gate it.
                         guard app.ensureEntitled() else {
-                            ui.closeFocusRingFan()
+                            ui.closeFocusRow()
                             return
                         }
                         if ui.editingTakeID == take.id {
@@ -420,12 +420,12 @@ struct RootView: View {
                             // command's card-grow/keyboard/caret relayout — so no fan
                             // removal transition runs through that relayout (which
                             // stranded the hub Iris as an orphan glyph, owner 2026-07-11).
-                            ui.closeFocusRingFan(animated: false)
+                            ui.closeFocusRow(animated: false)
                             ui.inlineFanCommand = command
                         } else {
-                            // A conflict may have arrived while the ring was open.
+                            // A conflict may have arrived while the row was open.
                             guard app.ensureNotHeld(take.id) else {
-                                ui.closeFocusRingFan()
+                                ui.closeFocusRow()
                                 return
                             }
                             app.dailiesVM.applyActivityTypes(
@@ -438,16 +438,16 @@ struct RootView: View {
                                 reminderLocation: reminderLocation,
                                 isImportant: isImportant
                             )
-                            ui.closeFocusRingFan()
+                            ui.closeFocusRow()
                         }
                     },
-                    onDismiss: { ui.closeFocusRingFan() }
+                    onDismiss: { ui.closeFocusRow() }
                 )
             }
             .ignoresSafeArea()
             .transition(.opacity)
             // Modal to assistive technologies (V5): VoiceOver keeps focus inside
-            // the open ring instead of flicking out to the surface behind it.
+            // the open row instead of flicking out to the surface behind it.
             // Belt to the braces of the timeline/dock AX-hiding above.
             .accessibilityAddTraits(.isModal)
         }

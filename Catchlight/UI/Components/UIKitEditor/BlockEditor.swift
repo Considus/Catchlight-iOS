@@ -34,7 +34,7 @@ struct BlockEditor: UIViewControllerRepresentable {
     /// content by a layout pass, and scrolling jumps the text instead of letting the card grow.
     var atMaxHeight: Bool = false
 
-    /// Audit 2026-08, V31: while the Focus-ring fan is up over this editor, the text
+    /// Audit 2026-08, V31: while the Focus row is up over this editor, the text
     /// view must LEAVE the accessibility tree. The host's SwiftUI `.accessibilityHidden`
     /// does not reach UIKit-vended elements (measured 2026-08-20, same limit as the
     /// timeline rows), so VoiceOver focus landed on the text behind the fan's veil.
@@ -127,7 +127,7 @@ struct BlockEditor: UIViewControllerRepresentable {
                 isDone: parent.draft.isMarkedDone,
                 doneEnabled: parent.draft.canBeMarkedDone,
                 // A "where" counts as a reminder exactly like a "when" (place/time parity,
-                // 2026-07-01) — the Focus ring's Remind mark has read it that way since, and
+                // 2026-07-01) — the Focus row's Remind mark has read it that way since, and
                 // the toolbar bell now TINTS on it (owner 2026-08-16), so a time-only test
                 // would leave a place reminder showing the untinted "add" bell while the
                 // button in fact opens the picker on the place already set.

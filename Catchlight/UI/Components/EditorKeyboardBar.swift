@@ -40,7 +40,7 @@ struct EditorToolbarConfig {
     var onOpenAngle: () -> Void
     /// Open the reminder picker for THIS Take (owner 2026-06-21). When supplied,
     /// slot 2 becomes a Reminder button wherever the Angle would be greyed (a note or
-    /// reminder-only Take) — editing the time/cadence in place, no Focus-ring detour.
+    /// reminder-only Take) — editing the time/cadence in place, no Focus row detour.
     /// nil where the host can't present the picker (e.g. Storyboard), leaving the
     /// previous greyed-Angle behaviour.
     var onReminder: (() -> Void)? = nil
@@ -83,7 +83,7 @@ struct EditorKeyboardBar: View {
             .frame(maxWidth: .infinity)
 
             // 2 — the REMINDER bell, on BOTH editors (audit round 9): edit
-            // the time on a reminder Take, or add one, without the Focus-ring
+            // the time on a reminder Take, or add one, without the Focus row
             // detour. A task previously had NO route to its reminder at all — the
             // Angle sat here, and the ring's Reminders blade TOGGLES (one tap turns
             // the reminder off, a second creates a new one at the default offset,
@@ -113,7 +113,7 @@ struct EditorKeyboardBar: View {
 
             // 3 — a TASK gets the Shot List here (Discard · bell · Shot
             // List · Done); a note keeps Important. Important LEAVES the task
-            // toolbar — it stays reachable from the Focus ring and the row's
+            // toolbar — it stays reachable from the Focus row and the row's
             // long-press menu, and the four-slot bar has no fifth slot to give.
             if config.angleEnabled {
                 slot(enabled: true, identifier: "angle-button",

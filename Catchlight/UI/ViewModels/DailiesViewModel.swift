@@ -724,10 +724,10 @@ final class DailiesViewModel {
         save(t)
     }
 
-    // MARK: - Activity-type toggles (focus-ring fan applies these)
+    // MARK: - Activity-type toggles (Focus row applies these)
 
-    /// Apply the focus-ring-fan selection to a Take, enforcing the Note floor.
-    /// `reminderDate` is the time chosen in the Focus-ring's picker (owner
+    /// Apply the Focus row selection to a Take, enforcing the Note floor.
+    /// `reminderDate` is the time chosen in the Focus row's picker (owner
     /// 2026-06-17); falls back to any existing reminder time, then +24h.
     func applyActivityTypes(to take: Take,
                             isNote: Bool,
@@ -768,7 +768,7 @@ final class DailiesViewModel {
         }
         updated.normaliseActivityFloor()
 
-        // The Focus-ring's fourth Mark now toggles Important, not Obie (owner 2026-07-06).
+        // The Focus row's fourth Mark now toggles Important, not Obie (owner 2026-07-06).
         // Obie is left exactly as it was — the fan no longer designates or clears it (that
         // lives on the Iris long-press). An Obie always stays Important (model invariant),
         // so OR it in rather than letting a fan toggle strip the flag off a pinned Take.
@@ -793,11 +793,11 @@ final class DailiesViewModel {
     }
 
     /// Long-press on an Obie's Iris turns it back into a standard Take (owner
-    /// 2026-07-04). Mirrors the Focus-ring "Obie off" path: clear the flag and
+    /// 2026-07-04). Mirrors the Focus row "Obie off" path: clear the flag and
     /// re-save — `upsert` re-seals the payload and clears the isObie column, and
     /// `save` reloads + notifies. NOT entitlement-gated: removing a designation is
     /// always allowed, even on a lapsed trial. (The auto-set Important flag is left
-    /// as-is, matching the Focus-ring demote.)
+    /// as-is, matching the Focus row demote.)
     func demoteObie(_ take: Take) {
         var t = take
         t.isObie = false

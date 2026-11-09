@@ -30,7 +30,7 @@ final class OverlayContainmentUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    /// V5: while the Focus ring is open, the timeline rows must be out of the
+    /// V5: while the Focus row is open, the timeline rows must be out of the
     /// tree, and must return when the ring closes.
     func testFocusRing_sealsRows_andRestoresOnClose() throws {
         let app = launchAppForUITesting()
@@ -38,22 +38,22 @@ final class OverlayContainmentUITests: XCTestCase {
                       "Timeline did not load")
 
         tapWhenReady(anyElement(in: app, id: "take-iris"))
-        try XCTSkipUnless(app.buttons["focus-ring-mark-task"].waitForExistence(timeout: 3),
-                          "Focus ring did not open under synthesized gestures on this runtime.")
+        try XCTSkipUnless(app.buttons["focus-row-mark-task"].waitForExistence(timeout: 3),
+                          "Focus row did not open under synthesized gestures on this runtime.")
 
         XCTAssertTrue(anyElement(in: app, id: "take-row").waitForNonExistence(timeout: 3),
-                      "Timeline rows are still in the accessibility tree behind the open Focus ring (V5)")
+                      "Timeline rows are still in the accessibility tree behind the open Focus row (V5)")
         XCTAssertFalse(anyElement(in: app, id: "take-iris").exists,
-                       "Row Irises are still in the accessibility tree behind the open Focus ring (V5)")
+                       "Row Irises are still in the accessibility tree behind the open Focus row (V5)")
 
         // Dismiss via the dim at a corner far from any mark (Flow 2 idiom —
         // a coordinate tap is HID-level, unaffected by accessibility hiding).
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.12)).tap()
-        try XCTSkipUnless(app.buttons["focus-ring-mark-task"].waitForNonExistence(timeout: 3),
-                          "Focus-ring dim-commit not delivered on this runtime.")
+        try XCTSkipUnless(app.buttons["focus-row-mark-task"].waitForNonExistence(timeout: 3),
+                          "Focus row dim-commit not delivered on this runtime.")
 
         XCTAssertTrue(anyElement(in: app, id: "take-row").waitForExistence(timeout: 3),
-                      "Timeline rows did not return to the accessibility tree after the Focus ring closed")
+                      "Timeline rows did not return to the accessibility tree after the Focus row closed")
     }
 
     /// RV-4/VC3 (Dailies): while an edit is open, the rows must be out of the
@@ -83,13 +83,13 @@ final class OverlayContainmentUITests: XCTestCase {
         let app = launchAppForUITesting()
 
         tapWhenReady(anyElement(in: app, id: "take-iris"))
-        let taskMark = app.buttons["focus-ring-mark-task"]
+        let taskMark = app.buttons["focus-row-mark-task"]
         try XCTSkipUnless(taskMark.waitForExistence(timeout: 3),
-                          "Focus ring did not open under synthesized gestures on this runtime.")
+                          "Focus row did not open under synthesized gestures on this runtime.")
         taskMark.tap()
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.12)).tap()
         try XCTSkipUnless(taskMark.waitForNonExistence(timeout: 3),
-                          "Focus-ring dim-commit not delivered on this runtime.")
+                          "Focus row dim-commit not delivered on this runtime.")
 
         tapWhenReady(app.buttons["angle-tab"])
         let row = anyElement(in: app, id: "storyboard-row")

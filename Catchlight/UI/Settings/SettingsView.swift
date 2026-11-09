@@ -427,7 +427,7 @@ struct SettingsView: View {
     private var remindersSection: some View {
         Section {
             // How many hours ahead a freshly-added reminder opens to (owner 2026-06-18).
-            // `FocusRingFanView.defaultReminderDate` reads the same key.
+            // `FocusRowView.defaultReminderDate` reads the same key.
             menuPickerRow(icon: "clock",
                           label: "Default timing",
                           accessibilityLabel: "Default reminder timing",

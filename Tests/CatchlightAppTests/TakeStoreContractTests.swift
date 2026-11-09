@@ -272,7 +272,7 @@ class TakeStoreContractTests: XCTestCase {
         XCTAssertEqual(try store.allTakes().filter(\.isObie).count, 1)
     }
 
-    /// The inline editor (Iris / Focus-ring) and "Obie this" capture persist an
+    /// The inline editor (Iris / Focus row) and "Obie this" capture persist an
     /// Obie by UPSERTING a Take with isObie = true (vm.save → store.upsert), NOT via
     /// setObie. Both implementations claim upsert enforces the single-Obie invariant.
     /// Repro for owner-reported 2026-06-23: a second Obie set via the Iris persisted

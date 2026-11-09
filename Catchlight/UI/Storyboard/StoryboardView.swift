@@ -237,7 +237,7 @@ struct StoryboardView: View {
     private var reminderEditorSheet: some View {
         let existing = editDraft?.timeReminder
         ReminderPickerSheet(
-            initialDate: existing?.scheduledDate ?? FocusRingFanView.defaultReminderDate,
+            initialDate: existing?.scheduledDate ?? FocusRowView.defaultReminderDate,
             initialAlarm: existing?.alarmEnabled ?? true,
             initialAllDay: existing?.isAllDay ?? false,
             initialRecurrence: existing?.recurrence ?? .none,

@@ -90,7 +90,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// Swipe actions (native), wired to the host's entitlement-gated Take actions.
     var onToggleDone: (Take) -> Void = { _ in }
     var onDelete: (Take) -> Void = { _ in }
-    /// Iris tap → open the Focus-ring fan at the given WINDOW-coord centre; long-press
+    /// Iris tap → open the Focus row at the given WINDOW-coord centre; long-press
     /// → toggle Obie. Wired to the same `ui`/`vm` the SwiftUI timeline uses.
     var onTapCircle: (Take, CGPoint) -> Void = { _, _ in }
     var onLongPressCircle: (Take) -> Void = { _ in }
@@ -110,7 +110,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// otherwise sits above the SwiftUI veil for hit-testing — tap-between-Takes was dead).
     var isEditing: Bool = false
     /// Audit 2026-08 (V5 + RV-4/VC3): remove the rows from the accessibility tree
-    /// while an overlay covers them (in-place editor OR the Focus-ring fan).
+    /// while an overlay covers them (in-place editor OR the Focus row).
     /// Distinct from `isEditing`, which also dims — the fan case hides without
     /// the editing dim (its own veil does the visual recede).
     var axHidden: Bool = false
@@ -224,7 +224,7 @@ struct TimelineReadCell: View {
     /// timeline said OVERDUE (found 2026-07-16 while re-anchoring the Feature Register).
     var isSnoozed: Bool = false
     /// Iris tap → the CGPoint is the Iris centre in WINDOW (global) coords, so the
-    /// host can bloom the Focus-ring fan in place (matches `RootView`'s full-screen
+    /// host can bloom the Focus row in place (matches `RootView`'s full-screen
     /// `ignoresSafeArea` overlay space). Long-press → toggle Obie. Both reuse the
     /// existing `TapAndLongPressRecognizer` from `TakeRowView` (built to survive the
     /// move to a UIKit-hosted cell).
@@ -264,7 +264,7 @@ struct TimelineReadCell: View {
         Color.clear
             .frame(width: d, height: d)
             .contentShape(Rectangle())
-            // Tap → Focus-ring fan, long-press (0.45s, .began) → toggle Obie. Same
+            // Tap → Focus row, long-press (0.45s, .began) → toggle Obie. Same
             // recognizer the SwiftUI row uses; `convert(_:to: nil)` yields the Iris
             // centre in window coords.
             .overlay(
@@ -1008,7 +1008,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     }
 
     /// Audit 2026-08, V5 + RV-4/VC3: while an overlay (the in-place editor or the
-    /// Focus-ring fan) is up, the rows must LEAVE the accessibility tree, not just
+    /// Focus row) is up, the rows must LEAVE the accessibility tree, not just
     /// dim — `alpha` and `isUserInteractionEnabled` do not remove elements, so
     /// VoiceOver could still reach a background Take and Voice Control still spoke
     /// its name. Set at the UIKit level because the row elements are vended by

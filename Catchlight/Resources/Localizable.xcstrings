@@ -40533,338 +40533,338 @@
         }
       }
     },
-    "Opens the Focus ring to change what this Take is." : {
+    "Opens the Focus row to change what this Take is." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnet den Fokus-Ring, um zu ändern, was dieser Take ist."
+            "value" : "Öffnet die Fokus-Zeile, um zu ändern, was dieser Take ist."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvre l’anneau de focus pour modifier le type de ce Take."
+            "value" : "Ouvre la rangée Focus pour modifier le type de ce Take."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre el anillo de enfoque para cambiar qué tipo de Take es este."
+            "value" : "Abre la fila de enfoque para cambiar qué tipo de Take es este."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apre l'anello Focus per modificare la categoria di questo Take."
+            "value" : "Apre la riga Focus per modificare la categoria di questo Take."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre o anel de foco para alterar o tipo deste Take."
+            "value" : "Abre a linha de foco para alterar o tipo deste Take."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opent de Focus-ring om het type van deze Take te wijzigen."
+            "value" : "Opent de Focus-rij om het type van deze Take te wijzigen."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre o anel de Foco para alterar o tipo deste Take."
+            "value" : "Abre a linha de Foco para alterar o tipo deste Take."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Otwiera pierścień ostrości, aby zmienić, czym jest ten Take."
+            "value" : "Otwiera wiersz ostrości, aby zmienić, czym jest ten Take."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öppnar Focus-cirkeln så att du kan ändra vad den här Taken är."
+            "value" : "Öppnar Focus-raden så att du kan ändra vad den här Taken är."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Åbner Fokusringen for at ændre, hvad denne Take er."
+            "value" : "Åbner Fokusrækken for at ændre, hvad denne Take er."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Åpner Fokus-ringen, der du kan endre hva denne Take-en er."
+            "value" : "Åpner Fokus-raden, der du kan endre hva denne Take-en er."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avaa tarkennusrenkaan, jolla voit muuttaa tämän Take:n tyyppiä."
+            "value" : "Avaa tarkennusrivin, jolla voit muuttaa tämän Take:n tyyppiä."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu Take'in ne olduğunu değiştirmek için Odak halkasını açar."
+            "value" : "Bu Take'in ne olduğunu değiştirmek için Odak satırını açar."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このTakeの種類を変更するためフォーカスリングを開きます。"
+            "value" : "このTakeの種類を変更するためフォーカス行を開きます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus 링을 열어 이 Take의 종류를 변경합니다."
+            "value" : "Focus 행을 열어 이 Take의 종류를 변경합니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开焦点环，以更改这条 Take 的类型。"
+            "value" : "打开焦点行，以更改这条 Take 的类型。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟焦點環以變更此 Take 的內容。"
+            "value" : "開啟焦點列以變更此 Take 的內容。"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เปิด Focus ring เพื่อเปลี่ยนประเภทของ Take นี้"
+            "value" : "เปิดแถว Focus เพื่อเปลี่ยนประเภทของ Take นี้"
           }
         }
       }
     },
-    "Opens the Focus ring. Use the actions rotor to make this your Obie." : {
+    "Opens the Focus row. Use the actions rotor to make this your Obie." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnet den Fokusring. Über den Aktionen-Rotor machst du diesen Take zu deinem Obie."
+            "value" : "Öffnet die Fokus-Zeile. Über den Aktionen-Rotor machst du diesen Take zu deinem Obie."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvre l’anneau de focus. Utilisez le rotor d’actions pour en faire votre Obie."
+            "value" : "Ouvre la rangée Focus. Utilisez le rotor d’actions pour en faire votre Obie."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre el anillo de enfoque. Usa el rotor de acciones para convertir esto en tu Obie."
+            "value" : "Abre la fila de enfoque. Usa el rotor de acciones para convertir esto en tu Obie."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apre l'anello Focus. Usa il rotore delle azioni per renderlo il tuo Obie."
+            "value" : "Apre la riga Focus. Usa il rotore delle azioni per renderlo il tuo Obie."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre o anel de foco. Use o rotor de ações para torná-lo seu Obie."
+            "value" : "Abre a linha de foco. Use o rotor de ações para torná-lo seu Obie."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opent de Focus-ring. Gebruik de actierotor om deze als Obie in te stellen."
+            "value" : "Opent de Focus-rij. Gebruik de actierotor om deze als Obie in te stellen."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre o anel de Foco. Use o rotor de ações para tornar este o seu Obie."
+            "value" : "Abre a linha de Foco. Use o rotor de ações para tornar este o seu Obie."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Otwiera pierścień Focus. Użyj pokrętła czynności, aby ustawić to ujęcie jako Obie."
+            "value" : "Otwiera wiersz Focus. Użyj pokrętła czynności, aby ustawić to ujęcie jako Obie."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öppnar Focus-cirkeln. Använd åtgärdsrotorn för att göra den här till din Obie."
+            "value" : "Öppnar Focus-raden. Använd åtgärdsrotorn för att göra den här till din Obie."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Åbner Fokusringen. Brug handlingsrotoren til at gøre dette til din Obie."
+            "value" : "Åbner Fokusrækken. Brug handlingsrotoren til at gøre dette til din Obie."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Åpner Fokus-ringen. Bruk handlingsrotoren for å gjøre denne til Obie-en din."
+            "value" : "Åpner Fokus-raden. Bruk handlingsrotoren for å gjøre denne til Obie-en din."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avaa tarkennusrenkaan. Tee tästä Obie käyttämällä roottorin Toiminnot-valintaa."
+            "value" : "Avaa tarkennusrivin. Tee tästä Obie käyttämällä roottorin Toiminnot-valintaa."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Odak halkasını açar. Bunu Obie'niz yapmak için eylemler rotorunu kullanın."
+            "value" : "Odak satırını açar. Bunu Obie'niz yapmak için eylemler rotorunu kullanın."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "フォーカスリングを開きます。アクションローターを使用してこれをObieにします。"
+            "value" : "フォーカス行を開きます。アクションローターを使用してこれをObieにします。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus 링을 엽니다. 동작 로터를 사용해 이 항목을 Obie로 설정하세요."
+            "value" : "Focus 행을 엽니다. 동작 로터를 사용해 이 항목을 Obie로 설정하세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开焦点环。使用操作转子将其设为你的 Obie。"
+            "value" : "打开焦点行。使用操作转子将其设为你的 Obie。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟焦點環。使用動作轉盤選擇「設為 Obie」，然後點兩下。只能有一個 Obie，因為最重要的只能有一個。"
+            "value" : "開啟焦點列。使用動作轉盤選擇「設為 Obie」，然後點兩下。只能有一個 Obie，因為最重要的只能有一個。"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เปิด Focus ring ใช้โรเตอร์การดำเนินการเพื่อตั้งค่านี้เป็น Obie ของคุณ"
+            "value" : "เปิดแถว Focus ใช้โรเตอร์การดำเนินการเพื่อตั้งค่านี้เป็น Obie ของคุณ"
           }
         }
       }
     },
-    "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take." : {
+    "Opens the Focus row. Use the actions rotor to turn this back into a standard Take." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnet den Fokus-Ring. Verwende den Aktionsrotor, um ihn wieder in einen standardmäßigen Take umzuwandeln."
+            "value" : "Öffnet die Fokus-Zeile. Verwende den Aktionsrotor, um ihn wieder in einen standardmäßigen Take umzuwandeln."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvre l’anneau de focus. Utilisez le rotor d’actions pour rétablir ce Take en Take standard."
+            "value" : "Ouvre la rangée Focus. Utilisez le rotor d’actions pour rétablir ce Take en Take standard."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre el anillo de enfoque. Usa el rotor de acciones para volver a convertir esto en un Take estándar."
+            "value" : "Abre la fila de enfoque. Usa el rotor de acciones para volver a convertir esto en un Take estándar."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apre l'anello Focus. Usa il rotore delle azioni per ripristinarlo come Take standard."
+            "value" : "Apre la riga Focus. Usa il rotore delle azioni per ripristinarlo come Take standard."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre o anel de foco. Use o rotor de ações para voltar a torná-lo um Take padrão."
+            "value" : "Abre a linha de foco. Use o rotor de ações para voltar a torná-lo um Take padrão."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opent de Focus-ring. Gebruik de actierotor om deze terug te zetten als standaard-Take."
+            "value" : "Opent de Focus-rij. Gebruik de actierotor om deze terug te zetten als standaard-Take."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre o anel de Foco. Use o rotor de ações para voltar a converter este num Take padrão."
+            "value" : "Abre a linha de Foco. Use o rotor de ações para voltar a converter este num Take padrão."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Otwiera pierścień ostrości. Użyj pokrętła Czynności, aby z powrotem zmienić go w zwykły Take."
+            "value" : "Otwiera wiersz ostrości. Użyj pokrętła Czynności, aby z powrotem zmienić go w zwykły Take."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öppnar Focus-cirkeln. Använd åtgärdsrotorn för att göra om den här till en vanlig Take."
+            "value" : "Öppnar Focus-raden. Använd åtgärdsrotorn för att göra om den här till en vanlig Take."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Åbner Fokusringen. Brug handlingsrotoren til at gøre dette til en standard-Take igen."
+            "value" : "Åbner Fokusrækken. Brug handlingsrotoren til at gøre dette til en standard-Take igen."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Åpner Fokus-ringen. Bruk handlingsrotoren for å gjøre denne om til en vanlig Take igjen."
+            "value" : "Åpner Fokus-raden. Bruk handlingsrotoren for å gjøre denne om til en vanlig Take igjen."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avaa tarkennusrenkaan. Muuta tämä takaisin tavalliseksi Take:ksi käyttämällä roottorin Toiminnot-valintaa."
+            "value" : "Avaa tarkennusrivin. Muuta tämä takaisin tavalliseksi Take:ksi käyttämällä roottorin Toiminnot-valintaa."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Odak halkasını açar. Bunu tekrar standart bir Take'e dönüştürmek için eylemler rotorunu kullanın."
+            "value" : "Odak satırını açar. Bunu tekrar standart bir Take'e dönüştürmek için eylemler rotorunu kullanın."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "フォーカスリングを開きます。アクションローターを使用してこれを標準のTakeに戻します。"
+            "value" : "フォーカス行を開きます。アクションローターを使用してこれを標準のTakeに戻します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus 링을 엽니다. 동작 로터를 사용해 이 항목을 일반 Take로 되돌리세요."
+            "value" : "Focus 행을 엽니다. 동작 로터를 사용해 이 항목을 일반 Take로 되돌리세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开焦点环。使用操作转子将其改回标准 Take。"
+            "value" : "打开焦点行。使用操作转子将其改回标准 Take。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟焦點環。使用動作轉盤將此 Take 還原為標準 Take。"
+            "value" : "開啟焦點列。使用動作轉盤將此 Take 還原為標準 Take。"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เปิด Focus ring ใช้โรเตอร์การดำเนินการเพื่อเปลี่ยนกลับเป็น Take ทั่วไป"
+            "value" : "เปิดแถว Focus ใช้โรเตอร์การดำเนินการเพื่อเปลี่ยนกลับเป็น Take ทั่วไป"
           }
         }
       }

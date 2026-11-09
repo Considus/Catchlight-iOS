@@ -54,15 +54,15 @@ final class CoreFlowsUITests: XCTestCase {
         XCTAssertTrue(newRow.waitForExistence(timeout: 3), "Newly created Take is not visible in Dailies")
     }
 
-    // MARK: - Flow 2 — Shape a Take (Focus-ring)
+    // MARK: - Flow 2 — Shape a Take (Focus row)
 
-    /// Tap a Take's Iris (1) → Focus-ring opens → tap a mark (2) → tap the dim
+    /// Tap a Take's Iris (1) → Focus row opens → tap a mark (2) → tap the dim
     /// overlay to commit + close. The Take's row should now advertise the new
     /// Task state via its composed accessibility label.
     ///
-    /// History: prior to the post-7.4 fix, `FocusRingFanView`'s dim-tap called
+    /// History: prior to the post-7.4 fix, `FocusRowView`'s dim-tap called
     /// `retractAndDismiss()` with the default `commit: false`, silently
-    /// dropping every Focus-ring edit. The dim-tap is now the commit gesture
+    /// dropping every Focus row edit. The dim-tap is now the commit gesture
     /// (`commit: true`), wired through `onCommit → applyActivityTypes`.
     func testFlow2_shapeTake_focusRingEditsCommitToTheRow() {
         let app = launchAppForUITesting()
@@ -78,16 +78,16 @@ final class CoreFlowsUITests: XCTestCase {
         let firstIris = app.descendants(matching: .any).matching(identifier: "take-iris").firstMatch
         XCTAssertTrue(firstIris.waitForExistence(timeout: 3), "No Iris found on Dailies")
 
-        // Tap 1: Iris → Focus-ring appears.
+        // Tap 1: Iris → Focus row appears.
         assertReachableInTwoInteractions(
-            "Flow 2: open Focus-ring",
+            "Flow 2: open Focus row",
             firstInteraction: { firstIris.tap() },
-            expectedElement: app.buttons["focus-ring-mark-task"]
+            expectedElement: app.buttons["focus-row-mark-task"]
         )
 
         // Tap 2 (counted toward the two-tap rule): toggle Task on. The accessibility
         // value flips to "active" — fan-internal sanity check.
-        let taskMark = app.buttons["focus-ring-mark-task"]
+        let taskMark = app.buttons["focus-row-mark-task"]
         let before = taskMark.value as? String ?? ""
         taskMark.tap()
         XCTAssertNotEqual(taskMark.value as? String ?? "", before,
@@ -100,13 +100,13 @@ final class CoreFlowsUITests: XCTestCase {
         // for full-bleed gesture targets without a hosting Button).
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.12)).tap()
 
-        // After the commit + close, the Focus-ring should be gone and the row's
+        // After the commit + close, the Focus row should be gone and the row's
         // composed label should now mention Task. Wait for the mark to vanish
         // first so we know retractAndDismiss completed (it animates over ~0.4s
         // then fires onCommit on the main queue).
         XCTAssertTrue(
-            app.buttons["focus-ring-mark-task"].waitForNonExistence(timeout: 3),
-            "Focus-ring did not close after dim tap"
+            app.buttons["focus-row-mark-task"].waitForNonExistence(timeout: 3),
+            "Focus row did not close after dim tap"
         )
 
         let predicate = NSPredicate(
@@ -116,7 +116,7 @@ final class CoreFlowsUITests: XCTestCase {
         let updatedRow = app.descendants(matching: .any).matching(predicate).firstMatch
         XCTAssertTrue(
             updatedRow.waitForExistence(timeout: 3),
-            "Take row did not reflect Task state after Focus-ring commit"
+            "Take row did not reflect Task state after Focus row commit"
         )
     }
 
@@ -193,7 +193,7 @@ final class CoreFlowsUITests: XCTestCase {
             // synthesized long presses at the leading-edge Iris position are
             // swallowed by the system before reaching the app — verified
             // empirically: a TAP through the very same UIKit recognizer opens
-            // the Focus-ring (so touch delivery to the view is fine), an identical
+            // the Focus row (so touch delivery to the view is fine), an identical
             // UILongPressGestureRecognizer fires ~30pt to the right (the row's
             // context menu), and SwiftUI/Button/UIKit long-press variants all
             // fail only at this position. Real-finger behaviour is on the

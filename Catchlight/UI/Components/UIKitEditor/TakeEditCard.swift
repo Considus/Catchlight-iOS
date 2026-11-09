@@ -50,10 +50,10 @@ struct TakeEditCard: View {
     var onEditReminder: (() -> Void)? = nil
     /// The keyboard × discards (revert); save is the host's tap-away.
     var onDiscard: (() -> Void)? = nil
-    /// Tap the Iris → open the Focus-ring fan against the LIVE DRAFT (owner 2026-06-17, so the
+    /// Tap the Iris → open the Focus row against the LIVE DRAFT (owner 2026-06-17, so the
     /// fan reflects unsaved shaping and its commit routes back to the draft — `RootView` does
     /// that routing off `ui.editingTakeID`). The `CGPoint` is the Iris centre in WINDOW coords,
-    /// which is the Focus-ring overlay's space. Only meaningful with `showsIris`.
+    /// which is the Focus row overlay's space. Only meaningful with `showsIris`.
     ///
     /// Iris LONG-press is deliberately absent: it's disabled during editing (discard moved to the
     /// Take's long-press menu — owner 2026-06-17), matching the old timeline's row.
@@ -61,7 +61,7 @@ struct TakeEditCard: View {
     /// Reports the RAW (uncapped) content height, for a host that sizes itself off it.
     var onContentHeightChange: ((CGFloat) -> Void)? = nil
     /// Seals the UIKit text view out of the accessibility tree while an overlay covers this
-    /// card (audit 2026-08, V31 — the Focus-ring fan opened from the Iris). See `BlockEditor`.
+    /// card (audit 2026-08, V31 — the Focus row opened from the Iris). See `BlockEditor`.
     var axHidden: Bool = false
     /// Hides the "Created on" stamp even when the setting shows it. `KeyboardTakeEditor` sets this
     /// at accessibility text sizes while the keyboard is up (owner 2026-09-30).
@@ -190,7 +190,7 @@ struct TakeEditCard: View {
                 Color.clear
                     .frame(width: d, height: d)
                     .contentShape(Rectangle())
-                    // Tap → the Focus-ring fan, as on a read card. This card's Iris was purely
+                    // Tap → the Focus row, as on a read card. This card's Iris was purely
                     // DECORATIVE from M4.7 until 2026-07-16: on the old timeline the row's own
                     // Iris stays beside the editor and carries the gesture, so nothing was lost
                     // until M5a routed every edit through this floating card. Reuses the row's
@@ -202,7 +202,7 @@ struct TakeEditCard: View {
                                                       onLongPress: {})
                         }
                     }
-                    // ⚠️ TEST CONTRACT: the XCUITests open the Focus ring through "editor-shape"
+                    // ⚠️ TEST CONTRACT: the XCUITests open the Focus row through "editor-shape"
                     // (the EDITING card's Iris) — the retired row-hosted editor published it, and
                     // it moved here with the card. Queried type-agnostically (`anyElement`), since
                     // a SwiftUI a11y element surfaces as .other on some runtimes and .button on
@@ -214,7 +214,7 @@ struct TakeEditCard: View {
                     // said what the Take is. Reads the DRAFT, so it follows the shape
                     // as the user changes it.
                     .accessibilityLabel(TakeRowView.irisAccessibilityLabel(for: draft))
-                    .accessibilityHint("Opens the Focus ring to change what this Take is.")
+                    .accessibilityHint("Opens the Focus row to change what this Take is.")
                     // V10 (audit 2026-08): announce as a button like the Obie row's
                     // Iris — the same control must not read differently per host.
                     .accessibilityAddTraits(.isButton)
@@ -257,7 +257,7 @@ struct KeyboardTakeEditor: View {
     var onOpenAngle: (() -> Void)? = nil
     var onEditReminder: (() -> Void)? = nil
     var onDiscard: (() -> Void)? = nil
-    /// Tap the Iris → the Focus-ring fan at the given WINDOW-coord centre (see `TakeEditCard`).
+    /// Tap the Iris → the Focus row at the given WINDOW-coord centre (see `TakeEditCard`).
     var onTapIris: ((CGPoint) -> Void)? = nil
 
     @Environment(\.deviceTopInset) private var deviceTopInset
@@ -318,7 +318,7 @@ struct KeyboardTakeEditor: View {
     ///
     /// That heading is drawn AFTER this card in `DailiesView`'s ZStack and takes taps across its whole
     /// frame (`contentShape` + `timelineBackgroundTap`), so an overlapped Iris isn't merely hidden
-    /// under the fade, it's dead: a tap meant for the Focus ring commits the edit instead (owner
+    /// under the fade, it's dead: a tap meant for the Focus row commits the edit instead (owner
     /// 2026-08-11). The Iris sits `irisInset` below the card's top, so the card itself needs only
     /// the rest of the headroom.
     private var irisReserve: CGFloat {

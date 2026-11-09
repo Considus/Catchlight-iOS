@@ -140,9 +140,9 @@ final class TakeRowViewTests: XCTestCase {
         let obie = Take(blocks: [.textLine("x")], isObie: true)
         let standard = Take(blocks: [.textLine("x")])
         XCTAssertEqual(TakeRowView.irisAccessibilityHint(for: standard),
-                       "Opens the Focus ring. Use the actions rotor to make this your Obie.")
+                       "Opens the Focus row. Use the actions rotor to make this your Obie.")
         XCTAssertEqual(TakeRowView.irisAccessibilityHint(for: obie),
-                       "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take.")
+                       "Opens the Focus row. Use the actions rotor to turn this back into a standard Take.")
         XCTAssertFalse(TakeRowView.irisAccessibilityHint(for: obie).contains("Long press"))
         XCTAssertFalse(TakeRowView.irisAccessibilityHint(for: standard).contains("Long press"))
     }

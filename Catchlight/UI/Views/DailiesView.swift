@@ -16,7 +16,7 @@
 //  In FILTERING, tapping empty timeline background (not rows/Irises) exits to
 //  RESTING and clears all filters.
 //
-//  Focus-ring fan and edit surfaces are presented by the parent RootView via the shared
+//  Focus row and edit surfaces are presented by the parent RootView via the shared
 //  UIState, so this view stays focused on layout.
 //
 //  Task 3.9: Error and edge-case states — three quiet, non-blocking strips are
@@ -162,11 +162,11 @@ struct DailiesView: View {
     @State private var showMissingPhraseExportConfirm = false
     @State private var editDraft: Take?
     @State private var editFocusedBlockID: UUID?
-    /// Where the keyboard goes back to after the Focus ring. Opening the ring over a
+    /// Where the keyboard goes back to after the Focus row. Opening the ring over a
     /// live editor drops the keyboard — the ring is a decision you stop to make (owner) — and
     /// this holds the focused block so closing the ring returns the edit. A COMMIT consumes it
     /// in `applyInlineFanCommand` (which may prefer a freshly-added task entry); a plain
-    /// DISMISS restores it via the `isFocusRingFanPresented` watcher. The caret OFFSET is not
+    /// DISMISS restores it via the `isFocusRowPresented` watcher. The caret OFFSET is not
     /// held here: `BlockEditorViewController` captures it at resign and restores it when focus
     /// returns to the same block.
     @State private var ringReturnFocus: UUID?
@@ -292,7 +292,7 @@ struct DailiesView: View {
             // the card below, so the card stays editable above it.
             if ui.isEditingInPlace {
                 // One wrapper around the catcher and the card — the SAME containment
-                // mechanism the Focus-ring fan uses (`.isModal`, RootView). Both
+                // mechanism the Focus row uses (`.isModal`, RootView). Both
                 // children are full-size, so the ZStack is layout-neutral; it exists
                 // so the modal trait covers the whole editing ensemble and nothing
                 // outside it. See the fix-12 measurement before changing this.
@@ -419,7 +419,7 @@ struct DailiesView: View {
             ledger.recordAsked(at: now, version: version)
             requestReview()
         }
-        // The Focus ring committed while a Take is edited in place — apply it to the
+        // The Focus row committed while a Take is edited in place — apply it to the
         // live draft (edit-in-place 2026-06-17). Guarded on `editingTakeID` so the
         // (behind) timeline ignores commits meant for the top-anchored new-Take editor.
         .onChange(of: ui.inlineFanCommand) { _, command in
@@ -431,7 +431,7 @@ struct DailiesView: View {
         // Deferred one runloop turn on purpose: a COMMIT closes the fan and posts its command
         // in the same transaction, and `applyInlineFanCommand` (synchronous, above) consumes
         // `ringReturnFocus` before this block runs — so this only ever fires for a dismiss.
-        .onChange(of: ui.isFocusRingFanPresented) { _, presented in
+        .onChange(of: ui.isFocusRowPresented) { _, presented in
             guard !presented else { return }
             DispatchQueue.main.async {
                 guard let back = ringReturnFocus, editDraft != nil else { return }
@@ -552,7 +552,7 @@ struct DailiesView: View {
         }
         // Reminder editor from the keyboard's slot-2 button (owner 2026-06-21): edit a
         // reminder Take's time/cadence, or add one to a note, in place — the same picker
-        // the Focus ring uses, applied straight to the editing draft.
+        // the Focus row uses, applied straight to the editing draft.
         .sheet(isPresented: $editingReminder) {
             reminderEditorSheet
         }
@@ -565,7 +565,7 @@ struct DailiesView: View {
     private var reminderEditorSheet: some View {
         let existing = editDraft?.timeReminder
         ReminderPickerSheet(
-            initialDate: existing?.scheduledDate ?? FocusRingFanView.defaultReminderDate,
+            initialDate: existing?.scheduledDate ?? FocusRowView.defaultReminderDate,
             initialAlarm: existing?.alarmEnabled ?? true,
             initialAllDay: existing?.isAllDay ?? false,
             initialRecurrence: existing?.recurrence ?? .none,
@@ -1239,13 +1239,13 @@ struct DailiesView: View {
                 guard app.ensureEditable(take.id) else { return }
                 requestDelete(take)
             },
-            // Iris tap → bloom the Focus-ring fan at the tapped Iris (window coords
+            // Iris tap → bloom the Focus row at the tapped Iris (window coords
             // match RootView's full-screen overlay). No edit-in-place on the new
             // timeline yet (M4), so the SwiftUI row's editing branches don't apply.
             onTapCircle: { take, irisCentre in
-                // A Take waiting for a conflict choice is read-only: no Focus ring.
+                // A Take waiting for a conflict choice is read-only: no Focus row.
                 guard app.ensureNotHeld(take.id) else { return }
-                ui.openFocusRingFan(for: take, origin: irisCentre)
+                ui.openFocusRow(for: take, origin: irisCentre)
             },
             // Iris long-press toggles Obie (owner 2026-07-04): demote is not gated,
             // designate is. Mirrors DailiesView.rowContent's onLongPressCircle.
@@ -1285,10 +1285,10 @@ struct DailiesView: View {
             // through to the save catcher). Covers both existing-edit and new-Take.
             isEditing: ui.isEditingInPlace,
             // Rows leave the accessibility tree behind EITHER overlay (audit
-            // 2026-08: RV-4/VC3 for the editor, V5 for the Focus-ring fan) —
+            // 2026-08: RV-4/VC3 for the editor, V5 for the Focus row) —
             // set at the UIKit level, where the row elements are actually
             // vended; the SwiftUI wrapper modifier was measured not to reach them.
-            axHidden: ui.isEditingInPlace || ui.isFocusRingFanPresented,
+            axHidden: ui.isEditingInPlace || ui.isFocusRowPresented,
             // Task 6.19 (re-wired 2026-07-23): the Spotlight deep-link target. The
             // pinned Obie never enters the collection — its flash rides rowContent's
             // background and is cleared by the onChange below — so it's filtered out
@@ -1365,11 +1365,11 @@ struct DailiesView: View {
             // fan's RootView-level hide covers this card's SwiftUI elements but does
             // not reach the UIKit-vended text, so VoiceOver focus landed on the text
             // behind the veil. Same channel as the timeline rows.
-            axHidden: ui.isFocusRingFanPresented,
+            axHidden: ui.isFocusRowPresented,
             onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
             onEditReminder: { presentReminderEditor() },
             onDiscard: { discardInlineEdit() },
-            // Iris tap → the Focus-ring fan, against the LIVE DRAFT so it reflects unsaved
+            // Iris tap → the Focus row, against the LIVE DRAFT so it reflects unsaved
             // shaping and its commit routes back through the draft rather than the store
             // (owner 2026-06-17; `RootView` keys that off `ui.editingTakeID`). Drop the keyboard
             // first, exactly as the old timeline's row does before blooming the fan.
@@ -1378,7 +1378,7 @@ struct DailiesView: View {
                 editFocusedBlockID = nil
                 // No spotlight card — this IS the editor (owner 2026-07-16). The fan still blooms
                 // at the Iris; it just doesn't redraw the Take as a read card over the veil.
-                ui.openFocusRingFan(for: editDraft ?? Take(), origin: irisCentre, showsCard: false)
+                ui.openFocusRow(for: editDraft ?? Take(), origin: irisCentre, showsCard: false)
             }
         )
     }
@@ -1575,7 +1575,7 @@ struct DailiesView: View {
             && !ui.isEditingInPlace && ui.pendingInlineNewTake == nil
             && !ui.isSettingsPresented && !ui.isPaywallPresented
             && !ui.isConflictSheetPresented && !ui.isStoryboardPresented
-            && !ui.isFocusRingFanPresented && ui.dockMode == .resting
+            && !ui.isFocusRowPresented && ui.dockMode == .resting
             && vm.tasksCompletedTakeID == nil
             && !ProcessInfo.processInfo.arguments.contains("--uitesting")
     }
@@ -1643,7 +1643,7 @@ struct DailiesView: View {
         vm.delete(take)
     }
 
-    /// Apply a Focus-ring selection to the inline draft. The draft is the single
+    /// Apply a Focus row selection to the inline draft. The draft is the single
     /// source of truth while editing, so the selection rides the inline save (fixing
     /// the Obie revert: the
     /// fan used to write the store, then the stale draft overwrote it). The Task Mark
@@ -1710,7 +1710,7 @@ struct DailiesView: View {
     }
 
     /// "Make Obie" from the editing long-press menu (owner 2026-07-06 — replaced "Make
-    /// Important" there; Important now lives on the Focus ring). Applies to the live draft
+    /// Important" there; Important now lives on the Focus row). Applies to the live draft
     /// so it rides the inline save. If another Obie already exists, warn first — exactly
     /// like the timeline long-press — leaving the flag off until confirmed.
     private func makeInlineObie() {
@@ -1750,12 +1750,12 @@ struct DailiesView: View {
             onTapCircle: { irisCentre in
                 // While another Take is focused, any tap outside it commits and exits.
                 if editingActive && !isEditingThis { saveInlineEdit(); return }
-                // Release the editor's keyboard BEFORE the Focus ring opens (owner
+                // Release the editor's keyboard BEFORE the Focus row opens (owner
                 // lockup 2026-06-18). Leaving the editor first-responder while the ring
                 // + reminder picker sit on top made the keyboard fight the overlay —
                 // Done re-raised it / needed a second tap. The ring owns the
                 // interaction; the commit re-focuses (applyInlineFanCommand).
-                // A Take waiting for a conflict choice is read-only: no Focus ring.
+                // A Take waiting for a conflict choice is read-only: no Focus row.
                 if !isEditingThis { guard app.ensureNotHeld(take.id) else { return } }
                 if isEditingThis { ringReturnFocus = editFocusedBlockID; editFocusedBlockID = nil }
                 // Section 8 — bloom the fan in place at the tapped Iris (window
@@ -1766,7 +1766,7 @@ struct DailiesView: View {
                 // Spotlight card only when this row ISN'T the one being edited — editing makes the
                 // editor the context, and the spotlight's READ card over it reads as the Take
                 // shrinking (owner 2026-07-16; the new timeline's editing card behaves the same).
-                ui.openFocusRingFan(for: isEditingThis ? (editDraft ?? take) : take,
+                ui.openFocusRow(for: isEditingThis ? (editDraft ?? take) : take,
                                     origin: irisCentre, showsCard: !isEditingThis)
             },
             onLongPressCircle: {
@@ -1844,7 +1844,7 @@ struct DailiesView: View {
                 ExportCoordinator.presentShareSheet(takes: [isEditingThis ? (editDraft ?? take) : take])
             },
             onDiscard: isEditingThis ? { discardInlineEdit() } : nil,
-            // The editing row's Iris is the shape control (tap = Focus ring), so it
+            // The editing row's Iris is the shape control (tap = Focus row), so it
             // carries the retired editor's "editor-shape" id for tests + semantics.
             irisIdentifier: isEditingThis ? "editor-shape" : "take-iris",
             cardSwipeOffset: cardSwipeOffset,

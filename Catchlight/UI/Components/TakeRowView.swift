@@ -5,7 +5,7 @@
 //  A single Take on the timeline: the Iris in the card's top-left, the Take's
 //  first line of text on the right. Reminder Takes show their alarm
 //  time as a small Fog label beside the circle. Gestures:
-//    • tap circle      → open the focus-ring fan (activity-type selector)
+//    • tap circle      → open the Focus row (activity-type selector)
 //    • long-press circle → designate as Obie (caller handles replacement confirm)
 //    • tap text        → open the Take edit surface
 //
@@ -20,8 +20,8 @@ struct TakeRowView: View {
     let take: Take
     /// Tap on the Iris. The `CGPoint` is the Iris's centre in WINDOW (global)
     /// coordinates, captured by the tap recognizer, so the caller can bloom the
-    /// focus-ring fan in place at the tapped Iris rather than at the screen centre
-    /// (section 8). The window coordinate space matches the full-screen focus-ring-fan
+    /// Focus row in place at the tapped Iris rather than at the screen centre
+    /// (section 8). The window coordinate space matches the full-screen Focus row
     /// overlay's space in RootView.
     var onTapCircle: (CGPoint) -> Void = { _ in }
     var onLongPressCircle: () -> Void = {}
@@ -54,7 +54,7 @@ struct TakeRowView: View {
     var onDiscard: (() -> Void)? = nil
     /// Accessibility id for the Iris. Defaults to "take-iris"; the row being edited in
     /// place passes "editor-shape" — it plays the role the retired top-anchored
-    /// editor's footer Iris did (tap = open the Focus ring), so the test contract and
+    /// editor's footer Iris did (tap = open the Focus row), so the test contract and
     /// the semantic carry over.
     var irisIdentifier: String = "take-iris"
     /// Horizontal swipe offset applied to the card and the Iris inside it, so the
@@ -202,8 +202,8 @@ struct TakeRowView: View {
     /// (same class as the V27 swipe-up hint).
     static func irisAccessibilityHint(for take: Take) -> String {
         take.isObie
-            ? String(localized: "Opens the Focus ring. Use the actions rotor to turn this back into a standard Take.")
-            : String(localized: "Opens the Focus ring. Use the actions rotor to make this your Obie.")
+            ? String(localized: "Opens the Focus row. Use the actions rotor to turn this back into a standard Take.")
+            : String(localized: "Opens the Focus row. Use the actions rotor to make this your Obie.")
     }
 
     /// The spoken status (Obie / Task + progress / Note / reminder-set) portion of
@@ -320,7 +320,7 @@ struct TakeRowView: View {
     }
 
     /// The Take's text column on the v1.7 card surface. The visual is factored into
-    /// `TakeCardSurface` (single-sourced) so the Focus-ring can lift a lit copy of
+    /// `TakeCardSurface` (single-sourced) so the Focus row can lift a lit copy of
     /// the tapped Take's card above its dim veil (owner 2026-06-16: keep the tapped
     /// Take readable while everything else recedes). Here it carries the row's
     /// gestures, context menu, and combined VoiceOver element.
@@ -441,8 +441,8 @@ struct TakeRowView: View {
 /// content pad 24/14/14/14, Daylight shadow / Night tonal-only, variant borders).
 /// Factored out of `TakeRowView` so the SAME card renders in two places without
 /// drifting: the timeline row (wrapped with gestures/menu/VoiceOver), and the
-/// Focus-ring's lit copy lifted above its dim veil (owner 2026-06-16 — keep the
-/// tapped Take readable while everything else recedes; `FocusRingFanView`). Purely
+/// Focus row's lit copy lifted above its dim veil (owner 2026-06-16 — keep the
+/// tapped Take readable while everything else recedes; `FocusRowView`). Purely
 /// visual: callers add interactivity. Fills the width PROPOSED to it (the row
 /// proposes full width; the fan proposes the card's reconstructed width), so the
 /// surface always reaches the card's trailing edge.
@@ -769,7 +769,7 @@ struct TapAndLongPressRecognizer: UIViewRepresentable {
     var minimumDuration: TimeInterval
     /// Receives the recognizer view's centre in WINDOW coordinates (the Iris
     /// touch-frame centre ≈ the Iris circle centre) so the caller can anchor the
-    /// focus-ring fan there (section 8).
+    /// Focus row there (section 8).
     var onTap: (CGPoint) -> Void
     var onLongPress: () -> Void
 
@@ -799,7 +799,7 @@ struct TapAndLongPressRecognizer: UIViewRepresentable {
 
         @objc func tapped(_ recognizer: UITapGestureRecognizer) {
             // The recognizer's view IS the Iris's 44pt touch overlay; its centre
-            // converted to window coordinates is the Iris centre the focus-ring fan
+            // converted to window coordinates is the Iris centre the Focus row
             // should bloom from (section 8). `convert(_:to: nil)` targets the
             // window — which equals the global / full-screen overlay space.
             let centre: CGPoint
