@@ -263,12 +263,19 @@ final class SubscriptionManager {
     /// HiFi v1.11.1). Same live intro-offer source as `trialDurationCopy`.
     var trialDurationAdjectiveCopy: String? {
         guard let offer = annual?.subscription?.introductoryOffer else { return nil }
-        let n = offer.period.value
-        switch offer.period.unit {
+        return Self.trialDurationAdjective(value: offer.period.value, unit: offer.period.unit)
+    }
+
+    /// The trial length as the paywall words it, from the period the App Store reports.
+    nonisolated static func trialDurationAdjective(value n: Int, unit: Product.SubscriptionPeriod.Unit) -> String? {
+        switch unit {
         // Each unit is its own key so a translator can inflect it for the sentence it
         // sits in ("14-day trial", "14-tägige Testphase").
         case .day: return String(localized: "\(n)-day", comment: "Trial length inside 'Start your %@ trial now, then only …'.")
-        case .week: return String(localized: "\(n)-week", comment: "Trial length inside 'Start your %@ trial now, then only …'.")
+        // Connect sets trials only in weeks, and the paywall says "14-day", not "2-week".
+        case .week:
+            let days = n * 7
+            return String(localized: "\(days)-day", comment: "Trial length inside 'Start your %@ trial now, then only …'.")
         case .month: return String(localized: "\(n)-month", comment: "Trial length inside 'Start your %@ trial now, then only …'.")
         case .year: return String(localized: "\(n)-year", comment: "Trial length inside 'Start your %@ trial now, then only …'.")
         @unknown default: return nil
