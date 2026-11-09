@@ -78,14 +78,6 @@ final class UIState {
     /// The tapped Take's card in window coordinates (`.zero` when unknown). The Focus row
     /// derives its hub from it and runs along its bottom edge.
     var focusRowCardFrame: CGRect = .zero
-    /// True while the Remind mark's picker fills the screen over the Focus row. The editor
-    /// lowers its keyboard for it and raises it again when it closes (owner 2026-11-09: the
-    /// keyboard otherwise stays up while the row is open).
-    var focusRowPickerShown = false
-    /// Bumped to ask an open Focus row to save and close, as a tap on its dimmed area does.
-    /// The editor's keyboard toolbar sends it while the row is open over the editor.
-    var focusRowCommitRequests = 0
-    func requestFocusRowCommit() { focusRowCommitRequests += 1 }
     var isFocusRowPresented: Bool { focusRowTake != nil }
 
     // Take editor — edit-in-place (the top-anchored overlay editor was retired in
@@ -358,12 +350,11 @@ final class UIState {
 
     /// Dismiss the Focus row. `animated: false` removes the overlay WITHOUT the
     /// opacity transition — required on the edit-in-place commit path, where committing
-    /// immediately grows the card and scrolls the caret (the keyboard stays up): a
+    /// immediately grows the card, re-raises the keyboard and scrolls the caret: a
     /// fade-out running THROUGH that relayout left SwiftUI unable to complete the removal
     /// transition and stranded the fan's screen-positioned hub Iris as an orphan glyph
     /// (owner 2026-07-11). With no transition there is nothing to strand.
     func closeFocusRow(animated: Bool = true) {
-        focusRowPickerShown = false
         if animated {
             withAnimation(Self.gatedFanFade) { focusRowTake = nil }
         } else {

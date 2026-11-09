@@ -246,18 +246,6 @@ struct DailiesView: View {
         // notice strip above the page moves the heading and its fade down, and the card has to
         // stop below where they actually are. 0 without a strip, so nothing moves.
         rootStack
-            // Kept off `rootStack`'s modifier chain, which is at the Release type-checker's limit.
-            // The Remind picker fills the screen over the ring, so the editor's keyboard steps
-            // down while it shows and comes back to the block it was in when it closes; the ring
-            // is still open then, and the keyboard stays up with it (owner 2026-11-09).
-            .onChange(of: ui.focusRowPickerShown) { _, shown in
-                guard editDraft != nil, ui.isFocusRowPresented else { return }
-                if shown {
-                    editFocusedBlockID = nil
-                } else if let back = ringReturnFocus {
-                    editFocusedBlockID = back
-                }
-            }
             .environment(\.headingClearance, headingClearance + max(0, headingBlockScreenY))
     }
 
@@ -1378,22 +1366,18 @@ struct DailiesView: View {
             // not reach the UIKit-vended text, so VoiceOver focus landed on the text
             // behind the veil. Same channel as the timeline rows.
             axHidden: ui.isFocusRowPresented,
-            // The keyboard stays up while the Focus row is open, and with it the editor's
-            // toolbar, above the row's dimmed area. Its buttons then act as that dimmed area
-            // does (save the row's choice and close it), never underneath the row.
-            toolbarInterceptor: ui.isFocusRowPresented ? { ui.requestFocusRowCommit() } : nil,
             onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
             onEditReminder: { presentReminderEditor() },
             onDiscard: { discardInlineEdit() },
             // Iris tap → the Focus row, against the LIVE DRAFT so it reflects unsaved
             // shaping and its commit routes back through the draft rather than the store
-            // (owner 2026-06-17; `RootView` keys that off `ui.editingTakeID`). The keyboard STAYS
-            // up (owner 2026-11-09): this card is anchored on it, so dropping it sent the card to
-            // the bottom of the screen while the row sat where the card had been. The block that
-            // holds the caret is still noted, for the case where something drops the keyboard
-            // while the row is open (the commit or the dismiss watcher gives it back).
+            // (owner 2026-06-17; `RootView` keys that off `ui.editingTakeID`). Drop the keyboard
+            // first, exactly as the old timeline's row does before blooming the fan: left up under
+            // the row, it fought the overlay and the Remind picker (owner lockup 2026-06-18). The
+            // commit gives it back to the block it was in (`applyInlineFanCommand`).
             onTapIris: { cardFrame in
                 ringReturnFocus = editFocusedBlockID
+                editFocusedBlockID = nil
                 // No spotlight card — this IS the editor (owner 2026-07-16). The fan still blooms
                 // at the Iris; it just doesn't redraw the Take as a read card over the veil.
                 ui.openFocusRow(for: editDraft ?? Take(), cardFrame: cardFrame, showsCard: false)
@@ -1710,24 +1694,19 @@ struct DailiesView: View {
         d.normaliseActivityFloor()
         editDraft = d
 
-        // Where the caret goes after the ring. A freshly-added task entry takes it (it's empty
-        // and wants its first character); otherwise the block that held the keyboard when the
-        // ring opened keeps or takes it back: the editor's controller returns the caret to its
-        // saved offset within it. First block only as a last resort (the return block can
-        // vanish if the commit reshaped it away).
+        // Restore the editor keyboard after the ring (and its reminder picker) — the
+        // ring-open path dropped it, so re-assert it here. A freshly-added task
+        // entry takes the caret (it's empty and wants its first character); otherwise the
+        // block that held the keyboard when the ring opened takes it back — the editor's
+        // controller returns the caret to its saved offset within it. First block only as
+        // a last resort (the return block can vanish if the commit reshaped it away).
         let returnBlock = ringReturnFocus.flatMap { r in
             d.blocks.contains(where: { $0.id == r }) ? r : nil
         }
         ringReturnFocus = nil                       // consumed — the dismiss watcher must not re-fire it
         let refocus = newTaskEntryID ?? returnBlock ?? d.blocks.first?.id
-        if let focused = editFocusedBlockID {
-            // The keyboard stayed up through the ring (owner 2026-11-09): move the caret only
-            // if the commit gave it a new home, never dropping the keyboard on the way.
-            if let refocus, refocus != focused {
-                DispatchQueue.main.async { editFocusedBlockID = refocus }
-            }
-        } else if let refocus {
-            // Something dropped the keyboard while the ring was open: raise it again.
+        editFocusedBlockID = nil
+        if let refocus {
             DispatchQueue.main.async { editFocusedBlockID = refocus }
         }
     }
@@ -1773,14 +1752,14 @@ struct DailiesView: View {
             onTapCircle: { cardFrame in
                 // While another Take is focused, any tap outside it commits and exits.
                 if editingActive && !isEditingThis { saveInlineEdit(); return }
+                // Release the editor's keyboard BEFORE the Focus row opens (owner
+                // lockup 2026-06-18). Leaving the editor first-responder while the ring
+                // + reminder picker sit on top made the keyboard fight the overlay —
+                // Done re-raised it / needed a second tap. The ring owns the
+                // interaction; the commit re-focuses (applyInlineFanCommand).
                 // A Take waiting for a conflict choice is read-only: no Focus row.
                 if !isEditingThis { guard app.ensureNotHeld(take.id) else { return } }
-                // Editing THIS Take: the keyboard stays up, as from the editing card's Iris
-                // (owner 2026-11-09). This slot is the pinned Obie, stood down while it is
-                // edited but still reachable through VoiceOver. The keyboard once fought the
-                // Remind picker over the ring (owner lockup 2026-06-18); the picker now lowers
-                // it while it shows (`ui.focusRowPickerShown`).
-                if isEditingThis { ringReturnFocus = editFocusedBlockID }
+                if isEditingThis { ringReturnFocus = editFocusedBlockID; editFocusedBlockID = nil }
                 // Section 8 — bloom the fan in place at the tapped Iris (window
                 // coords match the full-screen overlay space). The .zero fallback
                 // (screen centre) only survives as a last resort. While editing THIS

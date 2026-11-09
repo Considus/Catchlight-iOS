@@ -402,15 +402,6 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
                 if tv.isFirstResponder { tv.reloadInputViews() }
             }
         }
-        // While the Focus row is open every toolbar button saves and closes the row instead
-        // of its own action, so VoiceOver must not announce those actions; the row's dimmed
-        // area offers "Save and close". Set on the host view because `.accessibilityHidden`
-        // inside the bar did not reach the keyboard's window (measured in UI tests).
-        let hidden = config.interceptor != nil
-        if let hostView = toolbarHost?.view, hostView.accessibilityElementsHidden != hidden {
-            hostView.accessibilityElementsHidden = hidden
-            UIAccessibility.post(notification: .layoutChanged, argument: nil)
-        }
     }
 
     /// Add the check chrome (leading checkbox + trailing drag handle) around the row's

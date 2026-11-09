@@ -58,11 +58,6 @@ struct FocusRowView: View {
     /// 2026-06-18) — undefined/ignored when `hasReminder` is false.
     let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ reminderWeekdays: Set<Int>, _ reminderLocation: LocationTrigger?, _ isImportant: Bool) -> Void
     let onDismiss: () -> Void
-    /// The Remind mark's picker opened (true) or closed (false).
-    var onReminderPickerShownChange: (Bool) -> Void = { _ in }
-    /// Each change asks the row to save and close, exactly as a tap on the veil does, and
-    /// only while the veil itself would take that tap.
-    var commitRequests: Int = 0
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -131,9 +126,7 @@ struct FocusRowView: View {
          visibleBottom: CGFloat = 0,
          showsFocusCard: Bool = false,
          onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, TimeReminder.Recurrence, Set<Int>, LocationTrigger?, Bool) -> Void,
-         onDismiss: @escaping () -> Void,
-         onReminderPickerShownChange: @escaping (Bool) -> Void = { _ in },
-         commitRequests: Int = 0) {
+         onDismiss: @escaping () -> Void) {
         self.take = take
         self.cardFrame = cardFrame
         self.containerWidth = containerWidth
@@ -141,8 +134,6 @@ struct FocusRowView: View {
         self.showsFocusCard = showsFocusCard
         self.onCommit = onCommit
         self.onDismiss = onDismiss
-        self.onReminderPickerShownChange = onReminderPickerShownChange
-        self.commitRequests = commitRequests
         _isNote = State(initialValue: take.isNote)
         _isTask = State(initialValue: take.isTask)
         _hasReminder = State(initialValue: take.timeReminder != nil)
@@ -358,11 +349,6 @@ struct FocusRowView: View {
         }
         // A smooth, minimal-bounce spring approximating the iOS sheet present/dismiss.
         .animation(.spring(response: 0.52, dampingFraction: 0.9), value: showingReminderPicker)
-        .onChange(of: showingReminderPicker) { _, shown in onReminderPickerShownChange(shown) }
-        .onChange(of: commitRequests) { _, _ in
-            guard veilIsInteractive, !showingReminderPicker else { return }
-            retractAndDismiss(commit: true)
-        }
         .onAppear {
             if instantMotion { phase = .open }
             else { phase = .opening(start: .now) }
