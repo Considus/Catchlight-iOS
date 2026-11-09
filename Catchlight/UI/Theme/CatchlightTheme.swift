@@ -98,8 +98,16 @@ extension CatchlightScene {
 
     /// The app group store, so the share sheet (and later the widgets) read the same choice.
     /// One instance, so a write from `SceneChoice.select` reaches the Settings row's
-    /// `@AppStorage`, which watches this same object.
-    static let sharedDefaults = UserDefaults(suiteName: AppGroup.identifier)
+    /// `@AppStorage`, which watches this same object. A missing App Group is a setup error
+    /// (as in `AppGroup.containerURL()`): debug builds stop, and a release build falls back
+    /// to the standard store, so the row and the applied Scene still share one store.
+    static let sharedDefaults: UserDefaults = {
+        guard let group = UserDefaults(suiteName: AppGroup.identifier) else {
+            assertionFailure("App Group \(AppGroup.identifier) is not configured: check entitlements.")
+            return .standard
+        }
+        return group
+    }()
 
     /// The stored Scene, or Cobalt when the key is absent or holds an unknown value.
     static func stored(in defaults: UserDefaults? = sharedDefaults) -> CatchlightScene {
@@ -138,8 +146,8 @@ extension EnvironmentValues {
 /// A Scene colour role for SwiftUI. It resolves from the environment's Scene and colour
 /// scheme, which SwiftUI tracks, so a Scene change repaints every `ck*` colour. Do not build
 /// a `ck*` colour as `Color(uiColor:)` on a `SceneToken`: SwiftUI can keep that resolved
-/// value when only the custom trait changes. Measured with `SceneUITests`: the open Settings
-/// sheet kept the old Scene in 2 of 16 launches that way, and in none of 15 this way.
+/// value when only the custom trait changes, and the open Settings sheet then stays on the
+/// old Scene.
 struct SceneColor: ShapeStyle, Hashable {
     let role: KeyPath<ScenePalette, UInt32>
     var opacity: Double = 1
