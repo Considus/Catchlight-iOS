@@ -90,31 +90,47 @@ private enum Palette {
     static let emberText = UIColor(hex: 0x856539)
 }
 
-// MARK: - Scene tokens (redesign, Cobalt)
+// MARK: - The Scene trait
+
+/// The chosen Scene, carried as a UIKit trait so every dynamic `SceneToken` colour reads it.
+struct SceneTrait: UITraitDefinition {
+    static let defaultValue = CatchlightScene.default
+    static let identifier = "app.catchlight.scene"
+    static let name = "CatchlightScene"
+}
+
+// MARK: - Scene tokens
 //
-// The redesign's colour roles for the Cobalt Scene, Dark and Light, from
-// `Brand_System/tokens.json` in the workspace. Every semantic token below now
-// resolves through these. The other four Scenes and the Scene picker arrive in the
-// next slice, which generates this table from the JSON instead of hand-copying it.
+// The redesign's colour roles. Each resolves per Scene and appearance from the generated
+// palettes in `SceneTokens.generated.swift`, reading the Scene from `SceneTrait`, so a
+// Scene change re-resolves every colour in place. Every semantic token below resolves
+// through these.
 
 enum SceneToken {
-    static let ground   = UIColor.adaptive(dark: UIColor(hex: 0x0B0E2A), light: UIColor(hex: 0xF4F5FA))
-    static let surface  = UIColor.adaptive(dark: UIColor(hex: 0x131840), light: UIColor(hex: 0xE8EAF5))
-    static let card     = UIColor.adaptive(dark: UIColor(hex: 0x131840), light: UIColor(hex: 0xFFFFFF))
-    static let raised   = UIColor.adaptive(dark: UIColor(hex: 0x1C2356), light: UIColor(hex: 0xFFFFFF))
+    static let ground   = role(\.ground)
+    static let surface  = role(\.surface)
+    static let card     = role(\.card)
+    static let raised   = role(\.raised)
     /// Dividers and card edges only.
-    static let line     = UIColor.adaptive(dark: UIColor(hex: 0x283066), light: UIColor(hex: 0xD6DAEE))
+    static let line     = role(\.line)
     /// Unlit Iris lights and field outlines: 3:1 on every surface.
-    static let outline  = UIColor.adaptive(dark: UIColor(hex: 0x6A7097), light: UIColor(hex: 0x81849C))
-    static let text     = UIColor.adaptive(dark: UIColor(hex: 0xF6F7FF), light: UIColor(hex: 0x0B0E2A))
-    static let muted    = UIColor.adaptive(dark: UIColor(hex: 0xAEB4E3), light: UIColor(hex: 0x4A5078))
+    static let outline  = role(\.outline)
+    static let text     = role(\.text)
+    static let muted    = role(\.muted)
     /// Text that recedes at about 4.6:1: done Task text and placeholders.
-    static let faint    = UIColor.adaptive(dark: UIColor(hex: 0x888DBB), light: UIColor(hex: 0x616689))
-    static let accent   = UIColor.adaptive(dark: UIColor(hex: 0xFF8AD0), light: UIColor(hex: 0x2C41E8))
-    static let onAccent = UIColor.adaptive(dark: UIColor(hex: 0x0B0E2A), light: UIColor(hex: 0xFFFFFF))
-    static let accentText = UIColor.adaptive(dark: UIColor(hex: 0xFFA3DA), light: UIColor(hex: 0x2C41E8))
+    static let faint    = role(\.faint)
+    static let accent   = role(\.accent)
+    static let onAccent = role(\.onAccent)
+    static let accentText = role(\.accentText)
     /// "This is on": lit lights, the Obie square and the Focus row marks. Nothing else.
-    static let lit      = UIColor.adaptive(dark: UIColor(hex: 0xFFA3DA), light: UIColor(hex: 0x2C41E8))
+    static let lit      = role(\.lit)
+
+    private static func role(_ key: KeyPath<ScenePalette, UInt32>) -> UIColor {
+        UIColor { traits in
+            let palette = traits[SceneTrait.self].palette(dark: traits.userInterfaceStyle == .dark)
+            return UIColor(hex: palette[keyPath: key])
+        }
+    }
 }
 
 extension Color {

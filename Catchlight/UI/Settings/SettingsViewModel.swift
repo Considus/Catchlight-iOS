@@ -48,6 +48,37 @@ final class SettingsViewModel {
         }
     }
 
+    /// The chosen colour Scene (Settings → Appearance → Scene), stored as the Scene's raw value.
+    /// It reaches the colours as `SceneTrait` on every window scene's `traitOverrides`, so a
+    /// change re-resolves every `SceneToken` colour in SwiftUI and UIKit in place: no view is
+    /// rebuilt, the Settings sheet stays open and an edit in progress is kept.
+    enum SceneChoice {
+        static let defaultsKey = "catchlight.scene"
+
+        /// Store `scene` and apply it to every connected window scene at once.
+        static func select(_ scene: CatchlightScene, defaults: UserDefaults = .standard) {
+            defaults.set(scene.rawValue, forKey: defaultsKey)
+            for case let windowScene as UIWindowScene in UIApplication.shared.connectedScenes {
+                windowScene.traitOverrides[SceneTrait.self] = scene
+            }
+        }
+
+        /// Apply the stored Scene to each window scene as it connects, before its first frame.
+        static func applyOnConnect() {
+            NotificationCenter.default.addObserver(forName: UIScene.willConnectNotification,
+                                                   object: nil, queue: .main) { note in
+                MainActor.assumeIsolated {
+                    (note.object as? UIWindowScene)?.traitOverrides[SceneTrait.self] = current()
+                }
+            }
+        }
+
+        /// The stored Scene, or Cobalt when the key is absent or holds an unknown value.
+        static func current(_ defaults: UserDefaults = .standard) -> CatchlightScene {
+            defaults.string(forKey: defaultsKey).flatMap(CatchlightScene.init(rawValue:)) ?? .default
+        }
+    }
+
     /// "Lock after" grace — how long Catchlight may sit in the background before a
     /// return re-locks it. Read by `AppModel.relockIfAwayTooLong()`. The app
     /// ALWAYS re-locks on cold launch and when the phone locks while Catchlight is in
