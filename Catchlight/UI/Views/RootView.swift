@@ -456,7 +456,10 @@ struct RootView: View {
                             ui.closeFocusRow()
                         }
                     },
-                    onDismiss: { ui.closeFocusRow() }
+                    onDismiss: { ui.closeFocusRow() },
+                    onCardGrowth: { grown, duration in
+                        ui.focusRowGrowth.set(grown, for: take.id, duration: duration)
+                    }
                 )
             }
             .ignoresSafeArea()

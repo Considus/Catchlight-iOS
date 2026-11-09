@@ -6,17 +6,18 @@
 //  follows the Iris prototype's `openMarks` and `.mk` styles.
 //
 //  LAYOUT: four 44pt rounded-square marks, Note, Task, Reminder and Important from
-//  left to right, sit in a row along the Take card's bottom edge, their centres 8pt below
-//  it so their tops line up with the card's bottom padding, clear of its last line of
-//  text (`rowY`). Where that would put the row below the visible area (behind the dock,
-//  or under the keyboard from the editor), the row lifts to stay on screen. The first
-//  mark is 52pt right of the Iris centre and each next one 52pt further. On a narrow
-//  screen the gap shrinks evenly so the last mark stays 8pt inside the screen; the marks
-//  never shrink (`slotX`).
+//  left to right, 16pt apart, their centres 60, 120, 180 and 240pt right of the Iris
+//  centre. While the row is open the tapped card grows 22pt (half a mark) at the
+//  bottom, and the cards below move down with it; the marks' centres sit exactly on the
+//  grown bottom edge, so they clear its last line of text (`rowY`). Where that would put
+//  the row below the visible area (behind the dock, or above the bottom of the screen
+//  while editing), the row lifts to stay on screen. On a screen too narrow for the full
+//  row the gap shrinks evenly so the last mark stays 8pt inside the screen; the marks
+//  never shrink or overlap (`slotX`).
 //
 //  MOTION: the marks start stacked under the Iris at 85% size, invisible. They drop
-//  straight down to the card's bottom edge over 340ms (easeInOutCubic), growing to full
-//  size and fading in, then each slides right to its slot over 280ms, 50ms after the one
+//  straight down to the card's grown bottom edge over 340ms (easeInOutCubic), while the
+//  card grows on the same curve, growing to full size and fading in, then each slides right to its slot over 280ms, 50ms after the one
 //  before, with a small easeOutBack overshoot. Closing plays each mark's own open
 //  backwards, 1.25 times faster, as the prototype does. Reduce Motion and UI tests skip
 //  straight to the end state.
@@ -58,6 +59,10 @@ struct FocusRowView: View {
     /// 2026-06-18) — undefined/ignored when `hasReminder` is false.
     let onCommit: (_ isNote: Bool, _ isTask: Bool, _ hasReminder: Bool, _ reminderDate: Date?, _ reminderAlarm: Bool, _ reminderAllDay: Bool, _ reminderRecurrence: TimeReminder.Recurrence, _ reminderWeekdays: Set<Int>, _ reminderLocation: LocationTrigger?, _ isImportant: Bool) -> Void
     let onDismiss: () -> Void
+    /// Grow (true) or shrink back (false) the tapped card over this many seconds (nil: at
+    /// once), on `growTimingCurve`. Only called when `showsFocusCard`: the row runs along a
+    /// timeline card or the pinned Obie.
+    var onCardGrowth: (_ grown: Bool, _ duration: Double?) -> Void = { _, _ in }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -136,7 +141,8 @@ struct FocusRowView: View {
          visibleBottom: CGFloat = 0,
          showsFocusCard: Bool = false,
          onCommit: @escaping (Bool, Bool, Bool, Date?, Bool, Bool, TimeReminder.Recurrence, Set<Int>, LocationTrigger?, Bool) -> Void,
-         onDismiss: @escaping () -> Void) {
+         onDismiss: @escaping () -> Void,
+         onCardGrowth: @escaping (Bool, Double?) -> Void = { _, _ in }) {
         self.take = take
         self.cardFrame = cardFrame
         self.containerWidth = containerWidth
@@ -144,6 +150,7 @@ struct FocusRowView: View {
         self.showsFocusCard = showsFocusCard
         self.onCommit = onCommit
         self.onDismiss = onDismiss
+        self.onCardGrowth = onCardGrowth
         _isNote = State(initialValue: take.isNote)
         _isTask = State(initialValue: take.isTask)
         _hasReminder = State(initialValue: take.timeReminder != nil)
@@ -187,16 +194,16 @@ struct FocusRowView: View {
     static let markSize: CGFloat = 44
     /// Buttons take radius 10 in the redesign, never circles or pills.
     static let markCornerRadius: CGFloat = 10
-    /// Centre-to-centre spacing on a screen with room for it (the prototype's 50 for its
-    /// 40px marks, widened for 44pt touch targets).
-    static let markSpacing: CGFloat = 52
+    /// Centre-to-centre spacing on a screen with room for it: a 16pt gap between 44pt marks.
+    static let markSpacing: CGFloat = markSize + 16
     /// The least room kept between the last mark and the screen's trailing edge.
     static let screenMargin: CGFloat = 8
     /// How far the Iris centre sits in from its card's top and leading edges (36).
     static let irisCentreInset = CatchlightLayout.irisInset + CatchlightLayout.circleDiameter / 2
-    /// How far below the card's bottom edge the row's centre sits (8): it puts the marks'
-    /// tops on the card's bottom padding line, so they clear its last line of text.
-    static let belowEdge: CGFloat = markSize / 2 - CatchlightLayout.cardPadding
+    /// How much the tapped card grows at the bottom while the row is open (22, half a
+    /// mark): the marks sit centred on its grown bottom edge, so this keeps them clear of
+    /// its last line of text.
+    static let cardGrowth: CGFloat = markSize / 2
 
     /// The Iris centre of a card: `irisCentreInset` in from its top and leading edges.
     static func hubCentre(of cardFrame: CGRect) -> CGPoint {
@@ -210,11 +217,11 @@ struct FocusRowView: View {
                width: cardSize.width, height: cardSize.height)
     }
 
-    /// The row's resting y offset from the Iris centre: `belowEdge` under the card's bottom
-    /// edge, lifted so a mark's bottom stays at or above `visibleBottom` (0 = no clamp), and
-    /// never above the Iris centre.
+    /// The row's resting y offset from the Iris centre: exactly on the card's bottom edge
+    /// once it has grown by `cardGrowth`, lifted so a mark's bottom stays at or above
+    /// `visibleBottom` (0 = no clamp), and never above the Iris centre.
     static func rowY(cardFrame: CGRect, visibleBottom: CGFloat) -> CGFloat {
-        let y = cardFrame.height - irisCentreInset + belowEdge
+        let y = cardFrame.height + cardGrowth - irisCentreInset
         guard visibleBottom > 0 else { return y }
         let lowest = visibleBottom - markSize / 2 - hubCentre(of: cardFrame).y
         return max(0, min(y, lowest))
@@ -222,14 +229,16 @@ struct FocusRowView: View {
 
     /// A mark's resting x offset from the Iris centre. Marks sit `markSpacing` apart;
     /// when the last one would cross `screenMargin`, the spacing shrinks evenly so it
-    /// lands on the margin. `containerWidth` 0 means unknown (previews): no squeeze.
+    /// lands on the margin, but never below `markSize`, so the marks never overlap. With
+    /// the Iris at its real place that starts below about 319pt wide, narrower than any
+    /// supported phone. `containerWidth` 0 means unknown (previews): no squeeze.
     static func slotX(for index: Int, hubX: CGFloat, containerWidth: CGFloat) -> CGFloat {
         let count = CGFloat(MarkKind.allCases.count)
         var spacing = markSpacing
         if containerWidth > 0 {
             let limit = containerWidth - screenMargin - markSize / 2
             if hubX + count * markSpacing > limit {
-                spacing = (limit - hubX) / count
+                spacing = max(markSize, (limit - hubX) / count)
             }
         }
         return CGFloat(index + 1) * spacing
@@ -300,6 +309,24 @@ struct FocusRowView: View {
         }
     }
 
+    /// How far the tapped card has grown, 0 to 1: on the drop's own curve and timing, and on
+    /// the close with the whole open played backwards, so it shrinks as the marks lift.
+    private func growProgress(now: Date) -> Double {
+        let t: Double
+        switch phase {
+        case .opening(let start): t = now.timeIntervalSince(start) / Self.timeScale
+        case .open: return 1
+        case .closing(let start, _):
+            t = Choreo.total - now.timeIntervalSince(start) / Self.timeScale * Choreo.closeSpeed
+        case .dismissed: return 0
+        }
+        return Self.easeInOutCubic(min(max(t / Choreo.rise, 0), 1))
+    }
+
+    /// The drop's curve, easeInOutCubic, as cubic Bezier control points, for the cards below
+    /// the grown one, which UIKit moves.
+    static let growTimingCurve = (CGPoint(x: 0.65, y: 0), CGPoint(x: 0.35, y: 1))
+
     /// Only the live phases drive the TimelineView; `.open` and `.dismissed` are
     /// static so it pauses (and `.dismissed` lets the overlay be removed).
     private var isAnimating: Bool {
@@ -362,6 +389,9 @@ struct FocusRowView: View {
         .onAppear {
             if instantMotion { phase = .open }
             else { phase = .opening(start: .now) }
+            if showsFocusCard {
+                onCardGrowth(true, instantMotion ? nil : Choreo.rise * Self.timeScale)
+            }
             // Settle into the static .open phase once the choreography ends so
             // the TimelineView stops ticking.
             DispatchQueue.main.asyncAfter(deadline: .now() + (Choreo.total + 0.05) * Self.timeScale) {
@@ -434,8 +464,11 @@ struct FocusRowView: View {
                 // frame, so it lands exactly over it. Drawn BEFORE the marks so they pass
                 // above it.
                 if showsFocusCard, cardFrame.width > 0 {
-                    TakeCardSurface(take: take)
-                        .frame(width: cardFrame.width, height: cardFrame.height, alignment: .topLeading)
+                    // Grows over the real card, which keeps its size, on the drop's curve; the
+                    // cards below move down with it (`onCardGrowth`).
+                    let growth = Self.cardGrowth * growProgress(now: now)
+                    TakeCardSurface(take: take, extraBottomPadding: growth)
+                        .frame(width: cardFrame.width, height: cardFrame.height + growth, alignment: .topLeading)
                         .offset(x: cardFrame.minX, y: cardFrame.minY)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         // Fades out with the veil on close (owner 2026-06-17) so the
@@ -640,10 +673,19 @@ struct FocusRowView: View {
             return
         }
         if instantMotion {
+            if showsFocusCard { onCardGrowth(false, nil) }
             finish(commit: commit)
             return
         }
         phase = .closing(start: .now, commit: commit)
+        if showsFocusCard {
+            // The drop opened the row, so the card shrinks back over the close's last stretch.
+            let shrink = Choreo.rise / Choreo.closeSpeed * Self.timeScale
+            let wait = (Choreo.total - Choreo.rise) / Choreo.closeSpeed * Self.timeScale
+            DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
+                onCardGrowth(false, shrink)
+            }
+        }
         let closeDuration = ((Choreo.total / Choreo.closeSpeed) + 0.05) * Self.timeScale
         DispatchQueue.main.asyncAfter(deadline: .now() + closeDuration) {
             if case .closing(_, let c) = phase { finish(commit: c) }

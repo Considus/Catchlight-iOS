@@ -472,6 +472,9 @@ struct TakeCardSurface: View {
     /// the card's trailing edge, and this is what stops the body text running underneath
     /// it (owner 2026-08-15 — the handle sits IN the card, and the card is full width).
     var trailingContentInset: CGFloat = 0
+    /// EXTRA bottom padding, on top of `cardPadding`: the card grows by this much. The Focus
+    /// row grows the tapped card by `FocusRowView.cardGrowth` while it is open.
+    var extraBottomPadding: CGFloat = 0
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var dynamicSize
@@ -743,9 +746,10 @@ struct TakeCardSurface: View {
         // same text column (owner 2026-06-16). The minimum height fits the Iris.
         .padding(EdgeInsets(top: CatchlightLayout.cardPadding,
                             leading: CatchlightLayout.cardTextLeadingPad,
-                            bottom: CatchlightLayout.cardPadding,
+                            bottom: CatchlightLayout.cardPadding + extraBottomPadding,
                             trailing: CatchlightLayout.cardTextTrailingPad + trailingContentInset))
-        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.cardMinHeight, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.cardMinHeight + extraBottomPadding,
+               alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                 .fill(style.surface)

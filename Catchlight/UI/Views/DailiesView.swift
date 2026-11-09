@@ -1307,7 +1307,8 @@ struct DailiesView: View {
             onNudge: { take, delta in
                 guard app.ensureEditable(take.id) else { return }
                 nudge(take, by: delta)
-            }
+            },
+            focusGrowth: ui.focusRowGrowth
         )
     }
 

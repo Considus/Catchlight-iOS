@@ -135,6 +135,8 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     /// DISPLAY order. A handle that can only be dragged is a handle a VoiceOver user does
     /// not have, the same reason the Iris's Obie long-press carries a named action.
     var onNudge: (Take, Int) -> Void = { _, _ in }
+    /// The card under an open Focus row grows by this (see `FocusRowGrowth`).
+    var focusGrowth: FocusRowGrowth? = nil
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
@@ -159,6 +161,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
         vc.isReorderable = isReorderable
         vc.onReorder = onReorder
         vc.onNudge = onNudge
+        if let focusGrowth { vc.focusGrowth = focusGrowth }
         return vc
     }
 
@@ -596,6 +599,76 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     var onNudge: (Take, Int) -> Void = { _, _ in }
 
     private let swipeState = TimelineSwipeState()
+    /// The host's Focus row growth. While the row is open on a Take, every cell below that
+    /// Take moves down by the growth, on the row's own curve; with the pinned Obie (not in
+    /// this collection) under the row, every cell does. The tapped card itself keeps its
+    /// size: the row's lit copy, drawn over it, is the one that grows.
+    var focusGrowth = FocusRowGrowth()
+
+    /// A Take cell's content. Also set straight on a visible cell by `applyFocusGrowth`.
+    private func takeConfiguration(for take: Take) -> UIHostingConfiguration<TimelineSwipeCell, EmptyView> {
+        UIHostingConfiguration {
+            TimelineSwipeCell(take: take, spineX: self.spineX, cardGap: self.cardGap,
+                              isSnoozed: self.snoozedIDs.contains(take.id),
+                              swipeState: self.swipeState,
+                              onToggleDone: { self.onToggleDone($0) },
+                              onDelete: { self.onDelete($0) },
+                              onTapCircle: { self.onTapCircle($0, $1) },
+                              onLongPressCircle: { self.onLongPressCircle($0) },
+                              onSetImportant: { self.onSetImportant($0) },
+                              onMakeObie: { self.onMakeObie($0) },
+                              onExport: { self.onExport($0) },
+                              onTapText: { [weak self] tapped in
+                                  self?.onTapText(tapped)
+                              },
+                              isSpotlightTarget: self.flashingID == take.id,
+                              showsDragHandle: self.isReorderable,
+                              onNudge: { self.onNudge($0, $1) })
+        }
+        .margins(.all, 0)
+    }
+
+    private func observeFocusGrowth() {
+        withObservationTracking {
+            _ = focusGrowth.amount
+            _ = focusGrowth.takeID
+        } onChange: { [weak self] in
+            // Fires before the change lands: act on the next turn, then watch again.
+            DispatchQueue.main.async {
+                self?.applyFocusGrowth()
+                self?.observeFocusGrowth()
+            }
+        }
+    }
+
+    /// Moves the cells below the grown Take by the growth, over the change's duration on the
+    /// row's curve (at once for a zero duration).
+    private func applyFocusGrowth() {
+        guard let dataSource, let collectionView else { return }
+        let shift = focusGrowth.amount
+        let below: (IndexPath) -> Bool
+        if let id = focusGrowth.takeID, let grown = dataSource.indexPath(for: .take(id)) {
+            below = { $0 > grown }
+        } else {
+            below = { _ in true }
+        }
+        let cells = collectionView.indexPathsForVisibleItems.compactMap { path in
+            collectionView.cellForItem(at: path).map { ($0, below(path)) }
+        }
+        let change = {
+            for (cell, moves) in cells {
+                cell.transform = moves && shift != 0 ? CGAffineTransform(translationX: 0, y: shift) : .identity
+            }
+        }
+        let duration = focusGrowth.duration
+        guard duration > 0 else { change(); return }
+        let curve = FocusRowView.growTimingCurve
+        let animator = UIViewPropertyAnimator(
+            duration: duration,
+            timingParameters: UICubicTimingParameters(controlPoint1: curve.0, controlPoint2: curve.1))
+        animator.addAnimations(change)
+        animator.startAnimation()
+    }
     private var collectionView: UICollectionView!
     private var reorderPress: UILongPressGestureRecognizer!
     private var dataSource: UICollectionViewDiffableDataSource<Int, TimelineRow>!
@@ -743,25 +816,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
             switch row {
             case .take(let id):
                 guard let take = self.takesByID[id] else { return }
-                cell.contentConfiguration = UIHostingConfiguration {
-                    TimelineSwipeCell(take: take, spineX: self.spineX, cardGap: self.cardGap,
-                                      isSnoozed: self.snoozedIDs.contains(id),
-                                      swipeState: self.swipeState,
-                                      onToggleDone: { self.onToggleDone($0) },
-                                      onDelete: { self.onDelete($0) },
-                                      onTapCircle: { self.onTapCircle($0, $1) },
-                                      onLongPressCircle: { self.onLongPressCircle($0) },
-                                      onSetImportant: { self.onSetImportant($0) },
-                                      onMakeObie: { self.onMakeObie($0) },
-                                      onExport: { self.onExport($0) },
-                                      onTapText: { [weak self] tapped in
-                                          self?.onTapText(tapped)
-                                      },
-                                      isSpotlightTarget: self.flashingID == id,
-                                      showsDragHandle: self.isReorderable,
-                                      onNudge: { self.onNudge($0, $1) })
-                }
-                .margins(.all, 0)
+                cell.contentConfiguration = self.takeConfiguration(for: take)
             case .month(let key):
                 cell.contentConfiguration = UIHostingConfiguration {
                     TimelineMonthDivider(title: self.groupTitles[key] ?? "",
@@ -794,6 +849,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
             self.lastItems = order
             self.onReorder(moved, order.compactMap(\.takeID))
         }
+        observeFocusGrowth()
     }
 
     override func viewSafeAreaInsetsDidChange() {
