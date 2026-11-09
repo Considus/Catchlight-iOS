@@ -51,11 +51,11 @@ private extension UIColor {
 
 extension Color {
     // Night-mode (dark) palette — the brand's core.
-    static let ckInk = Color(hex: 0x0F0E0C)
+    static let ckInk = Color(uiColor: SceneToken.ground)
     static let ckDusk = Color(hex: 0x1C1A16)
     static let ckCatchlight = Color(hex: 0xF5EDD8)   // "catchlightCream"
-    static let ckGlow = Color(hex: 0xEDD9A3)
-    static let ckEmber = Color(hex: 0xC9A96E)
+    static let ckGlow = Color(uiColor: SceneToken.lit)
+    static let ckEmber = Color(uiColor: SceneToken.accent)
     static let ckFog = Color(hex: 0xB8B0A3)
     static let ckShadow = Color(hex: 0x0A0908)
 
@@ -90,6 +90,36 @@ private enum Palette {
     static let emberText = UIColor(hex: 0x856539)
 }
 
+// MARK: - Scene tokens (redesign, Cobalt)
+//
+// The redesign's colour roles for the Cobalt Scene, Dark and Light, from
+// `Brand_System/tokens.json` in the workspace. Every semantic token below now
+// resolves through these. The other four Scenes and the Scene picker arrive in the
+// next slice, which generates this table from the JSON instead of hand-copying it.
+
+enum SceneToken {
+    static let ground   = UIColor.adaptive(dark: UIColor(hex: 0x0B0E2A), light: UIColor(hex: 0xF4F5FA))
+    static let surface  = UIColor.adaptive(dark: UIColor(hex: 0x131840), light: UIColor(hex: 0xE8EAF5))
+    static let card     = UIColor.adaptive(dark: UIColor(hex: 0x131840), light: UIColor(hex: 0xFFFFFF))
+    static let raised   = UIColor.adaptive(dark: UIColor(hex: 0x1C2356), light: UIColor(hex: 0xFFFFFF))
+    static let line     = UIColor.adaptive(dark: UIColor(hex: 0x283066), light: UIColor(hex: 0xD6DAEE))
+    static let text     = UIColor.adaptive(dark: UIColor(hex: 0xF6F7FF), light: UIColor(hex: 0x0B0E2A))
+    static let muted    = UIColor.adaptive(dark: UIColor(hex: 0xAEB4E3), light: UIColor(hex: 0x4A5078))
+    static let accent   = UIColor.adaptive(dark: UIColor(hex: 0xFF8AD0), light: UIColor(hex: 0x2C41E8))
+    static let onAccent = UIColor.adaptive(dark: UIColor(hex: 0x0B0E2A), light: UIColor(hex: 0xFFFFFF))
+    static let accentText = UIColor.adaptive(dark: UIColor(hex: 0xFFA3DA), light: UIColor(hex: 0x2C41E8))
+    /// "This is on": lit lights, the Obie square and the Focus row marks. Nothing else.
+    static let lit      = UIColor.adaptive(dark: UIColor(hex: 0xFFA3DA), light: UIColor(hex: 0x2C41E8))
+}
+
+extension Color {
+    static let ckGround = Color(uiColor: SceneToken.ground)
+    static let ckCard = Color(uiColor: SceneToken.card)
+    static let ckRaised = Color(uiColor: SceneToken.raised)
+    static let ckLine = Color(uiColor: SceneToken.line)
+    static let ckLit = Color(uiColor: SceneToken.lit)
+}
+
 // MARK: - UIKit-facing semantic tokens (single source, shared with SwiftUI)
 //
 // UIKit views (the custom keyboards, the block editor) can't read the SwiftUI
@@ -99,22 +129,21 @@ private enum Palette {
 // than re-hard-coding hex in the views. (Scene-engine Phase 1.)
 
 enum UITheme {
-    static let background    = UIColor.adaptive(dark: Palette.ink,        light: Palette.paper)
-    static let surface       = UIColor.adaptive(dark: Palette.dusk,       light: Palette.white)
-    static let textPrimary   = UIColor.adaptive(dark: Palette.catchlight, light: Palette.ink)
-    static let textSecondary = UIColor.adaptive(dark: Palette.fog,        light: Palette.slate)
+    static let background    = SceneToken.ground
+    static let surface       = SceneToken.card
+    static let textPrimary   = SceneToken.text
+    static let textSecondary = SceneToken.muted
     /// Receded "done" grey — Fog @76% (Night) / #746E68 (Daylight). Mirrors `ckTextComplete`.
     /// It is text, so it clears WCAG 4.5:1 on every surface it sits on (owner 2026-10-03):
     /// Night 5.22 on a card, 4.58 on an Obie; Daylight 5.03 on a card, 4.59 on Paper. Fog at any
     /// opacity can't pass on White, hence a solid grey in Daylight. `DoneTextContrastTests` holds it.
-    static let textComplete  = UIColor.adaptive(dark: Palette.fog.withAlphaComponent(0.76),
-                                                light: UIColor(hex: 0x746E68))
+    static let textComplete  = SceneToken.muted
     /// Raw Ember FILL (both modes) — the Add droplet / Restore fill.
-    static let add           = UIColor.adaptive(dark: Palette.ember, light: Palette.ember)
+    static let add           = SceneToken.accent
     /// Amber FOREGROUND accent — Ember (Night) / Ember-text #856539 (Daylight, WCAG AA).
-    static let accent        = UIColor.adaptive(dark: Palette.ember, light: Palette.emberText)
+    static let accent        = SceneToken.accentText
     /// Foreground drawn ON an Ember fill — Ink in both modes.
-    static let onAccent      = UIColor.adaptive(dark: Palette.ink, light: Palette.ink)
+    static let onAccent      = SceneToken.onAccent
     /// Placeholder text on an input surface (audit C6 re-tune, owner 2026-08-28):
     /// EQUAL ratio in both schemes, passing small-text AA with a little margin,
     /// and deliberately receded — "equal and passing, not maximal". Derived from
@@ -122,8 +151,7 @@ enum UITheme {
     /// capsule; Night = fog dimmed toward Dusk to 4.62:1 on the dusk capsule.
     /// (The first C6 fix used textSecondary — 7.24:1/8.09:1 — which the owner
     /// read as too prominent for a placeholder.)
-    static let placeholder   = UIColor.adaptive(dark: UIColor(hex: 0x898378),
-                                                light: UIColor(hex: 0x7A746C))
+    static let placeholder   = SceneToken.muted
 }
 
 // MARK: - Semantic, adaptive colours (Night / Daylight)
@@ -141,7 +169,7 @@ extension Color {
     static let ckTextPrimary = Color(uiColor: UITheme.textPrimary)
 
     /// Obie-emphasis text — Glow (Night) / Ember Text #856539 (Daylight, WCAG AA on Paper).
-    static let ckTextObie = Color(uiColor: .adaptive(dark: Palette.glow, light: Palette.emberText))
+    static let ckTextObie = Color(uiColor: SceneToken.lit)
 
     /// Secondary / muted text — Fog (Night) / Slate #5C5650 (Daylight, WCAG AA on Paper).
     /// Fog (#B8B0A3) fails WCAG AA for body text on Paper; Slate is the accessible replacement.
@@ -158,22 +186,16 @@ extension Color {
     static let ckTextComplete = Color(uiColor: UITheme.textComplete)
 
     /// The timeline spine — Catchlight @ 18% (Night) / Ink @ 13% (Daylight).
-    static let ckSpine = Color(uiColor: .adaptive(
-        dark: Palette.catchlight.withAlphaComponent(0.18),
-        light: Palette.ink.withAlphaComponent(0.13)
-    ))
+    static let ckSpine = Color(uiColor: SceneToken.line)
 
     /// The Add button — Ember (both).
     static let ckAdd = Color(uiColor: UITheme.add)
 
     /// Active navigation icon — Ember (both).
-    static let ckNavActive = Color(uiColor: .adaptive(dark: Palette.ember, light: Palette.ember))
+    static let ckNavActive = Color(uiColor: SceneToken.accentText)
 
     /// Inactive navigation icon — Catchlight @ 55% (Night) / Fog (Daylight).
-    static let ckNavInactive = Color(uiColor: .adaptive(
-        dark: Palette.catchlight.withAlphaComponent(0.55),
-        light: Palette.fog
-    ))
+    static let ckNavInactive = Color(uiColor: SceneToken.muted)
 
     /// Amber accent for FOREGROUND content (text or iconography) drawn on a
     /// background SURFACE — Ember (Night) / Ember Text #856539 (Daylight).
@@ -200,10 +222,7 @@ extension Color {
     /// everywhere; no blur, no dark tint in Daylight). Ink @ 90% (Night) /
     /// Paper @ 90% (Daylight). The screens beneath stay full-opacity — the
     /// veil alone provides the recede.
-    static let ckDim = Color(uiColor: .adaptive(
-        dark: Palette.ink.withAlphaComponent(0.90),
-        light: Palette.paper.withAlphaComponent(0.90)
-    ))
+    static let ckDim = Color(uiColor: SceneToken.ground.withAlphaComponent(0.90))
 
     // MARK: - Take card variants (HiFi v1.7 .card — section 5)
     //
@@ -214,17 +233,11 @@ extension Color {
     /// Obie card BACKGROUND — a warm tint distinct from the plain surface so the
     /// pinned Take reads as special. Daylight #FBF8F3 (Ember @8% blended onto
     /// White, solid to prevent spine bleed) / Night #2D2921. (HiFi v1.7 .obie-card)
-    static let ckCardObieSurface = Color(uiColor: .adaptive(
-        dark: UIColor(hex: 0x2D2921),
-        light: UIColor(hex: 0xFBF8F3)
-    ))
+    static let ckCardObieSurface = Color(uiColor: SceneToken.raised)
 
     /// Obie card BORDER — Ember @65% (Daylight) / Glow @65% (Night). The Ember
     /// border is reserved EXCLUSIVELY for the Obie. (HiFi v1.7 .obie-card)
-    static let ckCardObieBorder = Color(uiColor: .adaptive(
-        dark: Palette.glow.withAlphaComponent(0.65),
-        light: Palette.ember.withAlphaComponent(0.65)
-    ))
+    static let ckCardObieBorder = Color(uiColor: SceneToken.lit)
 
     /// Overdue card BORDER (reminder date passed). RUBY (owner 2026-06-18 — the Take
     /// border/colour system): overdue now reads as an ALERT, not warm amber, and ruby
@@ -253,20 +266,14 @@ extension Color {
     /// hollow centre aperture) even when only some quadrants are active. Daylight
     /// #F1F1F0 / Night #1B1916. Replaces the old solid base disc, which filled the
     /// centre and defeated the hollow-aperture read.
-    static let ckIrisOff = Color(uiColor: .adaptive(
-        dark: UIColor(hex: 0x1B1916),
-        light: UIColor(hex: 0xF1F1F0)
-    ))
+    static let ckIrisOff = Color(uiColor: SceneToken.line)
 
     /// Iris OUTER ring. Raised 2026-06-18 (owner-approved) to meet WCAG 1.4.11
     /// non-text contrast (≥3:1): Daylight #8C8C8C ≈ 3.1:1 on the white card (was the
     /// v1.7 hairline #E7E7E7 ≈ 1.2:1); Night Catchlight @ 45% ≈ 3.9:1 on Ink (was 18%).
     /// The Iris reads bolder/clearer now — a deliberate move from the v1.7 soft rim to
     /// a legible-without-VoiceOver control.
-    static let ckIrisRing = Color(uiColor: .adaptive(
-        dark: Palette.catchlight.withAlphaComponent(0.45),
-        light: UIColor(hex: 0x8C8C8C)
-    ))
+    static let ckIrisRing = Color(uiColor: SceneToken.line)
 
     /// Error / warning accent — used by the non-blocking error strips on the
     /// timeline (Task 3.9). Same hue in both modes so the strip reads as an
