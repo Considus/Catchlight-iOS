@@ -465,8 +465,11 @@ struct FocusRowView: View {
                             .allowsHitTesting(p.rise > Self.hitTestRise)
                     }
 
-                    // Hub: the Iris itself, previewing the working selection live.
+                    // Hub: the Iris itself, previewing the working selection live. It takes no
+                    // taps, so a tap anywhere on it reaches the veil (save and close), as the
+                    // hollow-centred Iris before the redesign let it.
                     IrisView(take: workingTake, diameter: CatchlightLayout.circleDiameter)
+                        .allowsHitTesting(false)
                         .accessibilityLabel("Selected: \(IrisView.activityDescription(for: workingTake))")
                 }
                 .position(hubCentre)
