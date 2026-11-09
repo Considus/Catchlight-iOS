@@ -66,8 +66,18 @@ struct FocusRowView: View {
     /// animation (a known flake source). Mirrors the app-wide
     /// `UIView.setAnimationsEnabled(false)` that UI-test launches set for UIKit.
     private var instantMotion: Bool {
-        reduceMotion || ProcessInfo.processInfo.arguments.contains("--uitesting")
+        reduceMotion || (ProcessInfo.processInfo.arguments.contains("--uitesting") && Self.uiTestTimeScale == nil)
     }
+
+    /// UI tests only: `--uitesting -catchlight.focusRowTimeScale <n>` plays the choreography
+    /// n times slower instead of skipping it, so a test can tap the row mid-open.
+    private static let uiTestTimeScale: Double? = {
+        guard ProcessInfo.processInfo.arguments.contains("--uitesting") else { return nil }
+        let scale = UserDefaults.standard.double(forKey: "catchlight.focusRowTimeScale")
+        return scale > 0 ? scale : nil
+    }()
+    /// Real seconds per choreography second: 1 outside that UI-test hook.
+    private static var timeScale: Double { uiTestTimeScale ?? 1 }
 
     /// Default "when" a freshly-added reminder opens to — now a user preference
     /// (Settings → Reminders → Default timing (hrs); owner 2026-06-18). Read at call
@@ -279,11 +289,11 @@ struct FocusRowView: View {
     private func markProgress(_ kind: MarkKind, now: Date) -> MarkProgress {
         switch phase {
         case .opening(let start):
-            return Self.openProgress(kind, at: now.timeIntervalSince(start))
+            return Self.openProgress(kind, at: now.timeIntervalSince(start) / Self.timeScale)
         case .open:
             return MarkProgress(rise: 1, spread: 1)
         case .closing(let start, _):
-            let mirrored = Choreo.landing(kind) - now.timeIntervalSince(start) * Choreo.closeSpeed
+            let mirrored = Choreo.landing(kind) - now.timeIntervalSince(start) / Self.timeScale * Choreo.closeSpeed
             return Self.openProgress(kind, at: mirrored)
         case .dismissed:
             return MarkProgress(rise: 0, spread: 0)
@@ -315,12 +325,12 @@ struct FocusRowView: View {
         let dur = Choreo.total / Choreo.closeSpeed
         switch phase {
         case .opening(let start):
-            let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
+            let p = min(max(now.timeIntervalSince(start) / Self.timeScale / dur, 0), 1)
             return Self.easeInOutCubic(p)
         case .open:
             return 1
         case .closing(let start, _):
-            let p = min(max(now.timeIntervalSince(start) / dur, 0), 1)
+            let p = min(max(now.timeIntervalSince(start) / Self.timeScale / dur, 0), 1)
             return 1 - Self.easeInOutCubic(p)
         case .dismissed:
             return 0
@@ -354,7 +364,7 @@ struct FocusRowView: View {
             else { phase = .opening(start: .now) }
             // Settle into the static .open phase once the choreography ends so
             // the TimelineView stops ticking.
-            DispatchQueue.main.asyncAfter(deadline: .now() + Choreo.total + 0.05) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + (Choreo.total + 0.05) * Self.timeScale) {
                 if case .opening = phase { phase = .open }
             }
         }
@@ -439,8 +449,9 @@ struct FocusRowView: View {
                 let rowY = Self.rowY(cardFrame: cardFrame, visibleBottom: visibleBottom)
                 ZStack {
                     // Drawn before the hub so the marks come out from beneath the Iris.
-                    // Later marks stack on top while gathered, as in the prototype.
-                    ForEach(MarkKind.allCases, id: \.rawValue) { kind in
+                    // Reversed, as before the redesign, so Note is drawn last and sits on top
+                    // of the gathered marks: a tap on the stack toggles Note.
+                    ForEach(MarkKind.allCases.reversed(), id: \.rawValue) { kind in
                         let p = markProgress(kind, now: now)
                         let slot = Self.slotX(for: kind.rawValue, hubX: hubCentre.x,
                                               containerWidth: containerWidth)
@@ -630,7 +641,7 @@ struct FocusRowView: View {
             return
         }
         phase = .closing(start: .now, commit: commit)
-        let closeDuration = (Choreo.total / Choreo.closeSpeed) + 0.05
+        let closeDuration = ((Choreo.total / Choreo.closeSpeed) + 0.05) * Self.timeScale
         DispatchQueue.main.asyncAfter(deadline: .now() + closeDuration) {
             if case .closing(_, let c) = phase { finish(commit: c) }
         }
