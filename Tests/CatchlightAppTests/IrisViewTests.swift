@@ -4,7 +4,7 @@
 //
 //  Covers which of the Iris's six lights are lit for a Take, and which inner
 //  shape it draws: one type shows that type's shape, two or more show four
-//  dots, none shows the Note shape. Important is a light, never a type.
+//  dots, none shows the Note shape. Note counts only when nothing else is on. Important is a light, never a type.
 //
 
 import XCTest
@@ -34,11 +34,30 @@ final class IrisViewTests: XCTestCase {
         XCTAssertEqual(litLights(take), [.task])
     }
 
-    func testNoteWithReminder_fourDots() {
+    // Note is the floor: it counts as a type only when nothing else is on (R10).
+    func testNoteWithReminder_clockShape_noteStillLit() {
         var take = Take(blocks: [.textLine("call the framer")])
         take.timeReminder = TimeReminder(scheduledDate: .now, notificationIdentifier: "x")
-        XCTAssertEqual(IrisView.innerShape(for: take), .fourDots)
+        XCTAssertEqual(IrisView.innerShape(for: take), .reminder)
         XCTAssertEqual(litLights(take), [.note, .reminder])
+    }
+
+    func testNoteWithTask_tickShape_noteStillLit() {
+        let take = Take(blocks: [.checkItem("milk")], isNote: true)
+        XCTAssertEqual(IrisView.innerShape(for: take), .task)
+        XCTAssertEqual(litLights(take), [.note, .task])
+    }
+
+    func testNoteTaskAndReminder_fourDots() {
+        var take = Take(blocks: [.checkItem("frame")], isNote: true)
+        take.timeReminder = TimeReminder(scheduledDate: .now, notificationIdentifier: "x")
+        XCTAssertEqual(IrisView.innerShape(for: take), .fourDots)
+    }
+
+    func testTaskAndReminder_fourDots() {
+        var take = Take(blocks: [.checkItem("frame")], isNote: false)
+        take.timeReminder = TimeReminder(scheduledDate: .now, notificationIdentifier: "x")
+        XCTAssertEqual(IrisView.innerShape(for: take), .fourDots)
     }
 
     func testImportantNote_noteShape_importantAndNoteLit() {

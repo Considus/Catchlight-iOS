@@ -50,12 +50,12 @@ struct IrisView: View {
         ]
     }
 
-    /// The inner shape for `take`. Important is never a type.
+    /// The inner shape for `take`. Important is never a type, and Note is the floor:
+    /// it counts only when nothing else is on, so Note + Task shows the tick (R10).
     static func innerShape(for take: Take) -> IrisInnerShape {
         let lit = lights(for: take)
         let types: [(IrisLight, IrisInnerShape)] = [
-            (.note, .note), (.task, .task), (.reminder, .reminder),
-            (.audio, .audio), (.image, .image)
+            (.task, .task), (.reminder, .reminder), (.audio, .audio), (.image, .image)
         ]
         let active = types.filter { lit[$0.0] == true }
         switch active.count {
