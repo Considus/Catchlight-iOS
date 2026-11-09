@@ -64,9 +64,10 @@ final class FocusRowMotionUITests: XCTestCase {
         let tapAt = Date().timeIntervalSince(opened) / timeScale
         tap(app, at: CGPoint(x: hub.x, y: hub.y + 40))
         let tapDone = Date().timeIntervalSince(opened) / timeScale
-        let report = String(format: "[focus-row-motion] stack tap sent %.0f-%.0fms device time; note=%@ important=%@ row open=%@",
+        let report = String(format: "[focus-row-motion] stack tap sent %.0f-%.0fms device time; note=%@ task=%@ important=%@ row open=%@",
                             tapAt * 1000, tapDone * 1000, String(describing: note.value),
-                            String(describing: important.value), String(describing: dim.exists))
+                            String(describing: task.value), String(describing: important.value),
+                            String(describing: dim.exists))
         print(report)
         let a = XCTAttachment(string: report)
         a.lifetime = .keepAlways
