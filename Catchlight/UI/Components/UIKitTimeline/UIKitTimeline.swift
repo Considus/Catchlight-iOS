@@ -574,7 +574,8 @@ struct TimelineMonthDivider: View {
     }
 }
 
-final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDelegate {
+final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDelegate,
+                                         UICollectionViewDelegate {
     var spineX: CGFloat = 0
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
     var activeMonthKey: String?
@@ -605,7 +606,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     /// size: the row's lit copy, drawn over it, is the one that grows.
     var focusGrowth = FocusRowGrowth()
 
-    /// A Take cell's content. Also set straight on a visible cell by `applyFocusGrowth`.
+    /// A Take cell's content.
     private func takeConfiguration(for take: Take) -> UIHostingConfiguration<TimelineSwipeCell, EmptyView> {
         UIHostingConfiguration {
             TimelineSwipeCell(take: take, spineX: self.spineX, cardGap: self.cardGap,
@@ -667,6 +668,25 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         shiftLink = link
     }
 
+    /// The display link holds this controller: stop it when the timeline leaves the screen,
+    /// landing the shift where it was heading.
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        guard shiftLink != nil else { return }
+        shiftLink?.invalidate()
+        shiftLink = nil
+        setShift(shiftTo)
+    }
+
+    deinit { shiftLink?.invalidate() }
+
+    /// A cell kept off screen (prefetched, or scrolled away and back) is neither reconfigured
+    /// nor reused, so it takes the current shift here as it returns.
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell,
+                        forItemAt indexPath: IndexPath) {
+        (cell as? TimelineCell)?.focusShift = focusShift(at: indexPath)
+    }
+
     @objc private func stepShift() {
         let p = min(max((CACurrentMediaTime() - shiftStart) / shiftDuration, 0), 1)
         setShift(shiftFrom + (shiftTo - shiftFrom) * CGFloat(FocusRowView.easeInOutCubic(p)))
@@ -674,16 +694,23 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     }
 
     /// Moves every visible cell below the grown Take (every cell, for the pinned Obie) down by
-    /// `shift`, and the rest back to rest.
+    /// `shift`, and the rest back to rest. Cells configured or reused later take theirs from
+    /// `focusShift(at:)` in the cell registration.
     private func setShift(_ shift: CGFloat) {
         shiftNow = shift
-        guard let dataSource, let collectionView else { return }
-        let grown = focusGrowth.takeID.flatMap { dataSource.indexPath(for: .take($0)) }
+        guard let collectionView else { return }
         for path in collectionView.indexPathsForVisibleItems {
-            guard let cell = collectionView.cellForItem(at: path) else { continue }
-            let moves = shift != 0 && grown.map { path > $0 } ?? true
-            cell.transform = moves ? CGAffineTransform(translationX: 0, y: shift) : .identity
+            (collectionView.cellForItem(at: path) as? TimelineCell)?.focusShift = focusShift(at: path)
         }
+    }
+
+    /// The current shift for the row at `path`: `shiftNow` below the grown Take, 0 above it.
+    private func focusShift(at path: IndexPath) -> CGFloat {
+        guard shiftNow != 0, let dataSource else { return 0 }
+        guard let id = focusGrowth.takeID, let grown = dataSource.indexPath(for: .take(id)) else {
+            return shiftNow                     // the pinned Obie: every row is below it
+        }
+        return path > grown ? shiftNow : 0
     }
     private var collectionView: UICollectionView!
     private var reorderPress: UILongPressGestureRecognizer!
@@ -798,6 +825,8 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         // collection behind it, interactive tracking contributed to keyboard re-placement
         // thrash (caps-flash, attempt 1). Nothing here needs scroll-to-dismiss.
         collectionView.keyboardDismissMode = .none
+        // Only for `willDisplay`, which gives a cell coming back on screen the current shift.
+        collectionView.delegate = self
         // Tap the EMPTY timeline → the host's background action (clear a filter / close search).
         // The old SwiftUI timeline did this with a `.background` catcher behind its VStack; this
         // collection covers that area and eats the tap, so the exit was lost in the rebuild —
@@ -823,9 +852,11 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         // `UIViewControllerRepresentable`, which `UIHostingConfiguration` does not support: inside a
         // cell it renders SwiftUI's yellow "unavailable" placeholder. Editing happens in the plain
         // SwiftUI overlay (`KeyboardTakeEditor`) above this collection.
-        let cellReg = UICollectionView.CellRegistration<UICollectionViewListCell, TimelineRow> {
-            [weak self] cell, _, row in
+        let cellReg = UICollectionView.CellRegistration<TimelineCell, TimelineRow> {
+            [weak self] cell, indexPath, row in
             guard let self else { return }
+            // Configured or reused while the Focus row is open: take the current shift.
+            cell.focusShift = self.focusShift(at: indexPath)
             // Don't clip, so nothing drawn at a card's edge is cut off.
             cell.clipsToBounds = false
             cell.contentView.clipsToBounds = false
@@ -1099,4 +1130,27 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         collectionView.accessibilityElementsHidden = hidden
     }
 
+}
+
+/// A timeline row's cell. Carries the Focus row's shift of the cards below the tapped one
+/// (`UIKitTimelineViewController.setShift`) as its transform, and puts it back whenever the
+/// collection view re-applies the cell's layout attributes, which reset the transform.
+final class TimelineCell: UICollectionViewListCell {
+    var focusShift: CGFloat = 0 {
+        didSet { if focusShift != oldValue { applyFocusShift() } }
+    }
+
+    override func apply(_ layoutAttributes: UICollectionViewLayoutAttributes) {
+        super.apply(layoutAttributes)
+        applyFocusShift()
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        focusShift = 0
+    }
+
+    private func applyFocusShift() {
+        transform = focusShift == 0 ? .identity : CGAffineTransform(translationX: 0, y: focusShift)
+    }
 }

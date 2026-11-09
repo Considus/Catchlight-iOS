@@ -733,6 +733,9 @@ struct FocusRowView: View {
             let shrink = Timing.drop / Timing.closeSpeed * Self.timeScale
             let wait = (Timing.openDuration(slots: slots) - Timing.drop) / Timing.closeSpeed * Self.timeScale
             DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
+                // Only while this close is still running: a row removed another way has
+                // already reset the growth, and must not leave a stale Take behind.
+                guard case .closing = phase else { return }
                 onCardGrowth(false, shrink)
             }
         }
