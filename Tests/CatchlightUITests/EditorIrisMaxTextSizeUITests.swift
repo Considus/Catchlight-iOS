@@ -116,10 +116,12 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
 
         let frame = iris.frame
         let window = app.windows.firstMatch.frame
-        let ring = ringShare(of: frame, in: shot.image)
-        let report = String(format: "[iris-max-text] \(name) iris=%@ keyboardTop=%.1f window=%@ ring=%.2f",
+        let edges = ringShares(of: frame, in: shot.image)
+        let ring = edges.min() ?? 0
+        let report = String(format: "[iris-max-text] \(name) iris=%@ keyboardTop=%.1f window=%@ ring=%.2f (top %.2f right %.2f bottom %.2f left %.2f)",
                             NSCoder.string(for: frame), keyboard.frame.minY,
-                            NSCoder.string(for: window), ring)
+                            NSCoder.string(for: window), ring,
+                            edges[0], edges[1], edges[2], edges[3])
         print(report)
         let note = XCTAttachment(string: report)
         note.lifetime = .keepAlways
@@ -145,23 +147,25 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
             XCTAssertEqual(stampShown, expectStamp,
                            "Stamp \(expectStamp ? "should" : "should not") show while typing at this size")
         }
-        // The ring is drawn in six lights with gaps between them, so a visible Iris reads well below
-        // 100%. Measured on these scenarios: a visible Iris reads 90%, so 50% splits it from a hidden one.
+        // Every edge is scored on its own, so a heading covering only part of the Iris fails too.
+        // The ring is drawn in six lights with gaps between them, so a visible edge reads below
+        // 100%. Measured on these scenarios: a visible edge reads 90% or more, so 50% splits it
+        // from a covered one.
         XCTAssertGreaterThanOrEqual(ring, 0.5,
-                                    "Editor Iris is hidden: only \(Int(ring * 100))% of its outline ring differs from the card fill")
+                                    "Editor Iris is hidden or partly covered: its weakest edge shows only \(Int(ring * 100))% of the outline ring (top \(Int(edges[0] * 100))%, right \(Int(edges[1] * 100))%, bottom \(Int(edges[2] * 100))%, left \(Int(edges[3] * 100))%)")
     }
 
-    /// Share of sample points along the Iris's four straight edges where the ring (1.5 units in
+    /// Per edge (top, right, bottom, left), the share of sample points along its straight part where the ring (1.5 units in
     /// from the edge, the centre of the stroke) differs from the card fill 8 units in, clear of
     /// the ring, the inner shape and the Obie square. Geometry is the Iris's 44-unit space.
-    private func ringShare(of frame: CGRect, in image: UIImage) -> Double {
-        guard let cg = image.cgImage else { return 0 }
+    private func ringShares(of frame: CGRect, in image: UIImage) -> [Double] {
+        guard let cg = image.cgImage else { return [0, 0, 0, 0] }
         let scale = CGFloat(cg.width) / image.size.width
         let w = cg.width, h = cg.height
         var pixels = [UInt8](repeating: 0, count: w * h * 4)
         guard let ctx = CGContext(data: &pixels, width: w, height: h, bitsPerComponent: 8,
                                   bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
-                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return 0 }
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return [0, 0, 0, 0] }
         ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
 
         func rgb(_ point: CGPoint) -> (Int, Int, Int) {
@@ -171,7 +175,7 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
             return (Int(pixels[i]), Int(pixels[i + 1]), Int(pixels[i + 2]))
         }
         let u = frame.width / 44
-        var differing = 0, total = 0
+        var differing = [0, 0, 0, 0], total = 0
         // t runs along each edge between the rounded corners (units 11 to 33).
         for step in 0...20 {
             let t = (11 + 22 * CGFloat(step) / 20) * u
@@ -181,12 +185,12 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
                 (CGPoint(x: frame.minX + t, y: frame.maxY - 1.5 * u), CGPoint(x: frame.minX + t, y: frame.maxY - 8 * u)),
                 (CGPoint(x: frame.minX + 1.5 * u, y: frame.minY + t), CGPoint(x: frame.minX + 8 * u, y: frame.minY + t)),
             ]
-            for sample in samples {
+            for (edge, sample) in samples.enumerated() {
                 let r = rgb(sample.ring), f = rgb(sample.fill)
-                if abs(r.0 - f.0) + abs(r.1 - f.1) + abs(r.2 - f.2) > 30 { differing += 1 }
-                total += 1
+                if abs(r.0 - f.0) + abs(r.1 - f.1) + abs(r.2 - f.2) > 30 { differing[edge] += 1 }
             }
+            total += 1
         }
-        return Double(differing) / Double(total)
+        return differing.map { Double($0) / Double(total) }
     }
 }
