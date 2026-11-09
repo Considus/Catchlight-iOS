@@ -251,28 +251,23 @@ struct TakeRowView: View {
 
     var body: some View {
         // The Iris sits inside the card's top-left, `irisInset` from its top and leading
-        // edges, and moves with the card when it swipes. It is drawn on TOP of the card so
-        // its long-press still wins hit-testing; the card's text column starts at
-        // `cardTextLeadingPad`, clear of the Iris's 44pt touch frame.
-        // Explicit `.zIndex` pins the paint order (card < Iris < touch frame). Without it,
-        // when the card REPAINTS on a state change (e.g. the border recolouring on "mark
-        // done") SwiftUI could momentarily reshuffle these siblings and paint the card over
-        // the Iris for a beat (owner 2026-06-18).
+        // edges, and moves with the card when it swipes. It is DRAWN by the card itself
+        // (`cardIris`, overlaid before the long-press menu) so the menu's lifted preview
+        // carries it. Its touch frame sits on TOP of the card so its long-press still wins
+        // hit-testing; the card's text column starts at `cardTextLeadingPad`, clear of the
+        // Iris's 44pt touch frame.
+        // Explicit `.zIndex` pins the paint order (card < touch frame). Without it, when
+        // the card REPAINTS on a state change (e.g. the border recolouring on "mark done")
+        // SwiftUI could momentarily reshuffle these siblings (owner 2026-06-18).
+        //
+        // 🚨 THIS ROW IS THE PINNED OBIE. It is easy to read as dead code — nothing
+        // but its own previews constructs it directly — but `DailiesView.rowContent`
+        // builds it for the Obie, which is why the Obie was once left behind when
+        // the timeline cell alone was rebuilt.
         ZStack(alignment: .topLeading) {
             cardColumn
                 .offset(x: cardSwipeOffset)
                 .zIndex(0)
-            // The Iris, drawn by the same view the recycling timeline cell uses.
-            //
-            // 🚨 THIS ROW IS THE PINNED OBIE. It is easy to read as dead code — nothing
-            // but its own previews constructs it directly — but `DailiesView.rowContent`
-            // builds it for the Obie, which is why the Obie was once left behind when
-            // the timeline cell alone was rebuilt.
-            IrisView(take: take)
-                .allowsHitTesting(false)
-                .offset(x: CatchlightLayout.irisInset + cardSwipeOffset,
-                        y: CatchlightLayout.irisInset)
-                .zIndex(2)
             // Gestures sit above the drawing, in their own 44pt frame, so the drawing
             // cannot swallow the tap or produce a second VoiceOver element.
             irisColumn
@@ -281,6 +276,17 @@ struct TakeRowView: View {
                 .zIndex(3)
         }
         .padding(.vertical, 6)
+    }
+
+    /// The Iris drawing, part of the card so the long-press menu's lifted preview shows it
+    /// (owner, slice 1: the Iris vanished while a card was held). Pure drawing: no hit
+    /// testing, and `IrisView` vends no accessibility element of its own; `irisColumn`
+    /// keeps the gesture and the VoiceOver element.
+    private var cardIris: some View {
+        IrisView(take: take)
+            .allowsHitTesting(false)
+            .padding(.leading, CatchlightLayout.irisInset)
+            .padding(.top, CatchlightLayout.irisInset)
     }
 
     /// The Iris's touch frame, 44pt, matching the Iris it sits over.
@@ -292,7 +298,7 @@ struct TakeRowView: View {
     /// original exclusive semantics.
     private var irisColumn: some View {
         ZStack {
-            // Touch + VoiceOver only. `IrisView` above draws the Iris.
+            // Touch + VoiceOver only. `cardIris` on the card draws the Iris.
             Color.clear
         }
         .frame(width: CatchlightLayout.circleDiameter,
@@ -333,17 +339,15 @@ struct TakeRowView: View {
             // menu rides along so "Discard changes" / Delete / Mark-done are reachable
             // mid-edit (owner 2026-06-17).
             editingCard()
+                .overlay(alignment: .topLeading) { cardIris }
                 .contextMenu { rowMenuItems }
         } else {
             TakeCardSurface(take: take, isSnoozed: isSnoozed, linksInteractive: linksInteractive)
+                .overlay(alignment: .topLeading) { cardIris }
                 .contentShape(RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous))
                 .onTapGesture { onTapText() }
                 // iOS's standard long-press lift: the card rises cleanly (its own
-                // shape + shadow, no platter, no duplicate). The Iris is a separate
-                // sibling so it stays put for the brief lift — accepted (owner
-                // 2026-06-18): the "Iris-rides" custom/UIKit previews each cost more
-                // than the flourish is worth (platter, or a row restructure). Revisit
-                // only if the row ever moves to a UIKit-hosted cell.
+                // shape + shadow, no platter, no duplicate), carrying the Iris it draws.
                 .contextMenu { rowMenuItems }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("take-row")

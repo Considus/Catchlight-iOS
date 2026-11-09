@@ -227,3 +227,44 @@ func takeRow(in app: XCUIApplication, withLabelStarting prefix: String) -> XCUIE
                                 "take-row", prefix)
     return app.descendants(matching: .any).matching(predicate).firstMatch
 }
+
+// MARK: - Iris ring probe
+
+/// Per edge (top, right, bottom, left), the share of sample points along its straight part where the ring (1.5 units in
+/// from the edge, the centre of the stroke) differs from the card fill 8 units in, clear of
+/// the ring, the inner shape and the Obie square. Geometry is the Iris's 44-unit space.
+func irisRingShares(of frame: CGRect, in image: UIImage) -> [Double] {
+    guard let cg = image.cgImage else { return [0, 0, 0, 0] }
+    let scale = CGFloat(cg.width) / image.size.width
+    let w = cg.width, h = cg.height
+    var pixels = [UInt8](repeating: 0, count: w * h * 4)
+    guard let ctx = CGContext(data: &pixels, width: w, height: h, bitsPerComponent: 8,
+                              bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
+                              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return [0, 0, 0, 0] }
+    ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+    func rgb(_ point: CGPoint) -> (Int, Int, Int) {
+        let cx = min(max(Int(point.x * scale), 0), w - 1)
+        let cy = min(max(Int(point.y * scale), 0), h - 1)
+        let i = (cy * w + cx) * 4
+        return (Int(pixels[i]), Int(pixels[i + 1]), Int(pixels[i + 2]))
+    }
+    let u = frame.width / 44
+    var differing = [0, 0, 0, 0], total = 0
+    // t runs along each edge between the rounded corners (units 11 to 33).
+    for step in 0...20 {
+        let t = (11 + 22 * CGFloat(step) / 20) * u
+        let samples: [(ring: CGPoint, fill: CGPoint)] = [
+            (CGPoint(x: frame.minX + t, y: frame.minY + 1.5 * u), CGPoint(x: frame.minX + t, y: frame.minY + 8 * u)),
+            (CGPoint(x: frame.maxX - 1.5 * u, y: frame.minY + t), CGPoint(x: frame.maxX - 8 * u, y: frame.minY + t)),
+            (CGPoint(x: frame.minX + t, y: frame.maxY - 1.5 * u), CGPoint(x: frame.minX + t, y: frame.maxY - 8 * u)),
+            (CGPoint(x: frame.minX + 1.5 * u, y: frame.minY + t), CGPoint(x: frame.minX + 8 * u, y: frame.minY + t)),
+        ]
+        for (edge, sample) in samples.enumerated() {
+            let r = rgb(sample.ring), f = rgb(sample.fill)
+            if abs(r.0 - f.0) + abs(r.1 - f.1) + abs(r.2 - f.2) > 30 { differing[edge] += 1 }
+        }
+        total += 1
+    }
+    return differing.map { Double($0) / Double(total) }
+}

@@ -211,9 +211,9 @@ struct TimelineCardHitShape: Shape {
     }
 }
 
-/// One read-only timeline row, with the same layering as `TakeRowView` (card < Iris < touch
-/// frame). The ZStack origin is the card's top-left, after the leading pad, and the Iris
-/// sits `irisInset` in from it.
+/// One read-only timeline row, with the same layering as `TakeRowView` (the card, drawing its
+/// Iris, < the Iris touch frame). The ZStack origin is the card's top-left, after the leading
+/// pad, and the Iris sits `irisInset` in from it.
 struct TimelineReadCell: View {
     let take: Take
     let spineX: CGFloat
@@ -232,8 +232,8 @@ struct TimelineReadCell: View {
     var onLongPressCircle: (Take) -> Void = { _ in }
     /// Card context-menu actions (mirrors `TakeRowView.rowMenuItems`, resting variant).
     /// Mark-done / Delete reuse the swipe closures; the menu-delete is thus recurring-
-    /// aware too. Attached to the CARD only — the Iris is a sibling, so its long-press
-    /// (Obie) still wins, matching the SwiftUI row's deliberate split.
+    /// aware too. Attached to the CARD only — the Iris touch frame is a sibling, so its
+    /// long-press (Obie) still wins, matching the SwiftUI row's deliberate split.
     var onToggleDone: (Take) -> Void = { _ in }
     var onDelete: (Take) -> Void = { _ in }
     var onSetImportant: (Take) -> Void = { _ in }
@@ -311,6 +311,15 @@ struct TimelineReadCell: View {
                         .animation(.easeInOut(duration: 0.4), value: isSpotlightTarget)
                         .allowsHitTesting(false)
                 )
+                // The Iris, inside the card's top-left, drawn BY the card so the long-press
+                // menu's lifted preview carries it (owner, slice 1: it vanished while a card
+                // was held). Pure drawing; `irisHitTarget` keeps the gesture and VoiceOver.
+                .overlay(alignment: .topLeading) {
+                    IrisView(take: take)
+                        .allowsHitTesting(false)
+                        .padding(.leading, CatchlightLayout.irisInset)
+                        .padding(.top, CatchlightLayout.irisInset)
+                }
                 // The card's hit region STOPS at the drag handle in manual mode. Without
                 // this the strip is still the card's, so a hold there raised the card's
                 // CONTEXT MENU instead of lifting the row — the menu's own long-press beat
@@ -345,10 +354,6 @@ struct TimelineReadCell: View {
                         Button("Move down") { onNudge(take, 1) }
                     }
                 }
-            // ── The Iris, inside the card's top-left ─────────────────────────────
-            IrisView(take: take)
-                .allowsHitTesting(false)
-                .offset(x: CatchlightLayout.irisInset, y: CatchlightLayout.irisInset)
             irisHitTarget                                                              // gestures + VoiceOver
         }
         .padding(.leading, spineX - CatchlightLayout.cardLeadingOffset)
