@@ -83,18 +83,22 @@ struct SplitView: View {
         .contentShape(Rectangle())   // the whole half is tappable, not just the Iris
     }
 
+    /// One half of the wide Lock Screen widget: the Iris and "Take" or "Obie" beside it, on
+    /// one line at full size. Each half is only about 80pt wide, so the second line is gone
+    /// and the title is the noun alone, the same word in every language ("Neuer Take" broke
+    /// mid-word in German). VoiceOver still says the full "New Take" or "New Obie" (Art
+    /// Director, 2026-11-10).
     private func accessoryHalf(_ surface: CaptureSurface) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                WidgetIris(surface: surface, size: 26)
-                Text(surface.shortTitle).widgetUI(14, weight: .semibold)
-            }
-            Text(surface.subtitle).widgetUI(12).foregroundStyle(.secondary)
+        HStack(spacing: 4) {
+            WidgetIris(surface: surface, size: 22)
+            Text(surface.shortTitle)
+                .widgetUI(14, weight: .semibold)
+                .lineLimit(1)
         }
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(surface.title)
     }
 }
