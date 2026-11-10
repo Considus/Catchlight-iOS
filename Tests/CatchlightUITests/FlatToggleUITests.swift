@@ -113,9 +113,16 @@ final class FlatToggleUITests: XCTestCase {
     // MARK: - The track's drag does not take scrolling or sheet dismissal
 
     /// A vertical drag of `dy` points starting `dx` from the element's leading edge.
-    private func drag(from element: XCUIElement, dxFromTrailing: CGFloat, dy: CGFloat) {
+    /// With `slowAndHeld` the finger moves slowly and rests before lifting, so the list gets
+    /// no fling and its travel does not depend on how fast the runner delivers events.
+    private func drag(from element: XCUIElement, dxFromTrailing: CGFloat, dy: CGFloat, slowAndHeld: Bool = false) {
         let start = element.coordinate(withNormalizedOffset: CGVector(dx: 1 - dxFromTrailing / element.frame.width, dy: 0.5))
-        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: dy)))
+        let end = start.withOffset(CGVector(dx: 0, dy: dy))
+        if slowAndHeld {
+            start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.5)
+        } else {
+            start.press(forDuration: 0.05, thenDragTo: end)
+        }
     }
 
     private func settingsRowMovedBySwipe(fromTrack: Bool) -> (moved: CGFloat, value: String, before: String) {
@@ -134,7 +141,7 @@ final class FlatToggleUITests: XCTestCase {
         XCTAssertTrue(toggle.exists && toggle.isHittable, "the Follow-up reminders row is not reachable after \(scrolls) scrolls")
         let before = value(toggle)
         let yBefore = toggle.frame.minY
-        drag(from: toggle, dxFromTrailing: fromTrack ? 22 : toggle.frame.width * 0.7, dy: -220)
+        drag(from: toggle, dxFromTrailing: fromTrack ? 22 : toggle.frame.width * 0.7, dy: -220, slowAndHeld: true)
         Thread.sleep(forTimeInterval: 0.8)
         let after = anyElement(in: app, id: "follow-up-reminders-toggle")
         let result = (yBefore - after.frame.minY, value(after), before)
@@ -147,7 +154,7 @@ final class FlatToggleUITests: XCTestCase {
         let fromTrack = settingsRowMovedBySwipe(fromTrack: true)
         XCTAssertGreaterThan(fromLabel.moved, 50, "control: a swipe from the label must scroll the list (\(fromLabel.moved))")
         XCTAssertEqual(fromTrack.value, fromTrack.before, "a vertical swipe on the track must not change the toggle")
-        XCTAssertEqual(fromTrack.moved, fromLabel.moved, accuracy: 25,
+        XCTAssertEqual(fromTrack.moved, fromLabel.moved, accuracy: 6,
                        "the list scrolled \(fromTrack.moved) from the track and \(fromLabel.moved) from the label")
     }
 
