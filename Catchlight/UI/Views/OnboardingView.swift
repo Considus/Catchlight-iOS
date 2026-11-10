@@ -109,6 +109,46 @@ struct OnboardingView: View {
 
 // MARK: - Shared chrome
 
+/// The brand mark on an onboarding step. At the accessibility sizes it is left out: it is
+/// decorative, and its room goes to the content. Every step draws it through here, so every step
+/// behaves the same.
+private struct OnboardingBrandMark: View {
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
+    var body: some View {
+        if dynamicSize < .accessibility1 { IntroBrandMark() }
+    }
+}
+
+/// The gap from the top of a step (or the brand mark) to its heading: the shared set position,
+/// or a short one at the accessibility sizes, where there is no mark above it.
+private struct HeroGap: View {
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
+    var body: some View {
+        Color.clear.frame(height: dynamicSize >= .accessibility1 ? 24 : introHeroTopGap)
+    }
+}
+
+/// A step's heading: Archivo expanded 28, fixed up to the default text size so every heading sits
+/// at the same place and size. Above it the heading scales with the text size like the text
+/// beneath it, so it never ends up smaller than the point titles under it.
+private struct StepHeading: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+    @ScaledMetric(relativeTo: .title) private var scaledSize: CGFloat = 28
+
+    func body(content: Content) -> some View {
+        let scales = dynamicSize > .large
+        content
+            .ckDisplay(size: 28, relativeTo: scales ? .title : nil)
+            .lineSpacing(CatchlightFont.tightLeading(size: scales ? scaledSize : 28))
+    }
+}
+
+private extension View {
+    func stepHeading() -> some View { modifier(StepHeading()) }
+}
+
 extension OnboardingViewModel.Step {
     /// Welcome and the closing screen sit on the Scene's colour field. Every other step sits on
     /// the ground.
@@ -263,7 +303,7 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
     var body: some View {
         StepScaffold(onField: onField) {
             VStack(spacing: 0) {
-                IntroBrandMark()
+                OnboardingBrandMark()
                     .opacity(drawsBrandMark || dynamicSize > .large ? 1 : 0)
                 content()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -337,7 +377,7 @@ struct WelcomeContent: View {
                 // Pin the hero line at the shared set position (every brand-mark
                 // screen uses `introHeroTopGap`); the body then settles toward the
                 // button via the flexible spacer.
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 // Primary-text slot. The headline is laid out in BOTH modes (so the
                 // slot keeps the same height); the splash hides it and overlays the
                 // tagline in its place.
@@ -381,8 +421,7 @@ struct WelcomeContent: View {
 
     private var headline: some View {
         Text("You don't need to choose privacy, it's yours and you never have to ask for it.")
-            .ckDisplay(size: 28, relativeTo: nil)
-            .lineSpacing(CatchlightFont.tightLeading(size: 28))
+            .stepHeading()
             .stepInk(.primary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -397,8 +436,7 @@ struct WelcomeContent: View {
             // intro hero lines are now `displayFixed(28)`, static — so the splash
             // tagline and the Welcome headline it crossfades into are pixel-matched).
             // The secondary colour + italic keep it reading as a tagline.
-            .ckDisplay(size: 28, relativeTo: nil)
-            .lineSpacing(CatchlightFont.tightLeading(size: 28))
+            .stepHeading()
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -437,10 +475,9 @@ struct RestoreFolderView: View {
     var body: some View {
         IntroChapterScaffold(drawsBrandMark: true) {
             VStack(spacing: 0) {
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 Text("Welcome back")
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -507,14 +544,13 @@ private struct RestoreEntryStep: View {
                         // the scroll (not the hoisted fixed one — `showsBrandMark` excludes
                         // `.restoreEntry`) so it scrolls UP with the hero when the keyboard
                         // rises instead of hovering over the fields (owner 2026-07-02).
-                        IntroBrandMark()
+                        OnboardingBrandMark()
 
-                        Spacer().frame(height: introHeroTopGap)
+                        HeroGap()
 
                         VStack(spacing: 20) {
                             Text("Enter your Privacy phrase")
-                                .ckDisplay(size: 28, relativeTo: nil)
-                                .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                                .stepHeading()
                                 .foregroundStyle(Color.ckTextPrimary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -620,10 +656,9 @@ private struct StorageChoiceStep: View {
         IntroChapterScaffold {
             VStack(spacing: 0) {
                 // Hero line at the shared set position.
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 Text("Now, where should your Takes live?")
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -718,10 +753,9 @@ private struct LocalWarningStep: View {
                 // crossfade (owner 2026-06-15: "One thing before…" should match the
                 // low subtext of "You don't need to choose…"). A flexible spacer
                 // carries it down toward the dock while the hero stays pinned.
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 Text("One thing before we continue.")
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -789,17 +823,16 @@ private struct RevealStep: View {
                     // Reserve the brand-mark space (owner 2026-06-15); the visible,
                     // non-fading mark is hoisted in OnboardingView so it doesn't flash
                     // between steps. `.opacity(0)` keeps the same Y/height here.
-                    IntroBrandMark()
+                    OnboardingBrandMark()
                         // Visible and scrolling above Large — the hoisted mark stands down there.
                         .opacity(dynamicSize > .large ? 1 : 0)
                     // Hero line at the shared set position (consistent with the
                     // IntroChapterScaffold screens).
-                    Spacer().frame(height: introHeroTopGap)
+                    HeroGap()
 
                     VStack(spacing: 20) {
                         Text("Your Privacy phrase")
-                            .ckDisplay(size: 28, relativeTo: nil)
-                            .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                            .stepHeading()
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -890,7 +923,7 @@ private struct ConfirmStep: View {
             ScrollView {
                 VStack(spacing: 0) {
                     // Reserve the brand-mark space (hoisted + non-fading, as Reveal).
-                    IntroBrandMark()
+                    OnboardingBrandMark()
                         // Visible and scrolling above Large — the hoisted mark stands down there.
                         .opacity(dynamicSize > .large ? 1 : 0)
                     // The gap to the hero now also HOSTS the validation message: it
@@ -903,8 +936,7 @@ private struct ConfirmStep: View {
                     // hero stays pinned at the set position whether or not it shows).
                     // ckTextObie, not ckEmber: Ember fails WCAG AA on Paper at 13pt
                     // (DS §12.3); resolves to Ember Text #856539 Daylight / Glow Night.
-                    Color.clear
-                        .frame(height: introHeroTopGap)
+                    HeroGap()
                         .overlay {
                             if let failure = vm.failure {
                                 Text(failure)
@@ -937,8 +969,7 @@ private struct ConfirmStep: View {
 
                     VStack(spacing: 12) {
                         Text("Confirm three words")
-                            .ckDisplay(size: 28, relativeTo: nil)
-                            .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                            .stepHeading()
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1169,10 +1200,9 @@ private struct CompleteStep: View {
                 // Hero line at the shared set position (was centred — owner
                 // 2026-06-16: keep "You're ready." consistent with every other
                 // brand-mark screen).
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 Text("You're ready.")
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .stepInk(.primary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1281,10 +1311,9 @@ private struct BasicsStep: View {
         // 2026-09-14).
         IntroChapterScaffold {
             VStack(spacing: 0) {
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 Text(heading)
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1328,8 +1357,7 @@ private struct FailureStep: View {
             VStack(spacing: 20) {
                 Spacer()
                 Text(vm.failure ?? String(localized: "Something went wrong."))
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .accessibilityAddTraits(.isHeader)

@@ -35,4 +35,31 @@ final class OnboardingScrollUITests: XCTestCase {
         }
         XCTAssertEqual(checked, 2, "both pages should have been checked")
     }
+
+    private func mark(in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Catchlight'")).firstMatch
+    }
+
+    /// The step heading grows with the text size, and the logo and wordmark give their room to the
+    /// content. Measured by the heading's height on a page whose heading is two lines at the
+    /// default size (about 61pt): a heading that scales is several times that at the largest size.
+    func testAtTheLargestSize_theHeadingScales_andTheLogoAndWordmarkAreGone() {
+        continueAfterFailure = true
+        let defaults = XCUIApplication()
+        defaults.launchArguments = ["-appearanceMode", "night"]
+        defaults.launch()
+        XCTAssertTrue(mark(in: defaults).waitForExistence(timeout: 12), "the mark is missing at the default size")
+        defaults.terminate()
+
+        var checked = 0
+        walkOnboarding(contentSize: largest) { step, app in
+            XCTAssertFalse(mark(in: app).exists, "\(step): the logo and wordmark are still there")
+            guard step == .basics else { return }
+            let heading = app.staticTexts["A few things worth knowing"]
+            XCTAssertTrue(heading.exists)
+            XCTAssertGreaterThan(heading.frame.height, 150, "the heading did not scale: \(heading.frame.height)pt high")
+            checked += 1
+        }
+        XCTAssertEqual(checked, 1)
+    }
 }
