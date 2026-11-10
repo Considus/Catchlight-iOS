@@ -8,9 +8,10 @@
 //
 //  The Storyboard is NOT the timeline: there is no spine, no Iris, and no dock. It is
 //  just the real Take cards — `TakeCardSurface`, so they carry the SAME colour /
-//  border markings and the SAME overdue time line ("Overdue" in ruby at its start) — laid out
-//  in the user's chosen Order, capped by Preview, spaced by View (the same three
-//  Settings the timeline honours). An X in the top-right (the Shot List's chrome) is the only way out.
+//  border markings and the SAME overdue time line ("Overdue" in ruby at its start) —
+//  laid out in the user's chosen Order, capped by Preview, spaced by View (the same
+//  three Settings the timeline honours). An X in the top-right (the Shot List's
+//  chrome) is the only way out.
 //
 //  Editing: tapping a card focuses it for editing through the standard inline editor
 //  — background masked, the keyboard editing toolbar kept — but with NO Iris (owner
