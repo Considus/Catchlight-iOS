@@ -513,6 +513,56 @@ private struct FlatToggleTrack: View {
     }
 }
 
+/// The measurements of the flat segmented control. The selected segment is concentric with
+/// the container: its corner radius is the control radius less the inset.
+enum FlatSegmentedMetrics {
+    static let inset: CGFloat = 3
+    static var selectedRadius: CGFloat { CatchlightLayout.controlRadius - inset }
+    static let segmentHeight: CGFloat = CatchlightLayout.minTouchTarget
+}
+
+/// A two or more segment choice drawn as a rounded rectangle at the control radius, never a
+/// capsule. Each segment is a button of at least 44pt with the selected trait on the chosen
+/// one. The chosen segment is the chosen fill with the chosen mark.
+struct FlatSegmentedControl<Value: Hashable>: View {
+    let label: String
+    let segments: [(value: Value, title: String)]
+    @Binding var selection: Value
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(segments.indices, id: \.self) { index in
+                let segment = segments[index]
+                let selected = segment.value == selection
+                Button {
+                    selection = segment.value
+                } label: {
+                    Text(segment.title)
+                        .ckBody(.medium, size: 15, relativeTo: .body)
+                        .foregroundStyle(selected ? Color.ckChosenMark : Color.ckTextPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .frame(maxWidth: .infinity, minHeight: FlatSegmentedMetrics.segmentHeight)
+                        .background {
+                            if selected {
+                                RoundedRectangle(cornerRadius: FlatSegmentedMetrics.selectedRadius, style: .continuous)
+                                    .fill(Color.ckChosenFill)
+                                    .padding(FlatSegmentedMetrics.inset)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? [.isSelected] : [])
+            }
+        }
+        .background(CatchlightShape.control.fill(Color.ckSurface))
+        .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+    }
+}
+
 /// The face of a filled action button: the action colour with its on-colour label, or the
 /// disabled pair while the button is disabled (read from the environment, so the button
 /// needs no flag). A rounded rectangle at the control radius, never a pill.

@@ -33,4 +33,10 @@ final class FlatControlMetricsTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(FlatToggleMetrics.tapTarget.width, 44)
         XCTAssertGreaterThanOrEqual(FlatToggleMetrics.tapTarget.height, 44)
     }
+
+    func testSegmentedControl_selectedSegmentIsConcentricWithItsContainer() {
+        XCTAssertEqual(FlatSegmentedMetrics.inset, 3)
+        XCTAssertEqual(FlatSegmentedMetrics.selectedRadius, 7, "control radius 10 less inset 3")
+        XCTAssertGreaterThanOrEqual(FlatSegmentedMetrics.segmentHeight, 44)
+    }
 }

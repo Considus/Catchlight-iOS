@@ -228,11 +228,10 @@ struct LocationEditor: View {
 
     private var detailControls: some View {
         VStack(spacing: 0) {
-            Picker("Trigger", selection: $arriveOnEntry) {
-                Text("When I arrive").tag(true)
-                Text("When I leave").tag(false)
-            }
-            .pickerStyle(.segmented)
+            FlatSegmentedControl(label: String(localized: "Trigger"),
+                                 segments: [(value: true, title: String(localized: "When I arrive")),
+                                            (value: false, title: String(localized: "When I leave"))],
+                                 selection: $arriveOnEntry)
             .padding(.vertical, 8)
             .accessibilityIdentifier("location-arrive-leave")
 

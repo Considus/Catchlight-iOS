@@ -80,4 +80,25 @@ final class FlatToggleUITests: XCTestCase {
         XCTAssertEqual(value(anyElement(in: app, id: "reminder-allday-toggle")), "1",
                        "dragging the track to the trailing side sets it on")
     }
+
+    func testTimePlaceSegments_areButtonsOfAtLeast44_withTheSelectedTrait() {
+        let app = openReminderSheet()
+        let time = app.buttons["Time"], place = app.buttons["Place"]
+        XCTAssertTrue(time.exists && place.exists, "segments are buttons labelled Time and Place")
+        XCTAssertGreaterThanOrEqual(time.frame.height, 44, "Time segment height \(time.frame.height)")
+        XCTAssertGreaterThanOrEqual(place.frame.height, 44, "Place segment height \(place.frame.height)")
+        XCTAssertGreaterThanOrEqual(time.frame.width, 44)
+        XCTAssertTrue(time.isSelected, "Time starts selected")
+        XCTAssertFalse(place.isSelected)
+        XCTAssertTrue(anyElement(in: app, id: "reminder-mode").exists, "the group keeps its identifier")
+
+        place.tap()
+        XCTAssertTrue(app.buttons["Place"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["Place"].isSelected, "tapping Place selects it")
+        XCTAssertFalse(app.buttons["Time"].isSelected)
+        XCTAssertTrue(anyElement(in: app, id: "location-use-current").waitForExistence(timeout: 3),
+                      "the place controls replace the time controls")
+        // The arrive and leave choice appears only once a place is chosen, so it is not
+        // reachable here. It is the same `FlatSegmentedControl`.
+    }
 }

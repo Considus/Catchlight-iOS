@@ -1043,12 +1043,10 @@ struct ReminderPickerSheet: View {
     /// location-based, never both. Switching to Time on save clears any place; switching to
     /// Place clears the time — enforced at the commit ("location wins when present").
     private var modeSwitch: some View {
-        Picker("Reminder type", selection: $mode) {
-            ForEach(ReminderMode.allCases) { Text($0.label).tag($0) }
-        }
-        .pickerStyle(.segmented)
-        .tint(Color.ckEmber)
-        .accessibilityIdentifier("reminder-mode")
+        FlatSegmentedControl(label: String(localized: "Reminder type"),
+                             segments: ReminderMode.allCases.map { (value: $0, title: $0.label) },
+                             selection: $mode)
+            .accessibilityIdentifier("reminder-mode")
     }
 
 
