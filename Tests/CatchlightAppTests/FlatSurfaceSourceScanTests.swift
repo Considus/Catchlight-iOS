@@ -4,61 +4,91 @@
 //
 //  The redesign draws buttons, toggles, fields, cards and sheets flat, in rounded rectangles:
 //  controls at `CatchlightLayout.controlRadius`, surfaces at `surfaceRadius`. No pills, no
-//  shadows, no raised gradients or materials. This scans the app, share extension and widget
-//  sources for each of those, with a short allow-list where one is justified, each with its
-//  reason. A new use that is not on the list fails the test.
+//  circles for controls, no shadows, no raised gradients or materials, and every field
+//  outlined with the `outline` token. This scans the app, share extension and widget sources.
+//  A use that is not on the allow-list fails. Each allowance is pinned to the exact line of
+//  code and to how many times that line appears in its file, with the reason it stays.
 //
 
 import XCTest
 
 final class FlatSurfaceSourceScanTests: XCTestCase {
 
-    /// One permitted use: the file it is in, the pattern, and why it stays.
+    /// One permitted use: the file, the exact line of code (trimmed), how many times it
+    /// appears there, and why it stays.
     private struct Allowance {
         let file: String
-        let pattern: String
+        let line: String
+        let count: Int
         let reason: String
     }
 
-    private let allowances: [Allowance] = [
-        .init(file: "Catchlight/UI/Views/DockPillRow.swift", pattern: "LinearGradient",
-              reason: "Scroll edge fade: the ground colour fading to clear under the dock. A single colour, not a raised surface."),
-        .init(file: "Catchlight/UI/Views/DailiesView.swift", pattern: "LinearGradient",
-              reason: "Scroll edge fade: the ground colour fading to clear under the heading."),
-        .init(file: "Catchlight/UI/Views/OnboardingView.swift", pattern: "LinearGradient",
-              reason: "Scroll edge fade: the ground colour fading to clear under the heading."),
-        .init(file: "Catchlight/UI/Storyboard/StoryboardView.swift", pattern: "LinearGradient",
-              reason: "Scroll edge fade: the ground colour fading to clear under the heading."),
-        .init(file: "Catchlight/UI/Angles/ShotListView.swift", pattern: "LinearGradient",
-              reason: "Scroll edge fade: the surface colour fading to clear under the heading."),
-        .init(file: "Catchlight/UI/Components/KeyboardSearchBar.swift", pattern: "CAGradientLayer",
-              reason: "Scroll edge fade above the keyboard bar: the ground colour fading to clear."),
-        .init(file: "Catchlight/UI/Components/PhraseKeyboardEntry.swift", pattern: "CAGradientLayer",
-              reason: "Scroll edge fade above the keyboard bar: the ground colour fading to clear."),
-        .init(file: "Catchlight/UI/Settings/PrivacyPhraseView.swift", pattern: "\\.blur\\(",
+    private let fadeReason = "Scroll edge fade: one colour fading to clear under a heading or the dock. Not a raised surface."
+
+    private lazy var allowances: [Allowance] = [
+        .init(file: "Catchlight/UI/Views/DockPillRow.swift", line: "LinearGradient(stops: [", count: 1, reason: fadeReason),
+        .init(file: "Catchlight/UI/Views/DailiesView.swift", line: "LinearGradient(", count: 1, reason: fadeReason),
+        .init(file: "Catchlight/UI/Views/OnboardingView.swift",
+              line: "LinearGradient(colors: [Color.ckBackground, Color.ckBackground.opacity(0)],", count: 1, reason: fadeReason),
+        .init(file: "Catchlight/UI/Storyboard/StoryboardView.swift", line: "LinearGradient(", count: 1, reason: fadeReason),
+        .init(file: "Catchlight/UI/Angles/ShotListView.swift", line: "LinearGradient(", count: 1, reason: fadeReason),
+        .init(file: "Catchlight/UI/Components/KeyboardSearchBar.swift",
+              line: "private let fade = CAGradientLayer()", count: 1, reason: fadeReason),
+        .init(file: "Catchlight/UI/Components/PhraseKeyboardEntry.swift",
+              line: "private let fade = CAGradientLayer()", count: 1, reason: fadeReason),
+        .init(file: "Catchlight/UI/Settings/PrivacyPhraseView.swift", line: ".blur(radius: revealed ? 0 : 7)", count: 1,
               reason: "Privacy cover: hides the recovery phrase until it is revealed. Not a raised effect."),
-        .init(file: "CatchlightWidgets/WidgetSupport.swift", pattern: "\\.shadow\\(",
-              reason: "Widgets are redesigned in their own slice."),
-        .init(file: "CatchlightWidgets/WidgetSupport.swift", pattern: "cornerRadius:\\s*\\d",
-              reason: "Widgets are redesigned in their own slice."),
-        .init(file: "Catchlight/UI/Components/IrisView.swift", pattern: "cornerRadius:\\s*\\d",
+        .init(file: "Catchlight/UI/Settings/SettingsView.swift", line: "Circle()", count: 2,
+              reason: "The 8pt green or orange status dot beside Notifications. An indicator, not a control."),
+        .init(file: "Catchlight/UI/Views/CatchlightWordmark.swift", line: "Circle()", count: 1,
+              reason: "The lit dot of the wordmark's i. Brand mark, not a control."),
+        .init(file: "Catchlight/UI/Components/IrisView.swift", line: "cornerRadius: 7.3 * s)", count: 1,
               reason: "The Iris draws its own shape, set by the Iris slice."),
+        .init(file: "Catchlight/UI/Components/FocusRowView.swift", line: "let face = RoundedRectangle(cornerRadius: Self.markCornerRadius)", count: 1,
+              reason: "The Focus row marks draw their own shape, set by the Focus row slice."),
+        .init(file: "CatchlightWidgets/WidgetSupport.swift", line: "RoundedRectangle(cornerRadius: 12, style: .continuous)", count: 2,
+              reason: "Widgets are redesigned in their own slice."),
+        .init(file: "CatchlightWidgets/WidgetSupport.swift", line: ".shadow(color: WidgetPalette.cardShadowAmbient, radius: 4, y: 2)", count: 1,
+              reason: "Widgets are redesigned in their own slice."),
+        .init(file: "CatchlightWidgets/WidgetSupport.swift", line: ".shadow(color: WidgetPalette.cardShadowContact, radius: 1, y: 1)", count: 1,
+              reason: "Widgets are redesigned in their own slice."),
+        .init(file: "Catchlight/UI/Components/PhraseKeyboardEntry.swift", line: "let tf = UITextField()", count: 1,
+              reason: "Its outline is the phrase grid cell's `flatField()`, which draws around the field in PhraseEntryGrid."),
     ]
 
-    /// What no source may contain unless allowed above.
-    private let forbidden: [(name: String, pattern: String)] = [
-        ("Capsule", "Capsule\\b"),
-        ("capsule button shape", "\\.capsule"),
-        ("shadow", "\\.shadow\\("),
-        ("layer shadow", "shadow(Opacity|Radius|Offset|Color)\\s*="),
-        ("gradient", "(Linear|Radial|Angular|Elliptical)Gradient\\("),
-        ("gradient layer", "CAGradientLayer"),
-        ("material", "\\.(ultraThin|thin|regular|thick|ultraThick)?Material\\b|\\.bar\\b\\s*\\)"),
-        ("blur", "\\.blur\\("),
-        ("blur effect", "UIBlurEffect|UIVisualEffectView"),
-        ("card shadow modifier", "daylightCardShadow"),
-        ("literal corner radius", "cornerRadius:\\s*\\d"),
+    /// Constants a corner radius may be built from.
+    private let radiusConstants = [
+        "CatchlightLayout.controlRadius", "CatchlightLayout.surfaceRadius", "TakeCardStyle.cornerRadius",
+        "FlatToggleMetrics.knobRadius", "FlatSegmentedMetrics.selectedRadius",
     ]
+
+    private func matches(_ line: String, _ pattern: String) -> Bool {
+        line.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    /// What no source may contain unless allowed above. Each rule judges one line of code.
+    private var rules: [(name: String, test: (String) -> Bool)] {
+        [
+            ("Capsule", { self.matches($0, "Capsule\\b") }),
+            ("capsule button shape", { self.matches($0, "\\.capsule") }),
+            ("circle shape", { self.matches($0, "\\bCircle\\(") || self.matches($0, "\\.clipShape\\(Circle") || self.matches($0, "\\bEllipse\\(") }),
+            ("shadow", { self.matches($0, "\\.shadow\\(") }),
+            ("layer shadow", { self.matches($0, "shadow(Opacity|Radius|Offset|Color)\\s*=") }),
+            ("gradient", { self.matches($0, "(Linear|Radial|Angular|Elliptical)Gradient\\(") || $0.contains("CAGradientLayer") }),
+            ("material", { self.matches($0, "\\.(ultraThin|thin|regular|thick|ultraThick)?Material\\b") }),
+            ("blur", { self.matches($0, "\\.blur\\(") || self.matches($0, "UIBlurEffect|UIVisualEffectView") }),
+            ("card shadow modifier", { $0.contains("daylightCardShadow") }),
+            // Any corner radius not built from the radius constants: a number, `layer.cornerRadius =`,
+            // `.cornerRadius(`, or a half-height pill.
+            ("corner radius that is not a radius constant", {
+                $0.contains("cornerRadius") && !self.radiusConstants.contains(where: $0.contains)
+            }),
+            ("half-height radius", {
+                $0.localizedCaseInsensitiveContains("radius")
+                    && self.matches($0, "(height|width|bounds|size|diameter|circle)\\w*\\s*/\\s*2")
+            }),
+        ]
+    }
 
     private var repoRoot: URL {
         URL(fileURLWithPath: #filePath)
@@ -75,21 +105,20 @@ final class FlatSurfaceSourceScanTests: XCTestCase {
                 let url = candidate.resolvingSymlinksInPath()
                 guard !url.lastPathComponent.hasSuffix(".generated.swift"),
                       let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
-                let relative = String(url.path.dropFirst(repoRoot.path.count + 1))
-                found.append((relative, text))
+                found.append((String(url.path.dropFirst(repoRoot.path.count + 1)), text))
             }
         }
         return found
     }
 
-    /// The code part of each line: comments are not code.
+    /// The code part of each line, trimmed: comments are not code.
     private func codeLines(_ text: String) -> [(number: Int, line: String)] {
         text.components(separatedBy: "\n").enumerated().compactMap { index, raw in
             var line = raw
             if let slashes = line.range(of: "//") { line = String(line[..<slashes.lowerBound]) }
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.isEmpty || trimmed.hasPrefix("*") || trimmed.hasPrefix("/*") { return nil }
-            return (index + 1, line)
+            return (index + 1, trimmed)
         }
     }
 
@@ -101,47 +130,54 @@ final class FlatSurfaceSourceScanTests: XCTestCase {
         XCTAssertTrue(sources.contains { $0.path == "CatchlightWidgets/WidgetSupport.swift" })
     }
 
-    func testNoSource_usesAPill_aShadow_aRaisedGradientOrMaterial_withoutAReason() {
+    func testNoSource_usesAPill_aCircle_aShadow_aRaisedGradientOrMaterial_withoutAReason() {
         var violations: [String] = []
         for (path, text) in swiftSources() {
             for (number, line) in codeLines(text) {
-                for rule in forbidden {
-                    guard line.range(of: rule.pattern, options: .regularExpression) != nil else { continue }
-                    let allowed = allowances.contains {
-                        $0.file == path && line.range(of: $0.pattern, options: .regularExpression) != nil
-                    }
-                    if !allowed { violations.append("\(path):\(number) \(rule.name): \(line.trimmingCharacters(in: .whitespaces))") }
+                for rule in rules where rule.test(line) {
+                    let allowed = allowances.contains { $0.file == path && $0.line == line }
+                    if !allowed { violations.append("\(path):\(number) \(rule.name): \(line)") }
                 }
             }
         }
         XCTAssertTrue(violations.isEmpty, "\(violations.count) uses without a reason:\n" + violations.joined(separator: "\n"))
     }
 
-    /// The allow-list must not rot: every entry still matches something in its file.
-    func testEveryAllowance_stillMatchesAUse() {
+    /// The allow-list must not rot: each entry's exact line still appears exactly `count` times.
+    func testEveryAllowance_stillMatchesItsLine_exactlyAsOftenAsStated() {
         let sources = Dictionary(uniqueKeysWithValues: swiftSources().map { ($0.path, $0.text) })
         for allowance in allowances {
-            let text = sources[allowance.file] ?? ""
-            let hit = codeLines(text).contains { $0.line.range(of: allowance.pattern, options: .regularExpression) != nil }
-            XCTAssertTrue(hit, "\(allowance.file) no longer has \(allowance.pattern): remove the allowance (\(allowance.reason))")
+            let occurrences = codeLines(sources[allowance.file] ?? "").filter { $0.line == allowance.line }.count
+            XCTAssertEqual(occurrences, allowance.count,
+                           "\(allowance.file) has `\(allowance.line)` \(occurrences) times, not \(allowance.count): update the allowance (\(allowance.reason))")
         }
     }
 
-    /// The dock and the editor bar draw rounded squares, not circles.
-    func testDockAndEditorBar_drawNoCircleButtons() {
-        let sources = Dictionary(uniqueKeysWithValues: swiftSources().map { ($0.path, $0.text) })
-        for file in ["Catchlight/UI/Views/BottomDockView.swift", "Catchlight/UI/Components/EditorKeyboardBar.swift"] {
-            let circles = codeLines(sources[file] ?? "").filter { $0.line.contains("Circle(") }
-            XCTAssertTrue(circles.isEmpty, "\(file) draws a circle: \(circles.map { "\($0.number)" })")
-        }
-    }
-
-    /// Every field draws the `outline` token, never a tinted text colour.
-    func testEveryFieldFile_drawsTheOutlineToken() {
-        let sources = swiftSources()
-        for (path, text) in sources where text.contains("TextField(") || text.contains("UITextField()") {
-            XCTAssertTrue(text.contains("flatField(") || text.contains("SceneToken.outline"),
-                          "\(path) has a field with no outline from the outline token")
+    /// Every field draws the `outline` token. A SwiftUI field takes the next `flatField(` or
+    /// `ckOutline` within 30 lines and before the next field, and each of those serves one field. A UIKit field needs its
+    /// own `SceneToken.outline` in its file.
+    func testEveryField_hasItsOwnOutlineFromTheOutlineToken() {
+        let swiftUIField = "\\b(TextField|SecureField|TextEditor|PhraseTextField)\\("
+        for (path, text) in swiftSources() {
+            let lines = codeLines(text)
+            var used = Set<Int>()
+            let fields = lines.filter { matches($0.line, swiftUIField) && !$0.line.contains("struct ") }
+            for (index, field) in fields.enumerated() {
+                // The outline must come before the next field, so one field cannot borrow another's.
+                let next = index + 1 < fields.count ? fields[index + 1].number : Int.max
+                let marker = lines.first {
+                    $0.number > field.number && $0.number <= field.number + 30 && $0.number < next
+                        && !used.contains($0.number)
+                        && ($0.line.contains("flatField(") || $0.line.contains("ckOutline"))
+                }
+                XCTAssertNotNil(marker, "\(path):\(field.number) is a field with no outline from the outline token within 30 lines: \(field.line)")
+                if let marker { used.insert(marker.number) }
+            }
+            let uiKitFields = lines.filter { $0.line.contains("UITextField()") }
+            let allowed = uiKitFields.filter { f in allowances.contains { $0.file == path && $0.line == f.line } }
+            let outlines = lines.filter { $0.line.contains("SceneToken.outline") }.count
+            XCTAssertGreaterThanOrEqual(outlines, uiKitFields.count - allowed.count,
+                                        "\(path) has \(uiKitFields.count) UIKit fields but \(outlines) uses of the outline token")
         }
     }
 }
