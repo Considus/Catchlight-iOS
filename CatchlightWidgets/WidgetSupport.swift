@@ -13,9 +13,10 @@
 //  The redesign (spec R17, R18; drawn in catchlight-icon-and-widgets.html):
 //   • The Iris is the brand symbol, drawn from `IrisGeometry`, which the app shares:
 //     New Take is the Iris with its Note light lit and the Note shape. On the Home
-//     Screen, New Obie is an Obie made from a note: Important and Note lit, the inner
-//     square and the Note lines. The round Lock Screen widget and the controls show
-//     the control symbol instead: the outline with a plus, or with the inner square.
+//     Screen and the wide Lock Screen widgets, New Obie is an Obie made from a note:
+//     Important and Note lit, the inner square and the Note lines. The round Lock Screen
+//     widget and the controls show the control symbol instead: the outline with a plus,
+//     or with the inner square.
 //   • Colours are the chosen Scene's, read from the app group at each render, in
 //     Night or Daylight with the system appearance. The app reloads the widgets when
 //     the Scene changes (`SettingsViewModel.SceneChoice.select`).
@@ -168,11 +169,12 @@ struct WidgetIris: View {
     @Environment(\.widgetRenderingMode) private var mode
     @Environment(\.widgetFamily) private var family
 
-    /// On the Home Screen, New Obie shows a new Obie as the app draws one made from a
-    /// note: Important and Note lit, the inner square and the Note lines (Mark,
-    /// 2026-11-10). The Lock Screen keeps the inner square alone.
+    /// On the Home Screen and the wide Lock Screen widgets, New Obie shows a new Obie as
+    /// the app draws one made from a note: Important and Note lit, the inner square and
+    /// the Note lines (Mark and the Art Director, 2026-11-10). The round Lock Screen
+    /// widget and the controls show the control symbol instead (`RoundLockScreenSymbol`).
     private var obieAsInApp: Bool {
-        surface.isObie && ![.accessoryCircular, .accessoryRectangular, .accessoryInline].contains(family)
+        surface.isObie && ![.accessoryCircular, .accessoryInline].contains(family)
     }
 
     var body: some View {
