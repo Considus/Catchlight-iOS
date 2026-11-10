@@ -1226,6 +1226,15 @@ private struct BasicsStep: View {
     let page: Page
 
     @Environment(OnboardingViewModel.self) private var vm
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
+    /// The drawing beside its text, or above it at the accessibility sizes, where a text column
+    /// narrowed by the drawing would wrap a few words to a line.
+    private var pointLayout: AnyLayout {
+        dynamicSize >= .accessibility1
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 14))
+    }
 
     /// One point: the title, the sentence PRINTED on the page, and the sentence
     /// VoiceOver SPEAKS in its place.
@@ -1295,7 +1304,7 @@ private struct BasicsStep: View {
                 VStack(spacing: 0) {
                     ForEach(points, id: \.title) { point in
                         Rectangle().fill(Color.ckLine).frame(height: 1)
-                        HStack(alignment: .top, spacing: 14) {
+                        pointLayout {
                             PointMark(kind: point.mark)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(point.title)
