@@ -62,4 +62,37 @@ final class OnboardingScrollUITests: XCTestCase {
         }
         XCTAssertEqual(checked, 1)
     }
+
+    /// A wrong guess on Confirm shows its message between the top of the screen and the heading:
+    /// below the status bar, above "Confirm three words", and inside the screen. At the largest
+    /// size the message is several lines of large text, so it needs more room than the gap
+    /// above the heading gives it.
+    func testAtTheLargestSize_theWrongGuessMessage_sitsBelowTheStatusBarAndAboveTheHeading() {
+        continueAfterFailure = true
+        var checked = 0
+        walkOnboarding(contentSize: largest) { step, app in
+            guard step == .confirm else { return }
+            for _ in 0..<3 {
+                let tile = app.buttons.allElementsBoundByIndex.first {
+                    $0.exists && $0.isEnabled && $0.label != "Show my words once more" && !$0.label.isEmpty && !$0.label.hasPrefix("Word ")
+                }
+                guard let tile else { XCTFail("no bank tile to tap"); return }
+                scrollUntilHittable(tile, in: app)
+                tile.tap()
+            }
+            let message = app.staticTexts["Those aren't quite right. Try again."]
+            XCTAssertTrue(message.waitForExistence(timeout: 6), "no wrong-guess message; on screen: " + app.descendants(matching: .any).allElementsBoundByIndex.filter { $0.exists }.map { "\($0.elementType.rawValue):\($0.label)" }.joined(separator: " | "))
+            for _ in 0..<8 { app.swipeDown() }
+            let heading = app.staticTexts["Confirm three words"]
+            // The status bar and Dynamic Island take the top 62pt on iPhone 17.
+            let top: CGFloat = 62
+            XCTAssertGreaterThanOrEqual(message.frame.minY, top, "the message is under the status bar: \(message.frame)")
+            XCTAssertLessThanOrEqual(message.frame.maxY, heading.frame.minY + 0.5,
+                                     "the message overlaps the heading: \(message.frame) against \(heading.frame)")
+            XCTAssertLessThanOrEqual(message.frame.maxX, app.frame.maxX + 0.5, "the message is clipped on the right")
+            XCTAssertGreaterThanOrEqual(message.frame.minX, app.frame.minX - 0.5, "the message is clipped on the left")
+            checked += 1
+        }
+        XCTAssertEqual(checked, 1)
+    }
 }

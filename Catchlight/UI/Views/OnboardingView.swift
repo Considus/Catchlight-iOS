@@ -961,37 +961,35 @@ private struct ConfirmStep: View {
                     // hero stays pinned at the set position whether or not it shows).
                     // ckTextObie, not ckEmber: Ember fails WCAG AA on Paper at 13pt
                     // (DS §12.3); resolves to Ember Text #856539 Daylight / Glow Night.
-                    HeroGap()
-                        .overlay {
-                            if let failure = vm.failure {
-                                Text(failure)
-                                    .ckBody(.regular, size: 13, relativeTo: .caption)
-                                    .foregroundStyle(Color.ckAccent)
-                                    .multilineTextAlignment(.center)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        CatchlightShape.surface
-                                            .fill(Color.ckEmber.opacity(0.12))
-                                            .overlay(
-                                                CatchlightShape.surface
-                                                    .strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1)
-                                            )
-                                    )
-                                    .padding(.horizontal, 24)
-                                    // Nudge to the VISUAL centre of the wordmark→hero
-                                    // gap: the geometric centre reads a touch high
-                                    // because the hero sits low in its line
-                                    // box (owner 2026-06-15).
-                                    .offset(y: 16)
-                                    .transition(.opacity)
-                                    .accessibilityLabel(failure)
-                                    .accessibilityFocused($failureFocused)
-                            }
+                    //
+                    // From the accessibility sizes up the card is several lines of large text,
+                    // taller than the gap below the status bar, so it takes its own room above
+                    // the heading instead of floating over it. The step scrolls there, so the
+                    // heading moving down a little is harmless.
+                    Group {
+                    if dynamicSize >= .accessibility1 {
+                        HeroGap()
+                        if let failure = vm.failure {
+                            failureCard(failure)
+                                .padding(.bottom, 12)
+                                .transition(.opacity)
                         }
-                        .animation(.easeInOut(duration: 0.18), value: vm.failure)
-
+                    } else {
+                        HeroGap()
+                            .overlay {
+                                if let failure = vm.failure {
+                                    failureCard(failure)
+                                        // Nudge to the VISUAL centre of the wordmark→hero
+                                        // gap: the geometric centre reads a touch high
+                                        // because the hero sits low in its line
+                                        // box (owner 2026-06-15).
+                                        .offset(y: 16)
+                                        .transition(.opacity)
+                                }
+                            }
+                    }
+                    }
+                    .animation(.easeInOut(duration: 0.18), value: vm.failure)
                     VStack(spacing: 12) {
                         Text("Confirm three words")
                             .stepHeading()
@@ -1076,6 +1074,29 @@ private struct ConfirmStep: View {
         guard positions.count == 3 else {
             return String(localized: "Tap the words from your phrase, in order.")
         }
+    /// The wrong-guess message: a rounded card in the accent. One element, labelled with the
+    /// message, that VoiceOver focus moves to (see the handler below).
+    private func failureCard(_ failure: String) -> some View {
+        Text(failure)
+            .ckBody(.regular, size: 13, relativeTo: .caption)
+            .foregroundStyle(Color.ckAccent)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(
+                CatchlightShape.surface
+                    .fill(Color.ckEmber.opacity(0.12))
+                    .overlay(
+                        CatchlightShape.surface
+                            .strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1)
+                    )
+            )
+            .padding(.horizontal, 24)
+            .accessibilityLabel(failure)
+            .accessibilityFocused($failureFocused)
+    }
+
         return String(localized: "Tap words \(positions[0]), \(positions[1]) and \(positions[2]) from your phrase, in order.")
     }
 
