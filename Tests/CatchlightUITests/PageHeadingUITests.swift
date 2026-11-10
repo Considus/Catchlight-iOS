@@ -50,10 +50,11 @@ final class PageHeadingUITests: XCTestCase {
         app.staticTexts.matching(NSPredicate(format: "label ==[c] %@", label)).firstMatch
     }
 
-    /// The Dailies heading's element is the whole title strip (116pt tall at the default
-    /// size), not just the text, so it is measured by how much it GROWS against the
-    /// default size: a second line would add a full line, which is over the ceiling's
-    /// half.
+    /// The "Dailies" title is its own element now (the date beside it is another), found by
+    /// a case-insensitive match. It is measured by how much it GROWS against the default
+    /// size: a second line would add a full line, which is over the ceiling's half. The
+    /// ceiling is sized for the 24pt shared heading, a little under the 28pt title, which
+    /// keeps the check strict.
     func testDailiesHeading_staysOneLine() {
         let base = launch("UICTContentSizeCategoryL")
         let baseHeight = headingText(base, "DAILIES")
