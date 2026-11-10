@@ -36,9 +36,9 @@
                                 </constraints>
                             </imageView>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="catchlight-wordmark" translatesAutoresizingMaskIntoConstraints="NO" id="cl1-wmk-001">
-                                <rect key="frame" x="117.5" y="261" width="158" height="44"/>
+                                <rect key="frame" x="74" y="261" width="245" height="44"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="158" id="cl1-wmk-w"/>
+                                    <constraint firstAttribute="width" constant="245" id="cl1-wmk-w"/>
                                     <constraint firstAttribute="height" constant="44" id="cl1-wmk-h"/>
                                 </constraints>
                             </imageView>
@@ -60,7 +60,7 @@
     </scenes>
     <resources>
         <image name="catchlight-icon" width="72" height="72"/>
-        <image name="catchlight-wordmark" width="158" height="44"/>
+        <image name="catchlight-wordmark" width="245" height="44"/>
         <namedColor name="ck-background">
             <color red="0.96862745098039216" green="0.95686274509803926" blue="0.93725490196078431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>

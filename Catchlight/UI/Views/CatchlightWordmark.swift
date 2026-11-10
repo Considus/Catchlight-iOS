@@ -1,0 +1,46 @@
+//
+//  CatchlightWordmark.swift
+//  Catchlight
+//
+//  The wordmark, drawn from the outlined brand SVG: the letters as one template image
+//  in the text token, and the dot of the i as a circle in the `lit` token, so the mark
+//  follows the chosen Scene and Light or Dark. The geometry is the SVG's own
+//  (viewBox 0 -734 5171 927.55, dot at 3350, -644 with radius 90). Keep clear space of
+//  at least the height of the "h" around it (marks-and-files.md).
+//
+//  The launch screen cannot read the Scene, so it shows the Cobalt files in the
+//  `catchlight-wordmark` asset instead.
+//
+
+import SwiftUI
+
+struct CatchlightWordmark: View {
+    /// The SVG's viewBox, so the dot lands where the file puts it.
+    private static let boxWidth: CGFloat = 5171
+    private static let boxHeight: CGFloat = 927.55
+    private static let boxTop: CGFloat = -734
+    private static let dotCentre = CGPoint(x: 3350, y: -644)
+    private static let dotRadius: CGFloat = 90
+
+    /// Width over height of the mark.
+    static let aspectRatio: CGFloat = boxWidth / boxHeight
+
+    var body: some View {
+        Image("catchlight-wordmark-letters")
+            .resizable()
+            .renderingMode(.template)
+            .scaledToFit()
+            .foregroundStyle(Color.ckTextPrimary)
+            .overlay {
+                GeometryReader { proxy in
+                    let scale = proxy.size.width / Self.boxWidth
+                    Circle()
+                        .fill(Color.ckLit)
+                        .frame(width: Self.dotRadius * 2 * scale, height: Self.dotRadius * 2 * scale)
+                        .position(x: Self.dotCentre.x * scale,
+                                  y: (Self.dotCentre.y - Self.boxTop) * scale)
+                }
+            }
+            .aspectRatio(Self.aspectRatio, contentMode: .fit)
+    }
+}

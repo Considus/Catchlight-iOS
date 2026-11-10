@@ -32,9 +32,7 @@ struct IntroBrandMark: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 72, height: 72)
-            Image("catchlight-wordmark")
-                .resizable()
-                .scaledToFit()
+            CatchlightWordmark()
                 .frame(height: 44)
         }
         .padding(.top, deviceTopInset + 114)

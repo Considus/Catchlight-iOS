@@ -59,9 +59,7 @@ struct AboutView: View {
                 .scaledToFit()
                 .frame(width: 72, height: 72)
                 .accessibilityHidden(true)
-            Image("catchlight-wordmark")
-                .resizable()
-                .scaledToFit()
+            CatchlightWordmark()
                 .frame(height: 44)
                 .accessibilityLabel("Catchlight")
         }
@@ -75,6 +73,7 @@ struct AboutView: View {
         VStack(spacing: 6) {
             Text("Privacy-first notes and reminders")
                 .font(CatchlightFont.displayFixed(size: 28))
+                .lineSpacing(CatchlightFont.tightLeading(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
             // Not a link — a plain label that long-press copies as a short,
