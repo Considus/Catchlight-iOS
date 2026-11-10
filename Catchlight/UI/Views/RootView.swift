@@ -469,13 +469,14 @@ struct RootView: View {
     }
 
     /// The lowest the Focus row may reach. While editing, the toolbar is hidden and the keyboard
-    /// (when up) is the limit; otherwise the row stays above the toolbar, the same clearance
-    /// the timeline's last Take keeps.
+    /// (when up) is the limit. Otherwise the marks drop over the dimmed toolbar, just below the
+    /// card as everywhere else, and lift only where they would reach the home bar (or, on a
+    /// phone without one, the screen's edge) (owner 2026-11-10).
     private func focusRowVisibleBottom(screenHeight: CGFloat) -> CGFloat {
         if ui.isEditingInPlace {
             return min(keyboardTopY, screenHeight - deviceBottomInset)
         }
-        return screenHeight - CatchlightLayout.toolbarClearance - deviceBottomInset
+        return screenHeight - max(deviceBottomInset, FocusRowView.screenMargin)
     }
 
     // MARK: - New item actions

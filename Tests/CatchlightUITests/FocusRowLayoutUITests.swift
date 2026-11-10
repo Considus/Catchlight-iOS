@@ -42,6 +42,51 @@ final class FocusRowLayoutUITests: XCTestCase {
             XCTAssertEqual(f.midY, frames[0].midY, accuracy: 0.5, "The marks are staggered")
         }
     }
+
+    /// On the lowest Take that sits fully above the toolbar, the marks still drop to just below
+    /// the card, over the dimmed toolbar, as they do everywhere else (owner 2026-11-10). Before,
+    /// they were held above the toolbar and landed on the card's first line of text.
+    func testNearTheToolbar_marksStillDropBelowTheCard() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting", "--uitesting-fill"]
+        app.launch()
+        let add = app.buttons["add-button"]
+        XCTAssertTrue(add.waitForExistence(timeout: 10), "Toolbar not shown")
+        // The panel's top edge: the Add button sits inside it, so its top is a little lower.
+        let toolbarTop = add.frame.minY
+
+        // The lowest Take whose Iris is clear above the toolbar while its marks, dropped below
+        // the card, would cross the toolbar's top and still stay clear of the home bar.
+        let homeBarTop = app.frame.maxY - 34
+        let rows = app.descendants(matching: .any).matching(identifier: "take-row")
+        var card: CGRect?
+        for i in 0..<rows.count {
+            let f = rows.element(boundBy: i).frame
+            let irisBottom = f.minY + 36 + 22
+            if f.minY > 120, irisBottom < toolbarTop, f.maxY + 44 > toolbarTop,
+               f.maxY + 44 <= homeBarTop, f.maxY > (card?.maxY ?? 0) { card = f }
+        }
+        let cardFrame = try XCTUnwrap(card, "No Take has its Iris just above the toolbar")
+        let irises = app.descendants(matching: .any).matching(identifier: "take-iris")
+        var iris: XCUIElement?
+        for i in 0..<irises.count where cardFrame.contains(irises.element(boundBy: i).frame.center) {
+            iris = irises.element(boundBy: i)
+        }
+        let hub = try XCTUnwrap(iris, "No Iris inside the chosen Take")
+        print("[focus-row-near-toolbar] toolbarTop \(toolbarTop) card \(cardFrame) iris \(hub.frame)")
+
+        hub.tap()
+        let mark = anyElement(in: app, id: markIDs[0])
+        XCTAssertTrue(mark.waitForExistence(timeout: 5), "Focus row did not open")
+        sleep(1)
+        print("[focus-row-near-toolbar] mark \(mark.frame)")
+        XCTAssertEqual(mark.frame.midY, cardFrame.maxY + 22, accuracy: 1,
+                       "Near the toolbar the marks are not centred on the card's grown bottom edge")
+    }
+}
+
+private extension CGRect {
+    var center: CGPoint { CGPoint(x: midX, y: midY) }
 }
 
 /// Every mark and every Iris offers at least a 44pt touch area, and a mark takes a tap near
