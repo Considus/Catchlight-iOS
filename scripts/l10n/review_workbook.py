@@ -58,7 +58,7 @@ LANGS = {
         "glossary": [
             ("Take", "Take (der Take, die Takes)", "Product name. Keep in English. Masculine."),
             ("Obie", "Obie (das Obie)", "Product name. Keep in English. Neuter."),
-            ("Iris", "Iris (die Iris)", "Product name: the circle beside each Take. Keep."),
+            ("Iris", "Iris (die Iris)", "Product name: the square in the corner of each Take. Keep."),
             ("Dailies", "Dailies (die Dailies)", "Product name: the main timeline. Keep."),
             ("Sequence", "Sequence (die Sequence)", "Product name: a saved filter. Keep."),
             ("Angle", "Angle (der Angle)", "Product name. Keep."),
@@ -94,7 +94,7 @@ LANGS = {
         "glossary": [
             ("Take", "Take (le Take, les Takes)", "Product name. Keep in English. Masculine."),
             ("Obie", "Obie (l'Obie, un Obie)", "Product name. Keep in English. Masculine: \"Nouvel Obie\"."),
-            ("Iris", "Iris (l'Iris, un Iris)", "Product name: the circle beside each Take. Keep. Masculine, as the French noun."),
+            ("Iris", "Iris (l'Iris, un Iris)", "Product name: the square in the corner of each Take. Keep. Masculine, as the French noun."),
             ("Dailies", "Dailies", "Product name: the main timeline. Keep."),
             ("Sequence", "Sequence", "Product name: a saved filter. Keep."),
             ("Angle", "Angle", "Product name. Keep."),
@@ -126,7 +126,7 @@ LANGS = {
         "glossary": [
             ("Take", "Take (el Take, los Takes)", "Product name. Keep in English. Masculine."),
             ("Obie", "Obie (el Obie)", "Product name. Keep in English. Masculine."),
-            ("Iris", "Iris (el Iris)", "Product name: the circle beside each Take. Keep. Masculine."),
+            ("Iris", "Iris (el Iris)", "Product name: the square in the corner of each Take. Keep. Masculine."),
             ("Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep."),
             ("Privacy phrase", "frase de privacidad", "The 12 recovery words. Draft term, please confirm."),
             ("Timeline", "cronología", "Draft term."),
@@ -151,7 +151,7 @@ LANGS = {
         "glossary": [
             ("Take", "Take (il Take, i Take)", "Product name. Keep in English. Masculine, invariable plural."),
             ("Obie", "Obie (l'Obie, gli Obie)", "Product name. Keep in English. Masculine."),
-            ("Iris", "Iris (l'Iris)", "Product name: the circle beside each Take. Keep. Masculine."),
+            ("Iris", "Iris (l'Iris)", "Product name: the square in the corner of each Take. Keep. Masculine."),
             ("Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep."),
             ("Privacy phrase", "frase di privacy", "The 12 recovery words. Draft term, please confirm."),
             ("Timeline", "cronologia", "Draft term."),
@@ -176,7 +176,7 @@ LANGS = {
         "glossary": [
             ("Take", "Take (de Take, de Takes)", "Product name. Keep in English."),
             ("Obie", "Obie (de Obie)", "Product name. Keep in English."),
-            ("Iris", "Iris (de Iris)", "Product name: the circle beside each Take. Keep."),
+            ("Iris", "Iris (de Iris)", "Product name: the square in the corner of each Take. Keep."),
             ("Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep."),
             ("Privacy phrase", "privacyzin", "The 12 recovery words. Draft term, please confirm."),
             ("Timeline", "tijdlijn", "Draft term."),
@@ -201,7 +201,7 @@ LANGS = {
         "glossary": [
             ("Take", "Take (o Take, os Takes)", "Product name. Keep in English. Masculine."),
             ("Obie", "Obie (o Obie)", "Product name. Keep in English. Masculine."),
-            ("Iris", "Iris (o Iris)", "Product name: the circle beside each Take. Keep. Masculine."),
+            ("Iris", "Iris (o Iris)", "Product name: the square in the corner of each Take. Keep. Masculine."),
             ("Dailies, Sequence, Angle, Shot List, Storyboard", "unchanged", "Product names. Keep."),
             ("Privacy phrase", "frase de privacidade", "The 12 recovery words. Draft term, please confirm."),
             ("Timeline", "linha do tempo", "Draft term."),
