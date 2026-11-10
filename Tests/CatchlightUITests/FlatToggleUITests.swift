@@ -101,4 +101,73 @@ final class FlatToggleUITests: XCTestCase {
         // The arrive and leave choice appears only once a place is chosen, so it is not
         // reachable here. It is the same `FlatSegmentedControl`.
     }
+
+    // MARK: - The track's drag does not take scrolling or sheet dismissal
+
+    /// A vertical drag of `dy` points starting `dx` from the element's leading edge.
+    private func drag(from element: XCUIElement, dxFromTrailing: CGFloat, dy: CGFloat) {
+        let start = element.coordinate(withNormalizedOffset: CGVector(dx: 1 - dxFromTrailing / element.frame.width, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: dy)))
+    }
+
+    private func settingsRowMovedBySwipe(fromTrack: Bool) -> (moved: CGFloat, value: String, before: String) {
+        let app = launchAppForUITesting()
+        swipeUpWhenReady(anyElement(in: app, id: "angle-tab"))
+        XCTAssertTrue(anyElement(in: app, id: "settings-sheet").waitForExistence(timeout: 5))
+        let toggle = anyElement(in: app, id: "follow-up-reminders-toggle")
+        var scrolls = 0
+        while !(toggle.exists && toggle.isHittable) && scrolls < 10 {
+            let list = anyElement(in: app, id: "settings-sheet")
+            list.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.7))
+                .press(forDuration: 0.05, thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)))
+            Thread.sleep(forTimeInterval: 0.5)
+            scrolls += 1
+        }
+        XCTAssertTrue(toggle.exists && toggle.isHittable, "the Follow-up reminders row is not reachable after \(scrolls) scrolls")
+        let before = value(toggle)
+        let yBefore = toggle.frame.minY
+        drag(from: toggle, dxFromTrailing: fromTrack ? 22 : toggle.frame.width * 0.7, dy: -220)
+        Thread.sleep(forTimeInterval: 0.8)
+        let after = anyElement(in: app, id: "follow-up-reminders-toggle")
+        let result = (yBefore - after.frame.minY, value(after), before)
+        app.terminate()
+        return result
+    }
+
+    func testSettings_verticalSwipeStartingOnAToggleTrack_scrollsTheList_andLeavesTheToggle() {
+        let fromLabel = settingsRowMovedBySwipe(fromTrack: false)
+        let fromTrack = settingsRowMovedBySwipe(fromTrack: true)
+        XCTAssertGreaterThan(fromLabel.moved, 50, "control: a swipe from the label must scroll the list (\(fromLabel.moved))")
+        XCTAssertEqual(fromTrack.value, fromTrack.before, "a vertical swipe on the track must not change the toggle")
+        XCTAssertEqual(fromTrack.moved, fromLabel.moved, accuracy: 25,
+                       "the list scrolled \(fromTrack.moved) from the track and \(fromLabel.moved) from the label")
+    }
+
+    /// Opens the reminder sheet, swipes down from the label or from the track of the All-day
+    /// row, and reports whether the sheet is still up and the toggle's value.
+    private func swipeDownOnReminderSheet(fromTrack: Bool) -> (sheetUp: Bool, value: String, moved: CGFloat) {
+        let app = openReminderSheet()
+        let toggle = anyElement(in: app, id: "reminder-allday-toggle")
+        let yBefore = toggle.frame.minY
+        let startX: CGFloat = fromTrack ? 22 : toggle.frame.width * 0.85   // from the trailing edge
+        drag(from: toggle, dxFromTrailing: startX, dy: 320)
+        Thread.sleep(forTimeInterval: 1.2)
+        let after = anyElement(in: app, id: "reminder-allday-toggle")
+        let up = after.exists
+        let result = (up, up ? value(after) : "", up ? after.frame.minY - yBefore : .nan)
+        app.terminate()
+        return result
+    }
+
+    func testReminderSheet_downwardSwipeStartingOnATrack_behavesLikeOneStartingOnTheLabel() {
+        let fromLabel = swipeDownOnReminderSheet(fromTrack: false)
+        let fromTrack = swipeDownOnReminderSheet(fromTrack: true)
+        XCTAssertEqual(fromTrack.sheetUp, fromLabel.sheetUp,
+                       "sheet still up after a swipe from the track: \(fromTrack.sheetUp), from the label: \(fromLabel.sheetUp)")
+        if fromTrack.sheetUp {
+            XCTAssertEqual(fromTrack.moved, fromLabel.moved, accuracy: 4, "the sheet scrolled differently from the track")
+            XCTAssertEqual(fromTrack.value, "0", "the toggle must be unchanged")
+        }
+        XCTAssertEqual(fromLabel.sheetUp, fromTrack.sheetUp)
+    }
 }

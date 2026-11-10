@@ -465,6 +465,58 @@ struct FlatToggleStyle: ToggleStyle {
     }
 }
 
+/// A tap and a horizontal swipe on the track. This is UIKit on purpose: its pan recognizer
+/// begins only when the movement is clearly horizontal, so a vertical swipe that starts on the
+/// track is left to the list or the sheet to scroll or dismiss. (A SwiftUI `DragGesture`
+/// took vertical swipes too, even as a simultaneous gesture: measured in `FlatToggleUITests`.)
+private struct FlatToggleInput: UIViewRepresentable {
+    let isEnabled: Bool
+    let onTap: () -> Void
+    /// True for a swipe to the right (not reading-direction aware).
+    let onSwipe: (Bool) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.isAccessibilityElement = false
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tapped))
+        let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.panned(_:)))
+        pan.delegate = context.coordinator
+        view.addGestureRecognizer(tap)
+        view.addGestureRecognizer(pan)
+        return view
+    }
+
+    func updateUIView(_ view: UIView, context: Context) {
+        context.coordinator.isEnabled = isEnabled
+        context.coordinator.onTap = onTap
+        context.coordinator.onSwipe = onSwipe
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var isEnabled = true
+        var onTap: () -> Void = {}
+        var onSwipe: (Bool) -> Void = { _ in }
+
+        @objc func tapped() { if isEnabled { onTap() } }
+
+        @objc func panned(_ pan: UIPanGestureRecognizer) {
+            guard pan.state == .ended, isEnabled else { return }
+            let travel = pan.translation(in: pan.view)
+            if abs(travel.x) > 10 { onSwipe(travel.x > 0) }
+        }
+
+        /// Begin only for a mostly horizontal movement.
+        func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = recognizer as? UIPanGestureRecognizer else { return true }
+            let velocity = pan.velocity(in: pan.view)
+            return abs(velocity.x) > 2 * abs(velocity.y)
+        }
+    }
+}
+
 private struct FlatToggleTrack: View {
     @Binding var isOn: Bool
     @Environment(\.isEnabled) private var isEnabled
@@ -488,14 +540,15 @@ private struct FlatToggleTrack: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: isOn)
         .frame(width: FlatToggleMetrics.tapTarget.width, height: FlatToggleMetrics.tapTarget.height)
         .contentShape(Rectangle())
-        .onTapGesture { if isEnabled { isOn.toggle() } }
-        .gesture(
-            DragGesture(minimumDistance: 10).onEnded { drag in
-                guard isEnabled, abs(drag.translation.width) > abs(drag.translation.height) else { return }
-                let towardTrailing = layoutDirection == .leftToRight
-                    ? drag.translation.width > 0 : drag.translation.width < 0
-                isOn = towardTrailing
-            }
+        .overlay(
+            FlatToggleInput(
+                isEnabled: isEnabled,
+                onTap: { isOn.toggle() },
+                onSwipe: { toTheRight in
+                    // Right to left reverses which side is on.
+                    isOn = layoutDirection == .leftToRight ? toTheRight : !toTheRight
+                }
+            )
         )
     }
 
