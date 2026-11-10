@@ -12,6 +12,7 @@ import SwiftUI
 import Observation
 import UserNotifications
 import Security
+import WidgetKit
 import CatchlightCore
 
 @Observable
@@ -49,7 +50,7 @@ final class SettingsViewModel {
     }
 
     /// The chosen colour Scene (Settings → Appearance → Scene), stored as the Scene's raw value
-    /// in the app group store, which the share sheet reads too.
+    /// in the app group store, which the share sheet, the widgets and the controls read too.
     /// It goes onto every window scene's `traitOverrides` as `SceneTrait`, which UIKit's
     /// `SceneToken` colours read, and which SwiftUI reads as the bridged `catchlightScene`
     /// environment value for its `ck*` colours. A change re-resolves every colour in place:
@@ -73,6 +74,9 @@ final class SettingsViewModel {
                 }
             }
             defaults?.set(scene.rawValue, forKey: defaultsKey)
+            // The widgets and controls draw the stored Scene: redraw them in the new one.
+            WidgetCenter.shared.reloadAllTimelines()
+            ControlCenter.shared.reloadAllControls()
         }
 
         /// Apply the stored Scene to each window scene as it connects, before its first frame.

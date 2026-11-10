@@ -3,7 +3,7 @@
 //  CatchlightWidgets (2026-06-30)
 //
 //  The "split in two" launcher — ONE widget with BOTH capture buttons: New Take
-//  (the Catchlight "C") on the left, New Obie (the "O") on the right. An addition
+//  on the left, New Obie on the right, each with its Iris. An addition
 //  to the single-purpose launchers, not a replacement (owner 2026-06-30).
 //
 //  Two independent tap targets in one widget need `Button(intent:)` — `widgetURL`
@@ -25,36 +25,35 @@ struct CaptureSplitWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: LauncherProvider()) { _ in
             SplitView()
-                .containerBackground(WidgetPalette.background, for: .widget)
+                .widgetBackground { WidgetPalette.surface }
         }
         .configurationDisplayName("New Take or Obie")
-        .description("Both capture buttons in one widget — tap the side you need.")
+        .description("Start a Take or an Obie from one widget. Tap the side you need.")
         .supportedFamilies([.systemMedium, .accessoryRectangular])
+        .contentMarginsDisabled()   // SplitView sets its own 11pt inset
     }
 }
 
 /// Two tappable halves (Take | Obie), parameterised per family.
 struct SplitView: View {
     @Environment(\.widgetFamily) private var family
-    /// The system's widget content margin — reused as the gap between the two cards
-    /// so the border BETWEEN them equals the border AROUND them (owner 2026-06-30).
-    @Environment(\.widgetContentMargins) private var margins
 
     var body: some View {
         switch family {
         case .accessoryRectangular:
-            // Lock screen — system vibrant/monochrome; two glyph buttons side by side.
+            // Lock Screen: two halves with a hairline between.
             HStack(spacing: 0) {
                 captureButton(.take) { accessoryHalf(.take) }
-                Rectangle().fill(.secondary).frame(width: 0.5).opacity(0.4)
+                Rectangle().fill(Color.primary.opacity(0.28)).frame(width: 1).padding(.vertical, 12)
                 captureButton(.obie) { accessoryHalf(.obie) }
             }
         default:
-            // Home medium — TWO individual cards with an even gap == the surround.
-            HStack(spacing: margins.leading) {
-                captureButton(.take) { mediumHalf(.take).widgetCardSurface(isObie: false) }
-                captureButton(.obie) { mediumHalf(.obie).widgetCardSurface(isObie: true) }
+            // Home Screen medium: two cards 8pt apart, 11pt in from the edge.
+            HStack(spacing: 8) {
+                captureButton(.take) { mediumHalf(.take).widgetCard() }
+                captureButton(.obie) { mediumHalf(.obie).widgetCard() }
             }
+            .padding(11)
         }
     }
 
@@ -70,26 +69,32 @@ struct SplitView: View {
     }
 
     private func mediumHalf(_ surface: CaptureSurface) -> some View {
-        VStack(spacing: 10) {
-            WidgetGlyphMark(asset: surface.glyphAsset, height: 44, tint: surface.glyphTint,
-                            opticalScale: surface.glyphOpticalScale,
-                            inkOffsetFraction: surface.glyphInkOffsetFraction)
-            Text(surface.title)
-                .widgetUI(14, weight: .medium)
-                .foregroundStyle(WidgetPalette.textPrimary)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                WidgetIris(surface: surface, size: 44)
+                Spacer(minLength: 0)
+                WidgetPlus(size: 22, radius: 7, glyph: 11)
+            }
+            Spacer(minLength: 0)
+            WidgetTitle(title: surface.shortTitle, subtitle: surface.subtitle)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())   // the whole half is tappable, not just the glyph
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .contentShape(Rectangle())   // the whole half is tappable, not just the Iris
     }
 
     private func accessoryHalf(_ surface: CaptureSurface) -> some View {
-        VStack(spacing: 2) {
-            WidgetGlyphMark(asset: surface.glyphAsset, height: 22,
-                            opticalScale: surface.glyphOpticalScale,
-                            inkOffsetFraction: surface.glyphInkOffsetFraction)
-            Text(surface.isObie ? "Obie" : "Take").font(.caption2)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                WidgetIris(surface: surface, size: 26)
+                Text(surface.shortTitle).widgetUI(14, weight: .semibold)
+            }
+            Text(surface.subtitle).widgetUI(12).foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .contentShape(Rectangle())
     }
 }

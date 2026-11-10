@@ -348,12 +348,15 @@ targets:
       # provider, which must live solely in the app target.
       - path: Catchlight/Intents/NewTakeIntent.swift
       - path: Catchlight/Intents/NewObieIntent.swift
-      # The heading weight and width, one file shared with the app so they cannot differ.
+      # The chosen Scene and its colours, as the share sheet takes them: the theme, the
+      # generated Scene palettes, the heading axes the theme reads, and the app group
+      # where the Scene is stored. Code-defined colours, no asset catalog.
+      - path: Catchlight/UI/Theme/CatchlightTheme.swift
+      - path: Catchlight/UI/Theme/SceneTokens.generated.swift
       - path: Catchlight/UI/Theme/HeadingAxes.swift
-      # Bundle the brand fonts into the extension so the widget's display text can use Archivo
-      # (the same TTF as the app, registered via UIAppFonts below). Resources only.
-      - path: Catchlight/Resources/Fonts
-        buildPhase: resources
+      - path: Catchlight/AppGroup.swift
+      # The Iris's shapes, one file shared with the app so the widget Iris cannot drift.
+      - path: Catchlight/UI/Theme/IrisGeometry.swift
     info:
       path: CatchlightWidgets/Info.plist
       properties:
@@ -364,8 +367,7 @@ targets:
         # (2026-07-01 review). CFBundleVersion is pinned the same way.
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
-        UIAppFonts:
-          - "Archivo.ttf"
+        # No UIAppFonts: widgets use the system font only (redesign spec R18).
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
