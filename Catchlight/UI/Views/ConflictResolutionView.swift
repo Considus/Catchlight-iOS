@@ -417,11 +417,22 @@ struct ConflictResolutionView: View {
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .short
+        // "now" and "2 min. ago", never "in 0 sec.".
+        f.dateTimeStyle = .named
         return f
     }()
 
     private func relativeDate(_ date: Date) -> String {
-        Self.relativeFormatter.localizedString(for: date, relativeTo: Date())
+        Self.relativeDate(date, now: Date())
+    }
+
+    static func relativeDate(_ date: Date, now: Date, locale: Locale? = nil) -> String {
+        let f = relativeFormatter
+        if let locale { f.locale = locale }
+        defer { f.locale = .autoupdatingCurrent }
+        // A saved version is never in the future: another device's clock can run
+        // ahead of this one.
+        return f.localizedString(for: min(date, now), relativeTo: now)
     }
 }
 
