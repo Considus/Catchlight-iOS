@@ -611,8 +611,15 @@ struct FlatSegmentedControl<Value: Hashable>: View {
         }
         .background(CatchlightShape.control.fill(Color.ckSurface))
         .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(label)
+        // VoiceOver and XCUITest see the native segmented control, as before the redesign.
+        .accessibilityRepresentation {
+            Picker(label, selection: $selection) {
+                ForEach(segments.indices, id: \.self) { index in
+                    Text(segments[index].title).tag(segments[index].value)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
     }
 }
 

@@ -98,6 +98,11 @@ final class FlatToggleUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Time"].isSelected)
         XCTAssertTrue(anyElement(in: app, id: "location-use-current").waitForExistence(timeout: 3),
                       "the place controls replace the time controls")
+        app.buttons["Time"].tap()
+        XCTAssertTrue(app.buttons["Time"].isSelected, "tapping Time selects it again")
+        XCTAssertFalse(app.buttons["Place"].isSelected)
+        let group = anyElement(in: app, id: "reminder-mode")
+        XCTAssertEqual(group.elementType, .segmentedControl, "VoiceOver sees the native segmented control")
         // The arrive and leave choice appears only once a place is chosen, so it is not
         // reachable here. It is the same `FlatSegmentedControl`.
     }
