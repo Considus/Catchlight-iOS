@@ -414,14 +414,33 @@ struct ConflictResolutionView: View {
 
     // MARK: - Formatting
 
+    /// Numeric wording, as the screen always used: "2 min. ago", "1 day ago".
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .short
         return f
     }()
 
+    /// The first minute reads "now", never "in 0 sec.".
+    private static let justNowFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .short
+        f.dateTimeStyle = .named
+        return f
+    }()
+
     private func relativeDate(_ date: Date) -> String {
-        Self.relativeFormatter.localizedString(for: date, relativeTo: Date())
+        Self.relativeDate(date, now: Date())
+    }
+
+    static func relativeDate(_ date: Date, now: Date, locale: Locale? = nil) -> String {
+        // A saved version is never in the future: another device's clock can run
+        // ahead of this one.
+        let past = min(date, now)
+        let f = now.timeIntervalSince(past) < 60 ? justNowFormatter : relativeFormatter
+        if let locale { f.locale = locale }
+        defer { f.locale = .autoupdatingCurrent }
+        return f.localizedString(for: past, relativeTo: now)
     }
 }
 
