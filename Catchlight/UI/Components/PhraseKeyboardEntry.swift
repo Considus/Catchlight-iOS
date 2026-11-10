@@ -98,9 +98,17 @@ final class RestoreKeyboardAccessory: UIView {
         backButton.frame = CGRect(x: restoreX + pillW + gap, y: Self.topPad, width: pillW, height: d)
     }
 
+    /// Disabled shows the shared disabled pair (a readable label on a neutral fill), not a
+    /// faded button.
     func setReady(_ ready: Bool) {
         restoreButton.isEnabled = ready
-        restoreButton.alpha = ready ? 1 : 0.5
+        applyRestoreColors()
+    }
+
+    private func applyRestoreColors() {
+        restoreButton.backgroundColor = restoreButton.isEnabled ? Self.ember : UITheme.disabledFill
+        restoreButton.setTitleColor(Self.ink, for: .normal)
+        restoreButton.setTitleColor(UITheme.disabledLabel, for: .disabled)
     }
 
     /// CGColors don't follow traits, so resolve them against the bar's own traits.
@@ -115,7 +123,7 @@ final class RestoreKeyboardAccessory: UIView {
 
     /// The Back pill's border colour for the bar's current traits.
     private var backBorder: CGColor {
-        Self.textPrimary.resolvedColor(with: traitCollection).withAlphaComponent(0.4).cgColor
+        SceneToken.outline.resolvedColor(with: traitCollection).cgColor
     }
 
     private func buildLayout() {
@@ -136,12 +144,13 @@ final class RestoreKeyboardAccessory: UIView {
         // Audit 2026-08, DT7: this lazy view lives for the app's lifetime — the
         // scaled font must also FOLLOW a size change, not just read it once.
         button.titleLabel?.adjustsFontForContentSizeCategory = true
-        button.layer.cornerRadius = Self.circle / 2
+        button.layer.cornerRadius = CatchlightLayout.controlRadius
         button.layer.cornerCurve = .continuous
         button.layer.masksToBounds = true
         if filled {
             button.backgroundColor = Self.ember
             button.setTitleColor(Self.ink, for: .normal)
+            button.setTitleColor(UITheme.disabledLabel, for: .disabled)
         } else {
             button.backgroundColor = .clear
             button.layer.borderWidth = 1
@@ -155,6 +164,7 @@ final class RestoreKeyboardAccessory: UIView {
     private func refreshDynamicColors() {
         backButton.layer.borderColor = backBorder
         backButton.setTitleColor(Self.textPrimary, for: .normal)
+        applyRestoreColors()
         applyFadeColors()
     }
 }
@@ -198,7 +208,7 @@ struct PhraseTextField: UIViewRepresentable {
         // Audit 2026-08, DT7: follow live size changes (see configurePill).
         tf.adjustsFontForContentSizeCategory = true
         tf.textColor = UIColor(Color.ckTextPrimary)
-        tf.tintColor = UIColor(Color.ckTextObie)          // accent caret
+        tf.tintColor = UIColor(Color.ckAccent)          // accent caret
         tf.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
         tf.accessibilityIdentifier = "restore-word-\(index + 1)"
         // V8 (audit 2026-08): the twelve fields announced as identical unlabelled

@@ -539,11 +539,11 @@ struct TimelineMonthDivider: View {
                 Text(title.uppercased())
                     .ckBody(.regular, size: 14, relativeTo: .body)
                     .kerning(0.5)
-                    .foregroundStyle(isActive ? Color.ckTextObie : Color.ckTextSecondary)
+                    .foregroundStyle(isActive ? Color.ckAccent : Color.ckTextSecondary)
                 if isActive {
                     Image(systemName: "xmark.circle.fill")
                         .ckBody(.regular, size: 13, relativeTo: .caption)
-                        .foregroundStyle(Color.ckTextObie)
+                        .foregroundStyle(Color.ckAccent)
                         .accessibilityHidden(true)
                 }
             }

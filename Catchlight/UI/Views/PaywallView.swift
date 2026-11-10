@@ -119,7 +119,7 @@ struct PaywallView: View {
             .ckBody(.medium, size: 14, relativeTo: .footnote)
             .tracking(2)
             .textCase(.uppercase)
-            .foregroundStyle(Color.ckTextObie)
+            .foregroundStyle(Color.ckAccent)
     }
 
     private var valueProps: some View {
@@ -199,7 +199,7 @@ struct PaywallView: View {
                 if manager.isWorking {
                     ProgressView()
                         .progressViewStyle(.circular)
-                        .tint(Color.ckOnAccent)
+                        .tint(Color.ckDisabledLabel)
                 } else {
                     Text(ctaText)
                         .ckBody(.medium, size: 16, relativeTo: .body)
@@ -209,20 +209,16 @@ struct PaywallView: View {
                 }
             }
             // Owner 2026-06-21: no taller than the toolbar/dock buttons (44pt) with
-            // the same Capsule radius. Grows past 44pt only when the label wraps at
+            // the control radius. Grows past 44pt only when the label wraps at
             // large text sizes.
             .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
             .padding(.vertical, dynamicSize > .large ? 8 : 0)
-            .foregroundStyle(Color.ckOnAccent)
-            .background(Capsule().fill(Color.ckEmber))
-            .contentShape(Capsule())
+            .flatPrimaryFace()
         }
         .buttonStyle(.plain)
         .disabled(manager.isWorking || manager.annual == nil)
-        // Audit 2026-08, C7: the disabled state had NO visual expression — a
-        // failed product load looked like a live button that does nothing. The
-        // house disabled-dim (ConflictResolution's confirm uses the same 0.38).
-        .opacity(manager.isWorking || manager.annual == nil ? 0.38 : 1)
+        // Audit 2026-08, C7: the disabled state must show. `flatPrimaryFace` draws the
+        // shared disabled pair (readable label on a neutral fill) while it is disabled.
         // Audit 2026-08, V9: while a purchase runs, the ProgressView replaces the
         // Text and the button loses its accessible name entirely. The label must
         // not depend on which child is showing; the busy state rides the value so
@@ -269,7 +265,7 @@ struct PaywallView: View {
                 .accessibilityIdentifier("paywall-redeem")
             }
             .ckBody(.regular, size: 15, relativeTo: .subheadline)
-            .foregroundStyle(Color.ckTextObie)
+            .foregroundStyle(Color.ckAccent)
             .disabled(manager.isWorking)
         }
     }
@@ -316,7 +312,7 @@ struct PaywallView: View {
                 }
             }
             .ckBody(.regular, size: 12, relativeTo: .footnote)
-            .foregroundStyle(Color.ckTextObie)
+            .foregroundStyle(Color.ckAccent)
         }
     }
 

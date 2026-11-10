@@ -32,7 +32,7 @@ final class TakeCardStyleTests: XCTestCase {
 
     func testPlainNote_hasNoVisibleBorder() {
         let s = style(Take(blocks: [.textLine("just a note")]))
-        XCTAssertEqual(s.border, s.surface, "a plain Note draws no border")
+        XCTAssertEqual(s.border, Color.ckLine, "a plain Note draws the quiet line edge")
         XCTAssertFalse(s.isOverdue)
         XCTAssertFalse(s.isDone)
     }

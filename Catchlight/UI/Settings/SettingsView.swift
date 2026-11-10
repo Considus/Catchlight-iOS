@@ -513,10 +513,7 @@ struct SettingsView: View {
                     }
                 }
             }
-            // C3 (audit 2026-08): the ON-track is a state indicator on the row
-            // surface — raw Ember on white was 2.24:1. ckAccent keeps Night
-            // identical (Ember) and gives Daylight #856539 (5.36:1 on white).
-            .tint(Color.ckAccent)
+            .toggleStyle(FlatToggleStyle())
             .frame(minHeight: 52)
             .listRowBackground(Color.ckSurface)
             .accessibilityIdentifier("follow-up-reminders-toggle")
@@ -597,10 +594,7 @@ struct SettingsView: View {
                     }
                 }
             }
-            // C3 (audit 2026-08): the ON-track is a state indicator on the row
-            // surface — raw Ember on white was 2.24:1. ckAccent keeps Night
-            // identical (Ember) and gives Daylight #856539 (5.36:1 on white).
-            .tint(Color.ckAccent)
+            .toggleStyle(FlatToggleStyle())
             .frame(minHeight: 52)
             .listRowBackground(Color.ckSurface)
             .accessibilityIdentifier("confirm-before-delete-toggle")

@@ -170,7 +170,8 @@ struct LocationEditor: View {
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .frame(minHeight: CatchlightLayout.minTouchTarget)
+        .flatField()
         .onChange(of: query) { _, q in search.query = q }
     }
 
@@ -192,7 +193,7 @@ struct LocationEditor: View {
             }
         }
         .padding(.horizontal, 14)
-        .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .flatPanel()
     }
 
     private var currentLocationButton: some View {
@@ -200,8 +201,8 @@ struct LocationEditor: View {
             Label("Use current location", systemImage: "location.fill")
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(Color.ckSurface, in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1))
+                .background(Color.ckSurface, in: CatchlightShape.control)
+                .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.ckTextPrimary)
@@ -218,7 +219,7 @@ struct LocationEditor: View {
         // A fixed centre pin + "move the map under the pin" — drag to fine-tune the fence.
         .overlay { Image(systemName: "mappin").font(.title2).foregroundStyle(Color.ckEmber) }
         .frame(height: 220)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(CatchlightShape.surface)
         .onMapCameraChange(frequency: .onEnd) { context in
             self.coordinate = context.region.center
             writeBack()
@@ -269,9 +270,8 @@ struct LocationEditor: View {
                 // (owner 2026-06-29); slash stays for the silent/off place tag.
                 Label("Notify", systemImage: alarmEnabled ? "bell.fill" : "bell.slash")
                 Spacer()
-                Toggle("", isOn: $alarmEnabled).labelsHidden().tint(Color.ckEmber)
+                Toggle("", isOn: $alarmEnabled).labelsHidden().toggleStyle(FlatToggleStyle())
             }
-            .padding(.vertical, 8)
             .accessibilityIdentifier("location-notify-toggle")
 
             if !alarmEnabled {
@@ -302,13 +302,16 @@ struct LocationEditor: View {
                 }
                 TextField("e.g. Home", text: $name)
                     .multilineTextAlignment(.trailing)
+                    .padding(.horizontal, 10)
+                    .frame(minHeight: CatchlightLayout.minTouchTarget - 8)
+                    .flatField(fill: .ckBackground)
                     .accessibilityIdentifier("location-name-field")
             }
             .padding(.vertical, 8)
         }
         .tint(Color.ckEmber)
         .padding(.horizontal, 14).padding(.vertical, 4)
-        .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .flatPanel()
     }
 
     private var permissionHint: some View {

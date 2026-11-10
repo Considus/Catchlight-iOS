@@ -42,6 +42,27 @@ final class SceneContrastTests: XCTestCase {
         }
     }
 
+    /// A field sits on the page, a card or a sheet, so its outline is measured on `surface` too.
+    func testFieldOutline_reaches3to1_onTheSheetSurface() {
+        for scene in CatchlightScene.allCases {
+            for style in styles {
+                assertRatio(SceneToken.outline, SceneToken.surface, sceneTraits(scene, style), 3.0,
+                            "outline on surface, \(name(scene, style))")
+            }
+        }
+    }
+
+    /// A disabled button keeps its label readable against its own fill: the shared disabled
+    /// pair, in every Scene, Light and Dark.
+    func testDisabledButtonLabel_reaches3to1_onItsOwnFill() {
+        for scene in CatchlightScene.allCases {
+            for style in styles {
+                assertRatio(UITheme.disabledLabel, UITheme.disabledFill, sceneTraits(scene, style), 3.0,
+                            "disabled label on disabled fill, \(name(scene, style))")
+            }
+        }
+    }
+
     func testUnlitLight_reaches2to1_onEverySurfaceIncludingSurface() {
         let all = surfaces + [("surface", SceneToken.surface)]
         for scene in CatchlightScene.allCases {

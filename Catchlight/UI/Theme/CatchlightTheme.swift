@@ -403,31 +403,107 @@ enum Quadrant {
     }
 }
 
-// MARK: - Daylight card shadow (Design System v1.1 §4.1)
+// MARK: - Flat shapes (redesign)
+//
+// Every surface the app draws is flat: no shadows, gradients or raised materials. Buttons
+// and toggles are rounded rectangles at `CatchlightLayout.controlRadius`; fields, panels
+// and cards are rounded rectangles at `CatchlightLayout.surfaceRadius`. Never a pill.
 
-/// The standard Take-card shadow for ckSurface cards/chips on Paper: ambient
-/// `0 2px 8px rgba(15,14,12,0.09)` + contact `0 1px 2px rgba(15,14,12,0.05)`.
-/// Daylight ONLY — DS §4 prohibits shadows in Night, where elevation is the
-/// Dusk surface colour. CSS blur ≈ 2× SwiftUI radius, hence radius 4/1.
-struct DaylightCardShadow: ViewModifier {
-    /// Overdue Takes get a slightly stronger Daylight shadow (HiFi v1.7
-    /// .card.overdue: `0 2px 10px rgba(15,14,12,0.13), 0 1px 3px …0.08`) — the
-    /// dark overdue border absorbs the subtle default, so it's lifted a touch.
-    var strong: Bool = false
-    @Environment(\.colorScheme) private var scheme
+enum CatchlightShape {
+    /// Buttons, toggles and the marks inside them.
+    static let control = RoundedRectangle(cornerRadius: CatchlightLayout.controlRadius, style: .continuous)
+    /// Fields, panels, cards and sheets.
+    static let surface = RoundedRectangle(cornerRadius: CatchlightLayout.surfaceRadius, style: .continuous)
+}
+
+extension View {
+    /// A field's flat surface: the card colour, a 1pt outline from the `outline` token (3:1
+    /// on every surface) and the surface radius.
+    func flatField(fill: Color = .ckSurface) -> some View {
+        background(CatchlightShape.surface.fill(fill))
+            .overlay(CatchlightShape.surface.strokeBorder(Color.ckOutline, lineWidth: 1))
+    }
+
+    /// A panel's flat surface: the card colour and a hairline edge from the `line` token.
+    func flatPanel(fill: Color = .ckSurface) -> some View {
+        background(CatchlightShape.surface.fill(fill))
+            .overlay(CatchlightShape.surface.strokeBorder(Color.ckLine, lineWidth: 1))
+    }
+}
+
+/// A toggle drawn as a rounded rectangle track with a rounded square knob, never a pill.
+/// Off is the `outline` edge on the surface (3:1), on is the action colour. The whole row
+/// is one 44pt button that keeps the switch trait and its on or off value.
+struct FlatToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            HStack(spacing: 12) {
+                configuration.label
+                Spacer(minLength: 8)
+                FlatToggleTrack(isOn: configuration.isOn)
+            }
+            .frame(minHeight: CatchlightLayout.minTouchTarget)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isToggle)
+        .accessibilityValue(configuration.isOn ? "1" : "0")
+    }
+}
+
+private struct FlatToggleTrack: View {
+    let isOn: Bool
+    private let width: CGFloat = 46
+    private let height: CGFloat = 28
+    private let inset: CGFloat = 3
+    var body: some View {
+        let knob = height - inset * 2
+        ZStack(alignment: isOn ? .trailing : .leading) {
+            CatchlightShape.control
+                .fill(isOn ? Color.ckAdd : Color.ckSurface)
+            CatchlightShape.control
+                .strokeBorder(isOn ? Color.ckAdd : Color.ckOutline, lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: CatchlightLayout.controlRadius - inset, style: .continuous)
+                .fill(isOn ? Color.ckOnAccent : Color.ckOutline)
+                .frame(width: knob, height: knob)
+                .padding(inset)
+        }
+        .frame(width: width, height: height)
+        .animation(.snappy(duration: 0.15), value: isOn)
+        .accessibilityHidden(true)
+    }
+}
+
+/// The face of a filled action button: the action colour with its on-colour label, or the
+/// disabled pair while the button is disabled (read from the environment, so the button
+/// needs no flag). A rounded rectangle at the control radius, never a pill.
+private struct FlatPrimaryFace: ViewModifier {
+    @Environment(\.isEnabled) private var isEnabled
     func body(content: Content) -> some View {
         content
-            .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(strong ? 0.13 : 0.09),
-                    radius: strong ? 5 : 4, y: 2)
-            .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(strong ? 0.08 : 0.05),
-                    radius: strong ? 1.5 : 1, y: 1)
+            .foregroundStyle(isEnabled ? Color.ckOnAccent : Color.ckDisabledLabel)
+            .background(CatchlightShape.control.fill(isEnabled ? Color.ckAdd : Color.ckDisabledFill))
+            .contentShape(CatchlightShape.control)
     }
 }
 
 extension View {
-    func daylightCardShadow(strong: Bool = false) -> some View {
-        modifier(DaylightCardShadow(strong: strong))
-    }
+    func flatPrimaryFace() -> some View { modifier(FlatPrimaryFace()) }
+}
+
+extension UITheme {
+    /// A disabled button's fill and label. The label reaches 3:1 on the fill in every Scene
+    /// (`SceneContrastTests`): the old way faded the whole button, and a faded label on a
+    /// faded fill was pale on pale.
+    static let disabledFill  = SceneToken.line
+    static let disabledLabel = SceneToken.muted
+}
+
+extension Color {
+    static let ckDisabledFill = Color(SceneColor(\.line))
+    static let ckDisabledLabel = Color(SceneColor(\.muted))
 }
 
 // MARK: - Typography
@@ -730,6 +806,10 @@ enum CatchlightLayout {
     /// (Search/sequence results reuse the timeline row; the edit footer, conflict
     /// view, and Focus row pass their own explicit diameters and are unaffected.)
     static let circleDiameter: CGFloat = 44
+    /// Corner radius of a button or toggle. Never a pill.
+    static let controlRadius: CGFloat = 10
+    /// Corner radius of a field, panel, card or sheet.
+    static let surfaceRadius: CGFloat = 16
     /// The distance from the dock's first column centre (`spineX`) to the Take card's
     /// leading edge: the card starts at `spineX − cardLeadingOffset`, about 20pt from
     /// the screen edge, matching the 20pt trailing margin. The timeline line that once

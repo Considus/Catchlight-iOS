@@ -167,10 +167,8 @@ struct CloudStorageView: View {
             Button { pickerPresented = true } label: {
                 Text("Choose folder from Files")
                     .ckBody(.medium, size: 15, relativeTo: .body)
-                    .foregroundStyle(Color.ckOnAccent)
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Capsule().fill(Color.ckEmber))
-                    .contentShape(Capsule())
+                    .flatPrimaryFace()
             }
             .buttonStyle(.plain)
             .accessibilityHint("Opens the Files picker to choose a folder for sync.")
@@ -281,16 +279,15 @@ struct CloudStorageView: View {
                 Button { fireManualSync() } label: {
                     Text(syncFeedback ?? String(localized: "Sync Now"))
                         .ckBody(.medium, size: 14, relativeTo: .body)
-                        .foregroundStyle(hasFolderConfigured ? Color.ckTextObie : Color.ckTextSecondary)
+                        .foregroundStyle(hasFolderConfigured ? Color.ckAccent : Color.ckTextComplete)
                 }
                 // T4: same 44pt hit floor as Remove above.
                 .contentShape(Rectangle().inset(by: -13))
                 .disabled(!hasFolderConfigured || syncFeedback != nil)
                 // Audit 2026-08, C8: the no-folder disabled state was hue-swap
                 // only — invisible to a sighted user who can't distinguish the
-                // hues. The house disabled-dim carries it; the transient
-                // "Syncing…" state keeps full strength (its text IS the signal).
-                .opacity(hasFolderConfigured ? 1 : 0.38)
+                // hues. The receded text colour carries it (4.5:1, so still readable); the
+                // transient "Syncing…" state keeps full strength (its text IS the signal).
                 .accessibilityIdentifier("cloud-sync-now")
                 .accessibilityHint("Run a sync pass now.")
             }

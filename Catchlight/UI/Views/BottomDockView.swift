@@ -85,7 +85,7 @@ struct BottomDockView: View {
         (UIScreen.main.bounds.width - CatchlightLayout.dockHorizontalPadding * 2) / 4
     }
 
-    /// Visible dock-circle diameter. Owner 2026-06-15: enlarged 36 → 44 so the
+    /// Visible dock button size (a rounded square at the control radius, no longer a circle). Owner 2026-06-15: enlarged 36 → 44 so the
     /// circle FILLS its 44pt touch frame (= `minTouchTarget`) — the buttons read
     /// larger and now match the onboarding/paywall pill, which already sizes to the
     /// 44pt grid (DockPillRow). Slot centres are unchanged, so the buttons keep
@@ -104,7 +104,7 @@ struct BottomDockView: View {
     /// Sequence/Search and the filter/cancel rings) read as a colour mismatch
     /// between the slot pairs, so it's retired in favour of one weight.
     private func dockRing() -> some View {
-        Circle()
+        CatchlightShape.control
             .strokeBorder(Color.ckAccent.opacity(0.55), lineWidth: 1.5)
             .frame(width: dockCircle, height: dockCircle)
             .allowsHitTesting(false)
@@ -362,7 +362,7 @@ struct BottomDockView: View {
                 dockRing()
             case .on, .modified:
                 // Fill the toggle with its type colour (the fill edge IS the border).
-                Circle().fill(onFill)
+                CatchlightShape.control.fill(onFill)
                     .frame(width: dockCircle, height: dockCircle)
             }
             Image(systemName: system)
@@ -370,7 +370,7 @@ struct BottomDockView: View {
                 .foregroundStyle(visual == .off ? Color.ckAccent : Color.ckBackground)
         }
         .frame(width: buttonSize, height: buttonSize)
-        .contentShape(Circle())
+        .contentShape(CatchlightShape.control)
     }
 
     /// Important (slot 1, FILTERING) — replaces the Add button while filtering
@@ -386,7 +386,7 @@ struct BottomDockView: View {
                     // Fill with the Iris IMPORTANT colour, not Ember (owner 2026-06-29):
                     // every other Sequence toggle uses its Quadrant colour, so Important
                     // must too — Stone (Night) / Shadow (Daylight), matching the Iris N wedge.
-                    Circle().fill(Quadrant.important(scheme))
+                    CatchlightShape.control.fill(Quadrant.important(scheme))
                         .frame(width: dockCircle, height: dockCircle)
                 } else {
                     dockRing()
@@ -395,7 +395,7 @@ struct BottomDockView: View {
                     .foregroundStyle(ui.filterImportant ? Color.ckBackground : Color.ckAccent)
             }
             .frame(width: buttonSize, height: buttonSize)
-            .contentShape(Circle())
+            .contentShape(CatchlightShape.control)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("filter-important")
@@ -490,7 +490,7 @@ struct BottomDockView: View {
             ui.exitToResting()
         } label: {
             ZStack {
-                Circle().fill(Color.ckSurface)
+                CatchlightShape.control.fill(Color.ckSurface)
                     .frame(width: dockCircle, height: dockCircle)
                 dockRing()   // .db — Ember border @35%
                 Image(systemName: "plus")   // + rotated 45° → × — one close glyph app-wide (owner 2026-06-29)
@@ -507,7 +507,7 @@ struct BottomDockView: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    /// The capsule spanning slots 2+3 — a non-editable display of the current query
+    /// The field spanning slots 2+3 — a non-editable display of the current query
     /// (or the placeholder). Tapping it brings the keyboard + the docked search bar
     /// back up to keep typing.
     private var searchResumeField: some View {
@@ -524,8 +524,8 @@ struct BottomDockView: View {
             .padding(.horizontal, 16)
             .frame(height: buttonSize)
             .frame(maxWidth: .infinity)
-            .background(Capsule().fill(Color.ckSurface))
-            .contentShape(Capsule())
+            .flatField()
+            .contentShape(CatchlightShape.surface)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("search-resume")

@@ -1009,9 +1009,7 @@ struct DailiesView: View {
             .padding(.horizontal, 16)
             .frame(minHeight: 44)
             .frame(maxWidth: .infinity)
-            .background(scheme == .dark
-                        ? Color.ckGlow.opacity(0.12)
-                        : Color.ckEmber.opacity(0.15))
+            .background(Color.ckAdd.opacity(0.15))
             .transition(.move(edge: .top).combined(with: .opacity))
             .accessibilityElement(children: .contain)
         }
@@ -1055,9 +1053,7 @@ struct DailiesView: View {
             .padding(.horizontal, 16)
             .frame(minHeight: 44)
             .frame(maxWidth: .infinity)
-            .background(scheme == .dark
-                        ? Color.ckGlow.opacity(0.12)
-                        : Color.ckEmber.opacity(0.15))
+            .background(Color.ckAdd.opacity(0.15))
             .transition(.move(edge: .top).combined(with: .opacity))
             .accessibilityElement(children: .contain)
         }
@@ -1103,9 +1099,7 @@ struct DailiesView: View {
             .padding(.horizontal, 16)
             .frame(minHeight: 44)
             .frame(maxWidth: .infinity)
-            .background(scheme == .dark
-                        ? Color.ckGlow.opacity(0.12)
-                        : Color.ckEmber.opacity(0.15))
+            .background(Color.ckAdd.opacity(0.15))
             .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
@@ -1865,7 +1859,7 @@ struct DailiesView: View {
             // Task 6.19 — brief flash when this row is the Spotlight deep-link
             // target. Uses the ember accent at low opacity so it reads as a
             // gentle pulse, not a notification.
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            CatchlightShape.surface
                 .fill(Color.ckEmber.opacity(ui.revealTargetTakeID == take.id ? 0.18 : 0))
                 .animation(.easeInOut(duration: 0.4), value: ui.revealTargetTakeID)
         )

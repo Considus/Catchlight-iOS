@@ -233,25 +233,18 @@ private struct PhraseRevealGrid: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.ckSurface)
-                .daylightCardShadow()   // DS §4.1 — same lift as the onboarding chips
-        )
+        .flatPanel()
     }
 
     private var holdButton: some View {
         Text(revealed ? "Release to hide" : "Hold to reveal")
             .ckBody(.medium, size: 15, relativeTo: .body)
-            // Ink in BOTH modes (deliberate deviation from the pill system's
-            // ckBackground label): the revealed state fills with GLOW, and
-            // Paper-on-Glow is illegible in Daylight — Ink reads on both fills.
-            .foregroundStyle(Color.ckInk)
+            .foregroundStyle(Color.ckOnAccent)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
-                Capsule().fill(revealed ? Color.ckGlow : Color.ckEmber)
+                CatchlightShape.control.fill(Color.ckAdd)
             )
-            .contentShape(Capsule())
+            .contentShape(CatchlightShape.control)
             // LongPressGesture with minimumDuration: 0 fires on press and updates
             // GestureState to true; the binding flips back to false the moment the
             // gesture ends. This gives us a true "hold to reveal" — not a tap toggle.

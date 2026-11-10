@@ -8,16 +8,8 @@
 //  and `LockedCaptureView`'s capture card — so
 //  read↔edit never drift and the precedence lives in one place.
 //
-//  🎨 A TAKE-CARD CARRIES THE SAME LIFT EVERYWHERE IT IS DRAWN (owner 2026-07-16).
-//  Any view drawing this shell must pair the surface with the standard shadow:
-//
-//      .fill(style.surface)
-//      .daylightCardShadow(strong: style.isOverdue && !take.isObie)
-//
-//  This is easy to lose: BOTH BlockEditor migrations (M5a's Dailies card, M5b's
-//  LockedCapture card) rebuilt the shell and silently dropped the shadow, leaving those
-//  editors flat against the page while the read card behind them was lifted. If you are
-//  writing a new card shell rather than reusing one, this line is the one you'll forget.
+//  A TAKE CARD IS FLAT (redesign): no shadow, in either appearance. Its edge is the border
+//  below, and a plain note's is the `line` token, so a card never merges into the page.
 //
 //  Owner spec 2026-06-18 — two independent axes:
 //
@@ -31,8 +23,8 @@
 //        done               → grey   (`ckCardDoneBorder` == `ckTextComplete` grey)
 //        active task        → Task-quadrant colour   (same source as the Iris)
 //        active reminder    → Remind-quadrant colour  (same source as the Iris)
-//        else (plain note)  → none   (the surface colour — invisible, but the 0.75pt
-//                                      stroke is still drawn so every card is one size)
+//        else (plain note)  → the `line` token (a quiet edge, the same 0.75pt stroke, so
+//                                      every card is one size)
 //
 //  The active borders read straight from `Quadrant`, so the card edge is the SAME
 //  colour the Iris uses for that activity, by construction (owner: "use the colour
@@ -52,7 +44,7 @@ struct TakeCardStyle {
     static let borderWidth: CGFloat = 0.75
     /// Every Take card's corner radius (redesign: 16 for cards and panels), read by each
     /// shape that has to sit exactly on a card: its surface, border, tap area and flash.
-    static let cornerRadius: CGFloat = 16
+    static let cornerRadius: CGFloat = CatchlightLayout.surfaceRadius
 
     /// Card background fill.
     let surface: Color
@@ -93,7 +85,7 @@ struct TakeCardStyle {
             // instant to be past — so the ruby branch above stays time-only.
             self.border = Quadrant.reminder(scheme)
         } else {
-            self.border = surfaceColor
+            self.border = .ckLine
         }
 
         self.bodyText = done ? .ckTextComplete : (take.isObie ? .ckTextObie : .ckTextPrimary)

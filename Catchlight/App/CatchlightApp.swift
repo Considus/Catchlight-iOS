@@ -597,7 +597,7 @@ struct JailbreakBanner: View {
                 .font(.caption)
                 .multilineTextAlignment(.center)
                 .padding(10)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                .flatPanel(fill: .ckSurface)
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             Spacer()

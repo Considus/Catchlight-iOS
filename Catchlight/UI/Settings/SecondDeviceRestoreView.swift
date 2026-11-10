@@ -82,10 +82,8 @@ struct SecondDeviceRestoreView: View {
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .background(Color.ckRuby.opacity(0.08),
-                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.ckRuby.opacity(0.35), lineWidth: 1))
+            .background(Color.ckRuby.opacity(0.08), in: CatchlightShape.surface)
+            .overlay(CatchlightShape.surface.stroke(Color.ckRuby.opacity(0.35), lineWidth: 1))
     }
 
     private var statusLine: some View {
@@ -105,14 +103,11 @@ struct SecondDeviceRestoreView: View {
         Button(action: submit) {
             Text("Restore on this device")
                 .ckBody(.medium, size: 15, relativeTo: .body)
-                .foregroundStyle(Color.ckOnAccent)
                 .frame(maxWidth: .infinity, minHeight: 50)
-                .background(Capsule().fill(Color.ckEmber))
-                .contentShape(Capsule())
+                .flatPrimaryFace()
         }
         .buttonStyle(.plain)
         .disabled(!ready)
-        .opacity(ready ? 1 : 0.5)
         .accessibilityIdentifier("second-device-restore")
     }
 

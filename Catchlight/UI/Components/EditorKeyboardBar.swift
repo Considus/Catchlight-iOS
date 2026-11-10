@@ -134,7 +134,7 @@ struct EditorKeyboardBar: View {
                      hint: config.importantLocked ? "An Obie is always Important." : nil,
                      action: config.onToggleImportant) {
                     ImportantGlyph(size: 24)
-                        .foregroundStyle(config.importantLocked ? Color.ckTextSecondary.opacity(0.4) : Color.ckAccent)
+                        .foregroundStyle(config.importantLocked ? Color.ckTextComplete : Color.ckAccent)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -165,7 +165,7 @@ struct EditorKeyboardBar: View {
     private func dockSymbol(_ systemImage: String, tint: Color, enabled: Bool, size: CGFloat = 24) -> some View {
         Image(systemName: systemImage)
             .font(.system(size: size, weight: .light))
-            .foregroundStyle(enabled ? tint : Color.ckTextSecondary.opacity(0.4))
+            .foregroundStyle(enabled ? tint : Color.ckTextComplete)
             // The ∠ symbol's mass sits low-left, so nudge it up to optically centre —
             // matching the main dock's Angle glyph (owner 2026-06-19).
             .offset(y: systemImage == "angle" ? -2 : 0)
@@ -190,13 +190,13 @@ struct EditorKeyboardBar: View {
                                    @ViewBuilder glyph: () -> Glyph) -> some View {
         Button(action: action) {
             ZStack {
-                Circle()
+                CatchlightShape.control
                     .strokeBorder(Color.ckAccent.opacity(0.55), lineWidth: 1.5)
                     .frame(width: circle, height: circle)
                 glyph()
             }
             .frame(width: circle, height: circle)
-            .contentShape(Circle())
+            .contentShape(CatchlightShape.control)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
