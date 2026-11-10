@@ -73,7 +73,43 @@ struct FocusRowView: View {
     /// animation (a known flake source). Mirrors the app-wide
     /// `UIView.setAnimationsEnabled(false)` that UI-test launches set for UIKit.
     private var instantMotion: Bool {
-        reduceMotion || (ProcessInfo.processInfo.arguments.contains("--uitesting") && Self.uiTestTimeScale == nil)
+        reduceMotion
+            || (ProcessInfo.processInfo.arguments.contains("--uitesting")
+                && Self.uiTestTimeScale == nil && frozenAt == nil)
+    }
+
+    /// UI tests only: `--uitesting -catchlight.focusRowFreezeAt <s>` holds every open after the
+    /// first at `s` seconds into the choreography, and keeps it there: the marks stay where
+    /// they are at that instant, and taps are judged against that layout and hit gate, so a
+    /// test needs no timing. The first open still plays instantly, so a test can set the Take
+    /// up first. Compiled out of Release, like the time scale.
+    private static let uiTestFreezeAt: Double? = {
+        #if DEBUG
+        guard ProcessInfo.processInfo.arguments.contains("--uitesting") else { return nil }
+        let at = UserDefaults.standard.double(forKey: "catchlight.focusRowFreezeAt")
+        return at > 0 ? at : nil
+        #else
+        return nil
+        #endif
+    }()
+    #if DEBUG
+    nonisolated(unsafe) private static var opensSoFar = 0
+    #endif
+    /// The freeze for the open that is starting now: none for the first open.
+    private static func freezeForThisOpen() -> Double? {
+        #if DEBUG
+        opensSoFar += 1
+        return opensSoFar > 1 ? uiTestFreezeAt : nil
+        #else
+        return nil
+        #endif
+    }
+    @State private var frozenAt: Double?
+
+    /// Seconds into the open at `now`, held at the UI-test freeze when there is one.
+    private func openTime(since start: Date, now: Date) -> Double {
+        let t = now.timeIntervalSince(start) / Self.timeScale
+        return frozenAt.map { min(t, $0) } ?? t
     }
 
     /// UI tests only: `--uitesting -catchlight.focusRowTimeScale <n>` plays the choreography
@@ -354,7 +390,7 @@ struct FocusRowView: View {
     private func markProgress(_ kind: MarkKind, now: Date) -> MarkProgress {
         switch phase {
         case .opening(let start):
-            return openProgress(kind, at: now.timeIntervalSince(start) / Self.timeScale)
+            return openProgress(kind, at: openTime(since: start, now: now))
         case .open:
             return .rest
         case .closing(let start, _):
@@ -370,7 +406,7 @@ struct FocusRowView: View {
     private func growProgress(now: Date) -> Double {
         let t: Double
         switch phase {
-        case .opening(let start): t = now.timeIntervalSince(start) / Self.timeScale
+        case .opening(let start): t = openTime(since: start, now: now)
         case .open: return 1
         case .closing(let start, _):
             t = Timing.openDuration(slots: slots)
@@ -406,7 +442,7 @@ struct FocusRowView: View {
         let dur = Timing.closeDuration(slots: slots)
         switch phase {
         case .opening(let start):
-            let p = min(max(now.timeIntervalSince(start) / Self.timeScale / dur, 0), 1)
+            let p = min(max(openTime(since: start, now: now) / dur, 0), 1)
             return Self.easeInOutCubic(p)
         case .open:
             return 1
@@ -453,6 +489,7 @@ struct FocusRowView: View {
         // A smooth, minimal-bounce spring approximating the iOS sheet present/dismiss.
         .animation(.spring(response: 0.52, dampingFraction: 0.9), value: showingReminderPicker)
         .onAppear {
+            frozenAt = Self.freezeForThisOpen()
             if instantMotion { phase = .open }
             else { phase = .opening(start: .now) }
             if showsFocusCard {
@@ -462,7 +499,7 @@ struct FocusRowView: View {
             // the TimelineView stops ticking.
             // The veil takes the closing tap once the open has finished.
             DispatchQueue.main.asyncAfter(deadline: .now() + (Timing.openDuration(slots: slots) + 0.05) * Self.timeScale) {
-                if case .opening = phase { phase = .open }
+                if case .opening = phase, frozenAt == nil { phase = .open }
             }
         }
     }
