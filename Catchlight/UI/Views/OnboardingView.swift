@@ -78,10 +78,13 @@ struct OnboardingView: View {
     ///
     /// Above Large the mark is NOT hoisted (owner 2026-09-04). At those sizes the step
     /// scrolls, and a hoisted mark cannot scroll — so growing text ran underneath it. Each
-    /// step's reserve copy becomes the real, scrolling mark instead. The owner's reasoning
-    /// for accepting the crossfade this reintroduces: the mark's start size and position are
-    /// identical on every screen, so a scrolling mark still reads as persistent. Below Large
-    /// nothing scrolls, so the hoisted mark is kept exactly as it was.
+    /// step's reserve copy becomes the real, scrolling mark instead, up to the largest
+    /// non-accessibility size. The owner's reasoning for accepting the crossfade this
+    /// reintroduces: the mark's start size and position are identical on every screen, so a
+    /// scrolling mark still reads as persistent. From the accessibility sizes up
+    /// (`accessibility1`) no onboarding step draws a mark at all (`OnboardingBrandMark`): its
+    /// room goes to the content. Below Large nothing scrolls, so the hoisted mark is kept
+    /// exactly as it was.
     private var showsBrandMark: Bool {
         if dynamicSize > .large { return false }
         switch vm.step {
@@ -124,11 +127,11 @@ private struct OnboardingBrandMark: View {
 /// or, at the accessibility sizes where there is no mark above it, just clear of the status bar
 /// and Dynamic Island (the screen runs full-bleed, so the inset is part of the gap).
 private struct HeroGap: View {
+    /// The launch splash keeps its mark at every size, so it keeps the set position too.
+    var markDrawn = false
     @Environment(\.dynamicTypeSize) private var dynamicSize
     @Environment(\.deviceTopInset) private var deviceTopInset
 
-    /// The launch splash keeps its mark at every size, so it keeps the set position too.
-    var markDrawn = false
     var body: some View {
         Color.clear.frame(height: dynamicSize >= .accessibility1 && !markDrawn
                           ? deviceTopInset + 16 : introHeroTopGap)
@@ -139,12 +142,12 @@ private struct HeroGap: View {
 /// at the same place and size. Above it the heading scales with the text size like the text
 /// beneath it, so it never ends up smaller than the point titles under it.
 private struct StepHeading: ViewModifier {
-    @Environment(\.dynamicTypeSize) private var dynamicSize
-    @ScaledMetric(relativeTo: .title) private var scaledSize: CGFloat = 28
-
     /// The launch splash keeps its lines at the fixed 28 at every size: it is the same two lines
     /// the launch screen shows, and it holds still while the app starts.
     var scalesWithText = true
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+    @ScaledMetric(relativeTo: .title) private var scaledSize: CGFloat = 28
+
     func body(content: Content) -> some View {
         let scales = scalesWithText && dynamicSize > .large
         content
@@ -202,12 +205,12 @@ private struct StepLinkLabel: View {
 private struct StepScaffold<Content: View, Bottom: View>: View {
     /// Whether the step sits on the Scene's colour field instead of the ground.
     var onField: Bool = false
-    @ViewBuilder var content: () -> Content
-    @ViewBuilder var bottom: () -> Bottom
-
     /// The scrolling layout (above Large) pads its content 16pt top and bottom. The splash sets
     /// the top to 0 so its mark sits exactly where the launch screen and lock screen draw it.
     var padsTop: Bool = true
+    @ViewBuilder var content: () -> Content
+    @ViewBuilder var bottom: () -> Bottom
+
     // Above the default text size, wrap the content in a ScrollView so tall onboarding
     // screens (Welcome, Storage Choice, Cloud Reminder) don't clip behind the bottom
     // safe-area inset. At default sizes the Spacer-centred ZStack is preserved so
@@ -306,15 +309,15 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
     var drawsBrandMark: Bool = false
     /// Whether this step sits on the Scene's colour field (Welcome and the closing screen).
     var onField: Bool = false
+    /// The launch splash draws the mark at every text size. Onboarding steps drop it from the
+    /// accessibility sizes.
+    var keepsMarkAtEverySize: Bool = false
     /// Above Large the hoisted mark stands down (see `OnboardingView.showsBrandMark`), so the
     /// reserve copy here is the only mark — it is visible and scrolls with the content. From
     /// `accessibility1` up an onboarding step draws no mark (`OnboardingBrandMark`); the splash
     /// (`keepsMarkAtEverySize`) keeps it, because the launch screen and the lock screen draw it
     /// at every size and it must not vanish and return on a cold launch.
     @Environment(\.dynamicTypeSize) private var dynamicSize
-    /// The launch splash draws the mark at every text size. Onboarding steps drop it from the
-    /// accessibility sizes.
-    var keepsMarkAtEverySize: Bool = false
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
 
@@ -426,8 +429,8 @@ struct WelcomeContent: View {
                         StepLinkLabel(title: "I already use Catchlight")
                     }
                     // T3 (audit 2026-08): the sole alternate path on this screen
-                    // tapped at its ~20pt text line. Inset −13 reaches the 44pt
-                    // floor (the text line is 18pt) with the drawn text untouched. The pill below wins
+                    // tapped at its 18pt text line. Inset −13 reaches the 44pt
+                    // floor with the drawn text untouched. The pill below wins
                     // its own frame (later sibling, hit-tested first), so the
                     // 1pt overspill into the 12pt gap cannot steal its taps.
                     .contentShape(Rectangle().inset(by: -13))
@@ -849,7 +852,8 @@ private struct RevealStep: View {
                     // non-fading mark is hoisted in OnboardingView so it doesn't flash
                     // between steps. `.opacity(0)` keeps the same Y/height here.
                     OnboardingBrandMark()
-                        // Visible and scrolling above Large — the hoisted mark stands down there.
+                        // Visible and scrolling above Large, where the hoisted mark stands down;
+                        // not drawn at all from the accessibility sizes (`OnboardingBrandMark`).
                         .opacity(dynamicSize > .large ? 1 : 0)
                     // Hero line at the shared set position (consistent with the
                     // IntroChapterScaffold screens).
@@ -949,7 +953,8 @@ private struct ConfirmStep: View {
                 VStack(spacing: 0) {
                     // Reserve the brand-mark space (hoisted + non-fading, as Reveal).
                     OnboardingBrandMark()
-                        // Visible and scrolling above Large — the hoisted mark stands down there.
+                        // Visible and scrolling above Large, where the hoisted mark stands down;
+                        // not drawn at all from the accessibility sizes (`OnboardingBrandMark`).
                         .opacity(dynamicSize > .large ? 1 : 0)
                     // The gap to the hero now also HOSTS the validation message: it
                     // floats as a card centred between the brand mark and the hero
@@ -1069,11 +1074,6 @@ private struct ConfirmStep: View {
         }
     }
 
-    private var promptCopy: String {
-        let positions = vm.targetPositionsForDisplay
-        guard positions.count == 3 else {
-            return String(localized: "Tap the words from your phrase, in order.")
-        }
     /// The wrong-guess message: a rounded card in the accent. One element, labelled with the
     /// message, that VoiceOver focus moves to (see the handler below).
     private func failureCard(_ failure: String) -> some View {
@@ -1097,6 +1097,11 @@ private struct ConfirmStep: View {
             .accessibilityFocused($failureFocused)
     }
 
+    private var promptCopy: String {
+        let positions = vm.targetPositionsForDisplay
+        guard positions.count == 3 else {
+            return String(localized: "Tap the words from your phrase, in order.")
+        }
         return String(localized: "Tap words \(positions[0]), \(positions[1]) and \(positions[2]) from your phrase, in order.")
     }
 
@@ -1372,7 +1377,7 @@ private struct BasicsStep: View {
                     ForEach(points, id: \.title) { point in
                         OnboardingPointRow(mark: point.mark, title: point.title, shown: point.shown)
                             // One element per point, so the cursor steps heading-and-all
-                            // rather than splitting each into two stops — and an explicit
+                            // rather than splitting each into two stops, and an explicit
                             // label, which REPLACES the printed sentence with the spoken one.
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel("\(point.title). \(point.spoken)")

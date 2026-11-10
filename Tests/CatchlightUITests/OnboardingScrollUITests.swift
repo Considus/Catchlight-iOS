@@ -4,8 +4,8 @@
 //
 //  At the largest accessibility text size an onboarding step is taller than the screen. Its
 //  content scrolls under the pinned buttons, so the last of it can always be brought fully into
-//  view above them. Measured on "A few things worth knowing", whose last point was cut off
-//  behind Next.
+//  view above them. Measured on "A few things worth knowing": unscrolled, its last point sits
+//  below the screen, and scrolling brings it clear of Next.
 //
 
 import XCTest
