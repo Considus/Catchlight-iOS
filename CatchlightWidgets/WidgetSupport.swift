@@ -12,8 +12,11 @@
 //
 //  The redesign (spec R17, R18; drawn in catchlight-icon-and-widgets.html):
 //   • The Iris is the brand symbol, drawn from `IrisGeometry`, which the app shares:
-//     New Take is the Iris with its Note light lit and the Note shape, New Obie the
-//     Iris with its inner square.
+//     New Take is the Iris with its Note light lit and the Note shape. On the Home
+//     Screen and the wide Lock Screen widgets, New Obie is an Obie made from a note:
+//     Important and Note lit, the inner square and the Note lines. The round Lock Screen
+//     widget and the controls show the control symbol instead: the outline with a plus,
+//     or with the inner square.
 //   • Colours are the chosen Scene's, read from the app group at each render, in
 //     Night or Daylight with the system appearance. The app reloads the widgets when
 //     the Scene changes (`SettingsViewModel.SceneChoice.select`).
@@ -164,20 +167,41 @@ struct WidgetIris: View {
     let surface: CaptureSurface
     let size: CGFloat
     @Environment(\.widgetRenderingMode) private var mode
+    @Environment(\.widgetFamily) private var family
+
+    /// On the Home Screen and the wide Lock Screen widgets, New Obie shows a new Obie as
+    /// the app draws one made from a note: Important and Note lit, the inner square and
+    /// the Note lines (Mark and the Art Director, 2026-11-10). The round Lock Screen
+    /// widget and the controls show the control symbol instead (`RoundLockScreenSymbol`).
+    private var obieAsInApp: Bool {
+        surface.isObie && ![.accessoryCircular, .accessoryInline].contains(family)
+    }
 
     var body: some View {
         let s = size / 44
         let full = mode == .fullColor
-        let lit: Set<IrisLight> = surface.isObie ? [] : [.note]
+        let lit: Set<IrisLight> = surface.isObie ? (obieAsInApp ? [.important, .note] : []) : [.note]
         ZStack {
             IrisPart { IrisGeometry.lights(Set(IrisLight.allCases).subtracting(lit), scale: $0) }
                 .stroke(full ? WidgetPalette.unlitLight : Color.white.opacity(0.4),
                         style: StrokeStyle(lineWidth: IrisGeometry.unlitWidth * s, lineCap: .round))
             if surface.isObie {
+                if !lit.isEmpty {
+                    IrisPart { IrisGeometry.lights(lit, scale: $0) }
+                        .stroke(full ? WidgetPalette.lit : Color.white,
+                                style: StrokeStyle(lineWidth: IrisGeometry.litWidth * s, lineCap: .round))
+                        .widgetAccentable()
+                }
                 IrisPart { IrisGeometry.obieSquare(scale: $0) }
                     .stroke(full ? WidgetPalette.lit : Color.white,
                             lineWidth: IrisGeometry.obieSquareWidth * s)
                     .widgetAccentable()
+                if obieAsInApp {
+                    IrisPart { IrisGeometry.innerPath(.note, scale: $0) }
+                        .stroke(full ? WidgetPalette.text : Color.white.opacity(0.88),
+                                style: StrokeStyle(lineWidth: IrisGeometry.innerWidth(.note) * s,
+                                                   lineCap: .round, lineJoin: .round))
+                }
             } else {
                 IrisPart { IrisGeometry.lights(lit, scale: $0) }
                     .stroke(full ? WidgetPalette.lit : Color.white,
@@ -193,10 +217,55 @@ struct WidgetIris: View {
     }
 }
 
+// MARK: - The round Lock Screen symbol
+
+/// The control symbol drawn for the round Lock Screen widget (Art Director, 2026-11-10):
+/// the Iris outline in its six lights, with a plus inside for New Take and the inner
+/// square for New Obie. One idea per widget, like the system's round widgets: no badge,
+/// no Note lines. The outline's box is 56% of the circle, its line 1.5pt to match the
+/// system's widget text beside it; the plus or the square takes the tint.
+struct RoundLockScreenSymbol: View {
+    let surface: CaptureSurface
+
+    var body: some View {
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height) * 0.56
+            let line = StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
+            ZStack {
+                IrisPart { IrisGeometry.lights(Set(IrisLight.allCases), scale: $0) }
+                    .stroke(Color.white, style: line)
+                if surface.isObie {
+                    IrisPart { IrisGeometry.obieSquare(scale: $0) }
+                        .stroke(Color.white, style: line)
+                        .widgetAccentable()
+                } else {
+                    // Arms reach 45% of the outline's inner width, centred on the Iris.
+                    IrisPart { s in
+                        let half = 41 * 0.45 / 2
+                        var p = Path()
+                        p.move(to: CGPoint(x: 22 * s, y: (22 - half) * s))
+                        p.addLine(to: CGPoint(x: 22 * s, y: (22 + half) * s))
+                        p.move(to: CGPoint(x: (22 - half) * s, y: 22 * s))
+                        p.addLine(to: CGPoint(x: (22 + half) * s, y: 22 * s))
+                        return p
+                    }
+                    .stroke(Color.white, style: line)
+                    .widgetAccentable()
+                }
+            }
+            .frame(width: side, height: side)
+            .position(x: geo.size.width / 2, y: geo.size.height / 2)
+        }
+    }
+}
+
 // MARK: - The plus button
 
 /// The one action: a rounded square with a plus. Full colour is the Scene accent with the
 /// plus in `onAccent`; the one-colour modes cut the plus out, so it reads in any tint.
+/// The plus is a hole, so never place the button over other drawing: whatever lies
+/// underneath shows through and breaks the plus (the old round Lock Screen badge sat
+/// over New Obie's inner square, 2026-11-10).
 struct WidgetPlus: View {
     let size: CGFloat
     let radius: CGFloat
@@ -304,11 +373,12 @@ struct LauncherView: View {
     var body: some View {
         switch family {
         case .accessoryCircular:
-            ZStack(alignment: .bottomTrailing) {
-                WidgetIris(surface: surface, size: 42)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                WidgetPlus(size: 18, radius: 6, glyph: 10)
-                    .padding(7)
+            // The system's filled circle, drawn in the content: the Lock Screen removes a
+            // container background, so it would not show from there (Mark's screenshot,
+            // 2026-11-10). The symbol sits centred in it, like the system's own round widgets.
+            ZStack {
+                AccessoryWidgetBackground()
+                RoundLockScreenSymbol(surface: surface)
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(surface.title)
