@@ -87,11 +87,17 @@ final class ReminderQuickSetPresetTests: XCTestCase {
         XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: nil, region: nil), 1)
     }
 
-    /// Japanese display text falls back to Hiragino Mincho, the iOS serif; other languages keep the system fallback.
-    func testDisplayFallback_onlyJapaneseGetsASerif() {
-        XCTAssertEqual(CatchlightFont.displayFallback(for: "ja"), "HiraMinProN-W3")
-        XCTAssertNotNil(UIFont(name: "HiraMinProN-W3", size: 12), "the fallback must exist on iOS")
-        for language in ["en", "ko", "zh-Hans", "zh-Hant", "th", "de", nil] as [String?] {
+    /// Japanese, Korean and Chinese display text falls back to the system sans for
+    /// that script. Other languages keep iOS's own fallback.
+    func testDisplayFallback_isASansPerScript() {
+        let expected: [String: String] = ["ja": "HiraginoSans-W5", "ko": "AppleSDGothicNeo-Medium",
+                                          "zh-Hans": "PingFangSC-Medium", "zh-Hant": "PingFangTC-Medium",
+                                          "zh-HK": "PingFangHK-Medium"]
+        for (language, name) in expected {
+            XCTAssertEqual(CatchlightFont.displayFallback(for: language), name, language)
+            XCTAssertNotNil(UIFont(name: name, size: 12), "the fallback \(name) must exist on iOS")
+        }
+        for language in ["en", "th", "de", nil] as [String?] {
             XCTAssertNil(CatchlightFont.displayFallback(for: language))
         }
     }

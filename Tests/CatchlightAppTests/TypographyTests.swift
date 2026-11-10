@@ -130,3 +130,47 @@ final class TypographyTests: XCTestCase {
         XCTAssertEqual(laidOutWidth("1111", tabular: true), laidOutWidth("0000", tabular: true), accuracy: 0.01)
     }
 }
+
+// MARK: - Non-Latin headings fall back to a sans
+
+extension TypographyTests {
+
+    /// The family of the font Core Text picks to draw `text` in `font`.
+    func family(drawing text: String, in font: UIFont) -> String {
+        let ns = text as NSString
+        let used = CTFontCreateForString(font as CTFont, text as CFString, CFRange(location: 0, length: ns.length))
+        return CTFontCopyFamilyName(used) as String
+    }
+
+    func testJapaneseHeading_fallsBackToHiraginoSans_notAMincho() {
+        let font = CatchlightFont.uiDisplay(size: 28, relativeTo: nil, language: "ja")
+        let family = family(drawing: "設定", in: font)
+        XCTAssertFalse(family.localizedCaseInsensitiveContains("Mincho"), family)
+        XCTAssertTrue(family.hasPrefix("Hiragino Sans"), family)
+    }
+
+    func testChineseHeadings_fallBackToPingFang() {
+        for language in ["zh-Hans", "zh-Hant", "zh-HK"] {
+            let font = CatchlightFont.uiDisplay(size: 28, relativeTo: nil, language: language)
+            XCTAssertTrue(family(drawing: "設定", in: font).hasPrefix("PingFang"), language)
+        }
+    }
+
+    func testKoreanHeading_fallsBackToAppleSDGothicNeo() {
+        let font = CatchlightFont.uiDisplay(size: 28, relativeTo: nil, language: "ko")
+        XCTAssertEqual(family(drawing: "설정", in: font), "Apple SD Gothic Neo")
+    }
+
+    func testLatinStaysArchivo_whateverTheLanguage() {
+        for language in ["ja", "zh-Hans", "ko", "en", nil] {
+            let font = CatchlightFont.uiDisplay(size: 28, relativeTo: nil, language: language)
+            XCTAssertEqual(family(drawing: "Settings", in: font), "Archivo", language ?? "nil")
+        }
+    }
+
+    func testTightLeading_isNegativeAndSmall() {
+        let leading = CatchlightFont.tightLeading(size: 28)
+        XCTAssertLessThan(leading, 0)
+        XCTAssertGreaterThan(leading, -28 * 0.15, "tight, not overlapping")
+    }
+}

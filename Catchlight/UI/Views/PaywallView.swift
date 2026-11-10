@@ -105,8 +105,8 @@ struct PaywallView: View {
         // and the core privacy promise. Three clauses, one per line, for rhythm.
         Text("Start free,\nkeep your thoughts,\nprivately.")
             .font(CatchlightFont.displayFixed(size: 38))
+            .lineSpacing(CatchlightFont.tightLeading(size: 38))
             .foregroundStyle(Color.ckTextPrimary)
-            .lineSpacing(4)   // ≈ the standard heading's 1.25 line-height (HiFi v1.11.3)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)
@@ -146,6 +146,7 @@ struct PaywallView: View {
     private var pricingLine: some View {
         Text(pricingText)
             .font(CatchlightFont.display(size: 24, relativeTo: .title3))
+            .lineSpacing(CatchlightFont.tightLeading(size: 24))
             .foregroundStyle(Color.ckTextPrimary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)

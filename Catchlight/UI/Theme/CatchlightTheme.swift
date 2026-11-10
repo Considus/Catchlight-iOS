@@ -450,6 +450,9 @@ enum CatchlightFont {
 
     /// Heading weight, inside the 500 to 600 the design allows.
     static let headingWeight: CGFloat = 500
+    /// Line spacing for a heading that can wrap: Archivo's natural line is 1.088 em
+    /// (hhea ascent 878, descent 210), so about 0.09 em off lands on 1.0 em.
+    static func tightLeading(size: CGFloat) -> CGFloat { -size * 0.09 }
     /// Heading width, inside the 112 to 125 the design allows.
     static let headingWidth: CGFloat = 112
 
@@ -488,28 +491,33 @@ enum CatchlightFont {
         return UIFont(descriptor: descriptor, size: size)
     }
 
-    /// The face the display text falls back to for characters Archivo has no glyph
-    /// for, by app language. Archivo covers Latin scripts only, so iOS fills
-    /// Japanese, Korean, Chinese and Thai from its own fonts. Its default is a sans.
-    /// Japanese has an iOS serif to pair with it, Hiragino Mincho; Korean, Chinese and
-    /// Thai have none on iOS, so they keep the system sans (Apple SD Gothic Neo, PingFang,
-    /// Thonburi), which needs no change (owner 2026-10-06).
+    /// The system sans the display text falls back to for characters Archivo has no
+    /// glyph for, by app language, at a medium weight to sit beside the heading.
+    /// Archivo covers Latin scripts only. Japanese takes Hiragino Sans, Chinese takes
+    /// PingFang in its regional cut and Korean takes Apple SD Gothic Neo. Every other
+    /// language keeps iOS's own fallback, which is a sans (owner 2026-11, Art Director).
     static func displayFallback(for language: String?) -> String? {
-        language == "ja" ? "HiraMinProN-W3" : nil
-    }
-
-    private static var displayFallbackName: String? {
-        displayFallback(for: Bundle.main.preferredLocalizations.first)
+        guard let language else { return nil }
+        if language.hasPrefix("ja") { return "HiraginoSans-W5" }
+        if language.hasPrefix("ko") { return "AppleSDGothicNeo-Medium" }
+        if language.hasPrefix("zh") {
+            if language.contains("Hant") || language.hasSuffix("TW") { return "PingFangTC-Medium" }
+            if language.contains("HK") || language.contains("MO") { return "PingFangHK-Medium" }
+            return "PingFangSC-Medium"
+        }
+        return nil
     }
 
     /// `font` with the language's display fallback first in its cascade list, or
     /// `font` unchanged when the language has none.
-    private static func withDisplayFallback(_ font: UIFont) -> UIFont {
-        guard let name = displayFallbackName else { return font }
+    private static func withDisplayFallback(_ font: UIFont, language: String?) -> UIFont {
+        guard let name = displayFallback(for: language) else { return font }
         let cascade = [UIFontDescriptor(name: name, size: font.pointSize)]
         let descriptor = font.fontDescriptor.addingAttributes([.cascadeList: cascade])
         return UIFont(descriptor: descriptor, size: font.pointSize)
     }
+
+    private static var appLanguage: String? { Bundle.main.preferredLocalizations.first }
 
     private static func uiTextStyle(_ style: Font.TextStyle) -> UIFont.TextStyle {
         switch style {
@@ -546,8 +554,9 @@ enum CatchlightFont {
     /// with nil it stays at `size`. `traits` is for tests (a content size to scale for).
     static func uiDisplay(size: CGFloat,
                           relativeTo style: Font.TextStyle? = .body,
-                          compatibleWith traits: UITraitCollection? = nil) -> UIFont {
-        let base = withDisplayFallback(archivo(size: size, weight: headingWeight, width: headingWidth))
+                          compatibleWith traits: UITraitCollection? = nil,
+                          language: String? = CatchlightFont.appLanguage) -> UIFont {
+        let base = withDisplayFallback(archivo(size: size, weight: headingWeight, width: headingWidth), language: language)
         guard let style else { return base }
         return UIFontMetrics(forTextStyle: uiTextStyle(style)).scaledFont(for: base, compatibleWith: traits)
     }
@@ -702,6 +711,10 @@ extension View {
     func pageHeadingStyle() -> some View {
         self
             .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
+            // A page title is one word or two and never breaks inside a word: it
+            // stays on one line and scales down to fit.
+            .lineLimit(1)
+            .minimumScaleFactor(0.3)
             .kerning(CatchlightLayout.pageHeadingKerning)
             .foregroundStyle(Color.ckTextPrimary)
             .padding(.leading, CatchlightLayout.pageHeadingKerningComp)

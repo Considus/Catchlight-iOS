@@ -81,6 +81,7 @@ struct PrivacyPhraseView: View {
                 .accessibilityHidden(true)
             Text("Reveal your Privacy phrase")
                 .font(CatchlightFont.display(size: 28, relativeTo: .title2))
+                .lineSpacing(CatchlightFont.tightLeading(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
                 // Audit 2026-08, V23: the screen's hero is a heading.
@@ -146,6 +147,7 @@ struct PrivacyPhraseView: View {
                 .accessibilityHidden(true)
             Text(title)
                 .font(CatchlightFont.display(size: 28, relativeTo: .title2))
+                .lineSpacing(CatchlightFont.tightLeading(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
             Text(body)

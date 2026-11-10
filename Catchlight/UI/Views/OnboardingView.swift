@@ -339,6 +339,7 @@ struct WelcomeContent: View {
     private var headline: some View {
         Text("You don't need to choose privacy, it's yours and you never have to ask for it.")
             .font(CatchlightFont.displayFixed(size: 28))
+            .lineSpacing(CatchlightFont.tightLeading(size: 28))
             .foregroundStyle(Color.ckTextPrimary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -354,6 +355,7 @@ struct WelcomeContent: View {
             // tagline and the Welcome headline it crossfades into are pixel-matched).
             // The secondary colour + italic keep it reading as a tagline.
             .font(CatchlightFont.displayFixed(size: 28))
+            .lineSpacing(CatchlightFont.tightLeading(size: 28))
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -395,6 +397,7 @@ struct RestoreFolderView: View {
                 Spacer().frame(height: introHeroTopGap)
                 Text("Welcome back")
                     .font(CatchlightFont.displayFixed(size: 28))
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -468,6 +471,7 @@ private struct RestoreEntryStep: View {
                         VStack(spacing: 20) {
                             Text("Enter your Privacy phrase")
                                 .font(CatchlightFont.displayFixed(size: 28))
+                                .lineSpacing(CatchlightFont.tightLeading(size: 28))
                                 .foregroundStyle(Color.ckTextPrimary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -577,6 +581,7 @@ private struct StorageChoiceStep: View {
                 Spacer().frame(height: introHeroTopGap)
                 Text("Now, where should your Takes live?")
                     .font(CatchlightFont.displayFixed(size: 28))
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -678,6 +683,7 @@ private struct LocalWarningStep: View {
                 Spacer().frame(height: introHeroTopGap)
                 Text("One thing before we continue.")
                     .font(CatchlightFont.displayFixed(size: 28))
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -755,6 +761,7 @@ private struct RevealStep: View {
                     VStack(spacing: 20) {
                         Text("Your Privacy phrase")
                             .font(CatchlightFont.displayFixed(size: 28))
+                            .lineSpacing(CatchlightFont.tightLeading(size: 28))
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -896,6 +903,7 @@ private struct ConfirmStep: View {
                     VStack(spacing: 12) {
                         Text("Confirm three words")
                             .font(CatchlightFont.displayFixed(size: 28))
+                            .lineSpacing(CatchlightFont.tightLeading(size: 28))
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1133,6 +1141,7 @@ private struct CompleteStep: View {
                 Spacer().frame(height: introHeroTopGap)
                 Text("You're ready.")
                     .font(CatchlightFont.displayFixed(size: 28))
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1239,6 +1248,7 @@ private struct BasicsStep: View {
                 Spacer().frame(height: introHeroTopGap)
                 Text(heading)
                     .font(CatchlightFont.displayFixed(size: 28))
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1290,6 +1300,7 @@ private struct FailureStep: View {
                 Spacer()
                 Text(vm.failure ?? String(localized: "Something went wrong."))
                     .font(CatchlightFont.displayFixed(size: 28))
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .accessibilityAddTraits(.isHeader)

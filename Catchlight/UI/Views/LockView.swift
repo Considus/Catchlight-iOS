@@ -30,6 +30,7 @@ struct LockView: View {
                 Spacer().frame(height: CatchlightLayout.introHeroTopGap)
                 Text("Catchlight is locked")
                     .font(CatchlightFont.displayFixed(size: 28))
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)

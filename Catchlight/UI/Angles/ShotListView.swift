@@ -90,6 +90,9 @@ struct ShotListView: View {
                 Text("SHOT LIST")
                     .pageHeadingStyle()
                     .accessibilityAddTraits(.isHeader)
+                    // Reserve the close button's slot on both sides, as the Storyboard does,
+                    // so a scaled-up heading never runs into the ×.
+                    .padding(.horizontal, CatchlightLayout.minTouchTarget + 12)
                 HStack {
                     Spacer()
                     Button(action: onClose) {
