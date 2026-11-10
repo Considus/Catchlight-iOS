@@ -1,99 +1,70 @@
 //
 //  WidgetSupport.swift
-//  CatchlightWidgets — shared theme, provider, views (2026-06-23, restyled 2026-06-30)
+//  CatchlightWidgets: shared colours, provider and views
 //
 //  All Catchlight widgets are LAUNCHERS: a single static entry, no timeline
-//  refresh, no Take content. They render brand chrome and a deep link; tapping
+//  refresh, no Take content. They render the brand and a deep link; tapping
 //  opens the app to capture. Because nothing is decrypted or displayed, the
 //  keychain wall is irrelevant here (owner 2026-06-22, Ideas Backlog §7).
 //
 //  Take and Obie widgets share these views, parameterised by `CaptureSurface`
 //  (owner 2026-06-23: every Take widget has an Obie twin).
 //
-//  STYLING (owner 2026-06-30, widget brand pass): the extension can't link the
-//  app's asset catalog / `CatchlightTheme` / `CatchlightGlyphs`, so the brand
-//  tokens, fonts, and the Obie Mark glyph are MIRRORED here (same hex / same
-//  geometry). Two owner decisions drive this pass:
-//   • Home-screen widgets are ADAPTIVE — they follow Night/Daylight like the app
-//     (was a fixed cream that looked out of place on dark wallpapers).
-//   • The home widget's Obie mark UNIFIES on the in-app Mark glyph (ring + dot),
-//     not `crown.fill`. Controls + lock-screen accessories stay `crown.fill`:
-//     those surfaces are limited to SF Symbols, so they can't render the Mark.
+//  The redesign (spec R17, R18; drawn in catchlight-icon-and-widgets.html):
+//   • The Iris is the brand symbol, drawn from `IrisGeometry`, which the app shares:
+//     New Take is the Iris with its Note light lit and the Note shape, New Obie the
+//     Iris with its inner square.
+//   • Colours are the chosen Scene's, read from the app group at each render, in
+//     Night or Daylight with the system appearance. The app reloads the widgets when
+//     the Scene changes (`SettingsViewModel.SceneChoice.select`).
+//   • Each view reads `widgetRenderingMode`. Full colour draws the Scene; accented
+//     (tinted and clear Home Screens) and vibrant (Lock Screen, StandBy at night) draw
+//     one colour, with the lit light, the Obie's inner square and the plus button
+//     marked accentable. Backgrounds go through `containerBackground`, so the system
+//     can remove them (StandBy, accented).
+//   • System font only, 12pt and up. Flat: no shadows or gradients.
 //
 
 import WidgetKit
 import SwiftUI
 import CatchlightCore
 
-// MARK: - Brand palette (mirrored from CatchlightTheme for the extension)
-//
-// The app's adaptive `Color.ck*` tokens live in the main target; the extension
-// can't see them, so the values are mirrored here as dynamic UIColors with the
-// SAME hex. Keep these in lock-step with CatchlightTheme's `Palette`.
+// MARK: - Scene colours
 
-/// 24-bit RGB hex → UIColor (the app's `init(hex:)` is private to its target, so
-/// the extension carries its own copy — identical maths).
 private extension UIColor {
-    convenience init(rgbHex hex: UInt32) {
+    convenience init(rgbHex hex: UInt32, alpha: CGFloat = 1) {
         let r = CGFloat((hex >> 16) & 0xFF) / 255.0
         let g = CGFloat((hex >> 8) & 0xFF) / 255.0
         let b = CGFloat(hex & 0xFF) / 255.0
-        self.init(red: r, green: g, blue: b, alpha: 1.0)
+        self.init(red: r, green: g, blue: b, alpha: alpha)
     }
 }
 
+/// The chosen Scene's colours, Night or Daylight by the system appearance. Computed on
+/// every read, never cached: the extension's process can outlive a Scene change.
 enum WidgetPalette {
-    /// Resolve to `dark` in Night, `light` in Daylight — mirrors `UIColor.adaptive`.
-    private static func adaptive(dark: UInt32, light: UInt32) -> Color {
-        Color(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark ? UIColor(rgbHex: dark) : UIColor(rgbHex: light)
+    static func color(_ role: KeyPath<ScenePalette, UInt32>, opacity: CGFloat = 1) -> Color {
+        let scene = CatchlightScene.stored()
+        return Color(uiColor: UIColor { traits in
+            let hex = scene.palette(dark: traits.userInterfaceStyle == .dark)[keyPath: role]
+            return UIColor(rgbHex: hex, alpha: opacity)
         })
     }
 
-    /// Screen / widget background — Ink (Night) / Paper (Daylight). `ckBackground`.
-    static let background = adaptive(dark: 0x0F0E0C, light: 0xF7F4EF)
-    /// Elevated surface (the medium card) — Dusk (Night) / White (Daylight). `ckSurface`.
-    static let surface = adaptive(dark: 0x1C1A16, light: 0xFFFFFF)
-    /// Primary text — Catchlight cream (Night) / Ink (Daylight). `ckTextPrimary`.
-    static let textPrimary = adaptive(dark: 0xF5EDD8, light: 0x0F0E0C)
-    /// Secondary / muted text — Fog (Night) / Slate (Daylight). `ckTextSecondary`.
-    static let textSecondary = adaptive(dark: 0xB8B0A3, light: 0x5C5650)
-    /// Obie-emphasis text — Glow (Night) / Ember Text (Daylight). `ckTextObie`.
-    static let textObie = adaptive(dark: 0xEDD9A3, light: 0x856539)
-    /// Amber accent for FOREGROUND glyphs/labels — Ember (Night) / Ember Text
-    /// #856539 (Daylight, WCAG AA on Paper). `ckAccent`. Use for the "+" and ring.
-    static let accent = adaptive(dark: 0xC9A96E, light: 0x856539)
-    /// Brand gold as a FIXED fill (Control tint) — Ember in both. `ckEmber`.
-    static let ember = Color(uiColor: UIColor(rgbHex: 0xC9A96E))
-
-    // Take-card tokens (mirrored from TakeCardStyle / CatchlightTheme) — see widgetCardSurface.
-    /// Obie card BACKGROUND — warm tint: Night #2D2921 / Daylight #FBF8F3. `ckCardObieSurface`.
-    static let cardObieSurface = adaptive(dark: 0x2D2921, light: 0xFBF8F3)
-    /// Obie card BORDER — gold: Glow @65% (Night) / Ember @65% (Daylight). `ckCardObieBorder`.
-    static let cardObieBorder = Color(uiColor: UIColor { t in
-        t.userInterfaceStyle == .dark ? UIColor(rgbHex: 0xEDD9A3).withAlphaComponent(0.65)
-                                      : UIColor(rgbHex: 0xC9A96E).withAlphaComponent(0.65)
-    })
-    /// Daylight card shadow (Night = none — elevation is the lighter surface). Mirrors
-    /// `DaylightCardShadow` (non-strong): ambient ink @9% + contact ink @5%.
-    static let cardShadowAmbient = Color(uiColor: UIColor { t in
-        t.userInterfaceStyle == .dark ? .clear : UIColor(rgbHex: 0x0F0E0C).withAlphaComponent(0.09)
-    })
-    static let cardShadowContact = Color(uiColor: UIColor { t in
-        t.userInterfaceStyle == .dark ? .clear : UIColor(rgbHex: 0x0F0E0C).withAlphaComponent(0.05)
-    })
+    static var surface: Color { color(\.surface) }
+    static var card: Color { color(\.card) }
+    static var raised: Color { color(\.raised) }
+    static var line: Color { color(\.line) }
+    static var text: Color { color(\.text) }
+    static var muted: Color { color(\.muted) }
+    static var accent: Color { color(\.accent) }
+    static var onAccent: Color { color(\.onAccent) }
+    static var lit: Color { color(\.lit) }
+    /// An unlit light in full colour: `muted` at 78%, as drawn.
+    static var unlitLight: Color { color(\.muted, opacity: 0.78) }
 }
 
-// MARK: - Brand fonts (mirrored from CatchlightFont)
-//
-// Widget chrome is UI text in the system font. The display text is Archivo set
-// expanded, bundled into the extension (project.yml widget target + UIAppFonts) and
-// set through `kCTFontVariationAttribute` exactly as `CatchlightFont.archivo` does,
-// with the weight and width from `HeadingAxes`, the file the app shares. Falls back to
-// the system font when Archivo is not registered.
-//
-// The UI font is built from the view's own Dynamic Type size, so it grows when the
-// text size changes.
+// MARK: - Text
 
 private struct WidgetUIFontModifier: ViewModifier {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -124,141 +95,182 @@ private struct WidgetUIFontModifier: ViewModifier {
 }
 
 extension View {
-    /// Widget interface text: the system font, scaling live with Dynamic Type.
+    /// Widget text: the system font, scaling live with Dynamic Type.
     func widgetUI(_ size: CGFloat, weight: Font.Weight = .regular) -> some View {
         modifier(WidgetUIFontModifier(size: size, weight: weight))
     }
-
-    /// Display face: Archivo expanded at a fixed size (mirrors `CatchlightFont` display).
-    func widgetDisplay(_ size: CGFloat) -> some View {
-        font(WidgetFont.display(size))
-    }
 }
 
-enum WidgetFont {
-    static func display(_ size: CGFloat) -> Font {
-        guard UIFont(name: "Archivo-SemiBold", size: size) != nil else {
-            return .system(size: size, weight: .medium)
+/// A title and its line beneath, coloured for the rendering mode.
+struct WidgetTitle: View {
+    let title: String
+    let subtitle: String
+    var titleSize: CGFloat = 17
+    @Environment(\.widgetRenderingMode) private var mode
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .widgetUI(titleSize, weight: .semibold)
+                .foregroundStyle(mode == .fullColor ? WidgetPalette.text : Color.primary)
+            Text(subtitle)
+                .widgetUI(12)
+                .foregroundStyle(mode == .fullColor ? WidgetPalette.muted : Color.secondary)
         }
-        let variation: [Int: CGFloat] = [HeadingAxes.weightTag: HeadingAxes.weight,
-                                         HeadingAxes.widthTag: HeadingAxes.width]
-        let descriptor = UIFontDescriptor(fontAttributes: [
-            .name: "Archivo-SemiBold",
-            .size: size,
-            UIFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String): variation
-        ])
-        return Font(UIFont(descriptor: descriptor, size: size))
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
     }
 }
 
-// MARK: - Capture surface (Take vs Obie presentation)
+// MARK: - Capture surface (Take vs Obie)
 
-/// Describes what one launcher/card renders and where it routes. Both surfaces use
-/// a Catchlight brand letter-mark (same italic-letter + catch-dot family): Take = the
-/// Catchlight "C" icon, Obie = the Obie "O" glyph (owner 2026-06-30).
+/// What one launcher or card shows and where it goes.
 struct CaptureSurface {
     let url: URL
     let title: String        // "New Take" / "New Obie"
-    let heroPrompt: String    // medium-card hero line (onboarding-hero voice/style)
+    let shortTitle: String   // "Take" / "Obie", for each half of the two-in-one widget
+    let subtitle: String     // the line under the title
     let isObie: Bool
-
-    /// The brand letter-mark asset for this surface (`Assets.xcassets`). Used as a
-    /// vector template image on the home + lock-screen surfaces.
-    var glyphAsset: String { isObie ? WidgetAsset.obieGlyph : WidgetAsset.catchlightGlyph }
-    /// Home-widget tint — each mark in its own brand colour (Obie gold / Catchlight
-    /// primary). Lock-screen + Controls ignore this (system vibrant / tint).
-    var glyphTint: Color { isObie ? WidgetPalette.textObie : WidgetPalette.textPrimary }
-    /// Optical-size correction so the two letter-marks read at the same size. The
-    /// glyphs fill their artwork boxes differently (the "O" fills 99% of its box, the
-    /// "C" only 82% — the dot floats well above the letter), so framed at equal height
-    /// the C looks ~21% smaller. Scale the C up by 0.99/0.82 ≈ 1.21 (owner 2026-06-30).
-    var glyphOpticalScale: CGFloat { isObie ? 1.0 : 1.21 }
-    /// Vertical INK-centre correction (fraction of rendered height to raise the glyph).
-    /// The "O" body is centred in its box, but the "C" body sits low — its centre is
-    /// 8.9% of the box below the box centre (the dot pulls the box up). Raising the C
-    /// by that much centres the *letter* on the line, so it aligns with the text /
-    /// matches the O's level rather than sitting low (owner 2026-06-30).
-    var glyphInkOffsetFraction: CGFloat { isObie ? 0.0 : 0.089 }
 
     static let take = CaptureSurface(
         url: CaptureRouting.captureURL(.text),
         title: String(localized: "New Take"),
-        heroPrompt: String(localized: "What's your Take?"),
+        shortTitle: String(localized: "Take"),
+        subtitle: String(localized: "Tap to write"),
         isObie: false
     )
 
     static let obie = CaptureSurface(
         url: CaptureRouting.captureURL(.obie),
         title: String(localized: "New Obie"),
-        heroPrompt: String(localized: "What's most important?"),
+        shortTitle: String(localized: "Obie"),
+        subtitle: String(localized: "Tap to start"),
         isObie: true
     )
 }
 
-// MARK: - Shared card surface (Take-card look)
+// MARK: - The Iris
 
-extension View {
-    /// The in-app Take-card treatment, mirrored for the widget (owner 2026-06-30):
-    /// `RoundedRectangle(12)` surface fill + the Daylight card shadow + a 0.75pt
-    /// border. A plain Take's border is INVISIBLE (== surface), exactly like in-app;
-    /// the **Obie** card differs — warm/dark surface + gold border. Single-sourced
-    /// so every widget card (small, medium, split halves) reads as a real Take card.
-    func widgetCardSurface(isObie: Bool = false) -> some View {
-        let fill = isObie ? WidgetPalette.cardObieSurface : WidgetPalette.surface
-        let border = isObie ? WidgetPalette.cardObieBorder : fill   // Take border == surface (invisible)
-        return self
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(fill)
-                    .shadow(color: WidgetPalette.cardShadowAmbient, radius: 4, y: 2)
-                    .shadow(color: WidgetPalette.cardShadowContact, radius: 1, y: 1)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(border, lineWidth: 0.75)   // == TakeCardStyle.borderWidth
-            )
+/// One part of the Iris, scaled from its 44-unit space to the frame.
+private struct IrisPart: Shape {
+    let path: @Sendable (CGFloat) -> Path
+    func path(in rect: CGRect) -> Path { path(min(rect.width, rect.height) / 44) }
+}
+
+/// The brand Iris: New Take lights Note and shows the Note shape, New Obie shows the
+/// inner square. Built from separate layers so the lit light and the inner square can
+/// be accentable while the unlit lights are not.
+struct WidgetIris: View {
+    let surface: CaptureSurface
+    let size: CGFloat
+    @Environment(\.widgetRenderingMode) private var mode
+
+    var body: some View {
+        let s = size / 44
+        let full = mode == .fullColor
+        let lit: Set<IrisLight> = surface.isObie ? [] : [.note]
+        ZStack {
+            IrisPart { IrisGeometry.lights(Set(IrisLight.allCases).subtracting(lit), scale: $0) }
+                .stroke(full ? WidgetPalette.unlitLight : Color.white.opacity(0.4),
+                        style: StrokeStyle(lineWidth: IrisGeometry.unlitWidth * s, lineCap: .round))
+            if surface.isObie {
+                IrisPart { IrisGeometry.obieSquare(scale: $0) }
+                    .stroke(full ? WidgetPalette.lit : Color.white,
+                            lineWidth: IrisGeometry.obieSquareWidth * s)
+                    .widgetAccentable()
+            } else {
+                IrisPart { IrisGeometry.lights(lit, scale: $0) }
+                    .stroke(full ? WidgetPalette.lit : Color.white,
+                            style: StrokeStyle(lineWidth: IrisGeometry.litWidth * s, lineCap: .round))
+                    .widgetAccentable()
+                IrisPart { IrisGeometry.innerPath(.note, scale: $0) }
+                    .stroke(full ? WidgetPalette.text : Color.white.opacity(0.88),
+                            style: StrokeStyle(lineWidth: IrisGeometry.innerWidth(.note) * s,
+                                               lineCap: .round, lineJoin: .round))
+            }
+        }
+        .frame(width: size, height: size)
     }
 }
 
-// MARK: - Brand letter-marks (the logo glyphs — `Assets.xcassets`)
-//
-// The Catchlight "C" and Obie "O" logos (italic letter + catch-dot), from
-// the brand's Catchlight and Obie glyph drawings. Each is imported TWICE:
-//   • a vector TEMPLATE IMAGE (`*Glyph`) for the home widgets + lock-screen
-//     accessories (full SwiftUI — a solid silhouette survives the lock-screen
-//     monochrome flattening, where the in-app Mark could not);
-//   • a custom SF SYMBOL (`*Symbol`) for the Controls — a Control's label takes an
-//     SF Symbol, not a plain image asset (a plain image shows the "?" placeholder).
-// (owner 2026-06-30 — Take + Obie read as a matched brand pair.)
-enum WidgetAsset {
-    static let obieGlyph = "ObieGlyph"
-    static let catchlightGlyph = "CatchlightGlyph"
+// MARK: - The plus button
+
+/// The one action: a rounded square with a plus. Full colour is the Scene accent with the
+/// plus in `onAccent`; the one-colour modes cut the plus out, so it reads in any tint.
+struct WidgetPlus: View {
+    let size: CGFloat
+    let radius: CGFloat
+    let glyph: CGFloat
+    @Environment(\.widgetRenderingMode) private var mode
+
+    private var plus: some Shape {
+        IrisPart { s in
+            // The drawing's plus: M8 3v10 M3 8h10 in a 16 grid. `s` is per 44 units.
+            let u = s * 44 / 16
+            var p = Path()
+            p.move(to: CGPoint(x: 8 * u, y: 3 * u)); p.addLine(to: CGPoint(x: 8 * u, y: 13 * u))
+            p.move(to: CGPoint(x: 3 * u, y: 8 * u)); p.addLine(to: CGPoint(x: 13 * u, y: 8 * u))
+            return p
+        }
+        .stroke(style: StrokeStyle(lineWidth: 2.2 * glyph / 16, lineCap: .round))
+    }
+
+    var body: some View {
+        if mode == .fullColor {
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(WidgetPalette.accent)
+                .overlay { plus.foregroundStyle(WidgetPalette.onAccent).frame(width: glyph, height: glyph) }
+                .frame(width: size, height: size)
+        } else {
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(Color.white)
+                .overlay { plus.frame(width: glyph, height: glyph).blendMode(.destinationOut) }
+                .compositingGroup()
+                .frame(width: size, height: size)
+                .widgetAccentable()
+        }
+    }
 }
 
-/// A brand letter-mark scaled to a target height. `tint` nil = no tint (lock-screen
-/// accessories, where the system colours it); set it for the full-colour home widgets.
-struct WidgetGlyphMark: View {
-    let asset: String
-    /// The LAYOUT slot height — identical across glyphs so neighbouring labels align.
-    var height: CGFloat
-    var tint: Color? = nil
-    /// Per-glyph optical-size correction (see `CaptureSurface.glyphOpticalScale`).
-    /// Applied to the *render* size only (crisp), not the layout slot.
-    var opticalScale: CGFloat = 1.0
-    /// Per-glyph vertical ink-centre correction (see `glyphInkOffsetFraction`).
-    var inkOffsetFraction: CGFloat = 0.0
-    var body: some View {
-        let renderHeight = height * opticalScale
-        // Audit 2026-08, V19: brand glyphs are decorative — `Image(asset)` let
-        // VoiceOver speak the asset name ("ObieGlyph"); `decorative:` vends none.
-        Image(decorative: asset)
-            .renderingMode(.template)
-            .resizable()
-            .scaledToFit()
-            .frame(height: renderHeight)        // crisp render at the letter-matched size
-            .frame(height: height)              // FIXED layout slot (uniform across glyphs)
-            .offset(y: -inkOffsetFraction * renderHeight)   // raise the C so its letter centres
-            .foregroundStyle(tint ?? Color.primary)
+// MARK: - Cards inside the medium widgets
+
+extension View {
+    /// The card a medium widget's content sits on: 11pt in from the edge, an 11pt corner,
+    /// the Scene's `raised` colour with a 1pt `line` border. Flat, never a shadow.
+    func widgetCard() -> some View { modifier(WidgetCardModifier()) }
+
+    /// The widget's background, through `containerBackground` so the system can remove
+    /// it: the Scene colour for Home Screen sizes, the system's own on the Lock Screen.
+    func widgetBackground(_ fill: @escaping () -> Color) -> some View {
+        modifier(WidgetBackgroundModifier(fill: fill))
+    }
+}
+
+private struct WidgetCardModifier: ViewModifier {
+    @Environment(\.widgetRenderingMode) private var mode
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
+        let full = mode == .fullColor
+        return content
+            .background { shape.fill(full ? WidgetPalette.raised : Color.white.opacity(0.07)) }
+            .overlay { shape.strokeBorder(full ? WidgetPalette.line : Color.white.opacity(0.22), lineWidth: 1) }
+    }
+}
+
+private struct WidgetBackgroundModifier: ViewModifier {
+    let fill: () -> Color
+    @Environment(\.widgetFamily) private var family
+
+    func body(content: Content) -> some View {
+        content.containerBackground(for: .widget) {
+            switch family {
+            case .accessoryCircular, .accessoryRectangular, .accessoryInline:
+                AccessoryWidgetBackground()
+            default:
+                fill()
+            }
+        }
     }
 }
 
@@ -268,7 +280,8 @@ struct LauncherEntry: TimelineEntry {
     let date: Date
 }
 
-/// One fixed entry; launchers never need to refresh (`.never`).
+/// One fixed entry; launchers never need to refresh (`.never`). The app reloads them
+/// when the Scene changes.
 struct LauncherProvider: TimelineProvider {
     func placeholder(in context: Context) -> LauncherEntry { LauncherEntry(date: Date()) }
 
@@ -283,7 +296,7 @@ struct LauncherProvider: TimelineProvider {
 
 // MARK: - Shared views
 
-/// Home-small + lock-screen accessory launcher, parameterised by surface.
+/// The small Home Screen launcher and the two Lock Screen ones, for one surface.
 struct LauncherView: View {
     let surface: CaptureSurface
     @Environment(\.widgetFamily) private var family
@@ -291,56 +304,69 @@ struct LauncherView: View {
     var body: some View {
         switch family {
         case .accessoryCircular:
-            // Lock-screen accessory — system vibrant/monochrome; colour is ignored.
-            // Both marks are solid silhouettes that survive the flattening.
-            ZStack {
-                AccessoryWidgetBackground()
-                WidgetGlyphMark(asset: surface.glyphAsset, height: 30, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction)
+            ZStack(alignment: .bottomTrailing) {
+                WidgetIris(surface: surface, size: 42)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                WidgetPlus(size: 18, radius: 6, glyph: 10)
+                    .padding(7)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(surface.title)
         case .accessoryRectangular:
-            HStack(spacing: 8) {
-                WidgetGlyphMark(asset: surface.glyphAsset, height: 24, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction).frame(width: 22)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(surface.title).font(.headline)
-                    Text("Catchlight").font(.caption2).foregroundStyle(.secondary)
-                }
-                Spacer()
+            HStack(spacing: 10) {
+                WidgetIris(surface: surface, size: 40)
+                WidgetTitle(title: surface.title, subtitle: surface.subtitle, titleSize: 15)
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 14)
         default:
-            // Home-screen small — full brand chrome on the shared Take-card surface.
-            VStack(spacing: 12) {
-                WidgetGlyphMark(asset: surface.glyphAsset, height: 52, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction)
-                Text(surface.title)
-                    .widgetUI(15, weight: .medium)
-                    .foregroundStyle(WidgetPalette.textPrimary)
+            // Home Screen small, inside the system's 16pt margins.
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top) {
+                    WidgetIris(surface: surface, size: 56)
+                    Spacer(minLength: 0)
+                    WidgetPlus(size: 32, radius: 10, glyph: 16)
+                }
+                Spacer(minLength: 0)
+                WidgetTitle(title: surface.title, subtitle: surface.subtitle)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .widgetCardSurface(isObie: surface.isObie)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
 }
 
-/// Medium "blank Take/Obie card" — styled as a Take row you tap to write into.
+/// The medium blank card: a Take you tap to write into.
 struct CardView: View {
     let surface: CaptureSurface
+    @Environment(\.widgetRenderingMode) private var mode
 
     var body: some View {
-        HStack(spacing: 16) {
-            WidgetGlyphMark(asset: surface.glyphAsset, height: 36, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction)
-                .frame(width: 40, height: 40)
-
-            // The onboarding-hero voice + style (Archivo expanded, primary colour).
-            // 24pt (owner 2026-06-30, −4 from the hero's 28); single line, never wraps
-            // (minimumScaleFactor shrinks it if a longer prompt would overflow).
-            Text(surface.heroPrompt)
-                .widgetDisplay(24)
-                .foregroundStyle(WidgetPalette.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                WidgetIris(surface: surface, size: 36)
+                Text(surface.title)
+                    .widgetUI(15, weight: .semibold)
+                    .foregroundStyle(mode == .fullColor ? WidgetPalette.text : Color.primary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                WidgetPlus(size: 26, radius: 8, glyph: 13)
+            }
+            HStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(mode == .fullColor ? WidgetPalette.lit : Color.white)
+                    .frame(width: 2, height: 22)
+                    .widgetAccentable()
+                Text("Start writing")
+                    .widgetUI(17)
+                    .foregroundStyle(mode == .fullColor ? WidgetPalette.muted : Color.secondary)
+                    .lineLimit(1)
+            }
             Spacer(minLength: 0)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .widgetCardSurface(isObie: surface.isObie)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .widgetCard()
+        .padding(11)
     }
 }

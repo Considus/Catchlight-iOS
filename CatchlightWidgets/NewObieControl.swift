@@ -17,14 +17,12 @@ struct NewObieControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: kind) {
             ControlWidgetButton(action: NewObieIntent()) {
-                // Controls render SF Symbols, not image assets (a plain imageset shows
-                // the "?" placeholder). So the Obie brand glyph is provided as a CUSTOM
-                // SF SYMBOL (`Assets.xcassets/ObieSymbol.symbolset`) — same artwork, but
-                // a symbolset the Control accepts and tints (owner 2026-06-30).
-                Label("New Obie", image: "ObieSymbol")
+                // The Iris symbol drawn for controls: a template SF Symbol, which a
+                // Control accepts and tints (`Assets.xcassets/NewObieSymbol.symbolset`).
+                Label("New Obie", image: "NewObieSymbol")
             }
-            // Brand gold instead of the system default tint (blue). Ember = #C9A96E.
-            .tint(Color(.sRGB, red: 0.788, green: 0.663, blue: 0.431, opacity: 1.0))
+            // The Scene accent, Night or Daylight (spec R18).
+            .tint(WidgetPalette.accent)
         }
         .displayName("New Obie")
         .description("Open Catchlight and capture your Obie.")

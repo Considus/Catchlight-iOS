@@ -18,15 +18,12 @@ struct NewTakeControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: kind) {
             ControlWidgetButton(action: NewTakeIntent()) {
-                // The Catchlight "C" brand mark as a custom SF Symbol (Controls render
-                // SF Symbols, not image assets). Pairs with the Obie "O" Control
-                // (owner 2026-06-30). `Assets.xcassets/CatchlightSymbol.symbolset`.
-                Label("New Take", image: "CatchlightSymbol")
+                // The Iris symbol drawn for controls: a template SF Symbol, which a
+                // Control accepts and tints (`Assets.xcassets/NewTakeSymbol.symbolset`).
+                Label("New Take", image: "NewTakeSymbol")
             }
-            // Brand gold instead of the system default tint (green). iOS Controls
-            // only tint within their fixed style, but this carries the Catchlight
-            // accent through (owner 2026-06-30 widget pass). Ember = #C9A96E.
-            .tint(Color(.sRGB, red: 0.788, green: 0.663, blue: 0.431, opacity: 1.0))
+            // The Scene accent, Night or Daylight (spec R18).
+            .tint(WidgetPalette.accent)
         }
         .displayName("New Take")
         .description("Open Catchlight to a new Take.")
