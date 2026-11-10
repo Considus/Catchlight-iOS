@@ -85,18 +85,15 @@ struct BottomDockView: View {
         (UIScreen.main.bounds.width - CatchlightLayout.dockHorizontalPadding * 2) / 4
     }
 
-    /// Visible dock button size (a rounded square at the control radius, no longer a circle). Owner 2026-06-15: enlarged 36 → 44 so the
-    /// circle FILLS its 44pt touch frame (= `minTouchTarget`) — the buttons read
-    /// larger and now match the onboarding/paywall pill, which already sizes to the
-    /// 44pt grid (DockPillRow). Slot centres are unchanged, so the buttons keep
-    /// their distance from the screen edges and only sit visually closer together.
-    /// Glyphs were scaled in step (×44/36) to preserve the HiFi glyph-to-circle
-    /// ratio. All resting dock buttons draw this circle — a 1.5pt Ember-tinted
-    /// border around the icon (.db) — so they read as circles rather than bare
-    /// icons (section 6). Filled buttons (+, on-toggles, the × cancel) use the same
-    /// diameter so the dock stays visually uniform and the off→on toggle doesn't
-    /// jump size.
-    private let dockCircle: CGFloat = 44
+    /// Visible dock button size: a rounded square at the control radius that fills its 44pt
+    /// touch frame (`minTouchTarget`), so the buttons match the onboarding and paywall
+    /// buttons, which size to the same 44pt grid (DockPillRow). Slot centres are unchanged,
+    /// so the buttons keep their distance from the screen edges. Glyphs were scaled in step
+    /// to keep the HiFi glyph-to-button ratio. All resting dock buttons draw this square with
+    /// a 1.5pt Ember-tinted border around the icon (.db), so they read as buttons rather
+    /// than bare icons. Filled buttons (+, on-toggles, the × cancel) use the same size so the
+    /// dock stays visually uniform and the off to on toggle does not jump size.
+    private let dockButtonSize: CGFloat = 44
 
     /// The resting border ring shared by every dock button (HiFi v1.7 .db).
     /// Uniform Ember @ 0.55, 1.5pt across ALL dock buttons (owner 2026-06-19).
@@ -106,7 +103,7 @@ struct BottomDockView: View {
     private func dockRing() -> some View {
         CatchlightShape.control
             .strokeBorder(Color.ckAccent.opacity(0.55), lineWidth: 1.5)
-            .frame(width: dockCircle, height: dockCircle)
+            .frame(width: dockButtonSize, height: dockButtonSize)
             .allowsHitTesting(false)
     }
 
@@ -292,7 +289,7 @@ struct BottomDockView: View {
         } label: {
             ZStack {
                 dockRing()   // .db — Ember border @35%
-                SequenceGlyph(size: 24)   // scaled with the 36→44 circle
+                SequenceGlyph(size: 24)   // scaled with the 36 to 44 button
                     // Owner 2026-06-16: lay the three beads HORIZONTALLY (a left→
                     // right sequence) while Dailies stays vertical. Rotating the
                     // glyph view keeps the shape's bead/link geometry intact.
@@ -333,7 +330,7 @@ struct BottomDockView: View {
         ZStack {
             dockRing()   // .db — Ember border @35% (Sequence / Search resting)
             Image(systemName: system)
-                .font(.system(size: 24, weight: .light))   // scaled with the 36→44 circle
+                .font(.system(size: 24, weight: .light))   // scaled with the 36 to 44 button
                 .foregroundStyle(Color.ckAccent)
                 .frame(width: buttonSize, height: buttonSize)
                 .contentShape(Rectangle())
@@ -363,10 +360,10 @@ struct BottomDockView: View {
             case .on, .modified:
                 // Fill the toggle with its type colour (the fill edge IS the border).
                 CatchlightShape.control.fill(onFill)
-                    .frame(width: dockCircle, height: dockCircle)
+                    .frame(width: dockButtonSize, height: dockButtonSize)
             }
             Image(systemName: system)
-                .font(.system(size: 22, weight: .light))   // scaled with the 36→44 circle
+                .font(.system(size: 22, weight: .light))   // scaled with the 36 to 44 button
                 .foregroundStyle(visual == .off ? Color.ckAccent : Color.ckBackground)
         }
         .frame(width: buttonSize, height: buttonSize)
@@ -387,7 +384,7 @@ struct BottomDockView: View {
                     // every other Sequence toggle uses its Quadrant colour, so Important
                     // must too — Stone (Night) / Shadow (Daylight), matching the Iris N wedge.
                     CatchlightShape.control.fill(Quadrant.important(scheme))
-                        .frame(width: dockCircle, height: dockCircle)
+                        .frame(width: dockButtonSize, height: dockButtonSize)
                 } else {
                     dockRing()
                 }
@@ -491,7 +488,7 @@ struct BottomDockView: View {
         } label: {
             ZStack {
                 CatchlightShape.control.fill(Color.ckSurface)
-                    .frame(width: dockCircle, height: dockCircle)
+                    .frame(width: dockButtonSize, height: dockButtonSize)
                 dockRing()   // .db — Ember border @35%
                 Image(systemName: "plus")   // + rotated 45° → × — one close glyph app-wide (owner 2026-06-29)
                     .font(.system(size: 24, weight: .light))   // open glyph → 24 (owner 2026-06-29, glyph-size pass)
@@ -507,8 +504,8 @@ struct BottomDockView: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    /// The field spanning slots 2+3 — a non-editable display of the current query
-    /// (or the placeholder). Tapping it brings the keyboard + the docked search bar
+    /// The field spanning slots 2+3: a non-editable display of the current query
+    /// (or the placeholder). Tapping it brings the keyboard and the docked search bar
     /// back up to keep typing.
     private var searchResumeField: some View {
         Button {

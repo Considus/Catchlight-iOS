@@ -1113,7 +1113,6 @@ struct ReminderPickerSheet: View {
         }
         .animation(.snappy(duration: 0.2), value: recurrence != .none)
         .animation(.snappy(duration: 0.2), value: recurrence == .weekly && !weekdays.isEmpty)
-        .tint(Color.ckEmber)
         .toggleStyle(FlatToggleStyle())
         .padding(.horizontal, 14)
         .padding(.vertical, 4)
@@ -1144,7 +1143,7 @@ struct ReminderPickerSheet: View {
                         .foregroundStyle(isOn ? Color.ckOnAccent : Color.ckTextPrimary)
                 }
                 .buttonStyle(.plain)
-                // T6 (audit 2026-08): the drawn 38pt rounded square stays; the hit area
+                // T6 (audit 2026-08): the drawn 38pt rounded square stays, and the hit area
                 // grows to the 44pt floor (inset −3). The expansions meet at the
                 // midline of the 6pt gutter, so neighbours never overlap.
                 .contentShape(Rectangle().inset(by: -3))

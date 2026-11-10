@@ -406,7 +406,7 @@ enum Quadrant {
 // MARK: - Flat shapes (redesign)
 //
 // Every surface the app draws is flat: no shadows, gradients or raised materials. Buttons
-// and toggles are rounded rectangles at `CatchlightLayout.controlRadius`; fields, panels
+// and toggles are rounded rectangles at `CatchlightLayout.controlRadius`, and fields, panels
 // and cards are rounded rectangles at `CatchlightLayout.surfaceRadius`. Never a pill.
 
 enum CatchlightShape {

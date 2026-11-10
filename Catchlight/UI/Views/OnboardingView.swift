@@ -241,7 +241,7 @@ private struct SplashFooterPill: View {
             .lineLimit(1)
             // Round 2 (device, max size): `maxHeight: .infinity` made this a CIRCLE above
             // Large. Below Large `DockPillRow` wraps the row in a fixed 44pt frame so the
-            // button could never grow; the full-width branch above Large sets only a
+            // button could never grow, and the full-width branch above Large sets only a
             // minHeight. A minimum, not a maximum: the button hugs its text. Its corners
             // are a fixed radius, so it never rounds into a pill or a circle.
             .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)

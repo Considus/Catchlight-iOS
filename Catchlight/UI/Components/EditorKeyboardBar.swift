@@ -64,8 +64,8 @@ struct EditorKeyboardBar: View {
     var config: EditorToolbarConfig
     var onDismiss: () -> Void
 
-    /// Matches the dock's 44pt button circle.
-    private let circle: CGFloat = 44
+    /// Matches the dock's 44pt button.
+    private let buttonSize: CGFloat = 44
 
     var body: some View {
         // FOUR EQUAL SLOTS, each glyph centred — same layout as the dock (`slotW =
@@ -192,10 +192,10 @@ struct EditorKeyboardBar: View {
             ZStack {
                 CatchlightShape.control
                     .strokeBorder(Color.ckAccent.opacity(0.55), lineWidth: 1.5)
-                    .frame(width: circle, height: circle)
+                    .frame(width: buttonSize, height: buttonSize)
                 glyph()
             }
-            .frame(width: circle, height: circle)
+            .frame(width: buttonSize, height: buttonSize)
             .contentShape(CatchlightShape.control)
         }
         .buttonStyle(.plain)

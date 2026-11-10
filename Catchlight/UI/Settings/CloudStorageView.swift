@@ -284,10 +284,10 @@ struct CloudStorageView: View {
                 // T4: same 44pt hit floor as Remove above.
                 .contentShape(Rectangle().inset(by: -13))
                 .disabled(!hasFolderConfigured || syncFeedback != nil)
-                // Audit 2026-08, C8: the no-folder disabled state was hue-swap
-                // only — invisible to a sighted user who can't distinguish the
-                // hues. The receded text colour carries it (4.5:1, so still readable); the
-                // transient "Syncing…" state keeps full strength (its text IS the signal).
+                // Audit 2026-08, C8: the no-folder disabled state was a hue swap
+                // only, invisible to a sighted user who can't distinguish the
+                // hues. The receded text colour carries it (4.5:1, so still readable).
+                // The transient "Syncing…" state keeps full strength, as its text is the signal.
                 .accessibilityIdentifier("cloud-sync-now")
                 .accessibilityHint("Run a sync pass now.")
             }

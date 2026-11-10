@@ -142,7 +142,7 @@ final class SearchBarAccessory: UIView {
 
     init(controller: SearchInputController) {
         self.controller = controller
-        // Height matches the editor keyboard bar: 10 top + 44 circle + 8 bottom.
+        // Height matches the editor keyboard bar: 10 top + 44 button + 8 bottom.
         super.init(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 62))
         autoresizingMask = [.flexibleWidth]
         backgroundColor = .clear
@@ -193,25 +193,25 @@ final class SearchBarAccessory: UIView {
     // Dock grid (matches BottomDockView / CatchlightLayout exactly so × lands where +
     // sits at rest and the magnifier on the resting magnifier).
     private static let pad: CGFloat = 12        // dockHorizontalPadding
-    private static let circle: CGFloat = 44     // minTouchTarget / circleDiameter
+    private static let buttonSize: CGFloat = 44     // minTouchTarget
     private static let topPad: CGFloat = 10
 
     private func buildLayout() {
-        // × cancel — Ember ring, a rounded square (slot 1). The × is a `plus` rotated 45°,
+        // × cancel: an Ember ring, a rounded square (slot 1). The × is a `plus` rotated 45°,
         // identical to the editor-bar dismiss (owner 2026-06-29): the app's close
         // affordance is the Add "+" turned to ×. The real `xmark` glyph read larger
         // than the rotated plus at the same 24pt, so they're unified to one glyph.
-        configureCircleButton(cancelButton, systemName: "plus", rotated: true)
+        configureSquareButton(cancelButton, systemName: "plus", rotated: true)
         cancelButton.accessibilityIdentifier = "search-cancel"
         cancelButton.accessibilityLabel = "Cancel search"
         cancelButton.addTarget(controller?.coordinator,
                                action: #selector(KeyboardSearchBar.Coordinator.cancelTapped),
                                for: .touchUpInside)
 
-        // Magnifier dismiss / Return — circular Ember ring (slot 4). Kept at its
+        // Magnifier dismiss / Return: an Ember ring, a rounded square (slot 4). Kept at its
         // original 18pt (owner 2026-06-29): the real `magnifyingglass` reads larger
         // than the rotated-plus cancel at 24, so it's sized down to match optically.
-        configureCircleButton(dismissButton, systemName: "magnifyingglass", pointSize: 18)
+        configureSquareButton(dismissButton, systemName: "magnifyingglass", pointSize: 18)
         dismissButton.accessibilityIdentifier = "search-tab"
         dismissButton.accessibilityLabel = "Search"
         dismissButton.addTarget(controller?.coordinator,
@@ -269,7 +269,7 @@ final class SearchBarAccessory: UIView {
         var cons: [NSLayoutConstraint] = []
         for (i, slot) in slots.enumerated() {
             cons.append(slot.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad))
-            cons.append(slot.heightAnchor.constraint(equalToConstant: Self.circle))
+            cons.append(slot.heightAnchor.constraint(equalToConstant: Self.buttonSize))
             cons.append(i == 0
                 ? slot.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.pad)
                 : slot.leadingAnchor.constraint(equalTo: slots[i - 1].trailingAnchor))
@@ -284,7 +284,7 @@ final class SearchBarAccessory: UIView {
             field.leadingAnchor.constraint(equalTo: slots[1].leadingAnchor),
             field.trailingAnchor.constraint(equalTo: slots[2].trailingAnchor),
             field.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
-            field.heightAnchor.constraint(equalToConstant: Self.circle),
+            field.heightAnchor.constraint(equalToConstant: Self.buttonSize),
         ]
         NSLayoutConstraint.activate(cons)
     }
@@ -302,7 +302,7 @@ final class SearchBarAccessory: UIView {
         return turned.withRenderingMode(.alwaysTemplate)
     }
 
-    private func configureCircleButton(_ button: UIButton, systemName: String, pointSize: CGFloat = 24,
+    private func configureSquareButton(_ button: UIButton, systemName: String, pointSize: CGFloat = 24,
                                        rotated: Bool = false) {
         button.translatesAutoresizingMaskIntoConstraints = false
         var glyph = UIImage(systemName: systemName,
@@ -315,8 +315,8 @@ final class SearchBarAccessory: UIView {
         button.layer.borderWidth = 1.5
         button.layer.borderColor = emberBorder
         NSLayoutConstraint.activate([
-            button.widthAnchor.constraint(equalToConstant: Self.circle),
-            button.heightAnchor.constraint(equalToConstant: Self.circle),
+            button.widthAnchor.constraint(equalToConstant: Self.buttonSize),
+            button.heightAnchor.constraint(equalToConstant: Self.buttonSize),
         ])
     }
 

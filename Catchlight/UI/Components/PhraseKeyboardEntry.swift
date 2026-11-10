@@ -53,7 +53,7 @@ final class RestoreKeyboardAccessory: UIView {
     private static let pageBackground = UITheme.background
 
     private static let pad: CGFloat = 12       // dockHorizontalPadding
-    private static let circle: CGFloat = 44    // minTouchTarget
+    private static let buttonSize: CGFloat = 44    // minTouchTarget
     private static let topPad: CGFloat = 10
     private static let barHeight: CGFloat = 62 // 10 + 44 + 8, matches the editor bar
 
@@ -90,7 +90,7 @@ final class RestoreKeyboardAccessory: UIView {
         super.layoutSubviews()
         fade.frame = bounds
         let slotW = (bounds.width - 2 * Self.pad) / 4
-        let d = Self.circle                       // 44 — the dock button diameter
+        let d = Self.buttonSize                       // 44 — the dock button size
         let pillW = slotW + d                     // a pill spans two slots
         let gap = slotW - d                       // the dock's inter-button gap
         let restoreX = Self.pad + (slotW / 2 - d / 2)
