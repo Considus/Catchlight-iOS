@@ -82,6 +82,25 @@ final class ControlTouchAreaUITests: XCTestCase {
         }
     }
 
+    /// Every button on every onboarding step, not only Welcome's: the two choice cards, both
+    /// pills of a pair, the twelve confirm tiles, each page's pill and the closing one. The
+    /// "I already use Catchlight" link is held at the 42pt it has.
+    func testOnboardingEveryStep_buttons() {
+        var checked: [OnboardingStep: Int] = [:]
+        walkOnboarding { step, app in
+            let buttons = app.buttons.allElementsBoundByIndex.filter { $0.exists && $0.frame.height > 0 }
+            XCTAssertFalse(buttons.isEmpty, "no button on \(step)")
+            for button in buttons {
+                let isLink = button.identifier == "onboarding-restore-link"
+                assertTouchArea(button, "\(step) button \(button.identifier) \(button.label)",
+                                minimumHeight: isLink ? existingTextLinkHeight : nil)
+            }
+            checked[step] = buttons.count
+        }
+        XCTAssertEqual(Set(checked.keys), Set(OnboardingStep.allCases), "a step was not visited")
+        XCTAssertGreaterThanOrEqual(checked[.confirm] ?? 0, 13, "the confirm step should show 12 tiles and a pill")
+    }
+
     func testSettingsRows() {
         let app = launch()
         swipeUpWhenReady(anyElement(in: app, id: "angle-tab"))
