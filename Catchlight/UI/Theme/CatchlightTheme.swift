@@ -462,11 +462,11 @@ private struct FlatToggleTrack: View {
         let knob = height - inset * 2
         ZStack(alignment: isOn ? .trailing : .leading) {
             CatchlightShape.control
-                .fill(isOn ? Color.ckAdd : Color.ckSurface)
+                .fill(isOn ? Color.ckChosenFill : Color.ckSurface)
             CatchlightShape.control
-                .strokeBorder(isOn ? Color.ckAdd : Color.ckOutline, lineWidth: 1.5)
+                .strokeBorder(isOn ? Color.ckChosenFill : Color.ckOutline, lineWidth: 1.5)
             RoundedRectangle(cornerRadius: CatchlightLayout.controlRadius - inset, style: .continuous)
-                .fill(isOn ? Color.ckOnAccent : Color.ckOutline)
+                .fill(isOn ? Color.ckChosenMark : Color.ckOutline)
                 .frame(width: knob, height: knob)
                 .padding(inset)
         }
@@ -494,6 +494,12 @@ extension View {
 }
 
 extension UITheme {
+    /// What a chosen state is drawn in: the on track of a toggle and the selected segment.
+    /// The text-grade accent: the raw accent is a yellow in Graphite Light and is 1.45:1 there.
+    static let chosenFill = SceneToken.accentText
+    /// The knob or label on a chosen fill: the card colour, which stays readable on the
+    /// text-grade accent in every Scene (the on-accent colour is nearly the same dark there).
+    static let chosenMark = SceneToken.card
     /// A disabled button's fill and label. The label reaches 3:1 on the fill in every Scene
     /// (`SceneContrastTests`): the old way faded the whole button, and a faded label on a
     /// faded fill was pale on pale.
@@ -502,6 +508,8 @@ extension UITheme {
 }
 
 extension Color {
+    static let ckChosenFill = Color(uiColor: UITheme.chosenFill)
+    static let ckChosenMark = Color(uiColor: UITheme.chosenMark)
     static let ckDisabledFill = Color(SceneColor(\.line))
     static let ckDisabledLabel = Color(SceneColor(\.muted))
 }
