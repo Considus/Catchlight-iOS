@@ -399,7 +399,7 @@ struct FocusRowView: View {
 
     /// The dim veil's opacity, ramped on the row's OWN clock so the veil dissolves
     /// symmetrically — fade IN over the open, fade OUT over the close, both at the
-    /// same `dur` (owner 2026-06-17). The lit focus card rides the same value.
+    /// same `dur` (owner 2026-06-17). The lit focus card rides it on the close.
     /// `.open` holds solid; Reduce Motion (phase jumps straight to `.open`) keeps the
     /// overlay's plain transition.
     private func veilOpacity(now: Date) -> Double {
@@ -415,6 +415,18 @@ struct FocusRowView: View {
             return 1 - Self.easeInOutCubic(p)
         case .dismissed:
             return 0
+        }
+    }
+
+    /// The lit card copy's opacity. Solid while the row opens: it lands exactly over the real
+    /// card, so only its growth shows, in step with the drop. Fading it in with the veil hid
+    /// that growth for the first 340ms and then faded it in once the cards below had moved,
+    /// which read as the card popping taller. Fades out with the veil on close.
+    private func litCardOpacity(now: Date) -> Double {
+        switch phase {
+        case .opening, .open: return 1
+        case .closing: return veilOpacity(now: now)
+        case .dismissed: return 0
         }
     }
 
@@ -529,7 +541,7 @@ struct FocusRowView: View {
                         // Fades out with the veil on close (owner 2026-06-17) so the
                         // lit Take resolves back into the brightening timeline rather
                         // than blinking off when the overlay is removed.
-                        .opacity(veilOpacity(now: now))
+                        .opacity(litCardOpacity(now: now))
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }
