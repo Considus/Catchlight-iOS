@@ -472,6 +472,30 @@ extension View {
     }
 }
 
+extension View {
+    /// A small flat tile at the control radius: the card colour and a hairline edge from the
+    /// `line` token. The phrase words, the confirm slots and the confirm bank are tiles. A
+    /// slot or a tile in a state passes its own fill and edge.
+    func flatTile(fill: Color = .ckSurface, edge: Color = .ckLine, edgeWidth: CGFloat = 1) -> some View {
+        background(CatchlightShape.control.fill(fill))
+            .overlay(CatchlightShape.control.strokeBorder(edge, lineWidth: edgeWidth))
+    }
+}
+
+/// Whether a screen sits on the Scene's colour field (the first and last onboarding screens).
+/// Set by the onboarding scaffolds. The wordmark, the dock's fade and the action button read it
+/// to draw in the field's own colours, so no view branches on the screen it is on.
+private struct OnColourFieldKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var onColourField: Bool {
+        get { self[OnColourFieldKey.self] }
+        set { self[OnColourFieldKey.self] = newValue }
+    }
+}
+
 /// The measurements of the flat toggle, stated once so a test can hold them. The knob is
 /// concentric with the track: its corner radius is the control radius less the inset.
 enum FlatToggleMetrics {

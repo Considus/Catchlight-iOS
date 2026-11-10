@@ -38,17 +38,20 @@ struct CatchlightWordmark: View {
     /// did with the larger mark, so the hero below keeps its place.
     static let lockupHeight: CGFloat = 72 + 16 + 44
 
+    /// On the colour field the letters take the on-field colour and the dot of the i the icon dot.
+    @Environment(\.onColourField) private var onField
+
     var body: some View {
         Image("catchlight-wordmark-letters")
             .resizable()
             .renderingMode(.template)
             .scaledToFit()
-            .foregroundStyle(Color.ckTextPrimary)
+            .foregroundStyle(onField ? Color.ckOnField : Color.ckTextPrimary)
             .overlay {
                 GeometryReader { proxy in
                     let scale = proxy.size.width / Self.boxWidth
                     Circle()
-                        .fill(Color.ckLit)
+                        .fill(onField ? Color.ckIconDot : Color.ckLit)
                         .frame(width: Self.dotRadius * 2 * scale, height: Self.dotRadius * 2 * scale)
                         .position(x: Self.dotCentre.x * scale,
                                   y: (Self.dotCentre.y - Self.boxTop) * scale)
