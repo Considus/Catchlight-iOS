@@ -194,6 +194,12 @@ enum SceneToken {
     static let accentText = role(\.accentText)
     /// "This is on": lit lights, the Obie square and the Focus row marks. Nothing else.
     static let lit      = role(\.lit)
+    /// The colour field the first and last onboarding screens sit on, and the colours drawn on it:
+    /// the text, the quieter text and the dot of the wordmark's i.
+    static let field      = role(\.field)
+    static let onField    = role(\.onField)
+    static let fieldMuted = role(\.fieldMuted)
+    static let iconDot    = role(\.iconDot)
 
     private static func role(_ key: KeyPath<ScenePalette, UInt32>) -> UIColor {
         UIColor { traits in
@@ -212,6 +218,12 @@ extension Color {
     static let ckOutline = Color(SceneColor(\.outline))
     static let ckUnlit = Color(SceneColor(\.unlit))
     static let ckLit = Color(SceneColor(\.lit))
+    /// The `surface` role: a tile or well set into a card or the page.
+    static let ckSurfaceRole = Color(SceneColor(\.surface))
+    static let ckField = Color(SceneColor(\.field))
+    static let ckOnField = Color(SceneColor(\.onField))
+    static let ckFieldMuted = Color(SceneColor(\.fieldMuted))
+    static let ckIconDot = Color(SceneColor(\.iconDot))
 }
 
 // MARK: - UIKit-facing semantic tokens (single source, shared with SwiftUI)
