@@ -19,10 +19,9 @@ final class ControlTouchAreaUITests: XCTestCase {
         continueAfterFailure = true
     }
 
-    /// Two text links are 42pt high on main already, before any shape change (their hit area is
-    /// widened past the text with `contentShape`): the onboarding "I already use Catchlight"
-    /// link and the paywall's Restore. They are held at the 42pt they have, so a shape change
-    /// cannot shrink them, and are reported rather than counted as 44pt buttons.
+    /// The paywall's Restore link is 42pt high on main already, before any shape change (its hit
+    /// area is widened past the text with `contentShape`). It is held at the 42pt it has, so a
+    /// shape change cannot shrink it, and is reported rather than counted as a 44pt button.
     private let existingTextLinkHeight: CGFloat = 42
 
     private func assertTouchArea(_ element: XCUIElement, _ name: String, minimumHeight: CGFloat? = nil,
@@ -76,24 +75,20 @@ final class ControlTouchAreaUITests: XCTestCase {
         let buttons = app.buttons.allElementsBoundByIndex.filter { $0.exists && $0.frame.width > 120 }
         XCTAssertFalse(buttons.isEmpty, "no onboarding button found")
         for button in buttons {
-            let isLink = button.identifier == "onboarding-restore-link"
-            assertTouchArea(button, "onboarding button \(button.label)",
-                            minimumHeight: isLink ? existingTextLinkHeight : nil)
+            assertTouchArea(button, "onboarding button \(button.label)")
         }
     }
 
     /// Every button on every onboarding step, not only Welcome's: the two choice cards, both
-    /// pills of a pair, the twelve confirm tiles, each page's pill and the closing one. The
-    /// "I already use Catchlight" link is held at the 42pt it has.
+    /// pills of a pair, the twelve confirm tiles, each page's pill and the closing one, and the
+    /// "I already use Catchlight" link. All hold 44.
     func testOnboardingEveryStep_buttons() {
         var checked: [OnboardingStep: Int] = [:]
         walkOnboarding { step, app in
             let buttons = app.buttons.allElementsBoundByIndex.filter { $0.exists && $0.frame.height > 0 }
             XCTAssertFalse(buttons.isEmpty, "no button on \(step)")
             for button in buttons {
-                let isLink = button.identifier == "onboarding-restore-link"
-                assertTouchArea(button, "\(step) button \(button.identifier) \(button.label)",
-                                minimumHeight: isLink ? existingTextLinkHeight : nil)
+                assertTouchArea(button, "\(step) button \(button.identifier) \(button.label)")
             }
             checked[step] = buttons.count
         }

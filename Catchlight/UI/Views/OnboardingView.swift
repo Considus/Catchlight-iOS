@@ -361,11 +361,11 @@ struct WelcomeContent: View {
                         StepLinkLabel(title: "I already use Catchlight")
                     }
                     // T3 (audit 2026-08): the sole alternate path on this screen
-                    // tapped at its ~20pt text line. Inset −12 reaches the 44pt
-                    // floor with the drawn text untouched. The pill below wins
+                    // tapped at its ~20pt text line. Inset −13 reaches the 44pt
+                    // floor (the text line is 18pt) with the drawn text untouched. The pill below wins
                     // its own frame (later sibling, hit-tested first), so the
                     // 1pt overspill into the 12pt gap cannot steal its taps.
-                    .contentShape(Rectangle().inset(by: -12))
+                    .contentShape(Rectangle().inset(by: -13))
                     .accessibilityIdentifier("onboarding-restore-link")
                     DockPillRow {
                         DockPill(title: "Create my Privacy phrase", action: onPrimary)
@@ -460,7 +460,7 @@ struct RestoreFolderView: View {
                     .ckBody(.medium, size: 15, relativeTo: .body)
                     .foregroundStyle(Color.ckAccent)
                     // T3: same 44pt hit floor as the Welcome link above.
-                    .contentShape(Rectangle().inset(by: -12))
+                    .contentShape(Rectangle().inset(by: -13))
                     .accessibilityIdentifier("restore-connect-later")
                 DockPillRow {
                     DockPill(title: "Connect cloud folder") { pickerPresented = true }
