@@ -3,26 +3,21 @@
 //  CatchlightUITests
 //
 //  How the Focus row takes taps while it opens. UI tests normally skip the row's motion;
-//  here `-catchlight.focusRowTimeScale` plays it slowly instead, so a tap can land mid-open.
+//  here `-catchlight.focusRowFreezeAt` holds the second open at one instant of its motion,
+//  so a tap lands on a known layout with no timing.
 //
 
 import XCTest
 
 final class FocusRowMotionUITests: XCTestCase {
 
-    /// The open plays this many times slower than on a device.
-    private let timeScale = 60.0
+    /// Seconds into the open the row is held at (230ms: the marks are past half their drop,
+    /// and the far marks have started to slide away).
+    private let freezeAt = 0.23
 
     override func setUp() {
         super.setUp()
         continueAfterFailure = false
-    }
-
-    private func launchSlowRow() -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments = ["--uitesting", "-catchlight.focusRowTimeScale", String(timeScale)]
-        app.launch()
-        return app
     }
 
     private func tap(_ app: XCUIApplication, at point: CGPoint) {
@@ -31,29 +26,23 @@ final class FocusRowMotionUITests: XCTestCase {
     }
 
     /// Before the redesign Note was drawn on top of the gathered marks, so a tap on the stack,
-    /// once the marks are past half their drop (170ms) and before the far marks slide away
-    /// (about 230ms in, device time), toggles Note. With the old order it toggled Important.
+    /// once the marks are past half their drop (170ms) and before Note slides away (340ms),
+    /// toggles Note. With the old order it toggled Task, the next mark down (Important and
+    /// Reminder have slid off the stack by then).
     ///
-    /// The tap is sent at 230ms and must arrive by 245ms. Simulator timing can push it later,
-    /// so an attempt that misses that window starts again on a fresh launch (up to three), and
-    /// only an attempt inside the window is judged. (Measured: taps from about 255ms on were
-    /// not taken by any mark, cause unknown, so the window is not widened.)
+    /// The first open plays instantly, to make the Take a Task. The second is held at 230ms by
+    /// the freeze hook, so the tap is judged against the layout at that instant however slowly
+    /// the runner delivers it.
     func testTapOnTheGatheredMarks_togglesNote() throws {
-        for attempt in 1...3 {
-            if try tapTheStack(attempt: attempt) { return }
-        }
-        XCTFail("No attempt tapped the stack inside its 230 to 245ms window")
-    }
-
-    /// One attempt. Returns false, judging nothing, when the tap missed its window.
-    private func tapTheStack(attempt: Int) throws -> Bool {
-        let app = launchSlowRow()
-        defer { app.terminate() }
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting", "-catchlight.focusRowFreezeAt", String(freezeAt)]
+        app.launch()
         let iris = anyElement(in: app, id: "take-iris")
         XCTAssertTrue(iris.waitForExistence(timeout: 10), "No Take on the timeline")
         let hub = CGPoint(x: iris.frame.midX, y: iris.frame.midY)
         let note = anyElement(in: app, id: "focus-row-mark-note")
         let task = anyElement(in: app, id: "focus-row-mark-task")
+        let remind = anyElement(in: app, id: "focus-row-mark-remind")
         let important = anyElement(in: app, id: "focus-row-mark-important")
         let dim = anyElement(in: app, id: "focus-row-dim")
 
@@ -61,35 +50,29 @@ final class FocusRowMotionUITests: XCTestCase {
         // floor and a tap leaves it on.
         tap(app, at: hub)
         XCTAssertTrue(task.waitForExistence(timeout: 5), "Focus row did not open")
-        sleep(UInt32(1.3 * timeScale))            // the whole open, with room
         task.tap()
         XCTAssertEqual(task.value as? String, "active", "Task did not turn on")
         dim.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
-        XCTAssertTrue(task.waitForNonExistence(timeout: 2 * timeScale), "The row did not close")
-        sleep(2)
+        XCTAssertTrue(task.waitForNonExistence(timeout: 5), "The row did not close")
 
-        // Open again and tap 40pt below the Iris centre, clear of the Iris's own 44pt square,
-        // on the gathered marks.
+        // Open again, held at 230ms. The layout is frozen, so read where Note and Task overlap
+        // (Task has not started to slide) and tap the centre of that overlap, the deepest point of
+        // the stack, whatever the screen width.
         tap(app, at: hub)
-        let opened = Date()
         XCTAssertTrue(note.waitForExistence(timeout: 5), "Focus row did not open again")
-        let target = opened.addingTimeInterval(0.230 * timeScale)
-        if target > Date() { Thread.sleep(until: target) }
-        let tapAt = Date().timeIntervalSince(opened) / timeScale
-        tap(app, at: CGPoint(x: hub.x, y: hub.y + 40))
-        let tapDone = Date().timeIntervalSince(opened) / timeScale
-        let report = String(format: "[focus-row-motion] attempt %d: stack tap sent %.0f-%.0fms device time; note=%@ task=%@ important=%@ row open=%@",
-                            attempt, tapAt * 1000, tapDone * 1000, String(describing: note.value),
-                            String(describing: task.value), String(describing: important.value),
-                            String(describing: dim.exists))
-        print(report)
-        let a = XCTAttachment(string: report)
-        a.lifetime = .keepAlways
-        add(a)
-        guard tapDone < 0.245 else { return false }
+        XCTAssertEqual(note.value as? String, "active", "Note should start on")
+        let overlap = note.frame.intersection(task.frame)
+        let point = CGPoint(x: overlap.midX, y: overlap.midY)
+        XCTAssertGreaterThanOrEqual(point.x - note.frame.minX, 8, "Tap point too near Note's left edge")
+        XCTAssertGreaterThanOrEqual(note.frame.maxX - point.x, 8, "Tap point too near Note's right edge")
+        XCTAssertGreaterThanOrEqual(point.y - note.frame.minY, 8, "Tap point too near Note's top edge")
+        XCTAssertGreaterThanOrEqual(note.frame.maxY - point.y, 8, "Tap point too near Note's bottom edge")
+        XCTAssertTrue(point.y > hub.y + 22, "Tap point is on the Iris, not the marks")
+        tap(app, at: point)
         XCTAssertTrue(dim.exists, "The row closed: the tap did not reach a mark")
+        XCTAssertEqual(task.value as? String, "active", "The tap toggled Task, not Note")
         XCTAssertEqual(important.value as? String, "inactive", "The tap toggled Important, not Note")
+        XCTAssertEqual(remind.value as? String, "inactive", "The tap toggled Reminder, not Note")
         XCTAssertEqual(note.value as? String, "inactive", "The tap did not toggle Note")
-        return true
     }
 }
