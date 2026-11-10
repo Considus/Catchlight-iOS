@@ -467,6 +467,23 @@ struct FlatToggleStyle: ToggleStyle {
     }
 }
 
+/// What a horizontal drag on the track does when the finger lifts.
+enum FlatToggleGesture {
+    enum Outcome: Equatable {
+        /// Set the toggle to the side the drag went to (true for the right).
+        case swipe(toTheRight: Bool)
+        case nothing
+    }
+
+    /// The least net travel, in points, that counts as a swipe to a side.
+    static let swipeThreshold: CGFloat = 10
+
+    /// `travel` is the net horizontal travel of the drag at lift.
+    static func outcome(forTravel travel: CGFloat) -> Outcome {
+        abs(travel) > swipeThreshold ? .swipe(toTheRight: travel > 0) : .nothing
+    }
+}
+
 /// A tap and a horizontal swipe on the track. This is UIKit on purpose: its pan recognizer
 /// begins only when the movement is clearly horizontal, so a vertical swipe that starts on the
 /// track is left to the list or the sheet to scroll or dismiss. (A SwiftUI `DragGesture`
@@ -506,8 +523,10 @@ private struct FlatToggleInput: UIViewRepresentable {
 
         @objc func panned(_ pan: UIPanGestureRecognizer) {
             guard pan.state == .ended, isEnabled else { return }
-            let travel = pan.translation(in: pan.view)
-            if abs(travel.x) > 10 { onSwipe(travel.x > 0) }
+            switch FlatToggleGesture.outcome(forTravel: pan.translation(in: pan.view).x) {
+            case .swipe(let toTheRight): onSwipe(toTheRight)
+            case .nothing: break
+            }
         }
 
         /// Begin only for a mostly horizontal movement.
