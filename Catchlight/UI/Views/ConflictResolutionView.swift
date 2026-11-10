@@ -205,7 +205,6 @@ struct ConflictResolutionView: View {
                 }
             }
             .disabled(!enabled)
-            .opacity(enabled ? 1 : 0.38)
             DockPill(title: "Skip for now", secondary: true) {
                 queue.skipUnverified(id: id)
                 selection.removeValue(forKey: id)
@@ -340,18 +339,17 @@ struct ConflictResolutionView: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                CatchlightShape.surface
                     .fill(Color.ckSurface)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                CatchlightShape.surface
                     // Adaptive accent (ember Night / #856539 Daylight) so the 2pt
                     // selection border clears 3:1 contrast on the near-white Daylight
                     // panel — raw ckEmber failed it (owner 2026-06-29).
                     .strokeBorder(selected ? Color.ckAccent : Color.ckLine,
                                   lineWidth: selected ? 2 : 1)
             )
-            .daylightCardShadow()   // DS §4.1 — same lift as Take cards (owner 2026-07-02)
             .scaleEffect(selected ? 1.02 : 1.0)
             .animation(.spring(response: 0.25, dampingFraction: 0.85), value: selected)
         }
@@ -365,8 +363,8 @@ struct ConflictResolutionView: View {
 
     private func actionRow(for pair: (local: Take, remote: Take),
                            chosenLocal: Bool?) -> some View {
-        // The onboarding pill pair (owner 2026-07-02): primary Ember capsule +
-        // secondary outline capsule, same slot as before. "Keep this version"
+        // The onboarding button pair (owner 2026-07-02): primary action button +
+        // secondary outline button, same slot as before. "Keep this version"
         // stays disabled until the user taps a card.
         HStack(spacing: 12) {
             DockPill(title: "Keep this version") {
@@ -398,7 +396,6 @@ struct ConflictResolutionView: View {
                 }
             }
             .disabled(chosenLocal == nil)
-            .opacity(chosenLocal == nil ? 0.38 : 1)
 
             DockPill(title: "Skip for now", secondary: true) {
                 queue.skip(id: pair.local.id)

@@ -42,6 +42,62 @@ final class SceneContrastTests: XCTestCase {
         }
     }
 
+    /// A field sits on the page, a card or a sheet, so its outline is measured on `surface` too.
+    func testFieldOutline_reaches3to1_onTheSheetSurface() {
+        for scene in CatchlightScene.allCases {
+            for style in styles {
+                assertRatio(SceneToken.outline, SceneToken.surface, sceneTraits(scene, style), 3.0,
+                            "outline on surface, \(name(scene, style))")
+            }
+        }
+    }
+
+    /// A disabled button keeps its label readable against its own fill: the shared disabled
+    /// pair, in every Scene, Light and Dark.
+    func testDisabledButtonLabel_reaches3to1_onItsOwnFill() {
+        for scene in CatchlightScene.allCases {
+            for style in styles {
+                assertRatio(UITheme.disabledLabel, UITheme.disabledFill, sceneTraits(scene, style), 3.0,
+                            "disabled label on disabled fill, \(name(scene, style))")
+            }
+        }
+    }
+
+    /// The on track of a toggle and the selected segment: a shape, so 3:1 against the row or
+    /// page it sits on, on every surface, in every Scene. (Graphite Light's raw yellow accent
+    /// is 1.45:1 on its card, which is why the Settings toggles once used the text-grade accent.)
+    func testChosenFill_reaches3to1_onEverySurface() {
+        let all = surfaces + [("surface", SceneToken.surface)]
+        for scene in CatchlightScene.allCases {
+            for style in styles {
+                for (surfaceName, surface) in all {
+                    assertRatio(UITheme.chosenFill, surface, sceneTraits(scene, style), 3.0,
+                                "chosen fill on \(surfaceName), \(name(scene, style))")
+                }
+            }
+        }
+    }
+
+    /// The knob and the segment label sit on the chosen fill: text-grade, 4.5:1.
+    func testChosenMark_reaches4_5to1_onTheChosenFill() {
+        for scene in CatchlightScene.allCases {
+            for style in styles {
+                assertRatio(UITheme.chosenMark, UITheme.chosenFill, sceneTraits(scene, style), 4.5,
+                            "chosen mark on chosen fill, \(name(scene, style))")
+            }
+        }
+    }
+
+    /// The off toggle: its outline and its knob are the `outline` token on the card fill.
+    func testOffToggle_outlineAndKnob_reach3to1_onTheCardFill() {
+        for scene in CatchlightScene.allCases {
+            for style in styles {
+                assertRatio(SceneToken.outline, SceneToken.card, sceneTraits(scene, style), 3.0,
+                            "off toggle outline on card, \(name(scene, style))")
+            }
+        }
+    }
+
     func testUnlitLight_reaches2to1_onEverySurfaceIncludingSurface() {
         let all = surfaces + [("surface", SceneToken.surface)]
         for scene in CatchlightScene.allCases {

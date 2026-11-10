@@ -23,10 +23,10 @@ final class KeyboardBarSceneTests: XCTestCase {
             sceneTraits(.graphite, .dark).performAsCurrent { bar = controller.bar }
             window.addSubview(bar)
             bar.updateTraitsIfNeeded()
-            assertPaints(bar, .jade, borders: SceneToken.accentText, alpha: 0.55, "joining a Jade window")
+            assertPaints(bar, .jade, searchBarBorders, "joining a Jade window")
 
             SettingsViewModel.SceneChoice.select(.onyx, defaults: defaults)
-            assertPaints(bar, .onyx, borders: SceneToken.accentText, alpha: 0.55, "after switching to Onyx")
+            assertPaints(bar, .onyx, searchBarBorders, "after switching to Onyx")
         }
     }
 
@@ -38,18 +38,26 @@ final class KeyboardBarSceneTests: XCTestCase {
             }
             window.addSubview(bar)
             bar.updateTraitsIfNeeded()
-            assertPaints(bar, .jade, borders: SceneToken.text, alpha: 0.4, "joining a Jade window")
+            assertPaints(bar, .jade, restoreBarBorders, "joining a Jade window")
 
             SettingsViewModel.SceneChoice.select(.onyx, defaults: defaults)
-            assertPaints(bar, .onyx, borders: SceneToken.text, alpha: 0.4, "after switching to Onyx")
+            assertPaints(bar, .onyx, restoreBarBorders, "after switching to Onyx")
         }
     }
 
     // MARK: - Helpers
 
-    /// The fade's solid stop is the Scene's Dark ground, and every bordered button's
-    /// border is `borders` at `alpha` in that Scene.
-    private func assertPaints(_ bar: UIView, _ scene: CatchlightScene, borders: UIColor, alpha: CGFloat,
+    /// The search bar's buttons are ringed in the accent at 0.55, and its field in the
+    /// `outline` token, which is 3:1 on the surface.
+    private let searchBarBorders: (UIView) -> (UIColor, CGFloat) = { view in
+        view is UITextField ? (SceneToken.outline, 1) : (SceneToken.accentText, 0.55)
+    }
+    /// The Restore bar's only bordered button, Back, is outlined with the `outline` token.
+    private let restoreBarBorders: (UIView) -> (UIColor, CGFloat) = { _ in (SceneToken.outline, 1) }
+
+    /// The fade's solid stop is the Scene's Dark ground, and every bordered view's border is
+    /// the colour `borders` gives for it, in that Scene.
+    private func assertPaints(_ bar: UIView, _ scene: CatchlightScene, _ borders: (UIView) -> (UIColor, CGFloat),
                               _ label: String, file: StaticString = #filePath, line: UInt = #line) {
         let traits = sceneTraits(scene, .dark)
         let fade = bar.layer.sublayers?.compactMap { $0 as? CAGradientLayer }.first
@@ -57,10 +65,11 @@ final class KeyboardBarSceneTests: XCTestCase {
         XCTAssertEqual(solid.map(hex), hex(SceneToken.ground.resolvedColor(with: traits)),
                        "\(label): fade", file: file, line: line)
 
-        let expected = borders.resolvedColor(with: traits).withAlphaComponent(alpha)
         let bordered = allViews(in: bar).filter { $0.layer.borderWidth > 0 }
         XCTAssertFalse(bordered.isEmpty, "\(label): no bordered views", file: file, line: line)
         for view in bordered {
+            let (colour, alpha) = borders(view)
+            let expected = colour.resolvedColor(with: traits).withAlphaComponent(alpha)
             let border = view.layer.borderColor.map { UIColor(cgColor: $0) }
             XCTAssertEqual(border.map(hex), hex(expected), "\(label): border of \(type(of: view))", file: file, line: line)
         }

@@ -142,7 +142,7 @@ final class SearchBarAccessory: UIView {
 
     init(controller: SearchInputController) {
         self.controller = controller
-        // Height matches the editor keyboard bar: 10 top + 44 circle + 8 bottom.
+        // Height matches the editor keyboard bar: 10 top + 44 button + 8 bottom.
         super.init(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 62))
         autoresizingMask = [.flexibleWidth]
         backgroundColor = .clear
@@ -180,6 +180,11 @@ final class SearchBarAccessory: UIView {
         ]
     }
 
+    /// The field's outline for the bar's current traits: the `outline` token, 3:1 on the surface.
+    private var fieldOutline: CGColor {
+        SceneToken.outline.resolvedColor(with: traitCollection).cgColor
+    }
+
     /// The ember border colour for the bar's current traits.
     private var emberBorder: CGColor {
         Self.ember.resolvedColor(with: traitCollection).withAlphaComponent(0.55).cgColor
@@ -188,44 +193,41 @@ final class SearchBarAccessory: UIView {
     // Dock grid (matches BottomDockView / CatchlightLayout exactly so × lands where +
     // sits at rest and the magnifier on the resting magnifier).
     private static let pad: CGFloat = 12        // dockHorizontalPadding
-    private static let circle: CGFloat = 44     // minTouchTarget / circleDiameter
+    private static let buttonSize: CGFloat = 44     // minTouchTarget
     private static let topPad: CGFloat = 10
 
     private func buildLayout() {
-        // × cancel — circular Ember ring (slot 1). The × is a `plus` rotated 45°,
+        // × cancel: an Ember ring, a rounded square (slot 1). The × is a `plus` rotated 45°,
         // identical to the editor-bar dismiss (owner 2026-06-29): the app's close
         // affordance is the Add "+" turned to ×. The real `xmark` glyph read larger
         // than the rotated plus at the same 24pt, so they're unified to one glyph.
-        configureCircleButton(cancelButton, systemName: "plus")
-        cancelButton.transform = CGAffineTransform(rotationAngle: .pi / 4)
+        configureSquareButton(cancelButton, systemName: "plus", rotated: true)
         cancelButton.accessibilityIdentifier = "search-cancel"
         cancelButton.accessibilityLabel = "Cancel search"
         cancelButton.addTarget(controller?.coordinator,
                                action: #selector(KeyboardSearchBar.Coordinator.cancelTapped),
                                for: .touchUpInside)
 
-        // Magnifier dismiss / Return — circular Ember ring (slot 4). Kept at its
+        // Magnifier dismiss / Return: an Ember ring, a rounded square (slot 4). Kept at its
         // original 18pt (owner 2026-06-29): the real `magnifyingglass` reads larger
         // than the rotated-plus cancel at 24, so it's sized down to match optically.
-        configureCircleButton(dismissButton, systemName: "magnifyingglass", pointSize: 18)
+        configureSquareButton(dismissButton, systemName: "magnifyingglass", pointSize: 18)
         dismissButton.accessibilityIdentifier = "search-tab"
         dismissButton.accessibilityLabel = "Search"
         dismissButton.addTarget(controller?.coordinator,
                                 action: #selector(KeyboardSearchBar.Coordinator.dismissTapped),
                                 for: .touchUpInside)
 
-        // The field IS the capsule — same height (44) and end-radius (22) as the
-        // buttons (owner 2026-06-20), so it reads as the dock's control family.
+        // The field is a flat rounded rectangle at the surface radius, the same height (44)
+        // as the buttons, outlined with the `outline` token.
         field.translatesAutoresizingMaskIntoConstraints = false
         field.borderStyle = .none
         field.backgroundColor = Self.surface
-        field.layer.cornerRadius = Self.circle / 2   // 22 — matches the button circles
+        field.layer.cornerRadius = CatchlightLayout.surfaceRadius
         field.layer.cornerCurve = .continuous
         field.layer.masksToBounds = true
-        // Same ring as the buttons (owner 2026-06-20: makes the bar feel sturdier) —
-        // Ember @ 0.55, 1.5pt, matching `configureCircleButton` / the dock's `dockRing`.
-        field.layer.borderWidth = 1.5
-        field.layer.borderColor = emberBorder
+        field.layer.borderWidth = 1
+        field.layer.borderColor = fieldOutline
         field.textColor = Self.textPrimary
         // Adaptive accent caret (2026-07-01): the fixed #C9A96E was the raw Night
         // Ember — the exact low-contrast-on-Paper case ckAccent exists to avoid;
@@ -267,7 +269,7 @@ final class SearchBarAccessory: UIView {
         var cons: [NSLayoutConstraint] = []
         for (i, slot) in slots.enumerated() {
             cons.append(slot.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad))
-            cons.append(slot.heightAnchor.constraint(equalToConstant: Self.circle))
+            cons.append(slot.heightAnchor.constraint(equalToConstant: Self.buttonSize))
             cons.append(i == 0
                 ? slot.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.pad)
                 : slot.leadingAnchor.constraint(equalTo: slots[i - 1].trailingAnchor))
@@ -282,23 +284,39 @@ final class SearchBarAccessory: UIView {
             field.leadingAnchor.constraint(equalTo: slots[1].leadingAnchor),
             field.trailingAnchor.constraint(equalTo: slots[2].trailingAnchor),
             field.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
-            field.heightAnchor.constraint(equalToConstant: Self.circle),
+            field.heightAnchor.constraint(equalToConstant: Self.buttonSize),
         ]
         NSLayoutConstraint.activate(cons)
     }
 
-    private func configureCircleButton(_ button: UIButton, systemName: String, pointSize: CGFloat = 24) {
+    /// The glyph turned 45 degrees (a `plus` becomes a ×). The glyph is turned, not the button:
+    /// a turned button would turn its square outline into a diamond.
+    private static func turnedEighth(_ image: UIImage) -> UIImage {
+        let size = image.size
+        let turned = UIGraphicsImageRenderer(size: size).image { context in
+            context.cgContext.translateBy(x: size.width / 2, y: size.height / 2)
+            context.cgContext.rotate(by: .pi / 4)
+            context.cgContext.translateBy(x: -size.width / 2, y: -size.height / 2)
+            image.withRenderingMode(.alwaysTemplate).draw(at: .zero)
+        }
+        return turned.withRenderingMode(.alwaysTemplate)
+    }
+
+    private func configureSquareButton(_ button: UIButton, systemName: String, pointSize: CGFloat = 24,
+                                       rotated: Bool = false) {
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setImage(UIImage(systemName: systemName,
-                                withConfiguration: UIImage.SymbolConfiguration(pointSize: pointSize, weight: .light)),
-                        for: .normal)
+        var glyph = UIImage(systemName: systemName,
+                            withConfiguration: UIImage.SymbolConfiguration(pointSize: pointSize, weight: .light))
+        if rotated, let base = glyph { glyph = Self.turnedEighth(base) }
+        button.setImage(glyph, for: .normal)
         button.tintColor = Self.ember
-        button.layer.cornerRadius = Self.circle / 2
+        button.layer.cornerRadius = CatchlightLayout.controlRadius
+        button.layer.cornerCurve = .continuous
         button.layer.borderWidth = 1.5
         button.layer.borderColor = emberBorder
         NSLayoutConstraint.activate([
-            button.widthAnchor.constraint(equalToConstant: Self.circle),
-            button.heightAnchor.constraint(equalToConstant: Self.circle),
+            button.widthAnchor.constraint(equalToConstant: Self.buttonSize),
+            button.heightAnchor.constraint(equalToConstant: Self.buttonSize),
         ])
     }
 
@@ -307,7 +325,7 @@ final class SearchBarAccessory: UIView {
     private func refreshDynamicColors() {
         cancelButton.layer.borderColor = emberBorder
         dismissButton.layer.borderColor = emberBorder
-        field.layer.borderColor = emberBorder
+        field.layer.borderColor = fieldOutline
         applyFadeColors()
     }
 }

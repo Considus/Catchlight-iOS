@@ -32,7 +32,7 @@ final class TakeCardStyleTests: XCTestCase {
 
     func testPlainNote_hasNoVisibleBorder() {
         let s = style(Take(blocks: [.textLine("just a note")]))
-        XCTAssertEqual(s.border, s.surface, "a plain Note draws no border")
+        XCTAssertEqual(s.border, Color.ckLine, "a plain Note draws the quiet line edge")
         XCTAssertFalse(s.isOverdue)
         XCTAssertFalse(s.isDone)
     }
@@ -83,6 +83,11 @@ final class TakeCardStyleTests: XCTestCase {
         take.locationReminder = place()
         XCTAssertEqual(style(take).border, Quadrant.task(.dark),
                        "a Task-and-reminder Take borders as Task (border order)")
+    }
+
+    /// `HeldCardIrisUITests` allows for this stroke width when it finds the card's edges.
+    func testBorderWidth_isWhatTheHeldCardUITestAssumes() {
+        XCTAssertEqual(TakeCardStyle.borderWidth, 0.75)
     }
 }
 #endif

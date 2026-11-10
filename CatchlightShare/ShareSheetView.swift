@@ -140,7 +140,7 @@ struct ShareSheetView: View {
                     .frame(height: 150)
                     .frame(maxWidth: .infinity)
                     .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .clipShape(CatchlightShape.surface)
                     // Audit 2026-08, V20: the page's own title text below carries
                     // the meaning; the preview picture is decorative to a reader.
                     .accessibilityHidden(true)
@@ -160,9 +160,7 @@ struct ShareSheetView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.ckSurface)
-        )
+        .flatPanel()
     }
 
     // MARK: - Rich preview
@@ -227,10 +225,7 @@ struct ShareSheetView: View {
             .lineLimit(5...10)
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.ckTextSecondary.opacity(0.28), lineWidth: 1)
-            )
+            .flatField()
     }
 
     private func actions(_ items: [String]) -> some View {

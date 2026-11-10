@@ -60,14 +60,9 @@ struct TakeLabelLane: View {
                                                    // "Overdue"/"Snoozed" via statusDescription)
         case .colourChip(let colour):
             // FUTURE user label (DEMO render): a slim coloured pill hugging the left
-            // edge with an EQUAL gap on left/top/bottom, card-radius corners mirrored,
-            // and a visible drop shadow (both modes) so it floats just above the card.
-            RoundedRectangle(cornerRadius: min(12, width / 2), style: .continuous)
+            // edge with an EQUAL gap on left/top/bottom, flat (no shadow).
+            CatchlightShape.control
                 .fill(colour)
-                // Two-layer float (visible in BOTH modes): soft ambient + tighter
-                // contact. Pushed up so it reads clearly in Daylight on a white card.
-                .shadow(color: .black.opacity(0.30), radius: 8, y: 4)
-                .shadow(color: .black.opacity(0.22), radius: 2, y: 1)
                 .frame(width: max(0, width - Self.chipGap))
                 .frame(maxHeight: .infinity)
                 .padding(.vertical, Self.chipGap)

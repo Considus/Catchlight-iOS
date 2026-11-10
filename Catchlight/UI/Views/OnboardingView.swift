@@ -180,9 +180,6 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
     }
 }
 
-// (DaylightCardShadow lives in CatchlightTheme.swift — shared with the
-// Settings sub-screens since 2026-06-12.)
-
 // MARK: - Intro chapter (shared brand mark)
 
 // `IntroBrandMark` now lives in its own file (IntroBrandMark.swift) so the
@@ -244,12 +241,11 @@ private struct SplashFooterPill: View {
             .lineLimit(1)
             // Round 2 (device, max size): `maxHeight: .infinity` made this a CIRCLE above
             // Large. Below Large `DockPillRow` wraps the row in a fixed 44pt frame so the
-            // capsule could never grow; the full-width branch above Large sets only a
-            // minHeight, so an unbounded child took all the offered height and the capsule's
-            // corner radius (half the SHORTER side) grew until it met the width. A minimum,
-            // not a maximum: the pill hugs its text and never rounds into a circle.
+            // button could never grow, and the full-width branch above Large sets only a
+            // minHeight. A minimum, not a maximum: the button hugs its text. Its corners
+            // are a fixed radius, so it never rounds into a pill or a circle.
             .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-            .background(Capsule().strokeBorder(Color.ckTextSecondary.opacity(0.3), lineWidth: 1))
+            .background(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
             .accessibilityElement()
             .accessibilityLabel(text)
     }
@@ -315,7 +311,7 @@ struct WelcomeContent: View {
                     Button(action: onSecondary) {
                         Text("I already use Catchlight")
                             .ckBody(.medium, size: 15, relativeTo: .body)
-                            .foregroundStyle(Color.ckTextObie)
+                            .foregroundStyle(Color.ckAccent)
                     }
                     // T3 (audit 2026-08): the sole alternate path on this screen
                     // tapped at its ~20pt text line. Inset −12 reaches the 44pt
@@ -415,7 +411,7 @@ struct RestoreFolderView: View {
             VStack(spacing: 12) {
                 Button("Not now") { app.restoreAwaitingFolder = false }
                     .ckBody(.medium, size: 15, relativeTo: .body)
-                    .foregroundStyle(Color.ckTextObie)
+                    .foregroundStyle(Color.ckAccent)
                     // T3: same 44pt hit floor as the Welcome link above.
                     .contentShape(Rectangle().inset(by: -12))
                     .accessibilityIdentifier("restore-connect-later")
@@ -549,7 +545,6 @@ private struct RestoreEntryStep: View {
         DockPillRow(primary: {
             DockPill(title: "Restore") { vm.submitRestore(words) }
                 .disabled(!ready)
-                .opacity(ready ? 1 : 0.5)
         }, trailing: {
             DockPill(title: "Back", secondary: true) { vm.cancelRestore() }
         })
@@ -649,11 +644,7 @@ private struct StorageOptionCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.ckSurface)
-                    .daylightCardShadow()
-            )
+            .flatPanel()
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -827,11 +818,7 @@ private struct RevealStep: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.ckSurface)
-                        .daylightCardShadow()
-                )
+                .flatPanel()
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Word \(idx + 1): \(word)")
             }
@@ -874,16 +861,16 @@ private struct ConfirmStep: View {
                             if let failure = vm.failure {
                                 Text(failure)
                                     .ckBody(.regular, size: 13, relativeTo: .caption)
-                                    .foregroundStyle(Color.ckTextObie)
+                                    .foregroundStyle(Color.ckAccent)
                                     .multilineTextAlignment(.center)
                                     .fixedSize(horizontal: false, vertical: true)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        CatchlightShape.surface
                                             .fill(Color.ckEmber.opacity(0.12))
                                             .overlay(
-                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                CatchlightShape.surface
                                                     .strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1)
                                             )
                                     )
@@ -1009,10 +996,10 @@ private struct ConfirmStep: View {
                     // light surface (~2:1) — the exact pattern replaced
                     // with ckAccent elsewhere and never propagated here. ckAccent
                     // keeps Night identical (Ember) and gives Daylight #856539.
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    CatchlightShape.surface
                         .stroke(vm.flashError ? Color.ckAccent : Color.ckOutline, lineWidth: 1.5)
                         .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            CatchlightShape.surface
                                 .fill(vm.flashError ? Color.ckAccent.opacity(0.18) : Color.ckSurface.opacity(0.6))
                         )
                     // Number INLINE, to the left of the word — same arrangement as
@@ -1079,15 +1066,14 @@ private struct ConfirmStep: View {
                 Button { vm.tapBankWord(at: index) } label: {
                     Text(word)
                         .ckBody(.light, size: 16, relativeTo: .body)   // 12 words use the subtext font (DS §2.1), and the Confirm bank is interactive
-                        .foregroundStyle(used ? Color.ckTextSecondary.opacity(0.4) : Color.ckTextPrimary)
+                        .foregroundStyle(used ? Color.ckDisabledLabel : Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
                         .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color.ckSurface.opacity(used ? 0.35 : 1.0))
-                                .daylightCardShadow()
+                            CatchlightShape.control.fill(used ? Color.ckDisabledFill : Color.ckSurface)
                         )
+                        .overlay(CatchlightShape.control.strokeBorder(used ? Color.clear : Color.ckLine, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .disabled(used || vm.isLocked)

@@ -403,31 +403,259 @@ enum Quadrant {
     }
 }
 
-// MARK: - Daylight card shadow (Design System v1.1 §4.1)
+// MARK: - Flat shapes (redesign)
+//
+// Every surface the app draws is flat: no shadows, gradients or raised materials. Buttons
+// and toggles are rounded rectangles at `CatchlightLayout.controlRadius`, and fields, panels
+// and cards are rounded rectangles at `CatchlightLayout.surfaceRadius`. Never a pill.
 
-/// The standard Take-card shadow for ckSurface cards/chips on Paper: ambient
-/// `0 2px 8px rgba(15,14,12,0.09)` + contact `0 1px 2px rgba(15,14,12,0.05)`.
-/// Daylight ONLY — DS §4 prohibits shadows in Night, where elevation is the
-/// Dusk surface colour. CSS blur ≈ 2× SwiftUI radius, hence radius 4/1.
-struct DaylightCardShadow: ViewModifier {
-    /// Overdue Takes get a slightly stronger Daylight shadow (HiFi v1.7
-    /// .card.overdue: `0 2px 10px rgba(15,14,12,0.13), 0 1px 3px …0.08`) — the
-    /// dark overdue border absorbs the subtle default, so it's lifted a touch.
-    var strong: Bool = false
-    @Environment(\.colorScheme) private var scheme
+enum CatchlightShape {
+    /// Buttons, toggles and the marks inside them.
+    static let control = RoundedRectangle(cornerRadius: CatchlightLayout.controlRadius, style: .continuous)
+    /// Fields, panels, cards and sheets.
+    static let surface = RoundedRectangle(cornerRadius: CatchlightLayout.surfaceRadius, style: .continuous)
+}
+
+extension View {
+    /// A field's flat surface: the card colour, a 1pt outline from the `outline` token (3:1
+    /// on every surface) and the surface radius.
+    func flatField(fill: Color = .ckSurface) -> some View {
+        background(CatchlightShape.surface.fill(fill))
+            .overlay(CatchlightShape.surface.strokeBorder(Color.ckOutline, lineWidth: 1))
+    }
+
+    /// A panel's flat surface: the card colour and a hairline edge from the `line` token.
+    func flatPanel(fill: Color = .ckSurface) -> some View {
+        background(CatchlightShape.surface.fill(fill))
+            .overlay(CatchlightShape.surface.strokeBorder(Color.ckLine, lineWidth: 1))
+    }
+}
+
+/// The measurements of the flat toggle, stated once so a test can hold them. The knob is
+/// concentric with the track: its corner radius is the control radius less the inset.
+enum FlatToggleMetrics {
+    static let trackWidth: CGFloat = 46
+    static let trackHeight: CGFloat = 28
+    static let knobInset: CGFloat = 3
+    static var knobSize: CGFloat { trackHeight - knobInset * 2 }
+    static var knobRadius: CGFloat { CatchlightLayout.controlRadius - knobInset }
+    /// The tap target around the track: at least 44 by 44.
+    static var tapTarget: CGSize {
+        CGSize(width: max(trackWidth, CatchlightLayout.minTouchTarget),
+               height: max(trackHeight, CatchlightLayout.minTouchTarget))
+    }
+}
+
+/// A toggle drawn as a rounded rectangle track with a rounded square knob, never a pill.
+/// Off is the `outline` edge on the card (3:1), on is the chosen fill. Only the track takes
+/// a tap (in a 44 by 44 target) or a horizontal drag, as the native switch does, and the label
+/// does not. VoiceOver and XCUITest see the native switch: the accessibility representation
+/// is a real `Toggle`.
+struct FlatToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 12) {
+            configuration.label
+            Spacer(minLength: 8)
+            FlatToggleTrack(isOn: configuration.$isOn)
+        }
+        .accessibilityRepresentation {
+            Toggle(isOn: configuration.$isOn) { configuration.label }
+                .toggleStyle(.switch)
+        }
+    }
+}
+
+/// A tap and a horizontal swipe on the track. This is UIKit on purpose: its pan recognizer
+/// begins only when the movement is clearly horizontal, so a vertical swipe that starts on the
+/// track is left to the list or the sheet to scroll or dismiss. (A SwiftUI `DragGesture`
+/// took vertical swipes too, even as a simultaneous gesture: measured in `FlatToggleUITests`.)
+private struct FlatToggleInput: UIViewRepresentable {
+    let isEnabled: Bool
+    let onTap: () -> Void
+    /// True for a swipe to the right (not reading-direction aware).
+    let onSwipe: (Bool) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.isAccessibilityElement = false
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tapped))
+        let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.panned(_:)))
+        pan.delegate = context.coordinator
+        view.addGestureRecognizer(tap)
+        view.addGestureRecognizer(pan)
+        return view
+    }
+
+    func updateUIView(_ view: UIView, context: Context) {
+        context.coordinator.isEnabled = isEnabled
+        context.coordinator.onTap = onTap
+        context.coordinator.onSwipe = onSwipe
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var isEnabled = true
+        var onTap: () -> Void = {}
+        var onSwipe: (Bool) -> Void = { _ in }
+
+        @objc func tapped() { if isEnabled { onTap() } }
+
+        @objc func panned(_ pan: UIPanGestureRecognizer) {
+            guard pan.state == .ended, isEnabled else { return }
+            let travel = pan.translation(in: pan.view)
+            if abs(travel.x) > 10 { onSwipe(travel.x > 0) }
+        }
+
+        /// Begin only for a mostly horizontal movement.
+        func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = recognizer as? UIPanGestureRecognizer else { return true }
+            let velocity = pan.velocity(in: pan.view)
+            return abs(velocity.x) > 2 * abs(velocity.y)
+        }
+    }
+}
+
+private struct FlatToggleTrack: View {
+    @Binding var isOn: Bool
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    var body: some View {
+        let knob = FlatToggleMetrics.knobSize
+        let inset = FlatToggleMetrics.knobInset
+        ZStack(alignment: isOn ? .trailing : .leading) {
+            CatchlightShape.control
+                .fill(fill)
+            CatchlightShape.control
+                .strokeBorder(edge, lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: FlatToggleMetrics.knobRadius, style: .continuous)
+                .fill(knobColour)
+                .frame(width: knob, height: knob)
+                .padding(inset)
+        }
+        .frame(width: FlatToggleMetrics.trackWidth, height: FlatToggleMetrics.trackHeight)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: isOn)
+        .frame(width: FlatToggleMetrics.tapTarget.width, height: FlatToggleMetrics.tapTarget.height)
+        .contentShape(Rectangle())
+        .overlay(
+            FlatToggleInput(
+                isEnabled: isEnabled,
+                onTap: { isOn.toggle() },
+                onSwipe: { toTheRight in
+                    // Right to left reverses which side is on.
+                    isOn = layoutDirection == .leftToRight ? toTheRight : !toTheRight
+                }
+            )
+        )
+    }
+
+    private var fill: Color {
+        guard isEnabled else { return .ckDisabledFill }
+        return isOn ? .ckChosenFill : .ckSurface
+    }
+    private var edge: Color {
+        guard isEnabled else { return .ckDisabledFill }
+        return isOn ? .ckChosenFill : .ckOutline
+    }
+    private var knobColour: Color {
+        guard isEnabled else { return .ckDisabledLabel }
+        return isOn ? .ckChosenMark : .ckOutline
+    }
+}
+
+/// The measurements of the flat segmented control. The selected segment is concentric with
+/// the container: its corner radius is the control radius less the inset.
+enum FlatSegmentedMetrics {
+    static let inset: CGFloat = 3
+    static var selectedRadius: CGFloat { CatchlightLayout.controlRadius - inset }
+    static let segmentHeight: CGFloat = CatchlightLayout.minTouchTarget
+}
+
+/// A two or more segment choice drawn as a rounded rectangle at the control radius, never a
+/// capsule. Each segment is a button of at least 44pt with the selected trait on the chosen
+/// one. The chosen segment is the chosen fill with the chosen mark.
+struct FlatSegmentedControl<Value: Hashable>: View {
+    let label: String
+    let segments: [(value: Value, title: String)]
+    @Binding var selection: Value
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(segments.indices, id: \.self) { index in
+                let segment = segments[index]
+                let selected = segment.value == selection
+                Button {
+                    selection = segment.value
+                } label: {
+                    Text(segment.title)
+                        .ckBody(.medium, size: 15, relativeTo: .body)
+                        .foregroundStyle(selected ? Color.ckChosenMark : Color.ckTextPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .frame(maxWidth: .infinity, minHeight: FlatSegmentedMetrics.segmentHeight)
+                        .background {
+                            if selected {
+                                RoundedRectangle(cornerRadius: FlatSegmentedMetrics.selectedRadius, style: .continuous)
+                                    .fill(Color.ckChosenFill)
+                                    .padding(FlatSegmentedMetrics.inset)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? [.isSelected] : [])
+            }
+        }
+        .background(CatchlightShape.control.fill(Color.ckSurface))
+        .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
+        // Our own segment buttons are the accessibility elements: each is a button of 44pt
+        // with the selected trait, and the group is a contained element with its label.
+        // (A native segmented `Picker` as the accessibility representation reported its own
+        // hidden frames on iOS 18.5: 32pt high, and the second segment 0pt wide.)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+    }
+}
+
+/// The face of a filled action button: the action colour with its on-colour label, or the
+/// disabled pair while the button is disabled (read from the environment, so the button
+/// needs no flag). A rounded rectangle at the control radius, never a pill.
+private struct FlatPrimaryFace: ViewModifier {
+    @Environment(\.isEnabled) private var isEnabled
     func body(content: Content) -> some View {
         content
-            .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(strong ? 0.13 : 0.09),
-                    radius: strong ? 5 : 4, y: 2)
-            .shadow(color: scheme == .dark ? .clear : Color.ckInk.opacity(strong ? 0.08 : 0.05),
-                    radius: strong ? 1.5 : 1, y: 1)
+            .foregroundStyle(isEnabled ? Color.ckOnAccent : Color.ckDisabledLabel)
+            .background(CatchlightShape.control.fill(isEnabled ? Color.ckAdd : Color.ckDisabledFill))
+            .contentShape(CatchlightShape.control)
     }
 }
 
 extension View {
-    func daylightCardShadow(strong: Bool = false) -> some View {
-        modifier(DaylightCardShadow(strong: strong))
-    }
+    func flatPrimaryFace() -> some View { modifier(FlatPrimaryFace()) }
+}
+
+extension UITheme {
+    /// What a chosen state is drawn in: the on track of a toggle and the selected segment.
+    /// The text-grade accent: the raw accent is a yellow in Graphite Light and is 1.45:1 there.
+    static let chosenFill = SceneToken.accentText
+    /// The knob or label on a chosen fill: the card colour, which stays readable on the
+    /// text-grade accent in every Scene (the on-accent colour is nearly the same dark there).
+    static let chosenMark = SceneToken.card
+    /// A disabled button's fill and label. The label reaches 3:1 on the fill in every Scene
+    /// (`SceneContrastTests`): the old way faded the whole button, and a faded label on a
+    /// faded fill was pale on pale.
+    static let disabledFill  = SceneToken.line
+    static let disabledLabel = SceneToken.muted
+}
+
+extension Color {
+    static let ckChosenFill = Color(uiColor: UITheme.chosenFill)
+    static let ckChosenMark = Color(uiColor: UITheme.chosenMark)
+    static let ckDisabledFill = Color(SceneColor(\.line))
+    static let ckDisabledLabel = Color(SceneColor(\.muted))
 }
 
 // MARK: - Typography
@@ -730,6 +958,10 @@ enum CatchlightLayout {
     /// (Search/sequence results reuse the timeline row; the edit footer, conflict
     /// view, and Focus row pass their own explicit diameters and are unaffected.)
     static let circleDiameter: CGFloat = 44
+    /// Corner radius of a button or toggle. Never a pill.
+    static let controlRadius: CGFloat = 10
+    /// Corner radius of a field, panel, card or sheet.
+    static let surfaceRadius: CGFloat = 16
     /// The distance from the dock's first column centre (`spineX`) to the Take card's
     /// leading edge: the card starts at `spineX − cardLeadingOffset`, about 20pt from
     /// the screen edge, matching the 20pt trailing margin. The timeline line that once

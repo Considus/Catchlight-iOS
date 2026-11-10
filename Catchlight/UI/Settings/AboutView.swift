@@ -125,11 +125,7 @@ struct AboutView: View {
         .padding(.vertical, 16)
         .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.ckSurface)
-                .daylightCardShadow()   // DS §4.1
-        )
+        .flatPanel()
     }
 
     /// External links, grouped in one card (matches the licences card). Privacy +
@@ -146,11 +142,7 @@ struct AboutView: View {
             linkRow("Website", url: "https://catchlight.app")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.ckSurface)
-                .daylightCardShadow()   // DS §4.1 — matches the licences card
-        )
+        .flatPanel()
     }
 
     @ViewBuilder

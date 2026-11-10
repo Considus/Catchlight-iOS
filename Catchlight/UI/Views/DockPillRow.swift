@@ -18,9 +18,25 @@
 
 import SwiftUI
 
-/// The standard dock-geometry button label: Ember capsule + ckOnAccent (Ink)
-/// text (primary), or a ckTextPrimary@40% outline (secondary). The primary
-/// label is Ink in both modes — Paper-on-Ember fails WCAG in Daylight.
+/// The face of a `DockPill`: a rounded rectangle at the control radius. Primary is the action
+/// colour with its on-colour label, or the disabled pair while disabled. Secondary is the
+/// `outline` token as a 1pt edge (3:1 on every surface) with primary text.
+private struct DockPillFace: ViewModifier {
+    let secondary: Bool
+    func body(content: Content) -> some View {
+        if secondary {
+            content
+                .foregroundStyle(Color.ckTextPrimary)
+                .background(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
+                .contentShape(CatchlightShape.control)
+        } else {
+            content.flatPrimaryFace()
+        }
+    }
+}
+
+/// The standard dock-geometry button label: a rounded rectangle at the control radius.
+/// Primary is the action colour with its on-colour label (secondary: an outline).
 struct DockPill: View {
     let title: LocalizedStringKey
     var secondary: Bool = false
@@ -41,23 +57,10 @@ struct DockPill: View {
                 .lineLimit(dynamicSize > .large ? 2 : 1)
                 .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)
                 .padding(.horizontal, 10)
-                .foregroundStyle(secondary ? Color.ckTextPrimary : Color.ckOnAccent)
                 .frame(maxWidth: .infinity,
                        minHeight: dynamicSize > .large ? CatchlightLayout.minTouchTarget : nil,
                        maxHeight: dynamicSize > .large ? nil : .infinity)
-                .background {
-                    if secondary {
-                        // C4 (audit 2026-08): the outline is the secondary pill's
-                        // ONLY button affordance. At 0.4 it was 2.62:1 on Paper
-                        // (Night passed at 3.42:1). 0.5 clears the 3:1 UI floor in
-                        // Daylight (3.54:1) and lifts Night to 4.76:1 — same token,
-                        // one alpha, both schemes shown to the owner.
-                        Capsule().stroke(Color.ckTextPrimary.opacity(0.5), lineWidth: 1)
-                    } else {
-                        Capsule().fill(Color.ckAdd)
-                    }
-                }
-                .contentShape(Capsule())
+                .modifier(DockPillFace(secondary: secondary))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)

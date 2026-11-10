@@ -68,11 +68,7 @@ struct PhraseEntryGrid: View {
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
                 .onTapGesture { focusedIndex = index }
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.ckSurface)
-                        .daylightCardShadow()
-                )
+                .flatField()
             }
         }
     }

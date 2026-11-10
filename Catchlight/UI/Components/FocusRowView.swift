@@ -1007,7 +1007,7 @@ struct ReminderPickerSheet: View {
             SelectorRow(icon: "wand.and.stars", label: "Quick set",
                         value: quickSet?.label ?? String(localized: "Select"))
                 .padding(.horizontal, 14)
-                .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .flatPanel()
         }
         .tint(Color.ckEmber)
         .accessibilityIdentifier("reminder-quickset")
@@ -1043,12 +1043,10 @@ struct ReminderPickerSheet: View {
     /// location-based, never both. Switching to Time on save clears any place; switching to
     /// Place clears the time — enforced at the commit ("location wins when present").
     private var modeSwitch: some View {
-        Picker("Reminder type", selection: $mode) {
-            ForEach(ReminderMode.allCases) { Text($0.label).tag($0) }
-        }
-        .pickerStyle(.segmented)
-        .tint(Color.ckEmber)
-        .accessibilityIdentifier("reminder-mode")
+        FlatSegmentedControl(label: String(localized: "Reminder type"),
+                             segments: ReminderMode.allCases.map { (value: $0, title: $0.label) },
+                             selection: $mode)
+            .accessibilityIdentifier("reminder-mode")
     }
 
 
@@ -1058,7 +1056,6 @@ struct ReminderPickerSheet: View {
                 Label("All-day", systemImage: "calendar")
             }
             .accessibilityIdentifier("reminder-allday-toggle")
-            .padding(.vertical, 6)
 
             Divider()
 
@@ -1069,7 +1066,6 @@ struct ReminderPickerSheet: View {
                 Label("Notify", systemImage: alarm ? "bell.fill" : "bell.slash")
             }
             .accessibilityIdentifier("reminder-alarm-toggle")
-            .padding(.vertical, 6)
 
             Divider()
 
@@ -1091,7 +1087,6 @@ struct ReminderPickerSheet: View {
                 Label("Repeat", systemImage: "repeat")
             }
             .accessibilityIdentifier("reminder-repeat-toggle")
-            .padding(.vertical, 6)
 
             if recurrence != .none {
                 Divider()
@@ -1118,10 +1113,10 @@ struct ReminderPickerSheet: View {
         }
         .animation(.snappy(duration: 0.2), value: recurrence != .none)
         .animation(.snappy(duration: 0.2), value: recurrence == .weekly && !weekdays.isEmpty)
-        .tint(Color.ckEmber)
+        .toggleStyle(FlatToggleStyle())
         .padding(.horizontal, 14)
         .padding(.vertical, 4)
-        .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .flatPanel()
     }
 
     /// The seven-day toggle strip for the day-set weekly cadences (owner 2026-06-23; simplified
@@ -1143,12 +1138,12 @@ struct ReminderPickerSheet: View {
                     Text(symbols[idx])
                         .font(.subheadline.weight(.medium))
                         .frame(maxWidth: .infinity, minHeight: 38)
-                        .background(isOn ? Color.ckEmber.opacity(0.85) : Color.ckBackground, in: Circle())
-                        .overlay(Circle().strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1))
-                        .foregroundStyle(isOn ? Color.ckBackground : Color.ckTextPrimary)
+                        .background(isOn ? Color.ckAdd : Color.ckBackground, in: CatchlightShape.control)
+                        .overlay(CatchlightShape.control.strokeBorder(isOn ? Color.ckAdd : Color.ckOutline, lineWidth: 1))
+                        .foregroundStyle(isOn ? Color.ckOnAccent : Color.ckTextPrimary)
                 }
                 .buttonStyle(.plain)
-                // T6 (audit 2026-08): the drawn 38pt circle stays; the hit area
+                // T6 (audit 2026-08): the drawn 38pt rounded square stays, and the hit area
                 // grows to the 44pt floor (inset −3). The expansions meet at the
                 // midline of the 6pt gutter, so neighbours never overlap.
                 .contentShape(Rectangle().inset(by: -3))
@@ -1287,7 +1282,7 @@ private extension View {
             .tint(Color.ckEmber)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(Color.ckSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .flatPanel()
     }
 }
 

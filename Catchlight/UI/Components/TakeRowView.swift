@@ -755,9 +755,6 @@ struct TakeCardSurface: View {
         .background(
             RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                 .fill(style.surface)
-                // Daylight elevation only; Night is tonal (surface lighter than
-                // bg). Overdue gets the slightly stronger shadow.
-                .daylightCardShadow(strong: style.isOverdue && !take.isObie)
         )
         .overlay(
             RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
