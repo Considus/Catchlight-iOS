@@ -313,7 +313,7 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
     /// accessibility sizes.
     var keepsMarkAtEverySize: Bool = false
     /// Above Large the hoisted mark stands down (see `OnboardingView.showsBrandMark`), so the
-    /// reserve copy here is the only mark — it is visible and scrolls with the content. From
+    /// reserve copy here is the only mark. It is visible and scrolls with the content. From
     /// `accessibility1` up an onboarding step draws no mark (`OnboardingBrandMark`); the splash
     /// (`keepsMarkAtEverySize`) keeps it, because the launch screen and the lock screen draw it
     /// at every size and it must not vanish and return on a cold launch.
