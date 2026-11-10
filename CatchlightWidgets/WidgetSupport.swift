@@ -261,6 +261,9 @@ struct RoundLockScreenSymbol: View {
 
 /// The one action: a rounded square with a plus. Full colour is the Scene accent with the
 /// plus in `onAccent`; the one-colour modes cut the plus out, so it reads in any tint.
+/// The plus is a hole, so never place the button over other drawing: whatever lies
+/// underneath shows through and breaks the plus (the old round Lock Screen badge sat
+/// over New Obie's inner square, 2026-11-10).
 struct WidgetPlus: View {
     let size: CGFloat
     let radius: CGFloat
