@@ -8,10 +8,8 @@
 //  height, and mirrors the card's left corner radii on its right side (a slim rounded
 //  pill, not cut flat).
 //
-//  ONE container, two render modes (owner 2026-06-18):
-//   • `.systemText` — a small, glanceable VERTICAL (−90°) label in the Time-note
-//     font/size (e.g. ruby "OVERDUE"); text only, NO fill. Reinforces a system state
-//     quietly without being loud. The only mode used today.
+//  No card draws the lane today: the sideways "OVERDUE" label it carried was replaced
+//  by the word at the start of the red time line (owner 2026-11-10).
 //   • `.colourChip` — FUTURE (user-assignable labels, its own release): the container
 //     FILLED with the label colour + the Take's shadow so it floats just above the
 //     card, inset ~10pt from the edges. Defined here so it drops in without
@@ -26,8 +24,6 @@ import SwiftUI
 struct TakeLabelLane: View {
     enum Content {
         case none
-        /// Vertical text label (string + colour), Time-note font. No fill.
-        case systemText(LocalizedStringKey, Color)
         // FUTURE — user label: the lane filled with the colour + Take shadow, a
         // floating chip (DEMO-wired now; a later release adds the data model + UI).
         case colourChip(Color)
@@ -46,18 +42,6 @@ struct TakeLabelLane: View {
             // Reserves nothing visible (it's an overlay; non-labelled cards are
             // untouched).
             Color.clear.frame(width: width)
-        case .systemText(let text, let colour):
-            Text(text)
-                // Matches the reminder Time-note scale (system font 11pt medium).
-                .ckBody(.medium, size: 11, relativeTo: .caption)
-                .foregroundStyle(colour)
-                .lineLimit(1)
-                .fixedSize()                       // lay out at natural size, THEN rotate
-                .rotationEffect(.degrees(-90))     // reads bottom-to-top, glanceable
-                .frame(width: width)
-                .frame(maxHeight: .infinity)
-                .accessibilityHidden(true)         // the row label speaks the state (V4:
-                                                   // "Overdue"/"Snoozed" via statusDescription)
         case .colourChip(let colour):
             // FUTURE user label (DEMO render): a slim coloured pill hugging the left
             // edge with an EQUAL gap on left/top/bottom, flat (no shadow).

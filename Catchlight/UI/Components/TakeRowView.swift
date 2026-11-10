@@ -61,8 +61,8 @@ struct TakeRowView: View {
     /// Iris moves with its card. Driven by `SwipeActionRow`; 0 everywhere the row
     /// isn't swipeable.
     var cardSwipeOffset: CGFloat = 0
-    /// This Take's reminder currently has a pending snoozed re-nudge — the edge reads
-    /// "SNOOZED" instead of "OVERDUE" (owner 2026-06-21). Defaults false everywhere the
+    /// This Take's reminder currently has a pending snoozed re-nudge: its time line starts
+    /// "Snoozed" instead of "Overdue" (owner 2026-06-21). Defaults false everywhere the
     /// snooze state isn't tracked.
     var isSnoozed: Bool = false
     /// Edit-in-place (2026-06-17): when supplied, the read-only `TakeCardSurface` in
@@ -223,10 +223,9 @@ struct TakeRowView: View {
         }
         if let reminder = take.timeReminder {
             parts.append(String(localized: "Reminder set"))
-            // V4 (audit 2026-08): the visible ruby "OVERDUE"/"SNOOZED" lane is
-            // accessibility-hidden on the promise that the row label speaks the
-            // state — this is that promise. Snoozed wins over Overdue (a
-            // snoozed overdue reminder reads SNOOZED). `isOverdue(now:)` is the
+            // V4 (audit 2026-08): the row speaks the state here, so VoiceOver hears
+            // "Overdue" or "Snoozed" whatever the card draws. Snoozed wins over Overdue (a
+            // snoozed overdue reminder reads Snoozed). `isOverdue(now:)` is the
             // single overdue rule (the card edge uses the same one); a repeating
             // reminder is never overdue by that rule.
             if isSnoozed {
@@ -456,8 +455,8 @@ struct TakeRowView: View {
 /// surface always reaches the card's trailing edge.
 struct TakeCardSurface: View {
     let take: Take
-    /// This Take's reminder has a pending snoozed re-nudge — the edge reads "SNOOZED"
-    /// instead of "OVERDUE" (owner 2026-06-21). Defaults false (e.g. previews).
+    /// This Take's reminder has a pending snoozed re-nudge: its time line starts "Snoozed"
+    /// instead of "Overdue" (owner 2026-06-21). Defaults false (e.g. previews).
     var isSnoozed: Bool = false
     /// Whether detected URLs are TAPPABLE (owner 2026-06-27). The visual treatment
     /// (accent + underline) is unchanged either way; when false the `.link` attribute is
@@ -587,15 +586,6 @@ struct TakeCardSurface: View {
     /// `TakeCardStyle` so read↔edit never drift (owner 2026-06-18).
     private var style: TakeCardStyle { TakeCardStyle(take: take, scheme: scheme) }
 
-    /// What the left-edge label lane shows. An overdue reminder reads vertical ruby
-    /// "OVERDUE" — or "SNOOZED" (same ruby, ruby border/italic kept) when it currently
-    /// has a pending snoozed re-nudge (owner 2026-06-21). Future user colour-labels
-    /// render through the same lane (`TakeLabelLane`).
-    private var laneContent: TakeLabelLane.Content {
-        guard style.isOverdue else { return .none }
-        return .systemText(isSnoozed ? "SNOOZED" : "OVERDUE", .ckRuby)
-    }
-
     /// Cached formatters — this label is evaluated on every render, and a fresh
     /// `DateFormatter` per evaluation is one of Foundation's most expensive allocations.
     /// `reminderFormatter` shows an absolute date + time; the date-only variant drops
@@ -658,6 +648,16 @@ struct TakeCardSurface: View {
         if style.isOverdue { return .ckTextOverdue }
         if style.isDone { return .ckTextComplete }
         return .ckTextSecondary
+    }
+
+    /// The reminder's "when". An overdue one starts with the word "Overdue", or "Snoozed"
+    /// while it has a pending snoozed re-nudge, as one run of text that wraps as a whole
+    /// (owner 2026-11-10; it replaces the sideways label down the card's left edge).
+    private func reminderText(_ when: String) -> Text {
+        guard style.isOverdue else { return Text(when) }
+        let word = isSnoozed ? String(localized: "Snoozed") : String(localized: "Overdue")
+        return Text("\(Text(word).fontWeight(.semibold)) \(Text(when).italic())",
+                    comment: "An overdue reminder's time line: the state word (Overdue or Snoozed), then when it was due.")
     }
 
     var body: some View {
@@ -728,10 +728,10 @@ struct TakeCardSurface: View {
                         .ckBody(.medium, size: 11, relativeTo: .caption)
                         .foregroundStyle(reminderLabelColor)
                         .accessibilityHidden(true)
-                    Text(reminderLabel)
+                    reminderText(reminderLabel)
                         .ckBody(.medium, size: 11, relativeTo: .caption)
                         .monospacedDigit()   // a time: tabular digits
-                        .italic(style.isOverdue)
+                        .multilineTextAlignment(.leading)
                         .foregroundStyle(reminderLabelColor)
                 }
             }
@@ -760,11 +760,6 @@ struct TakeCardSurface: View {
             RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                 .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
         )
-        // The label lane hugs the card's left edge, in the `irisInset` strip left of
-        // the Iris (owner 2026-06-18). Rides with the card (incl. swipe).
-        .overlay(alignment: .leading) {
-            TakeLabelLane(content: laneContent)
-        }
     }
 }
 

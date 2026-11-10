@@ -79,8 +79,8 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     var activeMonthKey: String? = nil
     /// Tap a month divider → filter to that creation month; tap the lit one again → clear.
     var onToggleMonthFilter: (String) -> Void = { _ in }
-    /// Takes whose overdue reminder is SNOOZED — their label lane reads "SNOOZED" instead of
-    /// "OVERDUE". Not derivable from the Take: snooze lives in the view model
+    /// Takes whose overdue reminder is SNOOZED — their time line starts "Snoozed" instead of
+    /// "Overdue". Not derivable from the Take: snooze lives in the view model
     /// (`vm.snoozedReminderIDs`), which is exactly why the rebuild lost it (see the VC's
     /// `snoozedIDs`).
     var snoozedIDs: Set<UUID> = []
@@ -221,7 +221,7 @@ struct TimelineReadCell: View {
     let take: Take
     let addColumnX: CGFloat
     let cardGap: CGFloat
-    /// Overdue reminder currently SNOOZED → the label lane reads "SNOOZED" not "OVERDUE".
+    /// Overdue reminder currently SNOOZED → the time line starts "Snoozed", not "Overdue".
     /// It can't be read off the Take — snooze lives in the view model — so it has
     /// to be threaded down. The rebuild simply never passed it, and every snoozed Take on the new
     /// timeline said OVERDUE (found 2026-07-16 while re-anchoring the Feature Register).
@@ -979,7 +979,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         let monthFilterChanged = lastActiveMonthKey != .some(activeMonthKey)
         lastActiveMonthKey = .some(activeMonthKey)
         // Snoozing doesn't touch a Take's VALUE (it lives in the view model), so the value-diff
-        // below would never restyle the card — the lane would keep saying OVERDUE. Diff the SET.
+        // below would never restyle the card — the time line would keep saying Overdue. Diff the SET.
         let snoozeChanged = lastSnoozedIDs != nil && lastSnoozedIDs != snoozedIDs
         let snoozeAffected = (lastSnoozedIDs ?? []).symmetricDifference(snoozedIDs)
         lastSnoozedIDs = snoozedIDs

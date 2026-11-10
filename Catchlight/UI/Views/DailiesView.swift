@@ -635,10 +635,11 @@ struct DailiesView: View {
     /// toolbar clearance so the final Take still clears the now-raised toolbar.
     @Environment(\.deviceBottomInset) private var deviceBottomInset
 
-    /// The page title follows the activity: DAILIES · SEQUENCE · SEARCH.
+    /// The page title follows the activity: Dailies · SEQUENCE · SEARCH. Dailies draws its
+    /// own heading (`DailiesHeading`); this names it for the crossfade's identity.
     private var headingTitle: String {
         switch ui.toolbarMode {
-        case .resting:   return String(localized: "DAILIES")
+        case .resting:   return "Dailies"
         case .filtering: return String(localized: "SEQUENCE")
         case .searching: return String(localized: "SEARCH")
         }
@@ -661,9 +662,16 @@ struct DailiesView: View {
             // is a sibling that never fades. Keep it that way: anything that must stay opaque
             // during the title change belongs OUTSIDE the `.id`/`.transition` view.
             ZStack {
-                PageHeading(verbatim: headingTitle)
-                    // Shared page heading (Archivo expanded 24, kerned, centred,
-                    // with the kerning-centring fix).
+                Group {
+                    if ui.toolbarMode == .resting {
+                        // As drawn: "Dailies" on the left, today's date on the right.
+                        DailiesHeading()
+                    } else {
+                        // Shared page heading (Archivo expanded 24, kerned, centred,
+                        // with the kerning-centring fix).
+                        PageHeading(verbatim: headingTitle)
+                    }
+                }
                     // Recede the title while editing in place; the mask stays opaque so
                     // scrolled-up content still dissolves under the top.
                     .opacity(ui.isEditingInPlace ? 0.12 : 1)
@@ -760,8 +768,10 @@ struct DailiesView: View {
         // ZStack above and measured off a screen recording.
         .contentShape(Rectangle())
         .onTapGesture { timelineBackgroundTap() }
-        .accessibilityAddTraits(.isHeader)
-        .accessibilityLabel(headingTitle.capitalized)
+        // SEQUENCE and SEARCH read as one spoken heading. Dailies labels its own title and
+        // date, so the override stays off there, or the date would be read as "Dailies".
+        .accessibilityAddTraits(ui.toolbarMode == .resting ? [] : .isHeader)
+        .accessibilityLabel(Text(headingTitle.capitalized), isEnabled: ui.toolbarMode != .resting)
     }
 
     /// The PINNED Obie (owner 2026-06-16) — a static element sitting at the SAME
@@ -1219,7 +1229,7 @@ struct DailiesView: View {
             onToggleMonthFilter: { key in
                 withAnimation(.easeInOut(duration: 0.2)) { ui.toggleMonthFilter(key) }
             },
-            // Snoozed overdue Takes read "SNOOZED" rather than "OVERDUE" in the label lane.
+            // Snoozed overdue Takes start their time line with "Snoozed" rather than "Overdue".
             // Not derivable from the Take, so it has to be handed over.
             snoozedIDs: vm.snoozedReminderIDs,
             topInset: newTimelineTopInset,

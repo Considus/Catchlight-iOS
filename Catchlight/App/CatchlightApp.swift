@@ -526,7 +526,7 @@ struct CatchlightApp: App {
                     app.refreshRemindersSilencedOnset()
                 }
                 // Refresh which reminders are currently snoozed (owner 2026-06-21) so
-                // the timeline shows "SNOOZED" not "OVERDUE". Reads the OS pending queue
+                // the timeline shows "Snoozed", not "Overdue". Reads the OS pending queue
                 // (no key needed), so it's fine here regardless of lock state.
                 app.dailiesVM.refreshSnoozedReminders()
                 Task { @MainActor in

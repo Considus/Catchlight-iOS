@@ -565,7 +565,7 @@ final class DailiesViewModel {
     }
 
     /// Take IDs with a pending snoozed re-nudge (owner 2026-06-21) — the timeline reads
-    /// this to show "SNOOZED" instead of "OVERDUE" on those Takes' edges. Snooze is
+    /// this to start those Takes' time lines with "Snoozed" instead of "Overdue". Snooze is
     /// notification-only (no store write while locked), so this is refreshed from the OS
     /// pending queue when the app comes to the foreground; it can lag a lock-screen
     /// snooze until the next open, which is acceptable.

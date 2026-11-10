@@ -142,8 +142,8 @@ public final class ReminderScheduler {
     static let dueTextKey = "ckDueText"
     /// `userInfo` flag marking a notification as a SNOOZED re-nudge (owner 2026-06-21),
     /// so the app can detect — by inspecting pending requests on foreground — which
-    /// reminders are currently snoozed and show "SNOOZED" rather than "OVERDUE" on the
-    /// Take edge. Snooze never writes the encrypted store (it runs while locked), so a
+    /// reminders are currently snoozed and show "Snoozed" rather than "Overdue" on the
+    /// Take's time line. Snooze never writes the encrypted store (it runs while locked), so a
     /// pending notification is the only place this state lives.
     static let snoozedFlagKey = "ckSnoozed"
     static let logger = Logger(subsystem: "com.considus.catchlight", category: "reminders")
@@ -693,7 +693,7 @@ public final class ReminderScheduler {
     }
 
     /// The Take IDs that currently have a PENDING snoozed re-nudge (owner 2026-06-21) —
-    /// used to show "SNOOZED" instead of "OVERDUE" on the Take edge. Reads the OS pending
+    /// used to show "Snoozed" instead of "Overdue" on the Take's time line. Reads the OS pending
     /// queue (no encryption key needed, so it works even while locked); a notification is
     /// "snoozed" if it carries `snoozedFlagKey`. Identifiers may be a base UUID or a
     /// recurring-window id (`<uuid>#n`), so the base is taken before the `#`. Uses
@@ -738,7 +738,7 @@ public final class ReminderScheduler {
         content.threadIdentifier = identifier.split(separator: "#", maxSplits: 1).first.map(String.init) ?? identifier
         content.interruptionLevel = .timeSensitive
         content.userInfo[Self.dueTextKey] = dueText             // carry the original "when" across re-snoozes
-        content.userInfo[Self.snoozedFlagKey] = true           // mark as snoozed so the edge can read "SNOOZED"
+        content.userInfo[Self.snoozedFlagKey] = true           // mark as snoozed so the time line can read "Snoozed"
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         center.add(request)

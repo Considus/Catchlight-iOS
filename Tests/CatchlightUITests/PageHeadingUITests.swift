@@ -71,6 +71,22 @@ final class PageHeadingUITests: XCTestCase {
         }
     }
 
+    /// Dailies shows today's date beside its title, as drawn, and Sequence does not.
+    func testDailiesHeading_showsTodaysDate_onlyOnDailies() {
+        let app = launch("UICTContentSizeCategoryL")
+        let date = app.staticTexts["dailies-date"]
+        XCTAssertTrue(date.waitForExistence(timeout: 8), "No date beside the Dailies heading")
+        // Built with a different API from the app's, so the test can't agree by construction.
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("EEEEdMMMM")
+        XCTAssertEqual(date.label, formatter.string(from: Date()))
+        XCTAssertTrue(headingText(app, "Dailies").exists, "No Dailies title")
+
+        app.buttons["sequence-tab"].tap()
+        XCTAssertTrue(headingText(app, "SEQUENCE").waitForExistence(timeout: 5), "Sequence heading not shown")
+        XCTAssertFalse(date.exists, "The date still shows in Sequence")
+    }
+
     func testSettingsHeading_isOneLine() {
         for size in Self.sizes {
             let app = launch(size.category)
