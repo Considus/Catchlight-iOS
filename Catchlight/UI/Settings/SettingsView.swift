@@ -44,6 +44,8 @@ struct SettingsView: View {
     @AppStorage(WritingToolsBehaviour.defaultsKey) private var writingToolsRaw: String = WritingToolsBehaviour.default.rawValue
 
     @State private var vm = SettingsViewModel()
+    /// The icon on the Home Screen, read from iOS when Settings opens (`AppIconChoice`).
+    @State private var appIcon: CatchlightScene = AppIconChoice.current
     /// The Import-result message; non-nil presents the confirmation alert (owner 2026-06-22).
     @State private var importResultMessage: String?
     /// Set when an export couldn't read the Takes, so nothing was exported.
@@ -263,6 +265,18 @@ struct SettingsView: View {
                 }
             }
 
+            // App icon, straight under Scene and apart from it: one icon per Scene, by name.
+            menuPickerRow(icon: "app",
+                          label: "App icon",
+                          accessibilityLabel: "App icon",
+                          selectionLabel: appIcon.name) {
+                Picker("App icon", selection: appIconBinding) {
+                    ForEach(CatchlightScene.allCases) { scene in
+                        Text(scene.name).tag(scene)
+                    }
+                }
+            }
+
             // Timeline density — the gap between Takes on Dailies (owner 2026-06-16).
             menuPickerRow(icon: "arrow.up.and.down.text.horizontal",
                           label: "View",
@@ -382,6 +396,16 @@ struct SettingsView: View {
         Binding(
             get: { CatchlightScene(rawValue: sceneRaw) ?? .default },
             set: { SettingsViewModel.SceneChoice.select($0) }
+        )
+    }
+
+    /// Choosing an App icon asks iOS to switch, and the row follows once iOS has.
+    private var appIconBinding: Binding<CatchlightScene> {
+        Binding(
+            get: { appIcon },
+            set: { scene in
+                Task { if await AppIconChoice.select(scene) { appIcon = scene } }
+            }
         )
     }
 

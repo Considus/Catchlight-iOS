@@ -1,0 +1,58 @@
+{
+  "fill-specializations": [
+    {
+      "value": {
+        "solid": "srgb:0.23922,0.22745,0.72157,1.00000"
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "solid": "srgb:0.06275,0.06275,0.15686,1.00000"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "layers": [
+        {
+          "name": "dot",
+          "glass": true,
+          "image-name-specializations": [
+            {
+              "value": "dot.svg"
+            },
+            {
+              "appearance": "tinted",
+              "value": "dot-mono.svg"
+            }
+          ]
+        },
+        {
+          "name": "ring",
+          "glass": true,
+          "image-name-specializations": [
+            {
+              "value": "ring.svg"
+            },
+            {
+              "appearance": "tinted",
+              "value": "ring-mono.svg"
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.4
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}
