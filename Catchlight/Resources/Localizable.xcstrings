@@ -56678,114 +56678,114 @@
         }
       }
     },
-    "Tap the circle beside any Take to make it a task, set a reminder, or make it important." : {
+    "Tap the square in the corner of any Take to make it a task, set a reminder, or make it important." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tippe auf den Kreis neben einem Take, um ihn in eine Aufgabe umzuwandeln, eine Erinnerung festzulegen oder ihn als wichtig zu markieren."
+            "value" : "Tippe bei einem Take auf das Quadrat in der Ecke, um ihn in eine Aufgabe umzuwandeln, eine Erinnerung festzulegen oder ihn als wichtig zu markieren."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Touchez le cercle à côté d'un Take pour le transformer en tâche, définir un rappel ou le marquer comme important."
+            "value" : "Touchez le carré dans le coin de n'importe quel Take pour le transformer en tâche, définir un rappel ou le marquer comme important."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toca el círculo junto a cualquier Take para convertirlo en tarea, programar un recordatorio o marcarlo como importante."
+            "value" : "Toca el cuadrado en la esquina de cualquier Take para convertirlo en tarea, programar un recordatorio o marcarlo como importante."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tocca il cerchio accanto a un Take per trasformarlo in un’attività, impostare un promemoria o contrassegnarlo come importante."
+            "value" : "Tocca il quadrato nell’angolo di un Take per trasformarlo in un’attività, impostare un promemoria o contrassegnarlo come importante."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toque no círculo ao lado de qualquer Take para transformá-lo em tarefa, definir um lembrete ou marcá-lo como importante."
+            "value" : "Toque no quadrado no canto de qualquer Take para transformá-lo em tarefa, definir um lembrete ou marcá-lo como importante."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tik op de cirkel naast een Take om er een taak van te maken, een herinnering in te stellen of de Take belangrijk te maken."
+            "value" : "Tik op het vierkant in de hoek van een Take om er een taak van te maken, een herinnering in te stellen of de Take belangrijk te maken."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toque no círculo ao lado de qualquer Take para o tornar uma tarefa, definir um lembrete ou marcá-lo como importante."
+            "value" : "Toque no quadrado no canto de qualquer Take para o tornar uma tarefa, definir um lembrete ou marcá-lo como importante."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stuknij kółko obok dowolnego Take, aby zmienić go w zadanie, ustawić przypomnienie lub oznaczyć jako ważny."
+            "value" : "Stuknij kwadrat w rogu dowolnego Take, aby zmienić go w zadanie, ustawić przypomnienie lub oznaczyć jako ważny."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tryck på cirkeln bredvid en Take om du vill göra den till en uppgift, ställa in en påminnelse eller markera den som viktig."
+            "value" : "Tryck på rutan i hörnet på en Take om du vill göra den till en uppgift, ställa in en påminnelse eller markera den som viktig."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tryk på cirklen ved siden af enhver Take for at gøre den til en opgave, indstille en påmindelse eller markere den som vigtig."
+            "value" : "Tryk på firkanten i hjørnet af enhver Take for at gøre den til en opgave, indstille en påmindelse eller markere den som vigtig."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Trykk på sirkelen ved siden av en Take for å gjøre den til en oppgave, angi en påminnelse eller markere den som viktig."
+            "value" : "Trykk på firkanten i hjørnet av en Take for å gjøre den til en oppgave, angi en påminnelse eller markere den som viktig."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Napauta minkä tahansa Take:n vieressä olevaa ympyrää tehdäksesi siitä tehtävän, asettaaksesi muistutuksen tai merkitäksesi sen tärkeäksi."
+            "value" : "Napauta minkä tahansa Take:n kulmassa olevaa neliötä tehdäksesi siitä tehtävän, asettaaksesi muistutuksen tai merkitäksesi sen tärkeäksi."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Görev yapmak, anımsatıcı ayarlamak veya önemli olarak işaretlemek için herhangi bir Take'in yanındaki daireye dokunun."
+            "value" : "Görev yapmak, anımsatıcı ayarlamak veya önemli olarak işaretlemek için herhangi bir Take'in köşesindeki kareye dokunun."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Takeの横の丸をタップすると、タスクにしたり、リマインダーを設定したり、重要なものにしたりできます。"
+            "value" : "Takeの角にある四角をタップすると、タスクにしたり、リマインダーを設定したり、重要なものにしたりできます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Take 옆의 원을 탭하면 작업으로 만들거나, 미리 알림을 설정하거나, 중요 표시를 할 수 있습니다."
+            "value" : "Take 모서리의 사각형을 탭하면 작업으로 만들거나, 미리 알림을 설정하거나, 중요 표시를 할 수 있습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "轻点任意 Take 旁边的圆圈，即可将其设为任务、设置提醒或标记为重要。"
+            "value" : "轻点任意 Take 角落的方块，即可将其设为任务、设置提醒或标记为重要。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "點一下任一 Take 旁的圓圈，即可將它設為任務、設定提醒，或標示為重要。"
+            "value" : "點一下任一 Take 角落的方塊，即可將它設為任務、設定提醒，或標示為重要。"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แตะวงกลมข้าง Take ใด ๆ เพื่อทำให้เป็นงาน ตั้งการแจ้งเตือน หรือทำให้สำคัญ"
+            "value" : "แตะสี่เหลี่ยมที่มุมของ Take ใด ๆ เพื่อทำให้เป็นงาน ตั้งการแจ้งเตือน หรือทำให้สำคัญ"
           }
         }
       }

@@ -1205,7 +1205,7 @@ private struct BasicsStep: View {
                           shown: String(localized: "Tap the + button. Tap anywhere outside the Take to save. That's the whole capture flow."),
                           spoken: String(localized: "Double-tap Add Take in the toolbar. To save, double-tap Save and close. That's the whole capture flow.")),
                     Point(title: String(localized: "Shape your Take with the Iris"),
-                          shown: String(localized: "Tap the circle beside any Take to make it a task, set a reminder, or make it important."),
+                          shown: String(localized: "Tap the square in the corner of any Take to make it a task, set a reminder, or make it important."),
                           spoken: String(localized: "Double-tap an Iris to make that Take a task, set a reminder, or make it important."))]
         case .second:
             return [Point(title: String(localized: "Your Obie"),
