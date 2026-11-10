@@ -431,48 +431,85 @@ extension View {
     }
 }
 
+/// The measurements of the flat toggle, stated once so a test can hold them. The knob is
+/// concentric with the track: its corner radius is the control radius less the inset.
+enum FlatToggleMetrics {
+    static let trackWidth: CGFloat = 46
+    static let trackHeight: CGFloat = 28
+    static let knobInset: CGFloat = 3
+    static var knobSize: CGFloat { trackHeight - knobInset * 2 }
+    static var knobRadius: CGFloat { CatchlightLayout.controlRadius - knobInset }
+    /// The tap target around the track: at least 44 by 44.
+    static var tapTarget: CGSize {
+        CGSize(width: max(trackWidth, CatchlightLayout.minTouchTarget),
+               height: max(trackHeight, CatchlightLayout.minTouchTarget))
+    }
+}
+
 /// A toggle drawn as a rounded rectangle track with a rounded square knob, never a pill.
-/// Off is the `outline` edge on the surface (3:1), on is the action colour. The whole row
-/// is one 44pt button that keeps the switch trait and its on or off value.
+/// Off is the `outline` edge on the card (3:1), on is the chosen fill. Only the track takes
+/// a tap (in a 44 by 44 target) or a horizontal drag, as the native switch does, and the label
+/// does not. VoiceOver and XCUITest see the native switch: the accessibility representation
+/// is a real `Toggle`.
 struct FlatToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
-        Button {
-            configuration.isOn.toggle()
-        } label: {
-            HStack(spacing: 12) {
-                configuration.label
-                Spacer(minLength: 8)
-                FlatToggleTrack(isOn: configuration.isOn)
-            }
-            .frame(minHeight: CatchlightLayout.minTouchTarget)
-            .contentShape(Rectangle())
+        HStack(spacing: 12) {
+            configuration.label
+            Spacer(minLength: 8)
+            FlatToggleTrack(isOn: configuration.$isOn)
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(.isToggle)
-        .accessibilityValue(configuration.isOn ? "1" : "0")
+        .accessibilityRepresentation {
+            Toggle(isOn: configuration.$isOn) { configuration.label }
+                .toggleStyle(.switch)
+        }
     }
 }
 
 private struct FlatToggleTrack: View {
-    let isOn: Bool
-    private let width: CGFloat = 46
-    private let height: CGFloat = 28
-    private let inset: CGFloat = 3
+    @Binding var isOn: Bool
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
+
     var body: some View {
-        let knob = height - inset * 2
+        let knob = FlatToggleMetrics.knobSize
+        let inset = FlatToggleMetrics.knobInset
         ZStack(alignment: isOn ? .trailing : .leading) {
             CatchlightShape.control
-                .fill(isOn ? Color.ckChosenFill : Color.ckSurface)
+                .fill(fill)
             CatchlightShape.control
-                .strokeBorder(isOn ? Color.ckChosenFill : Color.ckOutline, lineWidth: 1.5)
-            RoundedRectangle(cornerRadius: CatchlightLayout.controlRadius - inset, style: .continuous)
-                .fill(isOn ? Color.ckChosenMark : Color.ckOutline)
+                .strokeBorder(edge, lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: FlatToggleMetrics.knobRadius, style: .continuous)
+                .fill(knobColour)
                 .frame(width: knob, height: knob)
                 .padding(inset)
         }
-        .frame(width: width, height: height)
-        .animation(.snappy(duration: 0.15), value: isOn)
-        .accessibilityHidden(true)
+        .frame(width: FlatToggleMetrics.trackWidth, height: FlatToggleMetrics.trackHeight)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: isOn)
+        .frame(width: FlatToggleMetrics.tapTarget.width, height: FlatToggleMetrics.tapTarget.height)
+        .contentShape(Rectangle())
+        .onTapGesture { if isEnabled { isOn.toggle() } }
+        .gesture(
+            DragGesture(minimumDistance: 10).onEnded { drag in
+                guard isEnabled, abs(drag.translation.width) > abs(drag.translation.height) else { return }
+                let towardTrailing = layoutDirection == .leftToRight
+                    ? drag.translation.width > 0 : drag.translation.width < 0
+                isOn = towardTrailing
+            }
+        )
+    }
+
+    private var fill: Color {
+        guard isEnabled else { return .ckDisabledFill }
+        return isOn ? .ckChosenFill : .ckSurface
+    }
+    private var edge: Color {
+        guard isEnabled else { return .ckDisabledFill }
+        return isOn ? .ckChosenFill : .ckOutline
+    }
+    private var knobColour: Color {
+        guard isEnabled else { return .ckDisabledLabel }
+        return isOn ? .ckChosenMark : .ckOutline
     }
 }
 
