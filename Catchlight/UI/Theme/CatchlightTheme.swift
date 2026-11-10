@@ -611,15 +611,12 @@ struct FlatSegmentedControl<Value: Hashable>: View {
         }
         .background(CatchlightShape.control.fill(Color.ckSurface))
         .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
-        // VoiceOver and XCUITest see the native segmented control, as before the redesign.
-        .accessibilityRepresentation {
-            Picker(label, selection: $selection) {
-                ForEach(segments.indices, id: \.self) { index in
-                    Text(segments[index].title).tag(segments[index].value)
-                }
-            }
-            .pickerStyle(.segmented)
-        }
+        // Our own segment buttons are the accessibility elements: each is a button of 44pt
+        // with the selected trait, and the group is a contained element with its label.
+        // (A native segmented `Picker` as the accessibility representation reported its own
+        // hidden frames on iOS 18.5: 32pt high, and the second segment 0pt wide.)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
     }
 }
 
