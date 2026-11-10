@@ -27,14 +27,14 @@ struct SelectorRow: View {
                 .frame(width: 26)
                 .accessibilityHidden(true)
             Text(label)
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                .ckBody(.regular, size: 17, relativeTo: .body)
                 .foregroundStyle(Color.ckTextPrimary)
                 // A `Menu` centres a label that wraps; a long translation (or a large
                 // text size) wraps here, so keep it flush left like every other row.
                 .multilineTextAlignment(.leading)
             Spacer(minLength: 8)
             Text(value)
-                .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                .ckBody(.regular, size: 15, relativeTo: .subheadline)
                 .foregroundStyle(Color.ckTextSecondary)
                 .lineLimit(1)
                 .truncationMode(.tail)

@@ -144,12 +144,12 @@ struct LockedCaptureView: View {
         VStack(spacing: 6) {
             // Orientation only — the × (discard) and tap-away (save) carry the actions.
             Text(isObie ? "New Obie" : "New Take")
-                .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .headline))
+                .ckBody(.medium, size: 17, relativeTo: .headline)
                 .foregroundStyle(Color.ckTextPrimary)
 
             if unlockFailed {
                 Text("Couldn't unlock. Tap to save again.")
-                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                    .ckBody(.regular, size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.ckTextSecondary)
             }
         }

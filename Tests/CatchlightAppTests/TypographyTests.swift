@@ -12,6 +12,7 @@ import SwiftUI
 import UIKit
 @testable import Catchlight
 
+@MainActor
 final class TypographyTests: XCTestCase {
 
     private let systemFamily = UIFont.systemFont(ofSize: 17).familyName
@@ -116,9 +117,9 @@ final class TypographyTests: XCTestCase {
 
     /// Width of `text` laid out as a SwiftUI `Text` in `font`.
     private func laidOutWidth(_ text: String, tabular: Bool) -> CGFloat {
-        let base = CatchlightFont.ui(.medium, size: 11, relativeTo: .caption)
         let view = Group {
-            if tabular { Text(text).font(base).monospacedDigit() } else { Text(text).font(base) }
+            if tabular { Text(text).ckBody(.medium, size: 11, relativeTo: .caption).monospacedDigit() }
+            else { Text(text).ckBody(.medium, size: 11, relativeTo: .caption) }
         }.fixedSize()
         let host = UIHostingController(rootView: view)
         return host.sizeThatFits(in: CGSize(width: 1000, height: 1000)).width
@@ -172,5 +173,103 @@ extension TypographyTests {
         let leading = CatchlightFont.tightLeading(size: 28)
         XCTAssertLessThan(leading, 0)
         XCTAssertGreaterThan(leading, -28 * 0.15, "tight, not overlapping")
+    }
+}
+
+// MARK: - Caching, shared numbers, emphasis
+
+@MainActor
+extension TypographyTests {
+
+    func testFontsAreBuiltOnce_notPerRender() {
+        let traits = UITraitCollection(preferredContentSizeCategory: .large)
+        _ = CatchlightFont.uiDisplay(size: 29, relativeTo: .title2, compatibleWith: traits, language: "ja")
+        _ = CatchlightFont.uiBody(size: 13.5, weight: .medium, relativeTo: .callout, compatibleWith: traits)
+        let built = CatchlightFont.cachedFontCount
+        for _ in 0..<50 {
+            _ = CatchlightFont.uiDisplay(size: 29, relativeTo: .title2, compatibleWith: traits, language: "ja")
+            _ = CatchlightFont.uiBody(size: 13.5, weight: .medium, relativeTo: .callout, compatibleWith: traits)
+        }
+        XCTAssertEqual(CatchlightFont.cachedFontCount, built, "repeat calls built new fonts")
+    }
+
+    func testHeadingNumbersAreOneSharedSource() {
+        XCTAssertEqual(CatchlightFont.headingWidth, HeadingAxes.width)
+        XCTAssertEqual(CatchlightFont.headingWeight, HeadingAxes.weight)
+        XCTAssertEqual(HeadingAxes.weightTag, 0x77676874)
+        XCTAssertEqual(HeadingAxes.widthTag, 0x77647468)
+    }
+
+    func testHongKongChineseUsesPingFangHK() {
+        XCTAssertEqual(CatchlightFont.displayFallback(for: "zh-Hant-HK"), "PingFangHK-Medium")
+        XCTAssertEqual(CatchlightFont.displayFallback(for: "zh-Hant"), "PingFangTC-Medium")
+        XCTAssertEqual(CatchlightFont.displayFallback(for: "zh-Hans"), "PingFangSC-Medium")
+    }
+
+    private func width(of view: some View) -> CGFloat {
+        UIHostingController(rootView: view.fixedSize()).sizeThatFits(in: CGSize(width: 2000, height: 400)).width
+    }
+
+    /// The bold in "the **ONLY** key" is Markdown in the string. It must still draw bold
+    /// in the system body font.
+    func testMarkdownEmphasisStillDrawsBold() {
+        let emphasised = width(of: EmphasisText("a **ONLY** b", .light, size: 16, relativeTo: .body))
+        let flat = width(of: Text("a ONLY b").ckBody(.light, size: 16, relativeTo: .body))
+        XCTAssertGreaterThan(emphasised, flat + 2, "the emphasised word did not get heavier: \(emphasised) against \(flat)")
+        let none = width(of: EmphasisText("a ONLY b", .light, size: 16, relativeTo: .body))
+        XCTAssertEqual(none, flat, accuracy: 0.5, "text without emphasis should match plain text")
+    }
+
+    // MARK: Multi-word headings
+
+    private func catalogTitle(_ language: String) -> String {
+        guard let path = Bundle.main.path(forResource: language, ofType: "lproj"),
+              let bundle = Bundle(path: path) else { return "SYNC CONFLICTS" }
+        return bundle.localizedString(forKey: "SYNC CONFLICTS", value: "SYNC CONFLICTS", table: nil)
+    }
+
+    private func headingHeight(_ title: String, width: CGFloat, category: UIContentSizeCategory) -> CGFloat {
+        let host = UIHostingController(rootView: PageHeading(verbatim: title))
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: width, height: 800))
+        host.safeAreaRegions = []
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        host.traitOverrides.preferredContentSizeCategory = category
+        host.view.layoutIfNeeded()
+        return host.sizeThatFits(in: CGSize(width: width, height: 2000)).height
+    }
+
+    /// The scale the widest line needs to fit `width`: it must stay above the floor, so
+    /// nothing is cut with an ellipsis.
+    private func neededScale(_ title: String, width: CGFloat, category: UIContentSizeCategory) -> CGFloat {
+        let traits = UITraitCollection(preferredContentSizeCategory: category)
+        let font = CatchlightFont.uiDisplay(size: 24, relativeTo: .title3, compatibleWith: traits)
+        let lines = (PageHeading.twoLines(title) ?? title).components(separatedBy: "\n")
+        let widest = lines.map { ($0 as NSString).size(withAttributes: [.font: font, .kern: CatchlightLayout.pageHeadingKerning]).width }.max() ?? 0
+        // One line fits when it is no wider than the space. Otherwise it scales.
+        return min(1, (width - CatchlightLayout.pageHeadingKerningComp) / widest)
+    }
+
+    func testMultiWordHeadings_wrapBetweenWords_neverInsideOne_andNeverTruncate() {
+        let available: CGFloat = 402 - 2 * 56   // the Conflict header's width with the close-button slots
+        for language in ["en", "it", "es", "fr"] {
+            let title = catalogTitle(language)
+            XCTAssertTrue(title.contains(" "), "\(language): \(title)")
+            for category in [UIContentSizeCategory.large, .accessibilityExtraExtraExtraLarge] {
+                let height = headingHeight(title, width: available, category: category)
+                let traits = UITraitCollection(preferredContentSizeCategory: category)
+                let line = CatchlightFont.uiDisplay(size: 24, relativeTo: .title3, compatibleWith: traits).lineHeight
+                XCTAssertLessThanOrEqual(height, line * 2.2, "\(language) \(category.rawValue): \(title) is \(height)pt tall, more than two lines")
+                XCTAssertGreaterThan(neededScale(title, width: available, category: category), 0.3,
+                                     "\(language) \(category.rawValue): \(title) would hit the scale floor and truncate")
+            }
+        }
+    }
+
+    func testSplit_isAtAWordBoundary_andBalanced() {
+        XCTAssertEqual(PageHeading.twoLines("SHOT LIST"), "SHOT\nLIST")
+        XCTAssertEqual(PageHeading.twoLines("SYNC CONFLICTS"), "SYNC\nCONFLICTS")
+        XCTAssertEqual(PageHeading.twoLines("CONFLITTI DI SINCRONIZZAZIONE"), "CONFLITTI DI\nSINCRONIZZAZIONE")
+        XCTAssertNil(PageHeading.twoLines("SETTINGS"))
     }
 }

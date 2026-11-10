@@ -49,7 +49,7 @@ struct TakeLabelLane: View {
         case .systemText(let text, let colour):
             Text(text)
                 // Matches the reminder Time-note scale (system font 11pt medium).
-                .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                .ckBody(.medium, size: 11, relativeTo: .caption)
                 .foregroundStyle(colour)
                 .lineLimit(1)
                 .fixedSize()                       // lay out at natural size, THEN rotate

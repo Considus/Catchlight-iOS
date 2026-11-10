@@ -47,7 +47,7 @@ struct PhraseEntryGrid: View {
             ForEach(0..<12, id: \.self) { index in
                 HStack(spacing: 5) {
                     Text("\(index + 1)")
-                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                        .ckBody(.regular, size: 12, relativeTo: .caption)
                         .foregroundStyle(Color.ckTextSecondary)
                         // V8: the field's own label now says the position, so the
                         // loose visible number is noise to assistive technology.

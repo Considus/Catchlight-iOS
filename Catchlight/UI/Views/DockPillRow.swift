@@ -37,7 +37,7 @@ struct DockPill: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                .ckBody(.medium, size: 15, relativeTo: .body)
                 .lineLimit(dynamicSize > .large ? 2 : 1)
                 .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)
                 .padding(.horizontal, 10)

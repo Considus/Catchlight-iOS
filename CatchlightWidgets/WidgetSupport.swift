@@ -87,37 +87,61 @@ enum WidgetPalette {
 // MARK: - Brand fonts (mirrored from CatchlightFont)
 //
 // Widget chrome is UI text in the system font. The display text is Archivo set
-// expanded, bundled into the extension (project.yml widget target + UIAppFonts)
-// and set through `kCTFontVariationAttribute` exactly as `CatchlightFont.archivo`
-// does. The weight and width here match `CatchlightFont.headingWeight` and
-// `headingWidth`. Falls back to the system font when Archivo is not registered.
+// expanded, bundled into the extension (project.yml widget target + UIAppFonts) and
+// set through `kCTFontVariationAttribute` exactly as `CatchlightFont.archivo` does,
+// with the weight and width from `HeadingAxes`, the file the app shares. Falls back to
+// the system font when Archivo is not registered.
+//
+// The UI font is built from the view's own Dynamic Type size, so it grows when the
+// text size changes.
+
+private struct WidgetUIFontModifier: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let size: CGFloat
+    let weight: Font.Weight
+
+    func body(content: Content) -> some View {
+        let category: UIContentSizeCategory
+        switch dynamicTypeSize {
+        case .xSmall: category = .extraSmall
+        case .small: category = .small
+        case .medium: category = .medium
+        case .large: category = .large
+        case .xLarge: category = .extraLarge
+        case .xxLarge: category = .extraExtraLarge
+        case .xxxLarge: category = .extraExtraExtraLarge
+        case .accessibility1: category = .accessibilityMedium
+        case .accessibility2: category = .accessibilityLarge
+        case .accessibility3: category = .accessibilityExtraLarge
+        case .accessibility4: category = .accessibilityExtraExtraLarge
+        case .accessibility5: category = .accessibilityExtraExtraExtraLarge
+        @unknown default: category = .large
+        }
+        let points = UIFontMetrics(forTextStyle: .body)
+            .scaledValue(for: size, compatibleWith: UITraitCollection(preferredContentSizeCategory: category))
+        return content.font(.system(size: points, weight: weight))
+    }
+}
+
+extension View {
+    /// Widget interface text: the system font, scaling live with Dynamic Type.
+    func widgetUI(_ size: CGFloat, weight: Font.Weight = .regular) -> some View {
+        modifier(WidgetUIFontModifier(size: size, weight: weight))
+    }
+
+    /// Display face: Archivo expanded at a fixed size (mirrors `CatchlightFont` display).
+    func widgetDisplay(_ size: CGFloat) -> some View {
+        font(WidgetFont.display(size))
+    }
+}
 
 enum WidgetFont {
-    static func ui(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        // Audit 2026-08, DT8: scale with Dynamic Type (relative to body) — the
-        // home-screen families used `fixedSize` while the accessory families
-        // correctly used text styles.
-        let base = UIFont.systemFont(ofSize: size, weight: uiWeight(weight))
-        return Font(UIFontMetrics(forTextStyle: .body).scaledFont(for: base))
-    }
-
-    private static func uiWeight(_ weight: Font.Weight) -> UIFont.Weight {
-        switch weight {
-        case .light: return .light
-        case .medium: return .medium
-        case .semibold: return .semibold
-        case .bold: return .bold
-        default: return .regular
-        }
-    }
-
-    // Display face — Archivo expanded (mirrors `CatchlightFont.displayFixed`).
-    // The onboarding hero face; used for the medium widgets' hero prompt.
     static func display(_ size: CGFloat) -> Font {
         guard UIFont(name: "Archivo-SemiBold", size: size) != nil else {
             return .system(size: size, weight: .medium)
         }
-        let variation: [Int: CGFloat] = [0x77676874: 500, 0x77647468: 112]   // 'wght', 'wdth'
+        let variation: [Int: CGFloat] = [HeadingAxes.weightTag: HeadingAxes.weight,
+                                         HeadingAxes.widthTag: HeadingAxes.width]
         let descriptor = UIFontDescriptor(fontAttributes: [
             .name: "Archivo-SemiBold",
             .size: size,
@@ -287,7 +311,7 @@ struct LauncherView: View {
             VStack(spacing: 12) {
                 WidgetGlyphMark(asset: surface.glyphAsset, height: 52, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction)
                 Text(surface.title)
-                    .font(WidgetFont.ui(15, weight: .medium))
+                    .widgetUI(15, weight: .medium)
                     .foregroundStyle(WidgetPalette.textPrimary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -309,7 +333,7 @@ struct CardView: View {
             // 24pt (owner 2026-06-30, −4 from the hero's 28); single line, never wraps
             // (minimumScaleFactor shrinks it if a longer prompt would overflow).
             Text(surface.heroPrompt)
-                .font(WidgetFont.display(24))
+                .widgetDisplay(24)
                 .foregroundStyle(WidgetPalette.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)

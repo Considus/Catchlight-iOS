@@ -29,14 +29,14 @@ struct LockView: View {
                 // Match the onboarding mark→hero rhythm exactly (owner 2026-06-29).
                 Spacer().frame(height: CatchlightLayout.introHeroTopGap)
                 Text("Catchlight is locked")
-                    .font(CatchlightFont.displayFixed(size: 28))
+                    .ckDisplay(size: 28, relativeTo: nil)
                     .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 Text(message)
-                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                    .ckBody(.light, size: 16, relativeTo: .body)
                     // Always grey, matching the onboarding subtext (owner 2026-06-29) —
                     // the error is carried by the message text + the "Try Again" button.
                     .foregroundStyle(Color.ckTextSecondary)

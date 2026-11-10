@@ -342,8 +342,10 @@ targets:
       # provider, which must live solely in the app target.
       - path: Catchlight/Intents/NewTakeIntent.swift
       - path: Catchlight/Intents/NewObieIntent.swift
+      # The heading weight and width, one file shared with the app so they cannot differ.
+      - path: Catchlight/UI/Theme/HeadingAxes.swift
       # Bundle the brand fonts into the extension so the widget's display text can use Archivo
-      # (the same TTF as the app; registered via UIAppFonts below). Resources only.
+      # (the same TTF as the app, registered via UIAppFonts below). Resources only.
       - path: Catchlight/Resources/Fonts
         buildPhase: resources
     info:
@@ -398,6 +400,8 @@ targets:
       - path: Catchlight/UI/Theme/CatchlightTheme.swift
       # The Scene palettes the theme reads, generated from design/tokens.json.
       - path: Catchlight/UI/Theme/SceneTokens.generated.swift
+      # The heading weight and width the theme reads.
+      - path: Catchlight/UI/Theme/HeadingAxes.swift
       # The app group identifier, where the theme reads the chosen Scene.
       - path: Catchlight/AppGroup.swift
     info:

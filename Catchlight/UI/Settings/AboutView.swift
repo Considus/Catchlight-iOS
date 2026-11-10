@@ -53,15 +53,13 @@ struct AboutView: View {
     /// hero (`IntroBrandMark`). Not that exact view: its `deviceTopInset + 114` offset
     /// is tuned for the full-screen flow, whereas this sits inside a sheet's scroll.
     private var brandMark: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: CatchlightWordmark.iconGap) {
             Image("catchlight-icon")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 72, height: 72)
                 .accessibilityHidden(true)
             CatchlightWordmark()
-                .frame(height: 44)
-                .accessibilityLabel("Catchlight")
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.top, 6)
@@ -72,7 +70,7 @@ struct AboutView: View {
     private var taglineBlock: some View {
         VStack(spacing: 6) {
             Text("Privacy-first notes and reminders")
-                .font(CatchlightFont.displayFixed(size: 28))
+                .ckDisplay(size: 28, relativeTo: nil)
                 .lineSpacing(CatchlightFont.tightLeading(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
@@ -81,7 +79,7 @@ struct AboutView: View {
             // no content or personal data), so it can be dropped into a support
             // email without retyping. Long-press surfaces the standard Copy menu.
             Text(Self.versionString)
-                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                .ckBody(.regular, size: 14, relativeTo: .subheadline)
                 .foregroundStyle(Color.ckTextSecondary)
                 .contextMenu {
                     Button {
@@ -106,17 +104,17 @@ struct AboutView: View {
     private var licences: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Open Source Licences")
-                .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .subheadline))
+                .ckBody(.medium, size: 15, relativeTo: .subheadline)
                 .foregroundStyle(Color.ckTextSecondary)
                 .textCase(.uppercase)
             // The Package.swift dependency set is empty — Catchlight ships with
             // only Apple system frameworks. We state that honestly here so the
             // section never lies about what's in the binary.
             Text("Catchlight uses only Apple system frameworks (CryptoKit, LocalAuthentication, Security, SQLite3). No third-party libraries are bundled.")
-                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                .ckBody(.regular, size: 14, relativeTo: .subheadline)
                 .foregroundStyle(Color.ckTextPrimary)
             Text("The BIP-39 English wordlist is sourced from the Trezor project and bundled under the MIT licence. See Resources/bip39-english.txt.")
-                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                .ckBody(.regular, size: 13, relativeTo: .footnote)
                 .foregroundStyle(Color.ckTextSecondary)
         }
         .padding(.vertical, 16)
@@ -158,7 +156,7 @@ struct AboutView: View {
             Link(destination: destination) {
                 HStack(spacing: 12) {
                     Text(title)
-                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                        .ckBody(.regular, size: 15, relativeTo: .subheadline)
                         .foregroundStyle(Color.ckTextPrimary)
                     Spacer()
                     Image(systemName: "arrow.up.right")
@@ -186,7 +184,7 @@ struct AboutView: View {
 
     private var madeBy: some View {
         Text("Made by Considus")
-            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+            .ckBody(.regular, size: 13, relativeTo: .footnote)
             .foregroundStyle(Color.ckTextSecondary)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.top, 8)

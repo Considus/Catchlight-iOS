@@ -42,7 +42,7 @@ struct PaywallView: View {
     // Composition per HiFi v1.7 §12 (owner 2026-06-12, internal v1.11.2–.4):
     // everything centred except the terms block (matching the onboarding
     // screens); hero's first line on the standard heading line (top 26);
-    // the eyebrow splits the hero↔values space equally; the Archivo
+    // the eyebrow splits the hero↔values space equally. The Archivo
     // trial/price line bisects the values↔auto-renews space (equal spacers);
     // CTA = the dock-geometry pill pinned at the dock's resting position.
     var body: some View {
@@ -104,7 +104,7 @@ struct PaywallView: View {
         // Owner-chosen conversion heading (2026-06-21): leads with the free trial
         // and the core privacy promise. Three clauses, one per line, for rhythm.
         Text("Start free,\nkeep your thoughts,\nprivately.")
-            .font(CatchlightFont.displayFixed(size: 38))
+            .ckDisplay(size: 38, relativeTo: nil)
             .lineSpacing(CatchlightFont.tightLeading(size: 38))
             .foregroundStyle(Color.ckTextPrimary)
             .multilineTextAlignment(.center)
@@ -116,7 +116,7 @@ struct PaywallView: View {
     /// (owner 2026-06-12, HiFi v1.11.4).
     private var eyebrow: some View {
         Text("Catchlight Annual")
-            .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .footnote))
+            .ckBody(.medium, size: 14, relativeTo: .footnote)
             .tracking(2)
             .textCase(.uppercase)
             .foregroundStyle(Color.ckTextObie)
@@ -134,7 +134,7 @@ struct PaywallView: View {
 
     private func valueRow(_ text: LocalizedStringKey) -> some View {
         Text(text)
-            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+            .ckBody(.regular, size: 17, relativeTo: .body)
             .foregroundStyle(Color.ckTextPrimary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -145,7 +145,7 @@ struct PaywallView: View {
     /// values↔auto-renews space via the equal Spacers in `body`.
     private var pricingLine: some View {
         Text(pricingText)
-            .font(CatchlightFont.display(size: 24, relativeTo: .title3))
+            .ckDisplay(size: 24, relativeTo: .title3)
             .lineSpacing(CatchlightFont.tightLeading(size: 24))
             .foregroundStyle(Color.ckTextPrimary)
             .multilineTextAlignment(.center)
@@ -172,7 +172,7 @@ struct PaywallView: View {
 
     private var renewalCopy: some View {
         Text("Auto-renews each year. Cancel anytime in your App Store account.")
-            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+            .ckBody(.regular, size: 13, relativeTo: .footnote)
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -202,7 +202,7 @@ struct PaywallView: View {
                         .tint(Color.ckOnAccent)
                 } else {
                     Text(ctaText)
-                        .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
+                        .ckBody(.medium, size: 16, relativeTo: .body)
                         .lineLimit(dynamicSize > .large ? 2 : 1)
                         .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)
                         .multilineTextAlignment(.center)
@@ -240,7 +240,7 @@ struct PaywallView: View {
         VStack(spacing: 12) {
             if let error = manager.lastError {
                 Text(error)
-                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                    .ckBody(.regular, size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.ckRuby)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
@@ -268,7 +268,7 @@ struct PaywallView: View {
                 .contentShape(Rectangle().inset(by: -12))
                 .accessibilityIdentifier("paywall-redeem")
             }
-            .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+            .ckBody(.regular, size: 15, relativeTo: .subheadline)
             .foregroundStyle(Color.ckTextObie)
             .disabled(manager.isWorking)
         }
@@ -291,7 +291,7 @@ struct PaywallView: View {
     private var legalBlock: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Your subscription auto-renews each year unless cancelled at least 24 hours before the period ends. Manage or cancel anytime in your App Store account. Catchlight is end-to-end encrypted. Your Takes are never readable by us.")
-                .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .footnote))
+                .ckBody(.regular, size: 12, relativeTo: .footnote)
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -315,7 +315,7 @@ struct PaywallView: View {
                         .contentShape(Rectangle().inset(by: -14))
                 }
             }
-            .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .footnote))
+            .ckBody(.regular, size: 12, relativeTo: .footnote)
             .foregroundStyle(Color.ckTextObie)
         }
     }

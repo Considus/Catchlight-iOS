@@ -29,7 +29,7 @@ struct SettingsRow<Accessory: View>: View {
                     .accessibilityHidden(true)
             }
             Text(label)
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                .ckBody(.regular, size: 17, relativeTo: .body)
                 .foregroundStyle(Color.ckTextPrimary)
             Spacer(minLength: 8)
             accessory()
@@ -89,7 +89,7 @@ struct SettingsDetailLabel: View {
     let text: String
     var body: some View {
         Text(text)
-            .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+            .ckBody(.regular, size: 15, relativeTo: .subheadline)
             .foregroundStyle(Color.ckTextSecondary)
             // Truncate trailing accessory values ("Coming soon", "1.0.0", "System")
             // at the tail at large Dynamic Type sizes rather than wrapping inside

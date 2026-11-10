@@ -87,8 +87,7 @@ struct ShotListView: View {
                 // caps) — owner 2026-06-19: named as an Angle, sibling to PLANNER ANGLE.
                 // CENTRED at 24pt (owner 2026-06-29) to match the timeline page heading;
                 // full-width frame centres it on screen, × floated at the right edge.
-                Text("SHOT LIST")
-                    .pageHeadingStyle()
+                PageHeading("SHOT LIST")
                     .accessibilityAddTraits(.isHeader)
                     // Reserve the close button's slot on both sides, as the Storyboard does,
                     // so a scaled-up heading never runs into the ×.
@@ -167,7 +166,7 @@ struct ShotListView: View {
             // fix 10): they never were here, and there is nothing for them to
             // collide with — prose has no tap target of its own.
             Text(Self.linkedText(textBlock.text, base: Color.ckTextSecondary))
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                .ckBody(.regular, size: 17, relativeTo: .body)
                 .foregroundStyle(Color.ckTextSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, rowLeadingInset)
@@ -257,7 +256,7 @@ struct ShotListView: View {
             Text(item.text.isEmpty ? AttributedString(" ")
                  : Self.linkedText(item.text,
                                    base: item.isComplete ? Color.ckTextComplete : Color.ckTextPrimary))
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .title3))
+                .ckBody(.regular, size: 17, relativeTo: .title3)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .lineLimit(1)
                 .accessibilityHidden(true)

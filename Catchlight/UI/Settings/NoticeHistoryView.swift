@@ -27,12 +27,12 @@ struct NoticeHistoryView: View {
                             .foregroundStyle(Color.ckTextSecondary)
                             .accessibilityHidden(true)
                         Text("No notices yet")
-                            .font(CatchlightFont.display(size: 28, relativeTo: .title2))
+                            .ckDisplay(size: 28, relativeTo: .title2)
                             .lineSpacing(CatchlightFont.tightLeading(size: 28))
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                         Text("Sync, storage and conflict notices will appear here.")
-                            .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                            .ckBody(.regular, size: 15, relativeTo: .subheadline)
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
@@ -55,10 +55,10 @@ struct NoticeHistoryView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     // The reference code is for the export only.
                                     Text(Notice.displayText(of: entry.message))
-                                        .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
+                                        .ckBody(.regular, size: 15, relativeTo: .body)
                                         .foregroundStyle(Color.ckTextPrimary)
                                     Text(entry.timestamp, format: .relative(presentation: .named))
-                                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                                        .ckBody(.regular, size: 12, relativeTo: .caption)
                                         .monospacedDigit()   // a time: tabular digits
                                         .foregroundStyle(Color.ckTextSecondary)
                                 }

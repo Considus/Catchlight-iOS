@@ -35,14 +35,14 @@ struct SecondDeviceRestoreView: View {
                     warningCard
 
                     Text("Enter your Privacy phrase")
-                        .font(CatchlightFont.display(size: 28, relativeTo: .title2))
+                        .ckDisplay(size: 28, relativeTo: .title2)
                         .lineSpacing(CatchlightFont.tightLeading(size: 28))
                         .foregroundStyle(Color.ckTextPrimary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .accessibilityAddTraits(.isHeader)
 
                     Text("The 12 words from your other device, in order.")
-                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                        .ckBody(.light, size: 16, relativeTo: .body)
                         .foregroundStyle(Color.ckTextSecondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -77,7 +77,7 @@ struct SecondDeviceRestoreView: View {
     /// already warned once). Ruby-toned, matching the app's "state precedence" accent.
     private var warningCard: some View {
         Text("This replaces the account on this device. Takes stored only here will be removed and can't be recovered. If you haven't already, close this and use Export Takes (Markdown) to keep a copy first.")
-            .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .footnote))
+            .ckBody(.regular, size: 14, relativeTo: .footnote)
             .foregroundStyle(Color.ckRuby)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -95,7 +95,7 @@ struct SecondDeviceRestoreView: View {
         else if ready { message = String(localized: "Ready to restore."); isError = false }
         else { message = String(localized: "\(filledCount) of 12 words"); isError = false }
         return Text(message)
-            .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .caption))
+            .ckBody(.regular, size: 14, relativeTo: .caption)
             .foregroundStyle(isError ? Color.ckRuby : Color.ckTextSecondary)
             .frame(maxWidth: .infinity, alignment: .center)
             .fixedSize(horizontal: false, vertical: true)
@@ -104,7 +104,7 @@ struct SecondDeviceRestoreView: View {
     private var restoreButton: some View {
         Button(action: submit) {
             Text("Restore on this device")
-                .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                .ckBody(.medium, size: 15, relativeTo: .body)
                 .foregroundStyle(Color.ckOnAccent)
                 .frame(maxWidth: .infinity, minHeight: 50)
                 .background(Capsule().fill(Color.ckEmber))

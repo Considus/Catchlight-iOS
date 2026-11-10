@@ -25,6 +25,18 @@ struct CatchlightWordmark: View {
     /// Width over height of the mark.
     static let aspectRatio: CGFloat = boxWidth / boxHeight
 
+    /// The size of the mark everywhere it is shown: onboarding, About, the privacy
+    /// overlay and the launch screen (whose storyboard repeats these two numbers).
+    static let width: CGFloat = 158
+    static let height: CGFloat = width / aspectRatio
+    /// The height of the "h", the unit of clear space (marks-and-files.md).
+    static let hHeight: CGFloat = -boxTop / boxWidth * width
+    /// Gap from the icon above to the wordmark: at least the "h" height.
+    static let iconGap: CGFloat = 24
+    /// The icon over the wordmark takes this much height in the opening chapter, as it
+    /// did with the larger mark, so the hero below keeps its place.
+    static let lockupHeight: CGFloat = 72 + 16 + 44
+
     var body: some View {
         Image("catchlight-wordmark-letters")
             .resizable()
@@ -42,5 +54,9 @@ struct CatchlightWordmark: View {
                 }
             }
             .aspectRatio(Self.aspectRatio, contentMode: .fit)
+            .frame(width: Self.width)
+            // One element with one label: the letters and the dot read once.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Catchlight")
     }
 }

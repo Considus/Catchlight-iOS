@@ -75,7 +75,7 @@ struct SplitView: View {
                             opticalScale: surface.glyphOpticalScale,
                             inkOffsetFraction: surface.glyphInkOffsetFraction)
             Text(surface.title)
-                .font(WidgetFont.ui(14, weight: .medium))
+                .widgetUI(14, weight: .medium)
                 .foregroundStyle(WidgetPalette.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
