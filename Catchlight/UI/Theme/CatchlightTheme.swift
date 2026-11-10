@@ -523,12 +523,21 @@ private struct FlatToggleInput: UIViewRepresentable {
 
         @objc func tapped() { if isEnabled { onTap() } }
 
+        /// Where the finger came down. A pan's own translation starts only once it has begun,
+        /// about 10pt into the movement, so it is not the net travel of the drag.
+        private var touchDownX: CGFloat = 0
+
         @objc func panned(_ pan: UIPanGestureRecognizer) {
             guard pan.state == .ended, isEnabled else { return }
-            switch FlatToggleGesture.outcome(forTravel: pan.translation(in: pan.view).x) {
+            switch FlatToggleGesture.outcome(forTravel: pan.location(in: pan.view).x - touchDownX) {
             case .swipe(let toTheRight): onSwipe(toTheRight)
             case .flip: onTap()
             }
+        }
+
+        func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            touchDownX = touch.location(in: recognizer.view).x
+            return true
         }
 
         /// Begin only for a mostly horizontal movement.
