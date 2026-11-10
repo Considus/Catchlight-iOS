@@ -14,7 +14,7 @@ import UIKit
 import CatchlightCore
 
 /// The fixed gap below the brand mark at which EVERY onboarding hero line (the
-/// Cormorant italic heading or, on the splash, the tagline) sits — so they land at
+/// Archivo heading or, on the splash, the tagline) sits — so they land at
 /// the same Y on every screen the brand mark appears: splash · Welcome · Storage ·
 /// Local warning · Reveal · Confirm · Complete (owner 2026-06-16). Without this the
 /// flexible spacers pushed each heading down by an amount that depended on the
@@ -808,8 +808,8 @@ private struct RevealStep: View {
                         .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
                         .foregroundStyle(Color.ckTextSecondary)
                     Text(word)
-                        // The 12 words use the subtext font, not Cormorant (owner
-                        // 2026-06-16): DS §2.1 reserves Cormorant for display moments,
+                        // The 12 words use the subtext font, not the display face (owner
+                        // 2026-06-16): DS §2.1 reserves the display face for display moments,
                         // never functional content; sans is also clearer for a phrase
                         // you must transcribe exactly.
                         .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
@@ -883,7 +883,7 @@ private struct ConfirmStep: View {
                                     .padding(.horizontal, 24)
                                     // Nudge to the VISUAL centre of the wordmark→hero
                                     // gap: the geometric centre reads a touch high
-                                    // because the Cormorant hero sits low in its line
+                                    // because the hero sits low in its line
                                     // box (owner 2026-06-15).
                                     .offset(y: 16)
                                     .transition(.opacity)
@@ -1229,7 +1229,7 @@ private struct BasicsStep: View {
 
     var body: some View {
         // The shared intro layout (Welcome · Storage · Local warning · Complete): brand
-        // mark at its set position, the Cormorant hero at `introHeroTopGap`, body centred
+        // mark at its set position, the hero at `introHeroTopGap`, body centred
         // beneath it, pill in the dock. The first cut of this page was built on the bare
         // `StepScaffold` instead — left-aligned, flush to the top of the screen, with the
         // hoisted mark drawing straight over the body text (owner device screenshot

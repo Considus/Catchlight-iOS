@@ -662,7 +662,7 @@ struct DailiesView: View {
             // during the title change belongs OUTSIDE the `.id`/`.transition` view.
             ZStack {
                 Text(headingTitle)
-                    // Shared page-heading style (Cormorant ROMAN 24, kerned, centred —
+                    // Shared page-heading style (Archivo expanded 24, kerned, centred —
                     // §catalogue, includes the kerning-centring fix).
                     .pageHeadingStyle()
                     // Recede the title while editing in place; the mask stays opaque so

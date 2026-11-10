@@ -433,44 +433,29 @@ extension View {
 // MARK: - Typography
 
 enum CatchlightFont {
-    // Cormorant Garamond and DM Sans are bundled as variable TTFs under
-    // `Catchlight/Resources/Fonts/` and registered in `Info.plist` (UIAppFonts).
-    // Variable TTFs expose only their *default* instance's PostScript name to
-    // UIFont; the per-weight names (e.g. "DMSans-Light") don't resolve. We probe
-    // a candidate list per weight and use the first that registers — defence in
-    // depth against minor PostScript-name drift across font releases.
+    // Headings and display text are Archivo, set expanded. Body text is the system
+    // font, so it follows Dynamic Type natively. Archivo is bundled as one variable
+    // TTF, `Catchlight/Resources/Fonts/Archivo.ttf`, registered in `Info.plist`
+    // (UIAppFonts).
+    //
+    // Axes (read from the file's `fvar` table with fontTools):
+    //   wght  100 to 900, default 600
+    //   wdth   62 to 125, default 100
+    // Names (name table): family "Archivo", default instance PostScript name
+    // "Archivo-SemiBold". The named instances (ArchivoRoman-Regular and the rest) are
+    // all at wdth 100 and do not resolve through `UIFont(name:)`, so every heading
+    // starts from the default instance and sets both axes through
+    // `kCTFontVariationAttribute`.
+    private static let archivoCandidates = ["Archivo-SemiBold", "Archivo"]
 
-    // Actual PostScript names (probed from bundled variable TTFs via name table ID 6):
-    //   CormorantGaramond-Italic[wght].ttf  → CormorantGaramond-LightItalic
-    //   CormorantGaramond[wght].ttf         → CormorantGaramond-Light
-    //   DMSans[opsz,wght].ttf               → DMSans-9ptRegular (default instance;
-    //                                          variable font also registers named
-    //                                          instances such as DMSans-Regular)
-    private static let displayCandidates = [
-        "CormorantGaramond-LightItalic",   // confirmed PS name — matches first
-        "CormorantGaramond-Italic",
-        "CormorantGaramond-Light",
-        "CormorantGaramond"
-    ]
-    /// ROMAN (upright) Cormorant Garamond — the same bundled face as the italic
-    /// candidates, but the non-italic cut. The `display*` candidates lead with
-    /// `CormorantGaramond-LightItalic`, so every "display" use renders italic;
-    /// these lead with the roman PostScript names so headings that must be
-    /// upright (the DAILIES page heading — section 3) resolve correctly. The
-    /// fallback is the system serif WITHOUT `.italic()`.
-    private static let displayRomanCandidates = [
-        "CormorantGaramond-Light",   // confirmed PS name of CormorantGaramond[wght].ttf
-        "CormorantGaramond"
-    ]
-    private static let uiLightCandidates = [
-        "DMSans-Light", "DMSans18pt-Light", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"
-    ]
-    private static let uiRegularCandidates = [
-        "DMSans-Regular", "DMSans18pt-Regular", "DMSans-9ptRegular", "DMSans"
-    ]
-    private static let uiMediumCandidates = [
-        "DMSans-Medium", "DMSans18pt-Medium", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"
-    ]
+    /// Heading weight, inside the 500 to 600 the design allows.
+    static let headingWeight: CGFloat = 500
+    /// Heading width, inside the 112 to 125 the design allows.
+    static let headingWidth: CGFloat = 112
+
+    /// The four-character axis tags `kCTFontVariationAttribute` is keyed by.
+    private static let weightAxisTag = 0x77676874   // 'wght'
+    private static let widthAxisTag = 0x77647468    // 'wdth'
 
     /// Resolution cache — `firstAvailable` is called for every `Text` on every
     /// render, and `UIFont(name:)` probing is not free. The installed font set
@@ -488,10 +473,24 @@ enum CatchlightFont {
         return resolved
     }
 
-    /// The face the display (Cormorant) text falls back to for characters it has no
-    /// glyph for, by app language. Cormorant and DM Sans cover Latin scripts only, so
-    /// iOS fills Japanese, Korean, Chinese and Thai from its own fonts. Its default is a
-    /// sans, which suits the DM Sans text but loses the serif of the display face.
+    /// Archivo at `size`, with the weight and width axes set. Falls back to the
+    /// system font at medium weight when the bundled face is not registered.
+    static func archivo(size: CGFloat, weight: CGFloat, width: CGFloat) -> UIFont {
+        guard let name = firstAvailable(archivoCandidates) else {
+            return UIFont.systemFont(ofSize: size, weight: .medium)
+        }
+        let variation: [Int: CGFloat] = [weightAxisTag: weight, widthAxisTag: width]
+        let descriptor = UIFontDescriptor(fontAttributes: [
+            .name: name,
+            .size: size,
+            UIFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String): variation
+        ])
+        return UIFont(descriptor: descriptor, size: size)
+    }
+
+    /// The face the display text falls back to for characters Archivo has no glyph
+    /// for, by app language. Archivo covers Latin scripts only, so iOS fills
+    /// Japanese, Korean, Chinese and Thai from its own fonts. Its default is a sans.
     /// Japanese has an iOS serif to pair with it, Hiragino Mincho; Korean, Chinese and
     /// Thai have none on iOS, so they keep the system sans (Apple SD Gothic Neo, PingFang,
     /// Thonburi), which needs no change (owner 2026-10-06).
@@ -512,16 +511,6 @@ enum CatchlightFont {
         return UIFont(descriptor: descriptor, size: font.pointSize)
     }
 
-    /// A display face as a SwiftUI font with the language's fallback, scaled for
-    /// Dynamic Type like `.custom(_:size:relativeTo:)`. Nil when there is no fallback,
-    /// so callers keep the plain custom font.
-    private static func cascaded(_ name: String, size: CGFloat, relativeTo style: Font.TextStyle?) -> Font? {
-        guard displayFallbackName != nil, let base = UIFont(name: name, size: size) else { return nil }
-        let font = withDisplayFallback(base)
-        guard let style else { return Font(font) }
-        return Font(UIFontMetrics(forTextStyle: uiTextStyle(style)).scaledFont(for: font))
-    }
-
     private static func uiTextStyle(_ style: Font.TextStyle) -> UIFont.TextStyle {
         switch style {
         case .largeTitle: return .largeTitle
@@ -538,91 +527,69 @@ enum CatchlightFont {
         }
     }
 
-    /// Display / Take text — Cormorant Garamond Italic, scaling with Dynamic
-    /// Type. Falls back to the system serif (italic) when the font is not bundled.
-    /// Use for USER CONTENT rendered in the display face (e.g. Take body text on
-    /// rows / edit sheet) — content must respect the user's text size preference.
-    static func display(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
-        if let name = firstAvailable(displayCandidates) {
-            return cascaded(name, size: size, relativeTo: style) ?? .custom(name, size: size, relativeTo: style)
-        }
-        return .system(style, design: .serif).italic()
-    }
-
-    /// Display ROMAN (upright) — Cormorant Garamond Light, scaling with Dynamic
-    /// Type. Use for display-face text that must NOT be italic: the pinned
-    /// DAILIES / SEQUENCE / SEARCH page heading (section 3). Take BODY text stays
-    /// italic via `display(size:)` — the display face is intentionally italic for
-    /// Take content. Falls back to the system serif (upright, no `.italic()`).
-    static func displayRoman(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
-        if let name = firstAvailable(displayRomanCandidates) {
-            return cascaded(name, size: size, relativeTo: style) ?? .custom(name, size: size, relativeTo: style)
-        }
-        return .system(style, design: .serif)
-    }
-
-    /// Display / brand headings — Cormorant Garamond Italic at a FIXED point size
-    /// that does NOT respond to Dynamic Type. Use ONLY for brand display: the
-    /// wordmark, onboarding headings, the Obie title treatment, BIP-39 word chips.
-    /// Everything else (including Take user content rendered in the display face)
-    /// must use `display(size:relativeTo:)` so the user's text-size preference is
-    /// honoured.
-    static func displayFixed(size: CGFloat) -> Font {
-        if let name = firstAvailable(displayCandidates) {
-            return cascaded(name, size: size, relativeTo: nil) ?? .custom(name, fixedSize: size)
-        }
-        // System-serif fallback has no fixedSize counterpart; clamp via .system.
-        return .system(size: size, weight: .regular, design: .serif).italic()
-    }
-
-    /// UIKit counterpart of `display(size:)` for `UIViewRepresentable` text
-    /// surfaces (the block editor's `UITextView` rows). Scales with Dynamic Type
-    /// via `UIFontMetrics(.body)`. Falls back to the system serif italic when the
-    /// bundled face isn't present — matching `display`'s SwiftUI fallback.
-    static func uiDisplay(size: CGFloat) -> UIFont {
-        let base: UIFont
-        if let name = firstAvailable(displayCandidates), let custom = UIFont(name: name, size: size) {
-            base = withDisplayFallback(custom)
-        } else {
-            let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
-                .withDesign(.serif)?
-                .withSymbolicTraits(.traitItalic)
-            base = descriptor.map { UIFont(descriptor: $0, size: size) }
-                ?? UIFont.italicSystemFont(ofSize: size)
-        }
-        return UIFontMetrics(forTextStyle: .body).scaledFont(for: base)
-    }
-
-    /// UIKit DM Sans — the `ui()` counterpart for `UIViewRepresentable` text
-    /// surfaces (the block editor's `UITextView` rows). Take content is DM Sans,
-    /// never the display face (DS §2.2). Scales via UIFontMetrics(.body).
-    static func uiBody(size: CGFloat, weight: Font.Weight = .regular) -> UIFont {
-        let candidates: [String]
+    private static func uiWeight(_ weight: Font.Weight) -> UIFont.Weight {
         switch weight {
-        case .light: candidates = uiLightCandidates
-        case .medium, .semibold, .bold: candidates = uiMediumCandidates
-        default: candidates = uiRegularCandidates
+        case .ultraLight: return .ultraLight
+        case .thin: return .thin
+        case .light: return .light
+        case .medium: return .medium
+        case .semibold: return .semibold
+        case .bold: return .bold
+        case .heavy: return .heavy
+        case .black: return .black
+        default: return .regular
         }
-        let base = firstAvailable(candidates).flatMap { UIFont(name: $0, size: size) }
-            ?? UIFont.systemFont(ofSize: size)
-        return UIFontMetrics(forTextStyle: .body).scaledFont(for: base)
     }
 
-    /// Interface text — DM Sans, scaling with Dynamic Type. Falls back to the
-    /// system sans (rounded-neutral) when the font is not bundled.
+    /// Heading / display face as a UIFont: Archivo, expanded, upright. With a `style`
+    /// it scales with Dynamic Type like a custom font set `relativeTo:` that style;
+    /// with nil it stays at `size`. `traits` is for tests (a content size to scale for).
+    static func uiDisplay(size: CGFloat,
+                          relativeTo style: Font.TextStyle? = .body,
+                          compatibleWith traits: UITraitCollection? = nil) -> UIFont {
+        let base = withDisplayFallback(archivo(size: size, weight: headingWeight, width: headingWidth))
+        guard let style else { return base }
+        return UIFontMetrics(forTextStyle: uiTextStyle(style)).scaledFont(for: base, compatibleWith: traits)
+    }
+
+    /// Body face as a UIFont: the system font at `weight`, scaled with Dynamic Type
+    /// relative to `style`. For `UIViewRepresentable` text surfaces (the block
+    /// editor's `UITextView` rows), the keyboard bars and `ui(_:size:relativeTo:)`.
+    static func uiBody(size: CGFloat,
+                       weight: Font.Weight = .regular,
+                       relativeTo style: Font.TextStyle = .body,
+                       compatibleWith traits: UITraitCollection? = nil) -> UIFont {
+        let base = UIFont.systemFont(ofSize: size, weight: uiWeight(weight))
+        return UIFontMetrics(forTextStyle: uiTextStyle(style)).scaledFont(for: base, compatibleWith: traits)
+    }
+
+    /// Display / Take text, scaling with Dynamic Type. Headings only: Take content
+    /// is the body face. Dynamic Type applies the same way as a custom font set
+    /// `relativeTo:` the given style.
+    static func display(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
+        Font(uiDisplay(size: size, relativeTo: style))
+    }
+
+    /// Display upright, scaling with Dynamic Type: the pinned DAILIES / SEQUENCE /
+    /// SEARCH page heading. Archivo has no italic in use, so this is the same face as
+    /// `display(size:relativeTo:)`; the name stays so call sites read the same.
+    static func displayRoman(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
+        Font(uiDisplay(size: size, relativeTo: style))
+    }
+
+    /// Display / brand headings at a FIXED point size that does NOT respond to Dynamic
+    /// Type. Use ONLY for brand display: onboarding headings, the Obie title
+    /// treatment, BIP-39 word chips. Everything else must use
+    /// `display(size:relativeTo:)` so the user's text-size preference is honoured.
+    static func displayFixed(size: CGFloat) -> Font {
+        Font(uiDisplay(size: size, relativeTo: nil))
+    }
+
+    /// Interface text: the system font, scaling with Dynamic Type relative to `style`.
     static func ui(_ weight: Font.Weight = .regular,
                    size: CGFloat,
                    relativeTo style: Font.TextStyle = .body) -> Font {
-        let candidates: [String]
-        switch weight {
-        case .light: candidates = uiLightCandidates
-        case .medium, .semibold, .bold: candidates = uiMediumCandidates
-        default: candidates = uiRegularCandidates
-        }
-        if let name = firstAvailable(candidates) {
-            return .custom(name, size: size, relativeTo: style).weight(weight)
-        }
-        return .system(style, design: .default).weight(weight)
+        Font(uiBody(size: size, weight: weight, relativeTo: style))
     }
 }
 
@@ -726,7 +693,7 @@ enum CatchlightLayout {
 }
 
 extension View {
-    /// The one page-heading style — Cormorant Garamond ROMAN 24, kerned, centred,
+    /// The one page-heading style — Archivo expanded 24, kerned, centred,
     /// `ckTextPrimary`. Shared by every screen's heading so they can't drift (the
     /// catalogue documents this once). `.kerning` adds its spacing AFTER the last
     /// glyph too, so a plainly-centred kerned title sits ~half a kern left of true

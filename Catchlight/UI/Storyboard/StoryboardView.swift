@@ -291,7 +291,7 @@ struct StoryboardView: View {
     private var topChrome: some View {
         VStack(spacing: 0) {
             ZStack {
-                // Explicit view heading, in the DAILIES house style (Cormorant Roman,
+                // Explicit view heading, in the DAILIES house style (Archivo expanded,
                 // kerned caps) — owner 2026-06-19: name it as an Angle so the ∠ glyph,
                 // the heading, and the concept all read the same. CENTRED at 24pt
                 // (owner 2026-06-29) to match the timeline page heading; spans full

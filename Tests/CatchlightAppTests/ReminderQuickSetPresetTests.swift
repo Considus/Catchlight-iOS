@@ -87,8 +87,7 @@ final class ReminderQuickSetPresetTests: XCTestCase {
         XCTAssertEqual(ReminderPickerSheet.firstWeekday(language: nil, region: nil), 1)
     }
 
-    /// Japanese display text falls back to Hiragino Mincho, the iOS serif that pairs
-    /// with Cormorant; other languages keep the system fallback.
+    /// Japanese display text falls back to Hiragino Mincho, the iOS serif; other languages keep the system fallback.
     func testDisplayFallback_onlyJapaneseGetsASerif() {
         XCTAssertEqual(CatchlightFont.displayFallback(for: "ja"), "HiraMinProN-W3")
         XCTAssertNotNil(UIFont(name: "HiraMinProN-W3", size: 12), "the fallback must exist on iOS")

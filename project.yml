@@ -118,9 +118,7 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UIAppFonts:
-          - "CormorantGaramond[wght].ttf"
-          - "CormorantGaramond-Italic[wght].ttf"
-          - "DMSans[opsz,wght].ttf"
+          - "Archivo.ttf"
         # Launch screen = LaunchScreen.storyboard (owner 2026-06-15), replacing the
         # earlier UILaunchScreen dict + centred composite (its launch-splash.imageset
         # retired 2026-07-23, storyboard device-confirmed). A storyboard
@@ -344,8 +342,8 @@ targets:
       # provider, which must live solely in the app target.
       - path: Catchlight/Intents/NewTakeIntent.swift
       - path: Catchlight/Intents/NewObieIntent.swift
-      # Bundle the brand fonts into the extension so widget chrome can use DM Sans
-      # (the same TTFs as the app; registered via UIAppFonts below). Resources only.
+      # Bundle the brand fonts into the extension so the widget's display text can use Archivo
+      # (the same TTF as the app; registered via UIAppFonts below). Resources only.
       - path: Catchlight/Resources/Fonts
         buildPhase: resources
     info:
@@ -359,9 +357,7 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UIAppFonts:
-          - "CormorantGaramond[wght].ttf"
-          - "CormorantGaramond-Italic[wght].ttf"
-          - "DMSans[opsz,wght].ttf"
+          - "Archivo.ttf"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
@@ -404,13 +400,6 @@ targets:
       - path: Catchlight/UI/Theme/SceneTokens.generated.swift
       # The app group identifier, where the theme reads the chosen Scene.
       - path: Catchlight/AppGroup.swift
-      # DM Sans, which every `CatchlightFont.ui` call on the sheet asks for. Without the file
-      # and the `UIAppFonts` entry below, iOS quietly drew the sheet in the system face. Only
-      # DM Sans (and its licence): the sheet sets no Cormorant Garamond.
-      - path: Catchlight/Resources/Fonts/DMSans[opsz,wght].ttf
-        buildPhase: resources
-      - path: Catchlight/Resources/Fonts/OFL-DMSans.txt
-        buildPhase: resources
     info:
       # ⚠️ XcodeGen REWRITES this file from the properties below on every `generate`.
       # A hand-written CatchlightShare/Info.plist is silently replaced — that is not a
@@ -423,8 +412,6 @@ targets:
         # The name the SHARE SHEET shows. Without it iOS falls back to the executable
         # name and the row reads "CatchlightShare".
         CFBundleDisplayName: Catchlight
-        UIAppFonts:
-          - "DMSans[opsz,wght].ttf"
         # App Store validation requires an extension's version strings to MATCH the
         # app's; the widgets hit exactly this as an archive rejection on 2026-07-01,
         # and XcodeGen's defaults ("1.0"/"1") reintroduce it on every new target.

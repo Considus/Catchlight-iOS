@@ -84,51 +84,46 @@ enum WidgetPalette {
     })
 }
 
-// MARK: - Brand fonts (DM Sans, mirrored probe of CatchlightFont)
+// MARK: - Brand fonts (mirrored from CatchlightFont)
 //
-// The three brand TTFs are bundled into the extension (project.yml widget target
-// + UIAppFonts). Variable TTFs only expose their default-instance PostScript name
-// to UIFont, so — like `CatchlightFont` — we probe a candidate list and fall back
-// to the system font. Widget chrome is all UI text → DM Sans (Take content is
-// never the display face, DS §2.2).
+// Widget chrome is UI text in the system font. The display text is Archivo set
+// expanded, bundled into the extension (project.yml widget target + UIAppFonts)
+// and set through `kCTFontVariationAttribute` exactly as `CatchlightFont.archivo`
+// does. The weight and width here match `CatchlightFont.headingWeight` and
+// `headingWidth`. Falls back to the system font when Archivo is not registered.
 
 enum WidgetFont {
-    private static let lightCandidates = ["DMSans-Light", "DMSans18pt-Light", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"]
-    private static let regularCandidates = ["DMSans-Regular", "DMSans18pt-Regular", "DMSans-9ptRegular", "DMSans"]
-    private static let mediumCandidates = ["DMSans-Medium", "DMSans18pt-Medium", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"]
-
-    private static func firstAvailable(_ names: [String]) -> String? {
-        names.first { UIFont(name: $0, size: 12) != nil }
-    }
-
     static func ui(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        let candidates: [String]
-        switch weight {
-        case .light: candidates = lightCandidates
-        case .medium, .semibold, .bold: candidates = mediumCandidates
-        default: candidates = regularCandidates
-        }
         // Audit 2026-08, DT8: scale with Dynamic Type (relative to body) — the
         // home-screen families used `fixedSize` while the accessory families
         // correctly used text styles.
-        if let name = firstAvailable(candidates) {
-            return .custom(name, size: size)
-        }
-        return .system(size: size, weight: weight)
+        let base = UIFont.systemFont(ofSize: size, weight: uiWeight(weight))
+        return Font(UIFontMetrics(forTextStyle: .body).scaledFont(for: base))
     }
 
-    // Display face — Cormorant Garamond Italic (mirrors `CatchlightFont.displayFixed`).
-    // The onboarding hero face; used for the medium widgets' hero prompt.
-    private static let displayItalicCandidates = [
-        "CormorantGaramond-LightItalic", "CormorantGaramond-Italic",
-        "CormorantGaramond-Light", "CormorantGaramond"
-    ]
-
-    static func display(_ size: CGFloat) -> Font {
-        if let name = firstAvailable(displayItalicCandidates) {
-            return .custom(name, fixedSize: size)
+    private static func uiWeight(_ weight: Font.Weight) -> UIFont.Weight {
+        switch weight {
+        case .light: return .light
+        case .medium: return .medium
+        case .semibold: return .semibold
+        case .bold: return .bold
+        default: return .regular
         }
-        return .system(size: size, weight: .regular, design: .serif).italic()
+    }
+
+    // Display face — Archivo expanded (mirrors `CatchlightFont.displayFixed`).
+    // The onboarding hero face; used for the medium widgets' hero prompt.
+    static func display(_ size: CGFloat) -> Font {
+        guard UIFont(name: "Archivo-SemiBold", size: size) != nil else {
+            return .system(size: size, weight: .medium)
+        }
+        let variation: [Int: CGFloat] = [0x77676874: 500, 0x77647468: 112]   // 'wght', 'wdth'
+        let descriptor = UIFontDescriptor(fontAttributes: [
+            .name: "Archivo-SemiBold",
+            .size: size,
+            UIFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String): variation
+        ])
+        return Font(UIFont(descriptor: descriptor, size: size))
     }
 }
 
@@ -310,7 +305,7 @@ struct CardView: View {
             WidgetGlyphMark(asset: surface.glyphAsset, height: 36, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction)
                 .frame(width: 40, height: 40)
 
-            // The onboarding-hero voice + style (Cormorant italic, primary colour).
+            // The onboarding-hero voice + style (Archivo expanded, primary colour).
             // 24pt (owner 2026-06-30, −4 from the hero's 28); single line, never wraps
             // (minimumScaleFactor shrinks it if a longer prompt would overflow).
             Text(surface.heroPrompt)

@@ -222,8 +222,8 @@ struct SettingsView: View {
 
     /// The "Settings" heading as a scrolling list row (owner 2026-06-21) — clear
     /// background, no section chrome, so it reads as a title and scrolls away.
-    /// Styled as the Dailies page heading (owner 2026-06-29): Cormorant Garamond
-    /// ROMAN 24pt, kerned, CENTRED and upper-cased to match DAILIES/SEQUENCE/etc.
+    /// Styled as the Dailies page heading (owner 2026-06-29): Archivo
+    /// expanded 24pt, kerned, CENTRED and upper-cased to match DAILIES/SEQUENCE/etc.
     private var titleRow: some View {
         Text("SETTINGS")
             .pageHeadingStyle()

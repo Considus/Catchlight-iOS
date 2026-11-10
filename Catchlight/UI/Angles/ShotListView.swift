@@ -83,7 +83,7 @@ struct ShotListView: View {
     private var topChrome: some View {
         VStack(spacing: 0) {
             ZStack {
-                // Explicit view heading, DAILIES house style (Cormorant Roman, kerned
+                // Explicit view heading, DAILIES house style (Archivo expanded, kerned
                 // caps) — owner 2026-06-19: named as an Angle, sibling to PLANNER ANGLE.
                 // CENTRED at 24pt (owner 2026-06-29) to match the timeline page heading;
                 // full-width frame centres it on screen, × floated at the right edge.

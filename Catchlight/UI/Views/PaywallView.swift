@@ -6,7 +6,7 @@
 //  because:
 //    1. It can't be styled to the Catchlight design system without surfaces
 //       breaking out of the theme.
-//    2. The product needs Cormorant Garamond italic in the hero, which only a
+//    2. The product needs the Archivo display face in the hero, which only a
 //       custom view can do.
 //
 //  Apple's mandatory paywall elements (otherwise rejection risk):
@@ -42,7 +42,7 @@ struct PaywallView: View {
     // Composition per HiFi v1.7 §12 (owner 2026-06-12, internal v1.11.2–.4):
     // everything centred except the terms block (matching the onboarding
     // screens); hero's first line on the standard heading line (top 26);
-    // the eyebrow splits the hero↔values space equally; the Cormorant
+    // the eyebrow splits the hero↔values space equally; the Archivo
     // trial/price line bisects the values↔auto-renews space (equal spacers);
     // CTA = the dock-geometry pill pinned at the dock's resting position.
     var body: some View {
@@ -140,7 +140,7 @@ struct PaywallView: View {
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// The trial/price line is a Cormorant Light Italic display moment that
+    /// The trial/price line is an Archivo display moment that
     /// breaks the page up (owner 2026-06-12, HiFi v1.11.3). It bisects the
     /// values↔auto-renews space via the equal Spacers in `body`.
     private var pricingLine: some View {
@@ -232,7 +232,7 @@ struct PaywallView: View {
     }
 
     // Owner 2026-06-21: the button is just "Subscribe now" — the trial + price
-    // detail already lives in the Cormorant price line directly above it.
+    // detail already lives in the Archivo price line directly above it.
     private var ctaText: String { String(localized: "Subscribe now") }
 
     private var secondaryActions: some View {
