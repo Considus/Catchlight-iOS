@@ -58,6 +58,7 @@ struct NoticeHistoryView: View {
                                         .foregroundStyle(Color.ckTextPrimary)
                                     Text(entry.timestamp, format: .relative(presentation: .named))
                                         .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                                        .monospacedDigit()   // a time: tabular digits
                                         .foregroundStyle(Color.ckTextSecondary)
                                 }
                             }

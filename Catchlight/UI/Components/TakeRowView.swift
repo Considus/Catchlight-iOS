@@ -663,7 +663,7 @@ struct TakeCardSurface: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(displayBody)
-                // DM Sans 14 (.tt) — Take content is never the display face.
+                // System font 14 (.tt) — Take content is never the display face.
                 .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
                 // Body + link colours are carried on the AttributedString (`displayBody`)
                 // so detected URLs render accent; `.tint` colours the link's tap state.
@@ -680,7 +680,7 @@ struct TakeCardSurface: View {
 
             // Quiet meta line: the checklist progress marker (2+ items) and/or
             // the reminder time. New marker — HiFi v1.7 is silent on it, so it
-            // matches the reminder label's scale (DM Sans caption, Secondary).
+            // matches the reminder label's scale (system caption, Secondary).
             // Stacked so neither fights the other.
             if let progressText {
                 // Quiet meta scale (matches .tm size; non-italic — it's a count).
@@ -729,6 +729,7 @@ struct TakeCardSurface: View {
                         .accessibilityHidden(true)
                     Text(reminderLabel)
                         .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .monospacedDigit()   // a time: tabular digits
                         .italic(style.isOverdue)
                         .foregroundStyle(reminderLabelColor)
                 }

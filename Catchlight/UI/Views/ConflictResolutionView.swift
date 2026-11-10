@@ -104,8 +104,8 @@ struct ConflictResolutionView: View {
     }
 
     /// Brand heading + guidance: the shared page-heading treatment (upright
-    /// Cormorant Roman, kerned, UPPER-CASE — §2.3, matching DAILIES/SETTINGS) over
-    /// DM Sans Light subtext — owner 2026-07-02.
+    /// Archivo expanded, kerned, UPPER-CASE — §2.3, matching DAILIES/SETTINGS) over
+    /// system-font Light subtext — owner 2026-07-02.
     private var header: some View {
         VStack(spacing: 16) {
             Text("SYNC CONFLICTS")
@@ -323,6 +323,7 @@ struct ConflictResolutionView: View {
                 }
                 Text(relativeDate(take.modifiedAt))
                     .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
+                    .monospacedDigit()   // a time: tabular digits
                     .foregroundStyle(Color.ckTextSecondary)
                 if let note {
                     Text(note)

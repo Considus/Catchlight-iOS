@@ -50,6 +50,7 @@ struct CreationStampLabel: View {
     var body: some View {
         Text(CreationTimestamp.text(for: date))
             .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption))
+            .monospacedDigit()   // a date and time: tabular digits
             .foregroundStyle(Color.ckTextComplete)
             .accessibilityLabel(CreationTimestamp.text(for: date))
     }
