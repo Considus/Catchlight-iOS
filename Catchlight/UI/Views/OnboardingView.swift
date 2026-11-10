@@ -127,8 +127,11 @@ private struct HeroGap: View {
     @Environment(\.dynamicTypeSize) private var dynamicSize
     @Environment(\.deviceTopInset) private var deviceTopInset
 
+    /// The launch splash keeps its mark at every size, so it keeps the set position too.
+    var markDrawn = false
     var body: some View {
-        Color.clear.frame(height: dynamicSize >= .accessibility1 ? deviceTopInset + 16 : introHeroTopGap)
+        Color.clear.frame(height: dynamicSize >= .accessibility1 && !markDrawn
+                          ? deviceTopInset + 16 : introHeroTopGap)
     }
 }
 
@@ -139,8 +142,11 @@ private struct StepHeading: ViewModifier {
     @Environment(\.dynamicTypeSize) private var dynamicSize
     @ScaledMetric(relativeTo: .title) private var scaledSize: CGFloat = 28
 
+    /// The launch splash keeps its lines at the fixed 28 at every size: it is the same two lines
+    /// the launch screen shows, and it holds still while the app starts.
+    var scalesWithText = true
     func body(content: Content) -> some View {
-        let scales = dynamicSize > .large
+        let scales = scalesWithText && dynamicSize > .large
         content
             .ckDisplay(size: 28, relativeTo: scales ? .title : nil)
             .lineSpacing(CatchlightFont.tightLeading(size: scales ? scaledSize : 28))
@@ -148,7 +154,7 @@ private struct StepHeading: ViewModifier {
 }
 
 private extension View {
-    func stepHeading() -> some View { modifier(StepHeading()) }
+    func stepHeading(scalesWithText: Bool = true) -> some View { modifier(StepHeading(scalesWithText: scalesWithText)) }
 }
 
 extension OnboardingViewModel.Step {
@@ -199,6 +205,9 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
 
+    /// The scrolling layout (above Large) pads its content 16pt top and bottom. The splash sets
+    /// the top to 0 so its mark sits exactly where the launch screen and lock screen draw it.
+    var padsTop: Bool = true
     // Above the default text size, wrap the content in a ScrollView so tall onboarding
     // screens (Welcome, Storage Choice, Cloud Reminder) don't clip behind the bottom
     // safe-area inset. At default sizes the Spacer-centred ZStack is preserved so
@@ -235,7 +244,8 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
                     content()
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 24)
-                        .padding(.vertical, 16)
+                        .padding(.top, padsTop ? 16 : 0)
+                        .padding(.bottom, 16)
                 }
                 .scrollIndicators(.hidden)   // app-wide: no scrollbars (Style Reference)
 
@@ -297,16 +307,28 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
     /// Whether this step sits on the Scene's colour field (Welcome and the closing screen).
     var onField: Bool = false
     /// Above Large the hoisted mark stands down (see `OnboardingView.showsBrandMark`), so the
-    /// reserve copy here is the ONLY mark — it must be visible and it scrolls with the content.
+    /// reserve copy here is the only mark — it is visible and scrolls with the content. From
+    /// `accessibility1` up an onboarding step draws no mark (`OnboardingBrandMark`); the splash
+    /// (`keepsMarkAtEverySize`) keeps it, because the launch screen and the lock screen draw it
+    /// at every size and it must not vanish and return on a cold launch.
     @Environment(\.dynamicTypeSize) private var dynamicSize
+    /// The launch splash draws the mark at every text size. Onboarding steps drop it from the
+    /// accessibility sizes.
+    var keepsMarkAtEverySize: Bool = false
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
 
     var body: some View {
-        StepScaffold(onField: onField) {
+        StepScaffold(onField: onField, padsTop: !keepsMarkAtEverySize) {
             VStack(spacing: 0) {
-                OnboardingBrandMark()
-                    .opacity(drawsBrandMark || dynamicSize > .large ? 1 : 0)
+                Group {
+                    if keepsMarkAtEverySize {
+                        IntroBrandMark()
+                    } else {
+                        OnboardingBrandMark()
+                            .opacity(drawsBrandMark || dynamicSize > .large ? 1 : 0)
+                    }
+                }
                 content()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -374,12 +396,13 @@ struct WelcomeContent: View {
         // The splash (`.splash`, shown by RootView) paints the brand mark itself; the
         // Welcome step (`.welcome`) reserves the space and lets OnboardingView's
         // hoisted, non-fading mark draw it.
-        IntroChapterScaffold(drawsBrandMark: !isWelcome, onField: isWelcome) {
+        IntroChapterScaffold(drawsBrandMark: !isWelcome, onField: isWelcome,
+                             keepsMarkAtEverySize: !isWelcome) {
             VStack(spacing: 0) {
                 // Pin the hero line at the shared set position (every brand-mark
                 // screen uses `introHeroTopGap`); the body then settles toward the
                 // button via the flexible spacer.
-                HeroGap()
+                HeroGap(markDrawn: !isWelcome)
                 // Primary-text slot. The headline is laid out in BOTH modes (so the
                 // slot keeps the same height); the splash hides it and overlays the
                 // tagline in its place.
@@ -423,7 +446,7 @@ struct WelcomeContent: View {
 
     private var headline: some View {
         Text("You don't need to choose privacy, it's yours and you never have to ask for it.")
-            .stepHeading()
+            .stepHeading(scalesWithText: isWelcome)
             .stepInk(.primary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -438,7 +461,7 @@ struct WelcomeContent: View {
             // intro hero lines are now `displayFixed(28)`, static — so the splash
             // tagline and the Welcome headline it crossfades into are pixel-matched).
             // The secondary colour + italic keep it reading as a tagline.
-            .stepHeading()
+            .stepHeading(scalesWithText: isWelcome)
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
