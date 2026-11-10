@@ -27,14 +27,14 @@ final class FocusRowLayoutTests: XCTestCase {
 
     /// 393pt wide with the Iris at the real card position: four marks at 60, 120, 180, 240.
     func testStandardWidth_marksSit60Apart() {
-        let hubX = CatchlightLayout.spineX(containerWidth: 393)
+        let hubX = CatchlightLayout.addColumnX(containerWidth: 393)
         XCTAssertEqual(slots(hubX: hubX, width: 393), [60, 120, 180, 240])
     }
 
     /// The narrowest supported phone (375) has room for the full spacing.
     func testNarrowestPhone_keepsTheFullSpacing() {
         let width: CGFloat = 375
-        let hubX = CatchlightLayout.spineX(containerWidth: width)
+        let hubX = CatchlightLayout.addColumnX(containerWidth: width)
         let xs = slots(hubX: hubX, width: width)
         XCTAssertEqual(xs, [60, 120, 180, 240])
         XCTAssertLessThanOrEqual(hubX + xs[3] + FocusRowView.markSize / 2, width - 8)
@@ -44,9 +44,9 @@ final class FocusRowLayoutTests: XCTestCase {
     /// 320 the last mark's edge (49 + 240 + 22 = 311) is inside the margin (312); at 318
     /// it is not (48.75 + 262 = 310.75 > 310), so the gap shrinks.
     func testSqueezeThreshold() {
-        XCTAssertEqual(slots(hubX: CatchlightLayout.spineX(containerWidth: 320), width: 320),
+        XCTAssertEqual(slots(hubX: CatchlightLayout.addColumnX(containerWidth: 320), width: 320),
                        [60, 120, 180, 240])
-        let xs = slots(hubX: CatchlightLayout.spineX(containerWidth: 318), width: 318)
+        let xs = slots(hubX: CatchlightLayout.addColumnX(containerWidth: 318), width: 318)
         XCTAssertLessThan(xs[0], 60)
         assertEqualGaps(xs)
     }

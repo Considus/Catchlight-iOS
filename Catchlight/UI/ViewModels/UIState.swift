@@ -1,11 +1,11 @@
 //
 //  UIState.swift
-//  Catchlight (iOS app target) — Phase 6 UI, one-surface dock redesign 2026-06-10
+//  Catchlight (iOS app target) — Phase 6 UI, one-surface toolbar redesign 2026-06-10
 //
 //  Cross-cutting, presentation-only UI coordination shared by RootView and its
-//  children. The app has ONE surface — the timeline — and the bottom dock MORPHS
+//  children. The app has ONE surface — the timeline — and the bottom toolbar MORPHS
 //  between three states (resting / filtering / searching) instead of switching
-//  tabs. This class owns the dock mode, the live filter toggles, and the search
+//  tabs. This class owns the toolbar mode, the live filter toggles, and the search
 //  query, plus the Focus row / editor / settings / paywall / conflict / spotlight
 //  presentation state. @Observable (iOS 17+). It owns NO domain data — the feature
 //  view models do — so it stays a thin coordinator any screen can read via the
@@ -19,7 +19,7 @@
 //    • Notes is mutually exclusive with Tasks/Reminders (a pure note can't also
 //      be a task/reminder): turning Notes on clears the other two (and their
 //      modifiers); turning Tasks or Reminders on clears Notes.
-//    • All toggles off keeps the dock in FILTERING (unfiltered timeline) — the
+//    • All toggles off keeps the toolbar in FILTERING (unfiltered timeline) — the
 //      user may be composing another combination. Exit is the timeline
 //      background tap (DailiesView) or implicit via exitToResting().
 //
@@ -31,12 +31,12 @@ import CatchlightCore
 @Observable
 final class UIState {
 
-    /// The dock's three morph states. There are no separate screens — the
-    /// timeline is always behind the dock; only the dock contents and the
+    /// The toolbar's three morph states. There are no separate screens — the
+    /// timeline is always behind the toolbar; only the toolbar contents and the
     /// active timeline filter change.
-    enum DockMode: Hashable { case resting, filtering, searching }
+    enum ToolbarMode: Hashable { case resting, filtering, searching }
 
-    var dockMode: DockMode = .resting
+    var toolbarMode: ToolbarMode = .resting
 
     // FILTERING-state toggles. Modifiers are meaningful only while their
     // parent toggle is on (the mutation funcs maintain that invariant).
@@ -52,7 +52,7 @@ final class UIState {
     var filterImportant = false
 
     /// Month filter — a "yyyy-MM" key set by tapping a month divider (owner 2026-07-01),
-    /// nil when off. Independent of the dock modes: it composes (AND) into
+    /// nil when off. Independent of the toolbar modes: it composes (AND) into
     /// `activeTimelineFilter` in resting, filtering, or searching. Cleared by tapping the
     /// active divider again or by `exitToResting`.
     var filterMonth: String?
@@ -69,8 +69,8 @@ final class UIState {
     /// Whether the search keyboard (and its docked search bar) is raised. The search
     /// field rides the keyboard as a UIKit `inputAccessoryView` (2026-06-20), so this
     /// gates that accessory. True on entering search; the magnifier / Return lowers it
-    /// (keeping the query + results, the dock shows a tap-to-resume bar); tapping the
-    /// dock bar raises it again. Only meaningful while `dockMode == .searching`.
+    /// (keeping the query + results, the toolbar shows a tap-to-resume bar); tapping the
+    /// toolbar bar raises it again. Only meaningful while `toolbarMode == .searching`.
     var searchKeyboardUp = false
 
     // Focus row.
@@ -96,7 +96,7 @@ final class UIState {
 
     /// A Take handed to DailiesView to edit IN PLACE (Phase 2 2026-06-17); DailiesView
     /// opens it in the editor and clears this. Usually a freshly-created blank Take: the
-    /// dock's + and a capture set it, and it is NOT persisted until the inline save (a
+    /// toolbar's + and a capture set it, and it is NOT persisted until the inline save (a
     /// blank one dismissed leaves nothing behind). It can also be a draft of a Take that
     /// already exists, handed back by `AppModel.resolvePendingEntitledSave` when the
     /// store refused its save, so the typing is on screen again.
@@ -142,7 +142,7 @@ final class UIState {
     /// mid-edit Take, not discard it). nil when nothing is editing / DailiesView is gone.
     var commitInlineEdit: (() -> Void)?
 
-    /// Settings sheet — a swipe UP on the dock toggles this.
+    /// Settings sheet — a swipe UP on the toolbar toggles this.
     /// (Owner redesign 2026-06-11 — replaces the long-press on Dailies.)
     var isSettingsPresented = false
 
@@ -157,8 +157,8 @@ final class UIState {
     var isPaywallPresented = false
 
     /// The Storyboard — a full-screen list of every task-bearing Take (owner 2026-06-19).
-    /// Presented over the timeline; opened from the dock's Angle button (∠, slot 2 —
-    /// the dock IA, PR #44) and closed by its own X. (An earlier draft used a
+    /// Presented over the timeline; opened from the toolbar's Angle button (∠, slot 2 —
+    /// the toolbar IA, PR #44) and closed by its own X. (An earlier draft used a
     /// DEBUG-only Settings row; comment corrected 2026-07-01.)
     var isStoryboardPresented = false
 
@@ -174,34 +174,34 @@ final class UIState {
     /// collection row).
     var revealTargetTakeID: UUID?
 
-    // MARK: - Dock mode transitions
+    // MARK: - Toolbar mode transitions
 
-    /// Enter FILTERING (the Sequence dock button). Toggles start from whatever
+    /// Enter FILTERING (the Sequence toolbar button). Toggles start from whatever
     /// they last were within this entry — entering always starts clean because
     /// exitToResting() is the only way back and it clears everything.
     func enterFiltering() {
-        dockMode = .filtering
+        toolbarMode = .filtering
     }
 
-    /// Enter SEARCHING (the Search dock button). The query starts empty and the
+    /// Enter SEARCHING (the Search toolbar button). The query starts empty and the
     /// keyboard (with the docked search bar) comes up.
     func enterSearching() {
         searchQuery = ""
-        dockMode = .searching
+        toolbarMode = .searching
         searchKeyboardUp = true
     }
 
     /// Lower the search keyboard but STAY in search — the query and filtered results
-    /// remain, and the dock shows a tap-to-resume search bar (magnifier / Return).
+    /// remain, and the toolbar shows a tap-to-resume search bar (magnifier / Return).
     func lowerSearchKeyboard() { searchKeyboardUp = false }
 
-    /// Raise the search keyboard again (tapping the dock's resumed search bar).
+    /// Raise the search keyboard again (tapping the toolbar's resumed search bar).
     func raiseSearchKeyboard() { searchKeyboardUp = true }
 
-    /// Return the dock to RESTING and clear every filter/search input, so the
+    /// Return the toolbar to RESTING and clear every filter/search input, so the
     /// timeline is unfiltered. Safe to call from any state (idempotent).
     func exitToResting() {
-        dockMode = .resting
+        toolbarMode = .resting
         filterNotes = false
         filterTasks = false
         filterTasksDone = false
@@ -290,14 +290,14 @@ final class UIState {
 
     // MARK: - Live timeline filter
 
-    /// The filter the current dock state describes — applied live by
+    /// The filter the current toolbar state describes — applied live by
     /// DailiesView. Empty (matches everything) in RESTING, built from the
     /// toggles in FILTERING, and from the typed query in SEARCHING. Matching
     /// is the pure `SequenceFilter.matches` with AND semantics.
     var activeTimelineFilter: SequenceFilter {
-        // The month filter (if any) composes with every dock mode.
+        // The month filter (if any) composes with every toolbar mode.
         let months = filterMonth.map { [$0] } ?? []
-        switch dockMode {
+        switch toolbarMode {
         case .resting:
             return SequenceFilter(months: months)
         case .filtering:
@@ -378,7 +378,7 @@ final class UIState {
         // editor's keyboard toolbar and the search bar fought — leaving a stray
         // floating toolbar and a stuck "search bar, no keyboard" state. Opening a Take
         // to edit now exits search first, handing the keyboard cleanly to the editor.
-        if dockMode == .searching { exitToResting() }
+        if toolbarMode == .searching { exitToResting() }
         withAnimation(Self.gatedFanFade) { editingTakeID = take.id }
     }
 

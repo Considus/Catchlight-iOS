@@ -10,13 +10,13 @@
 //  is correct on every device with NO manual math, and — unlike the hand-math — it
 //  behaves identically in the simulator.
 //
-//  Shape: [× cancel]  [— capsule field —]  [magnifier dismiss], matching the dock's
-//  four-slot grid and Ember styling. The editable field lives INSIDE the accessory
-//  (it must, to ride the keyboard), so it is a real UIKit `UITextField` here for
+//  Shape, as drawn in the redesign: [magnifier + field] [Cancel]. Return lowers the
+//  keyboard and keeps the query. The editable field lives INSIDE the accessory (it
+//  must, to ride the keyboard), so it is a real UIKit `UITextField` here for
 //  deterministic focus rather than a SwiftUI `TextField` nested in the accessory.
 //
-//  Accessibility identifiers are kept stable for the UI tests: `search-field`,
-//  `search-cancel`, `search-tab` (the dismiss/Return button).
+//  Accessibility identifiers are kept stable for the UI tests: `search-field` and
+//  `search-cancel`.
 //
 
 import SwiftUI
@@ -25,11 +25,11 @@ import SwiftUI
 /// Zero-size in the SwiftUI layout — all it does is own the keyboard accessory.
 struct KeyboardSearchBar: UIViewControllerRepresentable {
     @Binding var query: String
-    /// Drives the keyboard up/down: true while `dockMode == .searching`.
+    /// Drives the keyboard up/down: true while searching with the keyboard raised.
     var isActive: Bool
-    /// × — leave search entirely (back to the resting dock).
+    /// Cancel: leave search entirely (back to the resting toolbar).
     var onCancel: () -> Void
-    /// Magnifier / Return — lower the keyboard but keep the query + results.
+    /// Return: lower the keyboard but keep the query and results.
     var onSubmitDismiss: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -76,7 +76,6 @@ struct KeyboardSearchBar: UIViewControllerRepresentable {
             parent.query = field.text ?? ""
         }
         @objc func cancelTapped() { parent.onCancel() }
-        @objc func dismissTapped() { parent.onSubmitDismiss() }
 
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             parent.onSubmitDismiss()
@@ -112,47 +111,41 @@ final class SearchInputController: UIViewController {
     }
 }
 
-/// The keyboard-docked search bar: × · capsule field · magnifier, on the dock's faded
-/// background. Pure UIKit so the embedded field focuses deterministically.
+/// The keyboard-docked search row, as drawn in the redesign: an outlined field with a
+/// magnifier, then Cancel in the action colour, on a solid ground strip. Pure UIKit so
+/// the embedded field focuses deterministically. Return lowers the keyboard and keeps
+/// the query; Cancel leaves search.
 final class SearchBarAccessory: UIView {
     let field = UITextField()
     private let cancelButton = UIButton(type: .system)
-    private let dismissButton = UIButton(type: .system)
+    private let magnifier = UIImageView()
     private weak var controller: SearchInputController?
 
     // Colours read from the single source (`UITheme`, in CatchlightTheme.swift).
     // UIKit can't see the SwiftUI `ck*` tokens, so it shares the UIColor layer those
-    // are built on — no brand hex is re-declared here.
-    private static let ember = UITheme.accent            // ckAccent (amber foreground)
-    private static let surface = UITheme.surface         // ckSurface
+    // are built on: no brand hex is re-declared here.
+    private static let accent = UITheme.accent            // ckAccent (accentText)
+    private static let surface = UITheme.surface          // ckSurface (card)
     private static let textPrimary = UITheme.textPrimary
+    private static let textSecondary = UITheme.textSecondary
     private static let pageBackground = UITheme.background
-    /// Audit C6, re-tuned (owner 2026-08-28): the dedicated placeholder tone —
-    /// EQUAL 4.62:1 in both schemes, passing small-text AA, receded next to the
-    /// typed query. The first fix's textSecondary (7.24/8.09) read too
-    /// prominent; the original "done" tone (1.84/3.58) failed both schemes.
+    /// The placeholder tone, 4.5:1 on the field and receded next to the typed query.
     private static let placeholderGrey = UITheme.placeholder
 
-    /// The dock's soft fade (HiFi v1.11.5 / `dockFadeBackground`): scrolling content
-    /// dissolves UNDER the bar instead of meeting a hard edge. A solid fill here
-    /// blocked too much of the timeline and left a hard line where it crossed the Iris
-    /// below (owner 2026-06-20). Same stops as the SwiftUI gradient so the search bar
-    /// mirrors the dock + editor bar exactly: clear → 0.85 @ 28% → solid @ 55%.
-    private let fade = CAGradientLayer()
+    private static let pad: CGFloat = CatchlightLayout.toolbarHorizontalPadding
+    private static let rowHeight: CGFloat = CatchlightLayout.minTouchTarget
+    private static let topPad: CGFloat = 10
+    private static let bottomPad: CGFloat = 8
 
     init(controller: SearchInputController) {
         self.controller = controller
-        // Height matches the editor keyboard bar: 10 top + 44 button + 8 bottom.
-        super.init(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 62))
+        super.init(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width,
+                                 height: Self.topPad + Self.rowHeight + Self.bottomPad))
         autoresizingMask = [.flexibleWidth]
-        backgroundColor = .clear
-        fade.startPoint = CGPoint(x: 0.5, y: 0)
-        fade.endPoint = CGPoint(x: 0.5, y: 1)
-        fade.locations = [0, 0.28, 0.55]
-        layer.insertSublayer(fade, at: 0)
-        applyFadeColors()
+        // Solid and flat: the timeline stops at the row instead of fading under it.
+        backgroundColor = Self.pageBackground
         buildLayout()
-        // Re-resolve the CGColor-backed borders/fade on a Light/Dark or Scene change,
+        // Re-resolve the CGColor-backed outline on a Light/Dark or Scene change,
         // including when the bar first joins a window. The bar lives for the app's
         // lifetime, so a Scene chosen after it was built must still reach it.
         registerForTraitChanges([UITraitUserInterfaceStyle.self, SceneTrait.self]) { (bar: SearchBarAccessory, _) in
@@ -162,22 +155,8 @@ final class SearchBarAccessory: UIView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: 62) }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        fade.frame = bounds
-    }
-
-    /// CGColors don't follow traits, so resolve them against the bar's own traits (and
-    /// refresh on a trait change, registered in `init`).
-    private func applyFadeColors() {
-        let page = Self.pageBackground.resolvedColor(with: traitCollection)
-        fade.colors = [
-            page.withAlphaComponent(0).cgColor,
-            page.withAlphaComponent(0.85).cgColor,
-            page.cgColor,
-        ]
+    override var intrinsicContentSize: CGSize {
+        CGSize(width: UIView.noIntrinsicMetric, height: Self.topPad + Self.rowHeight + Self.bottomPad)
     }
 
     /// The field's outline for the bar's current traits: the `outline` token, 3:1 on the surface.
@@ -185,41 +164,30 @@ final class SearchBarAccessory: UIView {
         SceneToken.outline.resolvedColor(with: traitCollection).cgColor
     }
 
-    /// The ember border colour for the bar's current traits.
-    private var emberBorder: CGColor {
-        Self.ember.resolvedColor(with: traitCollection).withAlphaComponent(0.55).cgColor
-    }
-
-    // Dock grid (matches BottomDockView / CatchlightLayout exactly so × lands where +
-    // sits at rest and the magnifier on the resting magnifier).
-    private static let pad: CGFloat = 12        // dockHorizontalPadding
-    private static let buttonSize: CGFloat = 44     // minTouchTarget
-    private static let topPad: CGFloat = 10
-
     private func buildLayout() {
-        // × cancel: an Ember ring, a rounded square (slot 1). The × is a `plus` rotated 45°,
-        // identical to the editor-bar dismiss (owner 2026-06-29): the app's close
-        // affordance is the Add "+" turned to ×. The real `xmark` glyph read larger
-        // than the rotated plus at the same 24pt, so they're unified to one glyph.
-        configureSquareButton(cancelButton, systemName: "plus", rotated: true)
+        // Cancel: text in the action colour, as drawn. It leaves search and clears it.
+        var config = UIButton.Configuration.plain()
+        config.title = String(localized: "Cancel")
+        config.baseForegroundColor = Self.accent
+        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4)
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attrs in
+            var a = attrs
+            a.font = UIFontMetrics(forTextStyle: .body)
+                .scaledFont(for: .systemFont(ofSize: 15, weight: .medium))
+            return a
+        }
+        cancelButton.configuration = config
+        cancelButton.translatesAutoresizingMaskIntoConstraints = false
+        cancelButton.setContentHuggingPriority(.required, for: .horizontal)
+        cancelButton.setContentCompressionResistancePriority(.required, for: .horizontal)
         cancelButton.accessibilityIdentifier = "search-cancel"
-        cancelButton.accessibilityLabel = "Cancel search"
+        cancelButton.accessibilityLabel = String(localized: "Cancel search")
         cancelButton.addTarget(controller?.coordinator,
                                action: #selector(KeyboardSearchBar.Coordinator.cancelTapped),
                                for: .touchUpInside)
 
-        // Magnifier dismiss / Return: an Ember ring, a rounded square (slot 4). Kept at its
-        // original 18pt (owner 2026-06-29): the real `magnifyingglass` reads larger
-        // than the rotated-plus cancel at 24, so it's sized down to match optically.
-        configureSquareButton(dismissButton, systemName: "magnifyingglass", pointSize: 18)
-        dismissButton.accessibilityIdentifier = "search-tab"
-        dismissButton.accessibilityLabel = "Search"
-        dismissButton.addTarget(controller?.coordinator,
-                                action: #selector(KeyboardSearchBar.Coordinator.dismissTapped),
-                                for: .touchUpInside)
-
-        // The field is a flat rounded rectangle at the surface radius, the same height (44)
-        // as the buttons, outlined with the `outline` token.
+        // The field: a flat rounded rectangle at the surface radius, outlined with the
+        // `outline` token, a magnifier leading the text.
         field.translatesAutoresizingMaskIntoConstraints = false
         field.borderStyle = .none
         field.backgroundColor = Self.surface
@@ -229,13 +197,8 @@ final class SearchBarAccessory: UIView {
         field.layer.borderWidth = 1
         field.layer.borderColor = fieldOutline
         field.textColor = Self.textPrimary
-        // Adaptive accent caret (2026-07-01): the fixed #C9A96E was the raw Night
-        // Ember — the exact low-contrast-on-Paper case ckAccent exists to avoid;
-        // `Self.ember` already carries the Daylight-accessible pair.
-        field.tintColor = Self.ember
-        // Audit 2026-08, DT2: the query never scaled — fixed 14pt. The shared
-        // scaling face plus live adjustment, the same pair the editor rows use.
-        field.font = CatchlightFont.uiBody(size: 14)
+        field.tintColor = Self.accent
+        field.font = CatchlightFont.uiBody(size: 15)
         field.adjustsFontForContentSizeCategory = true
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
@@ -245,87 +208,39 @@ final class SearchBarAccessory: UIView {
             string: String(localized: "Search your Takes"),
             attributes: [.foregroundColor: Self.placeholderGrey])
         field.accessibilityIdentifier = "search-field"
-        field.accessibilityLabel = "Search Takes"
+        field.accessibilityLabel = String(localized: "Search Takes")
         field.delegate = controller?.coordinator
         field.addTarget(controller?.coordinator,
                         action: #selector(KeyboardSearchBar.Coordinator.textChanged),
                         for: .editingChanged)
-        // Insets so text/placeholder clear the rounded ends (radius 22) — fixes the
-        // left cut-off; the right pad keeps the placeholder off the curve when the
-        // clear button is hidden.
-        field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 18, height: 1))
+        magnifier.image = UIImage(systemName: "magnifyingglass",
+                                  withConfiguration: UIImage.SymbolConfiguration(pointSize: 15, weight: .regular))
+        magnifier.tintColor = Self.textSecondary
+        magnifier.contentMode = .center
+        let lead = UIView(frame: CGRect(x: 0, y: 0, width: 38, height: Self.rowHeight))
+        magnifier.frame = CGRect(x: 12, y: 0, width: 18, height: Self.rowHeight)
+        lead.addSubview(magnifier)
+        field.leftView = lead
         field.leftViewMode = .always
         field.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 12, height: 1))
         field.rightViewMode = .unlessEditing
 
-        [cancelButton, dismissButton, field].forEach(addSubview)
-
-        // Four equal slots across the padded content, exactly like the dock's
-        // `geo.size.width / 4` grid. Buttons centre in slots 1 & 4; the field spans
-        // from slot 2's leading to slot 3's trailing — the owner's "outer limit".
-        let slots = (0..<4).map { _ -> UILayoutGuide in
-            let g = UILayoutGuide(); addLayoutGuide(g); return g
-        }
-        var cons: [NSLayoutConstraint] = []
-        for (i, slot) in slots.enumerated() {
-            cons.append(slot.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad))
-            cons.append(slot.heightAnchor.constraint(equalToConstant: Self.buttonSize))
-            cons.append(i == 0
-                ? slot.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.pad)
-                : slot.leadingAnchor.constraint(equalTo: slots[i - 1].trailingAnchor))
-            if i == 3 { cons.append(slot.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.pad)) }
-            if i > 0 { cons.append(slot.widthAnchor.constraint(equalTo: slots[0].widthAnchor)) }
-        }
-        cons += [
-            cancelButton.centerXAnchor.constraint(equalTo: slots[0].centerXAnchor),
-            cancelButton.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
-            dismissButton.centerXAnchor.constraint(equalTo: slots[3].centerXAnchor),
-            dismissButton.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
-            field.leadingAnchor.constraint(equalTo: slots[1].leadingAnchor),
-            field.trailingAnchor.constraint(equalTo: slots[2].trailingAnchor),
-            field.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
-            field.heightAnchor.constraint(equalToConstant: Self.buttonSize),
-        ]
-        NSLayoutConstraint.activate(cons)
-    }
-
-    /// The glyph turned 45 degrees (a `plus` becomes a ×). The glyph is turned, not the button:
-    /// a turned button would turn its square outline into a diamond.
-    private static func turnedEighth(_ image: UIImage) -> UIImage {
-        let size = image.size
-        let turned = UIGraphicsImageRenderer(size: size).image { context in
-            context.cgContext.translateBy(x: size.width / 2, y: size.height / 2)
-            context.cgContext.rotate(by: .pi / 4)
-            context.cgContext.translateBy(x: -size.width / 2, y: -size.height / 2)
-            image.withRenderingMode(.alwaysTemplate).draw(at: .zero)
-        }
-        return turned.withRenderingMode(.alwaysTemplate)
-    }
-
-    private func configureSquareButton(_ button: UIButton, systemName: String, pointSize: CGFloat = 24,
-                                       rotated: Bool = false) {
-        button.translatesAutoresizingMaskIntoConstraints = false
-        var glyph = UIImage(systemName: systemName,
-                            withConfiguration: UIImage.SymbolConfiguration(pointSize: pointSize, weight: .light))
-        if rotated, let base = glyph { glyph = Self.turnedEighth(base) }
-        button.setImage(glyph, for: .normal)
-        button.tintColor = Self.ember
-        button.layer.cornerRadius = CatchlightLayout.controlRadius
-        button.layer.cornerCurve = .continuous
-        button.layer.borderWidth = 1.5
-        button.layer.borderColor = emberBorder
+        [field, cancelButton].forEach(addSubview)
         NSLayoutConstraint.activate([
-            button.widthAnchor.constraint(equalToConstant: Self.buttonSize),
-            button.heightAnchor.constraint(equalToConstant: Self.buttonSize),
+            field.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.pad),
+            field.topAnchor.constraint(equalTo: topAnchor, constant: Self.topPad),
+            field.heightAnchor.constraint(equalToConstant: Self.rowHeight),
+            cancelButton.leadingAnchor.constraint(equalTo: field.trailingAnchor, constant: 10),
+            cancelButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.pad),
+            cancelButton.centerYAnchor.constraint(equalTo: field.centerYAnchor),
+            cancelButton.heightAnchor.constraint(greaterThanOrEqualToConstant: Self.rowHeight),
+            cancelButton.widthAnchor.constraint(greaterThanOrEqualToConstant: Self.rowHeight),
         ])
     }
 
     /// Re-resolve the CGColors for the new appearance or Scene.
     /// Called by the trait-change registration in `init`.
     private func refreshDynamicColors() {
-        cancelButton.layer.borderColor = emberBorder
-        dismissButton.layer.borderColor = emberBorder
         field.layer.borderColor = fieldOutline
-        applyFadeColors()
     }
 }

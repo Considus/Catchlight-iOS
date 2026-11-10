@@ -250,7 +250,7 @@ struct KeyboardTakeEditor: View {
 
     /// The Iris in the card's top-left. Dailies yes; the Storyboard has none (owner 2026-06-19).
     var showsIris: Bool = true
-    /// The card's left edge (`spineX - cardLeadingOffset`).
+    /// The card's left edge (`addColumnX - cardLeadingOffset`).
     var leadingInset: CGFloat
     /// Passed through to the card's `BlockEditor` (audit 2026-08, V31).
     var axHidden: Bool = false

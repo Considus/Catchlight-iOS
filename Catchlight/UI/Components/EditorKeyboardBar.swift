@@ -154,7 +154,7 @@ struct EditorKeyboardBar: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
+        .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
         .padding(.top, 10)
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity)
@@ -171,8 +171,8 @@ struct EditorKeyboardBar: View {
             .offset(y: systemImage == "angle" ? -2 : 0)
     }
 
-    /// One toolbar slot: the dock ring (uniform Ember @ 0.55, 1.5pt — matches
-    /// `BottomDockView.dockRing`, owner 2026-06-19) with a centred glyph, in a
+    /// One toolbar slot: the ring the old Dailies toolbar used (uniform Ember @ 0.55,
+    /// 1.5pt, owner 2026-06-19) with a centred glyph, in a
     /// 44pt button.
     @ViewBuilder
     /// `value`/`selected` (V11, audit 2026-08): a STATE toggle keeps its fixed

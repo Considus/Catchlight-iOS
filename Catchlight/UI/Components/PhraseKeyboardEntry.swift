@@ -52,7 +52,7 @@ final class RestoreKeyboardAccessory: UIView {
     private static let textPrimary = UITheme.textPrimary // Back button
     private static let pageBackground = UITheme.background
 
-    private static let pad: CGFloat = 12       // dockHorizontalPadding
+    private static let pad: CGFloat = 12       // toolbarHorizontalPadding
     private static let buttonSize: CGFloat = 44    // minTouchTarget
     private static let topPad: CGFloat = 10
     private static let barHeight: CGFloat = 62 // 10 + 44 + 8, matches the editor bar

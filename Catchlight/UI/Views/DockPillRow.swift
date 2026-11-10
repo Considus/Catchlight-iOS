@@ -10,8 +10,8 @@
 //  slots 3+4, both fully rounded, separated by the grid's natural
 //  inter-button gap.
 //
-//  The grid is the same one BottomDockView and CatchlightLayout.spineX derive
-//  from: four equal slots inside `dockHorizontalPadding`, button diameter
+//  The grid is the same one DailiesToolbar and CatchlightLayout.addColumnX derive
+//  from: four equal slots inside `toolbarHorizontalPadding`, button diameter
 //  `minTouchTarget` — so the pills inherit the 44pt HIG touch target and the
 //  row occupies the dock's exact resting position (top 10 / bottom 8 padding).
 //
@@ -123,7 +123,7 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
                         .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
                 }
             }
-            .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
+            .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
             .padding(.top, 10)
             .padding(.bottom, deviceBottomInset + 8)
         } else {
@@ -145,7 +145,7 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
                 .frame(height: d)
             }
             .frame(height: CatchlightLayout.minTouchTarget)
-            .padding(.horizontal, CatchlightLayout.dockHorizontalPadding)
+            .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
             .padding(.top, 10)
             .padding(.bottom, deviceBottomInset + 8)
         }
