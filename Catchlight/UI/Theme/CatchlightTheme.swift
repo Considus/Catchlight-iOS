@@ -472,7 +472,9 @@ enum FlatToggleGesture {
     enum Outcome: Equatable {
         /// Set the toggle to the side the drag went to (true for the right).
         case swipe(toTheRight: Bool)
-        case nothing
+        /// A drag that began but ended with little net travel flips it, as a tap does and
+        /// as the native switch did (measured).
+        case flip
     }
 
     /// The least net travel, in points, that counts as a swipe to a side.
@@ -480,7 +482,7 @@ enum FlatToggleGesture {
 
     /// `travel` is the net horizontal travel of the drag at lift.
     static func outcome(forTravel travel: CGFloat) -> Outcome {
-        abs(travel) > swipeThreshold ? .swipe(toTheRight: travel > 0) : .nothing
+        abs(travel) > swipeThreshold ? .swipe(toTheRight: travel > 0) : .flip
     }
 }
 
@@ -525,7 +527,7 @@ private struct FlatToggleInput: UIViewRepresentable {
             guard pan.state == .ended, isEnabled else { return }
             switch FlatToggleGesture.outcome(forTravel: pan.translation(in: pan.view).x) {
             case .swipe(let toTheRight): onSwipe(toTheRight)
-            case .nothing: break
+            case .flip: onTap()
             }
         }
 
