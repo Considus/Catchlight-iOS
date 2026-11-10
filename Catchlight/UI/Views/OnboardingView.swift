@@ -121,12 +121,14 @@ private struct OnboardingBrandMark: View {
 }
 
 /// The gap from the top of a step (or the brand mark) to its heading: the shared set position,
-/// or a short one at the accessibility sizes, where there is no mark above it.
+/// or, at the accessibility sizes where there is no mark above it, just clear of the status bar
+/// and Dynamic Island (the screen runs full-bleed, so the inset is part of the gap).
 private struct HeroGap: View {
     @Environment(\.dynamicTypeSize) private var dynamicSize
+    @Environment(\.deviceTopInset) private var deviceTopInset
 
     var body: some View {
-        Color.clear.frame(height: dynamicSize >= .accessibility1 ? 24 : introHeroTopGap)
+        Color.clear.frame(height: dynamicSize >= .accessibility1 ? deviceTopInset + 16 : introHeroTopGap)
     }
 }
 
