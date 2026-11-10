@@ -17,10 +17,11 @@ enum OnboardingStep: String, CaseIterable {
 /// Launches the app fresh (no `--uitesting`, so onboarding runs) and calls `visit` on each step
 /// once it is on screen. The app is left on the closing screen.
 @discardableResult
-func walkOnboarding(file: StaticString = #filePath, line: UInt = #line,
+func walkOnboarding(contentSize: String? = nil, file: StaticString = #filePath, line: UInt = #line,
                     visit: (OnboardingStep, XCUIApplication) -> Void) -> XCUIApplication {
     let app = XCUIApplication()
     app.launchArguments = ["-appearanceMode", "night"]
+    if let contentSize { app.launchArguments += ["-UIPreferredContentSizeCategoryName", contentSize] }
     app.launch()
 
     let restoreLink = app.buttons["onboarding-restore-link"]
@@ -53,6 +54,7 @@ func walkOnboarding(file: StaticString = #filePath, line: UInt = #line,
     for position in 1...12 {
         let word = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH %@", "Word \(position): ")).firstMatch
+        if contentSize != nil { scrollUntilHittable(word, in: app) }
         XCTAssertTrue(word.exists, "word \(position) is not on screen", file: file, line: line)
         words.append(word.label.replacingOccurrences(of: "Word \(position): ", with: ""))
     }
@@ -66,7 +68,9 @@ func walkOnboarding(file: StaticString = #filePath, line: UInt = #line,
     let positions = prompt.label.components(separatedBy: CharacterSet.decimalDigits.inverted).compactMap { Int($0) }
     XCTAssertEqual(positions.count, 3, "expected three positions in \"\(prompt.label)\"", file: file, line: line)
     for position in positions where (1...12).contains(position) {
-        app.buttons[words[position - 1]].tap()
+        let tile = app.buttons[words[position - 1]]
+        if contentSize != nil { scrollUntilHittable(tile, in: app) }
+        tile.tap()
     }
     let next = app.buttons["Next"]
     XCTAssertTrue(next.waitForExistence(timeout: 6), "the first page of points did not appear", file: file, line: line)
@@ -85,6 +89,15 @@ func walkOnboarding(file: StaticString = #filePath, line: UInt = #line,
     settle()
     visit(.complete, app)
     return app
+}
+
+/// At the accessibility sizes a step is taller than the screen: swipe the content up until the
+/// element can be tapped (not under the pinned buttons).
+func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication) {
+    for _ in 0..<10 {
+        if element.exists && element.isHittable { return }
+        app.swipeUp()
+    }
 }
 
 /// A step crossfades in over 0.18s: let it finish before reading frames.
