@@ -43,5 +43,14 @@ final class ConflictRelativeTimeTests: XCTestCase {
         XCTAssertEqual(text, ConflictResolutionView.relativeDate(now, now: now, locale: german))
         XCTAssertFalse(text.hasPrefix("in "), text)
     }
+
+    /// Older times keep the numeric wording the screen always used ("1 day ago",
+    /// not "yesterday"): only the first minute reads as "now".
+    func testDateOneDayBefore_keepsNumericWording() {
+        let text = ConflictResolutionView.relativeDate(now.addingTimeInterval(-86_400), now: now, locale: english)
+        XCTAssertEqual(text, "1 day ago")
+        let week = ConflictResolutionView.relativeDate(now.addingTimeInterval(-7 * 86_400), now: now, locale: english)
+        XCTAssertEqual(week, "1 wk. ago")
+    }
 }
 #endif
