@@ -72,7 +72,7 @@ enum TimelineDragHandle {
 
 struct UIKitTimeline: UIViewControllerRepresentable {
     var groups: [TimelineMonthGroup]
-    var spineX: CGFloat = CatchlightLayout.spineX(containerWidth: UIScreen.main.bounds.width)
+    var addColumnX: CGFloat = CatchlightLayout.addColumnX(containerWidth: UIScreen.main.bounds.width)
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
     /// The month key ("yyyy-MM") currently filtering the timeline, if any — that divider lights
     /// amber with an × and always shows (even as the first group) so the clear affordance survives.
@@ -140,7 +140,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UIKitTimelineViewController {
         let vc = UIKitTimelineViewController()
-        vc.spineX = spineX
+        vc.addColumnX = addColumnX
         vc.cardGap = cardGap
         vc.activeMonthKey = activeMonthKey
         vc.onToggleMonthFilter = onToggleMonthFilter
@@ -166,7 +166,7 @@ struct UIKitTimeline: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ vc: UIKitTimelineViewController, context: Context) {
-        vc.spineX = spineX
+        vc.addColumnX = addColumnX
         vc.cardGap = cardGap
         vc.activeMonthKey = activeMonthKey
         vc.onToggleMonthFilter = onToggleMonthFilter
@@ -219,7 +219,7 @@ struct TimelineCardHitShape: Shape {
 /// pad, and the Iris sits `irisInset` in from it.
 struct TimelineReadCell: View {
     let take: Take
-    let spineX: CGFloat
+    let addColumnX: CGFloat
     let cardGap: CGFloat
     /// Overdue reminder currently SNOOZED → the label lane reads "SNOOZED" not "OVERDUE".
     /// It can't be read off the Take — snooze lives in the view model — so it has
@@ -362,7 +362,7 @@ struct TimelineReadCell: View {
                 }
             irisHitTarget                                                              // gestures + VoiceOver
         }
-        .padding(.leading, spineX - CatchlightLayout.cardLeadingOffset)
+        .padding(.leading, addColumnX - CatchlightLayout.cardLeadingOffset)
         .padding(.trailing, 20)
         // SYMMETRIC so the card is centred in the cell — a swipe action fill then centres
         // on the CARD, not the cell.
@@ -450,7 +450,7 @@ struct TimelineReadCell: View {
 /// centres the action fill on the card regardless of card height.
 struct TimelineSwipeCell: View {
     let take: Take
-    let spineX: CGFloat
+    let addColumnX: CGFloat
     let cardGap: CGFloat
     /// Threaded straight through to `TimelineReadCell` (see its `isSnoozed`).
     var isSnoozed: Bool = false
@@ -493,12 +493,12 @@ struct TimelineSwipeCell: View {
                                       ? .standard : .destructive,
                                   perform: { onDelete(take) }),
             openRowID: $swipeState.openRowID,
-            leadingInset: spineX - CatchlightLayout.cardLeadingOffset,
+            leadingInset: addColumnX - CatchlightLayout.cardLeadingOffset,
             trailingInset: 20,
             contentVerticalInset: cardGap / 2,
             centersActionLabel: true    // centre glyph/label in the revealed button, not hugged to the screen edge
         ) { offset in
-            TimelineReadCell(take: take, spineX: spineX, cardGap: cardGap,
+            TimelineReadCell(take: take, addColumnX: addColumnX, cardGap: cardGap,
                              isSnoozed: isSnoozed,
                              onTapCircle: onTapCircle, onLongPressCircle: onLongPressCircle,
                              onToggleDone: onToggleDone, onDelete: onDelete,
@@ -518,7 +518,7 @@ struct TimelineSwipeCell: View {
 /// centred on the y-axis — while keeping the overall card-to-card gap unchanged.
 struct TimelineMonthDivider: View {
     let title: String
-    let spineX: CGFloat
+    let addColumnX: CGFloat
     let cardGap: CGFloat
     /// This month is the ACTIVE filter — lit amber with an × as the clear affordance.
     var isActive: Bool = false
@@ -569,14 +569,14 @@ struct TimelineMonthDivider: View {
                 .onTapGesture(perform: onTapBlank)
                 .accessibilityHidden(true)
         }
-        .padding(.leading, spineX - CatchlightLayout.cardLeadingOffset + CatchlightLayout.cardTextLeadingPad)
+        .padding(.leading, addColumnX - CatchlightLayout.cardLeadingOffset + CatchlightLayout.cardTextLeadingPad)
         .padding(.trailing, 20)
     }
 }
 
 final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDelegate,
                                          UICollectionViewDelegate {
-    var spineX: CGFloat = 0
+    var addColumnX: CGFloat = 0
     var cardGap: CGFloat = SettingsViewModel.TakeSpacing.default.gap
     var activeMonthKey: String?
     var onToggleMonthFilter: (String) -> Void = { _ in }
@@ -609,7 +609,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     /// A Take cell's content.
     private func takeConfiguration(for take: Take) -> UIHostingConfiguration<TimelineSwipeCell, EmptyView> {
         UIHostingConfiguration {
-            TimelineSwipeCell(take: take, spineX: self.spineX, cardGap: self.cardGap,
+            TimelineSwipeCell(take: take, addColumnX: self.addColumnX, cardGap: self.cardGap,
                               isSnoozed: self.snoozedIDs.contains(take.id),
                               swipeState: self.swipeState,
                               onToggleDone: { self.onToggleDone($0) },
@@ -718,7 +718,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
     private var takesByID: [UUID: Take] = [:]
     private var previousTakes: [UUID: Take] = [:]   // reconfigure only what changed
     private var lastItems: [TimelineRow] = []        // skip re-applying an unchanged snapshot
-    private var lastSpineX: CGFloat = -1             // density/spine change → reconfigure all
+    private var lastAddColumnX: CGFloat = -1             // density/spine change → reconfigure all
     private var lastCardGap: CGFloat = -1
     private var lastActiveMonthKey: String??        // month-filter change → restyle the dividers
     /// Snoozed Take ids (from the host's view model). A snooze does NOT change the `Take`, so the
@@ -867,7 +867,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
             case .month(let key):
                 cell.contentConfiguration = UIHostingConfiguration {
                     TimelineMonthDivider(title: self.groupTitles[key] ?? "",
-                                         spineX: self.spineX, cardGap: self.cardGap,
+                                         addColumnX: self.addColumnX, cardGap: self.cardGap,
                                          isActive: self.activeMonthKey == key,
                                          onTap: { self.onToggleMonthFilter(key) },
                                          onTapBlank: { self.onTapBackground() })
@@ -971,8 +971,8 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         // explicit reconfigure. Normally reconfigure ONLY the Takes whose value changed (Take
         // is Equatable). A density/spine SETTING change doesn't touch Take content but does
         // change every cell's layout, so reconfigure all in that case.
-        let layoutChanged = spineX != lastSpineX || cardGap != lastCardGap
-        lastSpineX = spineX; lastCardGap = cardGap
+        let layoutChanged = addColumnX != lastAddColumnX || cardGap != lastCardGap
+        lastAddColumnX = addColumnX; lastCardGap = cardGap
         // A month-filter change doesn't touch any Take's content, but it restyles the DIVIDERS
         // (the active one lights amber with an ×) — item identity is the id alone, so they need
         // an explicit reconfigure or the lit state never appears.
@@ -1000,10 +1000,10 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         previousTakes = takesByID
         if !toApply.isEmpty {
             // Reconfigure is the other candidate, and `layoutChanged` reconfigures EVERY cell.
-            // `spineX` is derived from a MEASURED container width, so anything that perturbs
+            // `addColumnX` is derived from a MEASURED container width, so anything that perturbs
             // layout — a tooltip mounting, for instance — can move it and reconfigure the whole
             // collection. Record the reason, because the reasons need different fixes.
-            let why = layoutChanged ? "layout(spineX/cardGap)"
+            let why = layoutChanged ? "layout(addColumnX/cardGap)"
                 : (monthFilterChanged ? "monthFilter" : (snoozeChanged ? "snooze" : "content"))
             var reconfigured = current
             reconfigured.reconfigureItems(toApply)

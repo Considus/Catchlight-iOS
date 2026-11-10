@@ -205,10 +205,9 @@ final class CoreFlowsUITests: XCTestCase {
 
     // MARK: - Flow 5 — Search
 
-    /// Tap Search dock button (1) → the dock morphs to SEARCHING and the
-    /// capsule field appears in the dock → type a term (2) → the timeline
-    /// narrows live to the match. Then × (search-cancel) returns the dock to
-    /// RESTING (sequence-tab visible again).
+    /// Tap Search (1): the search row comes up on the keyboard. Type a term (2):
+    /// the timeline narrows live to the match. Then Cancel (search-cancel) returns
+    /// the toolbar to RESTING (sequence-tab visible again).
     func testFlow5_search_isReachableInTwoTaps_andReturnsMatches() {
         let app = launchAppForUITesting()
 
@@ -239,18 +238,35 @@ final class CoreFlowsUITests: XCTestCase {
             "Live search did not narrow the timeline to the seeded match for 'framer'"
         )
 
-        // Dismiss the keyboard via the Search confirm button first (that's its
-        // job in this state) — tapping × with the keyboard still up is flaky:
-        // keyboard avoidance is repositioning the dock at that moment.
-        tapWhenReady(app.buttons["search-tab"])
+        // Lower the keyboard with Return first (its job in this state): the query and
+        // results stay, and the toolbar shows the query and Cancel.
+        app.typeText("\n")
         _ = app.keyboards.firstMatch.waitForNonExistence(timeout: 3)
+        XCTAssertTrue(app.buttons["search-resume"].waitForExistence(timeout: 3),
+                      "With the keyboard lowered, the toolbar should hold the search row")
 
-        // × exits to RESTING and clears the query — the resting dock returns.
+        // Cancel leaves search and clears the query: the resting toolbar returns.
         tapWhenReady(app.buttons["search-cancel"])
         XCTAssertTrue(
             app.buttons["sequence-tab"].waitForExistence(timeout: 3),
-            "Cancelling search did not return the dock to its resting state"
+            "Cancelling search did not return the toolbar to its resting state"
         )
+    }
+
+    /// Sequence opens the filter chips ABOVE the toolbar, which stays (as drawn in the
+    /// redesign); tapping Sequence again closes them.
+    func testSequence_opensChipsAboveTheToolbar_andClosesOnASecondTap() {
+        let app = launchAppForUITesting()
+        tapWhenReady(app.buttons["sequence-tab"])
+        XCTAssertTrue(app.buttons["filter-tasks"].waitForExistence(timeout: 3), "The filter chips did not open")
+        for id in ["add-button", "angle-tab", "search-tab"] {
+            XCTAssertTrue(app.buttons[id].exists, "\(id) should stay in the toolbar while the filters show")
+        }
+        XCTAssertLessThan(app.buttons["filter-tasks"].frame.maxY, app.buttons["sequence-tab"].frame.minY,
+                          "The chips should sit above the toolbar")
+        tapWhenReady(app.buttons["sequence-tab"])
+        XCTAssertTrue(app.buttons["filter-tasks"].waitForNonExistence(timeout: 3),
+                      "A second tap on Sequence should close the filter chips")
     }
 
     // MARK: - Flow 6 — Open Settings

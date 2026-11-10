@@ -5,8 +5,6 @@
 //  Custom meaning-led glyphs from the icon refinement pass (HiFi v1.6 §-wide):
 //    • ImportantGlyph — an exclamation "!" (stem + dot): the app-wide Important mark
 //                       (owner 2026-07-06; replaced the two-Iris glyph, matches the site).
-//    • SequenceGlyph  — three smaller beads chained on the spine: a SEQUENCE
-//                       of Takes (sibling concept to Dailies).
 //    • ObieGlyph      — the Obie brand logo (solid italic "O" + catch-dot), the
 //                       Obie identity mark (matches the widget/brand glyph).
 //  All drawn on the prototype's 16-unit grid with light ~1.2-unit strokes so
@@ -14,32 +12,6 @@
 //
 
 import SwiftUI
-
-/// Three beads chained on the spine (Sequence).
-struct SequenceGlyphShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let u = min(rect.width, rect.height) / 16
-        var p = Path()
-        for (cy, link) in [(2.9, true), (8.0, true), (13.1, false)] {
-            p.addEllipse(in: CGRect(x: (8 - 1.8) * u, y: (cy - 1.8) * u, width: 3.6 * u, height: 3.6 * u))
-            if link {
-                p.move(to: CGPoint(x: 8 * u, y: (cy + 1.8) * u))
-                p.addLine(to: CGPoint(x: 8 * u, y: (cy + 3.3) * u))
-            }
-        }
-        return p
-    }
-}
-
-/// Convenience views matching the dock's SF Symbol sizing (icon box ~20pt).
-struct SequenceGlyph: View {
-    var size: CGFloat = 20
-    var body: some View {
-        SequenceGlyphShape()
-            .stroke(style: StrokeStyle(lineWidth: size * 1.2 / 16, lineCap: .round))
-            .frame(width: size, height: size)
-    }
-}
 
 /// The Obie identity glyph — the Catchlight Obie brand logo (solid italic "O" +
 /// catch-dot, `obie-glyph` asset made from the brand's Obie glyph drawing).
@@ -235,7 +207,6 @@ extension EnvironmentValues {
     HStack(spacing: 24) {
         ImportantGlyph().foregroundStyle(Color.ckEmber)
         ImportantGlyphSlashed().foregroundStyle(Color.ckEmber)
-        SequenceGlyph().foregroundStyle(Color.ckEmber)
         ObieGlyph().foregroundStyle(Color.ckTextObie)
     }
     .padding()

@@ -2,14 +2,14 @@
 //  DailiesView.swift
 //  Catchlight (iOS app target) — Phase 6 UI
 //
-//  The homepage timeline — the ONE surface (dock redesign 2026-06-10). A vertical
+//  The homepage timeline — the ONE surface (toolbar redesign 2026-06-10). A vertical
 //  scroll of Take cards, each with its Iris in the card's top-left.
 //  The Obie (if any) is pinned at the top with a small gap before the regular
 //  list — ALWAYS, even when it doesn't match the active filter. A persistent
 //  month divider (label + hairline) separates Takes by creation month. First-launch
 //  empty state is a single Fog line.
 //
-//  Live filtering (2026-06-10): the dock's FILTERING toggles and SEARCHING query
+//  Live filtering (2026-06-10): the toolbar's FILTERING toggles and SEARCHING query
 //  produce `ui.activeTimelineFilter`; the non-Obie rows are narrowed through
 //  `SequenceFilter.matches` before month-grouping. When a filter is active but
 //  nothing matches, a quiet "Nothing here yet." line replaces the grouped list.
@@ -76,7 +76,7 @@ struct DailiesView: View {
     @Environment(\.dynamicTypeSize) private var dynamicSize
 
     /// Container width, captured by the background GeometryReader on the body
-    /// ZStack; drives `spineX`.
+    /// ZStack; drives `addColumnX`.
     @State private var containerWidth: CGFloat = 0
 
     /// Container height, from the same reader. Bounds the pinned Obie so it can never
@@ -84,22 +84,22 @@ struct DailiesView: View {
     @State private var containerHeight: CGFloat = 0
 
 
-    /// The dock's Add button centre, from `CatchlightLayout.spineX(containerWidth:)`
-    /// (the same four-equal-columns formula BottomDockView lays out with). The card
-    /// column hangs off it (`spineX − cardLeadingOffset`). The screen width stands in
+    /// The toolbar's Add button centre, from `CatchlightLayout.addColumnX(containerWidth:)`
+    /// (the same four-equal-columns formula DailiesToolbar lays out with). The card
+    /// column hangs off it (`addColumnX − cardLeadingOffset`). The screen width stands in
     /// before the first layout pass so the cards don't flash at a wrong x.
-    private var spineX: CGFloat {
-        CatchlightLayout.spineX(
+    private var addColumnX: CGFloat {
+        CatchlightLayout.addColumnX(
             containerWidth: containerWidth > 0 ? containerWidth : UIScreen.main.bounds.width
         )
     }
 
-    /// Left edge of the Take TEXT column — the card's left edge (`spineX −
+    /// Left edge of the Take TEXT column — the card's left edge (`addColumnX −
     /// cardLeadingOffset`) plus the card's internal leading pad. The DAILIES heading and
     /// the ghosted month markers align to this so they sit directly above the body
-    /// text (owner 2026-06-16; was `spineX + 22`, which floated them right of the text).
+    /// text (owner 2026-06-16; was `addColumnX + 22`, which floated them right of the text).
     private var textColumnLeading: CGFloat {
-        spineX - CatchlightLayout.cardLeadingOffset + CatchlightLayout.cardTextLeadingPad
+        addColumnX - CatchlightLayout.cardLeadingOffset + CatchlightLayout.cardTextLeadingPad
     }
 
     /// Reads the user's timeline-density choice live. `cardGap` turns it into the
@@ -129,7 +129,7 @@ struct DailiesView: View {
     /// no single honest answer — the moved Take would land somewhere unpredictable
     /// relative to the hidden neighbours, and you'd only find out on clearing the filter.
     private var canReorder: Bool {
-        arrangement == .manual && ui.dockMode == .resting && activeFilter.isEmpty
+        arrangement == .manual && ui.toolbarMode == .resting && activeFilter.isEmpty
     }
 
     /// The row currently showing its swipe actions (Delete / Mark done), if any.
@@ -156,7 +156,7 @@ struct DailiesView: View {
     // MARK: - Edit-in-place (2026-06-17)
     /// The live draft of the Take being edited in position, and which of its blocks
     /// holds the keyboard. `ui.editingTakeID` is the matching focus flag (shared so
-    /// RootView can mask the dock). Both clear on save/discard. The draft is committed
+    /// RootView can mask the toolbar). Both clear on save/discard. The draft is committed
     /// through the same `vm.save` chokepoint the top-anchored editor uses.
     /// Gates the plaintext-export confirmation on the missing-phrase banner.
     @State private var showMissingPhraseExportConfirm = false
@@ -263,7 +263,7 @@ struct DailiesView: View {
                     keyboardTopY = frame.origin.y
                 }
 
-            // A first-launch-empty store shows the Fog line; but when a dock
+            // A first-launch-empty store shows the Fog line; but when a toolbar
             // filter is active the timeline (with its own filter-empty line)
             // always wins, so the background-tap exit remains available.
             if vm.isEmpty && activeFilter.isEmpty && inlineNewTake == nil {
@@ -324,16 +324,16 @@ struct DailiesView: View {
                         .accessibilitySortPriority(-1)
 
                     // BOTH new-Take and existing-Take edits ride the SAME bottom-anchored
-                    // `TakeEditCard` that grows UP from the dockbar (owner consistency pass
+                    // `TakeEditCard` that grows UP from the toolbar (owner consistency pass
                     // 2026-07-15), drawn BELOW the heading so its top dissolves under the
-                    // heading fade and its bottom always sits above the dockbar (the
+                    // heading fade and its bottom always sits above the toolbar (the
                     // top-anchored editPanel ran its bottom off-screen under the keyboard
                     // — "the edit-Take card has no bottom").
                     newTakeBlockCard
                 }
                 // Modal to assistive technologies while editing (audit 2026-08, fix 12:
-                // RV-4 dock half / VC3 / §15p). The `.accessibilityHidden` route was
-                // MEASURED inert on this transition — the dock and the background rows
+                // RV-4 toolbar half / VC3 / §15p). The `.accessibilityHidden` route was
+                // MEASURED inert on this transition — the toolbar and the background rows
                 // stayed in the tree through a keystroke re-vend — so containment uses
                 // the fan's `.isModal` instead, which is the mechanism the runtime dump
                 // proved seals (V5). Assistive tech stays inside the catcher + card.
@@ -343,7 +343,7 @@ struct DailiesView: View {
             // Pinned page heading + top fade (cosmetic baseline 2026-06-11):
             // a plain overlay child, NOT .safeAreaInset — in this full-bleed
             // hierarchy (.ignoresSafeArea(.container) at the app root) a top
-            // safeAreaInset here desynced hit-testing and killed the dock's
+            // safeAreaInset here desynced hit-testing and killed the toolbar's
             // keyboard avoidance (Flow 5 regression, 2026-06-11). The heading
             // dodges the status bar itself via deviceTopInset. Takes scroll
             // under the solid block and dissolve beneath the 12pt fade.
@@ -364,8 +364,8 @@ struct DailiesView: View {
             pinnedObie
         }
         .background {
-            // Capture the layout width (NOT UIScreen) so spineX matches the
-            // dock, which is laid out in the same safe-area coordinate space —
+            // Capture the layout width (NOT UIScreen) so addColumnX matches the
+            // toolbar, which is laid out in the same safe-area coordinate space —
             // and the remaining top safe-area inset for the pinned heading.
             GeometryReader { geo in
                 Color.clear
@@ -439,7 +439,7 @@ struct DailiesView: View {
                 editFocusedBlockID = back
             }
         }
-        // Dock + requested a new Take (Phase 2): create it in place at the
+        // Toolbar + requested a new Take (Phase 2): create it in place at the
         // Order-appropriate end and focus it.
         // The first reminder set to alert while notifications are off raises the strip now.
         .onChange(of: vm.anyAlertingReminder) { _, _ in app.refreshRemindersSilencedOnset() }
@@ -619,25 +619,25 @@ struct DailiesView: View {
 
     /// The device's top safe-area inset, captured at the WINDOW ROOT in
     /// CatchlightApp and delivered via the environment. The app root runs
-    /// full-bleed (`.ignoresSafeArea(.container)` — the dock design), so the
+    /// full-bleed (`.ignoresSafeArea(.container)` — the toolbar design), so the
     /// local safe-area plumbing reports zero here and the heading must dodge
     /// the status bar / Dynamic Island itself.
     ///
     /// History (2026-06-11): do NOT read UIKit window state for this —
     /// `keyWindow` per-body flapped when the keyboard window became key
-    /// (killed dock hit-testing + keyboard avoidance); a `static let`
+    /// (killed toolbar hit-testing + keyboard avoidance); a `static let`
     /// UIApplication read trapped in dispatch_once recursion (launch SIGILL).
     /// The root-GeometryReader environment value is the safe source.
     @Environment(\.deviceTopInset) private var deviceTopInset
 
     /// The device's BOTTOM safe-area inset (home-indicator zone), captured at the
     /// window root. Used to lift the timeline's last-row
-    /// dock clearance so the final Take still clears the now-raised dock.
+    /// toolbar clearance so the final Take still clears the now-raised toolbar.
     @Environment(\.deviceBottomInset) private var deviceBottomInset
 
     /// The page title follows the activity: DAILIES · SEQUENCE · SEARCH.
     private var headingTitle: String {
-        switch ui.dockMode {
+        switch ui.toolbarMode {
         case .resting:   return String(localized: "DAILIES")
         case .filtering: return String(localized: "SEQUENCE")
         case .searching: return String(localized: "SEARCH")
@@ -648,7 +648,7 @@ struct DailiesView: View {
     /// tight so the pinned Obie's circle is clear of it at rest).
     private var heading: some View {
         VStack(spacing: 0) {
-            // The title crossfades on a dock-mode change (DAILIES → SEQUENCE → SEARCH), and the
+            // The title crossfades on a toolbar-mode change (DAILIES → SEQUENCE → SEARCH), and the
             // ZStack is what keeps the MASK out of that crossfade. Without it the
             // `.background(Color.ckBackground)` below was applied to the very view carrying
             // `.id` + `.transition`, so the mask faded WITH the title — and two half-faded opaque
@@ -683,7 +683,7 @@ struct DailiesView: View {
                     // it takes a ViewBuilder, so resting mode offers NO action at all
                     // instead of one that silently does nothing.
                     .accessibilityActions {
-                        if ui.dockMode != .resting {
+                        if ui.toolbarMode != .resting {
                             Button("Show all Takes") { ui.exitToResting() }
                         }
                     }
@@ -709,8 +709,8 @@ struct DailiesView: View {
             // Audit 2026-08, V32: the reading order STARTED on the Obie's Iris —
             // the pinned Obie vends before the heading in the flattened container
             // (the V30 dumps show the same order). The page heading reads first;
-            // with the dock already last (V30), the order is heading → Obie →
-            // Takes → dock, the owner's settled visual order.
+            // with the toolbar already last (V30), the order is heading → Obie →
+            // Takes → toolbar, the owner's settled visual order.
             .accessibilitySortPriority(1)
             if vm.obie != nil && !ui.isEditingInPlace {
                 // With a pinned Obie: SOLID right down to the Obie's card top (no fade
@@ -1208,12 +1208,12 @@ struct DailiesView: View {
     }
 
     /// THE timeline (Pillar 2, default since M7): the recycling UIKit collection, fed the real
-    /// month groups, card column, density gap, and heading/dock insets. The pinned Obie and
+    /// month groups, card column, density gap, and heading/toolbar insets. The pinned Obie and
     /// heading still come from the surrounding body.
     private var timeline: some View {
         UIKitTimeline(
             groups: monthGroups.map { TimelineMonthGroup(id: $0.key, title: $0.month, takes: $0.takes) },
-            spineX: spineX,
+            addColumnX: addColumnX,
             cardGap: cardGap,
             activeMonthKey: ui.filterMonth,
             onToggleMonthFilter: { key in
@@ -1223,7 +1223,8 @@ struct DailiesView: View {
             // Not derivable from the Take, so it has to be handed over.
             snoozedIDs: vm.snoozedReminderIDs,
             topInset: newTimelineTopInset,
-            bottomInset: CatchlightLayout.dockClearance + deviceBottomInset,
+            bottomInset: CatchlightLayout.toolbarClearance + deviceBottomInset
+                + (ui.toolbarMode == .filtering ? DailiesToolbarMetrics.chipRowClearance : 0),
             onToggleDone: { take in
                 guard app.ensureEditable(take.id) else { return }
                 vm.toggleDone(take)
@@ -1347,14 +1348,14 @@ struct DailiesView: View {
 
     private func timelineBackgroundTap() {
         if ui.isEditingInPlace { saveInlineEdit(); return }
-        if ui.dockMode == .filtering || ui.dockMode == .searching { ui.exitToResting() }
+        if ui.toolbarMode == .filtering || ui.toolbarMode == .searching { ui.exitToResting() }
     }
 
     private var newTakeBlockCard: some View {
         KeyboardTakeEditor(
             draft: editDraftBinding,
             focusedBlockID: $editFocusedBlockID,
-            leadingInset: spineX - CatchlightLayout.cardLeadingOffset,
+            leadingInset: addColumnX - CatchlightLayout.cardLeadingOffset,
             // Seal the UIKit text view while the fan is up (audit 2026-08, V31): the
             // fan's RootView-level hide covers this card's SwiftUI elements but does
             // not reach the UIKit-vended text, so VoiceOver focus landed on the text
@@ -1434,16 +1435,16 @@ struct DailiesView: View {
                 }
             ),
             openRowID: $openSwipeRowID,
-            leadingInset: spineX - CatchlightLayout.cardLeadingOffset,
+            leadingInset: addColumnX - CatchlightLayout.cardLeadingOffset,
             trailingInset: 20,
             contentVerticalInset: 6
         ) { swipeOffset in
             // BOTH margins live inside the content so the wrapper spans the full
             // screen width — letting each action fill reach its screen edge. The
-            // card's leading edge is `cardLeadingOffset` left of `spineX`. `swipeOffset`
+            // card's leading edge is `cardLeadingOffset` left of `addColumnX`. `swipeOffset`
             // slides the card and the Iris inside it.
             rowContent(for: take, cardSwipeOffset: swipeOffset)
-                .padding(.leading, spineX - CatchlightLayout.cardLeadingOffset)
+                .padding(.leading, addColumnX - CatchlightLayout.cardLeadingOffset)
                 .padding(.trailing, 20)
         }
         // Edit-in-place (owner 2026-06-17): mask every row except the one under
@@ -1565,13 +1566,13 @@ struct DailiesView: View {
     }
 
     /// A rating moment is waiting and nothing is in the way: not editing, no sheet, no
-    /// strip asking a question, the dock at rest, and not a UI-test run.
+    /// strip asking a question, the toolbar at rest, and not a UI-test run.
     private var ratingPromptReady: Bool {
         vm.pendingRatingMoment != nil
             && !ui.isEditingInPlace && ui.pendingInlineNewTake == nil
             && !ui.isSettingsPresented && !ui.isPaywallPresented
             && !ui.isConflictSheetPresented && !ui.isStoryboardPresented
-            && !ui.isFocusRowPresented && ui.dockMode == .resting
+            && !ui.isFocusRowPresented && ui.toolbarMode == .resting
             && vm.tasksCompletedTakeID == nil
             && !ProcessInfo.processInfo.arguments.contains("--uitesting")
     }
@@ -1865,9 +1866,9 @@ struct DailiesView: View {
         )
     }
 
-    // MARK: - Live filter (dock redesign 2026-06-10)
+    // MARK: - Live filter (toolbar redesign 2026-06-10)
 
-    /// The filter the dock's current state describes (empty in RESTING).
+    /// The filter the toolbar's current state describes (empty in RESTING).
     private var activeFilter: SequenceFilter { ui.activeTimelineFilter }
 
     /// The non-Obie Takes in the user's chosen order. The VM hands them back
@@ -1889,7 +1890,7 @@ struct DailiesView: View {
         }
     }
 
-    /// `orderedTakes` narrowed through the live dock filter. The Obie is pinned
+    /// `orderedTakes` narrowed through the live toolbar filter. The Obie is pinned
     /// separately and never filtered.
     private var filteredTakes: [Take] {
         let filter = activeFilter

@@ -1,8 +1,8 @@
 //
-//  DockFilterStateTests.swift
-//  CatchlightCoreTests — one-surface dock redesign (2026-06-10)
+//  ToolbarFilterStateTests.swift
+//  CatchlightCoreTests — one-surface toolbar redesign (2026-06-10)
 //
-//  Pins the UIState dock logic: the morphing dock's mode transitions, the
+//  Pins the UIState toolbar logic: the morphing toolbar's mode transitions, the
 //  filter-toggle cycle (tap = off ↔ on; long-press = on + modifier; tap while
 //  modified = off), Notes ↔ Tasks/Reminders mutual exclusivity, the all-off
 //  "stay in filtering" rule, exitToResting's full clear, and the state →
@@ -19,26 +19,26 @@ import CatchlightCore
 @testable import Catchlight
 
 @MainActor
-final class DockFilterStateTests: XCTestCase {
+final class ToolbarFilterStateTests: XCTestCase {
 
     // MARK: - Mode transitions
 
     func testEnterFilteringAndSearching_setModes_andExitClearsBack() {
         let ui = UIState()
-        XCTAssertEqual(ui.dockMode, .resting)
+        XCTAssertEqual(ui.toolbarMode, .resting)
 
         ui.enterFiltering()
-        XCTAssertEqual(ui.dockMode, .filtering)
+        XCTAssertEqual(ui.toolbarMode, .filtering)
 
         ui.exitToResting()
-        XCTAssertEqual(ui.dockMode, .resting)
+        XCTAssertEqual(ui.toolbarMode, .resting)
 
         ui.enterSearching()
-        XCTAssertEqual(ui.dockMode, .searching)
+        XCTAssertEqual(ui.toolbarMode, .searching)
         XCTAssertEqual(ui.searchQuery, "")
     }
 
-    /// All toggles off keeps the dock in FILTERING — no auto-exit; the user
+    /// All toggles off keeps the toolbar in FILTERING — no auto-exit; the user
     /// may be about to choose another combination.
     func testAllTogglesOff_staysInFiltering() {
         let ui = UIState()
@@ -48,7 +48,7 @@ final class DockFilterStateTests: XCTestCase {
         XCTAssertFalse(ui.filterTasks)
         XCTAssertFalse(ui.filterNotes)
         XCTAssertFalse(ui.filterReminders)
-        XCTAssertEqual(ui.dockMode, .filtering, "All-off must NOT auto-exit filtering")
+        XCTAssertEqual(ui.toolbarMode, .filtering, "All-off must NOT auto-exit filtering")
         XCTAssertTrue(ui.activeTimelineFilter.isEmpty, "All-off filtering shows the unfiltered timeline")
     }
 
@@ -158,7 +158,7 @@ final class DockFilterStateTests: XCTestCase {
         ui.searchQuery = "leftover"
 
         ui.exitToResting()
-        XCTAssertEqual(ui.dockMode, .resting)
+        XCTAssertEqual(ui.toolbarMode, .resting)
         XCTAssertFalse(ui.filterNotes)
         XCTAssertFalse(ui.filterTasks)
         XCTAssertFalse(ui.filterTasksDone)
@@ -184,14 +184,14 @@ final class DockFilterStateTests: XCTestCase {
     func testBeginEditingInPlace_whileSearching_exitsSearch() {
         let ui = UIState()
         ui.enterSearching()
-        XCTAssertEqual(ui.dockMode, .searching)
+        XCTAssertEqual(ui.toolbarMode, .searching)
         XCTAssertTrue(ui.searchKeyboardUp)
 
         let take = Take(createdAt: Date(), modifiedAt: Date(),
                         blocks: [.textLine("find me")], isNote: true)
         ui.beginEditingInPlace(take)
 
-        XCTAssertEqual(ui.dockMode, .resting, "search must be exited before editing")
+        XCTAssertEqual(ui.toolbarMode, .resting, "search must be exited before editing")
         XCTAssertFalse(ui.searchKeyboardUp)
         XCTAssertEqual(ui.editingTakeID, take.id)
     }

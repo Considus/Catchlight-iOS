@@ -32,8 +32,6 @@ final class FlatSurfaceSourceScanTests: XCTestCase {
               line: "LinearGradient(colors: [Color.ckBackground, Color.ckBackground.opacity(0)],", count: 1, reason: fadeReason),
         .init(file: "Catchlight/UI/Storyboard/StoryboardView.swift", line: "LinearGradient(", count: 1, reason: fadeReason),
         .init(file: "Catchlight/UI/Angles/ShotListView.swift", line: "LinearGradient(", count: 1, reason: fadeReason),
-        .init(file: "Catchlight/UI/Components/KeyboardSearchBar.swift",
-              line: "private let fade = CAGradientLayer()", count: 1, reason: fadeReason),
         .init(file: "CatchlightWidgets/WidgetSupport.swift", line: "RoundedRectangle(cornerRadius: radius, style: .continuous)", count: 2,
               reason: "Widget shapes are set by the widgets slice, sized to the widget's own corners."),
         .init(file: "CatchlightWidgets/WidgetSupport.swift", line: "let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)", count: 1,
@@ -125,7 +123,7 @@ final class FlatSurfaceSourceScanTests: XCTestCase {
     func testSourceFinder_seesTheAppSources() {
         let sources = swiftSources()
         XCTAssertGreaterThan(sources.count, 50, "the scan found \(sources.count) files: the path is wrong")
-        XCTAssertTrue(sources.contains { $0.path == "Catchlight/UI/Views/BottomDockView.swift" })
+        XCTAssertTrue(sources.contains { $0.path == "Catchlight/UI/Views/DailiesToolbar.swift" })
         XCTAssertTrue(sources.contains { $0.path == "CatchlightShare/ShareSheetView.swift" })
         XCTAssertTrue(sources.contains { $0.path == "CatchlightWidgets/WidgetSupport.swift" })
     }

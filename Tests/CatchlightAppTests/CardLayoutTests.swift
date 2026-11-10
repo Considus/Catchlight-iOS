@@ -22,15 +22,15 @@ final class CardLayoutTests: XCTestCase {
         XCTAssertEqual(CatchlightLayout.cardMinHeight, 72)
     }
 
-    /// spineX(393) = 12 + (393 - 24) / 8 = 58.125, less 38.
+    /// addColumnX(393) = 12 + (393 - 24) / 8 = 58.125, less 38.
     func testCardLeadingEdge_393() {
-        let leading = CatchlightLayout.spineX(containerWidth: 393) - CatchlightLayout.cardLeadingOffset
+        let leading = CatchlightLayout.addColumnX(containerWidth: 393) - CatchlightLayout.cardLeadingOffset
         XCTAssertEqual(leading, 20.125, accuracy: 0.0001)
     }
 
-    /// spineX(375) = 12 + (375 - 24) / 8 = 55.875, less 38.
+    /// addColumnX(375) = 12 + (375 - 24) / 8 = 55.875, less 38.
     func testCardLeadingEdge_375() {
-        let leading = CatchlightLayout.spineX(containerWidth: 375) - CatchlightLayout.cardLeadingOffset
+        let leading = CatchlightLayout.addColumnX(containerWidth: 375) - CatchlightLayout.cardLeadingOffset
         XCTAssertEqual(leading, 17.875, accuracy: 0.0001)
     }
 

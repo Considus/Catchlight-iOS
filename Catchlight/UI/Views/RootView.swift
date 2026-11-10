@@ -3,17 +3,14 @@
 //  Catchlight (iOS app target) — Phase 6 UI
 //
 //  The top-level composition for the product UI. Decides onboarding vs. the main
-//  app, hosts the ONE surface (the timeline — the dock morphs instead of tabs
-//  switching, redesign 2026-06-10), the persistent bottom dock, and the modal
-//  overlays (Focus row, Take editor). All view models arrive via the environment
-//  from Wiring; this view owns no domain logic.
+//  app, hosts the ONE surface (the timeline: the toolbar changes mode instead of
+//  tabs switching), the Dailies toolbar, and the modal overlays (Focus row, Take
+//  editor). All view models arrive via the environment from Wiring; this view owns
+//  no domain logic.
 //
-//  Spine ↔ dock alignment: the timeline spine and the dock's Add button share the
-//  same x. Both derive it from `CatchlightLayout.spineX(containerWidth:)` — the
-//  dock's four-equal-columns formula — DailiesView for the spine and row layout,
-//  BottomDockView implicitly via its own column layout (and explicitly via
-//  `addButtonCentreX`). 2026-06-10 fix: the earlier fixed `spineLeading = 32`
-//  never matched the dock's real Add centre (~58pt on a 393pt screen).
+//  Card ↔ toolbar alignment: the Take cards hang off the centre of the toolbar's
+//  first column, `CatchlightLayout.addColumnX(containerWidth:)`, the toolbar's
+//  four-equal-columns formula.
 //
 
 import SwiftUI
@@ -197,7 +194,7 @@ struct RootView: View {
     private var mainApp: some View {
         @Bindable var ui = ui
         // The body is assembled from small computed properties (`timeline`,
-        // `dock`) rather than a single large ZStack ViewBuilder — an inline
+        // `toolbar`) rather than a single large ZStack ViewBuilder — an inline
         // conditional + modifier chain produced a phantom "cannot convert Color
         // to Bool" diagnostic from SwiftUI's type-checker.
         return ZStack(alignment: .bottom) {
@@ -205,7 +202,7 @@ struct RootView: View {
 
             timeline   // full opacity behind the fan — the veil does the work
 
-            dock
+            toolbar
 
             // The search field rides the keyboard as a UIKit inputAccessoryView
             // (2026-06-20) — OS-positioned, so it sits correctly on device with no
@@ -213,7 +210,7 @@ struct RootView: View {
             // Active while searching with the keyboard raised.
             KeyboardSearchBar(
                 query: $ui.searchQuery,
-                isActive: ui.dockMode == .searching && ui.searchKeyboardUp,
+                isActive: ui.toolbarMode == .searching && ui.searchKeyboardUp,
                 onCancel: { ui.exitToResting() },
                 onSubmitDismiss: { ui.lowerSearchKeyboard() }
             )
@@ -224,7 +221,7 @@ struct RootView: View {
         // needs it: the search bar rides the keyboard as a UIKit inputAccessoryView
         // (OS-positioned) and the edit-in-place editor pins its caret by driving the
         // timeline scroll offset directly. Without this, native avoidance flung
-        // the bottom-aligned resting dock up to the heading whenever it happened to be
+        // the bottom-aligned resting toolbar up to the heading whenever it happened to be
         // showing while a keyboard was up — the stray-toolbar bug (owner 2026-06-20).
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onReceive(NotificationCenter.default.publisher(
@@ -305,34 +302,34 @@ struct RootView: View {
     // `mainApp` ZStack) so each ViewBuilder stays simple enough for SwiftUI's
     // type-checker.
 
-    /// Opacity for the DOCK while a focus surface is up. Behind the Focus row the
+    /// Opacity for the TOOLBAR while a focus surface is up. Behind the Focus row the
     /// fan's own ckDim veil does the timeline recede; while editing in place the
-    /// timeline masks itself (DailiesView), and the dock recedes + goes inert here so
+    /// timeline masks itself (DailiesView), and the toolbar recedes + goes inert here so
     /// it can't start a competing action mid-edit (owner 2026-06-17).
     /// True while the search keyboard (and its docked search bar) is up. The bottom
-    /// dock is redundant then — the search bar IS the UI — so hide + inert it, exactly
+    /// toolbar is redundant then — the search bar IS the UI — so hide + inert it, exactly
     /// as for editing. Leaving it live let its swipe-up-for-Settings gesture compete
     /// with the timeline scroll (owner 2026-06-20: scrolling opened Settings instead).
     private var searchKeyboardUp: Bool {
-        ui.dockMode == .searching && ui.searchKeyboardUp
+        ui.toolbarMode == .searching && ui.searchKeyboardUp
     }
 
     private var fanOpacity: Double {
-        // Editing / search hide the dock OUTRIGHT — and this is checked BEFORE the fan
+        // Editing / search hide the toolbar OUTRIGHT — and this is checked BEFORE the fan
         // dim (owner 2026-06-21): a Focus row opened FROM the editor sets BOTH
-        // `isEditingInPlace` and `isFocusRowPresented`, and if the fan check won the dock
+        // `isEditingInPlace` and `isFocusRowPresented`, and if the fan check won the toolbar
         // re-appeared at 18% and the keyboard's safe-area avoidance shoved it mid-screen
         // — the "ghostly toolbar" bug. While editing, the keyboard toolbar replaces the
-        // dock, so hide it outright regardless of the fan. (The original reason still
-        // holds: even at low opacity the keyboard pushes a stray dock over the heading.)
+        // toolbar, so hide it outright regardless of the fan. (The original reason still
+        // holds: even at low opacity the keyboard pushes a stray toolbar over the heading.)
         if ui.isEditingInPlace || searchKeyboardUp { return 0 }
-        // The 0.18 dim is for a fan opened from the RESTING timeline (dock recedes
+        // The 0.18 dim is for a fan opened from the RESTING timeline (toolbar recedes
         // behind the veil but stays visible).
         if ui.isFocusRowPresented { return 0.18 }
         return 1
     }
 
-    /// The ONE surface — the timeline. The dock's filtering/searching states
+    /// The ONE surface — the timeline. The toolbar's filtering/searching states
     /// narrow it live via `ui.activeTimelineFilter` (read inside DailiesView).
     ///
     /// AX-hidden while the Focus row is up (audit 2026-08, V5 — Blocker):
@@ -347,9 +344,9 @@ struct RootView: View {
             .accessibilityHidden(ui.isFocusRowPresented)
     }
 
-    /// The persistent bottom dock (morphs between resting / filtering / searching).
-    private var dock: some View {
-        BottomDockView(onNewTake: { newTake() })
+    /// The Dailies toolbar (resting, filtering with its chips, or searching).
+    private var toolbar: some View {
+        DailiesToolbar(onNewTake: { newTake() })
             .environment(ui)
             .opacity(fanOpacity)
             // Inert while editing in place (so a stray tap can't open a second editor)
@@ -360,30 +357,30 @@ struct RootView: View {
             // 18% behind the fan and 0 while editing, but stayed fully present in
             // the accessibility tree — the escape hatch V5 walked through.
             .accessibilityHidden(ui.isFocusRowPresented || ui.isEditingInPlace)
-            // Read LAST (audit 2026-08, V30): the dock vends in the same flattened
+            // Read LAST (audit 2026-08, V30): the toolbar vends in the same flattened
             // container as DailiesView's heading + pinned Obie, BEFORE the nested
-            // timeline collection — so VoiceOver read Obie, then the dock, then the
+            // timeline collection — so VoiceOver read Obie, then the toolbar, then the
             // Takes, cutting the content in half. The reading order must follow the
-            // visual order (owner 2026-08-27): heading, Obie, Takes, dock at the
-            // bottom. One priority on the whole dock keeps its four buttons
+            // visual order (owner 2026-08-27): heading, Obie, Takes, toolbar at the
+            // bottom. One priority on the whole toolbar keeps its four buttons
             // contiguous in their own left-to-right order.
-            // 🚨 NO SORT PRIORITY ON THE DOCK — deliberately, and do not add one back.
+            // 🚨 NO SORT PRIORITY ON THE TOOLBAR — deliberately, and do not add one back.
             //
             // V30 (`a8fd291`, 2026-08-27) added `.accessibilitySortPriority(-1)` here to
-            // read the dock LAST. That was a mistake twice over. The owner had REPORTED
-            // the order he was hearing — heading, Obie, dock, then the Takes — as an
-            // observation; the decision to move the dock to the end was ours, justified
+            // read the toolbar LAST. That was a mistake twice over. The owner had REPORTED
+            // the order he was hearing — heading, Obie, toolbar, then the Takes — as an
+            // observation; the decision to move the toolbar to the end was ours, justified
             // by "a screen's chrome should come before or after its content", and the
             // commit then attributed it to him. He has since confirmed he never asked
             // for it and that the pre-V30 order is the one he wants.
             //
             // It also introduced the V40 focus regression. With the priority on, focus
-            // jumped out of dock elements to the timeline's FIRST CELL — the element that
-            // followed the dock BEFORE the sort moved it. Measured across his captures:
+            // jumped out of toolbar elements to the timeline's FIRST CELL — the element that
+            // followed the toolbar BEFORE the sort moved it. Measured across his captures:
             // 4 and 9 jumps with it on, 1 and 2 with it off, and swipes that actually
             // advanced went from 19 to 35.
             //
-            // Without it the dock vends in its natural position, which is the order he
+            // Without it the toolbar vends in its natural position, which is the order he
             // asked for: heading, Obie Iris, Obie card, Add, Storyboard, Sequence, Search,
             // then the Takes.
     }
@@ -466,24 +463,24 @@ struct RootView: View {
             .transition(.opacity)
             // Modal to assistive technologies (V5): VoiceOver keeps focus inside
             // the open row instead of flicking out to the surface behind it.
-            // Belt to the braces of the timeline/dock AX-hiding above.
+            // Belt to the braces of the timeline/toolbar AX-hiding above.
             .accessibilityAddTraits(.isModal)
         }
     }
 
-    /// The lowest the Focus row may reach. While editing, the dock is hidden and the keyboard
-    /// (when up) is the limit; otherwise the row stays above the dock, the same clearance
+    /// The lowest the Focus row may reach. While editing, the toolbar is hidden and the keyboard
+    /// (when up) is the limit; otherwise the row stays above the toolbar, the same clearance
     /// the timeline's last Take keeps.
     private func focusRowVisibleBottom(screenHeight: CGFloat) -> CGFloat {
         if ui.isEditingInPlace {
             return min(keyboardTopY, screenHeight - deviceBottomInset)
         }
-        return screenHeight - CatchlightLayout.dockClearance - deviceBottomInset
+        return screenHeight - CatchlightLayout.toolbarClearance - deviceBottomInset
     }
 
     // MARK: - New item actions
 
-    /// Invoked directly by the dock's Add button (RESTING and FILTERING states —
+    /// Invoked directly by the toolbar's Add button (RESTING and FILTERING states —
     /// redesign 2026-06-10, no bloom). Creates a blank Take and opens the editor.
     private func newTake() {
         // Task 6.20: lapsed users hit the paywall instead of creating a Take.

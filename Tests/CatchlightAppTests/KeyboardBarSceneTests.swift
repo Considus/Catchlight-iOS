@@ -23,10 +23,11 @@ final class KeyboardBarSceneTests: XCTestCase {
             sceneTraits(.graphite, .dark).performAsCurrent { bar = controller.bar }
             window.addSubview(bar)
             bar.updateTraitsIfNeeded()
-            assertPaints(bar, .jade, searchBarBorders, "joining a Jade window")
+            assertSearchBarPaints(bar, .jade, "joining a Jade window")
 
             SettingsViewModel.SceneChoice.select(.onyx, defaults: defaults)
-            assertPaints(bar, .onyx, searchBarBorders, "after switching to Onyx")
+            bar.updateTraitsIfNeeded()
+            assertSearchBarPaints(bar, .onyx, "after switching to Onyx")
         }
     }
 
@@ -47,10 +48,22 @@ final class KeyboardBarSceneTests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// The search bar's buttons are ringed in the accent at 0.55, and its field in the
-    /// `outline` token, which is 3:1 on the surface.
-    private let searchBarBorders: (UIView) -> (UIColor, CGFloat) = { view in
-        view is UITextField ? (SceneToken.outline, 1) : (SceneToken.accentText, 0.55)
+    /// The search row is a solid strip of the Scene's ground (as rendered by the layer),
+    /// and its one bordered view, the field, is outlined with the `outline` token.
+    private func assertSearchBarPaints(_ bar: UIView, _ scene: CatchlightScene, _ label: String,
+                                       file: StaticString = #filePath, line: UInt = #line) {
+        let traits = sceneTraits(scene, .dark)
+        let strip = bar.layer.backgroundColor.map { UIColor(cgColor: $0) }
+        XCTAssertEqual(strip.map(hex), hex(SceneToken.ground.resolvedColor(with: traits)),
+                       "\(label): strip", file: file, line: line)
+        let bordered = allViews(in: bar).filter { $0.layer.borderWidth > 0 }
+        XCTAssertEqual(bordered.count, 1, "\(label): only the field is outlined", file: file, line: line)
+        for view in bordered {
+            XCTAssertTrue(view is UITextField, "\(label): \(type(of: view)) is outlined", file: file, line: line)
+            let border = view.layer.borderColor.map { UIColor(cgColor: $0) }
+            XCTAssertEqual(border.map(hex), hex(SceneToken.outline.resolvedColor(with: traits)),
+                           "\(label): field outline", file: file, line: line)
+        }
     }
     /// The Restore bar's only bordered button, Back, is outlined with the `outline` token.
     private let restoreBarBorders: (UIView) -> (UIColor, CGFloat) = { _ in (SceneToken.outline, 1) }

@@ -207,6 +207,8 @@ extension Color {
     static let ckGround = Color(SceneColor(\.ground))
     static let ckCard = Color(SceneColor(\.card))
     static let ckLine = Color(SceneColor(\.line))
+    /// A panel on the ground: the Dailies toolbar and its filter chips.
+    static let ckPanel = Color(SceneColor(\.surface))
     static let ckOutline = Color(SceneColor(\.outline))
     static let ckUnlit = Color(SceneColor(\.unlit))
     static let ckLit = Color(SceneColor(\.lit))
@@ -962,10 +964,10 @@ enum CatchlightLayout {
     static let controlRadius: CGFloat = 10
     /// Corner radius of a field, panel, card or sheet.
     static let surfaceRadius: CGFloat = 16
-    /// The distance from the dock's first column centre (`spineX`) to the Take card's
-    /// leading edge: the card starts at `spineX − cardLeadingOffset`, about 20pt from
+    /// The distance from the dock's first column centre (`addColumnX`) to the Take card's
+    /// leading edge: the card starts at `addColumnX − cardLeadingOffset`, about 20pt from
     /// the screen edge, matching the 20pt trailing margin. The timeline line that once
-    /// ran down `spineX` is gone (owner 2026-11-09); the Add button still sits there.
+    /// ran down `addColumnX` is gone (owner 2026-11-09); the Add button still sits there.
     static let cardLeadingOffset: CGFloat = 38
     /// The Take card's inner padding on every side.
     static let cardPadding: CGFloat = 14
@@ -996,18 +998,14 @@ enum CatchlightLayout {
     /// itself, and a literal 14 in two files would drift the moment either moved.
     /// Unchanged in value — this is the same 14 the card has always used.
     static let cardTextTrailingPad: CGFloat = 14
-    /// Horizontal padding of the bottom dock (each side).
-    static let dockHorizontalPadding: CGFloat = 12
-    /// x of the timeline spine == the dock Add button's centre, for a given
-    /// container width. The dock lays out four equal columns inside
-    /// `dockHorizontalPadding`, so the first column's centre sits at
-    /// pad + (width − 2·pad) / 8. The spine, the Iris circles, and the Add
-    /// button must all derive from this one formula — that is what keeps the
-    /// spine on the + vertical at every device width.
-    /// (2026-06-10 fix: this was previously a fixed `spineLeading = 32` that
-    /// never matched the dock — ~26pt left of the + on a 393pt screen.)
-    static func spineX(containerWidth: CGFloat) -> CGFloat {
-        dockHorizontalPadding + (containerWidth - 2 * dockHorizontalPadding) / 8
+    /// The Dailies toolbar's inset from each side of the screen.
+    static let toolbarHorizontalPadding: CGFloat = 12
+    /// x of the centre of the toolbar's first column (Add), for a given container width.
+    /// The toolbar lays out four equal columns inside `toolbarHorizontalPadding`, so the
+    /// first column's centre sits at pad + (width − 2·pad) / 8. The Take cards hang off
+    /// it (`addColumnX − cardLeadingOffset`), as do the Focus row and the Storyboard rows.
+    static func addColumnX(containerWidth: CGFloat) -> CGFloat {
+        toolbarHorizontalPadding + (containerWidth - 2 * toolbarHorizontalPadding) / 8
     }
 
     /// Minimum touch target per HIG / accessibility.
@@ -1027,13 +1025,14 @@ enum CatchlightLayout {
     static let headingBelowGap: CGFloat = 23
 
     static let headingClearance: CGFloat = 68   // 52 → 58 → 66 → 68: drop the topmost Take/Obie lower so it clears the fade (owner 2026-06-16; +8 with the pinned-Obie header; +2 on 2026-06-29 when the heading grew 20 → 24, pushing the fade lower)
-    /// Resting clearance the dock occupies above the timeline's bottom, BEFORE
-    /// the device bottom inset is added. Last-row bottom padding is
-    /// `dockClearance + deviceBottomInset` so the final Take clears the raised dock.
-    static let dockClearance: CGFloat = 120
-    /// The dock's own resting bottom padding above the home indicator, added on
-    /// top of `deviceBottomInset` (BottomDockView / DockPillRow).
-    static let dockBottomPadding: CGFloat = 8
+    /// Clearance the resting toolbar takes above the timeline's bottom, BEFORE the device
+    /// bottom inset is added. Last-row bottom padding is `toolbarClearance +
+    /// deviceBottomInset` (plus the filter chips' row while they show), so the final Take
+    /// clears the toolbar.
+    static let toolbarClearance: CGFloat = 120
+    /// The toolbar's bottom padding above the home indicator, added on top of
+    /// `deviceBottomInset` (DailiesToolbar; DockPillRow keeps the same line).
+    static let toolbarBottomPadding: CGFloat = 8
     /// Gap between the brand mark (`IntroBrandMark`) and the hero line on the
     /// intro surfaces — onboarding steps AND the app-entry LockView reference this
     /// one value so the mark→hero rhythm is identical and can't drift (owner
