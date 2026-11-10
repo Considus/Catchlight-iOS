@@ -143,7 +143,8 @@ targets:
         # App encrypts user content with AES-256-GCM (CryptoKit) + HKDF/HMAC-SHA-256
         # for confidentiality, so it DOES use non-exempt encryption (beyond OS HTTPS).
         # Algorithms are standard (no proprietary crypto). Export basis: publicly
-        # available encryption source code, 15 CFR 742.15(b). Since BIS's 2021 rule,
+        # available encryption source code, 15 CFR 742.15(b), which holds only while
+        # this repo and the encryption source in Catchlight-Core stay public. Since BIS's 2021 rule,
         # public source that uses only standard cryptography needs no notice to BIS or
         # NSA, no CCATS and no self-classification report. Adding non-standard or
         # proprietary cryptography would need a notice before it is published. If the
