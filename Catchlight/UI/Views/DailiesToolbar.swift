@@ -2,8 +2,8 @@
 //  DailiesToolbar.swift
 //  Catchlight (iOS app target)
 //
-//  The toolbar at the bottom of Dailies, as drawn in the redesign's app screens
-//  (02_Design/Brand_Direction/catchlight-app-screens.html, "Search and Sequence"):
+//  The toolbar at the bottom of Dailies, as drawn in the redesign (the app screens
+//  drawing, "Search and Sequence"):
 //  one flat panel of four labelled icons, Add, Storyboard, Sequence and Search. Add's
 //  icon sits in a square filled with the action colour (Mark, 2026-11-10).
 //
@@ -122,9 +122,9 @@ struct DailiesToolbar: View {
                 .ckBody(.medium, size: 11, relativeTo: .caption2)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                // Like the system tab bar: the label stops growing at the largest
-                // standard size, and a long press shows it large instead.
-                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                // Like the system tab bar: the label stops growing at the second size
+                // above the default, and a long press shows it large instead.
+                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         }
         .frame(maxWidth: .infinity, minHeight: DailiesToolbarMetrics.panelHeight)
         .contentShape(Rectangle())
