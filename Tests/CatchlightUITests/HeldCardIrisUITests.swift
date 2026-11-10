@@ -15,6 +15,10 @@ import XCTest
 
 final class HeldCardIrisUITests: XCTestCase {
 
+    /// `TakeCardStyle.borderWidth`: held by `TakeCardStyleTests.testBorderWidth_isWhatTheHeldCardUITestAssumes`,
+    /// because the UI test target cannot read the app's constant.
+    private static let cardStrokeWidth: CGFloat = 0.75
+
     override func setUp() {
         super.setUp()
         continueAfterFailure = false
@@ -87,10 +91,11 @@ final class HeldCardIrisUITests: XCTestCase {
         var maxX = card.maxX + 30; while maxX > card.midX, !isFill(maxX, card.midY + 10) { maxX -= step }
         var minY = card.midY; while minY > card.minY - 30, isFill(card.maxX - 30, minY - step) { minY -= step }
         var maxY = card.midY; while maxY < card.maxY + 30, isFill(card.maxX - 30, maxY + step) { maxY += step }
-        // A plain note's card now has a quiet `line` edge (0.75pt), which is not the fill, so the
-        // walks above stop just inside it: measured 1.0pt in on each side at 3x. The card's own
-        // frame includes that edge, so the found frame is grown back out by it.
-        let edge: CGFloat = 1.0
+        // A plain note's card draws a quiet `line` edge, which is not the fill, so the walks above
+        // stop just inside it. The card's own frame includes that edge, so the found frame is
+        // grown back out by it: the stroke width plus a third of a point for anti-aliasing
+        // (measured 1.0pt in on each side at 3x).
+        let edge = Self.cardStrokeWidth + 0.25
         return CGRect(x: minX - edge, y: minY - edge, width: maxX - minX + 2 * edge, height: maxY - minY + 2 * edge)
     }
 

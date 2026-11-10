@@ -84,5 +84,10 @@ final class TakeCardStyleTests: XCTestCase {
         XCTAssertEqual(style(take).border, Quadrant.task(.dark),
                        "a Task-and-reminder Take borders as Task (border order)")
     }
+
+    /// `HeldCardIrisUITests` allows for this stroke width when it finds the card's edges.
+    func testBorderWidth_isWhatTheHeldCardUITestAssumes() {
+        XCTAssertEqual(TakeCardStyle.borderWidth, 0.75)
+    }
 }
 #endif
