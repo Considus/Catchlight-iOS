@@ -181,16 +181,31 @@ extension TypographyTests {
 @MainActor
 extension TypographyTests {
 
-    func testFontsAreBuiltOnce_notPerRender() {
+    /// Builds one display font and one body font the way a render does.
+    private func renderFonts() -> (UIFont, UIFont) {
         let traits = UITraitCollection(preferredContentSizeCategory: .large)
-        _ = CatchlightFont.uiDisplay(size: 29, relativeTo: .title2, compatibleWith: traits, language: "ja")
-        _ = CatchlightFont.uiBody(size: 13.5, weight: .medium, relativeTo: .callout, compatibleWith: traits)
-        let built = CatchlightFont.cachedFontCount
+        return (CatchlightFont.uiDisplay(size: 29, relativeTo: .title2, compatibleWith: traits, language: "ja"),
+                CatchlightFont.uiBody(size: 13.5, weight: .medium, relativeTo: .callout, compatibleWith: traits))
+    }
+
+    func testFontsAreBuiltOnce_notPerRender() {
+        let first = renderFonts()
+        let built = CatchlightFont.fontBuildCount
         for _ in 0..<50 {
-            _ = CatchlightFont.uiDisplay(size: 29, relativeTo: .title2, compatibleWith: traits, language: "ja")
-            _ = CatchlightFont.uiBody(size: 13.5, weight: .medium, relativeTo: .callout, compatibleWith: traits)
+            let again = renderFonts()
+            XCTAssertTrue(again.0 === first.0 && again.1 === first.1, "a repeat call returned a new font")
         }
-        XCTAssertEqual(CatchlightFont.cachedFontCount, built, "repeat calls built new fonts")
+        XCTAssertEqual(CatchlightFont.fontBuildCount, built, "repeat calls built fonts")
+    }
+
+    /// The control: with caching off the same calls do build, so the counter above can fail.
+    func testBuildCounter_seesBuilds_whenCachingIsOff() {
+        CatchlightFont.setCachingDisabledForTests(true)
+        defer { CatchlightFont.setCachingDisabledForTests(false) }
+        _ = renderFonts()
+        let built = CatchlightFont.fontBuildCount
+        for _ in 0..<5 { _ = renderFonts() }
+        XCTAssertGreaterThan(CatchlightFont.fontBuildCount, built)
     }
 
     func testHeadingNumbersAreOneSharedSource() {
@@ -220,6 +235,17 @@ extension TypographyTests {
         XCTAssertEqual(none, flat, accuracy: 0.5, "text without emphasis should match plain text")
     }
 
+    /// View-level modifiers placed after `ckBody` still reach the text: the overdue time is
+    /// italic (TakeRowView) and the filter label is kerned (UIKitTimeline).
+    func testItalicAndKerning_stillApplyAfterCkBody() {
+        let plain = width(of: Text("Overdue 12:40").ckBody(.medium, size: 11, relativeTo: .caption).monospacedDigit())
+        let italic = width(of: Text("Overdue 12:40").ckBody(.medium, size: 11, relativeTo: .caption).monospacedDigit().italic(true))
+        XCTAssertNotEqual(italic, plain, accuracy: 0.01, "italic did not change the text")
+        let label = width(of: Text("SEQUENCE").ckBody(.regular, size: 14, relativeTo: .body))
+        let kerned = width(of: Text("SEQUENCE").ckBody(.regular, size: 14, relativeTo: .body).kerning(0.5))
+        XCTAssertEqual(kerned - label, 0.5 * 8, accuracy: 0.6, "kerning did not apply")
+    }
+
     // MARK: Multi-word headings
 
     private func catalogTitle(_ language: String) -> String {
@@ -241,9 +267,9 @@ extension TypographyTests {
 
     /// The scale the widest line needs to fit `width`: it must stay above the floor, so
     /// nothing is cut with an ellipsis.
-    private func neededScale(_ title: String, width: CGFloat, category: UIContentSizeCategory) -> CGFloat {
+    private func neededScale(_ title: String, width: CGFloat, category: UIContentSizeCategory, language: String? = nil) -> CGFloat {
         let traits = UITraitCollection(preferredContentSizeCategory: category)
-        let font = CatchlightFont.uiDisplay(size: 24, relativeTo: .title3, compatibleWith: traits)
+        let font = CatchlightFont.uiDisplay(size: 24, relativeTo: .title3, compatibleWith: traits, language: language)
         let lines = (PageHeading.twoLines(title) ?? title).components(separatedBy: "\n")
         let widest = lines.map { ($0 as NSString).size(withAttributes: [.font: font, .kern: CatchlightLayout.pageHeadingKerning]).width }.max() ?? 0
         // One line fits when it is no wider than the space. Otherwise it scales.
@@ -260,10 +286,42 @@ extension TypographyTests {
                 let traits = UITraitCollection(preferredContentSizeCategory: category)
                 let line = CatchlightFont.uiDisplay(size: 24, relativeTo: .title3, compatibleWith: traits).lineHeight
                 XCTAssertLessThanOrEqual(height, line * 2.2, "\(language) \(category.rawValue): \(title) is \(height)pt tall, more than two lines")
-                XCTAssertGreaterThan(neededScale(title, width: available, category: category), 0.3,
+                XCTAssertGreaterThan(neededScale(title, width: available, category: category), PageHeading.scaleFloor,
                                      "\(language) \(category.rawValue): \(title) would hit the scale floor and truncate")
             }
         }
+    }
+
+    private static let catalogLanguages = ["en", "de", "fr", "es", "it", "pt-BR", "nl", "pt-PT", "pl", "sv", "da", "nb",
+                                           "fi", "tr", "ja", "ko", "zh-Hans", "zh-Hant", "th"]
+    private static let headingKeys = ["SETTINGS", "STORYBOARD", "SHOT LIST", "SYNC CONFLICTS", "DAILIES", "SEQUENCE", "SEARCH"]
+
+    private func localized(_ key: String, _ language: String) -> String {
+        guard let path = Bundle.main.path(forResource: language, ofType: "lproj"),
+              let bundle = Bundle(path: path) else { return key }
+        return bundle.localizedString(forKey: key, value: key, table: nil)
+    }
+
+    /// Every page heading in every catalog language, at the default size and AX5, in the
+    /// narrowest header (the Conflicts header with its close-button slots). It prints the
+    /// scale each one needs, and none may fall to the floor and be cut.
+    func testEveryHeadingInEveryLanguage_fitsAboveTheScaleFloor() {
+        // The instrument must see a translation: German SYNC CONFLICTS differs from English.
+        XCTAssertEqual(localized("SYNC CONFLICTS", "de"), "SYNCHRONISIERUNGSKONFLIKTE")
+        let available: CGFloat = 402 - 2 * 56
+        var worst: (String, CGFloat) = ("", 1)
+        for language in Self.catalogLanguages {
+            for key in Self.headingKeys {
+                let title = localized(key, language)
+                for category in [UIContentSizeCategory.large, .accessibilityExtraExtraExtraLarge] {
+                    let need = neededScale(title, width: available, category: category, language: language)
+                    if need < worst.1 { worst = ("\(language) \(key) \(category.rawValue) \(title)", need) }
+                    XCTAssertGreaterThan(need, PageHeading.scaleFloor, "\(language) \(category.rawValue): \(title) needs \(need)")
+                }
+            }
+        }
+        let size = CatchlightFont.uiDisplay(size: 24, relativeTo: .title3, compatibleWith: UITraitCollection(preferredContentSizeCategory: .accessibilityExtraExtraExtraLarge), language: "de").pointSize
+        print("WORST HEADING SCALE \(worst.1) for \(worst.0), drawn at about \(worst.1 * size)pt")
     }
 
     func testSplit_isAtAWordBoundary_andBalanced() {

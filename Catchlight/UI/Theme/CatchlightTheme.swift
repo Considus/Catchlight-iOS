@@ -468,21 +468,32 @@ enum CatchlightFont {
     private static var resolvedNames: [String: String?] = [:]
     private static let lock = NSLock()
 
+    private static var builds = 0
+    private static var cachingOff = false
+
     private static func cached(_ key: String, _ build: () -> UIFont) -> UIFont {
         lock.lock()
-        if let hit = cache[key] { lock.unlock(); return hit }
+        if !cachingOff, let hit = cache[key] { lock.unlock(); return hit }
         lock.unlock()
         let made = build()
         lock.lock()
-        cache[key] = made
+        builds += 1
+        if !cachingOff { cache[key] = made }
         lock.unlock()
         return made
     }
 
-    /// How many fonts have been built, for the test that proves they are cached.
-    static var cachedFontCount: Int {
+    /// How many fonts have been built since launch. The tests read it to prove repeat
+    /// calls build nothing.
+    static var fontBuildCount: Int {
         lock.lock(); defer { lock.unlock() }
-        return cache.count
+        return builds
+    }
+
+    /// Test hook: with caching off every call builds, which is what the build counter
+    /// must be able to see.
+    static func setCachingDisabledForTests(_ off: Bool) {
+        lock.lock(); cachingOff = off; lock.unlock()
     }
 
     private static func firstAvailable(_ names: [String]) -> String? {
@@ -835,6 +846,11 @@ struct PageHeading: View {
         return words[..<k].joined(separator: " ") + "\n" + words[k...].joined(separator: " ")
     }
 
+    /// How far a heading may shrink before it would be cut. The longest single word in the
+    /// catalog (German SYNC CONFLICTS at the largest accessibility size) needs 0.235, so
+    /// 0.2 never cuts a shipped title. The test over every language guards it.
+    static let scaleFloor: CGFloat = 0.2
+
     var body: some View {
         let two = Self.twoLines(title)
         ViewThatFits(in: .horizontal) {
@@ -850,7 +866,7 @@ struct PageHeading: View {
         Text(text)
             .ckDisplay(size: 24, relativeTo: .title3)
             .lineLimit(lines)
-            .minimumScaleFactor(scales ? 0.3 : 1)
+            .minimumScaleFactor(scales ? Self.scaleFloor : 1)
             .multilineTextAlignment(.center)
             .kerning(CatchlightLayout.pageHeadingKerning)
             .foregroundStyle(Color.ckTextPrimary)

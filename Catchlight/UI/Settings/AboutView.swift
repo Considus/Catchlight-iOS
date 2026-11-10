@@ -18,6 +18,8 @@ import UIKit
 @MainActor
 struct AboutView: View {
 
+    private static let sectionGap: CGFloat = 18
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -25,7 +27,7 @@ struct AboutView: View {
                 // sheet without scrolling at the default text size — no structural
                 // change, just smaller gaps. It stays a ScrollView so it still
                 // accommodates larger Dynamic Type sizes gracefully.
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: Self.sectionGap) {
                     brandMark
                     taglineBlock
                     licences
@@ -63,6 +65,9 @@ struct AboutView: View {
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.top, 6)
+        // Clear space below the wordmark is the same gap as above it (at least the h
+        // height), on top of the section spacing.
+        .padding(.bottom, CatchlightWordmark.iconGap - Self.sectionGap)
     }
 
     /// Tagline with the version directly beneath it, both CENTRED under the brand

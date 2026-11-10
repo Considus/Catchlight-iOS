@@ -127,7 +127,7 @@ targets:
         # catchlight-icon + catchlight-wordmark assets to the EXACT geometry of the
         # in-app brand mark (IntroChapterScaffold: icon 72 at safe-area-top+24,
         # wordmark 44 below) — so OS-launch → in-app splash → Welcome never jumps.
-        # Background is the ck-background asset colour (adaptive Paper/Ink), set on
+        # Background is the ck-background asset colour (Cobalt's ground, F4F5FA in Light and 0B0E2A in Dark, from the generated Scene tokens), set on
         # the storyboard's root view. Storyboards can't load custom fonts, hence both
         # marks are images and the tagline is revealed by the in-app splash instead.
         UILaunchStoryboardName: "LaunchScreen"

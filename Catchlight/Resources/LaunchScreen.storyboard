@@ -7,8 +7,8 @@
   `IntroChapterScaffold` in OnboardingView.swift: the icon is 72×72, its top is
   24pt below the safe-area top, and the wordmark (158 by 28.33, the size in CatchlightWordmark) sits 24pt beneath it.
   This makes the OS-launch → in-app splash → Welcome handoff seamless — the brand
-  mark never jumps. Background = the `ck-background` asset colour (adaptive Paper /
-  Ink), so the launch screen follows the system appearance like the rest of the
+  mark never jumps. Background = the `ck-background` asset colour (adaptive Cobalt
+  ground: F4F5FA in Light, 0B0E2A in Dark, from the generated Scene tokens), so the launch screen follows the system appearance like the rest of the
   app. Storyboards can't load custom fonts, which is why both marks are image
   assets (the tagline is revealed by the in-app splash, not shown here).
 -->
@@ -62,7 +62,7 @@
         <image name="catchlight-icon" width="72" height="72"/>
         <image name="catchlight-wordmark" width="158" height="28.33"/>
         <namedColor name="ck-background">
-            <color red="0.96862745098039216" green="0.95686274509803926" blue="0.93725490196078431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <color red="0.95686274509803921" green="0.96078431372549022" blue="0.98039215686274506" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
     </resources>
 </document>

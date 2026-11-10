@@ -31,7 +31,8 @@ struct CatchlightWordmark: View {
     static let height: CGFloat = width / aspectRatio
     /// The height of the "h", the unit of clear space (marks-and-files.md).
     static let hHeight: CGFloat = -boxTop / boxWidth * width
-    /// Gap from the icon above to the wordmark: at least the "h" height.
+    /// Clear space above and below the wordmark (icon above it, tagline below): at least
+    /// the "h" height.
     static let iconGap: CGFloat = 24
     /// The icon over the wordmark takes this much height in the opening chapter, as it
     /// did with the larger mark, so the hero below keeps its place.
