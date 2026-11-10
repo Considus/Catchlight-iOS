@@ -27,16 +27,14 @@ struct IntroBrandMark: View {
     @Environment(\.deviceTopInset) private var deviceTopInset
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: CatchlightWordmark.iconGap) {
             Image("catchlight-icon")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 72, height: 72)
-            Image("catchlight-wordmark")
-                .resizable()
-                .scaledToFit()
-                .frame(height: 44)
+            CatchlightWordmark()
         }
+        .frame(height: CatchlightWordmark.lockupHeight, alignment: .top)
         .padding(.top, deviceTopInset + 114)
         // 🚨 ONE element, ONE label, set on the CONTAINER. The owner heard
         // "Catchlight image Catchlight" (2026-09-11) — the name twice, with the

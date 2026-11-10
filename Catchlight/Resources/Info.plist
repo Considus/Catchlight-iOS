@@ -51,9 +51,7 @@
 	</array>
 	<key>UIAppFonts</key>
 	<array>
-		<string>CormorantGaramond[wght].ttf</string>
-		<string>CormorantGaramond-Italic[wght].ttf</string>
-		<string>DMSans[opsz,wght].ttf</string>
+		<string>Archivo.ttf</string>
 	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>

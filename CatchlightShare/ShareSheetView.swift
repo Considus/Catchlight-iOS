@@ -77,7 +77,7 @@ struct ShareSheetView: View {
             // zero Dynamic Type on the target. Every font below is the shared
             // scaling face; relativeTo styles chosen so the system fallback
             // matches the old sizes at default settings.
-            .font(CatchlightFont.ui(.medium, size: 20, relativeTo: .title3))
+            .ckBody(.medium, size: 20, relativeTo: .title3)
             .foregroundStyle(Color.ckTextPrimary)
             .frame(maxWidth: .infinity, alignment: .center)
     }
@@ -91,13 +91,13 @@ struct ShareSheetView: View {
         case .nothingToSave:
             VStack(alignment: .leading, spacing: 16) {
                 Text("There's nothing here Catchlight can keep.")
-                    .font(CatchlightFont.ui(.regular, size: 16, relativeTo: .callout))
+                    .ckBody(.regular, size: 16, relativeTo: .callout)
                     .foregroundStyle(Color.ckTextPrimary)
                 Text("It takes text, links and web pages, not images or files.")
-                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                    .ckBody(.regular, size: 15, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextSecondary)
                 Button("Close", action: onCancel)
-                    .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .callout))
+                    .ckBody(.medium, size: 16, relativeTo: .callout)
                     .foregroundStyle(Color.ckAccent)
                     // T5: 44pt hit floor; the frame grows into empty space.
                     .frame(minHeight: 44)
@@ -106,19 +106,19 @@ struct ShareSheetView: View {
 
         case .saved:
             Text("It'll be waiting on your timeline next time you open the app.")
-                .font(CatchlightFont.ui(.regular, size: 16, relativeTo: .callout))
+                .ckBody(.regular, size: 16, relativeTo: .callout)
                 .foregroundStyle(Color.ckTextSecondary)
 
         case .notQueued:
             VStack(alignment: .leading, spacing: 16) {
                 Text("Catchlight can't keep this yet.")
-                    .font(CatchlightFont.ui(.regular, size: 16, relativeTo: .callout))
+                    .ckBody(.regular, size: 16, relativeTo: .callout)
                     .foregroundStyle(Color.ckTextPrimary)
                 Text("Open Catchlight once, then share it again.")
-                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                    .ckBody(.regular, size: 15, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextSecondary)
                 Button("Close", action: onCancel)
-                    .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .callout))
+                    .ckBody(.medium, size: 16, relativeTo: .callout)
                     .foregroundStyle(Color.ckAccent)
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
@@ -147,12 +147,12 @@ struct ShareSheetView: View {
             }
             if let linkTitle {
                 Text(linkTitle)
-                    .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .callout))
+                    .ckBody(.medium, size: 16, relativeTo: .callout)
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(3)
             }
             Text(items.joined(separator: "\n"))
-                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                .ckBody(.regular, size: 14, relativeTo: .subheadline)
                 // The link recedes once there is a title — the title is the useful part.
                 .foregroundStyle(linkTitle == nil ? Color.ckTextPrimary : Color.ckTextSecondary)
                 .lineLimit(linkTitle == nil ? 8 : 2)
@@ -221,7 +221,7 @@ struct ShareSheetView: View {
 
     private var noteField: some View {
         TextField("Add a note (optional)", text: $note, axis: .vertical)
-            .font(CatchlightFont.ui(.regular, size: 16, relativeTo: .callout))
+            .ckBody(.regular, size: 16, relativeTo: .callout)
             // ~25% taller than the first cut (owner device round 4). This is where the value of
             // the screen is: the thought you add, not the link you already have.
             .lineLimit(5...10)
@@ -238,14 +238,14 @@ struct ShareSheetView: View {
             // T5: both actions get the 44pt floor — real frames, since the row
             // is Spacer-anchored and the growth lands in empty space.
             Button("Cancel", action: onCancel)
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                .ckBody(.regular, size: 17, relativeTo: .body)
                 .foregroundStyle(Color.ckTextSecondary)
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
             Spacer()
             // "Save", not "Post" — nothing is being published.
             Button("Save") { save(items) }
-                .font(CatchlightFont.ui(.semibold, size: 17, relativeTo: .body))
+                .ckBody(.semibold, size: 17, relativeTo: .body)
                 .foregroundStyle(Color.ckAccent)
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())

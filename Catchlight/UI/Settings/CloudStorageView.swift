@@ -119,7 +119,7 @@ struct CloudStorageView: View {
 
             if let errorText {
                 Text(errorText)
-                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                    .ckBody(.regular, size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.ckRuby)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -138,7 +138,8 @@ struct CloudStorageView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Choose a cloud folder you own")
-                .font(CatchlightFont.display(size: 28, relativeTo: .title2))
+                .ckDisplay(size: 28, relativeTo: .title2)
+                .lineSpacing(CatchlightFont.tightLeading(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -146,13 +147,13 @@ struct CloudStorageView: View {
                 .padding(.bottom, 18)   // 1 line break after "Choose from…"
 
             Text("Select an empty folder, or create a new one, and we'll take care of the rest.")
-                .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                .ckBody(.regular, size: 17, relativeTo: .body)
                 .foregroundStyle(Color.ckTextPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 18)   // 1 line break after "Select an empty…"
 
             Text("Catchlight never sees your files. Only you can read them.")
-                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                .ckBody(.regular, size: 14, relativeTo: .subheadline)
                 .foregroundStyle(Color.ckTextSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -165,7 +166,7 @@ struct CloudStorageView: View {
         VStack(alignment: .leading, spacing: 12) {
             Button { pickerPresented = true } label: {
                 Text("Choose folder from Files")
-                    .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                    .ckBody(.medium, size: 15, relativeTo: .body)
                     .foregroundStyle(Color.ckOnAccent)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(Capsule().fill(Color.ckEmber))
@@ -179,7 +180,7 @@ struct CloudStorageView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Color.ckAccent)
                     Text(folderDisplayPath)
-                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .footnote))
+                        .ckBody(.regular, size: 13, relativeTo: .footnote)
                         .foregroundStyle(Color.ckTextSecondary)
                         .lineLimit(2)
                         .truncationMode(.middle)
@@ -196,7 +197,7 @@ struct CloudStorageView: View {
                 HStack {
                     Spacer()
                     Button("Remove") { removeFolder() }
-                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .ckBody(.medium, size: 14, relativeTo: .body)
                         .foregroundStyle(Color.ckRuby)
                         // T4 (audit 2026-08): a destructive control tapped at its
                         // ~19pt line. Inset −13 reaches the 44pt hit floor; the
@@ -215,7 +216,7 @@ struct CloudStorageView: View {
     /// A recommendation, not a requirement: every provider in the fine print still works.
     private var recommendation: some View {
         Text("Easiest to set up is iCloud Drive, it's built in.")
-            .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+            .ckBody(.regular, size: 14, relativeTo: .subheadline)
             .foregroundStyle(Color.ckTextPrimary)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("cloud-icloud-recommendation")
@@ -237,7 +238,7 @@ struct CloudStorageView: View {
                 .foregroundStyle(Color.ckTextSecondary)
                 .accessibilityHidden(true)
             Text("Tested with iCloud Drive, Dropbox, Internxt, Koofr and Filen. Others may work, and a provider that greys out in the picker can't hand an app a whole folder. You'll need its app installed and signed in.")
-                .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                .ckBody(.regular, size: 12, relativeTo: .caption)
                 .foregroundStyle(Color.ckTextSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -273,13 +274,13 @@ struct CloudStorageView: View {
             .accessibilityLabel("Sync \(syncMode.label)")
 
             Text(syncModeDescription)
-                .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                .ckBody(.regular, size: 12, relativeTo: .caption)
                 .foregroundStyle(Color.ckTextSecondary)
 
             if syncMode == .manual {
                 Button { fireManualSync() } label: {
                     Text(syncFeedback ?? String(localized: "Sync Now"))
-                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .ckBody(.medium, size: 14, relativeTo: .body)
                         .foregroundStyle(hasFolderConfigured ? Color.ckTextObie : Color.ckTextSecondary)
                 }
                 // T4: same 44pt hit floor as Remove above.

@@ -516,7 +516,7 @@ struct BottomDockView: View {
         } label: {
             HStack {
                 Text(ui.searchQuery.isEmpty ? String(localized: "Search your Takes") : ui.searchQuery)
-                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
+                    .ckBody(.regular, size: 14, relativeTo: .body)
                     .foregroundStyle(ui.searchQuery.isEmpty ? Color.ckTextSecondary : Color.ckTextPrimary)
                     .lineLimit(1)
                 Spacer(minLength: 0)

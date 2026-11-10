@@ -58,7 +58,7 @@ struct DailiesView: View {
     /// The heading's clearance (owner device report 2026-09-04, item 5).
     ///
     /// `CatchlightLayout.headingClearance` is a constant tuned for the 24pt heading, but
-    /// `pageHeadingStyle` is `relativeTo: .title3` and grows with the text size — so above
+    /// `PageHeading` is `relativeTo: .title3` and grows with the text size, so above
     /// Large the heading came down into the pinned Obie and the two overlapped.
     ///
     /// Round 2 first tried SCALING the constant on `.title3`, and it overshot badly: the whole
@@ -661,10 +661,9 @@ struct DailiesView: View {
             // is a sibling that never fades. Keep it that way: anything that must stay opaque
             // during the title change belongs OUTSIDE the `.id`/`.transition` view.
             ZStack {
-                Text(headingTitle)
-                    // Shared page-heading style (Cormorant ROMAN 24, kerned, centred —
-                    // §catalogue, includes the kerning-centring fix).
-                    .pageHeadingStyle()
+                PageHeading(verbatim: headingTitle)
+                    // Shared page heading (Archivo expanded 24, kerned, centred,
+                    // with the kerning-centring fix).
                     // Recede the title while editing in place; the mask stays opaque so
                     // scrolled-up content still dissolves under the top.
                     .opacity(ui.isEditingInPlace ? 0.12 : 1)
@@ -840,7 +839,7 @@ struct DailiesView: View {
 
     private var emptyState: some View {
         Text("Your first Take is waiting.")
-            .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+            .ckBody(.light, size: 17, relativeTo: .body)
             .foregroundStyle(Color.ckTextSecondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityLabel("Your first Take is waiting.")
@@ -929,7 +928,7 @@ struct DailiesView: View {
                     .foregroundStyle(Color.ckRuby)
                     .accessibilityHidden(true)
                 Text("No privacy phrase on this device. Export now, then Settings > Start over.")
-                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    .ckBody(.regular, size: 14, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextPrimary)
                     // Stacked, the text owns the full width and must not be clipped: the
                     // instruction IS the banner. Side by side it stays capped so the button
@@ -939,7 +938,7 @@ struct DailiesView: View {
                 if !stacked { Spacer(minLength: 8) }
                 Button { showMissingPhraseExportConfirm = true } label: {
                     Text("Export now")
-                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .ckBody(.medium, size: 14, relativeTo: .body)
                         .foregroundStyle(Color.ckAccent)
                 }
                 .buttonStyle(.plain)
@@ -981,7 +980,7 @@ struct DailiesView: View {
                     .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
                 Text("Read-only. Your data is still yours.")
-                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    .ckBody(.regular, size: 14, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(2)
                 Spacer(minLength: 8)
@@ -990,7 +989,7 @@ struct DailiesView: View {
                     ExportCoordinator.presentShareSheet(takes: takes)
                 } label: {
                     Text("Export")
-                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .ckBody(.medium, size: 14, relativeTo: .body)
                         .foregroundStyle(Color.ckAccent)
                 }
                 .buttonStyle(.plain)
@@ -1000,7 +999,7 @@ struct DailiesView: View {
                     ui.isPaywallPresented = true
                 } label: {
                     Text("Subscribe")
-                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .ckBody(.medium, size: 14, relativeTo: .body)
                         .foregroundStyle(Color.ckAccent)
                 }
                 .buttonStyle(.plain)
@@ -1036,7 +1035,7 @@ struct DailiesView: View {
                     .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
                 Text("Enable Notifications")
-                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    .ckBody(.regular, size: 14, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(2)
                 Spacer(minLength: 8)
@@ -1045,7 +1044,7 @@ struct DailiesView: View {
                     UIApplication.shared.open(url)
                 } label: {
                     Text("Turn on")
-                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .ckBody(.medium, size: 14, relativeTo: .body)
                         .foregroundStyle(Color.ckAccent)
                 }
                 .buttonStyle(.plain)
@@ -1087,7 +1086,7 @@ struct DailiesView: View {
                 // — many locales don't pluralise on the singular/plural axis
                 // alone (e.g. Polish, Arabic). Tracked but not blocking.
                 Text(message)
-                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                    .ckBody(.regular, size: 14, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(2)
                 Spacer(minLength: 8)
@@ -1095,7 +1094,7 @@ struct DailiesView: View {
                     ui.isConflictSheetPresented = true
                 } label: {
                     Text("Review")
-                        .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                        .ckBody(.medium, size: 14, relativeTo: .body)
                         .foregroundStyle(Color.ckAccent)
                 }
                 .buttonStyle(.plain)
@@ -1127,7 +1126,7 @@ struct DailiesView: View {
                 .foregroundStyle(tint)
                 .accessibilityHidden(true)
             Text(text)
-                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                .ckBody(.regular, size: 14, relativeTo: .subheadline)
                 .foregroundStyle(Color.ckTextPrimary)
                 .lineLimit(2)
                 // Compose the message + Dismiss button into one VO element so the
@@ -1138,7 +1137,7 @@ struct DailiesView: View {
             Spacer(minLength: 8)
             Button(action: onDismiss) {
                 Text("Dismiss")
-                    .font(CatchlightFont.ui(.medium, size: 14, relativeTo: .body))
+                    .ckBody(.medium, size: 14, relativeTo: .body)
                     .foregroundStyle(tint)
                     .padding(.vertical, 6)
                     .padding(.horizontal, 4)

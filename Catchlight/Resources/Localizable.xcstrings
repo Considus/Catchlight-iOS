@@ -54995,11 +54995,12 @@
       }
     },
     "SYNC CONFLICTS" : {
+      "comment" : "soft hyphen at compound join (de, nl, da, nb, fi)",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SYNCHRONISIERUNGSKONFLIKTE"
+            "value" : "SYNCHRONISIERUNGS­KONFLIKTE"
           }
         },
         "fr" : {
@@ -55029,7 +55030,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SYNCHRONISATIECONFLICTEN"
+            "value" : "SYNCHRONISATIE­CONFLICTEN"
           }
         },
         "pt-PT" : {
@@ -55053,19 +55054,19 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SYNKRONISERINGSKONFLIKTER"
+            "value" : "SYNKRONISERINGS­KONFLIKTER"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SYNKRONISERINGSKONFLIKTER"
+            "value" : "SYNKRONISERINGS­KONFLIKTER"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SYNKRONOINTIRISTIRIIDAT"
+            "value" : "SYNKRONOINTI­RISTIRIIDAT"
           }
         },
         "tr" : {

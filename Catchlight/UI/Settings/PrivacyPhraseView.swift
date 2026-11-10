@@ -80,19 +80,20 @@ struct PrivacyPhraseView: View {
                 // Audit 2026-08, V21: decorative — the heading below carries the meaning.
                 .accessibilityHidden(true)
             Text("Reveal your Privacy phrase")
-                .font(CatchlightFont.display(size: 28, relativeTo: .title2))
+                .ckDisplay(size: 28, relativeTo: .title2)
+                .lineSpacing(CatchlightFont.tightLeading(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
                 // Audit 2026-08, V23: the screen's hero is a heading.
                 .accessibilityAddTraits(.isHeader)
             Text("Authenticate with Face ID or your device passcode to view the 12 words. They're the only way to recover your account, so reveal them somewhere private.")
-                .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                .ckBody(.regular, size: 15, relativeTo: .subheadline)
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             if let errorText {
                 Text(errorText)
-                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                    .ckBody(.regular, size: 13, relativeTo: .caption)
                     // Audit 2026-08, C9: every sibling error speaks Ruby — the
                     // accent token here cost "error" its colour semantics.
                     .foregroundStyle(Color.ckRuby)
@@ -145,11 +146,12 @@ struct PrivacyPhraseView: View {
                 // Audit 2026-08, V21: decorative — the title below carries the meaning.
                 .accessibilityHidden(true)
             Text(title)
-                .font(CatchlightFont.display(size: 28, relativeTo: .title2))
+                .ckDisplay(size: 28, relativeTo: .title2)
+                .lineSpacing(CatchlightFont.tightLeading(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
             Text(body)
-                .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                .ckBody(.regular, size: 15, relativeTo: .subheadline)
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -182,7 +184,7 @@ private struct PhraseRevealGrid: View {
     var body: some View {
         VStack(spacing: 24) {
             Text("Write these 12 words down somewhere safe, on paper. They're the only way back into your Takes on a new phone. They don't travel in an iPhone backup, and neither do your Takes, so restoring a backup won't bring either of them back.")
-                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .subheadline))
+                .ckBody(.regular, size: 14, relativeTo: .subheadline)
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
@@ -219,11 +221,11 @@ private struct PhraseRevealGrid: View {
     private func wordCell(index: Int, word: String) -> some View {
         HStack(spacing: 8) {
             Text("\(index + 1).")
-                .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                .ckBody(.regular, size: 13, relativeTo: .caption)
                 .foregroundStyle(Color.ckTextSecondary)
                 .frame(width: 22, alignment: .trailing)
             Text(word)
-                .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                .ckBody(.medium, size: 15, relativeTo: .body)
                 .foregroundStyle(Color.ckTextPrimary)
                 .blur(radius: revealed ? 0 : 7)
                 .animation(.easeInOut(duration: 0.12), value: revealed)
@@ -240,7 +242,7 @@ private struct PhraseRevealGrid: View {
 
     private var holdButton: some View {
         Text(revealed ? "Release to hide" : "Hold to reveal")
-            .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+            .ckBody(.medium, size: 15, relativeTo: .body)
             // Ink in BOTH modes (deliberate deviation from the pill system's
             // ckBackground label): the revealed state fills with GLOW, and
             // Paper-on-Glow is illegible in Daylight — Ink reads on both fills.

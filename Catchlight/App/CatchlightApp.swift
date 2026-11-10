@@ -616,15 +616,12 @@ struct PrivacyOverlay: View {
     var body: some View {
         ZStack {
             Color.ckBackground.ignoresSafeArea()
-            VStack(spacing: 16) {
+            VStack(spacing: CatchlightWordmark.iconGap) {
                 Image("catchlight-icon")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 72, height: 72)
-                Image("catchlight-wordmark")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 44)
+                CatchlightWordmark()
             }
             .accessibilityHidden(true)
         }

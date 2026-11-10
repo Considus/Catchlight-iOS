@@ -84,51 +84,70 @@ enum WidgetPalette {
     })
 }
 
-// MARK: - Brand fonts (DM Sans, mirrored probe of CatchlightFont)
+// MARK: - Brand fonts (mirrored from CatchlightFont)
 //
-// The three brand TTFs are bundled into the extension (project.yml widget target
-// + UIAppFonts). Variable TTFs only expose their default-instance PostScript name
-// to UIFont, so — like `CatchlightFont` — we probe a candidate list and fall back
-// to the system font. Widget chrome is all UI text → DM Sans (Take content is
-// never the display face, DS §2.2).
+// Widget chrome is UI text in the system font. The display text is Archivo set
+// expanded, bundled into the extension (project.yml widget target + UIAppFonts) and
+// set through `kCTFontVariationAttribute` exactly as `CatchlightFont.archivo` does,
+// with the weight and width from `HeadingAxes`, the file the app shares. Falls back to
+// the system font when Archivo is not registered.
+//
+// The UI font is built from the view's own Dynamic Type size, so it grows when the
+// text size changes.
+
+private struct WidgetUIFontModifier: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let size: CGFloat
+    let weight: Font.Weight
+
+    func body(content: Content) -> some View {
+        let category: UIContentSizeCategory
+        switch dynamicTypeSize {
+        case .xSmall: category = .extraSmall
+        case .small: category = .small
+        case .medium: category = .medium
+        case .large: category = .large
+        case .xLarge: category = .extraLarge
+        case .xxLarge: category = .extraExtraLarge
+        case .xxxLarge: category = .extraExtraExtraLarge
+        case .accessibility1: category = .accessibilityMedium
+        case .accessibility2: category = .accessibilityLarge
+        case .accessibility3: category = .accessibilityExtraLarge
+        case .accessibility4: category = .accessibilityExtraExtraLarge
+        case .accessibility5: category = .accessibilityExtraExtraExtraLarge
+        @unknown default: category = .large
+        }
+        let points = UIFontMetrics(forTextStyle: .body)
+            .scaledValue(for: size, compatibleWith: UITraitCollection(preferredContentSizeCategory: category))
+        return content.font(.system(size: points, weight: weight))
+    }
+}
+
+extension View {
+    /// Widget interface text: the system font, scaling live with Dynamic Type.
+    func widgetUI(_ size: CGFloat, weight: Font.Weight = .regular) -> some View {
+        modifier(WidgetUIFontModifier(size: size, weight: weight))
+    }
+
+    /// Display face: Archivo expanded at a fixed size (mirrors `CatchlightFont` display).
+    func widgetDisplay(_ size: CGFloat) -> some View {
+        font(WidgetFont.display(size))
+    }
+}
 
 enum WidgetFont {
-    private static let lightCandidates = ["DMSans-Light", "DMSans18pt-Light", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"]
-    private static let regularCandidates = ["DMSans-Regular", "DMSans18pt-Regular", "DMSans-9ptRegular", "DMSans"]
-    private static let mediumCandidates = ["DMSans-Medium", "DMSans18pt-Medium", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"]
-
-    private static func firstAvailable(_ names: [String]) -> String? {
-        names.first { UIFont(name: $0, size: 12) != nil }
-    }
-
-    static func ui(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        let candidates: [String]
-        switch weight {
-        case .light: candidates = lightCandidates
-        case .medium, .semibold, .bold: candidates = mediumCandidates
-        default: candidates = regularCandidates
-        }
-        // Audit 2026-08, DT8: scale with Dynamic Type (relative to body) — the
-        // home-screen families used `fixedSize` while the accessory families
-        // correctly used text styles.
-        if let name = firstAvailable(candidates) {
-            return .custom(name, size: size)
-        }
-        return .system(size: size, weight: weight)
-    }
-
-    // Display face — Cormorant Garamond Italic (mirrors `CatchlightFont.displayFixed`).
-    // The onboarding hero face; used for the medium widgets' hero prompt.
-    private static let displayItalicCandidates = [
-        "CormorantGaramond-LightItalic", "CormorantGaramond-Italic",
-        "CormorantGaramond-Light", "CormorantGaramond"
-    ]
-
     static func display(_ size: CGFloat) -> Font {
-        if let name = firstAvailable(displayItalicCandidates) {
-            return .custom(name, fixedSize: size)
+        guard UIFont(name: "Archivo-SemiBold", size: size) != nil else {
+            return .system(size: size, weight: .medium)
         }
-        return .system(size: size, weight: .regular, design: .serif).italic()
+        let variation: [Int: CGFloat] = [HeadingAxes.weightTag: HeadingAxes.weight,
+                                         HeadingAxes.widthTag: HeadingAxes.width]
+        let descriptor = UIFontDescriptor(fontAttributes: [
+            .name: "Archivo-SemiBold",
+            .size: size,
+            UIFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String): variation
+        ])
+        return Font(UIFont(descriptor: descriptor, size: size))
     }
 }
 
@@ -292,7 +311,7 @@ struct LauncherView: View {
             VStack(spacing: 12) {
                 WidgetGlyphMark(asset: surface.glyphAsset, height: 52, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction)
                 Text(surface.title)
-                    .font(WidgetFont.ui(15, weight: .medium))
+                    .widgetUI(15, weight: .medium)
                     .foregroundStyle(WidgetPalette.textPrimary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -310,11 +329,11 @@ struct CardView: View {
             WidgetGlyphMark(asset: surface.glyphAsset, height: 36, tint: surface.glyphTint, opticalScale: surface.glyphOpticalScale, inkOffsetFraction: surface.glyphInkOffsetFraction)
                 .frame(width: 40, height: 40)
 
-            // The onboarding-hero voice + style (Cormorant italic, primary colour).
+            // The onboarding-hero voice + style (Archivo expanded, primary colour).
             // 24pt (owner 2026-06-30, −4 from the hero's 28); single line, never wraps
             // (minimumScaleFactor shrinks it if a longer prompt would overflow).
             Text(surface.heroPrompt)
-                .font(WidgetFont.display(24))
+                .widgetDisplay(24)
                 .foregroundStyle(WidgetPalette.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)

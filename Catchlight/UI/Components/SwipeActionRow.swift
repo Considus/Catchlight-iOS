@@ -169,7 +169,7 @@ struct SwipeActionRow<Content: View>: View {
                 Image(systemName: action.systemImage)
                     .font(.system(size: 17, weight: .semibold))
                 Text(action.title)
-                    .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                    .ckBody(.medium, size: 11, relativeTo: .caption)
             }
             // Audit 2026-08, C2: white 11pt on the NIGHT ruby fill measured 3.93:1
             // (small text needs 4.5). Ink on that fill measures 4.91:1; Daylight's

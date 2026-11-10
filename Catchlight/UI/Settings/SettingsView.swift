@@ -222,11 +222,10 @@ struct SettingsView: View {
 
     /// The "Settings" heading as a scrolling list row (owner 2026-06-21) — clear
     /// background, no section chrome, so it reads as a title and scrolls away.
-    /// Styled as the Dailies page heading (owner 2026-06-29): Cormorant Garamond
-    /// ROMAN 24pt, kerned, CENTRED and upper-cased to match DAILIES/SEQUENCE/etc.
+    /// Styled as the Dailies page heading (owner 2026-06-29): Archivo
+    /// expanded 24pt, kerned, CENTRED and upper-cased to match DAILIES/SEQUENCE/etc.
     private var titleRow: some View {
-        Text("SETTINGS")
-            .pageHeadingStyle()
+        PageHeading("SETTINGS")
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 4, trailing: 20))
             .listRowSeparator(.hidden)
@@ -482,10 +481,10 @@ struct SettingsView: View {
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Follow-up reminders")
-                            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                            .ckBody(.regular, size: 17, relativeTo: .body)
                             .foregroundStyle(Color.ckTextPrimary)
                         Text("Re-nudge until you mark it done")
-                            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                            .ckBody(.regular, size: 13, relativeTo: .caption)
                             .foregroundStyle(Color.ckTextSecondary)
                     }
                 }
@@ -566,10 +565,10 @@ struct SettingsView: View {
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Confirm before deleting")
-                            .font(CatchlightFont.ui(.regular, size: 17, relativeTo: .body))
+                            .ckBody(.regular, size: 17, relativeTo: .body)
                             .foregroundStyle(Color.ckTextPrimary)
                         Text("A deleted Take cannot be recovered")
-                            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                            .ckBody(.regular, size: 13, relativeTo: .caption)
                             .foregroundStyle(Color.ckTextSecondary)
                     }
                 }
@@ -637,7 +636,7 @@ struct SettingsView: View {
                 .accessibilityValue(spotlightExposureBinding.wrappedValue.label)
 
                 Text("On-device search only. Considus can never read your Takes. Text levels are greyed out by an iOS limitation.")
-                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                    .ckBody(.regular, size: 13, relativeTo: .caption)
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("spotlight-exposure-description")
@@ -683,7 +682,7 @@ struct SettingsView: View {
                 .accessibilityValue(writingToolsBinding.wrappedValue.localizedLabel)
 
                 Text("Panel suggests, you accept. Inline rewrites in place. Both send that Take to Apple. Your Privacy phrase never goes.")
-                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                    .ckBody(.regular, size: 13, relativeTo: .caption)
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("writing-tools-description")
@@ -1081,7 +1080,7 @@ struct SettingsView: View {
                     .frame(width: 8, height: 8)
                     .accessibilityHidden(true)
                 Text("Enabled")
-                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                    .ckBody(.regular, size: 15, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextSecondary)
             }
             .accessibilityElement(children: .ignore)
@@ -1100,7 +1099,7 @@ struct SettingsView: View {
                     .frame(width: 8, height: 8)
                     .accessibilityHidden(true)
                 Text("Disabled")
-                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .subheadline))
+                    .ckBody(.regular, size: 15, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextSecondary)
             }
             .accessibilityElement(children: .ignore)
@@ -1134,7 +1133,7 @@ struct SettingsView: View {
     /// case and wrapping — it carries a warning, not a label.
     private func sectionFooter(_ text: LocalizedStringKey) -> some View {
         Text(text)
-            .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+            .ckBody(.regular, size: 13, relativeTo: .caption)
             .foregroundStyle(Color.ckTextSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.leading, 4)
@@ -1143,7 +1142,7 @@ struct SettingsView: View {
 
     private func sectionHeader(_ text: LocalizedStringKey) -> some View {
         Text(text)
-            .font(CatchlightFont.ui(.medium, size: 13, relativeTo: .caption))
+            .ckBody(.medium, size: 13, relativeTo: .caption)
             .foregroundStyle(Color.ckTextSecondary)
             .textCase(.uppercase)
             .padding(.leading, 4)

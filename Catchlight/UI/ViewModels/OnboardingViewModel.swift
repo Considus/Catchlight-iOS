@@ -37,7 +37,7 @@ final class OnboardingViewModel {
         /// floating bubble needed focus machinery that never worked.
         ///
         /// TWO pages, not one (owner 2026-09-14): on the shared intro layout — brand
-        /// mark and Cormorant hero at their set positions, body centred — four points
+        /// mark and hero at their set positions, body centred. Four points
         /// overflow a single screen and push the dock pill off the bottom edge.
         /// Splitting them keeps every screen's furniture where it belongs and needs no
         /// scrolling, which is the same one-idea-per-screen rhythm the rest of

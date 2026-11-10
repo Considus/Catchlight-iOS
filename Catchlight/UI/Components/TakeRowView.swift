@@ -663,8 +663,8 @@ struct TakeCardSurface: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(displayBody)
-                // DM Sans 14 (.tt) — Take content is never the display face.
-                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
+                // System font 14 (.tt). Take content is never the display face.
+                .ckBody(.regular, size: 14, relativeTo: .body)
                 // Body + link colours are carried on the AttributedString (`displayBody`)
                 // so detected URLs render accent; `.tint` colours the link's tap state.
                 .tint(.ckAccent)
@@ -680,12 +680,13 @@ struct TakeCardSurface: View {
 
             // Quiet meta line: the checklist progress marker (2+ items) and/or
             // the reminder time. New marker — HiFi v1.7 is silent on it, so it
-            // matches the reminder label's scale (DM Sans caption, Secondary).
+            // matches the reminder label's scale (system caption, Secondary).
             // Stacked so neither fights the other.
             if let progressText {
                 // Quiet meta scale (matches .tm size; non-italic — it's a count).
                 Text(progressText)
-                    .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption))
+                    .ckBody(.regular, size: 11, relativeTo: .caption)
+                    .monospacedDigit()   // a count: tabular digits
                     .foregroundStyle(Color.ckTextSecondary)
                     .accessibilityHidden(true)   // already spoken in the row label
             }
@@ -699,11 +700,11 @@ struct TakeCardSurface: View {
                     // Bell vs bell.slash — same "will it nag" cue as the time line (owner
                     // 2026-06-27): a silent place tag (alarm off) shows bell.slash.
                     Image(systemName: locationAlarmOn ? "bell" : "bell.slash")
-                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .ckBody(.medium, size: 11, relativeTo: .caption)
                         .foregroundStyle(Color.ckTextSecondary)
                         .accessibilityHidden(true)
                     Text(locationLabel)
-                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .ckBody(.medium, size: 11, relativeTo: .caption)
                         .foregroundStyle(Color.ckTextSecondary)
                 }
             } else if let reminderLabel {
@@ -715,7 +716,7 @@ struct TakeCardSurface: View {
                     // sitting LEFT of the alarm bell — so the two read as "scheduled" + "will
                     // it nag". Same size/colour as the label so they form one unit.
                     Image(systemName: "clock")
-                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .ckBody(.medium, size: 11, relativeTo: .caption)
                         .foregroundStyle(reminderLabelColor)
                         .accessibilityHidden(true)
                     // Small bell ahead of the "when" (owner 2026-06-22): a quiet at-a-glance
@@ -724,11 +725,12 @@ struct TakeCardSurface: View {
                     // Inherits the label's size + colour so it reads as one unit; never
                     // italicised (the slant is the text's "late" cue, not the glyph's).
                     Image(systemName: alarmOn ? "bell" : "bell.slash")
-                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .ckBody(.medium, size: 11, relativeTo: .caption)
                         .foregroundStyle(reminderLabelColor)
                         .accessibilityHidden(true)
                     Text(reminderLabel)
-                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption))
+                        .ckBody(.medium, size: 11, relativeTo: .caption)
+                        .monospacedDigit()   // a time: tabular digits
                         .italic(style.isOverdue)
                         .foregroundStyle(reminderLabelColor)
                 }

@@ -61,7 +61,7 @@ struct ConflictResolutionView: View {
         VStack(spacing: 0) {
             Spacer()
             Text("All caught up.")
-                .font(CatchlightFont.ui(.light, size: 17, relativeTo: .body))
+                .ckBody(.light, size: 17, relativeTo: .body)
                 .foregroundStyle(Color.ckTextSecondary)
             Spacer()
         }
@@ -104,12 +104,11 @@ struct ConflictResolutionView: View {
     }
 
     /// Brand heading + guidance: the shared page-heading treatment (upright
-    /// Cormorant Roman, kerned, UPPER-CASE — §2.3, matching DAILIES/SETTINGS) over
-    /// DM Sans Light subtext — owner 2026-07-02.
+    /// Archivo expanded, kerned, UPPER-CASE (§2.3, matching DAILIES/SETTINGS) over
+    /// system-font Light subtext (owner 2026-07-02).
     private var header: some View {
         VStack(spacing: 16) {
-            Text("SYNC CONFLICTS")
-                .pageHeadingStyle()
+            PageHeading("SYNC CONFLICTS")
                 .accessibilityAddTraits(.isHeader)
             // About choosing between two versions, which a converted pair doesn't offer.
             if queue.pending.contains(where: { !queue.isConverted($0.local.id) }) {
@@ -124,7 +123,7 @@ struct ConflictResolutionView: View {
 
     private func guidance(_ text: LocalizedStringKey) -> some View {
         Text(text)
-            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+            .ckBody(.light, size: 16, relativeTo: .body)
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -167,7 +166,7 @@ struct ConflictResolutionView: View {
                 }
             case let (nil, cloud?):
                 Text("Recover this Take?")
-                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
+                    .ckBody(.regular, size: 15, relativeTo: .body)
                     .foregroundStyle(Color.ckTextPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 versionPanel(.theirs, take: cloud, selected: false,
@@ -186,7 +185,7 @@ struct ConflictResolutionView: View {
 
     private func footnote(_ text: String) -> some View {
         Text(text)
-            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+            .ckBody(.light, size: 16, relativeTo: .body)
             .foregroundStyle(Color.ckTextSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -251,7 +250,7 @@ struct ConflictResolutionView: View {
     private func convertedCard(_ local: Take) -> some View {
         VStack(spacing: 12) {
             Text("This Take was turned into a Script on another device.")
-                .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
+                .ckBody(.regular, size: 15, relativeTo: .body)
                 .foregroundStyle(Color.ckTextPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -315,23 +314,24 @@ struct ConflictResolutionView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                     Text(side.label)
-                        .font(CatchlightFont.ui(.medium, size: 11, relativeTo: .caption2))
+                        .ckBody(.medium, size: 11, relativeTo: .caption2)
                         .foregroundStyle(Color.ckTextSecondary)
                         .textCase(.uppercase)
                     Spacer()
                     IrisView(take: take, diameter: 20)
                 }
                 Text(relativeDate(take.modifiedAt))
-                    .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
+                    .ckBody(.regular, size: 11, relativeTo: .caption2)
+                    .monospacedDigit()   // a time: tabular digits
                     .foregroundStyle(Color.ckTextSecondary)
                 if let note {
                     Text(note)
-                        .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption2))
+                        .ckBody(.regular, size: 11, relativeTo: .caption2)
                         .foregroundStyle(Color.ckTextSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(displayBody)
-                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
+                    .ckBody(.regular, size: 15, relativeTo: .body)
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(4)
                     .truncationMode(.tail)

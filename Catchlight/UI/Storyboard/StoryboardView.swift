@@ -291,13 +291,12 @@ struct StoryboardView: View {
     private var topChrome: some View {
         VStack(spacing: 0) {
             ZStack {
-                // Explicit view heading, in the DAILIES house style (Cormorant Roman,
+                // Explicit view heading, in the DAILIES house style (Archivo expanded,
                 // kerned caps) — owner 2026-06-19: name it as an Angle so the ∠ glyph,
                 // the heading, and the concept all read the same. CENTRED at 24pt
                 // (owner 2026-06-29) to match the timeline page heading; spans full
                 // width so it centres on screen, with the × floated at the right edge.
-                Text("STORYBOARD")
-                    .pageHeadingStyle()
+                PageHeading("STORYBOARD")
                     .accessibilityAddTraits(.isHeader)
                     // Audit 2026-08, DT12: at large text the full-width centred
                     // heading scaled INTO the floated ×. Reserve the ×'s slot on
@@ -399,11 +398,12 @@ struct StoryboardView: View {
     private var emptyState: some View {
         VStack(spacing: 8) {
             Text("Nothing planned yet")
-                .font(CatchlightFont.display(size: 28, relativeTo: .title2))
+                .ckDisplay(size: 28, relativeTo: .title2)
+                .lineSpacing(CatchlightFont.tightLeading(size: 28))
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
             Text("Takes with a task appear here.")
-                .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .callout))
+                .ckBody(.regular, size: 14, relativeTo: .callout)
                 .foregroundStyle(Color.ckTextSecondary)
         }
         .frame(maxWidth: .infinity)

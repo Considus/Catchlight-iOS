@@ -347,7 +347,7 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         return false
     }
 
-    /// Matches the current `BlockTextEditor` styling exactly (DM Sans). A
+    /// Matches the current `BlockTextEditor` styling exactly (system font). A
     /// `BackspaceTextView` so an empty-backspace merges with the block above.
     private func makeTextView(id: UUID, text: String, isComplete: Bool) -> BackspaceTextView {
         let tv = BackspaceTextView()

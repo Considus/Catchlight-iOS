@@ -383,7 +383,7 @@ struct TimelineReadCell: View {
         .overlay(alignment: .trailing) {
             if showsDragHandle {
                 Image(systemName: "line.3.horizontal")
-                    .font(CatchlightFont.ui(.regular, size: 15, relativeTo: .body))
+                    .ckBody(.regular, size: 15, relativeTo: .body)
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(width: TimelineDragHandle.stripWidth)
                     .padding(.trailing, TimelineDragHandle.trailingMargin)
@@ -537,12 +537,12 @@ struct TimelineMonthDivider: View {
             // padding sits INSIDE the target, so the touch height is still the full row.
             HStack(spacing: 6) {
                 Text(title.uppercased())
-                    .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .body))
+                    .ckBody(.regular, size: 14, relativeTo: .body)
                     .kerning(0.5)
                     .foregroundStyle(isActive ? Color.ckTextObie : Color.ckTextSecondary)
                 if isActive {
                     Image(systemName: "xmark.circle.fill")
-                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                        .ckBody(.regular, size: 13, relativeTo: .caption)
                         .foregroundStyle(Color.ckTextObie)
                         .accessibilityHidden(true)
                 }

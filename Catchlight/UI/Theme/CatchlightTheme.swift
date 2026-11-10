@@ -433,94 +433,116 @@ extension View {
 // MARK: - Typography
 
 enum CatchlightFont {
-    // Cormorant Garamond and DM Sans are bundled as variable TTFs under
-    // `Catchlight/Resources/Fonts/` and registered in `Info.plist` (UIAppFonts).
-    // Variable TTFs expose only their *default* instance's PostScript name to
-    // UIFont; the per-weight names (e.g. "DMSans-Light") don't resolve. We probe
-    // a candidate list per weight and use the first that registers — defence in
-    // depth against minor PostScript-name drift across font releases.
+    // Headings and display text are Archivo, set expanded. Body text is the system
+    // font. Archivo is bundled as one variable TTF,
+    // `Catchlight/Resources/Fonts/Archivo.ttf`, registered in `Info.plist`
+    // (UIAppFonts).
+    //
+    // Axes (read from the file's `fvar` table with fontTools):
+    //   wght  100 to 900, default 600
+    //   wdth   62 to 125, default 100
+    // Names (name table): family "Archivo", default instance PostScript name
+    // "Archivo-SemiBold". The named instances (ArchivoRoman-Regular and the rest) are
+    // all at wdth 100 and do not resolve through `UIFont(name:)`, so every heading
+    // starts from the default instance and sets both axes through
+    // `kCTFontVariationAttribute`.
+    //
+    // Live Dynamic Type: a SwiftUI `Font` made from a UIFont is fixed, so the text
+    // styles below (`ckBody`, `ckDisplay`) read the view's `dynamicTypeSize` and build
+    // the font for it. The fonts themselves are cached, so nothing is built per render.
+    private static let archivoCandidates = ["Archivo-SemiBold", "Archivo"]
 
-    // Actual PostScript names (probed from bundled variable TTFs via name table ID 6):
-    //   CormorantGaramond-Italic[wght].ttf  → CormorantGaramond-LightItalic
-    //   CormorantGaramond[wght].ttf         → CormorantGaramond-Light
-    //   DMSans[opsz,wght].ttf               → DMSans-9ptRegular (default instance;
-    //                                          variable font also registers named
-    //                                          instances such as DMSans-Regular)
-    private static let displayCandidates = [
-        "CormorantGaramond-LightItalic",   // confirmed PS name — matches first
-        "CormorantGaramond-Italic",
-        "CormorantGaramond-Light",
-        "CormorantGaramond"
-    ]
-    /// ROMAN (upright) Cormorant Garamond — the same bundled face as the italic
-    /// candidates, but the non-italic cut. The `display*` candidates lead with
-    /// `CormorantGaramond-LightItalic`, so every "display" use renders italic;
-    /// these lead with the roman PostScript names so headings that must be
-    /// upright (the DAILIES page heading — section 3) resolve correctly. The
-    /// fallback is the system serif WITHOUT `.italic()`.
-    private static let displayRomanCandidates = [
-        "CormorantGaramond-Light",   // confirmed PS name of CormorantGaramond[wght].ttf
-        "CormorantGaramond"
-    ]
-    private static let uiLightCandidates = [
-        "DMSans-Light", "DMSans18pt-Light", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"
-    ]
-    private static let uiRegularCandidates = [
-        "DMSans-Regular", "DMSans18pt-Regular", "DMSans-9ptRegular", "DMSans"
-    ]
-    private static let uiMediumCandidates = [
-        "DMSans-Medium", "DMSans18pt-Medium", "DMSans-9ptRegular", "DMSans-Regular", "DMSans"
-    ]
+    static let headingWeight: CGFloat = HeadingAxes.weight
+    static let headingWidth: CGFloat = HeadingAxes.width
 
-    /// Resolution cache — `firstAvailable` is called for every `Text` on every
-    /// render, and `UIFont(name:)` probing is not free. The installed font set
-    /// cannot change mid-process, so the first resolution is authoritative.
+    /// Line spacing for a heading that can wrap: Archivo's natural line is 1.088 em
+    /// (hhea ascent 878, descent 210), so about 0.09 em off lands on 1.0 em.
+    static func tightLeading(size: CGFloat) -> CGFloat { -size * 0.09 }
+
+    // MARK: Caches
+
+    /// One lock and one table for every font built here. The key names what the font
+    /// depends on, so a font is built once per size, weight, width, language and
+    /// content size, and never per render.
+    private static var cache: [String: UIFont] = [:]
     private static var resolvedNames: [String: String?] = [:]
-    private static let resolveLock = NSLock()
+    private static let lock = NSLock()
+
+    private static var builds = 0
+    private static var cachingOff = false
+
+    private static func cached(_ key: String, _ build: () -> UIFont) -> UIFont {
+        lock.lock()
+        if !cachingOff, let hit = cache[key] { lock.unlock(); return hit }
+        lock.unlock()
+        let made = build()
+        lock.lock()
+        builds += 1
+        if !cachingOff { cache[key] = made }
+        lock.unlock()
+        return made
+    }
+
+    /// How many fonts have been built since launch. The tests read it to prove repeat
+    /// calls build nothing.
+    static var fontBuildCount: Int {
+        lock.lock(); defer { lock.unlock() }
+        return builds
+    }
+
+    /// Test hook: with caching off every call builds, which is what the build counter
+    /// must be able to see.
+    static func setCachingDisabledForTests(_ off: Bool) {
+        lock.lock(); cachingOff = off; lock.unlock()
+    }
 
     private static func firstAvailable(_ names: [String]) -> String? {
         let key = names.joined(separator: "|")
-        resolveLock.lock()
-        defer { resolveLock.unlock() }
+        lock.lock()
+        defer { lock.unlock() }
         if let cached = resolvedNames[key] { return cached }
         let resolved = names.first { UIFont(name: $0, size: 12) != nil }
         resolvedNames[key] = resolved
         return resolved
     }
 
-    /// The face the display (Cormorant) text falls back to for characters it has no
-    /// glyph for, by app language. Cormorant and DM Sans cover Latin scripts only, so
-    /// iOS fills Japanese, Korean, Chinese and Thai from its own fonts. Its default is a
-    /// sans, which suits the DM Sans text but loses the serif of the display face.
-    /// Japanese has an iOS serif to pair with it, Hiragino Mincho; Korean, Chinese and
-    /// Thai have none on iOS, so they keep the system sans (Apple SD Gothic Neo, PingFang,
-    /// Thonburi), which needs no change (owner 2026-10-06).
+    // MARK: UIFont builders
+
+    /// Archivo at `size`, with the weight and width axes set. Falls back to the system
+    /// font at medium weight when the bundled face is not registered.
+    static func archivo(size: CGFloat, weight: CGFloat, width: CGFloat) -> UIFont {
+        cached("archivo|\(size)|\(weight)|\(width)") {
+            guard let name = firstAvailable(archivoCandidates) else {
+                return UIFont.systemFont(ofSize: size, weight: .medium)
+            }
+            let variation: [Int: CGFloat] = [HeadingAxes.weightTag: weight, HeadingAxes.widthTag: width]
+            let descriptor = UIFontDescriptor(fontAttributes: [
+                .name: name,
+                .size: size,
+                UIFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String): variation
+            ])
+            return UIFont(descriptor: descriptor, size: size)
+        }
+    }
+
+    /// The system sans the display text falls back to for characters Archivo has no
+    /// glyph for, by app language, at a medium weight to sit beside the heading.
+    /// Archivo covers Latin scripts only. Japanese takes Hiragino Sans, Chinese takes
+    /// PingFang in its regional cut and Korean takes Apple SD Gothic Neo. Every other
+    /// language keeps iOS's own fallback, which is a sans.
     static func displayFallback(for language: String?) -> String? {
-        language == "ja" ? "HiraMinProN-W3" : nil
+        guard let language else { return nil }
+        if language.hasPrefix("ja") { return "HiraginoSans-W5" }
+        if language.hasPrefix("ko") { return "AppleSDGothicNeo-Medium" }
+        if language.hasPrefix("zh") {
+            if language.contains("HK") || language.contains("MO") { return "PingFangHK-Medium" }
+            if language.contains("Hant") || language.hasSuffix("TW") { return "PingFangTC-Medium" }
+            return "PingFangSC-Medium"
+        }
+        return nil
     }
 
-    private static var displayFallbackName: String? {
-        displayFallback(for: Bundle.main.preferredLocalizations.first)
-    }
-
-    /// `font` with the language's display fallback first in its cascade list, or
-    /// `font` unchanged when the language has none.
-    private static func withDisplayFallback(_ font: UIFont) -> UIFont {
-        guard let name = displayFallbackName else { return font }
-        let cascade = [UIFontDescriptor(name: name, size: font.pointSize)]
-        let descriptor = font.fontDescriptor.addingAttributes([.cascadeList: cascade])
-        return UIFont(descriptor: descriptor, size: font.pointSize)
-    }
-
-    /// A display face as a SwiftUI font with the language's fallback, scaled for
-    /// Dynamic Type like `.custom(_:size:relativeTo:)`. Nil when there is no fallback,
-    /// so callers keep the plain custom font.
-    private static func cascaded(_ name: String, size: CGFloat, relativeTo style: Font.TextStyle?) -> Font? {
-        guard displayFallbackName != nil, let base = UIFont(name: name, size: size) else { return nil }
-        let font = withDisplayFallback(base)
-        guard let style else { return Font(font) }
-        return Font(UIFontMetrics(forTextStyle: uiTextStyle(style)).scaledFont(for: font))
-    }
+    static var appLanguage: String? { Bundle.main.preferredLocalizations.first }
 
     private static func uiTextStyle(_ style: Font.TextStyle) -> UIFont.TextStyle {
         switch style {
@@ -538,91 +560,161 @@ enum CatchlightFont {
         }
     }
 
-    /// Display / Take text — Cormorant Garamond Italic, scaling with Dynamic
-    /// Type. Falls back to the system serif (italic) when the font is not bundled.
-    /// Use for USER CONTENT rendered in the display face (e.g. Take body text on
-    /// rows / edit sheet) — content must respect the user's text size preference.
-    static func display(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
-        if let name = firstAvailable(displayCandidates) {
-            return cascaded(name, size: size, relativeTo: style) ?? .custom(name, size: size, relativeTo: style)
-        }
-        return .system(style, design: .serif).italic()
-    }
-
-    /// Display ROMAN (upright) — Cormorant Garamond Light, scaling with Dynamic
-    /// Type. Use for display-face text that must NOT be italic: the pinned
-    /// DAILIES / SEQUENCE / SEARCH page heading (section 3). Take BODY text stays
-    /// italic via `display(size:)` — the display face is intentionally italic for
-    /// Take content. Falls back to the system serif (upright, no `.italic()`).
-    static func displayRoman(size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
-        if let name = firstAvailable(displayRomanCandidates) {
-            return cascaded(name, size: size, relativeTo: style) ?? .custom(name, size: size, relativeTo: style)
-        }
-        return .system(style, design: .serif)
-    }
-
-    /// Display / brand headings — Cormorant Garamond Italic at a FIXED point size
-    /// that does NOT respond to Dynamic Type. Use ONLY for brand display: the
-    /// wordmark, onboarding headings, the Obie title treatment, BIP-39 word chips.
-    /// Everything else (including Take user content rendered in the display face)
-    /// must use `display(size:relativeTo:)` so the user's text-size preference is
-    /// honoured.
-    static func displayFixed(size: CGFloat) -> Font {
-        if let name = firstAvailable(displayCandidates) {
-            return cascaded(name, size: size, relativeTo: nil) ?? .custom(name, fixedSize: size)
-        }
-        // System-serif fallback has no fixedSize counterpart; clamp via .system.
-        return .system(size: size, weight: .regular, design: .serif).italic()
-    }
-
-    /// UIKit counterpart of `display(size:)` for `UIViewRepresentable` text
-    /// surfaces (the block editor's `UITextView` rows). Scales with Dynamic Type
-    /// via `UIFontMetrics(.body)`. Falls back to the system serif italic when the
-    /// bundled face isn't present — matching `display`'s SwiftUI fallback.
-    static func uiDisplay(size: CGFloat) -> UIFont {
-        let base: UIFont
-        if let name = firstAvailable(displayCandidates), let custom = UIFont(name: name, size: size) {
-            base = withDisplayFallback(custom)
-        } else {
-            let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
-                .withDesign(.serif)?
-                .withSymbolicTraits(.traitItalic)
-            base = descriptor.map { UIFont(descriptor: $0, size: size) }
-                ?? UIFont.italicSystemFont(ofSize: size)
-        }
-        return UIFontMetrics(forTextStyle: .body).scaledFont(for: base)
-    }
-
-    /// UIKit DM Sans — the `ui()` counterpart for `UIViewRepresentable` text
-    /// surfaces (the block editor's `UITextView` rows). Take content is DM Sans,
-    /// never the display face (DS §2.2). Scales via UIFontMetrics(.body).
-    static func uiBody(size: CGFloat, weight: Font.Weight = .regular) -> UIFont {
-        let candidates: [String]
+    private static func uiWeight(_ weight: Font.Weight) -> UIFont.Weight {
         switch weight {
-        case .light: candidates = uiLightCandidates
-        case .medium, .semibold, .bold: candidates = uiMediumCandidates
-        default: candidates = uiRegularCandidates
+        case .ultraLight: return .ultraLight
+        case .thin: return .thin
+        case .light: return .light
+        case .medium: return .medium
+        case .semibold: return .semibold
+        case .bold: return .bold
+        case .heavy: return .heavy
+        case .black: return .black
+        default: return .regular
         }
-        let base = firstAvailable(candidates).flatMap { UIFont(name: $0, size: size) }
-            ?? UIFont.systemFont(ofSize: size)
-        return UIFontMetrics(forTextStyle: .body).scaledFont(for: base)
     }
 
-    /// Interface text — DM Sans, scaling with Dynamic Type. Falls back to the
-    /// system sans (rounded-neutral) when the font is not bundled.
-    static func ui(_ weight: Font.Weight = .regular,
-                   size: CGFloat,
-                   relativeTo style: Font.TextStyle = .body) -> Font {
-        let candidates: [String]
-        switch weight {
-        case .light: candidates = uiLightCandidates
-        case .medium, .semibold, .bold: candidates = uiMediumCandidates
-        default: candidates = uiRegularCandidates
+    /// The unscaled heading font for `language`, with the language's fallback in its
+    /// cascade list.
+    private static func displayBase(size: CGFloat, language: String?) -> UIFont {
+        cached("display|\(size)|\(language ?? "-")") {
+            let archivo = archivo(size: size, weight: headingWeight, width: headingWidth)
+            guard let name = displayFallback(for: language) else { return archivo }
+            let cascade = [UIFontDescriptor(name: name, size: size)]
+            let descriptor = archivo.fontDescriptor.addingAttributes([.cascadeList: cascade])
+            return UIFont(descriptor: descriptor, size: size)
         }
-        if let name = firstAvailable(candidates) {
-            return .custom(name, size: size, relativeTo: style).weight(weight)
+    }
+
+    /// Heading / display face as a UIFont: Archivo, expanded, upright. With a `style`
+    /// it scales with Dynamic Type relative to that style, with nil it stays at `size`.
+    /// `traits` names the content size to scale for, and nil means the current one.
+    static func uiDisplay(size: CGFloat,
+                          relativeTo style: Font.TextStyle? = .body,
+                          compatibleWith traits: UITraitCollection? = nil,
+                          language: String? = CatchlightFont.appLanguage) -> UIFont {
+        let base = displayBase(size: size, language: language)
+        guard let style else { return base }
+        let metrics = UIFontMetrics(forTextStyle: uiTextStyle(style))
+        guard let traits else { return metrics.scaledFont(for: base) }
+        let key = "displayScaled|\(size)|\(language ?? "-")|\(style)|\(traits.preferredContentSizeCategory.rawValue)"
+        return cached(key) { metrics.scaledFont(for: base, compatibleWith: traits) }
+    }
+
+    /// Body face as a UIFont: the system font at `weight`, scaled with Dynamic Type
+    /// relative to `style`. For `UIViewRepresentable` text surfaces (the block
+    /// editor's `UITextView` rows) and the keyboard bars.
+    static func uiBody(size: CGFloat,
+                       weight: Font.Weight = .regular,
+                       relativeTo style: Font.TextStyle = .body,
+                       compatibleWith traits: UITraitCollection? = nil) -> UIFont {
+        let metrics = UIFontMetrics(forTextStyle: uiTextStyle(style))
+        let base = cached("system|\(size)|\(weight)") { UIFont.systemFont(ofSize: size, weight: uiWeight(weight)) }
+        guard let traits else { return metrics.scaledFont(for: base) }
+        let key = "systemScaled|\(size)|\(weight)|\(style)|\(traits.preferredContentSizeCategory.rawValue)"
+        return cached(key) { metrics.scaledFont(for: base, compatibleWith: traits) }
+    }
+
+    /// `size` scaled for a content size and text style, the point size a body font
+    /// takes at that size.
+    static func scaledPoints(_ size: CGFloat, relativeTo style: Font.TextStyle,
+                             compatibleWith traits: UITraitCollection) -> CGFloat {
+        UIFontMetrics(forTextStyle: uiTextStyle(style)).scaledValue(for: size, compatibleWith: traits)
+    }
+
+    /// The UIKit content size category for a SwiftUI Dynamic Type size.
+    static func contentSizeCategory(_ size: DynamicTypeSize) -> UIContentSizeCategory {
+        switch size {
+        case .xSmall: return .extraSmall
+        case .small: return .small
+        case .medium: return .medium
+        case .large: return .large
+        case .xLarge: return .extraLarge
+        case .xxLarge: return .extraExtraLarge
+        case .xxxLarge: return .extraExtraExtraLarge
+        case .accessibility1: return .accessibilityMedium
+        case .accessibility2: return .accessibilityLarge
+        case .accessibility3: return .accessibilityExtraLarge
+        case .accessibility4: return .accessibilityExtraExtraLarge
+        case .accessibility5: return .accessibilityExtraExtraExtraLarge
+        @unknown default: return .large
         }
-        return .system(style, design: .default).weight(weight)
+    }
+}
+
+// MARK: - Text styles
+
+/// Interface text. The font is rebuilt from the view's own Dynamic Type size, so it
+/// grows while the screen is open. It is a SwiftUI system font at the scaled size.
+/// Markdown emphasis needs `EmphasisText`: SwiftUI steps a light font's weight up by
+/// one for emphasis, which is not visibly bold.
+private struct BodyFontModifier: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let weight: Font.Weight
+    let size: CGFloat
+    let style: Font.TextStyle
+
+    func body(content: Content) -> some View {
+        let traits = UITraitCollection(preferredContentSizeCategory: CatchlightFont.contentSizeCategory(dynamicTypeSize))
+        return content.font(.system(size: CatchlightFont.scaledPoints(size, relativeTo: style, compatibleWith: traits),
+                                    weight: weight))
+    }
+}
+
+/// Heading and display text in Archivo, expanded. A nil `style` keeps the size fixed.
+private struct DisplayFontModifier: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let size: CGFloat
+    let style: Font.TextStyle?
+
+    func body(content: Content) -> some View {
+        let traits = UITraitCollection(preferredContentSizeCategory: CatchlightFont.contentSizeCategory(dynamicTypeSize))
+        return content.font(Font(CatchlightFont.uiDisplay(size: size, relativeTo: style, compatibleWith: traits)))
+    }
+}
+
+/// A sentence with inline Markdown emphasis (`**word**`) in the body font, the emphasised
+/// words in bold, scaling live with Dynamic Type. The Markdown stays in the string, so a
+/// translation can move the emphasis to wherever its own word order puts it.
+struct EmphasisText: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private let source: String
+    private let weight: Font.Weight
+    private let size: CGFloat
+    private let style: Font.TextStyle
+
+    init(_ key: LocalizedStringResource, _ weight: Font.Weight = .regular, size: CGFloat, relativeTo style: Font.TextStyle = .body) {
+        self.source = String(localized: key)
+        self.weight = weight
+        self.size = size
+        self.style = style
+    }
+
+    var body: some View {
+        let traits = UITraitCollection(preferredContentSizeCategory: CatchlightFont.contentSizeCategory(dynamicTypeSize))
+        let points = CatchlightFont.scaledPoints(size, relativeTo: style, compatibleWith: traits)
+        var text = (try? AttributedString(markdown: source,
+                                          options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
+            ?? AttributedString(source)
+        for run in text.runs where run.inlinePresentationIntent?.contains(.stronglyEmphasized) == true {
+            text[run.range].font = .system(size: points, weight: .bold)
+            text[run.range].inlinePresentationIntent = nil
+        }
+        return Text(text).font(.system(size: points, weight: weight))
+    }
+}
+
+extension View {
+    /// Interface text: the system font, scaling live with Dynamic Type relative to `style`.
+    func ckBody(_ weight: Font.Weight = .regular, size: CGFloat, relativeTo style: Font.TextStyle = .body) -> some View {
+        modifier(BodyFontModifier(weight: weight, size: size, style: style))
+    }
+
+    /// Heading text: Archivo expanded. Pass a `style` to scale live with Dynamic Type, or
+    /// nil for the brand display that stays at a fixed size (onboarding heroes, the
+    /// Obie title treatment, BIP-39 word chips). Take content is never the display face.
+    func ckDisplay(size: CGFloat, relativeTo style: Font.TextStyle?) -> some View {
+        modifier(DisplayFontModifier(size: size, style: style))
     }
 }
 
@@ -718,26 +810,146 @@ enum CatchlightLayout {
     /// Letter-spacing for the page heading (DAILIES / SEQUENCE / STORYBOARD / SHOT
     /// LIST / SETTINGS).
     static let pageHeadingKerning: CGFloat = 1.6
-    /// Leading inset `pageHeadingStyle` adds to optically centre the kerned title.
+    /// Leading inset `PageHeading` adds to optically centre the kerned title.
     /// `.kerning` adds trailing space after the last glyph (~half a glyph more than
     /// the kern value itself), pulling a plainly-centred title left; 3.0 lands the
     /// ink dead-centre — measured on DAILIES, 601→603px (owner 2026-06-29).
     static let pageHeadingKerningComp: CGFloat = 3.0
 }
 
-extension View {
-    /// The one page-heading style — Cormorant Garamond ROMAN 24, kerned, centred,
-    /// `ckTextPrimary`. Shared by every screen's heading so they can't drift (the
-    /// catalogue documents this once). `.kerning` adds its spacing AFTER the last
-    /// glyph too, so a plainly-centred kerned title sits ~half a kern left of true
-    /// centre; the matching `.padding(.leading)` cancels that trailing space so the
-    /// letters read dead-centre (owner 2026-06-29).
-    func pageHeadingStyle() -> some View {
-        self
-            .font(CatchlightFont.displayRoman(size: 24, relativeTo: .title3))
+/// The page heading: Archivo expanded 24, kerned, centred, `ckTextPrimary`. Shared by
+/// every screen's heading so they can't drift. A one-word title stays on one line and
+/// scales down to fit. A title of several words wraps between words onto two balanced
+/// lines when one line is too wide, and only scales down when a single word still does
+/// not fit. Nothing breaks inside a word.
+///
+/// `.kerning` adds its spacing AFTER the last glyph too, so a plainly-centred kerned
+/// title sits about half a kern left of true centre. The matching leading padding
+/// cancels that trailing space so the letters read dead-centre (owner 2026-06-29).
+struct PageHeading: View {
+    let title: String
+
+    init(_ title: LocalizedStringResource) { self.title = String(localized: title) }
+    init(verbatim title: String) { self.title = title }
+
+    /// `title` split onto two lines at a word boundary, the split that makes the longer
+    /// line shortest. Nil for a one-word title.
+    static func twoLines(_ title: String) -> String? {
+        let words = title.split(separator: " ").map(String.init)
+        guard words.count > 1 else { return nil }
+        var best: (Int, Int)?
+        for k in 1..<words.count {
+            let longest = max(words[..<k].joined(separator: " ").count, words[k...].joined(separator: " ").count)
+            if best == nil || longest < best!.1 { best = (k, longest) }
+        }
+        let k = best!.0
+        return words[..<k].joined(separator: " ") + "\n" + words[k...].joined(separator: " ")
+    }
+
+    /// The soft hyphen a translation puts at a true compound join, so a word that is too
+    /// long for the line can break there with a hyphen.
+    static let softHyphen = "\u{00AD}"
+
+    /// What a heading draws: the text (newlines where it breaks, with a hyphen at a soft
+    /// hyphen break), the point size, and whether it broke at soft hyphens.
+    struct Fit: Equatable {
+        var text: String
+        var points: CGFloat
+        var wraps: Bool
+    }
+
+    /// How a heading fits `width` at `category`: one line, then two balanced lines at a
+    /// word boundary, then shrinking to fit, but never below the body text size at that
+    /// Dynamic Type size. Past that floor a word breaks at a soft hyphen, and a title with
+    /// no soft hyphen that still does not fit keeps shrinking, so nothing is cut and
+    /// nothing breaks inside a word. The floor can give way only when even half a
+    /// compound, at the body size, is wider than the line.
+    static func fit(_ title: String, width: CGFloat, category: UIContentSizeCategory,
+                    language: String? = CatchlightFont.appLanguage) -> Fit {
+        let traits = UITraitCollection(preferredContentSizeCategory: category)
+        let font = CatchlightFont.uiDisplay(size: 24, relativeTo: .title3, compatibleWith: traits, language: language)
+        let full = font.pointSize
+        let bodyPoints = UIFont.preferredFont(forTextStyle: .body, compatibleWith: traits).pointSize
+        let floorScale = min(1, bodyPoints / full)
+        let available = width - CatchlightLayout.pageHeadingKerningComp - 1
+
+        // The kerning is a fixed number of points per character and does not shrink with
+        // the font, so a line at scale `s` is `glyphs * s + kern * characters` wide.
+        func glyphs(_ line: String) -> CGFloat {
+            (line as NSString).size(withAttributes: [.font: font]).width
+        }
+        func kern(_ line: String) -> CGFloat { CatchlightLayout.pageHeadingKerning * CGFloat(line.count) }
+        func lineWidth(_ line: String, scale: CGFloat) -> CGFloat { glyphs(line) * scale + kern(line) }
+        func widest(_ text: String, scale: CGFloat) -> CGFloat {
+            text.components(separatedBy: "\n").map { lineWidth($0, scale: scale) }.max() ?? 0
+        }
+        /// The largest scale at which every line of `text` fits.
+        func scaleToFit(_ text: String) -> CGFloat {
+            text.components(separatedBy: "\n").map { (available - kern($0)) / glyphs($0) }.min() ?? 1
+        }
+
+        let plain = title.replacingOccurrences(of: softHyphen, with: "")
+        if widest(plain, scale: 1) <= available { return Fit(text: plain, points: full, wraps: false) }
+        let two = twoLines(plain)
+        if let two, widest(two, scale: 1) <= available { return Fit(text: two, points: full, wraps: false) }
+
+        let shrinkable = two ?? plain
+        let need = scaleToFit(shrinkable)
+        if need >= floorScale { return Fit(text: shrinkable, points: full * need, wraps: false) }
+
+        // Past the floor, a title with a soft hyphen breaks there (and at spaces). It draws
+        // at the floor size, or smaller only when even its longest piece, with its hyphen,
+        // does not fit the width at that size.
+        if title.contains(softHyphen) {
+            // Units are the pieces between spaces and soft hyphens. The lines are broken here,
+            // not by Text, which would also hyphenate inside a piece.
+            var units: [(text: String, boundary: Character)] = []
+            for (w, word) in title.components(separatedBy: " ").enumerated() {
+                let parts = word.components(separatedBy: softHyphen)
+                for (i, part) in parts.enumerated() {
+                    let last = i == parts.count - 1
+                    units.append((part, !last ? "-" : (w == title.components(separatedBy: " ").count - 1 ? "." : " ")))
+                }
+            }
+            func hyphenated(_ u: (text: String, boundary: Character)) -> String { u.text + (u.boundary == "-" ? "-" : "") }
+            let pieceFit = units.map { (available - kern(hyphenated($0))) / glyphs(hyphenated($0)) }.min() ?? 1
+            let scale = min(floorScale, pieceFit)
+            var lines: [String] = []
+            var current = ""
+            var previous: Character = " "
+            for u in units {
+                let glue = current.isEmpty ? "" : (previous == " " ? " " : "")
+                let candidate = current + glue + u.text
+                if current.isEmpty || lineWidth(candidate + (u.boundary == "-" ? "-" : ""), scale: scale) <= available {
+                    current = candidate
+                } else {
+                    lines.append(current + (previous == "-" ? "-" : ""))
+                    current = u.text
+                }
+                previous = u.boundary
+            }
+            lines.append(current)
+            return Fit(text: lines.joined(separator: "\n"), points: full * scale, wraps: true)
+        }
+        return Fit(text: shrinkable, points: full * max(need, 0.05), wraps: false)
+    }
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var width: CGFloat = 0
+
+    var body: some View {
+        let category = CatchlightFont.contentSizeCategory(dynamicTypeSize)
+        let fit = width > 0 ? Self.fit(title, width: width, category: category) : nil
+        Text(fit?.text ?? title.replacingOccurrences(of: Self.softHyphen, with: ""))
+            .ckDisplay(size: fit?.points ?? 24, relativeTo: fit == nil ? .title3 : nil)
+            .lineLimit(fit.map { $0.text.components(separatedBy: "\n").count } ?? 1)
+            .multilineTextAlignment(.center)
             .kerning(CatchlightLayout.pageHeadingKerning)
             .foregroundStyle(Color.ckTextPrimary)
             .padding(.leading, CatchlightLayout.pageHeadingKerningComp)
+            .fixedSize(horizontal: true, vertical: true)
             .frame(maxWidth: .infinity, alignment: .center)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .accessibilityLabel(title.replacingOccurrences(of: Self.softHyphen, with: ""))
     }
 }

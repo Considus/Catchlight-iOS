@@ -14,7 +14,7 @@ import UIKit
 import CatchlightCore
 
 /// The fixed gap below the brand mark at which EVERY onboarding hero line (the
-/// Cormorant italic heading or, on the splash, the tagline) sits — so they land at
+/// Archivo heading or, on the splash, the tagline) sits, so they land at
 /// the same Y on every screen the brand mark appears: splash · Welcome · Storage ·
 /// Local warning · Reveal · Confirm · Complete (owner 2026-06-16). Without this the
 /// flexible spacers pushed each heading down by an amount that depended on the
@@ -239,7 +239,7 @@ private struct SplashFooterPill: View {
     let text: String
     var body: some View {
         Text(text)
-            .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))   // button-label style
+            .ckBody(.medium, size: 15, relativeTo: .body)   // button-label style
             .foregroundStyle(Color.ckTextSecondary)
             .lineLimit(1)
             // Round 2 (device, max size): `maxHeight: .infinity` made this a CIRCLE above
@@ -314,7 +314,7 @@ struct WelcomeContent: View {
                     // entering its phrase — styled as a link in ckTextObie (the Restore token).
                     Button(action: onSecondary) {
                         Text("I already use Catchlight")
-                            .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                            .ckBody(.medium, size: 15, relativeTo: .body)
                             .foregroundStyle(Color.ckTextObie)
                     }
                     // T3 (audit 2026-08): the sole alternate path on this screen
@@ -338,7 +338,8 @@ struct WelcomeContent: View {
 
     private var headline: some View {
         Text("You don't need to choose privacy, it's yours and you never have to ask for it.")
-            .font(CatchlightFont.displayFixed(size: 28))
+            .ckDisplay(size: 28, relativeTo: nil)
+            .lineSpacing(CatchlightFont.tightLeading(size: 28))
             .foregroundStyle(Color.ckTextPrimary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -353,7 +354,8 @@ struct WelcomeContent: View {
             // intro hero lines are now `displayFixed(28)`, static — so the splash
             // tagline and the Welcome headline it crossfades into are pixel-matched).
             // The secondary colour + italic keep it reading as a tagline.
-            .font(CatchlightFont.displayFixed(size: 28))
+            .ckDisplay(size: 28, relativeTo: nil)
+            .lineSpacing(CatchlightFont.tightLeading(size: 28))
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -364,13 +366,13 @@ struct WelcomeContent: View {
         VStack(spacing: 16) {
             // One sentence with inline Markdown bold, so a translation can move the
             // emphasis to wherever its own word order puts it.
-            Text("First, we'll create your Privacy phrase: 12 words that are the **ONLY** key to your data.")
-                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+            EmphasisText("First, we'll create your Privacy phrase: 12 words that are the **ONLY** key to your data.",
+                         .light, size: 16, relativeTo: .body)
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             Text("We never see them, store them, or ask for them. So don't lose them.")
-                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                .ckBody(.light, size: 16, relativeTo: .body)
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -394,7 +396,8 @@ struct RestoreFolderView: View {
             VStack(spacing: 0) {
                 Spacer().frame(height: introHeroTopGap)
                 Text("Welcome back")
-                    .font(CatchlightFont.displayFixed(size: 28))
+                    .ckDisplay(size: 28, relativeTo: nil)
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -402,7 +405,7 @@ struct RestoreFolderView: View {
 
                 Spacer(minLength: 24)
                 Text("Your account is restored on this device. Connect the cloud folder where your Takes are saved and they'll appear here.")
-                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                    .ckBody(.light, size: 16, relativeTo: .body)
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -411,7 +414,7 @@ struct RestoreFolderView: View {
         } bottom: {
             VStack(spacing: 12) {
                 Button("Not now") { app.restoreAwaitingFolder = false }
-                    .font(CatchlightFont.ui(.medium, size: 15, relativeTo: .body))
+                    .ckBody(.medium, size: 15, relativeTo: .body)
                     .foregroundStyle(Color.ckTextObie)
                     // T3: same 44pt hit floor as the Welcome link above.
                     .contentShape(Rectangle().inset(by: -12))
@@ -467,7 +470,8 @@ private struct RestoreEntryStep: View {
 
                         VStack(spacing: 20) {
                             Text("Enter your Privacy phrase")
-                                .font(CatchlightFont.displayFixed(size: 28))
+                                .ckDisplay(size: 28, relativeTo: nil)
+                                .lineSpacing(CatchlightFont.tightLeading(size: 28))
                                 .foregroundStyle(Color.ckTextPrimary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -482,7 +486,7 @@ private struct RestoreEntryStep: View {
 
                             VStack(spacing: 8) {
                                 Text("The 12 words from your other device, in order.")
-                                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                                    .ckBody(.light, size: 16, relativeTo: .body)
                                     .foregroundStyle(Color.ckTextSecondary)
                                     .multilineTextAlignment(.center)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -558,7 +562,7 @@ private struct RestoreEntryStep: View {
         else if ready { message = String(localized: "Ready to restore."); isError = false }
         else { message = String(localized: "\(filledCount) of 12 words"); isError = false }
         return Text(message)
-            .font(CatchlightFont.ui(.regular, size: 14, relativeTo: .caption))
+            .ckBody(.regular, size: 14, relativeTo: .caption)
             .foregroundStyle(isError ? Color.ckRuby : Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -576,7 +580,8 @@ private struct StorageChoiceStep: View {
                 // Hero line at the shared set position.
                 Spacer().frame(height: introHeroTopGap)
                 Text("Now, where should your Takes live?")
-                    .font(CatchlightFont.displayFixed(size: 28))
+                    .ckDisplay(size: 28, relativeTo: nil)
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -623,20 +628,20 @@ private struct StorageOptionCard: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .font(CatchlightFont.ui(.medium, size: 17, relativeTo: .body))
+                    .ckBody(.medium, size: 17, relativeTo: .body)
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(description)
                     // Matches every onboarding subtext (owner 2026-06-16: unified at
                     // 16 light Secondary everywhere; this panel text was 14 regular).
-                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                    .ckBody(.light, size: 16, relativeTo: .body)
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                 if let note {
                     Text(note)
-                        .font(CatchlightFont.ui(.regular, size: 16, relativeTo: .body))
+                        .ckBody(.regular, size: 16, relativeTo: .body)
                         .foregroundStyle(Color.ckTextPrimary)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
@@ -677,14 +682,15 @@ private struct LocalWarningStep: View {
                 // carries it down toward the dock while the hero stays pinned.
                 Spacer().frame(height: introHeroTopGap)
                 Text("One thing before we continue.")
-                    .font(CatchlightFont.displayFixed(size: 28))
+                    .ckDisplay(size: 28, relativeTo: nil)
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 24)
                 Text("Your Takes will live on this device and nowhere else. Your iPhone backup won't contain them, because we deliberately keep them out of it, and that's the same choice that keeps them out of iCloud Backup. Lose this phone or wipe it, and there's nothing to restore from.")
-                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                    .ckBody(.light, size: 16, relativeTo: .body)
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -754,7 +760,8 @@ private struct RevealStep: View {
 
                     VStack(spacing: 20) {
                         Text("Your Privacy phrase")
-                            .font(CatchlightFont.displayFixed(size: 28))
+                            .ckDisplay(size: 28, relativeTo: nil)
+                            .lineSpacing(CatchlightFont.tightLeading(size: 28))
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -770,7 +777,7 @@ private struct RevealStep: View {
                         // ckTextSecondary, matching the confirm prompt (owner
                         // 2026-06-12, HiFi v1.11.5 — the amber treatment retired).
                         Text(bodyText)
-                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                            .ckBody(.light, size: 16, relativeTo: .body)
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -805,14 +812,14 @@ private struct RevealStep: View {
             ForEach(Array(words.enumerated()), id: \.offset) { idx, word in
                 HStack(spacing: 5) {
                     Text("\(idx + 1)")
-                        .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                        .ckBody(.regular, size: 12, relativeTo: .caption)
                         .foregroundStyle(Color.ckTextSecondary)
                     Text(word)
-                        // The 12 words use the subtext font, not Cormorant (owner
-                        // 2026-06-16): DS §2.1 reserves Cormorant for display moments,
+                        // The 12 words use the subtext font, not the display face (owner
+                        // 2026-06-16): DS §2.1 reserves the display face for display moments,
                         // never functional content; sans is also clearer for a phrase
                         // you must transcribe exactly.
-                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                        .ckBody(.light, size: 16, relativeTo: .body)
                         .foregroundStyle(Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -866,7 +873,7 @@ private struct ConfirmStep: View {
                         .overlay {
                             if let failure = vm.failure {
                                 Text(failure)
-                                    .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                                    .ckBody(.regular, size: 13, relativeTo: .caption)
                                     .foregroundStyle(Color.ckTextObie)
                                     .multilineTextAlignment(.center)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -883,7 +890,7 @@ private struct ConfirmStep: View {
                                     .padding(.horizontal, 24)
                                     // Nudge to the VISUAL centre of the wordmark→hero
                                     // gap: the geometric centre reads a touch high
-                                    // because the Cormorant hero sits low in its line
+                                    // because the hero sits low in its line
                                     // box (owner 2026-06-15).
                                     .offset(y: 16)
                                     .transition(.opacity)
@@ -895,14 +902,15 @@ private struct ConfirmStep: View {
 
                     VStack(spacing: 12) {
                         Text("Confirm three words")
-                            .font(CatchlightFont.displayFixed(size: 28))
+                            .ckDisplay(size: 28, relativeTo: nil)
+                            .lineSpacing(CatchlightFont.tightLeading(size: 28))
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader)
 
                         Text(promptCopy)
-                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                            .ckBody(.light, size: 16, relativeTo: .body)
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1013,10 +1021,10 @@ private struct ConfirmStep: View {
                     // number stays the small grey prefix; the word fills the rest.
                     HStack(spacing: 5) {
                         Text(positionLabel)
-                            .font(CatchlightFont.ui(.regular, size: 12, relativeTo: .caption))
+                            .ckBody(.regular, size: 12, relativeTo: .caption)
                             .foregroundStyle(Color.ckTextSecondary)
                         Text(value ?? "—")
-                            .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))   // 12 words → subtext font (DS §2.1; Confirm bank is interactive)
+                            .ckBody(.light, size: 16, relativeTo: .body)   // 12 words use the subtext font (DS §2.1), and the Confirm bank is interactive
                             .foregroundStyle(value == nil ? Color.ckTextSecondary : Color.ckTextPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
@@ -1070,7 +1078,7 @@ private struct ConfirmStep: View {
                 let used = vm.usedBankIndices.contains(index)
                 Button { vm.tapBankWord(at: index) } label: {
                     Text(word)
-                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))   // 12 words → subtext font (DS §2.1; Confirm bank is interactive)
+                        .ckBody(.light, size: 16, relativeTo: .body)   // 12 words use the subtext font (DS §2.1), and the Confirm bank is interactive
                         .foregroundStyle(used ? Color.ckTextSecondary.opacity(0.4) : Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -1132,7 +1140,8 @@ private struct CompleteStep: View {
                 // brand-mark screen).
                 Spacer().frame(height: introHeroTopGap)
                 Text("You're ready.")
-                    .font(CatchlightFont.displayFixed(size: 28))
+                    .ckDisplay(size: 28, relativeTo: nil)
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1147,12 +1156,12 @@ private struct CompleteStep: View {
                 Spacer(minLength: 24)
                 VStack(spacing: 12) {
                     Text("Your thoughts, in your order, telling your story. Nobody else's.")
-                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                        .ckBody(.light, size: 16, relativeTo: .body)
                         .foregroundStyle(Color.ckTextPrimary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(bodyText)
-                        .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                        .ckBody(.light, size: 16, relativeTo: .body)
                         .foregroundStyle(Color.ckTextSecondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1229,7 +1238,7 @@ private struct BasicsStep: View {
 
     var body: some View {
         // The shared intro layout (Welcome · Storage · Local warning · Complete): brand
-        // mark at its set position, the Cormorant hero at `introHeroTopGap`, body centred
+        // mark at its set position, the hero at `introHeroTopGap`, body centred
         // beneath it, pill in the dock. The first cut of this page was built on the bare
         // `StepScaffold` instead — left-aligned, flush to the top of the screen, with the
         // hoisted mark drawing straight over the body text (owner device screenshot
@@ -1238,7 +1247,8 @@ private struct BasicsStep: View {
             VStack(spacing: 0) {
                 Spacer().frame(height: introHeroTopGap)
                 Text(heading)
-                    .font(CatchlightFont.displayFixed(size: 28))
+                    .ckDisplay(size: 28, relativeTo: nil)
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1248,12 +1258,12 @@ private struct BasicsStep: View {
                     ForEach(points, id: \.title) { point in
                         VStack(spacing: 6) {
                             Text(point.title)
-                                .font(CatchlightFont.ui(.medium, size: 16, relativeTo: .body))
+                                .ckBody(.medium, size: 16, relativeTo: .body)
                                 .foregroundStyle(Color.ckTextPrimary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
                             Text(point.shown)
-                                .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                                .ckBody(.light, size: 16, relativeTo: .body)
                                 .foregroundStyle(Color.ckTextSecondary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1289,21 +1299,22 @@ private struct FailureStep: View {
             VStack(spacing: 20) {
                 Spacer()
                 Text(vm.failure ?? String(localized: "Something went wrong."))
-                    .font(CatchlightFont.displayFixed(size: 28))
+                    .ckDisplay(size: 28, relativeTo: nil)
+                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .accessibilityAddTraits(.isHeader)
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail = vm.failureDetail {
                     Text(detail)
-                        .font(CatchlightFont.ui(.regular, size: 13, relativeTo: .caption))
+                        .ckBody(.regular, size: 13, relativeTo: .caption)
                         .foregroundStyle(Color.ckTextSecondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 8)
                 }
                 Text("You can start over and try again. Your phrase hasn't been saved anywhere. We'll generate another.")
-                    .font(CatchlightFont.ui(.light, size: 16, relativeTo: .body))
+                    .ckBody(.light, size: 16, relativeTo: .body)
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
