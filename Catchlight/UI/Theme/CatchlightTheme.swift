@@ -846,31 +846,110 @@ struct PageHeading: View {
         return words[..<k].joined(separator: " ") + "\n" + words[k...].joined(separator: " ")
     }
 
-    /// How far a heading may shrink before it would be cut. The longest single word in the
-    /// catalog (German SYNC CONFLICTS at the largest accessibility size) needs 0.235, so
-    /// 0.2 never cuts a shipped title. The test over every language guards it.
-    static let scaleFloor: CGFloat = 0.2
+    /// The soft hyphen a translation puts at a true compound join, so a word that is too
+    /// long for the line can break there with a hyphen.
+    static let softHyphen = "\u{00AD}"
 
-    var body: some View {
-        let two = Self.twoLines(title)
-        ViewThatFits(in: .horizontal) {
-            styled(title, lines: 1, scales: false)
-            if let two { styled(two, lines: 2, scales: false) }
-            styled(two ?? title, lines: two == nil ? 1 : 2, scales: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .accessibilityLabel(title)
+    /// What a heading draws: the text (newlines where it breaks, with a hyphen at a soft
+    /// hyphen break), the point size, and whether it broke at soft hyphens.
+    struct Fit: Equatable {
+        var text: String
+        var points: CGFloat
+        var wraps: Bool
     }
 
-    private func styled(_ text: String, lines: Int, scales: Bool) -> some View {
-        Text(text)
-            .ckDisplay(size: 24, relativeTo: .title3)
-            .lineLimit(lines)
-            .minimumScaleFactor(scales ? Self.scaleFloor : 1)
+    /// How a heading fits `width` at `category`: one line, then two balanced lines at a
+    /// word boundary, then shrinking to fit, but never below the body text size at that
+    /// Dynamic Type size. Past that floor a word breaks at a soft hyphen, and a title with
+    /// no soft hyphen that still does not fit keeps shrinking, so nothing is cut and
+    /// nothing breaks inside a word. The floor can give way only when even half a
+    /// compound, at the body size, is wider than the line.
+    static func fit(_ title: String, width: CGFloat, category: UIContentSizeCategory,
+                    language: String? = CatchlightFont.appLanguage) -> Fit {
+        let traits = UITraitCollection(preferredContentSizeCategory: category)
+        let font = CatchlightFont.uiDisplay(size: 24, relativeTo: .title3, compatibleWith: traits, language: language)
+        let full = font.pointSize
+        let bodyPoints = UIFont.preferredFont(forTextStyle: .body, compatibleWith: traits).pointSize
+        let floorScale = min(1, bodyPoints / full)
+        let available = width - CatchlightLayout.pageHeadingKerningComp - 1
+
+        // The kerning is a fixed number of points per character and does not shrink with
+        // the font, so a line at scale `s` is `glyphs * s + kern * characters` wide.
+        func glyphs(_ line: String) -> CGFloat {
+            (line as NSString).size(withAttributes: [.font: font]).width
+        }
+        func kern(_ line: String) -> CGFloat { CatchlightLayout.pageHeadingKerning * CGFloat(line.count) }
+        func lineWidth(_ line: String, scale: CGFloat) -> CGFloat { glyphs(line) * scale + kern(line) }
+        func widest(_ text: String, scale: CGFloat) -> CGFloat {
+            text.components(separatedBy: "\n").map { lineWidth($0, scale: scale) }.max() ?? 0
+        }
+        /// The largest scale at which every line of `text` fits.
+        func scaleToFit(_ text: String) -> CGFloat {
+            text.components(separatedBy: "\n").map { (available - kern($0)) / glyphs($0) }.min() ?? 1
+        }
+
+        let plain = title.replacingOccurrences(of: softHyphen, with: "")
+        if widest(plain, scale: 1) <= available { return Fit(text: plain, points: full, wraps: false) }
+        let two = twoLines(plain)
+        if let two, widest(two, scale: 1) <= available { return Fit(text: two, points: full, wraps: false) }
+
+        let shrinkable = two ?? plain
+        let need = scaleToFit(shrinkable)
+        if need >= floorScale { return Fit(text: shrinkable, points: full * need, wraps: false) }
+
+        // Past the floor, a title with a soft hyphen breaks there (and at spaces). It draws
+        // at the floor size, or smaller only when even its longest piece, with its hyphen,
+        // does not fit the width at that size.
+        if title.contains(softHyphen) {
+            // Units are the pieces between spaces and soft hyphens. The lines are broken here,
+            // not by Text, which would also hyphenate inside a piece.
+            var units: [(text: String, boundary: Character)] = []
+            for (w, word) in title.components(separatedBy: " ").enumerated() {
+                let parts = word.components(separatedBy: softHyphen)
+                for (i, part) in parts.enumerated() {
+                    let last = i == parts.count - 1
+                    units.append((part, !last ? "-" : (w == title.components(separatedBy: " ").count - 1 ? "." : " ")))
+                }
+            }
+            func hyphenated(_ u: (text: String, boundary: Character)) -> String { u.text + (u.boundary == "-" ? "-" : "") }
+            let pieceFit = units.map { (available - kern(hyphenated($0))) / glyphs(hyphenated($0)) }.min() ?? 1
+            let scale = min(floorScale, pieceFit)
+            var lines: [String] = []
+            var current = ""
+            var previous: Character = " "
+            for u in units {
+                let glue = current.isEmpty ? "" : (previous == " " ? " " : "")
+                let candidate = current + glue + u.text
+                if current.isEmpty || lineWidth(candidate + (u.boundary == "-" ? "-" : ""), scale: scale) <= available {
+                    current = candidate
+                } else {
+                    lines.append(current + (previous == "-" ? "-" : ""))
+                    current = u.text
+                }
+                previous = u.boundary
+            }
+            lines.append(current)
+            return Fit(text: lines.joined(separator: "\n"), points: full * scale, wraps: true)
+        }
+        return Fit(text: shrinkable, points: full * max(need, 0.05), wraps: false)
+    }
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var width: CGFloat = 0
+
+    var body: some View {
+        let category = CatchlightFont.contentSizeCategory(dynamicTypeSize)
+        let fit = width > 0 ? Self.fit(title, width: width, category: category) : nil
+        Text(fit?.text ?? title.replacingOccurrences(of: Self.softHyphen, with: ""))
+            .ckDisplay(size: fit?.points ?? 24, relativeTo: fit == nil ? .title3 : nil)
+            .lineLimit(fit.map { $0.text.components(separatedBy: "\n").count } ?? 1)
             .multilineTextAlignment(.center)
             .kerning(CatchlightLayout.pageHeadingKerning)
             .foregroundStyle(Color.ckTextPrimary)
             .padding(.leading, CatchlightLayout.pageHeadingKerningComp)
-            .fixedSize(horizontal: !scales, vertical: true)
+            .fixedSize(horizontal: true, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .accessibilityLabel(title.replacingOccurrences(of: Self.softHyphen, with: ""))
     }
 }
