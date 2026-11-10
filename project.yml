@@ -222,6 +222,12 @@ targets:
         # target to Manual on a future fix-warning prompt. Pre-archive audit
         # 2026-06-07.
         CODE_SIGN_STYLE: Automatic
+        # App icon: the Art Director's Icon Composer files in Catchlight/Resources, copied
+        # in as they are. Cobalt (`AppIcon.icon`) is the main icon and the one the App Store
+        # shows; the other four are alternates the person picks in Settings → App icon
+        # (`AppIconChoice`). Xcode builds the iOS 18 fallback images from each file.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "AppIcon-Graphite AppIcon-Onyx AppIcon-Jade AppIcon-Tanzanite"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         SWIFT_OBJC_BRIDGING_HEADER: ""
         # Section 1 (fix pass 1) — the git-SHA build-stamp script below must read
