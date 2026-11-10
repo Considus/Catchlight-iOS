@@ -686,6 +686,7 @@ struct TakeCardSurface: View {
                 // Quiet meta scale (matches .tm size; non-italic — it's a count).
                 Text(progressText)
                     .font(CatchlightFont.ui(.regular, size: 11, relativeTo: .caption))
+                    .monospacedDigit()   // a count: tabular digits
                     .foregroundStyle(Color.ckTextSecondary)
                     .accessibilityHidden(true)   // already spoken in the row label
             }
