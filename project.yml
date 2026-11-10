@@ -141,15 +141,15 @@ targets:
         # app never needs background location (the Apple Reminders posture). No "Always" key.
         NSLocationWhenInUseUsageDescription: "Catchlight uses your location to remind you about a Take when you arrive at or leave a place."
         # App encrypts user content with AES-256-GCM (CryptoKit) + HKDF/HMAC-SHA-256
-        # for confidentiality — i.e. it DOES use non-exempt encryption (beyond OS
-        # HTTPS). Algorithms are standard (no proprietary crypto). Export basis:
-        # Licence Exception TSU (15 CFR 740.13(e)) — Catchlight is open-source, so the
-        # publicly-available encryption source code qualifies; a one-time notification
-        # to BIS (crypt@bis.doc.gov) + NSA (enc@nsa.gov) with the repo URL is required
-        # before public release. No CCATS, no annual self-classification report.
-        # PREREQUISITE: GitHub repos must be public + TSU email sent before submission.
-        # If shipping closed-source instead, switch basis to mass-market 740.17(b)(1)
-        # (annual self-classification report).
+        # for confidentiality, so it DOES use non-exempt encryption (beyond OS HTTPS).
+        # Algorithms are standard (no proprietary crypto). Export basis: publicly
+        # available encryption source code, 15 CFR 742.15(b), which holds only while
+        # this repo and the encryption source in Catchlight-Core stay public. Since BIS's 2021 rule,
+        # public source that uses only standard cryptography needs no notice to BIS or
+        # NSA, no CCATS and no self-classification report. Adding non-standard or
+        # proprietary cryptography would need a notice before it is published. If the
+        # app ever ships closed-source, the basis becomes mass-market 740.17(b)(1):
+        # check the reporting rules again then.
         ITSAppUsesNonExemptEncryption: true
         # Apple's code for the approved encryption declaration (standard algorithms,
         # available in France), so each build stops asking the export questions.
