@@ -32,7 +32,11 @@ enum LightStatusBar {
         let light = !requests.isEmpty && requests.values.allSatisfy { $0 }
         guard let root = probe.view.window?.rootViewController ?? rootViewController() else { return }
         let install = install(on: root)
-        if install == .refused { return }
+        if install == .refused {
+            // Not ours to change: make sure our getter, if it is still in the chain, answers normally.
+            if isLight { isLight = false; root.setNeedsStatusBarAppearanceUpdate() }
+            return
+        }
         // A newly installed class must be asked again, whether or not the flag flipped.
         if light != isLight || install == .installed {
             isLight = light
@@ -47,15 +51,20 @@ enum LightStatusBar {
 
     private static let prefix = "CKLightStatusBar_"
 
-    private enum Install { case installed, already, refused }
+    enum Install { case installed, already, refused }
 
-    private static func install(on root: UIViewController) -> Install {
+    static func install(on root: UIViewController) -> Install {
         // `type(of:)` and `-class` hide a runtime subclass, so read the real class pointer.
         guard let actual = object_getClass(root) else { return .refused }
-        if NSStringFromClass(actual).hasPrefix(prefix) { return .already }
-        // Another observer (KVO) has already swapped the class: changing it again would
-        // fight over the same pointer, so leave the style alone.
         let base: AnyClass = type(of: root)
+        // Ours may sit under a class another observer (KVO) added later, so look down the chain.
+        var cls: AnyClass? = actual
+        while let current = cls, current !== base {
+            if NSStringFromClass(current).hasPrefix(prefix) { return .already }
+            cls = class_getSuperclass(current)
+        }
+        // Another observer (KVO) swapped the class before us: changing it again would
+        // fight over the same pointer, so leave the style alone.
         if actual !== base {
             if !loggedKept {
                 loggedKept = true
