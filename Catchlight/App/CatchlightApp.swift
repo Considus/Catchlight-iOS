@@ -30,6 +30,10 @@ struct CatchlightApp: App {
     /// The Phase 6 application-scope model (UI state + feature view models),
     /// composed in the single composition root.
     @State private var app: AppModel
+    /// The bottom inset with the keyboard left out (see `homeIndicatorInset`), read by a
+    /// reader that ignores the keyboard. Reading the window's insets from the body instead
+    /// hung the launch on the splash screen.
+    @State private var homeIndicatorInset: CGFloat = 34
 
     private let backgroundSync: BackgroundSyncCoordinator
 
@@ -416,6 +420,7 @@ struct CatchlightApp: App {
             // place the real bottom inset is visible; the dock + onboarding pill
             // row read it from the environment to rest above the home indicator.
             .environment(\.deviceBottomInset, rootGeo.safeAreaInsets.bottom)
+            .environment(\.homeIndicatorInset, homeIndicatorInset)
             .preferredColorScheme(
                 (SettingsViewModel.AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme
             )
@@ -473,6 +478,16 @@ struct CatchlightApp: App {
                 app.relock()
             }
             }   // GeometryReader (rootGeo)
+            .background(
+                GeometryReader { keyboardFree in
+                    Color.clear
+                        .onAppear { homeIndicatorInset = keyboardFree.safeAreaInsets.bottom }
+                        .onChange(of: keyboardFree.safeAreaInsets.bottom) { _, inset in
+                            homeIndicatorInset = inset
+                        }
+                }
+                .ignoresSafeArea(.keyboard)
+            )
         }
         .onChange(of: scenePhase) { _, newPhase in
             session.handleScenePhase(newPhase)

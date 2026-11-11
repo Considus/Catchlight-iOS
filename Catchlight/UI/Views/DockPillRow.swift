@@ -71,7 +71,9 @@ extension View {
     /// The dock's soft bottom edge behind a pill row (HiFi v1.11.5, owner
     /// 2026-06-12): scrolling content fades out beneath the button zone
     /// instead of meeting a hard edge. Apply to the safeAreaInset content.
-    func dockFadeBackground() -> some View {
+    /// `passesTouches`: the fade is only a look, so content still showing through it keeps its
+    /// taps (the Dailies toolbar, whose fade reaches above the panel over the Takes).
+    func dockFadeBackground(passesTouches: Bool = false) -> some View {
         background(
             LinearGradient(stops: [
                 .init(color: Color.ckBackground.opacity(0), location: 0),
@@ -79,6 +81,7 @@ extension View {
                 .init(color: Color.ckBackground, location: 0.55)
             ], startPoint: .top, endPoint: .bottom)
             .ignoresSafeArea(edges: .bottom)
+            .allowsHitTesting(!passesTouches)
         )
     }
 }

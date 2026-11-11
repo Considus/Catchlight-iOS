@@ -39,8 +39,8 @@ import CatchlightCore
 
 struct DailiesToolbar: View {
     @Environment(UIState.self) private var ui
-    /// Bottom safe-area inset (home-indicator zone), captured at the window root.
-    @Environment(\.deviceBottomInset) private var deviceBottomInset
+    /// The home-indicator inset alone, never counting the keyboard (CatchlightApp).
+    @Environment(\.homeIndicatorInset) private var homeIndicatorInset
 
     /// Create a Take and open the editor (gated by the paywall in RootView).
     var onNewTake: () -> Void
@@ -66,8 +66,16 @@ struct DailiesToolbar: View {
         }
         .animation(.easeInOut(duration: 0.2), value: ui.toolbarMode)
         .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
-        // Rest above the home indicator.
-        .padding(.bottom, deviceBottomInset + CatchlightLayout.toolbarBottomPadding)
+        // Level with Apple's own bottom search bar, measured from the home-indicator inset
+        // alone, which never counts the keyboard, so the panel can't stop high while the
+        // search keyboard and its bar go away.
+        .padding(.bottom, CatchlightLayout.toolbarBottomGap(homeIndicatorInset: homeIndicatorInset))
+        // The soft edge the Takes fade into behind and below the panel, as the old toolbar
+        // had (owner 2026-11-10: "lost its fade and mask below the bottom menu"). It starts a
+        // little above the panel so a Take dissolves before it reaches it. A Take still showing
+        // through it keeps its taps.
+        .padding(.top, DailiesToolbarMetrics.fadeAbove)
+        .dockFadeBackground(passesTouches: true)
         .onChange(of: ui.toolbarMode) { old, mode in
             // The chips appear and go without moving focus, so say so.
             let announcement: String
@@ -273,26 +281,22 @@ struct DailiesToolbar: View {
         }
     }
 
+    /// Icon only (owner 2026-11-10: names beside the icons overflowed at large text sizes).
+    /// The name stays as the VoiceOver label on each chip, and a long press at the large
+    /// accessibility sizes shows icon and name in the large content viewer.
     private func chipFace(icon: some View, label: LocalizedStringKey, state: ChipState) -> some View {
         let on = state != .off
-        return HStack(spacing: 5) {
-            icon.frame(width: 14, height: 14)
-            Text(label)
-                .ckBody(.medium, size: 13, relativeTo: .footnote)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        }
-        .padding(.horizontal, 4)
-        .foregroundStyle(on ? Color.ckOnAccent : Color.ckTextPrimary)
-        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-        .background(CatchlightShape.control.fill(on ? Color.ckAdd : Color.ckPanel))
-        .overlay(CatchlightShape.control.strokeBorder(on ? Color.ckAdd : Color.ckLine, lineWidth: 1))
-        .contentShape(CatchlightShape.control)
-        .accessibilityShowsLargeContentViewer {
-            icon
-            Text(label)
-        }
+        return icon
+            .frame(width: DailiesToolbarMetrics.chipIconSize, height: DailiesToolbarMetrics.chipIconSize)
+            .foregroundStyle(on ? Color.ckOnAccent : Color.ckTextPrimary)
+            .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
+            .background(CatchlightShape.control.fill(on ? Color.ckAdd : Color.ckPanel))
+            .overlay(CatchlightShape.control.strokeBorder(on ? Color.ckAdd : Color.ckLine, lineWidth: 1))
+            .contentShape(CatchlightShape.control)
+            .accessibilityShowsLargeContentViewer {
+                icon
+                Text(label)
+            }
     }
 
     private func chipIcon(_ glyph: ToolbarGlyph) -> some View {
@@ -338,7 +342,7 @@ struct DailiesToolbar: View {
         } label: {
             chipFace(icon: Group {
                 if state == .variant {
-                    Image(systemName: "checkmark.circle").font(.system(size: 13, weight: .medium))
+                    Image(systemName: "checkmark.circle").font(.system(size: 18, weight: .medium))
                 } else {
                     chipIcon(.task)
                 }
@@ -370,7 +374,7 @@ struct DailiesToolbar: View {
         } label: {
             chipFace(icon: Group {
                 if state == .variant {
-                    Image(systemName: "clock.badge.exclamationmark").font(.system(size: 13, weight: .medium))
+                    Image(systemName: "clock.badge.exclamationmark").font(.system(size: 18, weight: .medium))
                 } else {
                     chipIcon(.clock)
                 }
@@ -403,6 +407,10 @@ enum DailiesToolbarMetrics {
     static let chipGap: CGFloat = 8
     /// Between two filter chips.
     static let chipSpacing: CGFloat = 6
+    /// A filter chip's icon, now that the chips carry no name beside it.
+    static let chipIconSize: CGFloat = 20
+    /// How far above the panel (or the chips) the fade behind the toolbar begins.
+    static let fadeAbove: CGFloat = 16
     /// The search row's inset inside the panel.
     static let searchRowInset: CGFloat = 10
     /// The filter chip row: its 44pt height and the gap under it.

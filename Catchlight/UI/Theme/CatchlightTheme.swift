@@ -1060,9 +1060,13 @@ enum CatchlightLayout {
     /// deviceBottomInset` (plus the filter chips' row while they show), so the final Take
     /// clears the toolbar.
     static let toolbarClearance: CGFloat = 120
-    /// The toolbar's bottom padding above the home indicator, added on top of
-    /// `deviceBottomInset` (DailiesToolbar; DockPillRow keeps the same line).
-    static let toolbarBottomPadding: CGFloat = 8
+    /// How far the Dailies toolbar's panel sits from the screen's bottom edge. Apple's own
+    /// bottom search bar (Settings, iOS 27, iPhone 17) ends 28pt from the edge, 6pt inside the
+    /// 34pt home-indicator inset, and the owner found ours sat too high beside it
+    /// (2026-11-10), so the panel matches it. A phone without a home indicator keeps 8pt.
+    static func toolbarBottomGap(homeIndicatorInset: CGFloat) -> CGFloat {
+        homeIndicatorInset > 0 ? max(8, homeIndicatorInset - 6) : 8
+    }
     /// Gap between the brand mark (`IntroBrandMark`) and the hero line on the
     /// intro surfaces — onboarding steps AND the app-entry LockView reference this
     /// one value so the mark→hero rhythm is identical and can't drift (owner
