@@ -723,6 +723,37 @@ final class AppModel {
         reportSyncNotice(Self.friendlyBookmarkNotice(for: error))
     }
 
+    /// Check the cloud folder's bookmark and report a problem on the sync strip only if it
+    /// persists. On the owner's iPhone the bookmark sometimes fails to resolve as the app returns
+    /// after a while away, then resolves again: the sync that followed opened the same bookmark
+    /// 13 to 31 seconds after each false "couldn't be opened" (diagnostics, 2026-11-10 and 11).
+    /// So a failure is re-checked after each of `retryDelays`, and only one that is still there
+    /// at the end is reported. A cancelled check (the app came to the front again) reports nothing.
+    func verifyCloudFolder(
+        check: () -> Wiring.CloudBookmarkError? = Wiring.checkCloudBookmarkHealth,
+        retryDelays: [Duration] = AppModel.cloudFolderRetryDelays,
+        sleep: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) async {
+        guard var error = check() else { return }
+        for delay in retryDelays {
+            do { try await sleep(delay) } catch { return }
+            guard let again = check() else { return }
+            error = again
+        }
+        reportBookmarkError(error)
+    }
+
+    /// About half a minute in all, to cover the 31 seconds seen on the owner's phone.
+    static let cloudFolderRetryDelays: [Duration] = [.seconds(2), .seconds(5), .seconds(10), .seconds(15)]
+
+    /// Start a cloud-folder check, replacing any still waiting to re-check.
+    func startCloudFolderCheck() {
+        cloudFolderCheck?.cancel()
+        cloudFolderCheck = Task { await verifyCloudFolder() }
+    }
+
+    @ObservationIgnored private var cloudFolderCheck: Task<Void, Never>?
+
     /// Takes a push held back because this device was away too long: shown in the sync
     /// strip, so it also lands in Notice History.
     func reportHeldBack(_ count: Int) {
