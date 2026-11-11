@@ -103,7 +103,9 @@ struct SecondDeviceRestoreView: View {
         Button(action: submit) {
             Text("Restore on this device")
                 .ckBody(.medium, size: 15, relativeTo: .body)
-                .frame(maxWidth: .infinity, minHeight: 50)
+                // Half the Dailies toolbar's height, like every other bottom button (owner
+                // 2026-11-11). Inline under the grid, so it keeps the plain control corners.
+                .frame(maxWidth: .infinity, minHeight: CatchlightLayout.buttonRowHeight)
                 .flatPrimaryFace()
         }
         .buttonStyle(.plain)
