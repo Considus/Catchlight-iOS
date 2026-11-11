@@ -108,7 +108,6 @@ final class OnboardingConsistencyUITests: XCTestCase {
         func far(_ a: [Int], _ b: [Int]) -> Bool { zip(a, b).contains { abs($0 - $1) > 10 } }
         let left = Int(frame.minX * scale), top = Int(frame.minY * scale)
         let fill = rgb(Int((frame.maxX - 6) * scale), Int((frame.maxY - 6) * scale))
-        let border = rgb(Int(frame.midX * scale), top + 1)
         let page = rgb(left - Int(6 * scale), top + Int(frame.height * scale / 2))
         // How far in from the left the card starts on one pixel row. The page shows all the
         // way across on a row above the card.
@@ -125,6 +124,9 @@ final class OnboardingConsistencyUITests: XCTestCase {
         var firstRow = top
         while firstRow < top + Int(4 * scale), insetOnRow(firstRow) >= Int(40 * scale) { firstRow += 1 }
         let inset = insetOnRow(firstRow + 1)
+        // The border from the same drawn row: on an iPhone 16 a point card drew 2px below its frame,
+        // so the frame's row 1 was still the page.
+        let border = rgb(Int(frame.midX * scale), firstRow + 1)
         return CardLook(frame: frame, fill: fill, border: border, cornerInset: inset)
     }
 
