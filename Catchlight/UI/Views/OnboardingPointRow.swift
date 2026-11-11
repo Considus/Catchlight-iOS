@@ -3,8 +3,9 @@
 //  Catchlight (iOS app target)
 //
 //  One point on the "A few things worth knowing" pages, as drawn: a small drawing of the control
-//  it names beside its title and sentence, under a hairline. This is the whole of that layout,
-//  so going back to centred text is a change to the one call in `BasicsStep`. The accessibility
+//  it names beside its title and sentence, on a card that is a Take card's (its fill, border,
+//  corner and padding, from `TakeCardStyle` and `CatchlightLayout`). This is the whole of that
+//  layout, so going back to centred text is a change to the one call in `BasicsStep`. The accessibility
 //  of a point (one element, its spoken label) is set by `BasicsStep`, not here.
 //
 
@@ -18,6 +19,7 @@ struct OnboardingPointRow: View {
     let shown: String
 
     @Environment(\.dynamicTypeSize) private var dynamicSize
+    @Environment(\.colorScheme) private var scheme
 
     /// The drawing beside its text, or above it at the accessibility sizes, where a text column
     /// narrowed by the drawing would wrap a few words to a line.
@@ -28,26 +30,25 @@ struct OnboardingPointRow: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Rectangle().fill(Color.ckLine).frame(height: 1)
-            layout {
-                PointMark(kind: mark)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .ckBody(.semibold, size: 16, relativeTo: .body)
-                        .foregroundStyle(Color.ckTextPrimary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(shown)
-                        .ckBody(.light, size: 15, relativeTo: .body)
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+        layout {
+            PointMark(kind: mark)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .ckBody(.semibold, size: 16, relativeTo: .body)
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(shown)
+                    .ckBody(.light, size: 15, relativeTo: .body)
+                    .foregroundStyle(Color.ckTextSecondary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(CatchlightLayout.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .takeCardFace(TakeCardStyle.plain(scheme: scheme))
     }
 }
 
@@ -62,12 +63,12 @@ struct PointMark: View {
     /// The Obie, so its tile shows the inner square and the lit top light.
     private static let obieTake = Take(blocks: [.textLine("")], isObie: true, isImportant: true)
 
-    /// The Take card in miniature that holds the Iris or the Obie, and the Iris drawn in it.
-    static let tileSize = CGSize(width: 60, height: 48)
+    /// The square tile that holds the Iris or the Obie, and the Iris drawn in it.
+    static let tileSize = CGSize(width: 48, height: 48)
     static let irisDiameter: CGFloat = 28
     static let tileInset: CGFloat = 5
     /// The box every mark is drawn in.
-    static let markSize = CGSize(width: 72, height: 62)
+    static let markSize = CGSize(width: 62, height: 62)
 
     var body: some View {
         ZStack {
@@ -82,7 +83,7 @@ struct PointMark: View {
                 }
                 .frame(width: 34, height: 34)
             case .iris, .obie:
-                // A Take card in miniature, with the real Iris at its corner.
+                // A square tile, with the real Iris at its corner.
                 IrisView(take: kind == .obie ? Self.obieTake : Self.taskTake, diameter: Self.irisDiameter)
                     .padding(Self.tileInset)
                     .frame(width: Self.tileSize.width, height: Self.tileSize.height, alignment: .topLeading)

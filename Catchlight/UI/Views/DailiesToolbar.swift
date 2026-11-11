@@ -65,11 +65,10 @@ struct DailiesToolbar: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: ui.toolbarMode)
-        .padding(.horizontal, CatchlightLayout.dockInset)
         // At the dock's place, measured from the home-indicator inset alone, which never
         // counts the keyboard, so the panel can't stop high while the search keyboard and its
         // bar go away.
-        .padding(.bottom, CatchlightLayout.toolbarBottomGap(homeIndicatorInset: homeIndicatorInset))
+        .atDockPlace(homeIndicatorInset: homeIndicatorInset)
         // The soft edge the Takes fade into behind and below the panel, as the old toolbar
         // had (owner 2026-11-10: "lost its fade and mask below the bottom menu"). It starts a
         // little above the panel so a Take dissolves before it reaches it. A Take still showing

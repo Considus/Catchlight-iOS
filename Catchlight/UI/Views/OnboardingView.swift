@@ -21,6 +21,10 @@ import CatchlightCore
 /// content below it, so they drifted apart.
 private let introHeroTopGap: CGFloat = CatchlightLayout.introHeroTopGap
 
+/// The side inset of a step's content. The point cards on "A few things worth knowing" go out or
+/// in from it to the Take cards' margin.
+private let stepContentInset: CGFloat = 24
+
 struct OnboardingView: View {
     @Environment(OnboardingViewModel.self) private var vm
     @Environment(\.dynamicTypeSize) private var dynamicSize
@@ -246,7 +250,7 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
                 ScrollView {
                     content()
                         .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, stepContentInset)
                         .padding(.top, padsTop ? 16 : 0)
                         .padding(.bottom, 16)
                 }
@@ -262,11 +266,16 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
             .environment(\.onColourField, onField)
             .lightStatusBar(onField)
         } else {
-            ZStack {
-                content()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 24)
-            }
+            // The content is an overlay, so it never sizes the step. Sized by its content, a step
+            // that stood taller than the room (the points page, Welcome) pushed the bottom
+            // buttons off their place by as much as it overflowed, a different amount on each
+            // step. Measured: the same button's top edge sat at 734, 744, 754 and 772 on four steps.
+            Color.clear
+                .overlay(alignment: .top) {
+                    content()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal, stepContentInset)
+                }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background((onField ? Color.ckField : Color.ckBackground).ignoresSafeArea())
             .safeAreaInset(edge: .bottom) {
@@ -352,6 +361,7 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
 /// design, not a button; muted so it reads as a footer rather than a tappable CTA).
 private struct SplashFooterPill: View {
     let text: String
+    @Environment(\.dynamicTypeSize) private var dynamicSize
     var body: some View {
         Text(text)
             .ckBody(.medium, size: 15, relativeTo: .body)   // button-label style
@@ -362,8 +372,11 @@ private struct SplashFooterPill: View {
             // button could never grow, and the full-width branch above Large sets only a
             // minHeight. A minimum, not a maximum: the button hugs its text. Its corners
             // are a fixed radius, so it never rounds into a pill or a circle.
-            .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-            .background(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
+            // At the default size and below the row gives it the toolbar's height, as it does the
+            // Welcome button this crossfades into; above, it hugs its text.
+            .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget,
+                   maxHeight: dynamicSize > .large ? nil : .infinity)
+            .flatEdgePanel(fill: .clear, line: Color.ckOutline)
             .accessibilityElement()
             .accessibilityLabel(text)
     }
@@ -1373,9 +1386,11 @@ private struct BasicsStep: View {
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 24)
                 // As drawn: each point is a small drawing of the control it names, with its title
-                // and sentence beside it, between hairlines. The layout is `OnboardingPointRow`
-                // and nothing else here depends on it.
-                VStack(spacing: 0) {
+                // and sentence beside it, on a card that is a Take card's. The layout is
+                // `OnboardingPointRow` and nothing else here depends on it. The cards stand
+                // the Take cards' distance from the screen edge, and a gap apart as the
+                // tightest Dailies setting does.
+                VStack(spacing: CatchlightLayout.visibleCardGap(for: SettingsViewModel.TakeSpacing.compact.gap)) {
                     ForEach(points, id: \.title) { point in
                         OnboardingPointRow(mark: point.mark, title: point.title, shown: point.shown)
                             // One element per point, so the cursor steps heading-and-all
@@ -1384,8 +1399,9 @@ private struct BasicsStep: View {
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel("\(point.title). \(point.spoken)")
                     }
-                    Rectangle().fill(Color.ckLine).frame(height: 1)
                 }
+                .padding(.horizontal, CatchlightLayout.cardMargin(
+                    addColumnX: CatchlightLayout.addColumnX(containerWidth: UIScreen.main.bounds.width)) - stepContentInset)
                 Spacer().frame(height: 24)
             }
         } bottom: {

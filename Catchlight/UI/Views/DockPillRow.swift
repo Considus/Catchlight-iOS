@@ -2,33 +2,57 @@
 //  DockPillRow.swift
 //  Catchlight (iOS app target)
 //
-//  Onboarding/paywall actions adopt the DOCK GEOMETRY (owner decision
-//  2026-06-12, HiFi v1.7 internal v1.11.1/.2): a single pill button sits
-//  exactly over the four dock-button slots — if the dock were visible, the
-//  pill would hide all four buttons precisely. A pair of buttons splits the
-//  pill: the leading button covers slots 1+2, the trailing button covers
-//  slots 3+4, both fully rounded, separated by the grid's natural
-//  inter-button gap.
-//
-//  The grid is the same one DailiesToolbar and CatchlightLayout.addColumnX derive
-//  from: four equal slots inside `toolbarHorizontalPadding`, button diameter
-//  `minTouchTarget` — so the pills inherit the 44pt HIG touch target and the
-//  row occupies the dock's exact resting position (top 10 / bottom 8 padding).
+//  The bottom buttons of onboarding, the lock screen and the Settings screens that use them
+//  take the Dailies toolbar's place and size (owner 2026-11-11: "make them all match the size
+//  and shape of the new dailies menu"): in from each side by `dockInset`, up from the bottom
+//  by the dock's gap, `dockHeight` tall, and corners that follow the screen's curve where
+//  they reach the bottom edge (`CatchlightShape.edgeSurface`, never under the surface radius).
+//  A single button spans the toolbar's width. A pair splits it in two with a gap between.
 //
 
 import SwiftUI
 
-/// The face of a `DockPill`: a rounded rectangle at the control radius. Primary is the action
-/// colour with its on-colour label, or the disabled pair while disabled. Secondary is the
-/// `outline` token as a 1pt edge (3:1 on every surface) with primary text.
+/// Whether a `DockPill` sits in a `DockPillRow`, at the screen's bottom edge, and so takes the
+/// edge shape. A pill placed inline in a card keeps the plain control shape.
+private struct DockAtScreenEdgeKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    fileprivate var dockAtScreenEdge: Bool {
+        get { self[DockAtScreenEdgeKey.self] }
+        set { self[DockAtScreenEdgeKey.self] = newValue }
+    }
+}
+
+/// The face of a `DockPill`: a rounded rectangle at the control radius, or in a `DockPillRow` the
+/// edge shape that follows the screen's curve. Primary is the action colour with its on-colour
+/// label, or the disabled pair while disabled. Secondary is the `outline` token as a 1pt edge
+/// (3:1 on every surface) with primary text.
 ///
 /// On the colour field the primary is the on-field colour with the field colour as its label.
 /// The screens that sit on the field have no secondary button.
 private struct DockPillFace: ViewModifier {
     let secondary: Bool
     @Environment(\.onColourField) private var onField
+    @Environment(\.dockAtScreenEdge) private var atEdge
+    @Environment(\.isEnabled) private var isEnabled
     func body(content: Content) -> some View {
-        if onField && !secondary {
+        if atEdge {
+            if onField && !secondary {
+                content
+                    .foregroundStyle(Color.ckField)
+                    .flatEdgePanel(fill: Color.ckOnField, line: nil)
+            } else if secondary {
+                content
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .flatEdgePanel(fill: .clear, line: Color.ckOutline)
+            } else {
+                content
+                    .foregroundStyle(isEnabled ? Color.ckOnAccent : Color.ckDisabledLabel)
+                    .flatEdgePanel(fill: isEnabled ? Color.ckAdd : Color.ckDisabledFill, line: nil)
+            }
+        } else if onField && !secondary {
             content
                 .foregroundStyle(Color.ckField)
                 .background(CatchlightShape.control.fill(Color.ckOnField))
@@ -116,8 +140,8 @@ private struct DockFade: ViewModifier {
     }
 }
 
-/// One row on the dock grid. One child spans all four slots; two children
-/// cover slots 1+2 and 3+4 with the grid's inter-button gap between them.
+/// One row at the dock's place. One child spans the toolbar's width; two children split it in two,
+/// with a gap between them.
 struct DockPillRow<Primary: View, Trailing: View>: View {
     private let primary: Primary
     private let trailing: Trailing?
@@ -133,54 +157,44 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
         self.trailing = trailing()
     }
 
-    // CTA growth (Default is the floor): above the default text
-    // size (.xLarge and up) the locked dock-slot grid (fixed 44pt height,
-    // slot-aligned widths) would force the CTA labels to shrink below their
-    // default size. Abandon exact dock alignment there and let the pills grow
-    // full-width instead. At the default size and below, the grid is unchanged.
+    // CTA growth (Default is the floor): above the default text size (.xLarge and up) the
+    // toolbar's fixed height would force the CTA labels to shrink below their default size.
+    // There the pills grow with their text instead, full width and stacked, never under 44pt,
+    // at the same place, inset and shape. At the default size and below, each is `dockHeight` tall.
     @Environment(\.dynamicTypeSize) private var dynamicSize
-    /// Bottom safe-area inset. The onboarding/paywall pill
-    /// row mirrors the resting dock's geometry, so it must lift by the same
-    /// home-indicator inset to line up with the dock at rest.
+    /// The home-indicator inset alone: the row stands where the Dailies toolbar does.
+    @Environment(\.homeIndicatorInset) private var homeIndicatorInset
+    /// The inset the keyboard or an input accessory adds on top of it, so a row shown with one up
+    /// still rides above it. Zero when neither is showing.
     @Environment(\.deviceBottomInset) private var deviceBottomInset
 
     var body: some View {
-        if dynamicSize > .large {
-            // Full-width layout: a single primary pill spans the width; a primary
-            // plus a trailing pill stack vertically, each full width and ≥44pt.
-            VStack(spacing: 10) {
-                primary
-                    .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-                if let trailing {
-                    trailing
-                        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-                }
-            }
-            .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
-            .padding(.top, 10)
-            .padding(.bottom, deviceBottomInset + 8)
-        } else {
-            GeometryReader { geo in
-                // slot-i button centre = slotW·(i+0.5); pill edges = centre ∓ d/2.
-                // Single: slot-1 leading edge → slot-4 trailing edge (3·slotW + d).
-                // Pair: each slotW + d wide; gap = slotW − d (the inter-button gap).
-                let slotW = geo.size.width / 4
-                let d = CatchlightLayout.minTouchTarget
-                HStack(spacing: slotW - d) {
+        Group {
+            if dynamicSize > .large {
+                VStack(spacing: DailiesToolbarMetrics.chipGap) {
                     primary
-                        .frame(width: trailing == nil ? slotW * 3 + d : slotW + d)
+                        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
                     if let trailing {
                         trailing
-                            .frame(width: slotW + d)
+                            .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
                     }
                 }
-                .padding(.leading, slotW / 2 - d / 2)
-                .frame(height: d)
+            } else {
+                HStack(spacing: DailiesToolbarMetrics.chipGap) {
+                    primary
+                        .frame(maxWidth: .infinity)
+                    if let trailing {
+                        trailing
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .frame(height: CatchlightLayout.dockHeight)
             }
-            .frame(height: CatchlightLayout.minTouchTarget)
-            .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
-            .padding(.top, 10)
-            .padding(.bottom, deviceBottomInset + 8)
         }
+        .environment(\.dockAtScreenEdge, true)
+        .atDockPlace(homeIndicatorInset: homeIndicatorInset)
+        .padding(.bottom, max(0, deviceBottomInset - homeIndicatorInset))
+        // The fade behind the row starts this far above it, as the toolbar's does.
+        .padding(.top, DailiesToolbarMetrics.fadeAbove)
     }
 }

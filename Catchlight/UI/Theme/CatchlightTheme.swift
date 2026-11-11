@@ -476,19 +476,36 @@ extension View {
 
     /// `flatPanel` in the edge shape (`CatchlightShape.edgeSurface`), for a panel at a screen
     /// edge. The hairline takes no touches, and the panel takes them across its whole shape.
+    /// `line` is the hairline's colour, or nil for a panel with none.
     @ViewBuilder
-    func flatEdgePanel(fill: Color) -> some View {
+    func flatEdgePanel(fill: Color, line: Color? = .ckLine) -> some View {
         if #available(iOS 26, *) {
             background(CatchlightShape.edgeSurface.fill(fill))
                 // The concentric shape can't be inset, so the 1pt line is drawn on a shape half
                 // a point inside, which puts it wholly inside the edge, as `strokeBorder` does.
-                .overlay(CatchlightShape.edgeSurface.stroke(Color.ckLine, lineWidth: 1).padding(0.5).allowsHitTesting(false))
+                .overlay {
+                    if let line {
+                        CatchlightShape.edgeSurface.stroke(line, lineWidth: 1).padding(0.5).allowsHitTesting(false)
+                    }
+                }
                 .contentShape(CatchlightShape.edgeSurface)
         } else {
             background(CatchlightShape.surface.fill(fill))
-                .overlay(CatchlightShape.surface.strokeBorder(Color.ckLine, lineWidth: 1).allowsHitTesting(false))
+                .overlay {
+                    if let line {
+                        CatchlightShape.surface.strokeBorder(line, lineWidth: 1).allowsHitTesting(false)
+                    }
+                }
                 .contentShape(CatchlightShape.surface)
         }
+    }
+
+    /// Where the dock sits, which is where the Dailies toolbar and the bottom buttons of the other
+    /// screens stand: in from each side by `dockInset`, and up from the bottom edge by the dock's
+    /// gap, measured from the home-indicator inset alone.
+    func atDockPlace(homeIndicatorInset: CGFloat) -> some View {
+        padding(.horizontal, CatchlightLayout.dockInset)
+            .padding(.bottom, CatchlightLayout.toolbarBottomGap(homeIndicatorInset: homeIndicatorInset))
     }
 }
 
