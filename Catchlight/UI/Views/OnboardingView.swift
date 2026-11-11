@@ -925,10 +925,8 @@ private struct RevealStep: View {
         // 3×4 (owner 2026-06-15): three columns pack the 12 words into four rows
         // instead of six and remove the wide trailing gap the 2-column cards left
         // after each word — tighter on the page and quicker to scan.
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 8),
-                             count: phraseColumnCount(for: dynamicSize))   // DT11
-        return LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(Array(words.enumerated()), id: \.offset) { idx, word in
+        return PhraseGrid(count: words.count, columns: phraseColumnCount(for: dynamicSize)) { idx in   // DT11
+            let word = words[idx]
                 HStack(spacing: 5) {
                     Text("\(idx + 1)")
                         .ckBody(.regular, size: 12, relativeTo: .caption)
@@ -947,9 +945,57 @@ private struct RevealStep: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 8)
+                .frame(minHeight: PhraseCell.drawnHeight)
                 .flatTile()
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Word \(idx + 1): \(word)")
+        }
+    }
+}
+
+/// The word cells of the two phrase grids and the three slots above the Confirm bank. They draw
+/// 40 tall so both phrase steps fit above the bottom buttons with a two-line prompt on a 393pt
+/// phone, and a cell that takes taps keeps the 44pt touch target: 2pt above and below the tile
+/// still answer it. With 8pt between rows the touch areas stay 4pt apart.
+enum PhraseCell {
+    static let drawnHeight: CGFloat = 40
+    static let tapPadding: CGFloat = (CatchlightLayout.minTouchTarget - drawnHeight) / 2
+    static let rowSpacing: CGFloat = 8
+}
+
+private extension View {
+    /// Grows a 40pt phrase cell's touch area to 44 without drawing it any taller, and without
+    /// taking layout room: the gaps between rows stay `rowSpacing`.
+    func phraseCellTapArea() -> some View {
+        padding(.vertical, PhraseCell.tapPadding)
+            .contentShape(Rectangle())
+            .padding(.vertical, -PhraseCell.tapPadding)
+    }
+}
+
+/// The twelve words in rows of `columns` equal-width cells, `PhraseCell.rowSpacing` apart. Not a
+/// lazy grid: a lazy grid drops the cells scrolled out of view, and on a phrase step every word must
+/// stay on the page, for the person and for VoiceOver, at every phone and text size. Measured on an
+/// iPhone SE: a scrolled lazy bank had dropped words a test then could not find.
+struct PhraseGrid<Cell: View>: View {
+    let count: Int
+    let columns: Int
+    @ViewBuilder let cell: (Int) -> Cell
+
+    var body: some View {
+        let rows = stride(from: 0, to: count, by: max(1, columns)).map { Array($0..<min($0 + max(1, columns), count)) }
+        VStack(spacing: PhraseCell.rowSpacing) {
+            ForEach(rows, id: \.first) { row in
+                HStack(spacing: 8) {
+                    ForEach(row, id: \.self) { index in
+                        cell(index)
+                            .frame(maxWidth: .infinity)
+                    }
+                    // A short last row keeps the other rows' cell width.
+                    ForEach(0..<(max(1, columns) - row.count), id: \.self) { _ in
+                        Color.clear.frame(maxWidth: .infinity, maxHeight: 0)
+                    }
+                }
             }
         }
     }
@@ -1014,7 +1060,7 @@ private struct ConfirmStep: View {
                     }
                     }
                     .animation(.easeInOut(duration: 0.18), value: vm.failure)
-                    VStack(spacing: 12) {
+                    VStack(spacing: 8) {
                         Text("Confirm three words")
                             .stepHeading()
                             .foregroundStyle(Color.ckTextPrimary)
@@ -1033,7 +1079,7 @@ private struct ConfirmStep: View {
                         // rows (10), so the cells feel like a single family (owner
                         // 2026-06-15). This also recovers the height that was nudging
                         // the bottom row under the dock fade.
-                        VStack(spacing: 10) {
+                        VStack(spacing: 8) {
                             slotsRow
                             bankGrid
                         }
@@ -1159,7 +1205,7 @@ private struct ConfirmStep: View {
                     .padding(.vertical, 6)
                     .padding(.horizontal, 8)
                 }
-                .frame(minHeight: 44)
+                .frame(minHeight: PhraseCell.drawnHeight)
                 .frame(maxWidth: .infinity)
                 // As drawn: an open slot is edged in the muted colour, a filled one in the
                 // accent, and a wrong guess flashes the accent.
@@ -1178,7 +1224,7 @@ private struct ConfirmStep: View {
                 // gesture does NOT carry onto the synthesised element (the V2
                 // lesson, owner device test 2026-08-21). Both routes are no-ops on
                 // an empty slot and while the error flash is resetting the row.
-                .contentShape(Rectangle())
+                .phraseCellTapArea()
                 .onTapGesture { vm.deselectSlot(at: i) }
                 .accessibilityElement(children: .ignore)
                 .accessibilityAction { vm.deselectSlot(at: i) }
@@ -1203,13 +1249,11 @@ private struct ConfirmStep: View {
     private var bankGrid: some View {
         // 3×4 — matches the reveal grid (owner 2026-06-15: both phrase grids moved
         // 2×6 → 3×4 to compact the cards), order preserved from the shuffle.
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 8),
-                             count: phraseColumnCount(for: dynamicSize))   // DT11
-        return LazyVGrid(columns: columns, spacing: 10) {
-            // Index-based identity + usage (2026-06-10): tracking by word value
-            // greyed BOTH tiles when a phrase contained a duplicate word, and
-            // could make the confirm step unwinnable.
-            ForEach(Array(vm.bank.enumerated()), id: \.offset) { index, word in
+        // Index-based identity + usage (2026-06-10): tracking by word value
+        // greyed BOTH tiles when a phrase contained a duplicate word, and
+        // could make the confirm step unwinnable.
+        return PhraseGrid(count: vm.bank.count, columns: phraseColumnCount(for: dynamicSize)) { index in   // DT11
+            let word = vm.bank[index]
                 let used = vm.usedBankIndices.contains(index)
                 Button { vm.tapBankWord(at: index) } label: {
                     Text(word)
@@ -1217,9 +1261,10 @@ private struct ConfirmStep: View {
                         .foregroundStyle(used ? Color.ckDisabledLabel : Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
+                        .frame(maxWidth: .infinity, minHeight: PhraseCell.drawnHeight)
                         .flatTile(fill: used ? Color.ckDisabledFill : Color.ckSurface,
                                   edge: used ? Color.clear : Color.ckLine)
+                        .phraseCellTapArea()
                 }
                 .buttonStyle(.plain)
                 .disabled(used || vm.isLocked)
@@ -1236,7 +1281,6 @@ private struct ConfirmStep: View {
                 // states, which belong to traits. `.disabled` already states it, once.
                 .accessibilityLabel(word)
                 .accessibilityHint(used ? "" : "Double-tap to place in the next slot.")
-            }
         }
     }
 }
