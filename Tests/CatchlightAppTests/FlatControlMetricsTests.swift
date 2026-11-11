@@ -26,8 +26,9 @@ final class FlatControlMetricsTests: XCTestCase {
     }
 
     func testToggleTrack_isARoundedRectangleNotAPill() {
-        XCTAssertLessThan(CatchlightLayout.cappedRadius(forHeight: FlatToggleMetrics.trackHeight),
-                          FlatToggleMetrics.trackHeight / 2, "a radius of half the height would be a pill")
+        XCTAssertLessThanOrEqual(CatchlightLayout.cappedRadius(forHeight: FlatToggleMetrics.trackHeight),
+                                 FlatToggleMetrics.trackHeight / 3 + 0.5,
+                                 "a short control's corner is at most a third of its height, rounded")
     }
 
     func testToggleTapTarget_isAtLeast44By44() {
