@@ -72,9 +72,10 @@ struct DailiesToolbar: View {
         .padding(.bottom, CatchlightLayout.toolbarBottomGap(homeIndicatorInset: homeIndicatorInset))
         // The soft edge the Takes fade into behind and below the panel, as the old toolbar
         // had (owner 2026-11-10: "lost its fade and mask below the bottom menu"). It starts a
-        // little above the panel so a Take dissolves before it reaches it.
+        // little above the panel so a Take dissolves before it reaches it. A Take still showing
+        // through it keeps its taps.
         .padding(.top, DailiesToolbarMetrics.fadeAbove)
-        .dockFadeBackground()
+        .dockFadeBackground(passesTouches: true)
         .onChange(of: ui.toolbarMode) { old, mode in
             // The chips appear and go without moving focus, so say so.
             let announcement: String

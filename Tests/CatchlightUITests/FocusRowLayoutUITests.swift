@@ -96,6 +96,42 @@ final class FocusRowLayoutUITests: XCTestCase {
         XCTAssertEqual(mark.frame.midY, cardFrame.maxY + 22, accuracy: 1,
                        "Near the toolbar the marks are not centred on the card's grown bottom edge")
     }
+
+    /// The fade behind the toolbar starts `fadeAbove` (16pt) above the panel. A Take whose Iris
+    /// sits in that strip still shows through it, so a tap on the Iris must still open its
+    /// Focus row: the fade is only a look and must not take touches.
+    func testIrisInTheFadeAboveTheToolbar_stillOpensTheFocusRow() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting", "--uitesting-fill"]
+        app.launch()
+        let add = app.buttons["add-button"]
+        XCTAssertTrue(add.waitForExistence(timeout: 10), "Toolbar not shown")
+        // The Add button fills the panel's height, so its top is the panel's top.
+        let panelTop = add.frame.minY
+        let tapY = panelTop - 8      // halfway up the 16pt fade
+        let irises = app.descendants(matching: .any).matching(identifier: "take-iris")
+        func irisAcrossTheFade() -> XCUIElement? {
+            for i in 0..<irises.count {
+                let f = irises.element(boundBy: i).frame
+                if f.minY + 6 < tapY, tapY < f.maxY - 6 { return irises.element(boundBy: i) }
+            }
+            return nil
+        }
+        sleep(1)
+        var iris = irisAcrossTheFade()
+        for _ in 0..<20 where iris == nil {
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -15)),
+                        withVelocity: .slow, thenHoldForDuration: 0.5)
+            iris = irisAcrossTheFade()
+        }
+        let hub = try XCTUnwrap(iris, "No Iris lies across the fade above the toolbar")
+        print("[iris-in-fade] panelTop \(panelTop) tapY \(tapY) iris \(hub.frame)")
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: hub.frame.midX, dy: tapY)).tap()
+        XCTAssertTrue(anyElement(in: app, id: markIDs[0]).waitForExistence(timeout: 5),
+                      "A tap on an Iris in the fade above the toolbar did not open its Focus row")
+    }
 }
 
 private extension CGRect {
