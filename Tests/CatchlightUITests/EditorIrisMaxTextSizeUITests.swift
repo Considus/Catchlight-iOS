@@ -68,6 +68,22 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
                         stamp: "editor", expectStamp: true)
     }
 
+    /// The Take is created during the test, so its "Created on" time is the test's clock. In US
+    /// English, "10:34 AM" is wider than "9:25 AM" and wraps to two lines at the largest standard
+    /// size on an iPhone 16, which pushed the Iris under the heading fade. Main's CI went red only
+    /// from 10:00 to 12:59 UTC (2026-11-11). This picks a time zone where it is 10 in the morning
+    /// now, so every run checks that worst case. The digits are tabular, so the minutes don't
+    /// change the width.
+    private static func timeZoneForATwoDigitMorningHour(now: Date = Date()) -> String {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        // "Etc/GMT+N" is N hours BEHIND UTC; the zones run from GMT-14 to GMT+12, so at 23:00 UTC
+        // the hour goes to 11 instead of 10.
+        var behind = utc.component(.hour, from: now) - 10
+        if behind > 12 { behind -= 1 }
+        return behind >= 0 ? "Etc/GMT+\(behind)" : "Etc/GMT\(behind)"
+    }
+
     private func runScenario(lineCount: Int, name: String, size: String = maxSize,
                              stamp: String = "off", expectStamp: Bool? = nil,
                              notice: Bool = false, expectNotice: Bool? = nil,
@@ -78,6 +94,8 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
                                size,
                                "-catchlight.creationStamp", stamp]
             + (notice ? ["--uitesting-notice"] : [])
+            + ["-AppleLocale", "en_US", "-AppleLanguages", "(en)"]
+        app.launchEnvironment["TZ"] = Self.timeZoneForATwoDigitMorningHour()
         app.launch()
 
         // 1. Make a long Take, then save it so the next open is an EXISTING Take.

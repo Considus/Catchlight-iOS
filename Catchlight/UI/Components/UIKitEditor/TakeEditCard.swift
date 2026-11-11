@@ -68,6 +68,9 @@ struct TakeEditCard: View {
     /// Hides the "Created on" stamp even when the setting shows it. `KeyboardTakeEditor` sets this
     /// at accessibility text sizes while the keyboard is up (owner 2026-09-30).
     var hidesStamp: Bool = false
+    /// Reports the "Created on" row's real height (its top pad included), for a host whose
+    /// grow-up cap has to discount it. See `chrome(stampRow:)`.
+    var onStampRowHeightChange: ((CGFloat) -> Void)? = nil
 
     @Environment(\.colorScheme) private var scheme
 
@@ -93,17 +96,26 @@ struct TakeEditCard: View {
     static let capJumpThreshold: CGFloat = 12
 
     /// The card's own chrome above and below the `BlockEditor` frame: the `cardPadding` top and
-    /// bottom pads, PLUS the "Created on" stamp row when the setting shows it (11pt text + its
-    /// 6pt top pad ≈ 20).
+    /// bottom pads, PLUS the "Created on" stamp row's measured height when it shows (0 when off).
+    ///
+    /// The row is measured, not budgeted. A flat 20 fitted one line, but at the largest standard
+    /// text size on an iPhone 16 the US stamp wraps to two lines whenever the hour has two digits
+    /// ("10:34 AM" measured 258pt in a 257pt column, 37.7pt tall), so the card came out about 18pt
+    /// past its cap and its Iris went under the heading fade (154 → 135pt), only from 10:00 to
+    /// 12:59 (found by the iPhone Engineer, 2026-11-11).
     ///
     /// A host that computes a grow-up cap must discount THIS, not a guess: `KeyboardTakeEditor`
     /// carried a flat 38, exactly the stamp-OFF value at the time, so with the stamp on (Editor or Always,
     /// and Always is the busier default) the card came out 20pt taller than its own cap intended
     /// and its top overshot the limit by that much. Half of the "Iris behind the fade" report
     /// (owner 2026-08-11); `irisReserve` is the other half.
-    static func chrome(showsStamp: Bool) -> CGFloat {
-        CatchlightLayout.cardPadding * 2 + (showsStamp ? 20 : 0)
+    static func chrome(stampRow: CGFloat) -> CGFloat {
+        CatchlightLayout.cardPadding * 2 + stampRow
     }
+
+    /// The stamp row's height before it has been measured: one line of the 11pt text plus its
+    /// 6pt top pad.
+    static let stampRowEstimate: CGFloat = 20
 
     /// The content height the frame should honour — the floor while short, the real content after.
     private var effectiveContent: CGFloat { max(editorContentHeight, minContent) }
@@ -163,6 +175,9 @@ struct TakeEditCard: View {
                 if creationStamp != .off && !hidesStamp {
                     CreationStampLabel(date: draft.createdAt)
                         .padding(.top, 6)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                            onStampRowHeightChange?($0)
+                        }
                 }
             }
             // Card text inset: `cardPadding` top, bottom and trailing / text column leading,
@@ -278,6 +293,10 @@ struct KeyboardTakeEditor: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+    /// The "Created on" row's last measured height, top pad included. It wraps to a second line
+    /// when the time is wide enough, so the cap reads this instead of assuming one line.
+    @State private var stampRowHeight: CGFloat = TakeEditCard.stampRowEstimate
+
     /// At accessibility text sizes the stamp wraps onto several large lines, and with the keyboard
     /// up there is no room for it: the heading, the editor's minimum height, the stamp and the
     /// keyboard do not fit together, the minimum wins, and the card grows past its cap until its
@@ -347,7 +366,8 @@ struct KeyboardTakeEditor: View {
         // pushes the card past its own cap and its Iris under the heading fade (a notice
         // strip on an iPhone 16 left 114pt of room). With ample room, the usual case, the cap is
         // the room itself and the floor never applies.
-        return max(Self.editorFloor, kbTop - topLimit - TakeEditCard.chrome(showsStamp: showsStamp))
+        return max(Self.editorFloor, kbTop - topLimit
+                                     - TakeEditCard.chrome(stampRow: showsStamp ? stampRowHeight : 0))
     }
 
     /// The least the editor frame ever shrinks to while typing: about two lines at the default size.
@@ -379,7 +399,8 @@ struct KeyboardTakeEditor: View {
                 onTapIris: onTapIris,
                 onContentHeightChange: { editorContentHeight = $0 },
                 axHidden: axHidden,
-                hidesStamp: hidesStampForRoom
+                hidesStamp: hidesStampForRoom,
+                onStampRowHeightChange: { stampRowHeight = $0 }
             )
             .padding(.leading, leadingInset)
             .padding(.trailing, trailingInset ?? leadingInset)
