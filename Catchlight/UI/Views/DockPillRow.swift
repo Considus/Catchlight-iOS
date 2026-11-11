@@ -68,6 +68,14 @@ private struct DockPillFace: ViewModifier {
     }
 }
 
+extension View {
+    /// The `DockPill` face for a control that isn't a plain button, such as the Privacy phrase's
+    /// hold-to-reveal control, so it draws the same shape and colours in a `DockPillRow`.
+    func dockPillFace(secondary: Bool = false) -> some View {
+        modifier(DockPillFace(secondary: secondary))
+    }
+}
+
 /// The standard dock-geometry button label: a rounded rectangle at the control radius.
 /// Primary is the action colour with its on-colour label (secondary: an outline).
 struct DockPill: View {
@@ -199,73 +207,3 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
     }
 }
 
-/// The bottom row as it stood before it took the Dailies toolbar's place: 44pt pills on the dock's
-/// four-slot grid. Only the lock screen and the Privacy phrase screen use it, until they move to
-/// `DockPillRow` in their own change, where a test can reach them. No test seam reaches either
-/// screen today, so their layout stays exactly as it was here.
-struct DockGridPillRow<Primary: View, Trailing: View>: View {
-    private let primary: Primary
-    private let trailing: Trailing?
-
-    init(@ViewBuilder primary: () -> Primary) where Trailing == EmptyView {
-        self.primary = primary()
-        self.trailing = nil
-    }
-
-    init(@ViewBuilder primary: () -> Primary,
-         @ViewBuilder trailing: () -> Trailing) {
-        self.primary = primary()
-        self.trailing = trailing()
-    }
-
-    // CTA growth (Default is the floor): above the default text
-    // size (.xLarge and up) the locked dock-slot grid (fixed 44pt height,
-    // slot-aligned widths) would force the CTA labels to shrink below their
-    // default size. Abandon exact dock alignment there and let the pills grow
-    // full-width instead. At the default size and below, the grid is unchanged.
-    @Environment(\.dynamicTypeSize) private var dynamicSize
-    /// Bottom safe-area inset. The onboarding/paywall pill
-    /// row mirrors the resting dock's geometry, so it must lift by the same
-    /// home-indicator inset to line up with the dock at rest.
-    @Environment(\.deviceBottomInset) private var deviceBottomInset
-
-    var body: some View {
-        if dynamicSize > .large {
-            // Full-width layout: a single primary pill spans the width; a primary
-            // plus a trailing pill stack vertically, each full width and ≥44pt.
-            VStack(spacing: 10) {
-                primary
-                    .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-                if let trailing {
-                    trailing
-                        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-                }
-            }
-            .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
-            .padding(.top, 10)
-            .padding(.bottom, deviceBottomInset + 8)
-        } else {
-            GeometryReader { geo in
-                // slot-i button centre = slotW·(i+0.5); pill edges = centre ∓ d/2.
-                // Single: slot-1 leading edge → slot-4 trailing edge (3·slotW + d).
-                // Pair: each slotW + d wide; gap = slotW − d (the inter-button gap).
-                let slotW = geo.size.width / 4
-                let d = CatchlightLayout.minTouchTarget
-                HStack(spacing: slotW - d) {
-                    primary
-                        .frame(width: trailing == nil ? slotW * 3 + d : slotW + d)
-                    if let trailing {
-                        trailing
-                            .frame(width: slotW + d)
-                    }
-                }
-                .padding(.leading, slotW / 2 - d / 2)
-                .frame(height: d)
-            }
-            .frame(height: CatchlightLayout.minTouchTarget)
-            .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
-            .padding(.top, 10)
-            .padding(.bottom, deviceBottomInset + 8)
-        }
-    }
-}

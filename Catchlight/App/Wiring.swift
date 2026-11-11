@@ -219,6 +219,9 @@ enum Wiring {
             // the unlock while a capture is pending, so the run stays on the screen.
             let startOnLockedCapture =
                 ProcessInfo.processInfo.arguments.contains("--uitesting-locked-capture")
+            // `--uitesting-locked` lands the run on the lock screen itself, so its bottom button's
+            // place can be measured. The test unlock always fails, so the screen stays.
+            let startLocked = ProcessInfo.processInfo.arguments.contains("--uitesting-locked")
             let model = AppModel(
                 needsOnboarding: false,
                 initialStore: store,
@@ -227,7 +230,7 @@ enum Wiring {
                 unlockKeys: { throw KeychainError.notFound },   // an attempted save just re-arms the retry hint
                 // UI tests bypass the lock screen — EXCEPT the locked-capture fixture,
                 // which exists to show it.
-                lockState: startOnLockedCapture ? .locked : .unlocked,
+                lockState: (startOnLockedCapture || startLocked) ? .locked : .unlocked,
                 subscription: manager,
                 // UI tests must not touch the real Spotlight index — keep the
                 // user's device search results clean across runs.
@@ -238,7 +241,10 @@ enum Wiring {
             // unreachable under test — onboarding is skipped and Settings opens
             // by a gesture. Same test-seam rationale as `--uitesting-locked-capture`.
             // SettingsView reads the same argument to raise its sheet.
-            if ProcessInfo.processInfo.arguments.contains("--uitesting-restore") {
+            // `--uitesting-phrase` and `--uitesting-cloud-storage` raise Settings the same way,
+            // and SettingsView raises the Privacy phrase or Cloud Storage sheet over it.
+            let settingsSheetArgs = ["--uitesting-restore", "--uitesting-phrase", "--uitesting-cloud-storage"]
+            if settingsSheetArgs.contains(where: ProcessInfo.processInfo.arguments.contains) {
                 model.ui.isSettingsPresented = true
             }
             // The same blank one-block draft `makeCaptureDraft` builds for a blank

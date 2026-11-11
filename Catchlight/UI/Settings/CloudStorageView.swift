@@ -64,6 +64,11 @@ struct CloudStorageView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
+            .safeAreaInset(edge: .bottom) { chooseFolderRow }
+            // A sheet has its own bottom safe area (the home-indicator zone), which the app's root
+            // view lays out under. Laying out under it here too puts the bottom row at the
+            // Dailies toolbar's place, as on the full-screen views.
+            .ignoresSafeArea(.container, edges: .bottom)
             // System inline nav title, matching the other Settings sub-pages
             // (About / Notice History / Privacy phrase) — owner 2026-06-29; the
             // bespoke cloud-glyph hero was the only sub-page that differed.
@@ -107,7 +112,9 @@ struct CloudStorageView: View {
         VStack(alignment: .leading, spacing: 24) {
             intro
 
-            pickerSection
+            if folderDisplayPath != nil {
+                pickerSection
+            }
 
             recommendation
 
@@ -159,20 +166,22 @@ struct CloudStorageView: View {
         }
     }
 
-    // Primary action. Label is "Choose folder from Files" (unchanged — the UI
-    // tests' button query matches it); it also serves as the "change" path when a
-    // folder is already set, so a separate "Change folder" action is unnecessary.
+    // Primary action, in the bottom row at the Dailies toolbar's place. Label is "Choose
+    // folder from Files" (unchanged: the UI tests' button query matches it). It also serves
+    // as the "change" path when a folder is already set, so a separate "Change folder"
+    // action is unnecessary.
+    private var chooseFolderRow: some View {
+        DockPillRow {
+            DockPill(title: "Choose folder from Files") { pickerPresented = true }
+                .accessibilityHint("Opens the Files picker to choose a folder for sync.")
+        }
+        .frame(maxWidth: .infinity)
+        .dockFadeBackground()
+    }
+
+    // The chosen folder and its Remove action.
     private var pickerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Button { pickerPresented = true } label: {
-                Text("Choose folder from Files")
-                    .ckBody(.medium, size: 15, relativeTo: .body)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .flatPrimaryFace()
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Opens the Files picker to choose a folder for sync.")
-
             if let folderDisplayPath {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")

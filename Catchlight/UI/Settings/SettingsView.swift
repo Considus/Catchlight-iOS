@@ -122,6 +122,13 @@ struct SettingsView: View {
         .preferredColorScheme(settingsScheme)
         .presentationDragIndicator(.visible)
         .task {
+            #if DEBUG
+            // Test seams: open the Privacy phrase or Cloud Storage sheet directly, so a UI
+            // test can measure its bottom button without the row gestures.
+            let args = ProcessInfo.processInfo.arguments
+            if args.contains("--uitesting-phrase") { vm.isPhraseSheetPresented = true }
+            if args.contains("--uitesting-cloud-storage") { vm.isCloudStorageSheetPresented = true }
+            #endif
             await vm.refreshNotificationStatus()
         }
         .onChange(of: scenePhase) { _, phase in

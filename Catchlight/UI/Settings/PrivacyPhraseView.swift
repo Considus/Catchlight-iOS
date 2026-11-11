@@ -37,11 +37,30 @@ struct PrivacyPhraseView: View {
         // forces (there is no in-app PIN). Either the phrase exists and
         // we authenticate to show it, or it was never persisted on this device.
         _stage = State(initialValue: MnemonicKeychain.exists() ? .authenticate : .missingPhrase)
+        #if DEBUG
+        // Test seam: the UI-test run has no phrase in the Keychain, so `--uitesting-phrase`
+        // shows the reveal prompt, and `--uitesting-phrase-revealed` shows twelve fixed
+        // placeholder words. The Keychain is never read for either.
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("--uitesting-phrase") {
+            _stage = State(initialValue: args.contains("--uitesting-phrase-revealed")
+                ? .revealed(Self.testWords) : .authenticate)
+        }
+        #endif
     }
+
+    #if DEBUG
+    private static let testWords = ["abandon", "ability", "able", "about", "above", "absent",
+                                    "absorb", "abstract", "absurd", "abuse", "access", "accident"]
+    #endif
 
     var body: some View {
         NavigationStack {
             content
+                // A sheet has its own bottom safe area (the home-indicator zone), which the app's root
+                // view lays out under. Laying out under it here too puts the bottom row at the
+                // Dailies toolbar's place, as on the full-screen views.
+                .ignoresSafeArea(.container, edges: .bottom)
                 .navigationTitle("Privacy phrase")
                 .navigationBarTitleDisplayMode(.inline)
                 // No Done button — dismiss by swiping down (owner 2026-06-29),
@@ -106,7 +125,7 @@ struct PrivacyPhraseView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.ckBackground)
         .safeAreaInset(edge: .bottom) {
-            DockGridPillRow {
+            DockPillRow {
                 DockPill(title: "Reveal phrase") { revealViaDeviceAuth() }
             }
             .dockFadeBackground()
@@ -213,7 +232,7 @@ private struct PhraseRevealGrid: View {
         // Dock-geometry position for the hold control (the pill button system,
         // applied to Settings sub-screens 2026-06-12).
         .safeAreaInset(edge: .bottom) {
-            DockGridPillRow { holdButton }
+            DockPillRow { holdButton }
                 .dockFadeBackground()
         }
     }
@@ -239,12 +258,8 @@ private struct PhraseRevealGrid: View {
     private var holdButton: some View {
         Text(revealed ? "Release to hide" : "Hold to reveal")
             .ckBody(.medium, size: 15, relativeTo: .body)
-            .foregroundStyle(Color.ckOnAccent)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                CatchlightShape.control.fill(Color.ckAdd)
-            )
-            .contentShape(CatchlightShape.control)
+            .dockPillFace()
             // LongPressGesture with minimumDuration: 0 fires on press and updates
             // GestureState to true; the binding flips back to false the moment the
             // gesture ends. This gives us a true "hold to reveal" — not a tap toggle.
