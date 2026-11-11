@@ -753,7 +753,7 @@ struct DailiesView: View {
                        ? deviceTopInset + headingClearance + max(0, pinnedObieZoneHeight - Self.obieMaskLift)
                        : nil,
                alignment: .top)
-        // Below the pinned Obie, the same soft fade as under the heading, starting right at the
+        // Below the pinned Obie, a barely-there fade (`obieFade`), starting right at the
         // Obie card's bottom edge, so a Take scrolling up fades away as it reaches the Obie
         // instead of showing its lower half sliced against it. It was the toolbar's fade, a card
         // gap deep, which read as harsh and too low (owner 2026-11-11). The mask stops
@@ -763,10 +763,10 @@ struct DailiesView: View {
         // stops there. It takes no touches.
         .overlay(alignment: .bottom) {
             if vm.obie != nil && !ui.isEditingInPlace {
-                let depth = min(Self.headingFadeHeight, cardGap)
+                let depth = min(Self.obieFadeHeight, cardGap)
                 VStack(spacing: 0) {
                     Color.ckBackground.frame(height: Self.obieMaskLift)
-                    Self.headingFade(height: depth)
+                    Self.obieFade(height: depth)
                 }
                     .offset(y: Self.obieMaskLift + depth)
                     .allowsHitTesting(false)
@@ -1377,11 +1377,33 @@ struct DailiesView: View {
         commitReorder(of: take.id, displayOrder: ids)
     }
 
-    /// The soft fade a Take goes into at the top: the page colour to clear, 12pt deep. Under the
-    /// heading, and under the pinned Obie (owner 2026-11-11: "more subtle and better").
-    static let headingFadeHeight: CGFloat = 12
+    /// The fade a Take goes into under the heading: the page colour to clear, 24pt deep, eased
+    /// so neither end shows a line (owner 2026-11-11: "could it be a bit more gradual?"; values
+    /// from the Art Director). 24 fits the clear space between the heading and a resting first
+    /// Take, measured at 29pt on an iPhone 17 and an iPhone 16.
+    static let headingFadeHeight: CGFloat = 24
+    /// The page colour's strength down the heading fade, top to bottom, evenly spaced.
+    static let headingFadeStops: [Double] = [1, 0.8, 0.45, 0.15, 0]
+
+    /// The fade under the pinned Obie: barely there, so a Take only softens as it passes under
+    /// the Obie's edge (owner 2026-11-11: "ever so subtle, just barely visible"). The opaque
+    /// Obie card does the hiding; this only takes the hard edge off. Up to 16pt deep (never more
+    /// than a card gap), starting at 30% of the page colour, on the same eased shape.
+    static let obieFadeHeight: CGFloat = 16
+    static let obieFadeStops: [Double] = [0.30, 0.22, 0.12, 0.04, 0]
+
     static func headingFade(height: CGFloat = headingFadeHeight) -> some View {
-        LinearGradient(colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
+        pageFade(stops: headingFadeStops, height: height)
+    }
+    static func obieFade(height: CGFloat = obieFadeHeight) -> some View {
+        pageFade(stops: obieFadeStops, height: height)
+    }
+    /// The page colour at each strength in `stops`, evenly spaced from top to bottom.
+    private static func pageFade(stops: [Double], height: CGFloat) -> some View {
+        LinearGradient(stops: stops.enumerated().map { i, a in
+                           .init(color: Color.ckBackground.opacity(a),
+                                 location: CGFloat(i) / CGFloat(max(stops.count - 1, 1)))
+                       },
                        startPoint: .top, endPoint: .bottom)
             .frame(height: height)
     }
