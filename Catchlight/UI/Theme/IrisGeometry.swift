@@ -71,7 +71,7 @@ enum IrisGeometry {
     }
 
     /// Inner shape segments as [x1, y1, x2, y2] in a 24-unit grid.
-    private static func segments(_ shape: IrisInnerShape) -> [[CGFloat]] {
+    static func segments(_ shape: IrisInnerShape) -> [[CGFloat]] {
         switch shape {
         case .note:     return [[7.5, 9, 16.5, 9], [7.5, 12, 16.5, 12], [7.5, 15, 13, 15]]
         case .task:     return [[7.2, 12.4, 10.4, 15.6], [10.4, 15.6, 16.8, 8.6]]
@@ -84,14 +84,34 @@ enum IrisGeometry {
         }
     }
 
+    /// The segments an inner shape morphs through: always five. A shape with fewer repeats
+    /// its last segment's end point as a zero-length segment (the web prototype's `S`).
+    static let morphSegmentCount = 5
+    static func morphSegments(_ shape: IrisInnerShape) -> [[CGFloat]] {
+        var segs = segments(shape)
+        while segs.count < morphSegmentCount {
+            let end = Array(segs[segs.count - 1][2...3])
+            segs.append(end + end)
+        }
+        return segs
+    }
+
+    /// How many of `morphSegments(shape)` belong to the shape; the rest are padding.
+    static func realSegmentCount(_ shape: IrisInnerShape) -> Int { segments(shape).count }
+
     /// The inner shape's path: the 24 grid mapped by translate(22,22) scale(1.3)
     /// translate(-12,-12) into 44 space, then by `s`.
     static func innerPath(_ shape: IrisInnerShape, scale s: CGFloat) -> Path {
+        innerPath(segments: segments(shape), scale: s)
+    }
+
+    /// Any [x1, y1, x2, y2] segments on the 24 grid, mapped as `innerPath(_:scale:)` maps them.
+    static func innerPath(segments: [[CGFloat]], scale s: CGFloat) -> Path {
         func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
             CGPoint(x: (22 + (x - 12) * 1.3) * s, y: (22 + (y - 12) * 1.3) * s)
         }
         var path = Path()
-        for seg in segments(shape) {
+        for seg in segments {
             path.move(to: p(seg[0], seg[1]))
             path.addLine(to: p(seg[2], seg[3]))
         }

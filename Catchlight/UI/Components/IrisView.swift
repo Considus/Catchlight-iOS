@@ -21,6 +21,7 @@ import CatchlightCore
 struct IrisView: View {
     let take: Take
     var diameter: CGFloat = CatchlightLayout.circleDiameter
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // MARK: State
 
@@ -61,34 +62,19 @@ struct IrisView: View {
     // MARK: View
 
     var body: some View {
-        let lit = Self.lights(for: take)
-        let shape = Self.innerShape(for: take)
-        let isObie = take.isObie
-        Canvas { context, size in
-            let s = min(size.width, size.height) / 44
-            let outline = IrisGeometry.outline(scale: s)
-
-            // The fill matches the card the Iris sits on: Important and Obie cards are raised.
-            context.fill(outline, with: .color(take.isImportant ? .ckCardObieSurface : .ckCard))
-
-            for (index, kind) in IrisLight.allCases.enumerated() {
-                let isLit = lit[kind] == true
-                context.stroke(IrisGeometry.light(index, of: outline),
-                               with: .color(isLit ? .ckLit : Self.unlitLightColor),
-                               style: StrokeStyle(lineWidth: (isLit ? IrisGeometry.litWidth : IrisGeometry.unlitWidth) * s,
-                                                  lineCap: .round))
-            }
-
-            if isObie {
-                context.stroke(IrisGeometry.obieSquare(scale: s), with: .color(.ckLit),
-                               lineWidth: IrisGeometry.obieSquareWidth * s)
-            }
-
-            context.stroke(IrisGeometry.innerPath(shape, scale: s),
-                           with: .color(.ckTextPrimary),
-                           style: StrokeStyle(lineWidth: IrisGeometry.innerWidth(shape) * s,
-                                              lineCap: .round, lineJoin: .round))
+        let state = IrisMorphState(shape: Self.innerShape(for: take), lit: Self.lights(for: take))
+        // Not Reduce Motion: one mark per Take, whose strokes move to the new state. A different
+        // Take (a recycled row) replaces the mark without a transition, so rows never morph into
+        // each other. Reduce Motion: no movement; each state is its own mark and fades in.
+        let key: AnyHashable = reduceMotion ? AnyHashable(IrisMarkKey(id: take.id, state: state)) : AnyHashable(take.id)
+        ZStack {
+            IrisMark(values: state.vector,
+                     fill: take.isImportant ? .ckCardObieSurface : .ckCard,
+                     isObie: take.isObie)
+                .id(key)
+                .transition(reduceMotion ? .opacity : .identity)
         }
+        .animation(reduceMotion ? CatchlightMotion.reduced : CatchlightMotion.shape, value: state)
         .frame(width: diameter, height: diameter)
         // Decorative in every host: rows expose a combined label, and the callers that
         // want the Iris to speak (editor footer) label their own wrapper. 🚨 Do NOT add
@@ -115,6 +101,101 @@ struct IrisView: View {
         if take.timeReminder != nil || take.locationReminder != nil { parts.append(String(localized: "Reminder")) }
         if parts.isEmpty { return includesObie ? String(localized: "Note") : "" }
         return parts.joined(separator: ", ")
+    }
+}
+
+/// A fixed-length list of numbers that SwiftUI can interpolate, one straight line each.
+struct IrisVector: VectorArithmetic {
+    var values: [Double]
+
+    static var zero: IrisVector { IrisVector(values: []) }
+
+    private static func combine(_ a: IrisVector, _ b: IrisVector, _ f: (Double, Double) -> Double) -> IrisVector {
+        // `zero` is the empty list: it stands for all zeros of the other's length.
+        let n = max(a.values.count, b.values.count)
+        return IrisVector(values: (0..<n).map { f(i(a, $0), i(b, $0)) })
+    }
+    private static func i(_ v: IrisVector, _ k: Int) -> Double { k < v.values.count ? v.values[k] : 0 }
+
+    static func + (a: IrisVector, b: IrisVector) -> IrisVector { combine(a, b, +) }
+    static func - (a: IrisVector, b: IrisVector) -> IrisVector { combine(a, b, -) }
+    mutating func scale(by rhs: Double) { values = values.map { $0 * rhs } }
+    var magnitudeSquared: Double { values.reduce(0) { $0 + $1 * $1 } }
+}
+
+/// What the Iris shows: the inner shape and which lights are lit.
+struct IrisMorphState: Hashable {
+    let shape: IrisInnerShape
+    let lit: [Bool]
+
+    init(shape: IrisInnerShape, lit: [IrisLight: Bool]) {
+        self.shape = shape
+        self.lit = IrisLight.allCases.map { lit[$0] == true }
+    }
+
+    /// The numbers that move: 20 segment coordinates, 5 segment opacities (padding is 0), the inner
+    /// stroke width, and 6 light levels (0 unlit, 1 lit).
+    var vector: IrisVector {
+        var v: [Double] = []
+        for seg in IrisGeometry.morphSegments(shape) { v += seg.map(Double.init) }
+        let real = IrisGeometry.realSegmentCount(shape)
+        v += (0..<IrisGeometry.morphSegmentCount).map { $0 < real ? 1 : 0 }
+        v.append(Double(IrisGeometry.innerWidth(shape)))
+        v += lit.map { $0 ? 1 : 0 }
+        return IrisVector(values: v)
+    }
+}
+
+private struct IrisMarkKey: Hashable {
+    let id: UUID
+    let state: IrisMorphState
+}
+
+/// The Iris drawn from interpolated numbers. A `Canvas` does not animate by itself, so this
+/// view carries the numbers as `animatableData` and SwiftUI redraws it every frame.
+struct IrisMark: View, Animatable {
+    var values: IrisVector
+    let fill: Color
+    let isObie: Bool
+
+    var animatableData: IrisVector {
+        get { values }
+        set { values = newValue }
+    }
+
+    var body: some View {
+        let v = values.values
+        Canvas { context, size in
+            let s = min(size.width, size.height) / 44
+            let outline = IrisGeometry.outline(scale: s)
+
+            // The fill matches the card the Iris sits on: Important and Obie cards are raised.
+            context.fill(outline, with: .color(fill))
+
+            for (index, _) in IrisLight.allCases.enumerated() {
+                let t = CGFloat(v[26 + index])
+                context.stroke(IrisGeometry.light(index, of: outline),
+                               with: .color(t >= 0.5 ? .ckLit : IrisView.unlitLightColor),
+                               style: StrokeStyle(lineWidth: (IrisGeometry.unlitWidth + (IrisGeometry.litWidth - IrisGeometry.unlitWidth) * t) * s,
+                                                  lineCap: .round))
+            }
+
+            if isObie {
+                context.stroke(IrisGeometry.obieSquare(scale: s), with: .color(.ckLit),
+                               lineWidth: IrisGeometry.obieSquareWidth * s)
+            }
+
+            let style = StrokeStyle(lineWidth: CGFloat(v[25]) * s, lineCap: .round, lineJoin: .round)
+            let segs = (0..<IrisGeometry.morphSegmentCount).map { i in (0..<4).map { CGFloat(v[i * 4 + $0]) } }
+            // Fully visible segments are one path, as before; a fading one is its own stroke.
+            let solid = (0..<segs.count).filter { v[20 + $0] >= 1 }.map { segs[$0] }
+            context.stroke(IrisGeometry.innerPath(segments: solid, scale: s),
+                           with: .color(.ckTextPrimary), style: style)
+            for i in 0..<segs.count where v[20 + i] > 0 && v[20 + i] < 1 {
+                context.stroke(IrisGeometry.innerPath(segments: [segs[i]], scale: s),
+                               with: .color(Color.ckTextPrimary.opacity(v[20 + i])), style: style)
+            }
+        }
     }
 }
 

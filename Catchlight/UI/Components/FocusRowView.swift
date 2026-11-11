@@ -752,7 +752,7 @@ struct FocusRowView: View {
     // MARK: - Toggle (Note is the floor)
 
     private func toggle(_ kind: MarkKind) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(CatchlightMotion.press) {
             switch kind {
             case .note:   isNote.toggle()
             case .task:   isTask.toggle()

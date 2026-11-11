@@ -190,7 +190,7 @@ struct DailiesToolbar: View {
         return Button {
             if open { ui.exitToResting() } else { ui.enterFiltering() }
         } label: {
-            toolbarItem(icon: panelIcon(.sequence), label: "Sequence")
+            toolbarItem(icon: SequenceIcon(open: open), label: "Sequence")
                 .foregroundStyle(open ? Color.ckAccent : Color.ckTextSecondary)
         }
         .buttonStyle(.plain)
@@ -411,6 +411,50 @@ enum DailiesToolbarMetrics {
     static let searchRowInset: CGFloat = 10
     /// The filter chip row: its 44pt height and the gap under it.
     static let chipRowClearance: CGFloat = CatchlightLayout.minTouchTarget + chipGap
+}
+
+/// The Sequence icon: its three lines fold into a cross while the filters are open. The
+/// lines move; nothing crossfades. Closed, it draws exactly what `panelIcon(.sequence)` drew.
+private struct SequenceIcon: View {
+    let open: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack {
+            SequenceLines(progress: open ? 1 : 0)
+                .stroke(style: StrokeStyle(lineWidth: 1.7, lineCap: .round, lineJoin: .round))
+                .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
+                .id(reduceMotion ? open : false)
+                .transition(reduceMotion ? .opacity : .identity)
+        }
+        .animation(reduceMotion ? CatchlightMotion.reduced : CatchlightMotion.shape, value: open)
+    }
+}
+
+/// Three lines on the 24 grid, `progress` 0 (closed) to 1 (cross), interpolated per number.
+struct SequenceLines: Shape {
+    var progress: CGFloat
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    static let closed: [[CGFloat]] = [[5, 7, 19, 7], [5, 12, 19, 12], [5, 17, 14, 17]]
+    static let open: [[CGFloat]] = [[6.5, 6.5, 17.5, 17.5], [12, 12, 12, 12], [6.5, 17.5, 17.5, 6.5]]
+
+    func path(in rect: CGRect) -> Path {
+        let s = min(rect.width, rect.height) / 24
+        let ox = rect.midX - 12 * s, oy = rect.midY - 12 * s
+        var path = Path()
+        for (a, b) in zip(Self.closed, Self.open) {
+            let v = zip(a, b).map { $0 + ($1 - $0) * progress }
+            // A line that has shrunk to nothing is hidden, not drawn as a round dot.
+            if progress >= 1, v[0] == v[2], v[1] == v[3] { continue }
+            path.move(to: CGPoint(x: ox + v[0] * s, y: oy + v[1] * s))
+            path.addLine(to: CGPoint(x: ox + v[2] * s, y: oy + v[3] * s))
+        }
+        return path
+    }
 }
 
 /// The toolbar's and chips' icons, drawn from the app screens drawing's paths on a
