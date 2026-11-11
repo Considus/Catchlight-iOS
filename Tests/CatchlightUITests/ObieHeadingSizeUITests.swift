@@ -1,7 +1,7 @@
 //  The Dailies heading is the same size with an Obie pinned as without one.
 //
-//  Measured 2026-11-11: with an Obie pinned, "Dailies" drew at about 0.63 of its size (72.7 by
-//  23pt on an iPhone 17, against 116 wide without an Obie). The heading block sits in a frame of
+//  Measured 2026-11-11 on an iPhone 17: with an Obie pinned, "Dailies" drew at 73.7 by 23pt,
+//  against 99.7 by 30.7pt without an Obie (about 0.74 of its size). The heading block sits in a frame of
 //  fixed height with a flexible page-colour fill below it, and the title, which may shrink to fit,
 //  gave its height up to the fill.
 
@@ -24,14 +24,26 @@ final class ObieHeadingSizeUITests: XCTestCase {
         let makeObie = app.buttons["Make Obie"]
         XCTAssertTrue(makeObie.waitForExistence(timeout: 5), "Long-press menu did not appear")
         makeObie.tap()
-        sleep(1)
+        XCTAssertTrue(makeObie.waitForNonExistence(timeout: 5), "Long-press menu did not close")
 
-        let pinned = app.staticTexts["Dailies"].firstMatch.frame
-        print(String(format: "[OBIE-HEADING] alone %@ pinned %@",
-                     NSCoder.string(for: alone), NSCoder.string(for: pinned)))
+        let pinned = settledFrame(of: app.staticTexts["Dailies"].firstMatch)
         XCTAssertEqual(pinned.width, alone.width, accuracy: 1,
                        "The Dailies title shrank with an Obie pinned (\(alone.width) → \(pinned.width)pt wide)")
         XCTAssertEqual(pinned.height, alone.height, accuracy: 1,
                        "The Dailies title shrank with an Obie pinned (\(alone.height) → \(pinned.height)pt tall)")
+    }
+
+    /// The element's frame once two reads a tenth of a second apart agree, so the pin animation
+    /// has finished before the title is measured.
+    private func settledFrame(of element: XCUIElement, timeout: TimeInterval = 5) -> CGRect {
+        var last = element.frame
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.1)
+            let now = element.frame
+            if now == last { return now }
+            last = now
+        }
+        return last
     }
 }
