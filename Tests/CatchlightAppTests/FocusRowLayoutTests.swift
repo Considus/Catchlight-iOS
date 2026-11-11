@@ -40,13 +40,14 @@ final class FocusRowLayoutTests: XCTestCase {
         XCTAssertLessThanOrEqual(hubX + xs[3] + FocusRowView.markSize / 2, width - 8)
     }
 
-    /// The squeeze starts below 318.9pt wide with the Iris at the real card position: at
-    /// 320 the last mark's edge (49 + 240 + 22 = 311) is inside the margin (312); at 318
-    /// it is not (48.75 + 262 = 310.75 > 310), so the gap shrinks.
+    /// The squeeze starts below 323.2pt wide with the Iris at the real card position (the
+    /// dock's 17pt inset, owner 2026-11-11): at 324 the last mark's edge (53.25 + 240 + 22 =
+    /// 315.25) is inside the margin (316); at 322 it is not (53 + 262 = 315 > 314), so the
+    /// gap shrinks. Still far below the narrowest supported phone (375).
     func testSqueezeThreshold() {
-        XCTAssertEqual(slots(hubX: CatchlightLayout.addColumnX(containerWidth: 320), width: 320),
+        XCTAssertEqual(slots(hubX: CatchlightLayout.addColumnX(containerWidth: 324), width: 324),
                        [60, 120, 180, 240])
-        let xs = slots(hubX: CatchlightLayout.addColumnX(containerWidth: 318), width: 318)
+        let xs = slots(hubX: CatchlightLayout.addColumnX(containerWidth: 322), width: 322)
         XCTAssertLessThan(xs[0], 60)
         assertEqualGaps(xs)
     }

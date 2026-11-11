@@ -22,16 +22,17 @@ final class CardLayoutTests: XCTestCase {
         XCTAssertEqual(CatchlightLayout.cardMinHeight, 72)
     }
 
-    /// addColumnX(393) = 12 + (393 - 24) / 8 = 58.125, less 38.
+    /// addColumnX(393) = 17 + (393 - 34) / 8 = 61.875, less 38. The toolbar moved to the
+    /// dock's 17pt inset (owner 2026-11-11, "Move the cards"), and the cards moved with it.
     func testCardLeadingEdge_393() {
         let leading = CatchlightLayout.addColumnX(containerWidth: 393) - CatchlightLayout.cardLeadingOffset
-        XCTAssertEqual(leading, 20.125, accuracy: 0.0001)
+        XCTAssertEqual(leading, 23.875, accuracy: 0.0001)
     }
 
-    /// addColumnX(375) = 12 + (375 - 24) / 8 = 55.875, less 38.
+    /// addColumnX(375) = 17 + (375 - 34) / 8 = 59.625, less 38.
     func testCardLeadingEdge_375() {
         let leading = CatchlightLayout.addColumnX(containerWidth: 375) - CatchlightLayout.cardLeadingOffset
-        XCTAssertEqual(leading, 17.875, accuracy: 0.0001)
+        XCTAssertEqual(leading, 21.625, accuracy: 0.0001)
     }
 
     /// The default spacing setting stores 44; the old Iris's top half (22) no
