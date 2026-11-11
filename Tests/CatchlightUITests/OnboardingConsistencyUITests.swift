@@ -110,10 +110,21 @@ final class OnboardingConsistencyUITests: XCTestCase {
         let fill = rgb(Int((frame.maxX - 6) * scale), Int((frame.maxY - 6) * scale))
         let border = rgb(Int(frame.midX * scale), top + 1)
         let page = rgb(left - Int(6 * scale), top + Int(frame.height * scale / 2))
-        var inset = 0
-        while inset < Int(40 * scale), !far(rgb(left + inset, top + 1), page) {
-            inset += 1
+        // How far in from the left the card starts on one pixel row. The page shows all the
+        // way across on a row above the card.
+        func insetOnRow(_ y: Int) -> Int {
+            var inset = 0
+            while inset < Int(40 * scale), !far(rgb(left + inset, y), page) { inset += 1 }
+            return inset
         }
+        // Read the corner one row below the card's first drawn row, not one row below its
+        // frame. A frame on a third of a point can start a pixel above the drawing, and a 14pt
+        // corner moves about 7px per row there, so a row read off the frame compared the
+        // corners at different heights. Measured: from their first drawn rows the Take card
+        // and a point card read 38, 31, 27, 25, 22 alike, while the frame row read 31 and 38.
+        var firstRow = top
+        while firstRow < top + Int(4 * scale), insetOnRow(firstRow) >= Int(40 * scale) { firstRow += 1 }
+        let inset = insetOnRow(firstRow + 1)
         return CardLook(frame: frame, fill: fill, border: border, cornerInset: inset)
     }
 
