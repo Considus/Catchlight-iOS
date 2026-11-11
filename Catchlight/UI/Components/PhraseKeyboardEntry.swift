@@ -53,9 +53,11 @@ final class RestoreKeyboardAccessory: UIView {
     private static let pageBackground = UITheme.background
 
     private static let pad: CGFloat = 12       // toolbarHorizontalPadding
-    private static let buttonSize: CGFloat = 44    // minTouchTarget
+    private static let buttonSize: CGFloat = 44    // minTouchTarget, the dock grid's slot unit
+    /// The pills' height: half the Dailies toolbar, like every bottom button row outside it.
+    private static let buttonHeight: CGFloat = CatchlightLayout.buttonRowHeight
     private static let topPad: CGFloat = 10
-    private static let barHeight: CGFloat = 62 // 10 + 44 + 8, matches the editor bar
+    private static let barHeight: CGFloat = topPad + buttonHeight + 8
 
     init(onRestore: @escaping () -> Void, onBack: @escaping () -> Void) {
         self.onRestore = onRestore
@@ -94,8 +96,8 @@ final class RestoreKeyboardAccessory: UIView {
         let pillW = slotW + d                     // a pill spans two slots
         let gap = slotW - d                       // the dock's inter-button gap
         let restoreX = Self.pad + (slotW / 2 - d / 2)
-        restoreButton.frame = CGRect(x: restoreX, y: Self.topPad, width: pillW, height: d)
-        backButton.frame = CGRect(x: restoreX + pillW + gap, y: Self.topPad, width: pillW, height: d)
+        restoreButton.frame = CGRect(x: restoreX, y: Self.topPad, width: pillW, height: Self.buttonHeight)
+        backButton.frame = CGRect(x: restoreX + pillW + gap, y: Self.topPad, width: pillW, height: Self.buttonHeight)
     }
 
     /// Disabled shows the shared disabled pair (a readable label on a neutral fill), not a

@@ -3,10 +3,11 @@
 //  Catchlight (iOS app target)
 //
 //  The bottom buttons of every screen that puts them in this row take the Dailies toolbar's place
-//  and size (owner 2026-11-11: "make them all match the size
-//  and shape of the new dailies menu"): in from each side by `dockInset`, up from the bottom
-//  by the dock's gap, `dockHeight` tall, and corners that follow the screen's curve where
-//  they reach the bottom edge (`CatchlightShape.edgeSurface`, never under the surface radius).
+//  (owner 2026-11-11: "make them all match the size and shape of the new dailies menu", then
+//  "half height buttons generally, except for the menubar on Dailies"): in from each side by
+//  `dockInset`, up from the bottom by the dock's gap, `buttonRowHeight` tall (half the
+//  toolbar), and corners that follow the screen's curve where they reach the bottom edge
+//  (`CatchlightShape.edgeSurface`, never under the surface radius).
 //  A single button spans the toolbar's width. A pair splits it in two with a gap between.
 //
 
@@ -168,7 +169,7 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
     // CTA growth (Default is the floor): above the default text size (.xLarge and up) the
     // toolbar's fixed height would force the CTA labels to shrink below their default size.
     // There the pills grow with their text instead, full width and stacked, never under 44pt,
-    // at the same place, inset and shape. At the default size and below, each is `dockHeight` tall.
+    // at the same place, inset and shape. At the default size and below, each is `buttonRowHeight` tall.
     @Environment(\.dynamicTypeSize) private var dynamicSize
     /// The home-indicator inset alone: the row stands where the Dailies toolbar does.
     @Environment(\.homeIndicatorInset) private var homeIndicatorInset
@@ -196,7 +197,7 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .frame(height: CatchlightLayout.dockHeight)
+                .frame(height: CatchlightLayout.buttonRowHeight)
             }
         }
         .environment(\.dockAtScreenEdge, true)

@@ -3,7 +3,8 @@
 //  CatchlightUITests
 //
 //  The lock screen, Privacy phrase and Cloud Storage put their bottom buttons at the Dailies
-//  toolbar's place, with its height, its side insets and its bottom edge, like onboarding.
+//  toolbar's place, half its height, with its side insets and its bottom edge, like onboarding.
+//  Phrase entry's bar above the keyboard is checked in `RestoreBarHeightTests`.
 //
 
 import XCTest
@@ -37,7 +38,7 @@ final class ButtonRowPlaceUITests: XCTestCase {
         XCTAssertTrue(button.waitForExistence(timeout: 12), "\(screen): button not found", file: file, line: line)
         Thread.sleep(forTimeInterval: 1)   // let a sheet finish rising before reading frames
         let frame = button.frame
-        XCTAssertEqual(frame.height, toolbar.height, accuracy: 0.5, "\(screen): height", file: file, line: line)
+        XCTAssertEqual(frame.height, toolbar.height / 2, accuracy: 0.5, "\(screen): height", file: file, line: line)
         XCTAssertEqual(frame.maxY, toolbar.maxY, accuracy: 0.5, "\(screen): bottom edge", file: file, line: line)
         XCTAssertEqual(frame.minX, toolbar.minX, accuracy: 0.5, "\(screen): leading inset", file: file, line: line)
         XCTAssertEqual(frame.maxX, toolbar.maxX, accuracy: 0.5, "\(screen): trailing inset", file: file, line: line)
