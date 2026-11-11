@@ -17,10 +17,10 @@ enum OnboardingStep: String, CaseIterable {
 /// Launches the app fresh (no `--uitesting`, so onboarding runs) and calls `visit` on each step
 /// once it is on screen. The app is left on the closing screen.
 @discardableResult
-func walkOnboarding(contentSize: String? = nil, file: StaticString = #filePath, line: UInt = #line,
+func walkOnboarding(contentSize: String? = nil, appearance: String = "night", file: StaticString = #filePath, line: UInt = #line,
                     visit: (OnboardingStep, XCUIApplication) -> Void) -> XCUIApplication {
     let app = XCUIApplication()
-    app.launchArguments = ["-appearanceMode", "night"]
+    app.launchArguments = ["-appearanceMode", appearance]
     if let contentSize { app.launchArguments += ["-UIPreferredContentSizeCategoryName", contentSize] }
     app.launch()
 

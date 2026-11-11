@@ -260,6 +260,7 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background((onField ? Color.ckField : Color.ckBackground).ignoresSafeArea())
             .environment(\.onColourField, onField)
+            .lightStatusBar(onField)
         } else {
             ZStack {
                 content()
@@ -278,6 +279,7 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
             }
             // After the inset, so the bottom bar reads it too.
             .environment(\.onColourField, onField)
+            .lightStatusBar(onField)
         }
     }
 }
