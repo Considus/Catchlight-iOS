@@ -3,9 +3,10 @@
 //  CatchlightTests (app module)
 //
 //  The flat toggle and the flat segmented control are rounded rectangles with a concentric
-//  inner shape: the inner corner radius is the control radius less the inset, so the gap
-//  between the two edges is even all round. The expected numbers are the design's: control
-//  radius 10, inset 3, inner radius 7.
+//  inner shape: the inner corner radius is the outer radius less the inset, so the gap
+//  between the two edges is even all round. The expected numbers are the design's: radius 14
+//  (a third of height for a short item), inset 3. The 28pt track gives 9 and its knob 6.
+//  The 44pt segmented track gives 14 and its thumb 11.
 //
 
 import XCTest
@@ -13,20 +14,21 @@ import XCTest
 
 final class FlatControlMetricsTests: XCTestCase {
 
-    func testControlRadius_isTen_andSurfaceRadius_isSixteen() {
-        XCTAssertEqual(CatchlightLayout.controlRadius, 10)
-        XCTAssertEqual(CatchlightLayout.surfaceRadius, 16)
+    func testControlRadius_andSurfaceRadius_areBothFourteen() {
+        XCTAssertEqual(CatchlightLayout.controlRadius, 14)
+        XCTAssertEqual(CatchlightLayout.surfaceRadius, 14)
     }
 
     func testToggleKnob_isConcentricWithItsTrack() {
         XCTAssertEqual(FlatToggleMetrics.knobInset, 3)
-        XCTAssertEqual(FlatToggleMetrics.knobRadius, 7, "control radius 10 less inset 3")
+        XCTAssertEqual(FlatToggleMetrics.knobRadius, 6, "track radius 9 (a third of 28) less inset 3")
         XCTAssertEqual(FlatToggleMetrics.knobSize, 22, "track height 28 less an inset each side")
     }
 
     func testToggleTrack_isARoundedRectangleNotAPill() {
-        XCTAssertLessThan(CatchlightLayout.controlRadius, FlatToggleMetrics.trackHeight / 2,
-                          "a radius of half the height would be a pill")
+        XCTAssertLessThanOrEqual(CatchlightLayout.cappedRadius(forHeight: FlatToggleMetrics.trackHeight),
+                                 FlatToggleMetrics.trackHeight / 3 + 0.5,
+                                 "a short control's corner is at most a third of its height, rounded")
     }
 
     func testToggleTapTarget_isAtLeast44By44() {
@@ -36,7 +38,7 @@ final class FlatControlMetricsTests: XCTestCase {
 
     func testSegmentedControl_selectedSegmentIsConcentricWithItsContainer() {
         XCTAssertEqual(FlatSegmentedMetrics.inset, 3)
-        XCTAssertEqual(FlatSegmentedMetrics.selectedRadius, 7, "control radius 10 less inset 3")
+        XCTAssertEqual(FlatSegmentedMetrics.selectedRadius, 11, "track radius 14 less inset 3")
         XCTAssertGreaterThanOrEqual(FlatSegmentedMetrics.segmentHeight, 44)
     }
 }
