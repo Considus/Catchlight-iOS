@@ -319,12 +319,6 @@ struct KeyboardTakeEditor: View {
     @State private var keyboardTopY: CGFloat = .greatestFiniteMagnitude
     /// A keyboard hide that arrived while `holdsPlace`, applied when the hold ends.
     @State private var heldKeyboardTopY: CGFloat?
-    /// The card's top edge in screen coords as laid out, and where it was when the hold began.
-    /// Holding the keyboard's top is not quite enough: once the keyboard has gone, the home
-    /// indicator's inset counts again below the card and lowered it by that much (measured:
-    /// 34pt on an iPhone 17). The difference is taken back as an offset while the hold lasts.
-    @State private var layoutTopY: CGFloat = 0
-    @State private var anchoredTopY: CGFloat?
     /// The card's last reported RAW content height — drives the bottom drop.
     @State private var editorContentHeight: CGFloat = 30
 
@@ -420,12 +414,6 @@ struct KeyboardTakeEditor: View {
             )
             .padding(.leading, leadingInset)
             .padding(.trailing, trailingInset ?? leadingInset)
-            .background(GeometryReader { geo in
-                Color.clear
-                    .onAppear { layoutTopY = geo.frame(in: .global).minY }
-                    .onChange(of: geo.frame(in: .global).minY) { _, y in layoutTopY = y }
-            })
-            .offset(y: anchoredTopY.map { $0 - layoutTopY } ?? 0)
         }
         .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY) + bottomLift)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -445,7 +433,6 @@ struct KeyboardTakeEditor: View {
             keyboardTopY = frame.origin.y
         }
         .onChange(of: holdsPlace()) { _, holds in
-            anchoredTopY = holds ? layoutTopY : nil
             guard !holds, let held = heldKeyboardTopY else { return }
             heldKeyboardTopY = nil
             keyboardTopY = held
