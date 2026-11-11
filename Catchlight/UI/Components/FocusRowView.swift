@@ -548,6 +548,18 @@ struct FocusRowView: View {
                 // commit gesture — see the 4.5/7.4 audit note in history.)
                 Color.ckDim
                     .opacity(veilOpacity(now: now))
+                    // Opened from the card being edited: that card IS the Take, so the veil
+                    // leaves it lit where it stands instead of drawing a copy over it (owner
+                    // 2026-11-11: the Take should stay in place and visible). Only the look
+                    // has the window; a tap on the card still commits and closes, as before.
+                    .mask {
+                        if !showsFocusCard, cardFrame.width > 0 {
+                            VeilWindow(window: cardFrame)
+                                .fill(style: FillStyle(eoFill: true))
+                        } else {
+                            Rectangle()
+                        }
+                    }
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture { retractAndDismiss(commit: true) }
@@ -1314,4 +1326,16 @@ private extension View {
     }
     .background(Color.ckBackground)
     .preferredColorScheme(.light)
+}
+
+/// The veil with a window cut where the edited card stands: the whole area, less the card's
+/// own shape, filled even-odd.
+private struct VeilWindow: Shape {
+    let window: CGRect
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path(rect)
+        path.addPath(CatchlightShape.surface.path(in: window))
+        return path
+    }
 }

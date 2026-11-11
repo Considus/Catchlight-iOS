@@ -1389,6 +1389,7 @@ struct DailiesView: View {
             // not reach the UIKit-vended text, so VoiceOver focus landed on the text
             // behind the veil. Same channel as the timeline rows.
             axHidden: ui.isFocusRowPresented,
+            holdsPlace: { [ui = ui] in ui.isFocusRowPresented },
             onOpenAngle: { editFocusedBlockID = nil; anglePresented = true },
             onEditReminder: { presentReminderEditor() },
             onDiscard: { discardInlineEdit() },
@@ -1400,10 +1401,13 @@ struct DailiesView: View {
             // commit gives it back to the block it was in (`applyInlineFanCommand`).
             onTapIris: { cardFrame in
                 ringReturnFocus = editFocusedBlockID
-                editFocusedBlockID = nil
                 // No spotlight card — this IS the editor (owner 2026-07-16). The fan still blooms
                 // at the Iris; it just doesn't redraw the Take as a read card over the veil.
+                // The row opens BEFORE the keyboard drops: clearing the focus hides the keyboard
+                // at once, and the card holds its place only if the row is already open by then
+                // (measured: the hide arrived before the row opened, and the card followed it).
                 ui.openFocusRow(for: editDraft ?? Take(), cardFrame: cardFrame, showsCard: false)
+                editFocusedBlockID = nil
             }
         )
     }
