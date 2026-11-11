@@ -269,6 +269,14 @@ struct KeyboardTakeEditor: View {
     var leadingInset: CGFloat
     /// Passed through to the card's `BlockEditor` (audit 2026-08, V31).
     var axHidden: Bool = false
+    /// While the Focus row is open on this card, the card keeps its place. Opening the row drops
+    /// the keyboard, and following it down parked the card at the bottom of the screen, under
+    /// the veil, with only the row's Iris left where it had been (owner 2026-11-11). The hide is
+    /// held back until the row closes, by which time the keyboard is usually back.
+    ///
+    /// Read live, not passed as a value: the keyboard's hide arrives in the same update that opens
+    /// the row, before this view has been handed the new value.
+    var holdsPlace: () -> Bool = { false }
     /// The card's right margin. Nil matches the left (`leadingInset`), as every Take card does.
     var trailingInset: CGFloat? = nil
 
@@ -309,6 +317,14 @@ struct KeyboardTakeEditor: View {
 
     /// The keyboard's top edge in screen coords, INCLUDING its docked toolbar.
     @State private var keyboardTopY: CGFloat = .greatestFiniteMagnitude
+    /// A keyboard hide that arrived while `holdsPlace`, applied when the hold ends.
+    @State private var heldKeyboardTopY: CGFloat?
+    /// The card's top edge in screen coords as laid out, and where it was when the hold began.
+    /// Holding the keyboard's top is not quite enough: once the keyboard has gone, the home
+    /// indicator's inset counts again below the card and lowered it by that much (measured:
+    /// 34pt on an iPhone 17). The difference is taken back as an offset while the hold lasts.
+    @State private var layoutTopY: CGFloat = 0
+    @State private var anchoredTopY: CGFloat?
     /// The card's last reported RAW content height — drives the bottom drop.
     @State private var editorContentHeight: CGFloat = 30
 
@@ -404,6 +420,12 @@ struct KeyboardTakeEditor: View {
             )
             .padding(.leading, leadingInset)
             .padding(.trailing, trailingInset ?? leadingInset)
+            .background(GeometryReader { geo in
+                Color.clear
+                    .onAppear { layoutTopY = geo.frame(in: .global).minY }
+                    .onChange(of: geo.frame(in: .global).minY) { _, y in layoutTopY = y }
+            })
+            .offset(y: anchoredTopY.map { $0 - layoutTopY } ?? 0)
         }
         .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY) + bottomLift)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -415,7 +437,18 @@ struct KeyboardTakeEditor: View {
             for: UIResponder.keyboardWillChangeFrameNotification)) { note in
             guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
             else { return }
+            if holdsPlace() && frame.origin.y > keyboardTopY {
+                heldKeyboardTopY = frame.origin.y
+                return
+            }
+            heldKeyboardTopY = nil
             keyboardTopY = frame.origin.y
+        }
+        .onChange(of: holdsPlace()) { _, holds in
+            anchoredTopY = holds ? layoutTopY : nil
+            guard !holds, let held = heldKeyboardTopY else { return }
+            heldKeyboardTopY = nil
+            keyboardTopY = held
         }
     }
 }
