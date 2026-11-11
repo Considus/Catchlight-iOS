@@ -62,6 +62,13 @@ struct PointMark: View {
     /// The Obie, so its tile shows the inner square and the lit top light.
     private static let obieTake = Take(blocks: [.textLine("")], isObie: true, isImportant: true)
 
+    /// The Take card in miniature that holds the Iris or the Obie, and the Iris drawn in it.
+    static let tileSize = CGSize(width: 60, height: 48)
+    static let irisDiameter: CGFloat = 28
+    static let tileInset: CGFloat = 5
+    /// The box every mark is drawn in.
+    static let markSize = CGSize(width: 72, height: 62)
+
     var body: some View {
         ZStack {
             CatchlightShape.control.fill(Color.ckSurfaceRole)
@@ -76,9 +83,9 @@ struct PointMark: View {
                 .frame(width: 34, height: 34)
             case .iris, .obie:
                 // A Take card in miniature, with the real Iris at its corner.
-                IrisView(take: kind == .obie ? Self.obieTake : Self.taskTake, diameter: 28)
-                    .padding(5)
-                    .frame(width: 60, height: 48, alignment: .topLeading)
+                IrisView(take: kind == .obie ? Self.obieTake : Self.taskTake, diameter: Self.irisDiameter)
+                    .padding(Self.tileInset)
+                    .frame(width: Self.tileSize.width, height: Self.tileSize.height, alignment: .topLeading)
                     .flatTile(fill: kind == .obie ? Color.ckCardObieSurface : Color.ckSurface)
             case .swipeUp:
                 ArrowUpStroke()
@@ -87,7 +94,7 @@ struct PointMark: View {
                     .frame(width: 26, height: 26)
             }
         }
-        .frame(width: 72, height: 62)
+        .frame(width: Self.markSize.width, height: Self.markSize.height)
     }
 }
 
