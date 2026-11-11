@@ -467,6 +467,25 @@ struct FlatToggleStyle: ToggleStyle {
     }
 }
 
+/// What a horizontal drag on the track does when the finger lifts.
+enum FlatToggleGesture {
+    enum Outcome: Equatable {
+        /// Set the toggle to the side the drag went to (true for the right).
+        case swipe(toTheRight: Bool)
+        /// A drag that began but ended with little net travel flips it, as a tap does and
+        /// as the native switch did (measured).
+        case flip
+    }
+
+    /// The least net travel, in points, that counts as a swipe to a side.
+    static let swipeThreshold: CGFloat = 10
+
+    /// `travel` is the net horizontal travel of the drag at lift.
+    static func outcome(forTravel travel: CGFloat) -> Outcome {
+        abs(travel) > swipeThreshold ? .swipe(toTheRight: travel > 0) : .flip
+    }
+}
+
 /// A tap and a horizontal swipe on the track. This is UIKit on purpose: its pan recognizer
 /// begins only when the movement is clearly horizontal, so a vertical swipe that starts on the
 /// track is left to the list or the sheet to scroll or dismiss. (A SwiftUI `DragGesture`
@@ -504,10 +523,21 @@ private struct FlatToggleInput: UIViewRepresentable {
 
         @objc func tapped() { if isEnabled { onTap() } }
 
+        /// Where the finger came down. A pan's own translation starts only once it has begun,
+        /// about 10pt into the movement, so it is not the net travel of the drag.
+        private var touchDownX: CGFloat = 0
+
         @objc func panned(_ pan: UIPanGestureRecognizer) {
             guard pan.state == .ended, isEnabled else { return }
-            let travel = pan.translation(in: pan.view)
-            if abs(travel.x) > 10 { onSwipe(travel.x > 0) }
+            switch FlatToggleGesture.outcome(forTravel: pan.location(in: pan.view).x - touchDownX) {
+            case .swipe(let toTheRight): onSwipe(toTheRight)
+            case .flip: onTap()
+            }
+        }
+
+        func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            touchDownX = touch.location(in: recognizer.view).x
+            return true
         }
 
         /// Begin only for a mostly horizontal movement.
