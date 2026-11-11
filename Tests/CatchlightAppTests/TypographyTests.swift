@@ -281,7 +281,7 @@ extension TypographyTests {
 
     private static let catalogLanguages = ["en", "de", "fr", "es", "it", "pt-BR", "nl", "pt-PT", "pl", "sv", "da", "nb",
                                            "fi", "tr", "ja", "ko", "zh-Hans", "zh-Hant", "th"]
-    private static let headingKeys = ["SETTINGS", "STORYBOARD", "SHOT LIST", "SYNC CONFLICTS", "DAILIES", "SEQUENCE", "SEARCH"]
+    private static let headingKeys = ["SETTINGS", "STORYBOARD", "SHOT LIST", "SYNC CONFLICTS", "SEQUENCE", "SEARCH"]
 
     /// The headings whose single long word needs a soft hyphen at its compound join.
     private static let hyphenated: Set<String> = ["de|SYNC CONFLICTS", "nl|SYNC CONFLICTS", "da|SYNC CONFLICTS",

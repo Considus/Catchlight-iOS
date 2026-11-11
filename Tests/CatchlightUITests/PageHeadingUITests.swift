@@ -50,10 +50,11 @@ final class PageHeadingUITests: XCTestCase {
         app.staticTexts.matching(NSPredicate(format: "label ==[c] %@", label)).firstMatch
     }
 
-    /// The Dailies heading's element is the whole title strip (116pt tall at the default
-    /// size), not just the text, so it is measured by how much it GROWS against the
-    /// default size: a second line would add a full line, which is over the ceiling's
-    /// half.
+    /// The "Dailies" title is its own element now (the date beside it is another), found by
+    /// a case-insensitive match. It is measured by how much it GROWS against the default
+    /// size: a second line would add a full line, which is over the ceiling's half. The
+    /// ceiling is sized for the 24pt shared heading, a little under the 28pt title, which
+    /// keeps the check strict.
     func testDailiesHeading_staysOneLine() {
         let base = launch("UICTContentSizeCategoryL")
         let baseHeight = headingText(base, "DAILIES")
@@ -69,6 +70,22 @@ final class PageHeadingUITests: XCTestCase {
                               "Dailies heading at \(size.name) grew \(growth)pt over the default size: a second line")
             app.terminate()
         }
+    }
+
+    /// Dailies shows today's date beside its title, as drawn, and Sequence does not.
+    func testDailiesHeading_showsTodaysDate_onlyOnDailies() {
+        let app = launch("UICTContentSizeCategoryL")
+        let date = app.staticTexts["dailies-date"]
+        XCTAssertTrue(date.waitForExistence(timeout: 8), "No date beside the Dailies heading")
+        // Built with a different API from the app's, so the test can't agree by construction.
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("EEEEdMMMM")
+        XCTAssertEqual(date.label, formatter.string(from: Date()))
+        XCTAssertTrue(headingText(app, "Dailies").exists, "No Dailies title")
+
+        app.buttons["sequence-tab"].tap()
+        XCTAssertTrue(headingText(app, "SEQUENCE").waitForExistence(timeout: 5), "Sequence heading not shown")
+        XCTAssertFalse(date.exists, "The date still shows in Sequence")
     }
 
     func testSettingsHeading_isOneLine() {

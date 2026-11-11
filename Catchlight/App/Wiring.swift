@@ -188,6 +188,14 @@ enum Wiring {
             try? store.upsert(Take(createdAt: base.addingTimeInterval(-1),
                                    blocks: [.textLine("Buy film for the weekend shoot")]))
             try? store.upsert(Take(createdAt: base, blocks: [.textLine("Call the framer back")]))
+            // `--uitesting-fill` adds ten older two-line Takes below those two, so the timeline
+            // runs under the toolbar and a Take sits just above it (the Focus row placement test).
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-fill") {
+                for k in 0..<10 {
+                    try? store.upsert(Take(createdAt: base.addingTimeInterval(Double(-10 - k)),
+                                           blocks: [.textLine("Filler Take \(k + 1), long enough to wrap onto a second line")]))
+                }
+            }
             // UI-test build is treated as fully entitled by default so existing
             // flow tests aren't gated by the paywall. Pass `--uitesting-lapsed`
             // alongside to exercise the paywall path explicitly.
