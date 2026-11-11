@@ -74,7 +74,7 @@ struct IrisView: View {
                 .id(key)
                 .transition(reduceMotion ? .opacity : .identity)
         }
-        .animation(reduceMotion ? CatchlightMotion.reduced : CatchlightMotion.shape, value: state)
+        .animation(Self.morphAnimation(held: IrisMorphHold.isHeld(take.id), reduceMotion: reduceMotion), value: state)
         .frame(width: diameter, height: diameter)
         // Decorative in every host: rows expose a combined label, and the callers that
         // want the Iris to speak (editor footer) label their own wrapper. 🚨 Do NOT add
@@ -101,6 +101,37 @@ struct IrisView: View {
         if take.timeReminder != nil || take.locationReminder != nil { parts.append(String(localized: "Reminder")) }
         if parts.isEmpty { return includesObie ? String(localized: "Note") : "" }
         return parts.joined(separator: ", ")
+    }
+}
+
+extension IrisView {
+    /// How the Iris moves to a new state: the shape morph, the Reduce Motion fade, or (held)
+    /// a plain switch.
+    static func morphAnimation(held: Bool, reduceMotion: Bool) -> Animation? {
+        if held { return nil }
+        return reduceMotion ? CatchlightMotion.reduced : CatchlightMotion.shape
+    }
+}
+
+/// One change, one morph (art director 2026-11-11). A change made in the Focus row morphs in the
+/// row's own Iris, where the user tapped. The card's Iris then switches under the row's fade
+/// instead of morphing a second time beneath it: the two layers overlapped and showed both marks
+/// at once for about 0.3s. Every other route (the editor, sync) still morphs the card.
+@MainActor
+enum IrisMorphHold {
+    /// Long enough to cover the row's close and the store's update reaching the card. A later
+    /// change to the same Take, from any route, morphs as usual.
+    static let window: TimeInterval = 1.5
+    private static var heldUntil: [UUID: Date] = [:]
+
+    static func hold(_ id: UUID, now: Date = Date()) {
+        heldUntil = heldUntil.filter { $0.value > now }
+        heldUntil[id] = now.addingTimeInterval(window)
+    }
+
+    static func isHeld(_ id: UUID, now: Date = Date()) -> Bool {
+        guard let until = heldUntil[id] else { return false }
+        return now < until
     }
 }
 

@@ -418,6 +418,8 @@ struct RootView: View {
                             ui.closeFocusRow()
                             return
                         }
+                        // The row's Iris already morphed; the card's switches under the fade.
+                        IrisMorphHold.hold(take.id)
                         if ui.editingTakeID == take.id {
                             // Edit-in-place: the Take is being edited inline. Hand the
                             // selection to that editor's draft so it rides the inline

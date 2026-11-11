@@ -92,4 +92,24 @@ final class IconMotionTests: XCTestCase {
         XCTAssertNil(CatchlightMotion.movement(CatchlightMotion.shape, reduceMotion: true))
         XCTAssertNotNil(CatchlightMotion.movement(CatchlightMotion.shape, reduceMotion: false))
     }
+
+    // MARK: - One change, one morph (art director 2026-11-11)
+
+    @MainActor
+    func testAFocusRowCommit_holdsThatTakesIrisStill_forAMomentOnly() {
+        let id = UUID(), other = UUID()
+        let t0 = Date(timeIntervalSinceReferenceDate: 1_000)
+        IrisMorphHold.hold(id, now: t0)
+        XCTAssertTrue(IrisMorphHold.isHeld(id, now: t0.addingTimeInterval(0.5)), "The card should switch under the row's fade")
+        XCTAssertFalse(IrisMorphHold.isHeld(other, now: t0.addingTimeInterval(0.5)), "Another Take's Iris still morphs")
+        XCTAssertFalse(IrisMorphHold.isHeld(id, now: t0.addingTimeInterval(IrisMorphHold.window + 0.01)),
+                       "After the hold, a later change to the same Take morphs again")
+    }
+
+    @MainActor
+    func testWithoutAHold_theIrisMorphs() {
+        XCTAssertFalse(IrisMorphHold.isHeld(UUID(), now: Date()))
+        XCTAssertNotNil(IrisView.morphAnimation(held: false, reduceMotion: false))
+        XCTAssertNil(IrisView.morphAnimation(held: true, reduceMotion: false), "A held Iris switches with no animation")
+    }
 }
