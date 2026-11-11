@@ -27,7 +27,8 @@ final class FlatSurfaceSourceScanTests: XCTestCase {
 
     private lazy var allowances: [Allowance] = [
         .init(file: "Catchlight/UI/Views/DockPillRow.swift", line: "LinearGradient(stops: [", count: 1, reason: fadeReason),
-        .init(file: "Catchlight/UI/Views/DailiesView.swift", line: "LinearGradient(", count: 1, reason: fadeReason),
+        .init(file: "Catchlight/UI/Views/DailiesView.swift",
+              line: "LinearGradient(colors: [Color.ckBackground, Color.ckBackground.opacity(0)],", count: 1, reason: fadeReason),
         .init(file: "Catchlight/UI/Views/OnboardingView.swift",
               line: "LinearGradient(colors: [Color.ckBackground, Color.ckBackground.opacity(0)],", count: 1, reason: fadeReason),
         .init(file: "Catchlight/UI/Storyboard/StoryboardView.swift", line: "LinearGradient(", count: 1, reason: fadeReason),
