@@ -348,6 +348,11 @@ struct RootView: View {
     private var toolbar: some View {
         DailiesToolbar(onNewTake: { newTake() })
             .environment(ui)
+            // Measured 2026-11-11: while the search bar rides the keyboard this view's bottom
+            // edge sits at the safe area (840 of 874), not the screen's, and after Cancel it
+            // came back 0.4s after the keyboard had gone, so the toolbar stopped high and then
+            // dropped. Reaching the screen edge in every state keeps it still.
+            .ignoresSafeArea(.all, edges: .bottom)
             .opacity(fanOpacity)
             // Inert while editing in place (so a stray tap can't open a second editor)
             // AND while the search keyboard is up (so its swipe-up Settings gesture

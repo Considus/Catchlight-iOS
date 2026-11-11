@@ -170,6 +170,16 @@ private struct DeviceBottomInsetKey: EnvironmentKey {
     static let defaultValue: CGFloat = 34
 }
 
+/// The home-indicator inset ALONE, from a reader that ignores the keyboard (CatchlightApp).
+/// `deviceBottomInset` comes from the root
+/// GeometryReader, so it also counts the keyboard and an input accessory, and it lags behind
+/// them as they go: measured after search's Cancel, it read 62 (the search bar) for 0.42s
+/// after the keyboard had gone, so the Dailies toolbar, resting on it, stopped 62pt high and
+/// then dropped. The toolbar rests on this instead. Default as `DeviceBottomInsetKey`.
+private struct HomeIndicatorInsetKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 34
+}
+
 private struct HeadingClearanceKey: EnvironmentKey {
     static let defaultValue: CGFloat = CatchlightLayout.headingClearance
 }
@@ -200,6 +210,11 @@ extension EnvironmentValues {
     var deviceBottomInset: CGFloat {
         get { self[DeviceBottomInsetKey.self] }
         set { self[DeviceBottomInsetKey.self] = newValue }
+    }
+
+    var homeIndicatorInset: CGFloat {
+        get { self[HomeIndicatorInsetKey.self] }
+        set { self[HomeIndicatorInsetKey.self] = newValue }
     }
 }
 
