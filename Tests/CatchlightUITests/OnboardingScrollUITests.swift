@@ -95,4 +95,39 @@ final class OnboardingScrollUITests: XCTestCase {
         }
         XCTAssertEqual(checked, 1)
     }
+
+    /// At the largest size the content scrolls under the pinned dock buttons. Scrolled to the end,
+    /// every tile must lie fully above the dock, and each must be tappable by scrolling alone.
+    func testAtTheLargestSize_everyTile_scrollsClearOfTheDock() {
+        continueAfterFailure = true
+        var checked = [OnboardingStep]()
+        walkOnboarding(contentSize: largest) { step, app in
+            let dockLabel: String
+            let tiles: () -> [XCUIElement]
+            switch step {
+            case .reveal:
+                dockLabel = "I've written them down"
+                tiles = { app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Word ' AND label CONTAINS ': '")).allElementsBoundByIndex }
+            case .confirm:
+                dockLabel = "Show my words once more"
+                tiles = { app.buttons.allElementsBoundByIndex.filter {
+                    $0.label != dockLabel && !$0.label.isEmpty && !$0.label.hasPrefix("Word ") && $0.label != "Back" } }
+            default: return
+            }
+            let dock = app.buttons[dockLabel]
+            XCTAssertTrue(dock.exists, "\(step): no dock button \(dockLabel)")
+            for _ in 0..<14 { app.swipeUp() }
+            let all = tiles().filter { $0.exists }
+            XCTAssertGreaterThanOrEqual(all.count, 3, "\(step): found \(all.count) tiles")
+            for tile in all {
+                XCTAssertLessThanOrEqual(tile.frame.maxY, dock.frame.minY + 0.5,
+                    "\(step): tile '\(tile.label)' ends at \(tile.frame.maxY), behind the dock at \(dock.frame.minY)")
+            }
+            for tile in all {
+                XCTAssertTrue(scrollToHittable(tile, in: app), "\(step): tile '\(tile.label)' can't be scrolled into a tappable place: \(tile.frame)")
+            }
+            checked.append(step)
+        }
+        XCTAssertEqual(checked, [.reveal, .confirm])
+    }
 }

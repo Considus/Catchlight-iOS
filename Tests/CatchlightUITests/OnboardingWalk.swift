@@ -91,12 +91,28 @@ func walkOnboarding(contentSize: String? = nil, file: StaticString = #filePath, 
     return app
 }
 
-/// At the accessibility sizes a step is taller than the screen: swipe the content up until the
-/// element can be tapped (not under the pinned buttons).
-func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication) {
-    for _ in 0..<10 {
-        if element.exists && element.isHittable { return }
-        app.swipeUp()
+/// At the accessibility sizes a step is taller than the screen: scroll the content in short
+/// drags until the element can be tapped (not under the pinned buttons or the status bar). The
+/// direction comes from where the element is: in the top half the content is dragged down, else up.
+/// A one-way swipe overshoots a tile that sits above the visible area once the content is at its
+/// end. Returns false when the element never becomes tappable.
+@discardableResult
+func scrollToHittable(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+    for _ in 0..<40 {
+        if element.exists && element.isHittable { return true }
+        let up = element.frame.midY >= app.frame.midY
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: up ? 0.65 : 0.3))
+        let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: up ? 0.4 : 0.55))
+        from.press(forDuration: 0.05, thenDragTo: to)
+    }
+    return element.exists && element.isHittable
+}
+
+/// Same, but fails the test clearly instead of leaving the caller to tap an unreachable element.
+func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication,
+                         file: StaticString = #filePath, line: UInt = #line) {
+    if !scrollToHittable(element, in: app) {
+        XCTFail("could not scroll '\(element.label)' into a tappable place: \(element.frame)", file: file, line: line)
     }
 }
 
