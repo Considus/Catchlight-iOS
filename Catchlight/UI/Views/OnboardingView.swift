@@ -1001,6 +1001,48 @@ struct PhraseGrid<Cell: View>: View {
     }
 }
 
+/// The Confirm step's "Tap words 3, 7 and 11 from your phrase, in order." Up to Large it keeps to one
+/// line when it fits at 92 percent of its size or more, shrinking only as far as it must: in English a
+/// second line pushed the word bank under the bottom buttons on a 393pt phone. When even 92 percent is
+/// too wide (measured: 10 of the 18 translations on that phone, Polish and German need 74 percent) it
+/// wraps at its full size as before, rather than being cut off. Above Large it always wraps and grows.
+struct ConfirmPrompt: View {
+    let text: String
+    let keepsToOneLine: Bool
+    private static let floor: CGFloat = 0.92
+
+    var body: some View {
+        if keepsToOneLine {
+            ViewThatFits(in: .horizontal) {
+                // Fits only if the prompt fits on one line at the floor size. The hidden lines size
+                // it: the prompt at the floor for the width, one full-size line for the height.
+                ZStack {
+                    Text(text).ckBody(.light, size: 16 * Self.floor, relativeTo: .body).lineLimit(1)
+                    Text(verbatim: "Tap").ckBody(.light, size: 16, relativeTo: .body).lineLimit(1)
+                }
+                .hidden()
+                .frame(maxWidth: .infinity)
+                .overlay {
+                    styled(Text(text))
+                        .lineLimit(1)
+                        .minimumScaleFactor(Self.floor)
+                }
+                styled(Text(text))
+            }
+        } else {
+            styled(Text(text))
+        }
+    }
+
+    private func styled(_ text: Text) -> some View {
+        text
+            .ckBody(.light, size: 16, relativeTo: .body)
+            .foregroundStyle(Color.ckTextSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
 // MARK: - Screen 5: Confirm
 
 private struct ConfirmStep: View {
@@ -1068,17 +1110,7 @@ private struct ConfirmStep: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader)
 
-                        Text(promptCopy)
-                            .ckBody(.light, size: 16, relativeTo: .body)
-                            .foregroundStyle(Color.ckTextSecondary)
-                            .multilineTextAlignment(.center)
-                            // Up to Large the prompt keeps to one line: it wraps only when two of
-                            // the three numbers have two digits on a phone under 402pt wide, and the
-                            // second line pushed the word bank under the bottom buttons. It shrinks
-                            // only as far as it must. Above Large it wraps and grows as before.
-                            .lineLimit(dynamicSize > .large ? nil : 1)
-                            .minimumScaleFactor(dynamicSize > .large ? 1 : 0.92)
-                            .fixedSize(horizontal: false, vertical: true)
+                        ConfirmPrompt(text: promptCopy, keepsToOneLine: dynamicSize <= .large)
 
                         // Slots + bank read as one block: the gap between the to-fill
                         // row and the word bank matches the gap between the bank's own
