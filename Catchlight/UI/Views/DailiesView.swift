@@ -739,11 +739,7 @@ struct DailiesView: View {
                 // top, exactly like the no-Obie timeline, instead of vanishing at the
                 // Obie heading's hard mid-screen edge. (The pinned Obie + insets stay
                 // put, so the focused Take's position doesn't jump.)
-                LinearGradient(
-                    colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .frame(height: 12)
+                Self.headingFade()
             }
         }
         // ONLY when an Obie is pinned, the solid mask extends down to NEAR the Obie's
@@ -754,18 +750,25 @@ struct DailiesView: View {
         // up 12px from the true bottom (owner 2026-06-17: a 6px nudge up from the prior
         // −6 to clear a small scroll-edge ugliness). Natural height when there's no Obie.
         .frame(height: (vm.obie != nil && !ui.isEditingInPlace)
-                       ? deviceTopInset + headingClearance + max(0, pinnedObieZoneHeight - 12)
+                       ? deviceTopInset + headingClearance + max(0, pinnedObieZoneHeight - Self.obieMaskLift)
                        : nil,
                alignment: .top)
-        // Below the pinned Obie, the same fade as under the bottom toolbar, one card gap deep, so
-        // a Take scrolling up fades away as it reaches the Obie instead of showing its lower half
-        // sliced against it (owner 2026-11-11). It ends just above where the first Take rests,
-        // so a resting Take is untouched, and it takes no touches.
+        // Below the pinned Obie, the same soft fade as under the heading, starting right at the
+        // Obie card's bottom edge, so a Take scrolling up fades away as it reaches the Obie
+        // instead of showing its lower half sliced against it. It was the toolbar's fade, a card
+        // gap deep, which read as harsh and too low (owner 2026-11-11). The mask stops
+        // `obieMaskLift` above the card's bottom edge: the page colour carries on behind the card
+        // to its bottom edge, so nothing shows past its rounded corners, and the fade starts
+        // there. It never reaches a resting Take: at the compact spacing the gap is 10, so it
+        // stops there. It takes no touches.
         .overlay(alignment: .bottom) {
             if vm.obie != nil && !ui.isEditingInPlace {
-                EdgeFade.gradient(solid: .top)
-                    .frame(height: cardGap)
-                    .offset(y: cardGap)
+                let depth = min(Self.headingFadeHeight, cardGap)
+                VStack(spacing: 0) {
+                    Color.ckBackground.frame(height: Self.obieMaskLift)
+                    Self.headingFade(height: depth)
+                }
+                    .offset(y: Self.obieMaskLift + depth)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
@@ -1373,6 +1376,19 @@ struct DailiesView: View {
         ids.insert(take.id, at: to)
         commitReorder(of: take.id, displayOrder: ids)
     }
+
+    /// The soft fade a Take goes into at the top: the page colour to clear, 12pt deep. Under the
+    /// heading, and under the pinned Obie (owner 2026-11-11: "more subtle and better").
+    static let headingFadeHeight: CGFloat = 12
+    static func headingFade(height: CGFloat = headingFadeHeight) -> some View {
+        LinearGradient(colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
+                       startPoint: .top, endPoint: .bottom)
+            .frame(height: height)
+    }
+
+    /// How far above the pinned Obie card's bottom edge the solid mask stops (see the mask's
+    /// frame), so its rounded corners are always covered.
+    static let obieMaskLift: CGFloat = 12
 
     private func timelineBackgroundTap() {
         if ui.isEditingInPlace { saveInlineEdit(); return }
