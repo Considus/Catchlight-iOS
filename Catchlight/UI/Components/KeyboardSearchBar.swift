@@ -132,7 +132,9 @@ final class SearchBarAccessory: UIView {
     /// The placeholder tone, 4.5:1 on the field and receded next to the typed query.
     private static let placeholderGrey = UITheme.placeholder
 
-    private static let pad: CGFloat = CatchlightLayout.toolbarHorizontalPadding
+    /// The Dailies toolbar's side inset: the search row stands in for the toolbar's panel while
+    /// the keyboard is up, so it keeps the panel's sides.
+    private static let pad: CGFloat = CatchlightLayout.dockInset
     private static let rowHeight: CGFloat = CatchlightLayout.minTouchTarget
     private static let topPad: CGFloat = 10
     private static let bottomPad: CGFloat = 8

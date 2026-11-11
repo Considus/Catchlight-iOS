@@ -40,8 +40,6 @@ enum TimelineDragHandle {
     /// the card instead, which narrowed every card in manual mode and also left
     /// `SwipeActionRow`'s `trailingInset: 20` measuring to an edge the card no longer had.
     static let stripWidth: CGFloat = 44
-    /// The row's existing trailing margin — the gap between the card and the screen edge.
-    static let trailingMargin: CGFloat = 20
 
     /// EXTRA trailing padding for the card's CONTENT so no body text runs under the
     /// handle. The card's SURFACE is untouched; only the text insets. Derived rather than
@@ -49,9 +47,10 @@ enum TimelineDragHandle {
     /// own text by `cardTextTrailingPad`.
     static var contentInset: CGFloat { stripWidth - CatchlightLayout.cardTextTrailingPad }
 
-    /// True when `x` (in the collection view's coordinate space) is on the handle.
-    static func containsX(_ x: CGFloat, inWidth width: CGFloat) -> Bool {
-        x >= width - trailingMargin - stripWidth && x <= width - trailingMargin
+    /// True when `x` (in the collection view's coordinate space) is on the handle, which sits
+    /// inside the card's trailing edge, `cardMargin` from the screen's.
+    static func containsX(_ x: CGFloat, inWidth width: CGFloat, cardMargin: CGFloat) -> Bool {
+        x >= width - cardMargin - stripWidth && x <= width - cardMargin
     }
 
     // MARK: Tunables (device review may nudge these)
@@ -362,8 +361,8 @@ struct TimelineReadCell: View {
                 }
             irisHitTarget                                                              // gestures + VoiceOver
         }
-        .padding(.leading, addColumnX - CatchlightLayout.cardLeadingOffset)
-        .padding(.trailing, 20)
+        .padding(.leading, CatchlightLayout.cardMargin(addColumnX: addColumnX))
+        .padding(.trailing, CatchlightLayout.cardMargin(addColumnX: addColumnX))
         // SYMMETRIC so the card is centred in the cell — a swipe action fill then centres
         // on the CARD, not the cell.
         .padding(.vertical, cardGap / 2)
@@ -386,7 +385,7 @@ struct TimelineReadCell: View {
                     .ckBody(.regular, size: 15, relativeTo: .body)
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(width: TimelineDragHandle.stripWidth)
-                    .padding(.trailing, TimelineDragHandle.trailingMargin)
+                    .padding(.trailing, CatchlightLayout.cardMargin(addColumnX: addColumnX))
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
@@ -493,8 +492,8 @@ struct TimelineSwipeCell: View {
                                       ? .standard : .destructive,
                                   perform: { onDelete(take) }),
             openRowID: $swipeState.openRowID,
-            leadingInset: addColumnX - CatchlightLayout.cardLeadingOffset,
-            trailingInset: 20,
+            leadingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
+            trailingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
             contentVerticalInset: cardGap / 2,
             centersActionLabel: true    // centre glyph/label in the revealed button, not hugged to the screen edge
         ) { offset in
@@ -569,8 +568,8 @@ struct TimelineMonthDivider: View {
                 .onTapGesture(perform: onTapBlank)
                 .accessibilityHidden(true)
         }
-        .padding(.leading, addColumnX - CatchlightLayout.cardLeadingOffset + CatchlightLayout.cardTextLeadingPad)
-        .padding(.trailing, 20)
+        .padding(.leading, CatchlightLayout.cardMargin(addColumnX: addColumnX) + CatchlightLayout.cardTextLeadingPad)
+        .padding(.trailing, CatchlightLayout.cardMargin(addColumnX: addColumnX))
     }
 }
 
@@ -745,7 +744,8 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
             // than inside the handler matters: the recognizer has `minimumPressDuration = 0`,
             // so anything it is allowed to receive it claims on touch-DOWN.
             guard isReorderable,
-                  TimelineDragHandle.containsX(point.x, inWidth: collectionView.bounds.width),
+                  TimelineDragHandle.containsX(point.x, inWidth: collectionView.bounds.width,
+                                                cardMargin: CatchlightLayout.cardMargin(addColumnX: addColumnX)),
                   let path = collectionView.indexPathForItem(at: point),
                   dataSource.itemIdentifier(for: path)?.takeID != nil else { return false }
             return true

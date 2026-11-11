@@ -416,6 +416,16 @@ enum CatchlightShape {
     static let control = RoundedRectangle(cornerRadius: CatchlightLayout.controlRadius, style: .continuous)
     /// Fields, panels, cards and sheets.
     static let surface = RoundedRectangle(cornerRadius: CatchlightLayout.surfaceRadius, style: .continuous)
+    /// A surface that sits at a screen edge, as the Dailies toolbar sits where the Home Screen
+    /// dock does. The corners nearest the screen's corners follow the screen's curve, as the
+    /// dock's do, and the far corners keep the surface radius (owner 2026-11-11: "any element
+    /// close to the top or bottom of the screen inherits that radius, but only at its closest
+    /// corners"). Apple's concentric shape works out each corner from the screen, so no radius
+    /// is tuned by hand. Before iOS 26, which has no concentric shape, it is the plain surface.
+    @available(iOS 26, *)
+    static var edgeSurface: ConcentricRectangle {
+        ConcentricRectangle(corners: .concentric(minimum: .fixed(CatchlightLayout.surfaceRadius)), isUniform: false)
+    }
 }
 
 extension View {
@@ -430,6 +440,23 @@ extension View {
     func flatPanel(fill: Color = .ckSurface) -> some View {
         background(CatchlightShape.surface.fill(fill))
             .overlay(CatchlightShape.surface.strokeBorder(Color.ckLine, lineWidth: 1))
+    }
+
+    /// `flatPanel` in the edge shape (`CatchlightShape.edgeSurface`), for a panel at a screen
+    /// edge. The hairline takes no touches, and the panel takes them across its whole shape.
+    @ViewBuilder
+    func flatEdgePanel(fill: Color) -> some View {
+        if #available(iOS 26, *) {
+            background(CatchlightShape.edgeSurface.fill(fill))
+                // The concentric shape can't be inset, so the 1pt line is drawn on a shape half
+                // a point inside, which puts it wholly inside the edge, as `strokeBorder` does.
+                .overlay(CatchlightShape.edgeSurface.stroke(Color.ckLine, lineWidth: 1).padding(0.5).allowsHitTesting(false))
+                .contentShape(CatchlightShape.edgeSurface)
+        } else {
+            background(CatchlightShape.surface.fill(fill))
+                .overlay(CatchlightShape.surface.strokeBorder(Color.ckLine, lineWidth: 1).allowsHitTesting(false))
+                .contentShape(CatchlightShape.surface)
+        }
     }
 }
 
@@ -995,10 +1022,16 @@ enum CatchlightLayout {
     /// Corner radius of a field, panel, card or sheet.
     static let surfaceRadius: CGFloat = 16
     /// The distance from the dock's first column centre (`addColumnX`) to the Take card's
-    /// leading edge: the card starts at `addColumnX − cardLeadingOffset`, about 20pt from
-    /// the screen edge, matching the 20pt trailing margin. The timeline line that once
-    /// ran down `addColumnX` is gone (owner 2026-11-09); the Add button still sits there.
+    /// leading edge: the card starts at `addColumnX − cardLeadingOffset`. The timeline line
+    /// that once ran down `addColumnX` is gone (owner 2026-11-09); the Add button still sits
+    /// there, and the Iris under it.
     static let cardLeadingOffset: CGFloat = 38
+    /// A Take card's margin from the screen on EACH side: the leading edge that keeps the Iris
+    /// under Add, mirrored on the trailing side so the two margins match (art director
+    /// 2026-11-11, once the toolbar moved to the dock's inset). About 25pt on a 402pt phone.
+    static func cardMargin(addColumnX: CGFloat) -> CGFloat {
+        addColumnX - cardLeadingOffset
+    }
     /// The Take card's inner padding on every side.
     static let cardPadding: CGFloat = 14
     /// The Iris's top and leading offset inside its card.
@@ -1028,14 +1061,21 @@ enum CatchlightLayout {
     /// itself, and a literal 14 in two files would drift the moment either moved.
     /// Unchanged in value — this is the same 14 the card has always used.
     static let cardTextTrailingPad: CGFloat = 14
-    /// The Dailies toolbar's inset from each side of the screen.
+    /// The side inset of the editor's keyboard bar and of the pill-button row. (The search row
+    /// that stands in for the Dailies toolbar uses the toolbar's `dockInset`.)
     static let toolbarHorizontalPadding: CGFloat = 12
+    /// The Dailies toolbar sits where the Home Screen dock sits, at its size (owner
+    /// 2026-11-11). Measured on the iPhone 17 simulator, iOS 27: the dock is 17pt from each
+    /// side and from the bottom edge, and about 103pt tall.
+    static let dockInset: CGFloat = 17
+    static let dockHeight: CGFloat = 103
     /// x of the centre of the toolbar's first column (Add), for a given container width.
-    /// The toolbar lays out four equal columns inside `toolbarHorizontalPadding`, so the
-    /// first column's centre sits at pad + (width − 2·pad) / 8. The Take cards hang off
-    /// it (`addColumnX − cardLeadingOffset`), as do the Focus row and the Storyboard rows.
+    /// The toolbar lays out four equal columns inside `dockInset`, so the first column's
+    /// centre sits at inset + (width − 2·inset) / 8. The Take cards hang off it
+    /// (`addColumnX − cardLeadingOffset`), as do the Focus row and the Storyboard rows, so
+    /// each Iris stays under Add.
     static func addColumnX(containerWidth: CGFloat) -> CGFloat {
-        toolbarHorizontalPadding + (containerWidth - 2 * toolbarHorizontalPadding) / 8
+        dockInset + (containerWidth - 2 * dockInset) / 8
     }
 
     /// Minimum touch target per HIG / accessibility.
@@ -1060,12 +1100,10 @@ enum CatchlightLayout {
     /// deviceBottomInset` (plus the filter chips' row while they show), so the final Take
     /// clears the toolbar.
     static let toolbarClearance: CGFloat = 120
-    /// How far the Dailies toolbar's panel sits from the screen's bottom edge. Apple's own
-    /// bottom search bar (Settings, iOS 27, iPhone 17) ends 28pt from the edge, 6pt inside the
-    /// 34pt home-indicator inset, and the owner found ours sat too high beside it
-    /// (2026-11-10), so the panel matches it. A phone without a home indicator keeps 8pt.
+    /// How far the Dailies toolbar's panel sits from the screen's bottom edge: the dock's
+    /// gap (`dockInset`). A phone without a home indicator, whose dock is not inset, keeps 8pt.
     static func toolbarBottomGap(homeIndicatorInset: CGFloat) -> CGFloat {
-        homeIndicatorInset > 0 ? max(8, homeIndicatorInset - 6) : 8
+        homeIndicatorInset > 0 ? dockInset : 8
     }
     /// Gap between the brand mark (`IntroBrandMark`) and the hero line on the
     /// intro surfaces — onboarding steps AND the app-entry LockView reference this

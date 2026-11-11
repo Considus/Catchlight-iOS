@@ -96,15 +96,13 @@ struct StoryboardView: View {
 
     /// Card-column geometry, matched to Dailies (owner 2026-06-19) so the Storyboard
     /// cards — and the heading above them — sit in the SAME column as the timeline.
-    /// Dailies insets each row leading by `addColumnX − cardLeadingOffset` and trailing by
-    /// 20 (DailiesView), and the card's own `cardTextLeadingPad` then lands the text
+    /// Dailies insets each row by `cardMargin` on both sides (DailiesView), and the card's own `cardTextLeadingPad` then lands the text
     /// at the heading's column. Full-screen, so the screen width is the container
     /// width (matches DailiesView's addColumnX fallback).
     private var cardLeading: CGFloat {
-        CatchlightLayout.addColumnX(containerWidth: UIScreen.main.bounds.width)
-            - CatchlightLayout.cardLeadingOffset
+        CatchlightLayout.cardMargin(addColumnX: CatchlightLayout.addColumnX(containerWidth: UIScreen.main.bounds.width))
     }
-    private let cardTrailing: CGFloat = 20
+    private var cardTrailing: CGFloat { cardLeading }
 
     // MARK: - The planned Takes
 

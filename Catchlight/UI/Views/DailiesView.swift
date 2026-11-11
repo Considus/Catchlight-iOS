@@ -665,7 +665,7 @@ struct DailiesView: View {
                 Group {
                     if ui.toolbarMode == .resting {
                         // As drawn: "Dailies" on the left, today's date on the right.
-                        DailiesHeading()
+                        DailiesHeading(horizontalInset: CatchlightLayout.cardMargin(addColumnX: addColumnX))
                     } else {
                         // Shared page heading (Archivo expanded 24, kerned, centred,
                         // with the kerning-centring fix).
@@ -752,6 +752,19 @@ struct DailiesView: View {
                        ? deviceTopInset + headingClearance + max(0, pinnedObieZoneHeight - 12)
                        : nil,
                alignment: .top)
+        // Below the pinned Obie, the same fade as under the bottom toolbar, one card gap deep, so
+        // a Take scrolling up fades away as it reaches the Obie instead of showing its lower half
+        // sliced against it (owner 2026-11-11). It ends just above where the first Take rests,
+        // so a resting Take is untouched, and it takes no touches.
+        .overlay(alignment: .bottom) {
+            if vm.obie != nil && !ui.isEditingInPlace {
+                EdgeFade.gradient(solid: .top)
+                    .frame(height: cardGap)
+                    .offset(y: cardGap)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         .animation(.easeInOut(duration: 0.18), value: headingTitle)
         // The mask zone ABSORBS taps and reads as timeline background (owner 2026-07-16). It was
         // `.allowsHitTesting(false)`, so a tap here fell through to whatever Take had scrolled up
@@ -1445,8 +1458,8 @@ struct DailiesView: View {
                 }
             ),
             openRowID: $openSwipeRowID,
-            leadingInset: addColumnX - CatchlightLayout.cardLeadingOffset,
-            trailingInset: 20,
+            leadingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
+            trailingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
             contentVerticalInset: 6
         ) { swipeOffset in
             // BOTH margins live inside the content so the wrapper spans the full
@@ -1454,8 +1467,8 @@ struct DailiesView: View {
             // card's leading edge is `cardLeadingOffset` left of `addColumnX`. `swipeOffset`
             // slides the card and the Iris inside it.
             rowContent(for: take, cardSwipeOffset: swipeOffset)
-                .padding(.leading, addColumnX - CatchlightLayout.cardLeadingOffset)
-                .padding(.trailing, 20)
+                .padding(.leading, CatchlightLayout.cardMargin(addColumnX: addColumnX))
+                .padding(.trailing, CatchlightLayout.cardMargin(addColumnX: addColumnX))
         }
         // Edit-in-place (owner 2026-06-17): mask every row except the one under
         // focus — the "Iris-touch focus" applied to editing. The timeline still

@@ -59,16 +59,16 @@ struct DailiesToolbar: View {
             if ui.toolbarMode == .searching && ui.searchKeyboardUp {
                 // The search row rides the keyboard (KeyboardSearchBar). Draw nothing,
                 // so there is never a second `search-field` or `search-cancel`.
-                Color.clear.frame(height: DailiesToolbarMetrics.panelHeight)
+                Color.clear.frame(height: CatchlightLayout.dockHeight)
             } else {
                 panel
             }
         }
         .animation(.easeInOut(duration: 0.2), value: ui.toolbarMode)
-        .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
-        // Level with Apple's own bottom search bar, measured from the home-indicator inset
-        // alone, which never counts the keyboard, so the panel can't stop high while the
-        // search keyboard and its bar go away.
+        .padding(.horizontal, CatchlightLayout.dockInset)
+        // At the dock's place, measured from the home-indicator inset alone, which never
+        // counts the keyboard, so the panel can't stop high while the search keyboard and its
+        // bar go away.
         .padding(.bottom, CatchlightLayout.toolbarBottomGap(homeIndicatorInset: homeIndicatorInset))
         // The soft edge the Takes fade into behind and below the panel, as the old toolbar
         // had (owner 2026-11-10: "lost its fade and mask below the bottom menu"). It starts a
@@ -105,10 +105,8 @@ struct DailiesToolbar: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: DailiesToolbarMetrics.panelHeight)
-        .background(CatchlightShape.surface.fill(Color.ckPanel))
-        .overlay(CatchlightShape.surface.strokeBorder(Color.ckLine, lineWidth: 1).allowsHitTesting(false))
-        .contentShape(CatchlightShape.surface)
+        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.dockHeight)
+        .flatEdgePanel(fill: Color.ckPanel)
         // Settings: swipe up on the panel. The gesture belongs to the panel alone, so a
         // flick that starts in the home-indicator strip below it never reaches it
         // (owner 2026-06-23: home-swiping between captures latched Settings open).
@@ -134,7 +132,8 @@ struct DailiesToolbar: View {
                 // above the default, and a long press shows it large instead.
                 .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         }
-        .frame(maxWidth: .infinity, minHeight: DailiesToolbarMetrics.panelHeight)
+        // Each column fills the panel's full height, so a tap anywhere in it counts.
+        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.dockHeight)
         .contentShape(Rectangle())
         .accessibilityShowsLargeContentViewer {
             icon
@@ -398,8 +397,6 @@ struct DailiesToolbar: View {
 
 /// The toolbar's sizes, shared with the timeline's bottom clearance.
 enum DailiesToolbarMetrics {
-    /// The panel's height at the default text size.
-    static let panelHeight: CGFloat = 64
     /// The filled square behind Add's icon; every column's icon slot is this tall.
     static let addSquare: CGFloat = 34
     static let iconSize: CGFloat = 22

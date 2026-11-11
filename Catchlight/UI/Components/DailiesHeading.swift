@@ -15,8 +15,9 @@ struct DailiesHeading: View {
     static let titleSize: CGFloat = 28
     /// The date's point size at the default text size (the drawing's 12).
     static let dateSize: CGFloat = 12
-    /// In from each screen edge: the cards' 16 plus the drawing's 4.
-    static let horizontalInset: CGFloat = 20
+    /// In from each screen edge: the Take cards' margin (`CatchlightLayout.cardMargin`), so the
+    /// title and the date line up with the cards' edges below (art director 2026-11-11).
+    var horizontalInset: CGFloat
 
     /// "Monday 9 November" in English; each language's own order and words elsewhere.
     static func dateText(for date: Date, locale: Locale = .current) -> String {
@@ -38,7 +39,7 @@ struct DailiesHeading: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Self.horizontalInset)
+            .padding(.horizontal, horizontalInset)
             // The heading stops growing at the first accessibility size, so at the largest
             // sizes it doesn't take the room a Take being edited needs.
             .dynamicTypeSize(...DynamicTypeSize.accessibility1)
@@ -70,8 +71,8 @@ struct DailiesHeading: View {
 
 #Preview("Dailies heading") {
     VStack(spacing: 24) {
-        DailiesHeading()
-        DailiesHeading().environment(\.dynamicTypeSize, .accessibility5)
+        DailiesHeading(horizontalInset: 25)
+        DailiesHeading(horizontalInset: 25).environment(\.dynamicTypeSize, .accessibility5)
     }
     .background(Color.ckBackground)
 }

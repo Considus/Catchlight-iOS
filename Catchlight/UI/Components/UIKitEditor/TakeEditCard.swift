@@ -254,7 +254,8 @@ struct KeyboardTakeEditor: View {
     var leadingInset: CGFloat
     /// Passed through to the card's `BlockEditor` (audit 2026-08, V31).
     var axHidden: Bool = false
-    var trailingInset: CGFloat = 20
+    /// The card's right margin. Nil matches the left (`leadingInset`), as every Take card does.
+    var trailingInset: CGFloat? = nil
 
     var onOpenAngle: (() -> Void)? = nil
     var onEditReminder: (() -> Void)? = nil
@@ -381,7 +382,7 @@ struct KeyboardTakeEditor: View {
                 hidesStamp: hidesStampForRoom
             )
             .padding(.leading, leadingInset)
-            .padding(.trailing, trailingInset)
+            .padding(.trailing, trailingInset ?? leadingInset)
         }
         .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY) + bottomLift)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
