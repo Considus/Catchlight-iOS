@@ -878,7 +878,7 @@ private struct RevealStep: View {
                     // IntroChapterScaffold screens).
                     HeroGap()
 
-                    VStack(spacing: 20) {
+                    VStack(spacing: 12) {
                         Text("Your Privacy phrase")
                             .stepHeading()
                             .foregroundStyle(Color.ckTextPrimary)
@@ -1072,6 +1072,12 @@ private struct ConfirmStep: View {
                             .ckBody(.light, size: 16, relativeTo: .body)
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
+                            // Up to Large the prompt keeps to one line: it wraps only when two of
+                            // the three numbers have two digits on a phone under 402pt wide, and the
+                            // second line pushed the word bank under the bottom buttons. It shrinks
+                            // only as far as it must. Above Large it wraps and grows as before.
+                            .lineLimit(dynamicSize > .large ? nil : 1)
+                            .minimumScaleFactor(dynamicSize > .large ? 1 : 0.92)
                             .fixedSize(horizontal: false, vertical: true)
 
                         // Slots + bank read as one block: the gap between the to-fill
