@@ -287,6 +287,7 @@ struct KeyboardTakeEditor: View {
     var onTapIris: ((CGRect) -> Void)? = nil
 
     @Environment(\.deviceTopInset) private var deviceTopInset
+    @Environment(\.homeIndicatorInset) private var homeIndicatorInset
     /// Measured, so the grow-up cap tracks a heading that has grown with the text size.
     @Environment(\.headingClearance) private var headingClearance
 
@@ -319,6 +320,16 @@ struct KeyboardTakeEditor: View {
     @State private var keyboardTopY: CGFloat = .greatestFiniteMagnitude
     /// A keyboard hide that arrived while `holdsPlace`, applied when the hold ends.
     @State private var heldKeyboardTopY: CGFloat?
+    /// While a keyboard hide is held back the keyboard is really gone, and this view's bottom edge
+    /// moves down by the home-indicator inset: measured 2026-11-11 on an iPhone 17, the card's Iris
+    /// dropped from 392 to 426 with the hide held, and to 460 when this inset was taken off the
+    /// padding instead of added. Adding it keeps the card where it was. A fixed inset, not a
+    /// measurement of the card: measuring the card's own frame and feeding it back into its
+    /// offset hung the app.
+    private var heldHideShift: CGFloat {
+        heldKeyboardTopY == nil ? 0 : homeIndicatorInset
+    }
+
     /// The card's last reported RAW content height — drives the bottom drop.
     @State private var editorContentHeight: CGFloat = 30
 
@@ -415,7 +426,7 @@ struct KeyboardTakeEditor: View {
             .padding(.leading, leadingInset)
             .padding(.trailing, trailingInset ?? leadingInset)
         }
-        .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY) + bottomLift)
+        .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY) + bottomLift + heldHideShift)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .transition(.opacity)
