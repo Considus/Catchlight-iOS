@@ -1024,8 +1024,10 @@ enum CatchlightLayout {
     /// The distance from the dock's first column centre (`addColumnX`) to the Take card's
     /// leading edge: the card starts at `addColumnX − cardLeadingOffset`. The timeline line
     /// that once ran down `addColumnX` is gone (owner 2026-11-09); the Add button still sits
-    /// there, and the Iris under it.
-    static let cardLeadingOffset: CGFloat = 38
+    /// there, and the Iris under it: the Iris's centre is `irisInset + circleDiameter / 2` in
+    /// from the card's edge, so that is the offset. It was a separate 38, 2pt more than where the
+    /// Iris is drawn, which left every Iris 2pt left of Add (measured 61 against 63, 2026-11-11).
+    static let cardLeadingOffset: CGFloat = irisInset + circleDiameter / 2
     /// A Take card's margin from the screen on EACH side: the leading edge that keeps the Iris
     /// under Add, mirrored on the trailing side so the two margins match (art director
     /// 2026-11-11, once the toolbar moved to the dock's inset). About 25pt on a 402pt phone.
