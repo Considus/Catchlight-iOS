@@ -266,25 +266,29 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
             .environment(\.onColourField, onField)
             .lightStatusBar(onField)
         } else {
-            // The content is an overlay, so it never sizes the step. Sized by its content, a step
+            // A zero minimum height, so the content never sizes the step. Sized by its content, a step
             // that stood taller than the room (the points page, Welcome) pushed the bottom
             // buttons off their place by as much as it overflowed, a different amount on each
             // step. Measured: the same button's top edge sat at 734, 744, 754 and 772 on four steps.
-            Color.clear
-                .overlay(alignment: .top) {
-                    content()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.horizontal, stepContentInset)
-                }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ZStack {
+                content()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, stepContentInset)
+            }
+            .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
             .background((onField ? Color.ckField : Color.ckBackground).ignoresSafeArea())
             .safeAreaInset(edge: .bottom) {
                 // Background = the dock's soft edge (owner 2026-06-12, HiFi v1.11.5):
                 // scrolling content fades out beneath the button zone instead of
-                // meeting a hard edge.
-                bottom()
-                    .frame(maxWidth: .infinity)
-                    .dockFadeBackground()
+                // meeting a hard edge. A step with no buttons (Storage) has no row and no
+                // fade: with the content no longer sizing the step, the fade of an empty row
+                // covered the whole step (measured: its heading drawn at an eighth of its
+                // brightness, and the cards could not be seen).
+                if Bottom.self != EmptyView.self {
+                    bottom()
+                        .frame(maxWidth: .infinity)
+                        .dockFadeBackground()
+                }
             }
             // After the inset, so the bottom bar reads it too.
             .environment(\.onColourField, onField)
