@@ -665,7 +665,7 @@ struct DailiesView: View {
                 Group {
                     if ui.toolbarMode == .resting {
                         // As drawn: "Dailies" on the left, today's date on the right.
-                        DailiesHeading()
+                        DailiesHeading(horizontalInset: CatchlightLayout.cardMargin(addColumnX: addColumnX))
                     } else {
                         // Shared page heading (Archivo expanded 24, kerned, centred,
                         // with the kerning-centring fix).
