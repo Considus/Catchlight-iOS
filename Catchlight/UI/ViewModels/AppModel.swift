@@ -730,7 +730,7 @@ final class AppModel {
     /// So a failure is re-checked after each of `retryDelays`, and only one that is still there
     /// at the end is reported. A cancelled check (the app came to the front again) reports nothing.
     func verifyCloudFolder(
-        check: () -> Wiring.CloudBookmarkError? = Wiring.checkCloudBookmarkHealth,
+        check: () -> Wiring.CloudBookmarkError? = { Wiring.checkCloudBookmarkHealth() },
         retryDelays: [Duration] = AppModel.cloudFolderRetryDelays,
         sleep: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
     ) async {

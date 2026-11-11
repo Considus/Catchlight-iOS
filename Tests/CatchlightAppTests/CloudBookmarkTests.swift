@@ -99,6 +99,37 @@ final class CloudBookmarkTests: XCTestCase {
         XCTAssertNil(Wiring.checkCloudBookmarkHealth())
     }
 
+    /// A failed resolve leaves its system error in the log (domain and code only: no path).
+    func testCheckCloudBookmarkHealth_failure_logsTheSystemError() throws {
+        let defaults = UserDefaults(suiteName: AppGroup.identifier)
+        defer { defaults?.removeObject(forKey: Wiring.bookmarkDefaultsKey) }
+        defaults?.set(Data("garbage".utf8), forKey: Wiring.bookmarkDefaultsKey)
+        let log = DiagnosticsLog(fileURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("bookmark-check-\(UUID().uuidString).json"))
+
+        XCTAssertEqual(Wiring.checkCloudBookmarkHealth(log: log), .unresolvable)
+
+        let lines = log.entries().map(\.message)
+        XCTAssertEqual(lines.count, 1)
+        let line = try XCTUnwrap(lines.first)
+        XCTAssertTrue(line.hasPrefix("[CCIOS-926] Cloud folder bookmark didn't resolve (NSCocoaErrorDomain "),
+                      "Got: \(line)")
+        XCTAssertFalse(line.contains(tempFolder.path))
+    }
+
+    func testCheckCloudBookmarkHealth_success_logsNothing() throws {
+        let defaults = UserDefaults(suiteName: AppGroup.identifier)
+        defer { defaults?.removeObject(forKey: Wiring.bookmarkDefaultsKey) }
+        defaults?.set(try tempFolder.bookmarkData(options: [], includingResourceValuesForKeys: nil,
+                                                  relativeTo: nil),
+                      forKey: Wiring.bookmarkDefaultsKey)
+        let log = DiagnosticsLog(fileURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("bookmark-check-\(UUID().uuidString).json"))
+
+        XCTAssertNil(Wiring.checkCloudBookmarkHealth(log: log))
+        XCTAssertEqual(log.entries().count, 0)
+    }
+
     // MARK: - Clear
 
     func testClearCloudFolderBookmark_removesPersistedData() throws {
