@@ -42,7 +42,7 @@ struct TakeCardStyle {
     /// border). The invisible note border reserves this same width so all cards stay
     /// one size.
     static let borderWidth: CGFloat = 0.75
-    /// Every Take card's corner radius (redesign: 16 for cards and panels), read by each
+    /// Every Take card's corner radius (redesign: the one shared radius), read by each
     /// shape that has to sit exactly on a card: its surface, border, tap area and flash.
     static let cornerRadius: CGFloat = CatchlightLayout.surfaceRadius
 

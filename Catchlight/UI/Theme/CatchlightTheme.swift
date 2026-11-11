@@ -419,9 +419,10 @@ enum Quadrant {
 
 // MARK: - Flat shapes (redesign)
 //
-// Every surface the app draws is flat: no shadows, gradients or raised materials. Buttons
-// and toggles are rounded rectangles at `CatchlightLayout.controlRadius`, and fields, panels
-// and cards are rounded rectangles at `CatchlightLayout.surfaceRadius`. Never a pill.
+// Every surface the app draws is flat: no shadows, gradients or raised materials. Buttons,
+// toggles, fields, panels and cards are rounded rectangles at the one radius, 14 (`controlRadius`
+// and `surfaceRadius` name it for the two kinds). An item under 42pt tall takes a third of its
+// height instead, so nothing is a pill.
 
 /// A continuous rounded rectangle whose corner reads its own height: the shared radius, or a
 /// third of the height for an item too short to carry it. Insetting (a border, a part inside)
@@ -1072,10 +1073,13 @@ enum CatchlightLayout {
     /// (Search/sequence results reuse the timeline row; the edit footer, conflict
     /// view, and Focus row pass their own explicit diameters and are unaffected.)
     static let circleDiameter: CGFloat = 44
-    /// Corner radius of a button or toggle. Never a pill.
-    static let controlRadius: CGFloat = 10
-    /// Corner radius of a field, panel, card or sheet.
-    static let surfaceRadius: CGFloat = 16
+    /// The one corner radius of the app (owner 2026-11-10: 14 for everything). Every box and
+    /// control reads it, through `CatchlightShape` or the two names below.
+    static let radius: CGFloat = 14
+    /// Corner radius of a button or toggle. Never a pill. The same value as a box.
+    static let controlRadius: CGFloat = radius
+    /// Corner radius of a field, panel, card or sheet. The same value as a control.
+    static let surfaceRadius: CGFloat = radius
     /// The radius for an item of this height: the control radius, or a third of the height,
     /// rounded to the nearest point, when the item is too short to carry it.
     static func cappedRadius(forHeight height: CGFloat) -> CGFloat {

@@ -235,8 +235,8 @@ struct FocusRowView: View {
 
     /// Each mark's side: a full touch target, never shrunk to fit.
     static let markSize: CGFloat = 44
-    /// Buttons take radius 10 in the redesign, never circles or pills.
-    static let markCornerRadius: CGFloat = 10
+    /// The marks are controls: the shared control radius, never circles or pills.
+    static let markCornerRadius: CGFloat = CatchlightLayout.cappedRadius(forHeight: markSize)
     /// Centre-to-centre spacing on a screen with room for it: a 16pt gap between 44pt marks.
     static let markSpacing: CGFloat = markSize + 16
     /// The least room kept between the last mark and the screen's trailing edge.
