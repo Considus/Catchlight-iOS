@@ -757,18 +757,23 @@ struct DailiesView: View {
         // Obie card's bottom edge, so a Take scrolling up fades away as it reaches the Obie
         // instead of showing its lower half sliced against it. It was the toolbar's fade, a card
         // gap deep, which read as harsh and too low (owner 2026-11-11). The mask stops
-        // `obieMaskLift` above the card's bottom edge: the page colour carries on behind the card
-        // to its bottom edge, so nothing shows past its rounded corners, and the fade starts
-        // there. It never reaches a resting Take: at the compact spacing the gap is 10, so it
+        // `obieMaskLift` above the Obie zone's bottom edge: the page colour carries on behind the
+        // card to the card's own bottom edge, so nothing shows past its rounded corners, and the
+        // fade starts there. It never reaches a resting Take: at the compact spacing the gap is 10, so it
         // stops there. It takes no touches.
         .overlay(alignment: .bottom) {
             if vm.obie != nil && !ui.isEditingInPlace {
+                // The measured Obie zone includes the row's own space below its card, so the card's
+                // bottom edge is `rowVerticalInset` above the zone's. The page colour runs to that
+                // edge exactly and the fade starts there. Running it to the zone's edge drew a hard
+                // line 6pt below the card once the fade was light (measured 2026-11-11).
+                let solid = Self.obieMaskLift - Self.rowVerticalInset
                 let depth = min(Self.obieFadeHeight, cardGap)
                 VStack(spacing: 0) {
-                    Color.ckBackground.frame(height: Self.obieMaskLift)
+                    Color.ckBackground.frame(height: solid)
                     Self.obieFade(height: depth)
                 }
-                    .offset(y: Self.obieMaskLift + depth)
+                    .offset(y: solid + depth)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
@@ -1411,6 +1416,9 @@ struct DailiesView: View {
     /// How far above the pinned Obie card's bottom edge the solid mask stops (see the mask's
     /// frame), so its rounded corners are always covered.
     static let obieMaskLift: CGFloat = 12
+    /// The space a timeline row keeps above and below its card (`SwipeActionRow`'s
+    /// `contentVerticalInset`).
+    static let rowVerticalInset: CGFloat = 6
 
     private func timelineBackgroundTap() {
         if ui.isEditingInPlace { saveInlineEdit(); return }
@@ -1507,7 +1515,7 @@ struct DailiesView: View {
             openRowID: $openSwipeRowID,
             leadingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
             trailingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
-            contentVerticalInset: 6
+            contentVerticalInset: Self.rowVerticalInset
         ) { swipeOffset in
             // BOTH margins live inside the content so the wrapper spans the full
             // screen width — letting each action fill reach its screen edge. The
