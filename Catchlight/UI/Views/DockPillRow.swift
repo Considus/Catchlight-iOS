@@ -2,8 +2,8 @@
 //  DockPillRow.swift
 //  Catchlight (iOS app target)
 //
-//  The bottom buttons of onboarding, the lock screen and the Settings screens that use them
-//  take the Dailies toolbar's place and size (owner 2026-11-11: "make them all match the size
+//  The bottom buttons of every screen that puts them in this row take the Dailies toolbar's place
+//  and size (owner 2026-11-11: "make them all match the size
 //  and shape of the new dailies menu"): in from each side by `dockInset`, up from the bottom
 //  by the dock's gap, `dockHeight` tall, and corners that follow the screen's curve where
 //  they reach the bottom edge (`CatchlightShape.edgeSurface`, never under the surface radius).
