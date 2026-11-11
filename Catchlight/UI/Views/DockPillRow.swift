@@ -67,6 +67,20 @@ struct DockPill: View {
     }
 }
 
+/// The one fade scrolling content goes into at a screen edge: under the bottom toolbar and
+/// pill rows, and under the pinned Obie at the top (owner 2026-11-11: both edges alike). Clear
+/// at the open side, 85% page colour at 28% of the way, solid from 55%.
+enum EdgeFade {
+    /// `solid` is the side the content goes under.
+    static func gradient(solid: VerticalEdge) -> LinearGradient {
+        LinearGradient(stops: [
+            .init(color: Color.ckBackground.opacity(0), location: 0),
+            .init(color: Color.ckBackground.opacity(0.85), location: 0.28),
+            .init(color: Color.ckBackground, location: 0.55)
+        ], startPoint: solid == .bottom ? .top : .bottom, endPoint: solid == .bottom ? .bottom : .top)
+    }
+}
+
 extension View {
     /// The dock's soft bottom edge behind a pill row (HiFi v1.11.5, owner
     /// 2026-06-12): scrolling content fades out beneath the button zone
@@ -75,13 +89,9 @@ extension View {
     /// taps (the Dailies toolbar, whose fade reaches above the panel over the Takes).
     func dockFadeBackground(passesTouches: Bool = false) -> some View {
         background(
-            LinearGradient(stops: [
-                .init(color: Color.ckBackground.opacity(0), location: 0),
-                .init(color: Color.ckBackground.opacity(0.85), location: 0.28),
-                .init(color: Color.ckBackground, location: 0.55)
-            ], startPoint: .top, endPoint: .bottom)
-            .ignoresSafeArea(edges: .bottom)
-            .allowsHitTesting(!passesTouches)
+            EdgeFade.gradient(solid: .bottom)
+                .ignoresSafeArea(edges: .bottom)
+                .allowsHitTesting(!passesTouches)
         )
     }
 }

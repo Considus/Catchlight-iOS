@@ -752,6 +752,19 @@ struct DailiesView: View {
                        ? deviceTopInset + headingClearance + max(0, pinnedObieZoneHeight - 12)
                        : nil,
                alignment: .top)
+        // Below the pinned Obie, the same fade as under the bottom toolbar, one card gap deep, so
+        // a Take scrolling up fades away as it reaches the Obie instead of showing its lower half
+        // sliced against it (owner 2026-11-11). It ends just above where the first Take rests,
+        // so a resting Take is untouched, and it takes no touches.
+        .overlay(alignment: .bottom) {
+            if vm.obie != nil && !ui.isEditingInPlace {
+                EdgeFade.gradient(solid: .top)
+                    .frame(height: cardGap)
+                    .offset(y: cardGap)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         .animation(.easeInOut(duration: 0.18), value: headingTitle)
         // The mask zone ABSORBS taps and reads as timeline background (owner 2026-07-16). It was
         // `.allowsHitTesting(false)`, so a tap here fell through to whatever Take had scrolled up
