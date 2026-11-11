@@ -119,10 +119,23 @@ final class FocusRowLayoutUITests: XCTestCase {
         }
         sleep(1)
         var iris = irisAcrossTheFade()
-        for _ in 0..<20 where iris == nil {
+        // Aim an Iris's centre at the tap line. A drag scrolls the list by less than
+        // its length, by the scroll gesture's starting slop, which differs between iOS versions:
+        // a fixed small nudge scrolled 5pt a time on iOS 27 and, on CI's iOS 18.5, never got
+        // there. So each drag adds the slop, and the slop grows when a drag moves nothing.
+        var slop: CGFloat = 10
+        for attempt in 0..<10 where iris == nil {
+            let before = (0..<irises.count).map { irises.element(boundBy: $0).frame.midY }
+            // The list rests at its top and can't move down, so aim the nearest Iris BELOW the
+            // line and move the list up.
+            guard let nearest = before.filter({ $0 > tapY }).min() else { break }
+            let drag = nearest - tapY + slop
+            print("[iris-in-fade] try \(attempt): tapY \(tapY) nearest Iris centre \(nearest) drag \(drag)")
             let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -15)),
+            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -drag)),
                         withVelocity: .slow, thenHoldForDuration: 0.5)
+            let after = (0..<irises.count).map { irises.element(boundBy: $0).frame.midY }
+            if Set(before.map { Int($0) }) == Set(after.map { Int($0) }) { slop += 10 }
             iris = irisAcrossTheFade()
         }
         let hub = try XCTUnwrap(iris, "No Iris lies across the fade above the toolbar")
