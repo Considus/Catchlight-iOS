@@ -5,9 +5,9 @@
 //  When each part of the Focus row's open happens. Every mark takes the same L-shaped path:
 //  straight down, then straight right, never both at once (Art Director's rule, 2026-11-11,
 //  after Mark saw the far mark cut across the card). All four drop together over 220ms on an
-//  ease-out, then all four slide right together at one speed, set so the farthest mark's slide
-//  takes 560ms; each eases out only over its own last stretch. The close plays the whole open
-//  backwards 1.25 times faster.
+//  ease-out, then all four leave together at one speed on the same overshoot-and-settle curve
+//  (sideways only), the farthest taking 560ms. The close plays the whole open backwards 1.25 times
+//  faster, except the slide left eases in with no settle.
 //
 
 import XCTest
@@ -39,16 +39,18 @@ final class FocusRowTimingTests: XCTestCase {
     }
 
     /// The rule Mark asked for: no mark ever moves down and across at the same moment, on the
-    /// open or (since it is the open backwards) on the close.
+    /// open (settle included: it is sideways only) or on the close.
     func testNoMarkMovesOnBothAxesAtOnce() {
         let end = T.openDuration(slots: slots)
         for kind in FocusRowView.MarkKind.allCases {
             var t = 0.0
             while t <= end {
                 let drop = T.dropProgress(at: t)
-                let spread = T.spreadProgress(kind, at: t, slots: slots)
-                XCTAssertFalse(drop < 1 && spread > 0,
-                               "\(kind) slides while still dropping at \(t)s (drop \(drop), slide \(spread))")
+                for (name, spread) in [("open", T.spreadProgress(kind, at: t, slots: slots)),
+                                       ("close", T.closingSpreadProgress(kind, at: t, slots: slots))] {
+                    XCTAssertFalse(drop < 1 && spread != 0,
+                                   "\(kind) moves across while still dropping on the \(name) at \(t)s (drop \(drop), slide \(spread))")
+                }
                 t += 0.005
             }
         }
@@ -63,33 +65,56 @@ final class FocusRowTimingTests: XCTestCase {
         }
     }
 
-    /// The same speed for every mark while they slide together: after 50ms of sliding each has
-    /// travelled the same number of points.
-    func testMarksSlideTogether_atOneSpeed() {
-        let t = T.drop + 0.050
+    /// Every mark leaves at the same speed: in the first half millisecond of the slide each covers
+    /// the same number of points (within 1%).
+    func testMarksLeaveTogether_atOneSpeed() {
+        let t = T.drop + 0.0005
         let travelled = FocusRowView.MarkKind.allCases.map {
             T.spreadProgress($0, at: t, slots: slots) * Double(slots[$0.rawValue])
         }
         for points in travelled {
-            XCTAssertEqual(points, travelled[0], accuracy: 1e-6)
+            XCTAssertEqual(points, travelled[0], accuracy: travelled[0] * 0.01)
         }
     }
 
-    /// Note stops first and Important last, and none overshoots its slot.
-    func testNearMarksStopFirst_withNoOvershoot() {
-        let ends = FocusRowView.MarkKind.allCases.map { kind -> Double in
+    /// Each mark settles: past its slot by the same share of its travel (about 4.9%: Important
+    /// about 11.7pt, Note 2.9), then back, landing exactly in its slot.
+    func testEachMarkSettles_bySameShareOfItsTravel() {
+        for kind in FocusRowView.MarkKind.allCases {
+            let duration = T.spreadDuration(travel: slots[kind.rawValue], slots: slots)
+            var peak = 0.0
             var t = T.drop
-            while T.spreadProgress(kind, at: t, slots: slots) < 1 { t += 0.001 }
-            return t
+            while t <= T.drop + duration {
+                peak = max(peak, T.spreadProgress(kind, at: t, slots: slots))
+                t += 0.0005
+            }
+            XCTAssertEqual(peak, 1.0487, accuracy: 0.001, "\(kind) does not settle by the same share")
+            XCTAssertEqual(T.spreadProgress(kind, at: T.drop + duration, slots: slots), 1, accuracy: 1e-9)
         }
+        XCTAssertEqual(0.0487 * 240, 11.7, accuracy: 0.05)
+    }
+
+    /// Note settles first and Important last.
+    func testNearMarksLandFirst() {
+        let ends = FocusRowView.MarkKind.allCases.map { T.spreadDuration(travel: slots[$0.rawValue], slots: slots) }
         XCTAssertLessThan(ends[FocusRowView.MarkKind.note.rawValue], ends[FocusRowView.MarkKind.task.rawValue])
         XCTAssertLessThan(ends[FocusRowView.MarkKind.task.rawValue], ends[FocusRowView.MarkKind.remind.rawValue])
         XCTAssertLessThan(ends[FocusRowView.MarkKind.remind.rawValue], ends[FocusRowView.MarkKind.important.rawValue])
+    }
+
+    /// The close has no settle: each mark only ever moves left, never past its slot, and never
+    /// past the Iris.
+    func testClose_slidesLeftWithNoTwitchOrSettle() {
         for kind in FocusRowView.MarkKind.allCases {
-            var t = 0.0
-            while t <= 1 {
-                XCTAssertLessThanOrEqual(T.spreadProgress(kind, at: t, slots: slots), 1 + 1e-9)
-                t += 0.005
+            var elapsed = 0.0
+            var last = T.closingSpreadProgress(kind, at: T.closeTime(elapsed: 0, slots: slots), slots: slots)
+            XCTAssertEqual(last, 1, accuracy: 1e-9)
+            while elapsed <= T.closeDuration(slots: slots) {
+                let now = T.closingSpreadProgress(kind, at: T.closeTime(elapsed: elapsed, slots: slots), slots: slots)
+                XCTAssertLessThanOrEqual(now, last + 1e-12, "\(kind) moves right on the close at \(elapsed)s")
+                XCTAssertGreaterThanOrEqual(now, 0)
+                last = now
+                elapsed += 0.002
             }
         }
     }
@@ -97,7 +122,7 @@ final class FocusRowTimingTests: XCTestCase {
     /// The farthest mark's slide takes 560ms: 220 + 560 = 780ms for the whole open.
     func testOpen_takes780ms() {
         XCTAssertEqual(T.openDuration(slots: slots), 0.780, accuracy: 1e-9)
-        XCTAssertLessThan(T.spreadProgress(.important, at: 0.779, slots: slots), 1)
+        XCTAssertNotEqual(T.spreadProgress(.important, at: 0.779, slots: slots), 1, accuracy: 1e-6)
         XCTAssertEqual(T.spreadProgress(.important, at: 0.780, slots: slots), 1, accuracy: 1e-9)
     }
 

@@ -19,9 +19,10 @@
 //  Director 2026-11-11, after Mark saw the far mark cut across the card). The marks start
 //  stacked under the Iris at 85% size, invisible. All four drop straight down together to the
 //  card's grown bottom edge over 220ms on an ease-out, while the card grows on the same curve,
-//  fading in over its first 80ms. Then all four slide right together at one speed, set so the
-//  farthest takes 560ms, each easing out over its last 24pt, so Note stops first and Important
-//  last: 780ms in all. Closing plays the whole open backwards, 1.25 times faster: left, then up.
+//  fading in over its first 80ms. Then all four leave together at one speed, sliding right on
+//  the same small overshoot-and-settle curve, sideways only, the farthest taking 560ms, so Note
+//  settles first and Important last: 780ms in all. Closing plays the whole open backwards, 1.25
+//  times faster, left then up, except that the slide left eases in with no settle.
 //  Reduce Motion and UI tests skip straight to the end state.
 //
 //  STYLE: an off mark is a ground-coloured square with a half-strength lit border and a
@@ -302,30 +303,21 @@ struct FocusRowView: View {
         /// The close plays the open backwards this much faster.
         static let closeSpeed: Double = 1.25
 
-        /// The farthest mark's slide, start to stop. It sets the one speed all four slide at.
+        /// The farthest mark's slide, start to settled. The others take less in proportion to
+        /// their travel, so all four leave at the same speed.
         static let farSlide: Double = 0.560
-        /// Each mark slides at the shared speed until this far from its slot, then eases out
-        /// over it to a stop, with no overshoot.
-        static let settle: CGFloat = 24
 
-        /// The speed all four marks slide at, in points a second: the farthest mark covers its
-        /// travel in `farSlide`, its last `settle` points easing out.
-        static func slideSpeed(slots: [CGFloat]) -> Double {
+        /// How long a mark takes to slide `travel` points, when the farthest of `slots` takes
+        /// `farSlide`.
+        static func spreadDuration(travel: CGFloat, slots: [CGFloat]) -> Double {
             let far = slots.map { abs($0) }.max() ?? 0
-            return Double(far + min(settle, far)) / farSlide
-        }
-        /// How long a mark slides `travel` points at `speed`: the even stretch, then the
-        /// ease-out over the last `settle` points, which takes twice as long as at full speed.
-        static func spreadDuration(travel: CGFloat, speed: Double) -> Double {
-            let d = Double(abs(travel))
-            guard d > 0, speed > 0 else { return 0 }
-            return (d + Double(min(settle, abs(travel)))) / speed
+            guard far > 0 else { return 0 }
+            return farSlide * Double(abs(travel) / far)
         }
         /// When the open ends: the farthest mark stops. `slots` are the marks' x offsets from the
         /// Iris centre, in `MarkKind` order.
         static func openDuration(slots: [CGFloat]) -> Double {
-            let speed = slideSpeed(slots: slots)
-            return drop + (slots.map { spreadDuration(travel: $0, speed: speed) }.max() ?? 0)
+            drop + (slots.map { spreadDuration(travel: $0, slots: slots) }.max() ?? 0)
         }
         static func closeDuration(slots: [CGFloat]) -> Double { openDuration(slots: slots) / closeSpeed }
         /// The point of the open every mark shows `elapsed` seconds into the close: the whole
@@ -345,21 +337,33 @@ struct FocusRowView: View {
         /// The drop's ease-out (cubic). The timeline's cards below the grown one move on it too.
         static func dropCurve(_ p: Double) -> Double { 1 - pow(1 - p, 3) }
 
-        /// How far a mark has slid to its slot at time t of the open (0 to 1). Every mark waits
-        /// for the drop to end, so none moves down and across at once; then all four slide
-        /// together at one speed, and each eases out over its own last `settle` points, so the
-        /// nearest stops first and the farthest last.
+        /// How far a mark has slid to its slot at time t of the open (0 to 1, settling a little
+        /// past 1 and back). Every mark waits for the drop to end, so none moves down and across at
+        /// once, and the settle is sideways only. Then all four leave together at one speed, each
+        /// on the same overshoot curve over its own slide, so the nearest settles first and the
+        /// farthest last (Mark kept the settle, 2026-11-11).
         static func spreadProgress(_ kind: MarkKind, at t: Double, slots: [CGFloat]) -> Double {
-            let d = Double(abs(slots[kind.rawValue]))
-            let elapsed = t - drop
-            guard d > 0, elapsed > 0 else { return 0 }
-            let v = slideSpeed(slots: slots)
-            let ease = Double(min(settle, abs(slots[kind.rawValue])))
-            let even = d - ease
-            if v * elapsed <= even { return v * elapsed / d }
-            // Over the last stretch the speed falls evenly from v to 0, which takes 2·ease/v.
-            let u = min((elapsed - even / v) / (2 * ease / v), 1)
-            return (even + ease * (1 - (1 - u) * (1 - u))) / d
+            let duration = spreadDuration(travel: slots[kind.rawValue], slots: slots)
+            guard duration > 0, t > drop else { return 0 }
+            return easeOutBack(clamp((t - drop) / duration))
+        }
+
+        /// How far a mark has slid at time t of the open, as the CLOSE shows it. The close plays
+        /// the open backwards except for the settle: reversed, it would twitch right before
+        /// heading left. So each mark eases in on its slide left, with no settle under the Iris
+        /// (Art Director, 2026-11-11).
+        static func closingSpreadProgress(_ kind: MarkKind, at t: Double, slots: [CGFloat]) -> Double {
+            let duration = spreadDuration(travel: slots[kind.rawValue], slots: slots)
+            guard duration > 0, t > drop else { return 0 }
+            let u = clamp((t - drop) / duration)
+            return 1 - pow(1 - u, 3)
+        }
+
+        /// The settle: past the slot by about 4.9% of the travel, a third of the way in, then
+        /// back. The curve the slides had before the one-axis path.
+        static func easeOutBack(_ p: Double) -> Double {
+            let s = 1.15
+            return 1 + (s + 1) * pow(p - 1, 3) + s * pow(p - 1, 2)
         }
 
         private static func clamp(_ x: Double) -> Double { min(max(x, 0), 1) }
@@ -391,9 +395,11 @@ struct FocusRowView: View {
         static let hidden = MarkProgress(rise: 0, spread: 0, opacity: 0, scale: Timing.startScale)
     }
 
-    private func openProgress(_ kind: MarkKind, at t: Double) -> MarkProgress {
+    private func openProgress(_ kind: MarkKind, at t: Double, closing: Bool = false) -> MarkProgress {
         MarkProgress(rise: Timing.dropProgress(at: t),
-                     spread: Timing.spreadProgress(kind, at: t, slots: slots),
+                     spread: closing
+                        ? Timing.closingSpreadProgress(kind, at: t, slots: slots)
+                        : Timing.spreadProgress(kind, at: t, slots: slots),
                      opacity: Timing.markOpacity(at: t),
                      scale: Timing.markScale(at: t))
     }
@@ -407,7 +413,7 @@ struct FocusRowView: View {
             return .rest
         case .closing(let start, _):
             let elapsed = now.timeIntervalSince(start) / Self.timeScale
-            return openProgress(kind, at: Timing.closeTime(elapsed: elapsed, slots: slots))
+            return openProgress(kind, at: Timing.closeTime(elapsed: elapsed, slots: slots), closing: true)
         case .dismissed:
             return .hidden
         }
