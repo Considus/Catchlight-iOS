@@ -132,7 +132,8 @@ struct DailiesToolbar: View {
                 // above the default, and a long press shows it large instead.
                 .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         }
-        .frame(maxWidth: .infinity, minHeight: DailiesToolbarMetrics.panelHeight)
+        // Each column fills the panel's full height, so a tap anywhere in it counts.
+        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.dockHeight)
         .contentShape(Rectangle())
         .accessibilityShowsLargeContentViewer {
             icon
@@ -396,8 +397,6 @@ struct DailiesToolbar: View {
 
 /// The toolbar's sizes, shared with the timeline's bottom clearance.
 enum DailiesToolbarMetrics {
-    /// The panel's height at the default text size.
-    static let panelHeight: CGFloat = 64
     /// The filled square behind Add's icon; every column's icon slot is this tall.
     static let addSquare: CGFloat = 34
     static let iconSize: CGFloat = 22
