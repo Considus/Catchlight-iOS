@@ -59,12 +59,25 @@ final class FocusRowLayoutUITests: XCTestCase {
         // the card, would cross the toolbar's top and still stay clear of the home bar.
         let homeBarTop = app.frame.maxY - 34
         let rows = app.descendants(matching: .any).matching(identifier: "take-row")
-        var card: CGRect?
-        for i in 0..<rows.count {
-            let f = rows.element(boundBy: i).frame
-            let irisBottom = f.minY + 36 + 22
-            if f.minY > 120, irisBottom < toolbarTop, f.maxY + 44 > toolbarTop,
-               f.maxY + 44 <= homeBarTop, f.maxY > (card?.maxY ?? 0) { card = f }
+        func nearTake() -> CGRect? {
+            var card: CGRect?
+            for i in 0..<rows.count {
+                let f = rows.element(boundBy: i).frame
+                let irisBottom = f.minY + 36 + 22
+                if f.minY > 120, irisBottom < toolbarTop, f.maxY + 44 > toolbarTop,
+                   f.maxY + 44 <= homeBarTop, f.maxY > (card?.maxY ?? 0) { card = f }
+            }
+            return card
+        }
+        // Where the list rests depends on the phone's height, so nudge it up a little at a
+        // time until a Take sits in that spot.
+        sleep(1)
+        var card = nearTake()
+        for _ in 0..<8 where card == nil {
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -25)),
+                        withVelocity: .slow, thenHoldForDuration: 0.5)
+            card = nearTake()
         }
         let cardFrame = try XCTUnwrap(card, "No Take has its Iris just above the toolbar")
         let irises = app.descendants(matching: .any).matching(identifier: "take-iris")
