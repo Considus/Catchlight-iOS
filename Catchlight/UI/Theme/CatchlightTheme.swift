@@ -1061,7 +1061,8 @@ enum CatchlightLayout {
     /// itself, and a literal 14 in two files would drift the moment either moved.
     /// Unchanged in value — this is the same 14 the card has always used.
     static let cardTextTrailingPad: CGFloat = 14
-    /// The side inset of the bars that ride the keyboard and of the pill-button row.
+    /// The side inset of the editor's keyboard bar and of the pill-button row. (The search row
+    /// that stands in for the Dailies toolbar uses the toolbar's `dockInset`.)
     static let toolbarHorizontalPadding: CGFloat = 12
     /// The Dailies toolbar sits where the Home Screen dock sits, at its size (owner
     /// 2026-11-11). Measured on the iPhone 17 simulator, iOS 27: the dock is 17pt from each
