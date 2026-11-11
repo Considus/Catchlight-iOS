@@ -802,7 +802,7 @@ private struct LocalWarningStep: View {
             DockPillRow {
                 DockPill(title: "I know the risk") { vm.continueLocally() }
             } trailing: {
-                DockPill(title: "Go back", secondary: true) { vm.backToStorageChoice() }
+                DockPill(title: "Back", secondary: true) { vm.backToStorageChoice() }
             }
         }
     }
