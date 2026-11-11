@@ -698,6 +698,11 @@ struct DailiesView: View {
                     .id(headingTitle)
                     .transition(.opacity)
             }
+            // Always the heading's own height. With an Obie pinned the frame below is a fixed
+            // height and the page colour under the title is flexible, so the title, which may
+            // shrink to fit, gave its height up to it and drew at about three quarters of its size (measured
+            // 2026-11-11: 73.7 against 99.7pt wide on an iPhone 17).
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.top, deviceTopInset + 14)
             .padding(.bottom, 2)
             .background(Color.ckBackground)
