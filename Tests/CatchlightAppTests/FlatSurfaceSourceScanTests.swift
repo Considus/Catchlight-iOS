@@ -57,7 +57,7 @@ final class FlatSurfaceSourceScanTests: XCTestCase {
     /// Constants a corner radius may be built from.
     private let radiusConstants = [
         "CatchlightLayout.controlRadius", "CatchlightLayout.surfaceRadius", "TakeCardStyle.cornerRadius",
-        "FlatToggleMetrics.knobRadius", "FlatSegmentedMetrics.selectedRadius",
+        "FlatToggleMetrics.knobRadius", "FlatSegmentedMetrics.selectedRadius", "CatchlightLayout.cappedRadius",
     ]
 
     private func matches(_ line: String, _ pattern: String) -> Bool {

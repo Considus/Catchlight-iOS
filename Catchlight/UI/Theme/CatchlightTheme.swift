@@ -423,11 +423,30 @@ enum Quadrant {
 // and toggles are rounded rectangles at `CatchlightLayout.controlRadius`, and fields, panels
 // and cards are rounded rectangles at `CatchlightLayout.surfaceRadius`. Never a pill.
 
+/// A continuous rounded rectangle whose corner reads its own height: the shared radius, or a
+/// third of the height for an item too short to carry it. Insetting (a border, a part inside)
+/// takes the inset off the radius, so the inner edge stays concentric with the outer one.
+struct CappedRoundedRectangle: InsettableShape {
+    var insetAmount: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        Path(roundedRect: rect.insetBy(dx: insetAmount, dy: insetAmount),
+             cornerRadius: max(0, CatchlightLayout.cappedRadius(forHeight: rect.height) - insetAmount),
+             style: .continuous)
+    }
+
+    func inset(by amount: CGFloat) -> CappedRoundedRectangle {
+        var shape = self
+        shape.insetAmount += amount
+        return shape
+    }
+}
+
 enum CatchlightShape {
     /// Buttons, toggles and the marks inside them.
-    static let control = RoundedRectangle(cornerRadius: CatchlightLayout.controlRadius, style: .continuous)
-    /// Fields, panels, cards and sheets.
-    static let surface = RoundedRectangle(cornerRadius: CatchlightLayout.surfaceRadius, style: .continuous)
+    static let control = CappedRoundedRectangle()
+    /// Fields, panels, cards and sheets. The same shape: the app has one corner radius.
+    static let surface = CappedRoundedRectangle()
     /// A surface that sits at a screen edge, as the Dailies toolbar sits where the Home Screen
     /// dock does. The corners nearest the screen's corners follow the screen's curve, as the
     /// dock's do, and the far corners keep the surface radius (owner 2026-11-11: "any element
@@ -503,7 +522,7 @@ enum FlatToggleMetrics {
     static let trackHeight: CGFloat = 28
     static let knobInset: CGFloat = 3
     static var knobSize: CGFloat { trackHeight - knobInset * 2 }
-    static var knobRadius: CGFloat { CatchlightLayout.controlRadius - knobInset }
+    static var knobRadius: CGFloat { CatchlightLayout.cappedRadius(forHeight: trackHeight) - knobInset }
     /// The tap target around the track: at least 44 by 44.
     static var tapTarget: CGSize {
         CGSize(width: max(trackWidth, CatchlightLayout.minTouchTarget),
@@ -665,7 +684,7 @@ private struct FlatToggleTrack: View {
 /// the container: its corner radius is the control radius less the inset.
 enum FlatSegmentedMetrics {
     static let inset: CGFloat = 3
-    static var selectedRadius: CGFloat { CatchlightLayout.controlRadius - inset }
+    static var selectedRadius: CGFloat { CatchlightLayout.cappedRadius(forHeight: segmentHeight) - inset }
     static let segmentHeight: CGFloat = CatchlightLayout.minTouchTarget
 }
 
@@ -1057,6 +1076,11 @@ enum CatchlightLayout {
     static let controlRadius: CGFloat = 10
     /// Corner radius of a field, panel, card or sheet.
     static let surfaceRadius: CGFloat = 16
+    /// The radius for an item of this height: the control radius, or a third of the height,
+    /// rounded to the nearest point, when the item is too short to carry it.
+    static func cappedRadius(forHeight height: CGFloat) -> CGFloat {
+        min(controlRadius, (height / 3).rounded())
+    }
     /// The distance from the dock's first column centre (`addColumnX`) to the Take card's
     /// leading edge: the card starts at `addColumnX − cardLeadingOffset`. The timeline line
     /// that once ran down `addColumnX` is gone (owner 2026-11-09); the Add button still sits
