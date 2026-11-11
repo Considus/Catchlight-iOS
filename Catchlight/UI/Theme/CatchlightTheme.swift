@@ -1022,10 +1022,16 @@ enum CatchlightLayout {
     /// Corner radius of a field, panel, card or sheet.
     static let surfaceRadius: CGFloat = 16
     /// The distance from the dock's first column centre (`addColumnX`) to the Take card's
-    /// leading edge: the card starts at `addColumnX − cardLeadingOffset`, about 20pt from
-    /// the screen edge, matching the 20pt trailing margin. The timeline line that once
-    /// ran down `addColumnX` is gone (owner 2026-11-09); the Add button still sits there.
+    /// leading edge: the card starts at `addColumnX − cardLeadingOffset`. The timeline line
+    /// that once ran down `addColumnX` is gone (owner 2026-11-09); the Add button still sits
+    /// there, and the Iris under it.
     static let cardLeadingOffset: CGFloat = 38
+    /// A Take card's margin from the screen on EACH side: the leading edge that keeps the Iris
+    /// under Add, mirrored on the trailing side so the two margins match (art director
+    /// 2026-11-11, once the toolbar moved to the dock's inset). About 25pt on a 402pt phone.
+    static func cardMargin(addColumnX: CGFloat) -> CGFloat {
+        addColumnX - cardLeadingOffset
+    }
     /// The Take card's inner padding on every side.
     static let cardPadding: CGFloat = 14
     /// The Iris's top and leading offset inside its card.
