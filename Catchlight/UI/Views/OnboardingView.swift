@@ -21,6 +21,10 @@ import CatchlightCore
 /// content below it, so they drifted apart.
 private let introHeroTopGap: CGFloat = CatchlightLayout.introHeroTopGap
 
+/// The side inset of a step's content. The point cards on "A few things worth knowing" go out or
+/// in from it to the Take cards' margin.
+private let stepContentInset: CGFloat = 24
+
 struct OnboardingView: View {
     @Environment(OnboardingViewModel.self) private var vm
     @Environment(\.dynamicTypeSize) private var dynamicSize
@@ -246,7 +250,7 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
                 ScrollView {
                     content()
                         .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, stepContentInset)
                         .padding(.top, padsTop ? 16 : 0)
                         .padding(.bottom, 16)
                 }
@@ -262,20 +266,29 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
             .environment(\.onColourField, onField)
             .lightStatusBar(onField)
         } else {
+            // A zero minimum height, so the content never sizes the step. Sized by its content, a step
+            // that stood taller than the room (the points page, Welcome) pushed the bottom
+            // buttons off their place by as much as it overflowed, a different amount on each
+            // step. Measured: the same button's top edge sat at 734, 744, 754 and 772 on four steps.
             ZStack {
                 content()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, stepContentInset)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
             .background((onField ? Color.ckField : Color.ckBackground).ignoresSafeArea())
             .safeAreaInset(edge: .bottom) {
                 // Background = the dock's soft edge (owner 2026-06-12, HiFi v1.11.5):
                 // scrolling content fades out beneath the button zone instead of
-                // meeting a hard edge.
-                bottom()
-                    .frame(maxWidth: .infinity)
-                    .dockFadeBackground()
+                // meeting a hard edge. A step with no buttons (Storage) has no row and no
+                // fade: with the content no longer sizing the step, the fade of an empty row
+                // covered the whole step (measured: its heading drawn at an eighth of its
+                // brightness, and the cards could not be seen).
+                if Bottom.self != EmptyView.self {
+                    bottom()
+                        .frame(maxWidth: .infinity)
+                        .dockFadeBackground()
+                }
             }
             // After the inset, so the bottom bar reads it too.
             .environment(\.onColourField, onField)
@@ -352,6 +365,7 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
 /// design, not a button; muted so it reads as a footer rather than a tappable CTA).
 private struct SplashFooterPill: View {
     let text: String
+    @Environment(\.dynamicTypeSize) private var dynamicSize
     var body: some View {
         Text(text)
             .ckBody(.medium, size: 15, relativeTo: .body)   // button-label style
@@ -362,8 +376,11 @@ private struct SplashFooterPill: View {
             // button could never grow, and the full-width branch above Large sets only a
             // minHeight. A minimum, not a maximum: the button hugs its text. Its corners
             // are a fixed radius, so it never rounds into a pill or a circle.
-            .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-            .background(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
+            // At the default size and below the row gives it the toolbar's height, as it does the
+            // Welcome button this crossfades into; above, it hugs its text.
+            .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget,
+                   maxHeight: dynamicSize > .large ? nil : .infinity)
+            .flatEdgePanel(fill: .clear, line: Color.ckOutline)
             .accessibilityElement()
             .accessibilityLabel(text)
     }
@@ -802,7 +819,7 @@ private struct LocalWarningStep: View {
             DockPillRow {
                 DockPill(title: "I know the risk") { vm.continueLocally() }
             } trailing: {
-                DockPill(title: "Go back", secondary: true) { vm.backToStorageChoice() }
+                DockPill(title: "Back", secondary: true) { vm.backToStorageChoice() }
             }
         }
     }
@@ -861,7 +878,7 @@ private struct RevealStep: View {
                     // IntroChapterScaffold screens).
                     HeroGap()
 
-                    VStack(spacing: 20) {
+                    VStack(spacing: 12) {
                         Text("Your Privacy phrase")
                             .stepHeading()
                             .foregroundStyle(Color.ckTextPrimary)
@@ -908,10 +925,8 @@ private struct RevealStep: View {
         // 3×4 (owner 2026-06-15): three columns pack the 12 words into four rows
         // instead of six and remove the wide trailing gap the 2-column cards left
         // after each word — tighter on the page and quicker to scan.
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 8),
-                             count: phraseColumnCount(for: dynamicSize))   // DT11
-        return LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(Array(words.enumerated()), id: \.offset) { idx, word in
+        return PhraseGrid(count: words.count, columns: phraseColumnCount(for: dynamicSize)) { idx in   // DT11
+            let word = words[idx]
                 HStack(spacing: 5) {
                     Text("\(idx + 1)")
                         .ckBody(.regular, size: 12, relativeTo: .caption)
@@ -930,11 +945,101 @@ private struct RevealStep: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 8)
+                .frame(minHeight: PhraseCell.drawnHeight)
                 .flatTile()
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Word \(idx + 1): \(word)")
+        }
+    }
+}
+
+/// The word cells of the two phrase grids and the three slots above the Confirm bank. They draw
+/// 40 tall so both phrase steps fit above the bottom buttons with a two-line prompt on a 393pt
+/// phone, and a cell that takes taps keeps the 44pt touch target: 2pt above and below the tile
+/// still answer it. With 8pt between rows the touch areas stay 4pt apart.
+enum PhraseCell {
+    static let drawnHeight: CGFloat = 40
+    static let tapPadding: CGFloat = (CatchlightLayout.minTouchTarget - drawnHeight) / 2
+    static let rowSpacing: CGFloat = 8
+}
+
+private extension View {
+    /// Grows a 40pt phrase cell's touch area to 44 without drawing it any taller, and without
+    /// taking layout room: the gaps between rows stay `rowSpacing`.
+    func phraseCellTapArea() -> some View {
+        padding(.vertical, PhraseCell.tapPadding)
+            .contentShape(Rectangle())
+            .padding(.vertical, -PhraseCell.tapPadding)
+    }
+}
+
+/// The twelve words in rows of `columns` equal-width cells, `PhraseCell.rowSpacing` apart. Not a
+/// lazy grid: a lazy grid drops the cells scrolled out of view, and on a phrase step every word must
+/// stay on the page, for the person and for VoiceOver, at every phone and text size. Measured on an
+/// iPhone SE: a scrolled lazy bank had dropped words a test then could not find.
+struct PhraseGrid<Cell: View>: View {
+    let count: Int
+    let columns: Int
+    @ViewBuilder let cell: (Int) -> Cell
+
+    var body: some View {
+        let rows = stride(from: 0, to: count, by: max(1, columns)).map { Array($0..<min($0 + max(1, columns), count)) }
+        VStack(spacing: PhraseCell.rowSpacing) {
+            ForEach(rows, id: \.first) { row in
+                HStack(spacing: 8) {
+                    ForEach(row, id: \.self) { index in
+                        cell(index)
+                            .frame(maxWidth: .infinity)
+                    }
+                    // A short last row keeps the other rows' cell width.
+                    ForEach(0..<(max(1, columns) - row.count), id: \.self) { _ in
+                        Color.clear.frame(maxWidth: .infinity, maxHeight: 0)
+                    }
+                }
             }
         }
+    }
+}
+
+/// The Confirm step's "Tap words 3, 7 and 11 from your phrase, in order." Up to Large it keeps to one
+/// line when it fits at 92 percent of its size or more, shrinking only as far as it must: in English a
+/// second line pushed the word bank under the bottom buttons on a 393pt phone. When even 92 percent is
+/// too wide (measured: 10 of the 18 translations on that phone, Polish and German need 74 percent) it
+/// wraps at its full size as before, rather than being cut off. Above Large it always wraps and grows.
+struct ConfirmPrompt: View {
+    let text: String
+    let keepsToOneLine: Bool
+    private static let floor: CGFloat = 0.92
+
+    var body: some View {
+        if keepsToOneLine {
+            ViewThatFits(in: .horizontal) {
+                // Fits only if the prompt fits on one line at the floor size. The hidden lines size
+                // it: the prompt at the floor for the width, one full-size line for the height.
+                ZStack {
+                    Text(text).ckBody(.light, size: 16 * Self.floor, relativeTo: .body).lineLimit(1)
+                    Text(verbatim: "Tap").ckBody(.light, size: 16, relativeTo: .body).lineLimit(1)
+                }
+                .hidden()
+                .frame(maxWidth: .infinity)
+                .overlay {
+                    styled(Text(text))
+                        .lineLimit(1)
+                        .minimumScaleFactor(Self.floor)
+                }
+                styled(Text(text))
+            }
+        } else {
+            styled(Text(text))
+        }
+    }
+
+    private func styled(_ text: Text) -> some View {
+        text
+            .ckBody(.light, size: 16, relativeTo: .body)
+            .foregroundStyle(Color.ckTextSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -997,7 +1102,7 @@ private struct ConfirmStep: View {
                     }
                     }
                     .animation(.easeInOut(duration: 0.18), value: vm.failure)
-                    VStack(spacing: 12) {
+                    VStack(spacing: 8) {
                         Text("Confirm three words")
                             .stepHeading()
                             .foregroundStyle(Color.ckTextPrimary)
@@ -1005,18 +1110,14 @@ private struct ConfirmStep: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader)
 
-                        Text(promptCopy)
-                            .ckBody(.light, size: 16, relativeTo: .body)
-                            .foregroundStyle(Color.ckTextSecondary)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
+                        ConfirmPrompt(text: promptCopy, keepsToOneLine: dynamicSize <= .large)
 
                         // Slots + bank read as one block: the gap between the to-fill
                         // row and the word bank matches the gap between the bank's own
                         // rows (10), so the cells feel like a single family (owner
                         // 2026-06-15). This also recovers the height that was nudging
                         // the bottom row under the dock fade.
-                        VStack(spacing: 10) {
+                        VStack(spacing: 8) {
                             slotsRow
                             bankGrid
                         }
@@ -1142,7 +1243,7 @@ private struct ConfirmStep: View {
                     .padding(.vertical, 6)
                     .padding(.horizontal, 8)
                 }
-                .frame(minHeight: 44)
+                .frame(minHeight: PhraseCell.drawnHeight)
                 .frame(maxWidth: .infinity)
                 // As drawn: an open slot is edged in the muted colour, a filled one in the
                 // accent, and a wrong guess flashes the accent.
@@ -1161,7 +1262,7 @@ private struct ConfirmStep: View {
                 // gesture does NOT carry onto the synthesised element (the V2
                 // lesson, owner device test 2026-08-21). Both routes are no-ops on
                 // an empty slot and while the error flash is resetting the row.
-                .contentShape(Rectangle())
+                .phraseCellTapArea()
                 .onTapGesture { vm.deselectSlot(at: i) }
                 .accessibilityElement(children: .ignore)
                 .accessibilityAction { vm.deselectSlot(at: i) }
@@ -1186,13 +1287,11 @@ private struct ConfirmStep: View {
     private var bankGrid: some View {
         // 3×4 — matches the reveal grid (owner 2026-06-15: both phrase grids moved
         // 2×6 → 3×4 to compact the cards), order preserved from the shuffle.
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 8),
-                             count: phraseColumnCount(for: dynamicSize))   // DT11
-        return LazyVGrid(columns: columns, spacing: 10) {
-            // Index-based identity + usage (2026-06-10): tracking by word value
-            // greyed BOTH tiles when a phrase contained a duplicate word, and
-            // could make the confirm step unwinnable.
-            ForEach(Array(vm.bank.enumerated()), id: \.offset) { index, word in
+        // Index-based identity + usage (2026-06-10): tracking by word value
+        // greyed BOTH tiles when a phrase contained a duplicate word, and
+        // could make the confirm step unwinnable.
+        return PhraseGrid(count: vm.bank.count, columns: phraseColumnCount(for: dynamicSize)) { index in   // DT11
+            let word = vm.bank[index]
                 let used = vm.usedBankIndices.contains(index)
                 Button { vm.tapBankWord(at: index) } label: {
                     Text(word)
@@ -1200,9 +1299,10 @@ private struct ConfirmStep: View {
                         .foregroundStyle(used ? Color.ckDisabledLabel : Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
+                        .frame(maxWidth: .infinity, minHeight: PhraseCell.drawnHeight)
                         .flatTile(fill: used ? Color.ckDisabledFill : Color.ckSurface,
                                   edge: used ? Color.clear : Color.ckLine)
+                        .phraseCellTapArea()
                 }
                 .buttonStyle(.plain)
                 .disabled(used || vm.isLocked)
@@ -1219,7 +1319,6 @@ private struct ConfirmStep: View {
                 // states, which belong to traits. `.disabled` already states it, once.
                 .accessibilityLabel(word)
                 .accessibilityHint(used ? "" : "Double-tap to place in the next slot.")
-            }
         }
     }
 }
@@ -1373,9 +1472,11 @@ private struct BasicsStep: View {
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 24)
                 // As drawn: each point is a small drawing of the control it names, with its title
-                // and sentence beside it, between hairlines. The layout is `OnboardingPointRow`
-                // and nothing else here depends on it.
-                VStack(spacing: 0) {
+                // and sentence beside it, on a card that is a Take card's. The layout is
+                // `OnboardingPointRow` and nothing else here depends on it. The cards stand
+                // the Take cards' distance from the screen edge, and a gap apart as the
+                // tightest Dailies setting does.
+                VStack(spacing: CatchlightLayout.visibleCardGap(for: SettingsViewModel.TakeSpacing.compact.gap)) {
                     ForEach(points, id: \.title) { point in
                         OnboardingPointRow(mark: point.mark, title: point.title, shown: point.shown)
                             // One element per point, so the cursor steps heading-and-all
@@ -1384,8 +1485,9 @@ private struct BasicsStep: View {
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel("\(point.title). \(point.spoken)")
                     }
-                    Rectangle().fill(Color.ckLine).frame(height: 1)
                 }
+                .padding(.horizontal, CatchlightLayout.cardMargin(
+                    addColumnX: CatchlightLayout.addColumnX(containerWidth: UIScreen.main.bounds.width)) - stepContentInset)
                 Spacer().frame(height: 24)
             }
         } bottom: {

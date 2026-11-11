@@ -106,7 +106,7 @@ struct PrivacyPhraseView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.ckBackground)
         .safeAreaInset(edge: .bottom) {
-            DockPillRow {
+            DockGridPillRow {
                 DockPill(title: "Reveal phrase") { revealViaDeviceAuth() }
             }
             .dockFadeBackground()
@@ -213,7 +213,7 @@ private struct PhraseRevealGrid: View {
         // Dock-geometry position for the hold control (the pill button system,
         // applied to Settings sub-screens 2026-06-12).
         .safeAreaInset(edge: .bottom) {
-            DockPillRow { holdButton }
+            DockGridPillRow { holdButton }
                 .dockFadeBackground()
         }
     }

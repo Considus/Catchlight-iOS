@@ -69,7 +69,8 @@ func walkOnboarding(contentSize: String? = nil, appearance: String = "night", fi
     XCTAssertEqual(positions.count, 3, "expected three positions in \"\(prompt.label)\"", file: file, line: line)
     for position in positions where (1...12).contains(position) {
         let tile = app.buttons[words[position - 1]]
-        if contentSize != nil { scrollUntilHittable(tile, in: app) }
+        // At any size: on a narrow phone the bank can run below the buttons at the default size too.
+        scrollUntilHittable(tile, in: app, above: app.buttons["Show my words once more"].frame.minY)
         tile.tap()
     }
     let next = app.buttons["Next"]
@@ -97,21 +98,27 @@ func walkOnboarding(contentSize: String? = nil, appearance: String = "night", fi
 /// A one-way swipe overshoots a tile that sits above the visible area once the content is at its
 /// end. Returns false when the element never becomes tappable.
 @discardableResult
-func scrollToHittable(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+func scrollToHittable(_ element: XCUIElement, in app: XCUIApplication, above limit: CGFloat? = nil) -> Bool {
+    // XCUITest can call an element hittable while it sits under the bottom buttons (measured on an
+    // iPhone SE: the tap went to the button). With a limit, the element must also end above it.
+    func ready() -> Bool {
+        element.exists && element.isHittable && element.frame.maxY <= (limit ?? .greatestFiniteMagnitude)
+    }
     for _ in 0..<40 {
-        if element.exists && element.isHittable { return true }
-        let up = element.frame.midY >= app.frame.midY
+        if ready() { return true }
+        // An element a lazy grid has not drawn yet has no frame: it lies below, so drag up.
+        let up = !element.exists || element.frame.midY >= app.frame.midY
         let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: up ? 0.65 : 0.3))
         let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: up ? 0.4 : 0.55))
         from.press(forDuration: 0.05, thenDragTo: to)
     }
-    return element.exists && element.isHittable
+    return ready()
 }
 
 /// Same, but fails the test clearly instead of leaving the caller to tap an unreachable element.
-func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication,
+func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication, above limit: CGFloat? = nil,
                          file: StaticString = #filePath, line: UInt = #line) {
-    if !scrollToHittable(element, in: app) {
+    if !scrollToHittable(element, in: app, above: limit) {
         XCTFail("could not scroll '\(element.label)' into a tappable place: \(element.frame)", file: file, line: line)
     }
 }

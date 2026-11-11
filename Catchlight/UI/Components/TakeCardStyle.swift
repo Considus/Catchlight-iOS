@@ -93,3 +93,26 @@ struct TakeCardStyle {
         self.isDone = done
     }
 }
+
+extension TakeCardStyle {
+    /// The style of a plain note, the card most Takes are: for a screen that draws something
+    /// as a Take card without being a Take.
+    static func plain(scheme: ColorScheme) -> TakeCardStyle {
+        TakeCardStyle(take: Take(blocks: [.textLine("")]), scheme: scheme)
+    }
+}
+
+extension View {
+    /// A Take card's face: its fill and its border, at the card radius and border width. The
+    /// timeline row draws the same two shapes in `TakeCardSurface`.
+    func takeCardFace(_ style: TakeCardStyle) -> some View {
+        background(
+            RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
+                .fill(style.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
+                .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
+        )
+    }
+}
