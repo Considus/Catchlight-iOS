@@ -48,8 +48,22 @@ final class FocusRowKeyboardUITests: XCTestCase {
                       "The keyboard did not come back after the row committed", file: file, line: line)
         sleep(1)
         app.typeText(" now")
-        XCTAssertEqual(body.value as? String, text + " now",
-                       "The caret did not return to the end of the block it was in", file: file, line: line)
+        assertBodyValue(body, becomes: text + " now",
+                        "The caret did not return to the end of the block it was in", file: file, line: line)
+    }
+
+    /// `typeText` returns when the keystrokes are sent, not when the app has handled them, so a
+    /// slow runner can still be mid-text. Wait for the body to settle on the expected value, then
+    /// assert it exactly. A timeout fails with the last value seen.
+    private func assertBodyValue(_ body: XCUIElement, becomes expected: String, _ message: String,
+                                 file: StaticString = #filePath, line: UInt = #line) {
+        let deadline = Date().addingTimeInterval(5)
+        var last = body.value as? String
+        while last != expected && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.1)
+            last = body.value as? String
+        }
+        XCTAssertEqual(last, expected, message + " (last value seen: \(last ?? "nil"))", file: file, line: line)
     }
 
     func testIrisTapInEditor_putsTheKeyboardAway_andCommitBringsItBack() throws {
@@ -137,6 +151,6 @@ final class FocusRowKeyboardUITests: XCTestCase {
         // so only check the keyboard and that nothing was lost.
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
                       "The keyboard did not come back after the row committed")
-        XCTAssertEqual(body.value as? String, text, "The Obie's text changed")
+        assertBodyValue(body, becomes: text, "The Obie's text changed")
     }
 }
