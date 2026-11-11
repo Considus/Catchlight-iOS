@@ -15,7 +15,7 @@ final class OnboardingStatusBarUITests: XCTestCase {
 
     private enum Icons { case light, dark }
 
-    /// Reads the status bar's clock area of a screenshot against the background beside it:
+    /// Reads the status bar's clock area of a screenshot against the background, the median of the box:
     /// glyph pixels brighter than the background mean light icons, darker mean dark icons.
     private func icons(in app: XCUIApplication) -> Icons? {
         guard let image = XCUIScreen.main.screenshot().image.cgImage,
@@ -26,7 +26,14 @@ final class OnboardingStatusBarUITests: XCTestCase {
             let p = bytes + y * image.bytesPerRow + x * bpp
             return (0.299 * Double(p[0]) + 0.587 * Double(p[1]) + 0.114 * Double(p[2])) / 255
         }
-        let background = luma(Int(200 * scale), Int(30 * scale))
+        // The background is the median of the clock's box: the field is the majority colour, the
+        // glyphs a small minority, and the box stops short of the Dynamic Island and the
+        // screen's rounded corners.
+        var lumas = [Double]()
+        for y in Int(14 * scale)..<Int(50 * scale) {
+            for x in Int(24 * scale)..<Int(140 * scale) { lumas.append(luma(x, y)) }
+        }
+        let background = lumas.sorted()[lumas.count / 2]
         var brighter = 0, darker = 0
         for y in Int(14 * scale)..<Int(50 * scale) {
             for x in Int(24 * scale)..<Int(140 * scale) {
@@ -58,7 +65,9 @@ final class OnboardingStatusBarUITests: XCTestCase {
         XCTAssertEqual(seen.count, 5)
     }
 
-    func testDarkAppearance_statusBarIconsAreLightEverywhere() {
+    /// A regression guard only: in the dark appearance the icons are light with or without the
+    /// fix, so this cannot fail for want of it. It fails if the fix ever turns them dark.
+    func testDarkAppearance_statusBarIconsStayLight() {
         continueAfterFailure = true
         var seen = 0
         walkOnboarding(appearance: "night") { step, app in

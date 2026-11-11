@@ -16,21 +16,25 @@
 import SwiftUI
 import UIKit
 import ObjectiveC
+import CatchlightCore
 
 @MainActor
 enum LightStatusBar {
     /// What each screen on display asked for, by the probe that reports it.
     private static var requests: [ObjectIdentifier: Bool] = [:]
 
-    nonisolated(unsafe) fileprivate static var isLight = false
+    fileprivate static var isLight = false
+    private static var loggedKept = false
 
     fileprivate static func set(_ wantsLight: Bool?, for probe: UIViewController) {
         let key = ObjectIdentifier(probe)
         if let wantsLight { requests[key] = wantsLight } else { requests[key] = nil }
         let light = !requests.isEmpty && requests.values.allSatisfy { $0 }
         guard let root = probe.view.window?.rootViewController ?? rootViewController() else { return }
-        install(on: root)
-        if light != isLight {
+        let install = install(on: root)
+        if install == .refused { return }
+        // A newly installed class must be asked again, whether or not the flag flipped.
+        if light != isLight || install == .installed {
             isLight = light
             root.setNeedsStatusBarAppearanceUpdate()
         }
@@ -43,23 +47,40 @@ enum LightStatusBar {
 
     private static let prefix = "CKLightStatusBar_"
 
-    private static func install(on root: UIViewController) {
+    private enum Install { case installed, already, refused }
+
+    private static func install(on root: UIViewController) -> Install {
+        // `type(of:)` and `-class` hide a runtime subclass, so read the real class pointer.
+        guard let actual = object_getClass(root) else { return .refused }
+        if NSStringFromClass(actual).hasPrefix(prefix) { return .already }
+        // Another observer (KVO) has already swapped the class: changing it again would
+        // fight over the same pointer, so leave the style alone.
         let base: AnyClass = type(of: root)
+        if actual !== base {
+            if !loggedKept {
+                loggedKept = true
+                DiagnosticsLog.shared.record(.statusBarStyleKept)
+            }
+            return .refused
+        }
         let baseName = NSStringFromClass(base)
-        if baseName.hasPrefix(prefix) { return }
         let name = prefix + baseName
-        if let existing = NSClassFromString(name) { object_setClass(root, existing); return }
-        guard let subclass = objc_allocateClassPair(base, name, 0) else { return }
+        if let existing = NSClassFromString(name) { object_setClass(root, existing); return .installed }
+        guard let subclass = objc_allocateClassPair(base, name, 0) else { return .refused }
         let selector = #selector(getter: UIViewController.preferredStatusBarStyle)
-        guard let imp = class_getMethodImplementation(base, selector) else { return }
+        guard let imp = class_getMethodImplementation(base, selector) else { return .refused }
         typealias Original = @convention(c) (AnyObject, Selector) -> Int
         let original = unsafeBitCast(imp, to: Original.self)
         let answer: @convention(block) (AnyObject) -> Int = { object in
-            LightStatusBar.isLight ? UIStatusBarStyle.lightContent.rawValue : original(object, selector)
+            // UIKit asks for the status bar style on the main thread.
+            MainActor.assumeIsolated {
+                LightStatusBar.isLight ? UIStatusBarStyle.lightContent.rawValue : original(object, selector)
+            }
         }
         class_addMethod(subclass, selector, imp_implementationWithBlock(answer), "q@:")
         objc_registerClassPair(subclass)
         object_setClass(root, subclass)
+        return .installed
     }
 }
 
