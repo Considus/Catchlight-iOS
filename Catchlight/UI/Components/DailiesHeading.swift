@@ -16,10 +16,10 @@ struct DailiesHeading: View {
     /// (owner 2026-11-11: "Dailies looks too small, compared with what is on the website";
     /// art director: 34, scaled as a Large Title).
     static let titleSize: CGFloat = 34
-    /// The date's point size at the default text size: 13, so the longest date in any language
-    /// ("segunda-feira, 28 de dezembro") still fits beside the title on the iPhone SE (art
-    /// director 2026-11-11; 14, the website's 0.8 of its Take text, left a 2.75pt gap there).
-    static let dateSize: CGFloat = 13
+    /// The date's point size at the default text size: 14, the website's 0.8 of its Take text
+    /// (art director 2026-11-11). With the cards at the toolbar's 17pt margin the longest date in
+    /// any language ("segunda-feira, 28 de dezembro") still fits beside the title on the iPhone SE.
+    static let dateSize: CGFloat = 14
     /// The website's letter-spacing for the heading, -0.025 em.
     static let titleKerning: CGFloat = -0.025 * titleSize
     /// In from each screen edge: the Take cards' margin (`CatchlightLayout.cardMargin`), so the

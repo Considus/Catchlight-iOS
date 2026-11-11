@@ -17,6 +17,7 @@ import SwiftUI
 import CatchlightCore
 
 struct TakeRowView: View {
+    @Environment(\.irisLeadingInset) private var irisLeadingInset
     let take: Take
     /// Tap on the Iris. The `CGRect` is the card's frame in WINDOW coordinates: the
     /// tap recognizer reports the Iris centre there, and the card's measured size
@@ -271,7 +272,7 @@ struct TakeRowView: View {
             // Gestures sit above the drawing, in their own 44pt frame, so the drawing
             // cannot swallow the tap or produce a second VoiceOver element.
             irisColumn
-                .offset(x: CatchlightLayout.irisInset + cardSwipeOffset,
+                .offset(x: irisLeadingInset + cardSwipeOffset,
                         y: CatchlightLayout.irisInset)
                 .zIndex(3)
         }
@@ -288,7 +289,7 @@ struct TakeRowView: View {
     private var cardIris: some View {
         IrisView(take: take)
             .allowsHitTesting(false)
-            .padding(.leading, CatchlightLayout.irisInset)
+            .padding(.leading, irisLeadingInset)
             .padding(.top, CatchlightLayout.irisInset)
     }
 
@@ -312,7 +313,8 @@ struct TakeRowView: View {
         .overlay(
             TapAndLongPressRecognizer(
                 minimumDuration: 0.45,
-                onTap: { onTapCircle(FocusRowView.cardFrame(irisCentre: $0, cardSize: cardSize)) },
+                onTap: { onTapCircle(FocusRowView.cardFrame(irisCentre: $0, cardSize: cardSize,
+                                                                 irisLeadingInset: irisLeadingInset)) },
                 onLongPress: onLongPressCircle
             )
         )
@@ -454,6 +456,7 @@ struct TakeRowView: View {
 /// proposes full width; the fan proposes the card's reconstructed width), so the
 /// surface always reaches the card's trailing edge.
 struct TakeCardSurface: View {
+    @Environment(\.irisLeadingInset) private var irisLeadingInset
     let take: Take
     /// This Take's reminder has a pending snoozed re-nudge: its time line starts "Snoozed"
     /// instead of "Overdue" (owner 2026-06-21). Defaults false (e.g. previews).
@@ -747,7 +750,7 @@ struct TakeCardSurface: View {
         // the Iris in the top-left, and the DAILIES heading + month markers align to this
         // same text column (owner 2026-06-16). The minimum height fits the Iris.
         .padding(EdgeInsets(top: CatchlightLayout.cardPadding,
-                            leading: CatchlightLayout.cardTextLeadingPad,
+                            leading: CatchlightLayout.cardTextLeadingPad(irisLeadingInset: irisLeadingInset),
                             bottom: CatchlightLayout.cardPadding + extraBottomPadding,
                             trailing: CatchlightLayout.cardTextTrailingPad + trailingContentInset))
         .frame(maxWidth: .infinity, minHeight: CatchlightLayout.cardMinHeight + extraBottomPadding,

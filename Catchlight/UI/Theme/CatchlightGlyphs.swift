@@ -180,6 +180,13 @@ private struct HomeIndicatorInsetKey: EnvironmentKey {
     static let defaultValue: CGFloat = 34
 }
 
+/// The Iris's leading inset in its card (`CatchlightLayout.irisLeadingInset`), published at the
+/// window root from the window's width. The default is the 402pt phone's, for previews.
+private struct IrisLeadingInsetKey: EnvironmentKey {
+    static let defaultValue: CGFloat =
+        CatchlightLayout.irisLeadingInset(addColumnX: CatchlightLayout.addColumnX(containerWidth: 402))
+}
+
 private struct HeadingClearanceKey: EnvironmentKey {
     static let defaultValue: CGFloat = CatchlightLayout.headingClearance
 }
@@ -215,6 +222,11 @@ extension EnvironmentValues {
     var homeIndicatorInset: CGFloat {
         get { self[HomeIndicatorInsetKey.self] }
         set { self[HomeIndicatorInsetKey.self] = newValue }
+    }
+
+    var irisLeadingInset: CGFloat {
+        get { self[IrisLeadingInsetKey.self] }
+        set { self[IrisLeadingInsetKey.self] = newValue }
     }
 }
 

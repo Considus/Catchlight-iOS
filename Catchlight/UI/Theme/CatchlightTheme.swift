@@ -1102,29 +1102,31 @@ enum CatchlightLayout {
     static func cappedRadius(forHeight height: CGFloat) -> CGFloat {
         min(controlRadius, (height / 3).rounded())
     }
-    /// The distance from the dock's first column centre (`addColumnX`) to the Take card's
-    /// leading edge: the card starts at `addColumnX − cardLeadingOffset`. The timeline line
-    /// that once ran down `addColumnX` is gone (owner 2026-11-09); the Add button still sits
-    /// there, and the Iris under it: the Iris's centre is `irisInset + circleDiameter / 2` in
-    /// from the card's edge, so that is the offset. It was a separate 38, 2pt more than where the
-    /// Iris is drawn, which left every Iris 2pt left of Add (measured 61 against 63, 2026-11-11).
-    static let cardLeadingOffset: CGFloat = irisInset + circleDiameter / 2
-    /// A Take card's margin from the screen on EACH side: the leading edge that keeps the Iris
-    /// under Add, mirrored on the trailing side so the two margins match (art director
-    /// 2026-11-11, once the toolbar moved to the dock's inset). About 25pt on a 402pt phone.
-    static func cardMargin(addColumnX: CGFloat) -> CGFloat {
-        addColumnX - cardLeadingOffset
+    /// A Take card's margin from the screen on EACH side: the toolbar's, so a card is exactly as
+    /// wide as the toolbar (owner 2026-11-11: "The Take card needs to exactly match the width of
+    /// the menu bar"; art director, option a).
+    static let cardMargin: CGFloat = dockInset
+    /// How far the Iris sits in from its card's leading edge: whatever puts the Iris's centre
+    /// exactly on `addColumnX`, under Add, so it changes with the screen width, (width − 34) / 8
+    /// − 22: 20.6 on a 375pt phone, 24 on 402, 28.75 on 440 (art director 2026-11-11: not rounded,
+    /// SwiftUI snaps it to the pixel). The top inset stays `irisInset`. Views read it from
+    /// `\.irisLeadingInset`, published at the window root; the timeline works it out from its own
+    /// `addColumnX`.
+    static func irisLeadingInset(addColumnX: CGFloat) -> CGFloat {
+        addColumnX - cardMargin - circleDiameter / 2
     }
     /// The Take card's inner padding on every side.
     static let cardPadding: CGFloat = 14
-    /// The Iris's top and leading offset inside its card.
+    /// The Iris's TOP offset inside its card. Its leading offset is `irisLeadingInset`.
     static let irisInset: CGFloat = 14
     /// The gap between the Iris's trailing edge and the card's text column.
     static let irisTextGap: CGFloat = 12
     /// The Take card's internal LEADING text padding: the text column starts clear of
-    /// the Iris in the card's top-left. The DAILIES heading and month markers align to
-    /// the same column.
-    static let cardTextLeadingPad: CGFloat = irisInset + circleDiameter + irisTextGap
+    /// the Iris in the card's top-left, a fixed distance from it, so it moves with the Iris.
+    /// The month markers align to the same column.
+    static func cardTextLeadingPad(irisLeadingInset: CGFloat) -> CGFloat {
+        irisLeadingInset + circleDiameter + irisTextGap
+    }
     /// The shortest a Take card may be: room for the Iris with `irisInset` above and below.
     static let cardMinHeight: CGFloat = irisInset * 2 + circleDiameter
     /// The spacing setting's gaps were tuned with the old Iris's top half hanging into them.
@@ -1154,9 +1156,8 @@ enum CatchlightLayout {
     static let dockHeight: CGFloat = 103
     /// x of the centre of the toolbar's first column (Add), for a given container width.
     /// The toolbar lays out four equal columns inside `dockInset`, so the first column's
-    /// centre sits at inset + (width − 2·inset) / 8. The Take cards hang off it
-    /// (`addColumnX − cardLeadingOffset`), as do the Focus row and the Storyboard rows, so
-    /// each Iris stays under Add.
+    /// centre sits at inset + (width − 2·inset) / 8. Every card's Iris is centred on it
+    /// (`irisLeadingInset(addColumnX:)`), so each Iris stays under Add.
     static func addColumnX(containerWidth: CGFloat) -> CGFloat {
         dockInset + (containerWidth - 2 * dockInset) / 8
     }

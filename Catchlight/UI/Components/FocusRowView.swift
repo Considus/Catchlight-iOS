@@ -51,7 +51,8 @@ struct FocusRowView: View {
     /// (previews): no clamp.
     var visibleBottom: CGFloat = 0
     /// Screen-space point of the hub (centre of the tapped Iris).
-    private var hubCentre: CGPoint { Self.hubCentre(of: cardFrame) }
+    private var hubCentre: CGPoint { Self.hubCentre(of: cardFrame, irisLeadingInset: irisLeadingInset) }
+    @Environment(\.irisLeadingInset) private var irisLeadingInset
     /// Whether to lift the tapped Take's card above the veil (owner 2026-06-16).
     /// True when the row opens from a timeline Iris (`hubCentre` is a real row);
     /// false from the editor footer (the editor IS the context there, so no card to
@@ -242,22 +243,26 @@ struct FocusRowView: View {
     static let markSpacing: CGFloat = markSize + 16
     /// The least room kept between the last mark and the screen's trailing edge.
     static let screenMargin: CGFloat = 8
-    /// How far the Iris centre sits in from its card's top and leading edges (36).
+    /// How far the Iris centre sits down from its card's top edge (36). Across, it sits
+    /// `irisLeadingInset + 22` in from the leading edge, which changes with the screen width.
     static let irisCentreInset = CatchlightLayout.irisInset + CatchlightLayout.circleDiameter / 2
     /// How much the tapped card grows at the bottom while the row is open (22, half a
     /// mark): the marks sit centred on its grown bottom edge, so this keeps them clear of
     /// its last line of text.
     static let cardGrowth: CGFloat = markSize / 2
 
-    /// The Iris centre of a card: `irisCentreInset` in from its top and leading edges.
-    static func hubCentre(of cardFrame: CGRect) -> CGPoint {
-        CGPoint(x: cardFrame.minX + irisCentreInset, y: cardFrame.minY + irisCentreInset)
+    /// The Iris centre of a card: `irisLeadingInset + 22` in from its leading edge, and
+    /// `irisCentreInset` down from its top.
+    static func hubCentre(of cardFrame: CGRect, irisLeadingInset: CGFloat) -> CGPoint {
+        CGPoint(x: cardFrame.minX + irisLeadingInset + CatchlightLayout.circleDiameter / 2,
+                y: cardFrame.minY + irisCentreInset)
     }
 
     /// A card's frame from its Iris centre (as the Iris's tap recognizer reports it, in
     /// window coordinates) and the card's measured size.
-    static func cardFrame(irisCentre: CGPoint, cardSize: CGSize) -> CGRect {
-        CGRect(x: irisCentre.x - irisCentreInset, y: irisCentre.y - irisCentreInset,
+    static func cardFrame(irisCentre: CGPoint, cardSize: CGSize, irisLeadingInset: CGFloat) -> CGRect {
+        CGRect(x: irisCentre.x - irisLeadingInset - CatchlightLayout.circleDiameter / 2,
+               y: irisCentre.y - irisCentreInset,
                width: cardSize.width, height: cardSize.height)
     }
 
@@ -267,7 +272,7 @@ struct FocusRowView: View {
     static func rowY(cardFrame: CGRect, visibleBottom: CGFloat) -> CGFloat {
         let y = cardFrame.height + cardGrowth - irisCentreInset
         guard visibleBottom > 0 else { return y }
-        let lowest = visibleBottom - markSize / 2 - hubCentre(of: cardFrame).y
+        let lowest = visibleBottom - markSize / 2 - (cardFrame.minY + irisCentreInset)
         return max(0, min(y, lowest))
     }
 
