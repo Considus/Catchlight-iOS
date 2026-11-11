@@ -48,7 +48,11 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             accentText: 0xFFA3DA,
             onAccent: 0x0B0E2A,
             lit: 0xFFA3DA,
-            unlit: 0x4C5380
+            unlit: 0x4C5380,
+            field: 0x1C2356,
+            onField: 0xF6F7FF,
+            fieldMuted: 0xAEB4E3,
+            iconDot: 0xFF8AD0
         )
         case (.cobalt, false): return ScenePalette(
             ground: 0xF4F5FA,
@@ -64,7 +68,11 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             accentText: 0x2C41E8,
             onAccent: 0xFFFFFF,
             lit: 0x2C41E8,
-            unlit: 0xA3A6BD
+            unlit: 0xA3A6BD,
+            field: 0x2C41E8,
+            onField: 0xFFFFFF,
+            fieldMuted: 0xDCE1FF,
+            iconDot: 0xFF8AD0
         )
         case (.graphite, true): return ScenePalette(
             ground: 0x111214,
@@ -80,7 +88,11 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             accentText: 0xFFD84D,
             onAccent: 0x111214,
             lit: 0xFFD84D,
-            unlit: 0x53575B
+            unlit: 0x53575B,
+            field: 0x26292D,
+            onField: 0xF2F3F5,
+            fieldMuted: 0xA3A8B0,
+            iconDot: 0xFFD21F
         )
         case (.graphite, false): return ScenePalette(
             ground: 0xECEDEF,
@@ -96,7 +108,11 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             accentText: 0x141518,
             onAccent: 0x111214,
             lit: 0x141518,
-            unlit: 0xA0A2A6
+            unlit: 0xA0A2A6,
+            field: 0x1A1C1F,
+            onField: 0xF2F3F5,
+            fieldMuted: 0xA3A8B0,
+            iconDot: 0xFFD21F
         )
         case (.onyx, true): return ScenePalette(
             ground: 0x05070A,
@@ -112,7 +128,11 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             accentText: 0x8FE3F5,
             onAccent: 0x05070A,
             lit: 0xBFE9F2,
-            unlit: 0x464D54
+            unlit: 0x464D54,
+            field: 0x161B22,
+            onField: 0xF3F6FA,
+            fieldMuted: 0x9AA3AF,
+            iconDot: 0x8FE3F5
         )
         case (.onyx, false): return ScenePalette(
             ground: 0xF5F7F9,
@@ -128,7 +148,11 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             accentText: 0x1F6E86,
             onAccent: 0xF5F7F9,
             lit: 0x1F6E86,
-            unlit: 0xA6AAB0
+            unlit: 0xA6AAB0,
+            field: 0x0A0D12,
+            onField: 0xF5F7F9,
+            fieldMuted: 0x9AA3AF,
+            iconDot: 0x8FE3F5
         )
         case (.jade, true): return ScenePalette(
             ground: 0x0C1511,
@@ -144,7 +168,11 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             accentText: 0x9BE3B4,
             onAccent: 0x0C1511,
             lit: 0x9BE3B4,
-            unlit: 0x4A5B51
+            unlit: 0x4A5B51,
+            field: 0x1C2D25,
+            onField: 0xEEF4EF,
+            fieldMuted: 0x9DB1A6,
+            iconDot: 0xC8F06A
         )
         case (.jade, false): return ScenePalette(
             ground: 0xF6F8F5,
@@ -160,7 +188,11 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             accentText: 0x1F4A38,
             onAccent: 0xF6F8F5,
             lit: 0x1F4A38,
-            unlit: 0xA3ADA6
+            unlit: 0xA3ADA6,
+            field: 0x1F4A38,
+            onField: 0xF6F8F5,
+            fieldMuted: 0xC9D9CF,
+            iconDot: 0xC8F06A
         )
         case (.tanzanite, true): return ScenePalette(
             ground: 0x101028,
@@ -176,7 +208,11 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             accentText: 0xFFC7A3,
             onAccent: 0x101028,
             lit: 0xFFC7A3,
-            unlit: 0x52547D
+            unlit: 0x52547D,
+            field: 0x24254D,
+            onField: 0xF5F3FF,
+            fieldMuted: 0xB0ACD9,
+            iconDot: 0xFFB98C
         )
         case (.tanzanite, false): return ScenePalette(
             ground: 0xF3F7FC,
@@ -192,7 +228,11 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             accentText: 0x3D3AB8,
             onAccent: 0xFFFFFF,
             lit: 0x3D3AB8,
-            unlit: 0xA0A9BF
+            unlit: 0xA0A9BF,
+            field: 0x3D3AB8,
+            onField: 0xFFFFFF,
+            fieldMuted: 0xE0DEFA,
+            iconDot: 0xFFB98C
         )
         }
     }
@@ -214,4 +254,8 @@ struct ScenePalette: Equatable, Sendable {
     let onAccent: UInt32
     let lit: UInt32
     let unlit: UInt32
+    let field: UInt32
+    let onField: UInt32
+    let fieldMuted: UInt32
+    let iconDot: UInt32
 }

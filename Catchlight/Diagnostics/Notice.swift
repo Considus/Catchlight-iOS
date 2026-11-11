@@ -96,6 +96,7 @@ enum NoticeCode: Int, CaseIterable {
     case libraryOpenFailed = 922            // Encrypted library failed to open, with the error (the user sees 104).
     case conflictNotKept = 923              // A waiting conflict couldn't be written to disk, with the system error; held for this session only.
     case conflictFileNotRemoved = 924       // A resolved conflict's file couldn't be removed.
+    case statusBarStyleKept = 925           // Light status bar icons not applied: the root view controller is already observed (KVO), so its class was left alone.
 }
 
 /// One line for the diagnostics log. Build it, then `DiagnosticsLog.shared.record(_:)`.
@@ -129,6 +130,7 @@ enum Notice: Equatable {
     case libraryOpenFailed(String)
     case conflictNotKept(domain: String, code: Int)
     case conflictFileNotRemoved
+    case statusBarStyleKept
 
     /// The platform part of the reference. The Mac app uses "CCMOS".
     static let platform = "CCIOS"
@@ -169,6 +171,7 @@ enum Notice: Equatable {
         case .obieAwaitingConflict: return .obieAwaitingConflict
         case .conflictsUnreadable: return .conflictsUnreadable
         case .conflictFileNotRemoved: return .conflictFileNotRemoved
+        case .statusBarStyleKept: return .statusBarStyleKept
         case .takesQuarantined: return .takesQuarantined
         case .capturesUnopenable: return .capturesUnopenable
         case .spotlightReindexSkipped: return .spotlightReindexSkipped
@@ -317,6 +320,8 @@ enum Notice: Equatable {
             return "A waiting conflict couldn't be kept on disk; held for this session only (\(domain) \(code))"
         case .conflictFileNotRemoved:
             return "A resolved conflict's file couldn't be removed"
+        case .statusBarStyleKept:
+            return "Light status bar icons not applied: the root view controller is already observed, so it was left alone"
         }
     }
 

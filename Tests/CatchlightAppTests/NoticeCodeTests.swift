@@ -79,7 +79,8 @@ final class NoticeCodeTests: XCTestCase {
             "watermarkStepFailed": 921,
             "libraryOpenFailed": 922,
             "conflictNotKept": 923,
-            "conflictFileNotRemoved": 924
+            "conflictFileNotRemoved": 924,
+            "statusBarStyleKept": 925
         ]
         let current = Dictionary(uniqueKeysWithValues: NoticeCode.allCases.map { ("\($0)", $0.rawValue) })
         XCTAssertEqual(current, pinned)

@@ -44,6 +44,9 @@ struct OnboardingView: View {
             // Failure step, which has no mark).
             if showsBrandMark {
                 IntroBrandMark()
+                    // On the colour field the wordmark takes the field's colours, and the
+                    // hoisted mark follows the step it sits over.
+                    .environment(\.onColourField, vm.step.sitsOnColourField)
                     .transition(.opacity)
             }
         }
@@ -75,10 +78,13 @@ struct OnboardingView: View {
     ///
     /// Above Large the mark is NOT hoisted (owner 2026-09-04). At those sizes the step
     /// scrolls, and a hoisted mark cannot scroll — so growing text ran underneath it. Each
-    /// step's reserve copy becomes the real, scrolling mark instead. The owner's reasoning
-    /// for accepting the crossfade this reintroduces: the mark's start size and position are
-    /// identical on every screen, so a scrolling mark still reads as persistent. Below Large
-    /// nothing scrolls, so the hoisted mark is kept exactly as it was.
+    /// step's reserve copy becomes the real, scrolling mark instead, up to the largest
+    /// non-accessibility size. The owner's reasoning for accepting the crossfade this
+    /// reintroduces: the mark's start size and position are identical on every screen, so a
+    /// scrolling mark still reads as persistent. From the accessibility sizes up
+    /// (`accessibility1`) no onboarding step draws a mark at all (`OnboardingBrandMark`): its
+    /// room goes to the content. Below Large nothing scrolls, so the hoisted mark is kept
+    /// exactly as it was.
     private var showsBrandMark: Bool {
         if dynamicSize > .large { return false }
         switch vm.step {
@@ -106,10 +112,102 @@ struct OnboardingView: View {
 
 // MARK: - Shared chrome
 
+/// The brand mark on an onboarding step. At the accessibility sizes it is left out: it is
+/// decorative, and its room goes to the content. Every step draws it through here, so every step
+/// behaves the same.
+private struct OnboardingBrandMark: View {
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
+    var body: some View {
+        if dynamicSize < .accessibility1 { IntroBrandMark() }
+    }
+}
+
+/// The gap from the top of a step (or the brand mark) to its heading: the shared set position,
+/// or, at the accessibility sizes where there is no mark above it, just clear of the status bar
+/// and Dynamic Island (the screen runs full-bleed, so the inset is part of the gap).
+private struct HeroGap: View {
+    /// The launch splash keeps its mark at every size, so it keeps the set position too.
+    var markDrawn = false
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+    @Environment(\.deviceTopInset) private var deviceTopInset
+
+    var body: some View {
+        Color.clear.frame(height: dynamicSize >= .accessibility1 && !markDrawn
+                          ? deviceTopInset + 16 : introHeroTopGap)
+    }
+}
+
+/// A step's heading: Archivo expanded 28, fixed up to the default text size so every heading sits
+/// at the same place and size. Above it the heading scales with the text size like the text
+/// beneath it, so it never ends up smaller than the point titles under it.
+private struct StepHeading: ViewModifier {
+    /// The launch splash keeps its lines at the fixed 28 at every size: it is the same two lines
+    /// the launch screen shows, and it holds still while the app starts.
+    var scalesWithText = true
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+    @ScaledMetric(relativeTo: .title) private var scaledSize: CGFloat = 28
+
+    func body(content: Content) -> some View {
+        let scales = scalesWithText && dynamicSize > .large
+        content
+            .ckDisplay(size: 28, relativeTo: scales ? .title : nil)
+            .lineSpacing(CatchlightFont.tightLeading(size: scales ? scaledSize : 28))
+    }
+}
+
+private extension View {
+    func stepHeading(scalesWithText: Bool = true) -> some View { modifier(StepHeading(scalesWithText: scalesWithText)) }
+}
+
+extension OnboardingViewModel.Step {
+    /// Welcome and the closing screen sit on the Scene's colour field. Every other step sits on
+    /// the ground.
+    fileprivate var sitsOnColourField: Bool { self == .welcome || self == .complete }
+}
+
+/// The colour of text on a step: the page's own, or the field's on a screen that sits on it.
+private struct StepInk: ViewModifier {
+    enum Role { case primary, secondary }
+    let role: Role
+    @Environment(\.onColourField) private var onField
+
+    func body(content: Content) -> some View {
+        switch (onField, role) {
+        case (true, .primary): content.foregroundStyle(Color.ckOnField)
+        case (true, .secondary): content.foregroundStyle(Color.ckFieldMuted)
+        case (false, .primary): content.foregroundStyle(Color.ckTextPrimary)
+        case (false, .secondary): content.foregroundStyle(Color.ckTextSecondary)
+        }
+    }
+}
+
+private extension View {
+    func stepInk(_ role: StepInk.Role) -> some View { modifier(StepInk(role: role)) }
+}
+
+/// A text link on a step: the accent on the ground, underlined in the on-field colour on the field.
+private struct StepLinkLabel: View {
+    let title: LocalizedStringKey
+    @Environment(\.onColourField) private var onField
+
+    var body: some View {
+        Text(title)
+            .ckBody(.medium, size: 15, relativeTo: .body)
+            .underline(onField)
+            .foregroundStyle(onField ? Color.ckOnField : Color.ckAccent)
+    }
+}
+
 /// Wraps a step's content with a full-bleed background, edge-padded body, and an
 /// optional bottom-pinned button row (above the home indicator). Every step uses
 /// this so the layout pattern is consistent and no screen ever clips its button.
 private struct StepScaffold<Content: View, Bottom: View>: View {
+    /// Whether the step sits on the Scene's colour field instead of the ground.
+    var onField: Bool = false
+    /// The scrolling layout (above Large) pads its content 16pt top and bottom. The splash sets
+    /// the top to 0 so its mark sits exactly where the launch screen and lock screen draw it.
+    var padsTop: Bool = true
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
 
@@ -149,7 +247,8 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
                     content()
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 24)
-                        .padding(.vertical, 16)
+                        .padding(.top, padsTop ? 16 : 0)
+                        .padding(.bottom, 16)
                 }
                 .scrollIndicators(.hidden)   // app-wide: no scrollbars (Style Reference)
 
@@ -159,7 +258,9 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
                     .dockFadeBackground()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.ckBackground.ignoresSafeArea())
+            .background((onField ? Color.ckField : Color.ckBackground).ignoresSafeArea())
+            .environment(\.onColourField, onField)
+            .lightStatusBar(onField)
         } else {
             ZStack {
                 content()
@@ -167,7 +268,7 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
                     .padding(.horizontal, 24)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.ckBackground.ignoresSafeArea())
+            .background((onField ? Color.ckField : Color.ckBackground).ignoresSafeArea())
             .safeAreaInset(edge: .bottom) {
                 // Background = the dock's soft edge (owner 2026-06-12, HiFi v1.11.5):
                 // scrolling content fades out beneath the button zone instead of
@@ -176,6 +277,9 @@ private struct StepScaffold<Content: View, Bottom: View>: View {
                     .frame(maxWidth: .infinity)
                     .dockFadeBackground()
             }
+            // After the inset, so the bottom bar reads it too.
+            .environment(\.onColourField, onField)
+            .lightStatusBar(onField)
         }
     }
 }
@@ -205,17 +309,31 @@ private struct IntroChapterScaffold<Content: View, Bottom: View>: View {
     /// crossfade in `OnboardingView`, and the scaffold just RESERVES its space with
     /// a hidden copy so the content still sits below it.
     var drawsBrandMark: Bool = false
+    /// Whether this step sits on the Scene's colour field (Welcome and the closing screen).
+    var onField: Bool = false
+    /// The launch splash draws the mark at every text size. Onboarding steps drop it from the
+    /// accessibility sizes.
+    var keepsMarkAtEverySize: Bool = false
     /// Above Large the hoisted mark stands down (see `OnboardingView.showsBrandMark`), so the
-    /// reserve copy here is the ONLY mark — it must be visible and it scrolls with the content.
+    /// reserve copy here is the only mark. It is visible and scrolls with the content. From
+    /// `accessibility1` up an onboarding step draws no mark (`OnboardingBrandMark`); the splash
+    /// (`keepsMarkAtEverySize`) keeps it, because the launch screen and the lock screen draw it
+    /// at every size and it must not vanish and return on a cold launch.
     @Environment(\.dynamicTypeSize) private var dynamicSize
     @ViewBuilder var content: () -> Content
     @ViewBuilder var bottom: () -> Bottom
 
     var body: some View {
-        StepScaffold {
+        StepScaffold(onField: onField, padsTop: !keepsMarkAtEverySize) {
             VStack(spacing: 0) {
-                IntroBrandMark()
-                    .opacity(drawsBrandMark || dynamicSize > .large ? 1 : 0)
+                Group {
+                    if keepsMarkAtEverySize {
+                        IntroBrandMark()
+                    } else {
+                        OnboardingBrandMark()
+                            .opacity(drawsBrandMark || dynamicSize > .large ? 1 : 0)
+                    }
+                }
                 content()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -283,12 +401,13 @@ struct WelcomeContent: View {
         // The splash (`.splash`, shown by RootView) paints the brand mark itself; the
         // Welcome step (`.welcome`) reserves the space and lets OnboardingView's
         // hoisted, non-fading mark draw it.
-        IntroChapterScaffold(drawsBrandMark: !isWelcome) {
+        IntroChapterScaffold(drawsBrandMark: !isWelcome, onField: isWelcome,
+                             keepsMarkAtEverySize: !isWelcome) {
             VStack(spacing: 0) {
                 // Pin the hero line at the shared set position (every brand-mark
                 // screen uses `introHeroTopGap`); the body then settles toward the
                 // button via the flexible spacer.
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap(markDrawn: !isWelcome)
                 // Primary-text slot. The headline is laid out in BOTH modes (so the
                 // slot keeps the same height); the splash hides it and overlays the
                 // tagline in its place.
@@ -309,16 +428,14 @@ struct WelcomeContent: View {
                     // Secondary path (owner 2026-07-02): adopt an existing identity by
                     // entering its phrase — styled as a link in ckTextObie (the Restore token).
                     Button(action: onSecondary) {
-                        Text("I already use Catchlight")
-                            .ckBody(.medium, size: 15, relativeTo: .body)
-                            .foregroundStyle(Color.ckAccent)
+                        StepLinkLabel(title: "I already use Catchlight")
                     }
                     // T3 (audit 2026-08): the sole alternate path on this screen
-                    // tapped at its ~20pt text line. Inset −12 reaches the 44pt
+                    // tapped at its 18pt text line. Inset −13 reaches the 44pt
                     // floor with the drawn text untouched. The pill below wins
                     // its own frame (later sibling, hit-tested first), so the
                     // 1pt overspill into the 12pt gap cannot steal its taps.
-                    .contentShape(Rectangle().inset(by: -12))
+                    .contentShape(Rectangle().inset(by: -13))
                     .accessibilityIdentifier("onboarding-restore-link")
                     DockPillRow {
                         DockPill(title: "Create my Privacy phrase", action: onPrimary)
@@ -334,9 +451,8 @@ struct WelcomeContent: View {
 
     private var headline: some View {
         Text("You don't need to choose privacy, it's yours and you never have to ask for it.")
-            .ckDisplay(size: 28, relativeTo: nil)
-            .lineSpacing(CatchlightFont.tightLeading(size: 28))
-            .foregroundStyle(Color.ckTextPrimary)
+            .stepHeading(scalesWithText: isWelcome)
+            .stepInk(.primary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)
@@ -350,8 +466,7 @@ struct WelcomeContent: View {
             // intro hero lines are now `displayFixed(28)`, static — so the splash
             // tagline and the Welcome headline it crossfades into are pixel-matched).
             // The secondary colour + italic keep it reading as a tagline.
-            .ckDisplay(size: 28, relativeTo: nil)
-            .lineSpacing(CatchlightFont.tightLeading(size: 28))
+            .stepHeading(scalesWithText: isWelcome)
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -364,12 +479,12 @@ struct WelcomeContent: View {
             // emphasis to wherever its own word order puts it.
             EmphasisText("First, we'll create your Privacy phrase: 12 words that are the **ONLY** key to your data.",
                          .light, size: 16, relativeTo: .body)
-                .foregroundStyle(Color.ckTextSecondary)
+                .stepInk(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             Text("We never see them, store them, or ask for them. So don't lose them.")
                 .ckBody(.light, size: 16, relativeTo: .body)
-                .foregroundStyle(Color.ckTextSecondary)
+                .stepInk(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -390,10 +505,9 @@ struct RestoreFolderView: View {
     var body: some View {
         IntroChapterScaffold(drawsBrandMark: true) {
             VStack(spacing: 0) {
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 Text("Welcome back")
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -413,7 +527,7 @@ struct RestoreFolderView: View {
                     .ckBody(.medium, size: 15, relativeTo: .body)
                     .foregroundStyle(Color.ckAccent)
                     // T3: same 44pt hit floor as the Welcome link above.
-                    .contentShape(Rectangle().inset(by: -12))
+                    .contentShape(Rectangle().inset(by: -13))
                     .accessibilityIdentifier("restore-connect-later")
                 DockPillRow {
                     DockPill(title: "Connect cloud folder") { pickerPresented = true }
@@ -460,14 +574,13 @@ private struct RestoreEntryStep: View {
                         // the scroll (not the hoisted fixed one — `showsBrandMark` excludes
                         // `.restoreEntry`) so it scrolls UP with the hero when the keyboard
                         // rises instead of hovering over the fields (owner 2026-07-02).
-                        IntroBrandMark()
+                        OnboardingBrandMark()
 
-                        Spacer().frame(height: introHeroTopGap)
+                        HeroGap()
 
                         VStack(spacing: 20) {
                             Text("Enter your Privacy phrase")
-                                .ckDisplay(size: 28, relativeTo: nil)
-                                .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                                .stepHeading()
                                 .foregroundStyle(Color.ckTextPrimary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -573,10 +686,9 @@ private struct StorageChoiceStep: View {
         IntroChapterScaffold {
             VStack(spacing: 0) {
                 // Hero line at the shared set position.
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 Text("Now, where should your Takes live?")
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -615,7 +727,7 @@ private struct StorageChoiceStep: View {
 private struct StorageOptionCard: View {
     let title: LocalizedStringKey
     let description: LocalizedStringKey
-    /// A line under the description in the primary text colour, so a recommendation reads apart
+    /// A line under the description in the accent, semibold, so a recommendation reads apart
     /// from the explanation above it.
     var note: LocalizedStringKey? = nil
     let action: () -> Void
@@ -623,7 +735,7 @@ private struct StorageOptionCard: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .ckBody(.medium, size: 17, relativeTo: .body)
+                    .ckBody(.semibold, size: 17, relativeTo: .body)
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -636,8 +748,8 @@ private struct StorageOptionCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if let note {
                     Text(note)
-                        .ckBody(.regular, size: 16, relativeTo: .body)
-                        .foregroundStyle(Color.ckTextPrimary)
+                        .ckBody(.semibold, size: 16, relativeTo: .body)
+                        .foregroundStyle(Color.ckAccent)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -671,10 +783,9 @@ private struct LocalWarningStep: View {
                 // crossfade (owner 2026-06-15: "One thing before…" should match the
                 // low subtext of "You don't need to choose…"). A flexible spacer
                 // carries it down toward the dock while the hero stays pinned.
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 Text("One thing before we continue.")
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -742,17 +853,17 @@ private struct RevealStep: View {
                     // Reserve the brand-mark space (owner 2026-06-15); the visible,
                     // non-fading mark is hoisted in OnboardingView so it doesn't flash
                     // between steps. `.opacity(0)` keeps the same Y/height here.
-                    IntroBrandMark()
-                        // Visible and scrolling above Large — the hoisted mark stands down there.
+                    OnboardingBrandMark()
+                        // Visible and scrolling above Large, where the hoisted mark stands down;
+                        // not drawn at all from the accessibility sizes (`OnboardingBrandMark`).
                         .opacity(dynamicSize > .large ? 1 : 0)
                     // Hero line at the shared set position (consistent with the
                     // IntroChapterScaffold screens).
-                    Spacer().frame(height: introHeroTopGap)
+                    HeroGap()
 
                     VStack(spacing: 20) {
                         Text("Your Privacy phrase")
-                            .ckDisplay(size: 28, relativeTo: nil)
-                            .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                            .stepHeading()
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -806,11 +917,12 @@ private struct RevealStep: View {
                         .ckBody(.regular, size: 12, relativeTo: .caption)
                         .foregroundStyle(Color.ckTextSecondary)
                     Text(word)
-                        // The 12 words use the subtext font, not the display face (owner
+                        // The 12 words use the body face, not the display face (owner
                         // 2026-06-16): DS §2.1 reserves the display face for display moments,
                         // never functional content; sans is also clearer for a phrase
-                        // you must transcribe exactly.
-                        .ckBody(.light, size: 16, relativeTo: .body)
+                        // you must transcribe exactly. Semibold, as drawn, so a word reads
+                        // apart from its number.
+                        .ckBody(.semibold, size: 15, relativeTo: .body)
                         .foregroundStyle(Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -818,7 +930,7 @@ private struct RevealStep: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 8)
-                .flatPanel()
+                .flatTile()
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Word \(idx + 1): \(word)")
             }
@@ -842,8 +954,9 @@ private struct ConfirmStep: View {
             ScrollView {
                 VStack(spacing: 0) {
                     // Reserve the brand-mark space (hoisted + non-fading, as Reveal).
-                    IntroBrandMark()
-                        // Visible and scrolling above Large — the hoisted mark stands down there.
+                    OnboardingBrandMark()
+                        // Visible and scrolling above Large, where the hoisted mark stands down;
+                        // not drawn at all from the accessibility sizes (`OnboardingBrandMark`).
                         .opacity(dynamicSize > .large ? 1 : 0)
                     // The gap to the hero now also HOSTS the validation message: it
                     // floats as a card centred between the brand mark and the hero
@@ -855,42 +968,38 @@ private struct ConfirmStep: View {
                     // hero stays pinned at the set position whether or not it shows).
                     // ckTextObie, not ckEmber: Ember fails WCAG AA on Paper at 13pt
                     // (DS §12.3); resolves to Ember Text #856539 Daylight / Glow Night.
-                    Color.clear
-                        .frame(height: introHeroTopGap)
-                        .overlay {
-                            if let failure = vm.failure {
-                                Text(failure)
-                                    .ckBody(.regular, size: 13, relativeTo: .caption)
-                                    .foregroundStyle(Color.ckAccent)
-                                    .multilineTextAlignment(.center)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        CatchlightShape.surface
-                                            .fill(Color.ckEmber.opacity(0.12))
-                                            .overlay(
-                                                CatchlightShape.surface
-                                                    .strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1)
-                                            )
-                                    )
-                                    .padding(.horizontal, 24)
-                                    // Nudge to the VISUAL centre of the wordmark→hero
-                                    // gap: the geometric centre reads a touch high
-                                    // because the hero sits low in its line
-                                    // box (owner 2026-06-15).
-                                    .offset(y: 16)
-                                    .transition(.opacity)
-                                    .accessibilityLabel(failure)
-                                    .accessibilityFocused($failureFocused)
-                            }
+                    //
+                    // From the accessibility sizes up the card is several lines of large text,
+                    // taller than the gap below the status bar, so it takes its own room above
+                    // the heading instead of floating over it. The step scrolls there, so the
+                    // heading moving down a little is harmless.
+                    Group {
+                    if dynamicSize >= .accessibility1 {
+                        HeroGap()
+                        if let failure = vm.failure {
+                            failureCard(failure)
+                                .padding(.bottom, 12)
+                                .transition(.opacity)
                         }
-                        .animation(.easeInOut(duration: 0.18), value: vm.failure)
-
+                    } else {
+                        HeroGap()
+                            .overlay {
+                                if let failure = vm.failure {
+                                    failureCard(failure)
+                                        // Nudge to the VISUAL centre of the wordmark→hero
+                                        // gap: the geometric centre reads a touch high
+                                        // because the hero sits low in its line
+                                        // box (owner 2026-06-15).
+                                        .offset(y: 16)
+                                        .transition(.opacity)
+                                }
+                            }
+                    }
+                    }
+                    .animation(.easeInOut(duration: 0.18), value: vm.failure)
                     VStack(spacing: 12) {
                         Text("Confirm three words")
-                            .ckDisplay(size: 28, relativeTo: nil)
-                            .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                            .stepHeading()
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -967,6 +1076,29 @@ private struct ConfirmStep: View {
         }
     }
 
+    /// The wrong-guess message: a rounded card in the accent. One element, labelled with the
+    /// message, that VoiceOver focus moves to (see the handler below).
+    private func failureCard(_ failure: String) -> some View {
+        Text(failure)
+            .ckBody(.regular, size: 13, relativeTo: .caption)
+            .foregroundStyle(Color.ckAccent)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(
+                CatchlightShape.surface
+                    .fill(Color.ckEmber.opacity(0.12))
+                    .overlay(
+                        CatchlightShape.surface
+                            .strokeBorder(Color.ckEmber.opacity(0.35), lineWidth: 1)
+                    )
+            )
+            .padding(.horizontal, 24)
+            .accessibilityLabel(failure)
+            .accessibilityFocused($failureFocused)
+    }
+
     private var promptCopy: String {
         let positions = vm.targetPositionsForDisplay
         guard positions.count == 3 else {
@@ -992,16 +1124,6 @@ private struct ConfirmStep: View {
                     ? "\(vm.targetPositionsForDisplay[i])"
                     : ""
                 ZStack {
-                    // C5 (audit 2026-08): the error state used raw ckEmber on the
-                    // light surface (~2:1) — the exact pattern replaced
-                    // with ckAccent elsewhere and never propagated here. ckAccent
-                    // keeps Night identical (Ember) and gives Daylight #856539.
-                    CatchlightShape.surface
-                        .stroke(vm.flashError ? Color.ckAccent : Color.ckOutline, lineWidth: 1.5)
-                        .background(
-                            CatchlightShape.surface
-                                .fill(vm.flashError ? Color.ckAccent.opacity(0.18) : Color.ckSurface.opacity(0.6))
-                        )
                     // Number INLINE, to the left of the word — same arrangement as
                     // the reveal cells (owner 2026-06-15), so the slot reads as a
                     // single-line cell rather than a taller stacked one. The position
@@ -1011,7 +1133,7 @@ private struct ConfirmStep: View {
                             .ckBody(.regular, size: 12, relativeTo: .caption)
                             .foregroundStyle(Color.ckTextSecondary)
                         Text(value ?? "—")
-                            .ckBody(.light, size: 16, relativeTo: .body)   // 12 words use the subtext font (DS §2.1), and the Confirm bank is interactive
+                            .ckBody(.semibold, size: 15, relativeTo: .body)   // the 12 words use the body face (DS §2.1), semibold as drawn
                             .foregroundStyle(value == nil ? Color.ckTextSecondary : Color.ckTextPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
@@ -1022,6 +1144,15 @@ private struct ConfirmStep: View {
                 }
                 .frame(minHeight: 44)
                 .frame(maxWidth: .infinity)
+                // As drawn: an open slot is edged in the muted colour, a filled one in the
+                // accent, and a wrong guess flashes the accent.
+                //
+                // C5 (audit 2026-08): the error state used raw ckEmber on the light surface
+                // (~2:1), the pattern replaced with ckAccent elsewhere and never propagated
+                // here. ckAccent keeps Night identical (Ember) and gives Daylight #856539.
+                .flatTile(fill: vm.flashError ? Color.ckAccent.opacity(0.18) : .clear,
+                          edge: vm.flashError || value != nil ? Color.ckAccent : Color.ckTextSecondary,
+                          edgeWidth: 1.5)
                 .animation(.easeInOut(duration: 0.18), value: vm.flashError)
                 // V7 (audit 2026-08): the label below promised "Double-tap to
                 // deselect" with no behaviour behind it — for anyone, not only
@@ -1065,15 +1196,13 @@ private struct ConfirmStep: View {
                 let used = vm.usedBankIndices.contains(index)
                 Button { vm.tapBankWord(at: index) } label: {
                     Text(word)
-                        .ckBody(.light, size: 16, relativeTo: .body)   // 12 words use the subtext font (DS §2.1), and the Confirm bank is interactive
+                        .ckBody(.regular, size: 15, relativeTo: .body)   // the 12 words use the body face (DS §2.1), and the Confirm bank is interactive
                         .foregroundStyle(used ? Color.ckDisabledLabel : Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-                        .background(
-                            CatchlightShape.control.fill(used ? Color.ckDisabledFill : Color.ckSurface)
-                        )
-                        .overlay(CatchlightShape.control.strokeBorder(used ? Color.clear : Color.ckLine, lineWidth: 1))
+                        .flatTile(fill: used ? Color.ckDisabledFill : Color.ckSurface,
+                                  edge: used ? Color.clear : Color.ckLine)
                 }
                 .buttonStyle(.plain)
                 .disabled(used || vm.isLocked)
@@ -1119,16 +1248,15 @@ private struct CompleteStep: View {
         // Carry the persistent brand mark through to the end (owner 2026-06-15):
         // the icon+wordmark sits at the same Y as every other intro screen, so the
         // standalone 72pt hero icon is retired in favour of the shared mark.
-        IntroChapterScaffold {
+        IntroChapterScaffold(onField: true) {
             VStack(spacing: 0) {
                 // Hero line at the shared set position (was centred — owner
                 // 2026-06-16: keep "You're ready." consistent with every other
                 // brand-mark screen).
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 Text("You're ready.")
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
-                    .foregroundStyle(Color.ckTextPrimary)
+                    .stepHeading()
+                    .stepInk(.primary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
@@ -1143,12 +1271,12 @@ private struct CompleteStep: View {
                 VStack(spacing: 12) {
                     Text("Your thoughts, in your order, telling your story. Nobody else's.")
                         .ckBody(.light, size: 16, relativeTo: .body)
-                        .foregroundStyle(Color.ckTextPrimary)
+                        .stepInk(.primary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(bodyText)
                         .ckBody(.light, size: 16, relativeTo: .body)
-                        .foregroundStyle(Color.ckTextSecondary)
+                        .stepInk(.secondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1193,6 +1321,7 @@ private struct BasicsStep: View {
     /// and double-taps are spoken instruction, never page text. The first cut swapped the
     /// visible `Text` instead, which printed the rotor wording on screen.
     private struct Point {
+        let mark: OnboardingPointRow.Mark
         let title: String
         let shown: String
         let spoken: String
@@ -1201,17 +1330,21 @@ private struct BasicsStep: View {
     private var points: [Point] {
         switch page {
         case .first:
-            return [Point(title: String(localized: "Add a Take"),
+            return [Point(mark: .add,
+                          title: String(localized: "Add a Take"),
                           shown: String(localized: "Tap the + button. Tap anywhere outside the Take to save. That's the whole capture flow."),
                           spoken: String(localized: "Double-tap Add Take in the toolbar. To save, double-tap Save and close. That's the whole capture flow.")),
-                    Point(title: String(localized: "Shape your Take with the Iris"),
-                          shown: String(localized: "Tap the circle beside any Take to make it a task, set a reminder, or make it important."),
+                    Point(mark: .iris,
+                          title: String(localized: "Shape your Take with the Iris"),
+                          shown: String(localized: "Tap the square in the corner of any Take to make it a task, set a reminder, or make it important."),
                           spoken: String(localized: "Double-tap an Iris to make that Take a task, set a reminder, or make it important."))]
         case .second:
-            return [Point(title: String(localized: "Your Obie"),
+            return [Point(mark: .obie,
+                          title: String(localized: "Your Obie"),
                           shown: String(localized: "Press and hold an Iris to pin one above the rest. Only one is ever your Obie, because there can only be one that's most important."),
                           spoken: String(localized: "Select an Iris, use the rotor to select Actions, swipe up to select Make Obie, then double-tap. Only one is ever your Obie, because there can only be one that's most important.")),
-                    Point(title: String(localized: "Settings"),
+                    Point(mark: .swipeUp,
+                          title: String(localized: "Settings"),
                           shown: String(localized: "Simply swipe up from the toolbar."),
                           spoken: String(localized: "Select Storyboard, then use the rotor to select Actions and double-tap to open Settings."))]
         }
@@ -1231,35 +1364,27 @@ private struct BasicsStep: View {
         // 2026-09-14).
         IntroChapterScaffold {
             VStack(spacing: 0) {
-                Spacer().frame(height: introHeroTopGap)
+                HeroGap()
                 Text(heading)
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 24)
-                VStack(spacing: 20) {
+                // As drawn: each point is a small drawing of the control it names, with its title
+                // and sentence beside it, between hairlines. The layout is `OnboardingPointRow`
+                // and nothing else here depends on it.
+                VStack(spacing: 0) {
                     ForEach(points, id: \.title) { point in
-                        VStack(spacing: 6) {
-                            Text(point.title)
-                                .ckBody(.medium, size: 16, relativeTo: .body)
-                                .foregroundStyle(Color.ckTextPrimary)
-                                .multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text(point.shown)
-                                .ckBody(.light, size: 16, relativeTo: .body)
-                                .foregroundStyle(Color.ckTextSecondary)
-                                .multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        // One element per point, so the cursor steps heading-and-all
-                        // rather than splitting each into two stops — and an explicit
-                        // label, which REPLACES the printed sentence with the spoken one.
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("\(point.title). \(point.spoken)")
+                        OnboardingPointRow(mark: point.mark, title: point.title, shown: point.shown)
+                            // One element per point, so the cursor steps heading-and-all
+                            // rather than splitting each into two stops, and an explicit
+                            // label, which REPLACES the printed sentence with the spoken one.
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("\(point.title). \(point.spoken)")
                     }
+                    Rectangle().fill(Color.ckLine).frame(height: 1)
                 }
                 Spacer().frame(height: 24)
             }
@@ -1285,8 +1410,7 @@ private struct FailureStep: View {
             VStack(spacing: 20) {
                 Spacer()
                 Text(vm.failure ?? String(localized: "Something went wrong."))
-                    .ckDisplay(size: 28, relativeTo: nil)
-                    .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                    .stepHeading()
                     .foregroundStyle(Color.ckTextPrimary)
                     .multilineTextAlignment(.center)
                     .accessibilityAddTraits(.isHeader)

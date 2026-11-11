@@ -125,6 +125,19 @@ final class SceneContrastTests: XCTestCase {
         }
     }
 
+    /// The colour field of the first and last onboarding screens: the text on it and the quieter
+    /// text reach 4.5:1, and the action button there is the on-field colour with the field
+    /// colour as its label, so that pair reaches 4.5:1 too.
+    func testOnboardingColourField_textReaches4_5to1() {
+        for scene in CatchlightScene.allCases {
+            for style in styles {
+                let t = sceneTraits(scene, style)
+                assertRatio(SceneToken.onField, SceneToken.field, t, 4.5, "onField on field, \(name(scene, style))")
+                assertRatio(SceneToken.fieldMuted, SceneToken.field, t, 4.5, "fieldMuted on field, \(name(scene, style))")
+            }
+        }
+    }
+
     /// Graphite Light's accent fails as a line on its light surfaces, so it is used only as
     /// a fill (checked above). Every other Scene's accent also works as a line.
     func testAccentAsALine_reaches3to1_exceptGraphiteLightWhichIsFillOnly() {

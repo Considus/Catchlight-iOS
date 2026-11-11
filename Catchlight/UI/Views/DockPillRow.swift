@@ -21,10 +21,19 @@ import SwiftUI
 /// The face of a `DockPill`: a rounded rectangle at the control radius. Primary is the action
 /// colour with its on-colour label, or the disabled pair while disabled. Secondary is the
 /// `outline` token as a 1pt edge (3:1 on every surface) with primary text.
+///
+/// On the colour field the primary is the on-field colour with the field colour as its label.
+/// The screens that sit on the field have no secondary button.
 private struct DockPillFace: ViewModifier {
     let secondary: Bool
+    @Environment(\.onColourField) private var onField
     func body(content: Content) -> some View {
-        if secondary {
+        if onField && !secondary {
+            content
+                .foregroundStyle(Color.ckField)
+                .background(CatchlightShape.control.fill(Color.ckOnField))
+                .contentShape(CatchlightShape.control)
+        } else if secondary {
             content
                 .foregroundStyle(Color.ckTextPrimary)
                 .background(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
@@ -72,11 +81,13 @@ struct DockPill: View {
 /// at the open side, 85% page colour at 28% of the way, solid from 55%.
 enum EdgeFade {
     /// `solid` is the side the content goes under.
-    static func gradient(solid: VerticalEdge) -> LinearGradient {
+    /// `ground` is the colour the content fades into: the page's ground, or the colour field on
+    /// the screens that sit on it.
+    static func gradient(solid: VerticalEdge, ground: Color = .ckBackground) -> LinearGradient {
         LinearGradient(stops: [
-            .init(color: Color.ckBackground.opacity(0), location: 0),
-            .init(color: Color.ckBackground.opacity(0.85), location: 0.28),
-            .init(color: Color.ckBackground, location: 0.55)
+            .init(color: ground.opacity(0), location: 0),
+            .init(color: ground.opacity(0.85), location: 0.28),
+            .init(color: ground, location: 0.55)
         ], startPoint: solid == .bottom ? .top : .bottom, endPoint: solid == .bottom ? .bottom : .top)
     }
 }
@@ -88,8 +99,17 @@ extension View {
     /// `passesTouches`: the fade is only a look, so content still showing through it keeps its
     /// taps (the Dailies toolbar, whose fade reaches above the panel over the Takes).
     func dockFadeBackground(passesTouches: Bool = false) -> some View {
-        background(
-            EdgeFade.gradient(solid: .bottom)
+        modifier(DockFade(passesTouches: passesTouches))
+    }
+}
+
+/// The fade itself, into the page's ground or into the colour field on the screens that sit on it.
+private struct DockFade: ViewModifier {
+    let passesTouches: Bool
+    @Environment(\.onColourField) private var onField
+    func body(content: Content) -> some View {
+        content.background(
+            EdgeFade.gradient(solid: .bottom, ground: onField ? .ckField : .ckBackground)
                 .ignoresSafeArea(edges: .bottom)
                 .allowsHitTesting(!passesTouches)
         )

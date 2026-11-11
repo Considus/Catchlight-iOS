@@ -194,6 +194,12 @@ enum SceneToken {
     static let accentText = role(\.accentText)
     /// "This is on": lit lights, the Obie square and the Focus row marks. Nothing else.
     static let lit      = role(\.lit)
+    /// The colour field the first and last onboarding screens sit on, and the colours drawn on it:
+    /// the text, the quieter text and the dot of the wordmark's i.
+    static let field      = role(\.field)
+    static let onField    = role(\.onField)
+    static let fieldMuted = role(\.fieldMuted)
+    static let iconDot    = role(\.iconDot)
 
     private static func role(_ key: KeyPath<ScenePalette, UInt32>) -> UIColor {
         UIColor { traits in
@@ -212,6 +218,12 @@ extension Color {
     static let ckOutline = Color(SceneColor(\.outline))
     static let ckUnlit = Color(SceneColor(\.unlit))
     static let ckLit = Color(SceneColor(\.lit))
+    /// The `surface` role: a tile or well set into a card or the page.
+    static let ckSurfaceRole = Color(SceneColor(\.surface))
+    static let ckField = Color(SceneColor(\.field))
+    static let ckOnField = Color(SceneColor(\.onField))
+    static let ckFieldMuted = Color(SceneColor(\.fieldMuted))
+    static let ckIconDot = Color(SceneColor(\.iconDot))
 }
 
 // MARK: - UIKit-facing semantic tokens (single source, shared with SwiftUI)
@@ -457,6 +469,30 @@ extension View {
                 .overlay(CatchlightShape.surface.strokeBorder(Color.ckLine, lineWidth: 1).allowsHitTesting(false))
                 .contentShape(CatchlightShape.surface)
         }
+    }
+}
+
+extension View {
+    /// A small flat tile at the control radius: the card colour and a hairline edge from the
+    /// `line` token. The phrase words, the confirm slots and the confirm bank are tiles. A
+    /// slot or a tile in a state passes its own fill and edge.
+    func flatTile(fill: Color = .ckSurface, edge: Color = .ckLine, edgeWidth: CGFloat = 1) -> some View {
+        background(CatchlightShape.control.fill(fill))
+            .overlay(CatchlightShape.control.strokeBorder(edge, lineWidth: edgeWidth))
+    }
+}
+
+/// Whether a screen sits on the Scene's colour field (the first and last onboarding screens).
+/// Set by the onboarding scaffolds. The wordmark, the dock's fade and the action button read it
+/// to draw in the field's own colours, so no view branches on the screen it is on.
+private struct OnColourFieldKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var onColourField: Bool {
+        get { self[OnColourFieldKey.self] }
+        set { self[OnColourFieldKey.self] = newValue }
     }
 }
 
