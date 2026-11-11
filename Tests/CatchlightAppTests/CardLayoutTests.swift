@@ -22,17 +22,26 @@ final class CardLayoutTests: XCTestCase {
         XCTAssertEqual(CatchlightLayout.cardMinHeight, 72)
     }
 
-    /// addColumnX(393) = 17 + (393 - 34) / 8 = 61.875, less 38. The toolbar moved to the
-    /// dock's 17pt inset (owner 2026-11-11, "Move the cards"), and the cards moved with it.
-    func testCardLeadingEdge_393() {
-        let leading = CatchlightLayout.addColumnX(containerWidth: 393) - CatchlightLayout.cardLeadingOffset
-        XCTAssertEqual(leading, 23.875, accuracy: 0.0001)
+    /// The Iris's centre sits `cardLeadingOffset` in from the card's leading edge, so it lands
+    /// exactly on `addColumnX`, under the toolbar's Add button. The Iris is drawn `irisInset`
+    /// in, and is `circleDiameter` wide.
+    func testIrisCentre_isCardLeadingOffsetIn_soItSitsUnderAdd() {
+        XCTAssertEqual(CatchlightLayout.irisInset + CatchlightLayout.circleDiameter / 2,
+                       CatchlightLayout.cardLeadingOffset)
     }
 
-    /// addColumnX(375) = 17 + (375 - 34) / 8 = 59.625, less 38.
+    /// addColumnX(393) = 17 + (393 - 34) / 8 = 61.875, less 36. The toolbar moved to the
+    /// dock's 17pt inset (owner 2026-11-11, "Move the cards"), and the cards moved with it so
+    /// the Iris sits exactly under Add.
+    func testCardLeadingEdge_393() {
+        let leading = CatchlightLayout.addColumnX(containerWidth: 393) - CatchlightLayout.cardLeadingOffset
+        XCTAssertEqual(leading, 25.875, accuracy: 0.0001)
+    }
+
+    /// addColumnX(375) = 17 + (375 - 34) / 8 = 59.625, less 36.
     func testCardLeadingEdge_375() {
         let leading = CatchlightLayout.addColumnX(containerWidth: 375) - CatchlightLayout.cardLeadingOffset
-        XCTAssertEqual(leading, 21.625, accuracy: 0.0001)
+        XCTAssertEqual(leading, 23.625, accuracy: 0.0001)
     }
 
     /// The default spacing setting stores 44; the old Iris's top half (22) no
