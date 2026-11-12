@@ -105,12 +105,12 @@ public final class ReminderScheduler {
         return status
     }
 
-    /// Whether the timeline should say reminders are silenced: iOS notifications are turned
-    /// off for Catchlight while at least one Take has a reminder set to alert. Only `.denied`
-    /// counts. Before the user is asked (`.notDetermined`), setting a reminder is what asks them.
     /// Set when the user closes the timeline's reminders-silenced strip. It never comes back.
     static let silencedBannerDismissedKey = "catchlight.remindersSilencedBannerDismissed"
 
+    /// Whether the timeline should say reminders are silenced: iOS notifications are turned
+    /// off for Catchlight while at least one Take has a reminder set to alert. Only `.denied`
+    /// counts. Before the user is asked (`.notDetermined`), setting a reminder is what asks them.
     static func remindersSilenced(status: UNAuthorizationStatus, anyAlerting: Bool) -> Bool {
         status == .denied && anyAlerting
     }
