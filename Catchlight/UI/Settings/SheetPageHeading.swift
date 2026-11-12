@@ -40,7 +40,7 @@ extension View {
 }
 
 /// The heading, and an action's text button on its first line: in the body font and the
-/// accent colour as it was in the bar, on the heading's first baseline, its right edge on
+/// Scene's accent text colour, on the heading's first baseline, its right edge on
 /// the same inset as the heading's left, with a 44pt tap area and 16pt clear of the title.
 /// Without an action the heading takes the full width (Art Director, 2026-11-12).
 struct SheetPageHeading: View {
@@ -87,6 +87,9 @@ struct SheetPageHeading: View {
         return Button(action: action.perform) {
             Text(action.label)
                 .font(.body)
+                // The Scene's accent text colour, as the app's other text buttons use: 4.5:1 or
+                // more on the page in every Scene, daylight and night.
+                .foregroundStyle(Color.ckAccent)
                 .lineLimit(1)
                 .fixedSize()
                 .frame(minWidth: CatchlightLayout.minTouchTarget, minHeight: tap, alignment: .trailing)
