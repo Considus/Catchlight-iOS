@@ -1486,8 +1486,7 @@ private struct BasicsStep: View {
                             .accessibilityLabel("\(point.title). \(point.spoken)")
                     }
                 }
-                .padding(.horizontal, CatchlightLayout.cardMargin(
-                    addColumnX: CatchlightLayout.addColumnX(containerWidth: UIScreen.main.bounds.width)) - stepContentInset)
+                .padding(.horizontal, CatchlightLayout.cardMargin - stepContentInset)
                 Spacer().frame(height: 24)
             }
         } bottom: {
