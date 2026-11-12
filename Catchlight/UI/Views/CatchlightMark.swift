@@ -11,7 +11,7 @@
 //  (About, the lock screen, the privacy curtain). `.bare` is the ring and dot alone, sized so
 //  the ring's outer edge fills the box, for the colour field (onboarding), as in the lockup.
 //  The launch screen cannot read the Scene, so it shows the Cobalt tile in the
-//  `catchlight-icon` asset.
+//  `catchlight-launch-mark` asset.
 //
 
 import SwiftUI
