@@ -77,7 +77,10 @@ final class RestoreKeyboardAccessory: UIView {
         self.onRestore = onRestore
         self.onBack = onBack
         super.init(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: Self.topPad + Self.buttonHeight + Self.bottomPad))
-        autoresizingMask = [.flexibleWidth]
+        // Flexible height so the keyboard sizes the bar from `intrinsicContentSize`, which grows
+        // when the pair stacks above Large text. With a fixed height the stacked Back button ran
+        // behind the keyboard (measured at the largest size: its bottom 73pt below the keyboard's top).
+        autoresizingMask = [.flexibleWidth, .flexibleHeight]
         backgroundColor = .clear
         fade.startPoint = CGPoint(x: 0.5, y: 0)
         fade.endPoint = CGPoint(x: 0.5, y: 1)

@@ -38,4 +38,29 @@ final class RestoreBarUITests: XCTestCase {
         XCTAssertEqual(restore.frame.height, 51.5, accuracy: 0.5, "Restore height")
         XCTAssertEqual(back.frame.height, 51.5, accuracy: 0.5, "Back height")
     }
+
+    /// At an accessibility text size the two stack, full width, and both stay above the keyboard.
+    func testStackedRestoreAndBackStayAboveTheKeyboardAtTheLargestSize() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-appearanceMode", "daylight",
+                               "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        let restoreLink = app.buttons["onboarding-restore-link"]
+        XCTAssertTrue(restoreLink.waitForExistence(timeout: 12), "onboarding did not appear")
+        Thread.sleep(forTimeInterval: 1)
+        restoreLink.tap()
+        let first = app.descendants(matching: .any).matching(identifier: "restore-word-1").firstMatch
+        XCTAssertTrue(first.waitForExistence(timeout: 8), "the restore step did not open")
+        Thread.sleep(forTimeInterval: 1)
+        first.tap()
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 5), "the keyboard did not come up")
+        Thread.sleep(forTimeInterval: 1)
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "restore-step-keyboard-up-xxxl"; shot.lifetime = .keepAlways; add(shot)
+        let restore = app.descendants(matching: .any).matching(identifier: "restore-submit").firstMatch
+        let back = app.descendants(matching: .any).matching(identifier: "restore-back").firstMatch
+        XCTAssertTrue(restore.exists && back.exists, "Restore or Back missing")
+        XCTAssertGreaterThan(back.frame.minY, restore.frame.maxY, "the two should stack")
+        XCTAssertLessThanOrEqual(back.frame.maxY, keyboard.frame.minY + 0.5, "Back runs behind the keyboard")
+    }
 }
