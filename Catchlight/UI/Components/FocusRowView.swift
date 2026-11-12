@@ -1102,6 +1102,8 @@ struct ReminderPickerSheet: View {
             }
             .accessibilityIdentifier("reminder-alarm-toggle")
 
+            NotificationsOffNote(notifyOn: alarm)
+
             Divider()
 
             // Repeat (owner 2026-06-21): a toggle that REVEALS the cadence chooser when

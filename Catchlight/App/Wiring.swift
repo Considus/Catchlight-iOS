@@ -271,6 +271,11 @@ enum Wiring {
                     UnverifiedCopy(id: lost.id, local: nil, cloud: lost),
                 ])
             }
+            // Each UI test starts with the reminders-silenced strip not yet closed, unless it
+            // relaunches with `--uitesting-keep-dismissals` to check the close lasts.
+            if !ProcessInfo.processInfo.arguments.contains("--uitesting-keep-dismissals") {
+                UserDefaults.standard.removeObject(forKey: ReminderScheduler.silencedBannerDismissedKey)
+            }
             // `--uitesting-notifications-off` raises the reminders-silenced strip: iOS
             // notifications refused, and a Take with a reminder set to alert. Otherwise it needs
             // notifications turned off in iOS Settings.
@@ -281,6 +286,17 @@ enum Wiring {
                 try? store.upsert(first)
                 model.dailiesVM.reload()
                 model.notificationStatus = .denied
+            }
+            // `--uitesting-place-reminder` gives "Buy film for the weekend shoot" a saved place
+            // reminder set to alert, so its editor opens on Place with the Notify row showing.
+            // Otherwise it needs the simulator's location, or a search, to pin a place.
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-place-reminder"),
+               var film = (try? store.allTakes())?.first(where: { $0.plainText.hasPrefix("Buy film") }) {
+                film.locationReminder = LocationTrigger(latitude: 51.5074, longitude: -0.1278,
+                                                        radiusMetres: ReminderScheduler.defaultGeofenceRadius,
+                                                        triggerOnArrival: true, locationName: "Studio")
+                try? store.upsert(film)
+                model.dailiesVM.reload()
             }
             // `--uitesting-converted` seeds a conflict whose other side another device has turned
             // into a Script (Catchlight-Core#29), for the sheet's converted card: otherwise it needs

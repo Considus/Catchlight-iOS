@@ -280,6 +280,7 @@ struct LocationEditor: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 6)
             }
+            NotificationsOffNote(notifyOn: alarmEnabled)
 
             Divider()
 
