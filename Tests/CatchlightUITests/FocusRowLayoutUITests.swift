@@ -17,7 +17,7 @@ final class FocusRowLayoutUITests: XCTestCase {
 
     private let markIDs = ["note", "task", "remind", "important"].map { "focus-row-mark-\($0)" }
 
-    func testMarksSitOnTheGrownBottomEdge_60Apart() throws {
+    func testMarksSitOnTheGrownBottomEdge_60Apart_centred() throws {
         let app = launchAppForUITesting()
         let card = takeRow(in: app, withLabelStarting: "Call the framer")
         XCTAssertTrue(card.waitForExistence(timeout: 10), "Seeded Take not on the timeline")
@@ -37,8 +37,11 @@ final class FocusRowLayoutUITests: XCTestCase {
             XCTAssertEqual(f.width, 44, accuracy: 0.5, "\(markIDs[i]) is not 44 wide")
             XCTAssertEqual(f.midY, cardFrame.maxY + 22, accuracy: 1,
                            "\(markIDs[i]) is not centred on the card's grown bottom edge")
-            XCTAssertEqual(f.midX - hub.x, CGFloat(60 * (i + 1)), accuracy: 1,
-                           "\(markIDs[i]) is not \(60 * (i + 1))pt right of the Iris centre")
+            // 60 apart, as a group centred on the screen (owner 2026-11-12).
+            let expected = app.windows.firstMatch.frame.midX + (CGFloat(i) - 1.5) * 60
+            XCTAssertEqual(f.midX, expected, accuracy: 1,
+                           "\(markIDs[i]) is not at \(expected), its place in a centred row")
+            XCTAssertGreaterThan(f.midX, hub.x, "\(markIDs[i]) is left of the Iris")
             XCTAssertEqual(f.midY, frames[0].midY, accuracy: 0.5, "The marks are staggered")
         }
     }

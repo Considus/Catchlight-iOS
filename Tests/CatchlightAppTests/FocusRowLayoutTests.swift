@@ -2,9 +2,9 @@
 //  FocusRowLayoutTests.swift
 //  CatchlightTests (app module)
 //
-//  Covers where the Focus row's four marks land: 44pt marks with 16pt gaps, centres
-//  60, 120, 180 and 240pt right of the Iris on a phone, squeezed evenly (never shrunk,
-//  never overlapping) when the row would otherwise run past the screen's 8pt margin.
+//  Covers where the Focus row's four marks land: 44pt marks with 16pt gaps, as a group
+//  centred on the screen (and so the card), squeezed evenly (never shrunk, never
+//  overlapping) only on a screen too narrow for the full row and an 8pt margin each side.
 //  The tapped card grows 22pt at the bottom while the row is open, and the marks'
 //  centres sit exactly on its grown bottom edge, lifted to stay above the keyboard or
 //  the dock.
@@ -25,47 +25,53 @@ final class FocusRowLayoutTests: XCTestCase {
         XCTAssertEqual(FocusRowView.markSpacing - FocusRowView.markSize, 16)
     }
 
-    /// 393pt wide with the Iris at the real card position: four marks at 60, 120, 180, 240.
-    func testStandardWidth_marksSit60Apart() {
-        let hubX = CatchlightLayout.addColumnX(containerWidth: 393)
-        XCTAssertEqual(slots(hubX: hubX, width: 393), [60, 120, 180, 240])
+    /// The four marks sit as one group centred on the screen, which is the card's centre, at
+    /// every phone width (owner 2026-11-12: they sat 12pt right of centre on a 402pt phone).
+    func testTheGroupIsCentred_atEveryPhoneWidth() {
+        for width: CGFloat in [375, 393, 402, 440] {
+            let hubX = CatchlightLayout.addColumnX(containerWidth: width)
+            let xs = slots(hubX: hubX, width: width)
+            let groupMid = hubX + (xs[0] + xs[3]) / 2
+            XCTAssertEqual(groupMid, width / 2, accuracy: 0.0001, "Off centre at \(width)pt")
+            assertEqualGaps(xs)
+            XCTAssertEqual(xs[1] - xs[0], 60, accuracy: 0.0001, "Spacing changed at \(width)pt")
+        }
     }
 
-    /// The narrowest supported phone (375) has room for the full spacing.
-    func testNarrowestPhone_keepsTheFullSpacing() {
-        let width: CGFloat = 375
-        let hubX = CatchlightLayout.addColumnX(containerWidth: width)
-        let xs = slots(hubX: hubX, width: width)
-        XCTAssertEqual(xs, [60, 120, 180, 240])
-        XCTAssertLessThanOrEqual(hubX + xs[3] + FocusRowView.markSize / 2, width - 8)
+    /// On a 402pt phone the Iris is at 63, so the marks' centres are 111, 171, 231 and 291.
+    func testStandardPhone_marksSit60Apart_aroundTheCentre() {
+        XCTAssertEqual(slots(hubX: 63, width: 402), [48, 108, 168, 228])
     }
 
-    /// The squeeze starts below 323.2pt wide with the Iris at the real card position (the
-    /// dock's 17pt inset, owner 2026-11-11): at 324 the last mark's edge (53.25 + 240 + 22 =
-    /// 315.25) is inside the margin (316); at 322 it is not (53 + 262 = 315 > 314), so the
-    /// gap shrinks. Still far below the narrowest supported phone (375).
-    func testSqueezeThreshold() {
-        XCTAssertEqual(slots(hubX: CatchlightLayout.addColumnX(containerWidth: 324), width: 324),
-                       [60, 120, 180, 240])
-        let xs = slots(hubX: CatchlightLayout.addColumnX(containerWidth: 322), width: 322)
-        XCTAssertLessThan(xs[0], 60)
+    /// Every mark is still right of the Iris on every phone, so each one slides right.
+    func testEveryMarkSlidesRight() {
+        for width: CGFloat in [375, 393, 402, 440] {
+            let hubX = CatchlightLayout.addColumnX(containerWidth: width)
+            XCTAssertGreaterThan(slots(hubX: hubX, width: width)[0], 0, "Note is left of the Iris at \(width)pt")
+        }
+    }
+
+    /// Only a screen narrower than the full row plus 8pt each side (240pt) shrinks the gap,
+    /// evenly, keeping the group centred and inside the margins.
+    func testSqueeze_belowTheFullRow() {
+        XCTAssertEqual(slots(hubX: 30, width: 240), [0, 60, 120, 180])
+        let xs = slots(hubX: 30, width: 220)
+        XCTAssertLessThan(xs[1] - xs[0], 60)
         assertEqualGaps(xs)
-    }
-
-    /// When the Iris sits far enough right that the standard row would overflow, the gap
-    /// shrinks evenly so the last mark's right edge lands exactly on the 8pt margin.
-    func testOverflow_gapShrinksEvenlyToTheMargin() {
-        let width: CGFloat = 375
-        let hubX: CGFloat = 160
-        let xs = slots(hubX: hubX, width: width)
-        XCTAssertEqual(hubX + xs[3] + FocusRowView.markSize / 2, width - 8, accuracy: 0.0001)
-        XCTAssertLessThan(xs[0], 60)
-        assertEqualGaps(xs)
+        XCTAssertEqual(30 + xs[0] - FocusRowView.markSize / 2, 8, accuracy: 0.0001)
+        XCTAssertEqual(30 + xs[3] + FocusRowView.markSize / 2, 220 - 8, accuracy: 0.0001)
     }
 
     /// However little room there is, the marks never overlap: 44pt apart at the least.
     func testSqueeze_neverOverlaps() {
-        XCTAssertEqual(slots(hubX: 200, width: 300), [44, 88, 132, 176])
+        let xs = slots(hubX: 20, width: 100)
+        XCTAssertEqual(xs[1] - xs[0], 44, accuracy: 0.0001)
+        assertEqualGaps(xs)
+    }
+
+    /// Before the container has a width, the marks sit a full spacing apart from the Iris.
+    func testNoWidthYet_marksSit60ApartFromTheIris() {
+        XCTAssertEqual(slots(hubX: 63, width: 0), [60, 120, 180, 240])
     }
 
     /// The mark is never resized to fit: it stays a 44pt touch target.
@@ -124,8 +130,8 @@ final class FocusRowLayoutTests: XCTestCase {
     }
 
     private func assertEqualGaps(_ xs: [CGFloat], file: StaticString = #filePath, line: UInt = #line) {
-        let gap = xs[0]
-        for i in 1..<xs.count {
+        let gap = xs[1] - xs[0]
+        for i in 2..<xs.count {
             XCTAssertEqual(xs[i] - xs[i - 1], gap, accuracy: 0.0001, file: file, line: line)
         }
     }
