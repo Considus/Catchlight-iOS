@@ -3,7 +3,7 @@
 //  CatchlightTests (app module)
 //
 //  Every Scene, in Dark and Light, measured on the surfaces a card or the page can be
-//  (ground, card, raised). Text, muted and faint text reach 4.5:1, with faint below muted.
+//  (ground, card, raised, important). Text, muted and faint text reach 4.5:1, with faint below muted.
 //  Field outlines and lit marks are shapes, so they reach 3:1 (WCAG 1.4.11). Unlit Iris
 //  lights are deliberately softer, at 2:1 on every surface including `surface`. The
 //  foreground on an accent fill reaches 4.5:1. The accent also reaches 3:1 as a line,
@@ -17,7 +17,8 @@ import UIKit
 final class SceneContrastTests: XCTestCase {
 
     private let surfaces: [(String, UIColor)] = [
-        ("ground", SceneToken.ground), ("card", SceneToken.card), ("raised", SceneToken.raised)
+        ("ground", SceneToken.ground), ("card", SceneToken.card), ("raised", SceneToken.raised),
+        ("important", SceneToken.important)
     ]
     private let styles: [UIUserInterfaceStyle] = [.dark, .light]
 

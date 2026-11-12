@@ -59,6 +59,13 @@ struct IrisView: View {
         }
     }
 
+    /// The Iris's inside: the plain card colour on every Take, Important ones included, so its
+    /// marks keep their contrast on the tinted card; the Obie keeps its raised square (owner
+    /// 2026-11-12).
+    static func fill(for take: Take) -> Color {
+        take.isObie ? .ckCardObieSurface : .ckCard
+    }
+
     // MARK: View
 
     var body: some View {
@@ -69,7 +76,7 @@ struct IrisView: View {
         let key: AnyHashable = reduceMotion ? AnyHashable(IrisMarkKey(id: take.id, state: state)) : AnyHashable(take.id)
         ZStack {
             IrisMark(values: state.vector,
-                     fill: take.isImportant ? .ckCardObieSurface : .ckCard,
+                     fill: Self.fill(for: take),
                      isObie: take.isObie)
                 .id(key)
                 .transition(reduceMotion ? .opacity : .identity)

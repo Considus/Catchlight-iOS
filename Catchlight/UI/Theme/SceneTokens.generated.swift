@@ -39,6 +39,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             surface: 0x131840,
             card: 0x131840,
             raised: 0x1C2356,
+            important: 0x1C2356,
             line: 0x283066,
             outline: 0x6A7097,
             text: 0xF6F7FF,
@@ -59,6 +60,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             surface: 0xE8EAF5,
             card: 0xFFFFFF,
             raised: 0xFFFFFF,
+            important: 0xE8EAF5,
             line: 0xD6DAEE,
             outline: 0x81849C,
             text: 0x0B0E2A,
@@ -79,6 +81,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             surface: 0x1A1C1F,
             card: 0x1A1C1F,
             raised: 0x26292D,
+            important: 0x26292D,
             line: 0x30343A,
             outline: 0x707377,
             text: 0xF2F3F5,
@@ -99,6 +102,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             surface: 0xE2E4E7,
             card: 0xFFFFFF,
             raised: 0xFFFFFF,
+            important: 0xE2E4E7,
             line: 0xD3D6DA,
             outline: 0x7F8185,
             text: 0x141518,
@@ -119,6 +123,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             surface: 0x0D1015,
             card: 0x0D1015,
             raised: 0x161B22,
+            important: 0x161B22,
             line: 0x232A33,
             outline: 0x62686F,
             text: 0xF3F6FA,
@@ -139,6 +144,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             surface: 0xEBEEF2,
             card: 0xFFFFFF,
             raised: 0xFFFFFF,
+            important: 0xEBEEF2,
             line: 0xDCE1E7,
             outline: 0x84888E,
             text: 0x0A0D12,
@@ -159,6 +165,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             surface: 0x13201A,
             card: 0x13201A,
             raised: 0x1C2D25,
+            important: 0x1C2D25,
             line: 0x26392F,
             outline: 0x68776E,
             text: 0xEEF4EF,
@@ -179,6 +186,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             surface: 0xEBF0EA,
             card: 0xFFFFFF,
             raised: 0xFFFFFF,
+            important: 0xE5F2E7,
             line: 0xD9E2DA,
             outline: 0x818B84,
             text: 0x13201A,
@@ -199,6 +207,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             surface: 0x191A3A,
             card: 0x191A3A,
             raised: 0x24254D,
+            important: 0x24254D,
             line: 0x2E3060,
             outline: 0x6F7094,
             text: 0xF5F3FF,
@@ -219,6 +228,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             surface: 0xE3EEFA,
             card: 0xFFFFFF,
             raised: 0xFFFFFF,
+            important: 0xE3EEFA,
             line: 0xD3DFEE,
             outline: 0x7F869F,
             text: 0x14163A,
@@ -244,6 +254,7 @@ struct ScenePalette: Equatable, Sendable {
     let surface: UInt32
     let card: UInt32
     let raised: UInt32
+    let important: UInt32
     let line: UInt32
     let outline: UInt32
     let text: UInt32

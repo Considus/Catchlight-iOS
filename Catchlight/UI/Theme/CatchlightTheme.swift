@@ -179,6 +179,8 @@ enum SceneToken {
     static let surface  = role(\.surface)
     static let card     = role(\.card)
     static let raised   = role(\.raised)
+    /// An Important Take's card: its own shade in Daylight, raised in Dark (owner 2026-11-12).
+    static let important = role(\.important)
     /// Dividers and card edges only.
     static let line     = role(\.line)
     /// Field outlines: 3:1 on every surface.
@@ -331,6 +333,11 @@ extension Color {
     /// pinned Take reads as special. Daylight #FBF8F3 (Ember @8% blended onto
     /// White, solid to prevent spine bleed) / Night #2D2921. (HiFi v1.7 .obie-card)
     static let ckCardObieSurface = Color(SceneColor(\.raised))
+
+    /// An Important Take's card background, the Obie aside: its own shade per Scene in Daylight,
+    /// where `raised` is the same white as a plain card, and `raised` in Dark (owner
+    /// 2026-11-12). Its own values, so a later panel or raised change can't move it.
+    static let ckCardImportantSurface = Color(SceneColor(\.important))
 
     /// Obie card BORDER — Ember @65% (Daylight) / Glow @65% (Night). The Ember
     /// border is reserved EXCLUSIVELY for the Obie. (HiFi v1.7 .obie-card)

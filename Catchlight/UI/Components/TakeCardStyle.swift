@@ -13,8 +13,9 @@
 //
 //  Owner spec 2026-06-18 — two independent axes:
 //
-//    • SURFACE = emphasis. Dark (`ckCardObieSurface`) if the Take is Important (the
-//      Obie always is, sticky); else the standard light `ckSurface`.
+//    • SURFACE = emphasis. The Obie keeps `ckCardObieSurface`; any other Important Take
+//      takes `ckCardImportantSurface` (its own shade in Daylight, owner 2026-11-12); else
+//      the standard `ckSurface`.
 //
 //    • BORDER = state, by precedence (first match wins):
 //        overdue            → ruby   (`ckCardOverdueBorder`; the ONLY override of gold)
@@ -68,7 +69,8 @@ struct TakeCardStyle {
         let overdue = take.timeReminder?.isOverdue(now: now) ?? false
         let done = take.isMarkedDone
 
-        let surfaceColor: Color = take.isImportant ? .ckCardObieSurface : .ckSurface
+        let surfaceColor: Color = take.isObie ? .ckCardObieSurface
+            : (take.isImportant ? .ckCardImportantSurface : .ckSurface)
         self.surface = surfaceColor
 
         if overdue {
