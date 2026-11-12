@@ -10,9 +10,9 @@
 //  `catchlight.cloudFolderBookmark` UserDefaults key that `Wiring.makeSyncEngine`
 //  and `FileCloudFolder(bookmark:)` resolve at sync time.
 //
-//  Tested providers = iCloud Drive, Dropbox, Internxt, Koofr, Filen (device-verified
-//  2026-06-22): folder-in-place selection requires NSFileProviderReplicatedExtension,
-//  which only those two implement — every other cloud greys out in the picker.
+//  Tested with iCloud Drive, Dropbox, Internxt, Koofr and Filen (device-verified
+//  2026-06-22). Others may work: folder-in-place selection requires
+//  NSFileProviderReplicatedExtension, and a cloud without one greys out in the picker.
 //  The paste-a-URL fallback was removed 2026-06-22; a typed path can never gain
 //  iOS write access (the grant must come through the picker), so it only ever
 //  failed.
