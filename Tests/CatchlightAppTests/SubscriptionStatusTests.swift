@@ -57,6 +57,16 @@ final class SubscriptionStatusTests: XCTestCase {
         XCTAssertEqual(status, .lapsed)
     }
 
+    /// A free trial that ends without a subscription lands in the same read-only lane as an
+    /// ended subscription: readable and exportable, no adding or editing (LapsedReadOnlyUITests).
+    func testDerive_expiredTrialWithoutSubscribing_isLapsedAndNotEntitled() {
+        let status = SubscriptionStatus.derive(
+            from: [snap(active: false, trial: true)],
+            everSubscribed: true)
+        XCTAssertEqual(status, .lapsed)
+        XCTAssertFalse(status.isEntitled)
+    }
+
     func testDerive_mixedActiveAndInactive_prefersActive() {
         let status = SubscriptionStatus.derive(
             from: [snap(active: false, trial: false),
