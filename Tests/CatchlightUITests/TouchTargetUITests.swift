@@ -221,13 +221,21 @@ final class TouchTargetUITests: XCTestCase {
         settle()
         auditTouchTargets("paywall", in: app)
         // The footer is below the fold on the small iPhone: scroll to it and measure that too.
-        let terms = app.links["Terms of Service"]
-        for _ in 0..<6 where !(terms.exists && terms.isHittable) { app.swipeUp() }
+        // Found by label whatever type the runtime gives a Link (a link on one iOS, a button or
+        // text on another), so the check does not depend on it.
+        func footer(_ label: String) -> XCUIElement {
+            app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
+        }
+        let terms = footer("Terms of Service")
+        for _ in 0..<8 where !(terms.exists && terms.isHittable) { app.swipeUp() }
         XCTAssertTrue(terms.exists, "the paywall footer links were not reached")
         settle()
-        let seen = measureControls(in: app).map(\.name)
-        XCTAssertTrue(seen.contains("\"Terms of Service\"") && seen.contains("paywall-restore"),
-                      "the scrolled paywall did not show the footer controls: \(seen)")
+        for label in ["Privacy Policy", "Terms of Service", "Restore Purchases", "Redeem Code"] {
+            let element = footer(label)
+            XCTAssertTrue(element.exists, "\(label) is not on the paywall")
+            XCTAssertGreaterThanOrEqual(element.frame.height, touchTargetMinimum - 0.5, "\(label) is \(element.frame.height) high")
+            XCTAssertGreaterThanOrEqual(element.frame.width, touchTargetMinimum - 0.5, "\(label) is \(element.frame.width) wide")
+        }
         auditTouchTargets("paywall-footer", in: app)
     }
 
