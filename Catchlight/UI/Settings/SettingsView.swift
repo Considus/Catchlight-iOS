@@ -88,6 +88,9 @@ struct SettingsView: View {
     /// The calm message after a refund request; nil hides the alert.
     @State private var refundMessage: String?
     @State private var isRequestingRefund = false
+    /// How far in the list sets the title row: undone so the heading spans the sheet as
+    /// Dailies' spans the screen.
+    @State private var titleRowInset: CGFloat = 0
 
     var body: some View {
         NavigationStack {
@@ -108,6 +111,10 @@ struct SettingsView: View {
             .listSectionSpacing(.compact)
             .scrollIndicators(.hidden)
             .scrollContentBackground(.hidden)
+            // No list margin above the title, so it sits as far below the sheet's top edge
+            // as Dailies' title sits below the safe area.
+            .contentMargins(.top, 0, for: .scrollContent)
+            .coordinateSpace(name: Self.listSpace)
             .background(Color.ckBackground)
             .accessibilityIdentifier("settings-sheet")
             // The "Settings" title scrolls with the list now (owner 2026-06-21) —
@@ -232,14 +239,19 @@ struct SettingsView: View {
 
     // MARK: - Title (scrolls with the list)
 
+    private static let listSpace = "settings-list"
+
     /// The "Settings" heading as a scrolling list row (owner 2026-06-21) — clear
     /// background, no section chrome, so it reads as a title and scrolls away.
-    /// Styled as the Dailies page heading (owner 2026-06-29): Archivo
-    /// expanded 24pt, kerned, CENTRED and upper-cased to match DAILIES/SEQUENCE/etc.
+    /// Drawn as the Dailies title (owner 2026-11-12), at Dailies' left inset and top gap.
     private var titleRow: some View {
-        PageHeading("SETTINGS")
+        PageHeading("Settings")
+            .padding(.horizontal, -titleRowInset)
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.listSpace)).minX } action: {
+                titleRowInset = max(0, $0)
+            }
             .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 4, trailing: 20))
+            .listRowInsets(EdgeInsets(top: CatchlightLayout.pageHeadingTopGap, leading: 0, bottom: 4, trailing: 0))
             .listRowSeparator(.hidden)
             .accessibilityLabel("Settings")
             .accessibilityAddTraits(.isHeader)

@@ -152,7 +152,7 @@ struct StoryboardView: View {
             // × still sits above the catcher and stays tappable mid-edit (it commits and closes
             // in one tap, via `closeStoryboard`) — the behaviour this view already had.
             .overlay { editOverlay }
-            // Dailies-style chrome: an opaque X-row + a 12pt fade, content scrolling
+            // Dailies-style chrome: an opaque heading row + the Dailies heading fade, content scrolling
             // under it (same as the Shot List — owner 2026-06-19).
             .safeAreaInset(edge: .top, spacing: 0) { topChrome }
             // The keyboard toolbar's bag → the full-screen Shot List on the draft.
@@ -285,42 +285,24 @@ struct StoryboardView: View {
 
     private var topChrome: some View {
         VStack(spacing: 0) {
-            ZStack {
-                // Explicit view heading, in the DAILIES house style (Archivo expanded,
-                // kerned caps) — owner 2026-06-19: name it as an Angle so the ∠ glyph,
-                // the heading, and the concept all read the same. CENTRED at 24pt
-                // (owner 2026-06-29) to match the timeline page heading; spans full
-                // width so it centres on screen, with the × floated at the right edge.
-                PageHeading("STORYBOARD")
-                    .accessibilityAddTraits(.isHeader)
-                    // Audit 2026-08, DT12: at large text the full-width centred
-                    // heading scaled INTO the floated ×. Reserve the ×'s slot on
-                    // BOTH sides (so centring holds); at default sizes the heading
-                    // is far narrower than this bound and nothing changes.
-                    .padding(.horizontal, CatchlightLayout.minTouchTarget + 12)
-                HStack {
-                    Spacer()
-                    Button(action: closeStoryboard) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(Color.ckTextSecondary)
-                            .frame(width: CatchlightLayout.minTouchTarget,
-                                   height: CatchlightLayout.minTouchTarget)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("storyboard-close")
-                    .accessibilityLabel("Close Storyboard")
+            // The page heading, drawn as the Dailies title at the Dailies inset, with the ×
+            // on the right of its first line (owner 2026-11-12).
+            PageHeadingWithButton(title: "Storyboard") {
+                Button(action: closeStoryboard) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .frame(width: CatchlightLayout.minTouchTarget,
+                               height: CatchlightLayout.minTouchTarget)
+                        .contentShape(Rectangle())
                 }
-                .padding(.trailing, 12)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("storyboard-close")
+                .accessibilityLabel("Close Storyboard")
             }
-            .padding(.top, 4)
+            .padding(.top, CatchlightLayout.pageHeadingTopGap)
             .background(Color.ckBackground)
-            LinearGradient(
-                colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .frame(height: 12)
+            DailiesView.headingFade(color: Color.ckBackground)
         }
     }
 
