@@ -66,6 +66,56 @@ func tapSaveCatcher(in app: XCUIApplication, above editor: XCUIElement,
         .withOffset(CGVector(dx: point.x, dy: point.y)).tap()
 }
 
+/// How long to wait for something a slow CI runner may be late to ready. A short fixed wait
+/// failed here when a runner stalled for seconds (the UI suite ran 45 minutes on one); a
+/// generous timeout costs nothing on a fast run, since every wait below returns the moment
+/// its condition holds.
+let slowRunnerTimeout: TimeInterval = 15
+
+/// Waits until `element` exists AND can take a tap (`isHittable`), up to `timeout`. Existing is
+/// not ready: an element is in the accessibility tree while it is still animating in, covered
+/// or off screen, and a tap or a keystroke sent then is swallowed or lands elsewhere. Returns
+/// whether it became hittable; the caller asserts, so the failure message names the thing.
+@discardableResult
+func waitUntilHittable(_ element: XCUIElement, timeout: TimeInterval = slowRunnerTimeout) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    guard element.waitForExistence(timeout: timeout) else { return false }
+    while Date() < deadline {
+        if element.isHittable { return true }
+        Thread.sleep(forTimeInterval: 0.1)
+    }
+    return element.isHittable
+}
+
+/// Waits until `element` exists and its frame has stopped moving (the same frame on three polls
+/// 0.1s apart), up to `timeout`: the keyboard exists while it is still sliding up, and a keystroke
+/// sent then is dropped. Returns whether it settled.
+@discardableResult
+func waitUntilStill(_ element: XCUIElement, timeout: TimeInterval = slowRunnerTimeout) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    guard element.waitForExistence(timeout: timeout) else { return false }
+    var last = element.frame
+    var steady = 0
+    while Date() < deadline {
+        Thread.sleep(forTimeInterval: 0.1)
+        let now = element.frame
+        steady = (now == last && !now.isEmpty) ? steady + 1 : 0
+        if steady >= 3 { return true }
+        last = now
+    }
+    return false
+}
+
+/// Taps the screen point `point`, once `anchor` is hittable. For a control with no element of
+/// its own to tap (the Focus row opens from a tap on a Take's Iris by coordinate).
+func tapPointWhenHittable(_ app: XCUIApplication, at point: CGPoint, after anchor: XCUIElement,
+                          file: StaticString = #filePath, line: UInt = #line) {
+    XCTAssertTrue(waitUntilHittable(anchor), "\(anchor) was not hittable within \(slowRunnerTimeout)s",
+                  file: file, line: line)
+    app.coordinate(withNormalizedOffset: .zero)
+        .withOffset(CGVector(dx: point.x, dy: point.y)).tap()
+}
+
 /// Wait for `element` to exist (default 5s), then tap it. Returns the element.
 @discardableResult
 func tapWhenReady(_ element: XCUIElement, timeout: TimeInterval = 5,

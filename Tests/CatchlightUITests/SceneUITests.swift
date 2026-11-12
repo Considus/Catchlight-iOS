@@ -130,9 +130,16 @@ final class SceneUITests: XCTestCase {
         XCTFail("\(label): the toolbar drew \(drawn), expected \(e)", file: file, line: line)
     }
 
+    /// Open the Scene menu and pick `name`. Each step waits for the control to take a tap, and the
+    /// last waits for the menu to close: the next switch otherwise taps a picker that is still
+    /// dismissing, which opens nothing ("Failed to not hittable: Button 'Scene'").
     private func choose(_ name: String, from picker: XCUIElement, in app: XCUIApplication) {
-        tapWhenReady(picker)
-        tapWhenReady(app.buttons[name])
+        XCTAssertTrue(waitUntilHittable(picker), "The Scene row was not hittable")
+        picker.tap()
+        let item = app.buttons[name]
+        XCTAssertTrue(waitUntilHittable(item), "The Scene menu did not open with \(name)")
+        item.tap()
+        XCTAssertTrue(item.waitForNonExistence(timeout: slowRunnerTimeout), "The Scene menu did not close after \(name)")
     }
 
     /// The pixel 6pt in from the sheet's leading edge, a third of the way down: the
