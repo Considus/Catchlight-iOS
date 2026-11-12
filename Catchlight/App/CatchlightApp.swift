@@ -548,11 +548,10 @@ struct CatchlightApp: App {
                     await subscriptionRef.refreshEntitlements()
                 }
                 // Task 6.13 — surface a stale/unresolvable cloud-folder
-                // bookmark through the existing sync-error strip. Cheap to
+                // bookmark through the existing sync-error strip, once it has
+                // failed every re-check (see `verifyCloudFolder`). Cheap to
                 // run on every activation; no-op when sync is not configured.
-                if let bookmarkError = Wiring.checkCloudBookmarkHealth() {
-                    app.reportBookmarkError(bookmarkError)
-                }
+                app.startCloudFolderCheck()
                 // Shared items land as saved Takes BEFORE the widget capture below, which may
                 // open an editor: saving runs a `reload()`, and doing that underneath an open
                 // editor is the kind of ordering that strands a draft.

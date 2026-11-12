@@ -76,11 +76,17 @@ enum Wiring {
     ///   • no bookmark is configured (local-only mode), OR
     ///   • the bookmark resolves cleanly and is not stale.
     /// Designed to be cheap to call on scene activation.
-    static func checkCloudBookmarkHealth() -> CloudBookmarkError? {
+    /// Every failed resolve is logged with its system error, including ones a re-check clears,
+    /// so the cause of a passing failure can be read from a support export.
+    static func checkCloudBookmarkHealth(log: DiagnosticsLog = .shared) -> CloudBookmarkError? {
         do {
             guard let resolved = try resolveCloudFolderURL() else { return nil }
             return resolved.isStale ? .stale : nil
         } catch {
+            let ns = error as NSError
+            let under = (ns.userInfo[NSUnderlyingErrorKey] as? NSError)
+                .map { "\($0.domain) \($0.code)" } ?? "none"
+            log.record(.cloudFolderCheckFailed(domain: ns.domain, code: ns.code, underlying: under))
             return .unresolvable
         }
     }
