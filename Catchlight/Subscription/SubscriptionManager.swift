@@ -14,6 +14,7 @@
 
 import Foundation
 import StoreKit
+import UIKit
 import Observation
 import CatchlightCore
 
@@ -222,6 +223,57 @@ final class SubscriptionManager {
             lastError = String(localized: "Couldn't restore purchases. Please try again.")
             return false
         }
+    }
+
+
+    // MARK: - Refund request
+
+    /// What a refund request came to. The Settings row words each one calmly;
+    /// `.cancelled` (the person closed Apple's sheet) needs no message.
+    enum RefundOutcome: Equatable {
+        case submitted, cancelled, alreadyRequested, noPurchase, failed
+    }
+
+    /// Apple's refund sheet for one transaction id.
+    typealias RefundSheet = (UInt64) async throws -> Transaction.RefundRequestStatus
+
+    /// Ask Apple for a refund of the current subscription charge, in the app. Uses the
+    /// latest verified Annual transaction; with none, the sheet never opens.
+    func requestRefund(sheet: RefundSheet) async -> RefundOutcome {
+        guard case .verified(let txn)? = await Transaction.latest(for: Self.annualProductID) else {
+            return .noPurchase
+        }
+        do {
+            switch try await sheet(txn.id) {
+            case .success: return .submitted
+            case .userCancelled: return .cancelled
+            @unknown default: return .failed
+            }
+        } catch {
+            return Self.refundOutcome(for: error)
+        }
+    }
+
+    /// Apple's own sheet, in the foreground window scene.
+    func requestRefund() async -> RefundOutcome {
+        await requestRefund { id in
+            guard let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive }) else {
+                throw Transaction.RefundRequestError.failed
+            }
+            return try await Transaction.beginRefundRequest(for: id, in: scene)
+        }
+    }
+
+    nonisolated static func refundOutcome(for error: Error) -> RefundOutcome {
+        if let e = error as? Transaction.RefundRequestError {
+            if e == .duplicateRequest { return .alreadyRequested }
+            // iOS 27 adds `.ineligible` (nothing refundable, e.g. a free trial). The CI
+            // toolchain's SDK predates it, so it is matched by case name.
+            if String(describing: e) == "ineligible" { return .noPurchase }
+        }
+        return .failed
     }
 
     /// Pricing copy for the CTA. Uses StoreKit's locale-aware display price.

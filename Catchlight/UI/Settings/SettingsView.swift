@@ -85,6 +85,9 @@ struct SettingsView: View {
     /// that block is gone; Start over ships.
     @State private var showStartOverExportOffer = false
     @State private var showStartOverConfirm = false
+    /// The calm message after a refund request; nil hides the alert.
+    @State private var refundMessage: String?
+    @State private var isRequestingRefund = false
 
     var body: some View {
         NavigationStack {
@@ -807,8 +810,40 @@ struct SettingsView: View {
                 SettingsDetailLabel(text: subscriptionRowDetail)
             }
             .accessibilityHint("View your subscription or restore purchases.")
+            SettingsRow(icon: "arrow.uturn.backward.circle",
+                        label: "Request a refund",
+                        chevron: false,
+                        disabled: isRequestingRefund,
+                        action: { requestRefund() })
+                .accessibilityIdentifier("settings-request-refund")
+                .accessibilityHint("Ask Apple to refund your subscription.")
         } header: {
             sectionHeader("Subscription")
+        }
+    }
+
+    private func requestRefund() {
+        isRequestingRefund = true
+        Task {
+            let outcome = await app.subscription.requestRefund()
+            isRequestingRefund = false
+            refundMessage = Self.refundMessage(for: outcome)
+        }
+    }
+
+    /// Calm wording per outcome; closing Apple's sheet says nothing.
+    static func refundMessage(for outcome: SubscriptionManager.RefundOutcome) -> String? {
+        switch outcome {
+        case .submitted:
+            return String(localized: "Request sent. Apple usually replies within 48 hours.")
+        case .alreadyRequested:
+            return String(localized: "You've already asked Apple for a refund. They usually reply within 48 hours.")
+        case .noPurchase:
+            return String(localized: "There's nothing to refund yet. A free trial isn't charged.")
+        case .failed:
+            return String(localized: "Couldn't send the request. Please try again in a moment.")
+        case .cancelled:
+            return nil
         }
     }
 
@@ -900,6 +935,12 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Export Takes now. This is the only way to preserve them. This will make cloud copies unreadable.")
+        }
+        .alert("Request a refund", isPresented: Binding(get: { refundMessage != nil },
+                                                        set: { if !$0 { refundMessage = nil } })) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(refundMessage ?? "")
         }
         .alert("Erase everything on this device?", isPresented: $showStartOverConfirm) {
             Button("Cancel", role: .cancel) { }
