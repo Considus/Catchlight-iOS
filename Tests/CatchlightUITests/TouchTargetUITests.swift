@@ -22,11 +22,6 @@ final class TouchTargetUITests: XCTestCase {
     /// logged, never failed, so this audit guards only the controls the app draws.
     private let systemPickerControls: Set<String> = ["Cancel", "Done", "Time Picker", "Month", "Previous Month",
                                                      "Next Month", "Show year picker", "Clear"]
-    /// The strip buttons are rebuilt by the strip work (the new x), then held to 44 here.
-    private let stripButtonsPendingRework: Set<String> = [
-        "Dismiss quarantine notice", "Turn on notifications", "3 Takes need a decision. Double-tap to review.",
-    ]
-
     private func launch(_ extra: [String] = [], uitesting: Bool = true) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = (uitesting ? ["--uitesting"] : []) + extra
@@ -110,14 +105,15 @@ final class TouchTargetUITests: XCTestCase {
         let app = launch(["--uitesting-notice"])
         XCTAssertTrue(anyElement(in: app, id: "add-button").waitForExistence(timeout: 8))
         settle()
-        auditTouchTargets("dailies-notice-strip", in: app, allowing: stripButtonsPendingRework)
+        auditTouchTargets("dailies-notice-strip", in: app)
     }
 
     func testDailies_notificationsStrip() {
         let app = launch(["--uitesting-notifications-off"])
         XCTAssertTrue(anyElement(in: app, id: "reminders-silenced-turn-on").waitForExistence(timeout: 8))
         settle()
-        auditTouchTargets("dailies-notifications-strip", in: app, allowing: stripButtonsPendingRework)
+        XCTAssertTrue(anyElement(in: app, id: "reminders-silenced-dismiss").exists, "the strip's x is missing, so it was not measured")
+        auditTouchTargets("dailies-notifications-strip", in: app)
     }
 
     func testDailies_focusRow() {
@@ -243,7 +239,7 @@ final class TouchTargetUITests: XCTestCase {
         let app = launch(["--uitesting-unverified"])
         let banner = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "3 Takes need a decision")).firstMatch
         XCTAssertTrue(banner.waitForExistence(timeout: 10))
-        auditTouchTargets("conflict-banner", in: app, allowing: stripButtonsPendingRework)
+        auditTouchTargets("conflict-banner", in: app)
         banner.tap()
         XCTAssertTrue(app.staticTexts["Recover this Take?"].waitForExistence(timeout: 5))
         settle()
