@@ -26,10 +26,54 @@ struct DailiesHeading: View {
     /// title and the date line up with the cards' edges below (art director 2026-11-11).
     var horizontalInset: CGFloat
 
-    /// "Monday 9 November" in English; each language's own order and words elsewhere.
-    static func dateText(for date: Date, locale: Locale = .current) -> String {
-        date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(locale))
+    /// The date in each language's own order and words, cut around the day number so the
+    /// ordinal letters can be raised: "Thursday 12th November" in the UK, "Thursday, November
+    /// 12th" in the US, "dimanche 1er novembre" in French on the 1st (owner 2026-11-12: "12th
+    /// with month"). Every other language is unchanged, with no suffix.
+    struct DateParts: Equatable {
+        var beforeDay: String
+        var day: String
+        var suffix: String
+        var afterDay: String
+        /// The whole date as one line of text, which VoiceOver reads ("twelfth").
+        var plain: String { beforeDay + day + suffix + afterDay }
     }
+
+    static func dateParts(for date: Date, locale: Locale = .current) -> DateParts {
+        let style = Date.FormatStyle.dateTime.weekday(.wide).day().month(.wide).locale(locale)
+        let attributed = date.formatted(style.attributed)
+        guard let dayRun = attributed.runs.first(where: { $0.foundation.dateField == .day }) else {
+            return DateParts(beforeDay: String(attributed.characters), day: "", suffix: "", afterDay: "")
+        }
+        let day = String(attributed[dayRun.range].characters)
+        return DateParts(beforeDay: String(attributed[..<dayRun.range.lowerBound].characters),
+                         day: day,
+                         suffix: Int(day).map { ordinalSuffix(day: $0, locale: locale) } ?? "",
+                         afterDay: String(attributed[dayRun.range.upperBound...].characters))
+    }
+
+    /// The letters after the day number: English "st", "nd", "rd" or "th" (11th to 13th
+    /// included); French "er" on the 1st only; nothing in any other language.
+    static func ordinalSuffix(day: Int, locale: Locale) -> String {
+        switch locale.language.languageCode?.identifier {
+        case "en":
+            if (11...13).contains(day % 100) { return "th" }
+            switch day % 10 {
+            case 1: return "st"
+            case 2: return "nd"
+            case 3: return "rd"
+            default: return "th"
+            }
+        case "fr":
+            return day == 1 ? "er" : ""
+        default:
+            return ""
+        }
+    }
+
+    /// The raised letters' size and lift, as fractions of the date's own size.
+    static let suffixScale: CGFloat = 0.7
+    static let suffixLift: CGFloat = 0.35
 
     var body: some View {
         // Redraws each minute, so the date turns over at midnight while the app is open.
@@ -66,13 +110,30 @@ struct DailiesHeading: View {
 
     /// Always one line. Stacked under the title it may shrink a little to fit the width.
     private func date(_ now: Date, stacked: Bool = false) -> some View {
-        Text(Self.dateText(for: now))
-            .ckBody(.regular, size: Self.dateSize, relativeTo: .caption)
+        DateLine(parts: Self.dateParts(for: now))
             .foregroundStyle(Color.ckTextSecondary)
             .lineLimit(1)
             .minimumScaleFactor(stacked ? 0.7 : 1)
             .fixedSize(horizontal: !stacked, vertical: true)
             .accessibilityIdentifier("dailies-date")
+    }
+}
+
+/// The date as one Text, with the ordinal letters smaller and raised. Its own view so it reads
+/// the text size inside the heading's cap, not the one outside it.
+private struct DateLine: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let parts: DailiesHeading.DateParts
+
+    var body: some View {
+        let traits = UITraitCollection(preferredContentSizeCategory: CatchlightFont.contentSizeCategory(dynamicTypeSize))
+        let size = CatchlightFont.scaledPoints(DailiesHeading.dateSize, relativeTo: .caption, compatibleWith: traits)
+        let raised = Text(parts.suffix)
+            .font(.system(size: size * DailiesHeading.suffixScale))
+            .baselineOffset(size * DailiesHeading.suffixLift)
+        return (Text(parts.beforeDay + parts.day) + raised + Text(parts.afterDay))
+            .font(.system(size: size))
+            .accessibilityLabel(parts.plain)
     }
 }
 

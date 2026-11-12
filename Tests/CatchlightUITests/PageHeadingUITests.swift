@@ -78,9 +78,17 @@ final class PageHeadingUITests: XCTestCase {
         let date = app.staticTexts["dailies-date"]
         XCTAssertTrue(date.waitForExistence(timeout: 8), "No date beside the Dailies heading")
         // Built with a different API from the app's, so the test can't agree by construction.
+        // The day carries its English ordinal ("12th"), which VoiceOver reads as one word.
         let formatter = DateFormatter()
         formatter.setLocalizedDateFormatFromTemplate("EEEEdMMMM")
-        XCTAssertEqual(date.label, formatter.string(from: Date()))
+        let dayNumber = Calendar.current.component(.day, from: Date())
+        let ordinal = NumberFormatter()
+        ordinal.numberStyle = .ordinal
+        ordinal.locale = Locale(identifier: "en")
+        let expected = formatter.string(from: Date())
+            .replacingOccurrences(of: "\\b\(dayNumber)\\b", with: ordinal.string(from: NSNumber(value: dayNumber))!,
+                                  options: .regularExpression)
+        XCTAssertEqual(date.label, expected)
         XCTAssertTrue(headingText(app, "Dailies").exists, "No Dailies title")
 
         app.buttons["sequence-tab"].tap()
