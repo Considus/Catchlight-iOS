@@ -2,11 +2,9 @@
 //  TakeCardStyleTests.swift
 //  CatchlightAppTests — 2026-07-02 review-audit follow-up
 //
-//  First direct coverage for the card colour precedence
-//  (overdue ruby → Obie gold → done grey → Task/Remind quadrant → none),
-//  including the 2026-07-01 place/time parity branch: a location reminder
-//  takes the Remind border like a time one, and — having no due instant —
-//  can never be OVERDUE.
+//  The card edge precedence (owner 2026-11-12, "Option 1"): overdue ruby → Obie lit →
+//  Important mid edge → the quiet line for everything else (notes, Tasks, reminders,
+//  done). A location reminder, having no due instant, can never be OVERDUE.
 //
 //  iOS-only — gated on `canImport(Catchlight)`.
 //
@@ -37,19 +35,17 @@ final class TakeCardStyleTests: XCTestCase {
         XCTAssertFalse(s.isDone)
     }
 
-    func testTimeReminder_takesReminderBorder() {
+    func testTimeReminder_takesTheLine() {
         var take = Take(blocks: [.textLine("call back")])
         take.timeReminder = TimeReminder(scheduledDate: now.addingTimeInterval(3600),
                                          notificationIdentifier: take.id.uuidString)
-        XCTAssertEqual(style(take).border, Quadrant.reminder(.dark))
+        XCTAssertEqual(style(take).border, Color.ckLine)
     }
 
-    /// The place/time parity branch (owner 2026-07-01): a "where" lights the
-    /// SAME Remind border as a "when".
-    func testPlaceReminder_takesReminderBorder() {
+    func testPlaceReminder_takesTheLine() {
         let take = Take(blocks: [.textLine("pick up parcel")], locationReminder: place())
         let s = style(take)
-        XCTAssertEqual(s.border, Quadrant.reminder(.dark))
+        XCTAssertEqual(s.border, Color.ckLine)
         XCTAssertFalse(s.isOverdue, "a place has no due instant — it can never be overdue")
     }
 
@@ -63,11 +59,11 @@ final class TakeCardStyleTests: XCTestCase {
                        "overdue ruby outranks even the Obie gold")
     }
 
-    func testDonePlace_takesDoneGrey() {
+    func testDonePlace_takesTheLine() {
         let take = Take(blocks: [.textLine("errand")], locationReminder: place(isDone: true))
         let s = style(take)
         XCTAssertTrue(s.isDone)
-        XCTAssertEqual(s.border, Color.ckCardDoneBorder)
+        XCTAssertEqual(s.border, Color.ckLine)
         XCTAssertEqual(s.bodyText, Color.ckTextComplete, "done recedes the body text")
     }
 
@@ -75,14 +71,31 @@ final class TakeCardStyleTests: XCTestCase {
         var take = Take(blocks: [.checkItem("x", isComplete: true)], isObie: true)
         take.setAllItemsComplete(true)
         XCTAssertEqual(style(take).border, Color.ckCardObieBorder,
-                       "Obie gold outranks the done grey")
+                       "the Obie keeps its edge when done")
     }
 
-    func testTask_beatsReminder_inQuadrantTier() {
+    func testTask_takesTheLine() {
         var take = Take(blocks: [.checkItem("x", isComplete: false)])
         take.locationReminder = place()
-        XCTAssertEqual(style(take).border, Quadrant.task(.dark),
-                       "a Task-and-reminder Take borders as Task (border order)")
+        XCTAssertEqual(style(take).border, Color.ckLine)
+    }
+
+    func testImportant_takesTheMidEdge_andTheObieOutranksIt() {
+        XCTAssertEqual(style(Take(blocks: [.textLine("a")], isImportant: true)).border, Color.ckCardImportantBorder)
+        XCTAssertEqual(style(Take(blocks: [.textLine("b")], isObie: true)).border, Color.ckCardObieBorder)
+    }
+
+    func testFormerObie_takesTheImportantEdge() {
+        var take = Take(blocks: [.textLine("a")], isObie: true)
+        take.isObie = false
+        XCTAssertEqual(style(take).border, Color.ckCardImportantBorder)
+    }
+
+    func testImportantOverdue_isRuby() {
+        var take = Take(blocks: [.textLine("late")], isImportant: true)
+        take.timeReminder = TimeReminder(scheduledDate: now.addingTimeInterval(-3600),
+                                         notificationIdentifier: take.id.uuidString)
+        XCTAssertEqual(style(take).border, Color.ckCardOverdueBorder)
     }
 
     /// `HeldCardIrisUITests` allows for this stroke width when it finds the card's edges.

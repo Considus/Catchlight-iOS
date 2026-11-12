@@ -181,6 +181,8 @@ enum SceneToken {
     static let raised   = role(\.raised)
     /// An Important Take's card: its own shade in Daylight, raised in Dark (owner 2026-11-12).
     static let important = role(\.important)
+    /// An Important Take's card edge (owner 2026-11-12).
+    static let importantEdge = role(\.importantEdge)
     /// Dividers and card edges only.
     static let line     = role(\.line)
     /// Field outlines: 3:1 on every surface.
@@ -339,6 +341,10 @@ extension Color {
     /// 2026-11-12). Its own values, so a later panel or raised change can't move it.
     static let ckCardImportantSurface = Color(SceneColor(\.important))
 
+    /// An Important Take's edge, the Obie aside: a mid edge per Scene, 55% of the way from
+    /// `line` to `lit`, so the Obie's lit edge stays the strongest (owner 2026-11-12).
+    static let ckCardImportantBorder = Color(SceneColor(\.importantEdge))
+
     /// Obie card BORDER — Ember @65% (Daylight) / Glow @65% (Night). The Ember
     /// border is reserved EXCLUSIVELY for the Obie. (HiFi v1.7 .obie-card)
     static let ckCardObieBorder = Color(SceneColor(\.lit))
@@ -359,12 +365,6 @@ extension Color {
         light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
     ))
 
-    /// Done card BORDER (a fully-ticked Task or a reminder marked done). It IS the done-text
-    /// grey, built from the same token so the two can't drift: "done" recedes by the same
-    /// amount whether it's the edge or the words (owner 2026-06-18, reaffirmed 2026-10-03
-    /// when the grey was darkened for contrast). `DoneTextContrastTests` holds it.
-    static let ckCardDoneBorder = Color(SceneColor(\.faint))
-
     /// Error / warning accent — used by the non-blocking error strips on the
     /// timeline (Task 3.9). Same hue in both modes so the strip reads as an
     /// alert regardless of theme; brightness chosen to remain WCAG AA against
@@ -374,54 +374,6 @@ extension Color {
         light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
     ))
 
-}
-
-// MARK: - Quadrant / mark fills (mode-dependent — resolved by the caller)
-//
-// These need the active colour scheme because the same activity reads differently
-// per mode. Views pass their `@Environment(\.colorScheme)` in.
-
-// Per-TYPE fill colours (position was set by the old Iris's N/E/S/W diamond —
-// Note=top, Task=right, Remind=left, Reserved=bottom). Daylight values are the
-// HiFi v1.6.9 `--q-*` swatches (the canonical look the owner reviews). v1.6.9
-// moved the Ember accent from Remind onto TASK, so Task is the warm quadrant
-// and Remind is the lighter amber. (Supersedes the DS §5.2 Ink-tint
-// Daylight values — flagged for DS reconciliation.)
-enum Quadrant {
-    // Daylight fills raised 2026-06-18 (owner-approved) to meet WCAG 1.4.11 (≥3:1 on
-    // the white card): Note #BCBCBB→#8C8C8C (~1.9→~3.1:1), Task Ember #C9A96E→#A8843E
-    // (~2→~3.5:1), Remind #B5A283→#8A7A58 (~2→~3.7:1). Night values unchanged (already
-    // light-on-dark). Supersedes the v1.6.9 `--q-*` swatches for Daylight.
-    //
-    // The Daylight fills are named here so they live in ONE editable place rather
-    // than as inline magic numbers inside each accessor.
-    private static let noteDay   = Color(hex: 0x8C8C8C)   // ~3.1:1 on the white card
-    private static let taskDay   = Color(hex: 0xA8843E)   // ~3.5:1 on the white card
-    private static let remindDay = Color(hex: 0x8A7A58)   // ~3.7:1 on the white card
-
-    /// Note — Daylight grey / Night Catchlight @ 55%.
-    static func note(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.ckCatchlight.opacity(0.55) : noteDay
-    }
-
-    /// Task — the warm accent; Daylight darkened to a 3:1 amber, Night keeps Ember.
-    static func task(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? .ckEmber : taskDay
-    }
-
-    /// Remind — Daylight darkened to a 3:1 tan / Night Glow @ 65%.
-    static func reminder(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.ckGlow.opacity(0.65) : remindDay
-    }
-
-    /// Important — the Iris North wedge (owner 2026-06-20, indicator only). Uses the
-    /// two previously-unused brand swatches, paired for legibility per mode: Shadow
-    /// #0A0908 (near-black, ~20:1 on the white card) in Daylight, Stone #E0D9CE
-    /// (light warm stone, light-on-dark) in Night. Shown on an Obie too (an Obie
-    /// auto-flags Important; owner wants the flag visible there alongside the ring).
-    static func important(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? .ckStone : .ckShadow
-    }
 }
 
 // MARK: - Flat shapes (redesign)

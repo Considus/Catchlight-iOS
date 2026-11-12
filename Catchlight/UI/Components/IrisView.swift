@@ -60,10 +60,10 @@ struct IrisView: View {
     }
 
     /// The Iris's inside: the plain card colour on every Take, Important ones included, so its
-    /// marks keep their contrast on the tinted card; the Obie keeps its raised square (owner
-    /// 2026-11-12).
+    /// marks keep their contrast on the tinted card; the Obie's matches its own tinted card
+    /// (owner 2026-11-12).
     static func fill(for take: Take) -> Color {
-        take.isObie ? .ckCardObieSurface : .ckCard
+        take.isObie ? .ckCardImportantSurface : .ckCard
     }
 
     // MARK: View

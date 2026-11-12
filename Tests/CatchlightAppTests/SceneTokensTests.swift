@@ -20,7 +20,7 @@ final class SceneTokensTests: XCTestCase {
     /// The app roles the generator emits, each with the token that carries it.
     private let roles: [(String, UIColor)] = [
         ("ground", SceneToken.ground), ("surface", SceneToken.surface), ("card", SceneToken.card),
-        ("raised", SceneToken.raised), ("important", SceneToken.important), ("line", SceneToken.line), ("outline", SceneToken.outline),
+        ("raised", SceneToken.raised), ("important", SceneToken.important), ("importantEdge", SceneToken.importantEdge), ("line", SceneToken.line), ("outline", SceneToken.outline),
         ("text", SceneToken.text), ("muted", SceneToken.muted), ("faint", SceneToken.faint),
         ("accent", SceneToken.accent), ("accentText", SceneToken.accentText),
         ("onAccent", SceneToken.onAccent), ("lit", SceneToken.lit), ("unlit", SceneToken.unlit),

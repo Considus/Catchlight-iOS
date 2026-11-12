@@ -36,8 +36,8 @@ struct ShotListView: View {
     @Environment(\.colorScheme) private var scheme
 
     /// The Shopping view's surface follows the Take's REAL card colour (owner
-    /// 2026-06-19): light (`ckSurface`) for a normal Take, the darker emphasis
-    /// surface (`ckCardObieSurface`) for an Important / Obie one. Single-sourced via
+    /// 2026-06-19): `ckSurface` for a normal Take, `ckCardImportantSurface` for an
+    /// Important or Obie one. Single-sourced via
     /// `TakeCardStyle` so it can never drift from the card on the timeline.
     private var surface: Color { TakeCardStyle(take: take, scheme: scheme).surface }
 
