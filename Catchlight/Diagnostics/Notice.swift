@@ -252,7 +252,7 @@ enum Notice: Equatable {
         case .privacyPhraseMissing:
             return String(localized: "No privacy phrase on this device. Export now, then Settings > Start over.")
         case .readOnlyLapsed:
-            return String(localized: "Read-only. Your data is still yours.")
+            return String(localized: "Read-only. Your Takes are still yours.")
         case .exportFailed:
             return String(localized: "Your Takes couldn't be read, so nothing was exported. Don't start over until an export works.")
         case .remindersSilenced:

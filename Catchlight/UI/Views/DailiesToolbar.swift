@@ -39,6 +39,9 @@ import CatchlightCore
 
 struct DailiesToolbar: View {
     @Environment(UIState.self) private var ui
+    /// Read for the subscription state, so Add can look locked while read-only. Optional so
+    /// previews without an AppModel still render.
+    @Environment(AppModel.self) private var app: AppModel?
     /// The home-indicator inset alone, never counting the keyboard (CatchlightApp).
     @Environment(\.homeIndicatorInset) private var homeIndicatorInset
 
@@ -145,23 +148,44 @@ struct DailiesToolbar: View {
             .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
     }
 
+    /// Read-only after a subscription or trial ends: Add keeps its place and still opens the
+    /// subscribe screen (through `onNewTake`'s gate), but looks locked (owner 2026-11-12).
+    private var addLocked: Bool { app?.subscriptionStatus == .lapsed }
+
     private var addButton: some View {
         Button {
             onNewTake()
         } label: {
-            toolbarItem(
-                icon: ToolbarGlyph.plus
-                    .stroke(Color.ckOnAccent, style: StrokeStyle(lineWidth: DailiesToolbarMetrics.iconStroke, lineCap: .round))
-                    .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
-                    .frame(width: DailiesToolbarMetrics.addSquare, height: DailiesToolbarMetrics.addSquare)
-                    .background(CatchlightShape.control.fill(Color.ckAdd)),
-                label: "Add")
-            .foregroundStyle(Color.ckTextPrimary)
+            Group {
+                if addLocked {
+                    toolbarItem(
+                        icon: ToolbarGlyph.lock
+                            .stroke(Color.ckTextSecondary,
+                                    style: StrokeStyle(lineWidth: DailiesToolbarMetrics.iconStroke,
+                                                       lineCap: .round, lineJoin: .round))
+                            .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
+                            .frame(width: DailiesToolbarMetrics.addSquare, height: DailiesToolbarMetrics.addSquare)
+                            .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1.5)),
+                        label: "Add")
+                    .foregroundStyle(Color.ckTextSecondary)
+                } else {
+                    toolbarItem(
+                        icon: ToolbarGlyph.plus
+                            .stroke(Color.ckOnAccent, style: StrokeStyle(lineWidth: DailiesToolbarMetrics.iconStroke, lineCap: .round))
+                            .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
+                            .frame(width: DailiesToolbarMetrics.addSquare, height: DailiesToolbarMetrics.addSquare)
+                            .background(CatchlightShape.control.fill(Color.ckAdd)),
+                        label: "Add")
+                    .foregroundStyle(Color.ckTextPrimary)
+                }
+            }
+            // The two faces swap without animation (owner 2026-11-12).
+            .transaction { $0.animation = nil }
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("add-button")
-        .accessibilityLabel("Add Take")
-        .accessibilityHint("Double-tap to capture a new Take.")
+        .accessibilityLabel(addLocked ? "Add Take, locked" : "Add Take")
+        .accessibilityHint(addLocked ? "Double-tap to see subscription options." : "Double-tap to capture a new Take.")
         .accessibilityAddTraits(.isButton)
     }
 
@@ -464,7 +488,7 @@ struct SequenceLines: Shape {
 /// The toolbar's and chips' icons, drawn from the app screens drawing's paths on a
 /// 24-point grid and scaled to their frame. Stroked by the caller.
 enum ToolbarGlyph: Shape {
-    case plus, storyboard, sequence, search, important, note, task, clock
+    case plus, storyboard, sequence, search, important, note, task, clock, lock
 
     func path(in rect: CGRect) -> Path {
         let s = min(rect.width, rect.height) / 24
@@ -495,6 +519,14 @@ enum ToolbarGlyph: Shape {
         case .clock:
             path.addEllipse(in: CGRect(x: ox + 5 * s, y: oy + 5 * s, width: 14 * s, height: 14 * s))
             path.move(to: p(12, 8.5)); path.addLine(to: p(12, 12)); path.addLine(to: p(14.6, 13.4))
+        case .lock:
+            // Body, then the shackle: up from its left foot, a half circle over the top, down.
+            path.addRoundedRect(in: CGRect(x: ox + 6.5 * s, y: oy + 11 * s, width: 11 * s, height: 8 * s),
+                                cornerSize: CGSize(width: 2 * s, height: 2 * s))
+            path.move(to: p(9, 11)); path.addLine(to: p(9, 8.5))
+            path.addArc(center: p(12, 8.5), radius: 3 * s,
+                        startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
+            path.addLine(to: p(15, 11))
         }
         return path
     }
