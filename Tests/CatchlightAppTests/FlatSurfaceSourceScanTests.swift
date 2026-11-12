@@ -44,7 +44,7 @@ final class FlatSurfaceSourceScanTests: XCTestCase {
         .init(file: "Catchlight/UI/Settings/PrivacyPhraseView.swift", line: ".blur(radius: revealed ? 0 : 7)", count: 1,
               reason: "Privacy cover: hides the recovery phrase until it is revealed. Not a raised effect."),
         .init(file: "Catchlight/UI/Settings/SettingsView.swift", line: "Circle()", count: 2,
-              reason: "The 8pt green or orange status dot beside Notifications. An indicator, not a control."),
+              reason: "The 8pt status dot (on) or ring (off) beside Notifications. An indicator, not a control."),
         .init(file: "Catchlight/UI/Views/CatchlightWordmark.swift", line: "Circle()", count: 1,
               reason: "The lit dot of the wordmark's i. Brand mark, not a control."),
         .init(file: "Catchlight/UI/Theme/IrisGeometry.swift", line: "cornerRadius: 7.3 * s)", count: 1,

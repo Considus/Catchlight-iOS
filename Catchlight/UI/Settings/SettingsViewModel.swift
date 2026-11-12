@@ -498,6 +498,15 @@ final class SettingsViewModel {
 
     /// Pull the current authorization status. Safe to call repeatedly; never prompts.
     func refreshNotificationStatus() async {
+        #if DEBUG
+        // Test seam: `--uitesting-notification-status on|off` fixes the status the Notifications
+        // row shows, which otherwise follows the simulator's real permission.
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "--uitesting-notification-status"), i + 1 < args.count {
+            notificationStatus = args[i + 1] == "on" ? .authorized : .denied
+            return
+        }
+        #endif
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         notificationStatus = settings.authorizationStatus
     }
