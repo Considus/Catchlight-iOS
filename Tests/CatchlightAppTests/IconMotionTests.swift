@@ -112,4 +112,16 @@ final class IconMotionTests: XCTestCase {
         XCTAssertNotNil(IrisView.morphAnimation(held: false, reduceMotion: false))
         XCTAssertNil(IrisView.morphAnimation(held: true, reduceMotion: false), "A held Iris switches with no animation")
     }
+
+    /// SwiftUI may hand an animatable view its vector's `zero`, which is the empty list. The Iris
+    /// must draw from it (as nothing) instead of reading past its end.
+    @MainActor
+    func testTheIrisDraws_fromTheEmptyZeroVector() {
+        let mark = IrisMark(values: .zero, fill: .white, isObie: false)
+            .frame(width: 44, height: 44)
+        let renderer = ImageRenderer(content: mark)
+        XCTAssertNotNil(renderer.uiImage)
+        let full = IrisMorphState(shape: .note, lit: [:]).vector
+        XCTAssertEqual(full.values.count, IrisMark.vectorLength)
+    }
 }

@@ -194,8 +194,17 @@ struct IrisMark: View, Animatable {
         set { values = newValue }
     }
 
+    /// How many numbers a full vector holds: 20 segment coordinates, 5 opacities, the stroke
+    /// width and 6 lights (`IrisMorphState.vector`).
+    static let vectorLength = IrisGeometry.morphSegmentCount * 5 + 1 + IrisLight.allCases.count
+
     var body: some View {
-        let v = values.values
+        // SwiftUI may hand this view its vector's `zero`, the empty list, which stands for all
+        // zeros: pad it, so it draws as nothing instead of reading past the end (measured: an
+        // empty vector crashed the drawing with an index out of range).
+        let v = values.values.count >= Self.vectorLength
+            ? values.values
+            : values.values + Array(repeating: 0, count: Self.vectorLength - values.values.count)
         Canvas { context, size in
             let s = min(size.width, size.height) / 44
             let outline = IrisGeometry.outline(scale: s)
