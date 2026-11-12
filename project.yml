@@ -124,7 +124,7 @@ targets:
         # retired 2026-07-23, storyboard device-confirmed). A storyboard
         # also opts into modern full-screen scene sizing (the gotcha-#1 requirement)
         # but, unlike the dict's single CENTRED image, it can pin the real
-        # catchlight-icon + catchlight-wordmark assets to the EXACT geometry of the
+        # catchlight-launch-mark + catchlight-wordmark assets to the EXACT geometry of the
         # in-app brand mark (IntroChapterScaffold: icon 72 at safe-area-top+24,
         # wordmark 44 below) — so OS-launch → in-app splash → Welcome never jumps.
         # Background is the ck-background asset colour (Cobalt's ground, F4F5FA in Light and 0B0E2A in Dark, from the generated Scene tokens), set on

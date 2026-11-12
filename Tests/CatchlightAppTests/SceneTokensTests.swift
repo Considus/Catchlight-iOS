@@ -25,7 +25,8 @@ final class SceneTokensTests: XCTestCase {
         ("accent", SceneToken.accent), ("accentText", SceneToken.accentText),
         ("onAccent", SceneToken.onAccent), ("lit", SceneToken.lit), ("unlit", SceneToken.unlit),
         ("field", SceneToken.field), ("onField", SceneToken.onField),
-        ("fieldMuted", SceneToken.fieldMuted), ("iconDot", SceneToken.iconDot)
+        ("fieldMuted", SceneToken.fieldMuted), ("iconBg", SceneToken.iconBg),
+        ("iconRing", SceneToken.iconRing), ("iconDot", SceneToken.iconDot)
     ]
 
     private struct Source: Decodable {

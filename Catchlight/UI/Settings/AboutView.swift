@@ -56,10 +56,7 @@ struct AboutView: View {
     /// is tuned for the full-screen flow, whereas this sits inside a sheet's scroll.
     private var brandMark: some View {
         VStack(spacing: CatchlightWordmark.iconGap) {
-            Image("catchlight-icon")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 72, height: 72)
+            CatchlightMark(style: .tile)
                 .accessibilityHidden(true)
             CatchlightWordmark()
         }

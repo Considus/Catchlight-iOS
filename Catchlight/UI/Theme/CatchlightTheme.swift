@@ -199,6 +199,8 @@ enum SceneToken {
     static let field      = role(\.field)
     static let onField    = role(\.onField)
     static let fieldMuted = role(\.fieldMuted)
+    static let iconBg     = role(\.iconBg)
+    static let iconRing   = role(\.iconRing)
     static let iconDot    = role(\.iconDot)
 
     private static func role(_ key: KeyPath<ScenePalette, UInt32>) -> UIColor {
@@ -223,6 +225,8 @@ extension Color {
     static let ckField = Color(SceneColor(\.field))
     static let ckOnField = Color(SceneColor(\.onField))
     static let ckFieldMuted = Color(SceneColor(\.fieldMuted))
+    static let ckIconBg = Color(SceneColor(\.iconBg))
+    static let ckIconRing = Color(SceneColor(\.iconRing))
     static let ckIconDot = Color(SceneColor(\.iconDot))
 }
 

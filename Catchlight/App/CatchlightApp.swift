@@ -633,10 +633,7 @@ struct PrivacyOverlay: View {
         ZStack {
             Color.ckBackground.ignoresSafeArea()
             VStack(spacing: CatchlightWordmark.iconGap) {
-                Image("catchlight-icon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 72, height: 72)
+                CatchlightMark(style: .tile)
                 CatchlightWordmark()
             }
             .accessibilityHidden(true)
