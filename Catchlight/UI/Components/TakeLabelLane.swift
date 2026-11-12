@@ -8,9 +8,9 @@
 //  height, and mirrors the card's left corner radii on its right side (a slim rounded
 //  pill, not cut flat).
 //
-//  No card draws the lane today: the sideways "OVERDUE" label it carried was replaced
-//  by the word at the start of the red time line (owner 2026-11-10). Kept for the
-//  colour-label chip below; revisit (wire it or delete it) when colour labels are built.
+//  No card draws the lane today: the sideways "OVERDUE" word is `TakeStateWordStrip`
+//  (owner 2026-11-12). Kept for the colour-label chip below; revisit (wire it or delete
+//  it) when colour labels are built.
 //   • `.colourChip` — FUTURE (user-assignable labels, its own release): the container
 //     FILLED with the label colour + the Take's shadow so it floats just above the
 //     card, inset ~10pt from the edges. Defined here so it drops in without

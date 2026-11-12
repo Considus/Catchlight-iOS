@@ -40,9 +40,25 @@ final class CardLayoutTests: XCTestCase {
     }
 
     /// The text column starts a fixed distance from the Iris: Iris inset + Iris 44 + gap 12.
+    /// The gap from the Iris to the text equals the gap from the card's edge to the Iris
+    /// (owner 2026-11-12), so the Iris is centred in its own space on every width.
     func testTextColumnStartsClearOfTheIris() {
-        XCTAssertEqual(CatchlightLayout.cardTextLeadingPad(irisLeadingInset: 24), 80)
-        XCTAssertEqual(CatchlightLayout.cardTextLeadingPad(irisLeadingInset: 20.625), 76.625, accuracy: 0.0001)
+        XCTAssertEqual(CatchlightLayout.cardTextLeadingPad(irisLeadingInset: 24), 92)
+        XCTAssertEqual(CatchlightLayout.cardTextLeadingPad(irisLeadingInset: 20.625), 85.25, accuracy: 0.0001)
+        for width: CGFloat in [375, 393, 402, 440] {
+            let inset = CatchlightLayout.irisLeadingInset(addColumnX: CatchlightLayout.addColumnX(containerWidth: width))
+            let gapAfterIris = CatchlightLayout.cardTextLeadingPad(irisLeadingInset: inset) - inset - CatchlightLayout.circleDiameter
+            XCTAssertEqual(gapAfterIris, inset, accuracy: 0.0001, "width \(width)")
+        }
+    }
+
+    /// "Dailies" and its date sit in from the cards' edges by the website's share of the card
+    /// width: 5.16 of 220.16px.
+    func testDailiesHeadingInset_matchesTheWebsitesShare() {
+        let expected: [CGFloat: CGFloat] = [375: 17 + 8.0, 393: 17 + 8.414, 402: 17 + 8.625, 440: 17 + 9.516]
+        for (width, inset) in expected {
+            XCTAssertEqual(CatchlightLayout.dailiesHeadingInset(containerWidth: width), inset, accuracy: 0.01, "width \(width)")
+        }
     }
 
     /// The top inset stays 14: 14 above and below a 44pt Iris.

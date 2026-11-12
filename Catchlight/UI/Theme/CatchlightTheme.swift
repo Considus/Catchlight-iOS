@@ -347,8 +347,10 @@ extension Color {
     /// Overdue reminder META TEXT (`.tm.overdue`) — RUBY, matching the overdue border
     /// (owner 2026-06-18). The subtext is italic ONLY when overdue, so the ruby + slant
     /// together read as "this one's late." Same hue as `ckRuby` / `ckCardOverdueBorder`.
+    /// Dark is lighter than the border (#E17070, art director 2026-11-12) so 11pt text reaches
+    /// 4.5:1 on every dark card, raised and Important colour; the border keeps #DB5252.
     static let ckTextOverdue = Color(uiColor: .adaptive(
-        dark: UIColor(red: 0.86, green: 0.32, blue: 0.32, alpha: 1.0),
+        dark: UIColor(red: 0xE1 / 255.0, green: 0x70 / 255.0, blue: 0x70 / 255.0, alpha: 1.0),
         light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
     ))
 
@@ -1123,13 +1125,19 @@ enum CatchlightLayout {
     static let cardPadding: CGFloat = 14
     /// The Iris's TOP offset inside its card. Its leading offset is `irisLeadingInset`.
     static let irisInset: CGFloat = 14
-    /// The gap between the Iris's trailing edge and the card's text column.
-    static let irisTextGap: CGFloat = 12
-    /// The Take card's internal LEADING text padding: the text column starts clear of
-    /// the Iris in the card's top-left, a fixed distance from it, so it moves with the Iris.
-    /// The month markers align to the same column.
+    /// The Take card's internal LEADING text padding: the text column starts as far right of
+    /// the Iris as the Iris sits in from the card's edge, so the Iris is centred in its own
+    /// space (owner 2026-11-12). It moves with the Iris. The month markers align to it too.
     static func cardTextLeadingPad(irisLeadingInset: CGFloat) -> CGFloat {
-        irisLeadingInset + circleDiameter + irisTextGap
+        irisLeadingInset + circleDiameter + irisLeadingInset
+    }
+    /// The Dailies title and date sit in from the cards' edges by this share of the card's
+    /// width, as on the website (5.16 of 220.16px; owner 2026-11-12).
+    static let dailiesHeadingInsetShare: CGFloat = 5.16 / 220.16
+    /// The Dailies heading's inset from the screen edge: the card margin plus its share of the
+    /// card's width.
+    static func dailiesHeadingInset(containerWidth: CGFloat) -> CGFloat {
+        cardMargin + dailiesHeadingInsetShare * (containerWidth - 2 * cardMargin)
     }
     /// The shortest a Take card may be: room for the Iris with `irisInset` above and below.
     static let cardMinHeight: CGFloat = irisInset * 2 + circleDiameter
