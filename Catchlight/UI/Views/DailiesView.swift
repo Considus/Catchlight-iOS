@@ -347,7 +347,7 @@ struct DailiesView: View {
             // safeAreaInset here desynced hit-testing and killed the toolbar's
             // keyboard avoidance (Flow 5 regression, 2026-06-11). The heading
             // dodges the status bar itself via deviceTopInset. Takes scroll
-            // under the solid block and dissolve beneath the 12pt fade.
+            // under the solid block and dissolve beneath the heading fade.
             // While editing in place (owner 2026-06-17) the heading's page-coloured
             // top MASK stays opaque — so a focused Take scrolled up still dissolves
             // under it instead of running to the Dynamic Island — and only the title
@@ -646,7 +646,7 @@ struct DailiesView: View {
         }
     }
 
-    /// Solid background behind the title, then a 12pt fade hugging it (kept
+    /// Solid background behind the title, then the heading fade (`headingFade`, 24pt) hugging it (kept
     /// tight so the pinned Obie's circle is clear of it at rest).
     private var heading: some View {
         VStack(spacing: 0) {
@@ -736,7 +736,7 @@ struct DailiesView: View {
                 Color.ckBackground
             } else {
                 // No Obie — OR editing in place (owner 2026-06-17): use the natural
-                // height + a 12pt fade so a grown focused Take dissolves under the
+                // height + the heading fade (`headingFade`) so a grown focused Take dissolves under the
                 // top, exactly like the no-Obie timeline, instead of vanishing at the
                 // Obie heading's hard mid-screen edge. (The pinned Obie + insets stay
                 // put, so the focused Take's position doesn't jump.)
