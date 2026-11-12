@@ -27,6 +27,7 @@ import CatchlightCore
 // MARK: - The card
 
 struct TakeEditCard: View {
+    @Environment(\.irisLeadingInset) private var irisLeadingInset
     /// Single source of truth — the host owns the draft. `BlockEditor`'s coordinator mutates it
     /// only through `Take`'s block mutators, so the derived flags never drift. Hosts must GUARD
     /// the setter of any binding built from an Optional: the coordinator is UIKit and outlives
@@ -183,7 +184,7 @@ struct TakeEditCard: View {
             // Card text inset: `cardPadding` top, bottom and trailing / text column leading,
             // clear of the Iris. Matches TakeCardSurface, so read↔edit don't shift.
             .padding(EdgeInsets(top: CatchlightLayout.cardPadding,
-                                leading: CatchlightLayout.cardTextLeadingPad,
+                                leading: CatchlightLayout.cardTextLeadingPad(irisLeadingInset: irisLeadingInset),
                                 bottom: CatchlightLayout.cardPadding,
                                 trailing: CatchlightLayout.cardPadding))
             .background(
@@ -202,7 +203,7 @@ struct TakeEditCard: View {
                 // top-left in the same place.
                 IrisView(take: draft)
                     .allowsHitTesting(false)
-                    .offset(x: irisInset, y: irisInset)
+                    .offset(x: irisLeadingInset, y: irisInset)
                 // The touch and VoiceOver surface, separate from the drawing.
                 Color.clear
                     .frame(width: d, height: d)
@@ -215,7 +216,7 @@ struct TakeEditCard: View {
                     .overlay {
                         if let onTapIris {
                             TapAndLongPressRecognizer(minimumDuration: 0.45,
-                                                      onTap: { onTapIris(FocusRowView.cardFrame(irisCentre: $0, cardSize: cardSize)) },
+                                                      onTap: { onTapIris(FocusRowView.cardFrame(irisCentre: $0, cardSize: cardSize, irisLeadingInset: irisLeadingInset)) },
                                                       onLongPress: {})
                         }
                     }
@@ -235,7 +236,7 @@ struct TakeEditCard: View {
                     // V10 (audit 2026-08): announce as a button like the Obie row's
                     // Iris — the same control must not read differently per host.
                     .accessibilityAddTraits(.isButton)
-                    .offset(x: irisInset, y: irisInset)
+                    .offset(x: irisLeadingInset, y: irisInset)
             }
         }
     }
@@ -265,7 +266,7 @@ struct KeyboardTakeEditor: View {
 
     /// The Iris in the card's top-left. Dailies yes; the Storyboard has none (owner 2026-06-19).
     var showsIris: Bool = true
-    /// The card's left edge (`addColumnX - cardLeadingOffset`).
+    /// The card's left edge (`CatchlightLayout.cardMargin`).
     var leadingInset: CGFloat
     /// Passed through to the card's `BlockEditor` (audit 2026-08, V31).
     var axHidden: Bool = false

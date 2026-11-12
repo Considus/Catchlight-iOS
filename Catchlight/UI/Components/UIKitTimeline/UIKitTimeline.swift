@@ -217,6 +217,8 @@ struct TimelineCardHitShape: Shape {
 /// Iris, < the Iris touch frame). The ZStack origin is the card's top-left, after the leading
 /// pad, and the Iris sits `irisInset` in from it.
 struct TimelineReadCell: View {
+    /// The Iris's leading inset in the card, from the cell's own `addColumnX`.
+    private var irisLeadingInset: CGFloat { CatchlightLayout.irisLeadingInset(addColumnX: addColumnX) }
     let take: Take
     let addColumnX: CGFloat
     let cardGap: CGFloat
@@ -274,7 +276,8 @@ struct TimelineReadCell: View {
             .overlay(
                 TapAndLongPressRecognizer(
                     minimumDuration: 0.45,
-                    onTap: { onTapCircle(take, FocusRowView.cardFrame(irisCentre: $0, cardSize: cardSize)) },
+                    onTap: { onTapCircle(take, FocusRowView.cardFrame(irisCentre: $0, cardSize: cardSize,
+                                                                  irisLeadingInset: irisLeadingInset)) },
                     onLongPress: { onLongPressCircle(take) }
                 )
             )
@@ -289,7 +292,7 @@ struct TimelineReadCell: View {
             // V10 (audit 2026-08): the pinned Obie row's Iris carries .isButton; this
             // one didn't, so the same control announced differently on one screen.
             .accessibilityAddTraits(.isButton)
-            .offset(x: CatchlightLayout.irisInset, y: CatchlightLayout.irisInset)
+            .offset(x: irisLeadingInset, y: CatchlightLayout.irisInset)
     }
 
     var body: some View {
@@ -322,7 +325,7 @@ struct TimelineReadCell: View {
                 .overlay(alignment: .topLeading) {
                     IrisView(take: take)
                         .allowsHitTesting(false)
-                        .padding(.leading, CatchlightLayout.irisInset)
+                        .padding(.leading, irisLeadingInset)
                         .padding(.top, CatchlightLayout.irisInset)
                 }
                 // The card's hit region STOPS at the drag handle in manual mode. Without
@@ -361,8 +364,8 @@ struct TimelineReadCell: View {
                 }
             irisHitTarget                                                              // gestures + VoiceOver
         }
-        .padding(.leading, CatchlightLayout.cardMargin(addColumnX: addColumnX))
-        .padding(.trailing, CatchlightLayout.cardMargin(addColumnX: addColumnX))
+        .padding(.leading, CatchlightLayout.cardMargin)
+        .padding(.trailing, CatchlightLayout.cardMargin)
         // SYMMETRIC so the card is centred in the cell — a swipe action fill then centres
         // on the CARD, not the cell.
         .padding(.vertical, cardGap / 2)
@@ -385,7 +388,7 @@ struct TimelineReadCell: View {
                     .ckBody(.regular, size: 15, relativeTo: .body)
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(width: TimelineDragHandle.stripWidth)
-                    .padding(.trailing, CatchlightLayout.cardMargin(addColumnX: addColumnX))
+                    .padding(.trailing, CatchlightLayout.cardMargin)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
@@ -492,8 +495,8 @@ struct TimelineSwipeCell: View {
                                       ? .standard : .destructive,
                                   perform: { onDelete(take) }),
             openRowID: $swipeState.openRowID,
-            leadingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
-            trailingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
+            leadingInset: CatchlightLayout.cardMargin,
+            trailingInset: CatchlightLayout.cardMargin,
             contentVerticalInset: cardGap / 2,
             centersActionLabel: true    // centre glyph/label in the revealed button, not hugged to the screen edge
         ) { offset in
@@ -508,6 +511,9 @@ struct TimelineSwipeCell: View {
                              onNudge: onNudge)
                 .offset(x: offset)
         }
+        // The cell is hosted by UIKit, so it doesn't inherit the window root's environment:
+        // the card inside it reads the Iris inset from here.
+        .environment(\.irisLeadingInset, CatchlightLayout.irisLeadingInset(addColumnX: addColumnX))
     }
 }
 
@@ -568,8 +574,9 @@ struct TimelineMonthDivider: View {
                 .onTapGesture(perform: onTapBlank)
                 .accessibilityHidden(true)
         }
-        .padding(.leading, CatchlightLayout.cardMargin(addColumnX: addColumnX) + CatchlightLayout.cardTextLeadingPad)
-        .padding(.trailing, CatchlightLayout.cardMargin(addColumnX: addColumnX))
+        .padding(.leading, CatchlightLayout.cardMargin
+                  + CatchlightLayout.cardTextLeadingPad(irisLeadingInset: CatchlightLayout.irisLeadingInset(addColumnX: addColumnX)))
+        .padding(.trailing, CatchlightLayout.cardMargin)
     }
 }
 
@@ -749,7 +756,7 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
             // so anything it is allowed to receive it claims on touch-DOWN.
             guard isReorderable,
                   TimelineDragHandle.containsX(point.x, inWidth: collectionView.bounds.width,
-                                                cardMargin: CatchlightLayout.cardMargin(addColumnX: addColumnX)),
+                                                cardMargin: CatchlightLayout.cardMargin),
                   let path = collectionView.indexPathForItem(at: point),
                   dataSource.itemIdentifier(for: path)?.takeID != nil else { return false }
             return true

@@ -85,8 +85,8 @@ struct DailiesView: View {
 
 
     /// The toolbar's Add button centre, from `CatchlightLayout.addColumnX(containerWidth:)`
-    /// (the same four-equal-columns formula DailiesToolbar lays out with). The card
-    /// column hangs off it (`addColumnX − cardLeadingOffset`). The screen width stands in
+    /// (the same four-equal-columns formula DailiesToolbar lays out with). Every
+    /// card's Iris is centred on it (`CatchlightLayout.irisLeadingInset`). The screen width stands in
     /// before the first layout pass so the cards don't flash at a wrong x.
     private var addColumnX: CGFloat {
         CatchlightLayout.addColumnX(
@@ -94,12 +94,13 @@ struct DailiesView: View {
         )
     }
 
-    /// Left edge of the Take TEXT column — the card's left edge (`addColumnX −
-    /// cardLeadingOffset`) plus the card's internal leading pad. The DAILIES heading and
+    /// Left edge of the Take TEXT column — the card's left edge (`cardMargin`) plus the
+    /// card's internal leading pad. The DAILIES heading and
     /// the ghosted month markers align to this so they sit directly above the body
     /// text (owner 2026-06-16; was `addColumnX + 22`, which floated them right of the text).
     private var textColumnLeading: CGFloat {
-        addColumnX - CatchlightLayout.cardLeadingOffset + CatchlightLayout.cardTextLeadingPad
+        CatchlightLayout.cardMargin
+            + CatchlightLayout.cardTextLeadingPad(irisLeadingInset: CatchlightLayout.irisLeadingInset(addColumnX: addColumnX))
     }
 
     /// Reads the user's timeline-density choice live. `cardGap` turns it into the
@@ -346,7 +347,7 @@ struct DailiesView: View {
             // safeAreaInset here desynced hit-testing and killed the toolbar's
             // keyboard avoidance (Flow 5 regression, 2026-06-11). The heading
             // dodges the status bar itself via deviceTopInset. Takes scroll
-            // under the solid block and dissolve beneath the 12pt fade.
+            // under the solid block and dissolve beneath the heading fade.
             // While editing in place (owner 2026-06-17) the heading's page-coloured
             // top MASK stays opaque — so a focused Take scrolled up still dissolves
             // under it instead of running to the Dynamic Island — and only the title
@@ -645,7 +646,7 @@ struct DailiesView: View {
         }
     }
 
-    /// Solid background behind the title, then a 12pt fade hugging it (kept
+    /// Solid background behind the title, then the heading fade (`headingFade`, 24pt) hugging it (kept
     /// tight so the pinned Obie's circle is clear of it at rest).
     private var heading: some View {
         VStack(spacing: 0) {
@@ -665,7 +666,7 @@ struct DailiesView: View {
                 Group {
                     if ui.toolbarMode == .resting {
                         // As drawn: "Dailies" on the left, today's date on the right.
-                        DailiesHeading(horizontalInset: CatchlightLayout.cardMargin(addColumnX: addColumnX))
+                        DailiesHeading(horizontalInset: CatchlightLayout.cardMargin)
                     } else {
                         // Shared page heading (Archivo expanded 24, kerned, centred,
                         // with the kerning-centring fix).
@@ -735,7 +736,7 @@ struct DailiesView: View {
                 Color.ckBackground
             } else {
                 // No Obie — OR editing in place (owner 2026-06-17): use the natural
-                // height + a 12pt fade so a grown focused Take dissolves under the
+                // height + the heading fade (`headingFade`) so a grown focused Take dissolves under the
                 // top, exactly like the no-Obie timeline, instead of vanishing at the
                 // Obie heading's hard mid-screen edge. (The pinned Obie + insets stay
                 // put, so the focused Take's position doesn't jump.)
@@ -1429,7 +1430,7 @@ struct DailiesView: View {
         KeyboardTakeEditor(
             draft: editDraftBinding,
             focusedBlockID: $editFocusedBlockID,
-            leadingInset: addColumnX - CatchlightLayout.cardLeadingOffset,
+            leadingInset: CatchlightLayout.cardMargin,
             // Seal the UIKit text view while the fan is up (audit 2026-08, V31): the
             // fan's RootView-level hide covers this card's SwiftUI elements but does
             // not reach the UIKit-vended text, so VoiceOver focus landed on the text
@@ -1513,17 +1514,17 @@ struct DailiesView: View {
                 }
             ),
             openRowID: $openSwipeRowID,
-            leadingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
-            trailingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
+            leadingInset: CatchlightLayout.cardMargin,
+            trailingInset: CatchlightLayout.cardMargin,
             contentVerticalInset: Self.rowVerticalInset
         ) { swipeOffset in
             // BOTH margins live inside the content so the wrapper spans the full
             // screen width — letting each action fill reach its screen edge. The
-            // card's leading edge is `cardLeadingOffset` left of `addColumnX`. `swipeOffset`
+            // card's leading edge is `CatchlightLayout.cardMargin` in, like the toolbar's. `swipeOffset`
             // slides the card and the Iris inside it.
             rowContent(for: take, cardSwipeOffset: swipeOffset)
-                .padding(.leading, CatchlightLayout.cardMargin(addColumnX: addColumnX))
-                .padding(.trailing, CatchlightLayout.cardMargin(addColumnX: addColumnX))
+                .padding(.leading, CatchlightLayout.cardMargin)
+                .padding(.trailing, CatchlightLayout.cardMargin)
         }
         // Edit-in-place (owner 2026-06-17): mask every row except the one under
         // focus — the "Iris-touch focus" applied to editing. The timeline still

@@ -421,6 +421,8 @@ struct CatchlightApp: App {
             // row read it from the environment to rest above the home indicator.
             .environment(\.deviceBottomInset, rootGeo.safeAreaInsets.bottom)
             .environment(\.homeIndicatorInset, homeIndicatorInset)
+            .environment(\.irisLeadingInset, CatchlightLayout.irisLeadingInset(
+                addColumnX: CatchlightLayout.addColumnX(containerWidth: rootGeo.size.width)))
             .preferredColorScheme(
                 (SettingsViewModel.AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme
             )

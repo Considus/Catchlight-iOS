@@ -74,17 +74,18 @@ final class FocusRowLayoutTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(FocusRowView.markSize, CatchlightLayout.minTouchTarget)
     }
 
-    /// The Iris centre is 36 in from the card's top and leading edges.
-    func testHubCentre_is36InFromTheCardsTopLeft() {
-        let card = CGRect(x: 20, y: 200, width: 353, height: 72)
-        XCTAssertEqual(FocusRowView.hubCentre(of: card), CGPoint(x: 56, y: 236))
+    /// The Iris centre is 36 down from the card's top, and its inset + 22 in from the leading edge.
+    func testHubCentre_isTheIrisCentre() {
+        let card = CGRect(x: 17, y: 200, width: 368, height: 72)
+        XCTAssertEqual(FocusRowView.hubCentre(of: card, irisLeadingInset: 24), CGPoint(x: 63, y: 236))
     }
 
     /// The card frame a host reports is rebuilt from the Iris centre and the card's size.
     func testCardFrame_fromIrisCentreAndSize() {
-        XCTAssertEqual(FocusRowView.cardFrame(irisCentre: CGPoint(x: 56, y: 236),
-                                              cardSize: CGSize(width: 353, height: 140)),
-                       CGRect(x: 20, y: 200, width: 353, height: 140))
+        XCTAssertEqual(FocusRowView.cardFrame(irisCentre: CGPoint(x: 63, y: 236),
+                                              cardSize: CGSize(width: 368, height: 140),
+                                              irisLeadingInset: 24),
+                       CGRect(x: 17, y: 200, width: 368, height: 140))
     }
 
     /// The open row grows the tapped card by half a mark at the bottom, so the marks,
@@ -98,14 +99,14 @@ final class FocusRowLayoutTests: XCTestCase {
     func testRowY_shortCard_sitsOnTheGrownBottomEdge() {
         let card = CGRect(x: 20, y: 200, width: 353, height: 72)
         XCTAssertEqual(FocusRowView.rowY(cardFrame: card, visibleBottom: 852), 58)
-        XCTAssertEqual(FocusRowView.hubCentre(of: card).y + 58, card.maxY + 22)
+        XCTAssertEqual(FocusRowView.hubCentre(of: card, irisLeadingInset: 24).y + 58, card.maxY + 22)
     }
 
     /// A 140pt card grows to 162: the marks' centres 162 - 36 = 126 below the Iris centre.
     func testRowY_tallCard_sitsOnTheGrownBottomEdge() {
         let card = CGRect(x: 20, y: 200, width: 353, height: 140)
         XCTAssertEqual(FocusRowView.rowY(cardFrame: card, visibleBottom: 852), 126)
-        XCTAssertEqual(FocusRowView.hubCentre(of: card).y + 126, card.maxY + 22)
+        XCTAssertEqual(FocusRowView.hubCentre(of: card, irisLeadingInset: 24).y + 126, card.maxY + 22)
     }
 
     /// A card whose grown bottom edge runs past the visible area: Iris centre at 636, row

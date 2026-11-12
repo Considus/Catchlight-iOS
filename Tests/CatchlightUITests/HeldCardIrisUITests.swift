@@ -8,7 +8,7 @@
 //  The test samples the Iris's outline ring at rest (proving the probe sees a drawn Iris)
 //  and again with the menu up. The lift scales the card slightly (measured about 2% on the
 //  iPhone 17e), so each screenshot's card edges are found from its pixels and the Iris is
-//  placed `irisInset` in from those, scaled with the card.
+//  placed where the resting Iris sits in from those, scaled with the card.
 //
 
 import XCTest
@@ -31,11 +31,16 @@ final class HeldCardIrisUITests: XCTestCase {
         sleep(1) // let the timeline settle before reading frames
 
         let card = row.frame
+        // Where this card's Iris sits across: it changes with the screen width (the Iris is
+        // centred under Add), so it is read from the resting Iris rather than assumed.
+        let restIris = app.descendants(matching: .any).matching(identifier: "take-iris").allElementsBoundByIndex
+            .first { card.contains(CGPoint(x: $0.frame.midX, y: $0.frame.midY)) }
+        let leading = try XCTUnwrap(restIris, "No Iris inside the card").frame.minX - card.minX
 
         let rest = XCUIScreen.main.screenshot()
         attach(rest, "held-card-iris-rest")
         let restCard = drawnCardFrame(near: card, in: rest.image)
-        let restEdges = irisRingShares(of: irisFrame(in: restCard, resting: card), in: rest.image)
+        let restEdges = irisRingShares(of: irisFrame(in: restCard, resting: card, leading: leading), in: rest.image)
         note("rest", card: restCard, edges: restEdges)
         XCTAssertGreaterThanOrEqual(restEdges.min() ?? 0, 0.5,
                                     "Probe cannot see the Iris at rest: \(restEdges)")
@@ -49,17 +54,17 @@ final class HeldCardIrisUITests: XCTestCase {
         let held = XCUIScreen.main.screenshot()
         attach(held, "held-card-iris-menu")
         let heldCard = drawnCardFrame(near: card, in: held.image)
-        let heldEdges = irisRingShares(of: irisFrame(in: heldCard, resting: card), in: held.image)
+        let heldEdges = irisRingShares(of: irisFrame(in: heldCard, resting: card, leading: leading), in: held.image)
         note("held", card: heldCard, edges: heldEdges)
         XCTAssertGreaterThanOrEqual(heldEdges.min() ?? 0, 0.5,
                                     "The Iris is not drawn on the held card: weakest edge shows only \(Int((heldEdges.min() ?? 0) * 100))% of the ring \(heldEdges)")
     }
 
-    /// The Iris is drawn `irisInset` (14) in from the card's top and leading edges, 44 square,
-    /// scaled with the card when the lift enlarges it.
-    private func irisFrame(in drawn: CGRect, resting: CGRect) -> CGRect {
+    /// The Iris is drawn `irisInset` (14) down from the card's top and `leading` in from its
+    /// leading edge, 44 square, scaled with the card when the lift enlarges it.
+    private func irisFrame(in drawn: CGRect, resting: CGRect, leading: CGFloat) -> CGRect {
         let k = drawn.width / resting.width
-        return CGRect(x: drawn.minX + 14 * k, y: drawn.minY + 14 * k, width: 44 * k, height: 44 * k)
+        return CGRect(x: drawn.minX + leading * k, y: drawn.minY + 14 * k, width: 44 * k, height: 44 * k)
     }
 
     /// The card as drawn in `image`: its fill is sampled inside the card's lower right, clear of

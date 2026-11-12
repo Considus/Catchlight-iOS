@@ -400,7 +400,9 @@ struct RootView: View {
                     take: take,
                     // No card measured: the hub sits at the screen centre (a last resort).
                     cardFrame: ui.focusRowCardFrame == .zero
-                        ? CGRect(x: geo.size.width / 2 - FocusRowView.irisCentreInset,
+                        ? CGRect(x: geo.size.width / 2 - CatchlightLayout.circleDiameter / 2
+                                     - CatchlightLayout.irisLeadingInset(
+                                        addColumnX: CatchlightLayout.addColumnX(containerWidth: geo.size.width)),
                                  y: geo.size.height / 2 - FocusRowView.irisCentreInset,
                                  width: 0, height: CatchlightLayout.cardMinHeight)
                         : ui.focusRowCardFrame,
