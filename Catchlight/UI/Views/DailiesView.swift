@@ -1056,8 +1056,12 @@ struct DailiesView: View {
     /// that reminder will never show. Turning them off in iOS Settings used to stop every
     /// reminder with nothing said in the app (only the diagnostics log recorded it). The
     /// button opens Catchlight's page in iOS Settings, where notifications are turned on.
+    /// Once the user closes the strip with its ×, it stays closed for good. The editors' own
+    /// note still says when a reminder can't alert.
+    @AppStorage(ReminderScheduler.silencedBannerDismissedKey) private var remindersSilencedDismissed = false
+
     private var remindersSilenced: Bool {
-        ReminderScheduler.remindersSilenced(status: app.notificationStatus,
+        !remindersSilencedDismissed && ReminderScheduler.remindersSilenced(status: app.notificationStatus,
                                             anyAlerting: vm.anyAlertingReminder)
     }
 
@@ -1075,8 +1079,7 @@ struct DailiesView: View {
                     .lineLimit(2)
                 Spacer(minLength: 8)
                 Button {
-                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-                    UIApplication.shared.open(url)
+                    NotificationSettings.open()
                 } label: {
                     Text("Turn on")
                         .ckBody(.medium, size: 14, relativeTo: .body)
@@ -1086,12 +1089,27 @@ struct DailiesView: View {
                 .accessibilityIdentifier("reminders-silenced-turn-on")
                 .accessibilityLabel("Turn on notifications")
                 .accessibilityHint("Opens iOS Settings.")
+                Button {
+                    withAnimation(reduceMotion ? nil : .default) { remindersSilencedDismissed = true }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                // The 44pt hit area hangs into the strip's trailing padding, so the glyph sits
+                // where the padding would end and "Turn on" keeps its own hit area.
+                .padding(.trailing, -14)
+                .accessibilityIdentifier("reminders-silenced-dismiss")
+                .accessibilityLabel("Dismiss")
             }
             .padding(.horizontal, 16)
             .frame(minHeight: 44)
             .frame(maxWidth: .infinity)
             .background(Color.ckAdd.opacity(0.15))
-            .transition(.move(edge: .top).combined(with: .opacity))
+            .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             .accessibilityElement(children: .contain)
         }
     }
