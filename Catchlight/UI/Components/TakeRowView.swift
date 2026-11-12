@@ -480,6 +480,8 @@ struct TakeCardSurface: View {
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var dynamicSize
+    /// The card's measured height, for whether the state word fits in the strip.
+    @State private var cardHeight: CGFloat = 0
 
     /// The user's "Preview" length (Single/Some/All) — how many body lines a
     /// collapsed Take shows on the timeline. Independent of "View" density.
@@ -653,14 +655,46 @@ struct TakeCardSurface: View {
         return .ckTextSecondary
     }
 
-    /// The reminder's "when". An overdue one starts with the word "Overdue", or "Snoozed"
-    /// while it has a pending snoozed re-nudge, as one run of text that wraps as a whole
-    /// (owner 2026-11-10; it replaces the sideways label down the card's left edge).
-    private func reminderText(_ when: String) -> Text {
-        guard style.isOverdue else { return Text(when) }
-        let word = isSnoozed ? String(localized: "Snoozed") : String(localized: "Overdue")
-        return Text("\(Text(word).fontWeight(.semibold)) \(Text(when).italic())",
+    /// An overdue reminder's state word: "Snoozed" while it has a pending snoozed re-nudge,
+    /// else "Overdue". Nil when the reminder isn't overdue.
+    private var stateWord: String? {
+        guard style.isOverdue else { return nil }
+        return isSnoozed ? String(localized: "Snoozed") : String(localized: "Overdue")
+    }
+
+    /// The scale the state word is drawn at in the strip left of the Iris, or nil when it
+    /// stays on the time line (`TakeStateWordStrip`). Judged on the card's height without the
+    /// Focus row's growth, so opening the row never moves the word.
+    private var stripScale: CGFloat? {
+        guard let stateWord else { return nil }
+        return TakeStateWordStrip.scale(wordSize: TakeStateWordStrip.size(of: stateWord, dynamicTypeSize: dynamicSize),
+                                        cardHeight: cardHeight - extraBottomPadding,
+                                        stripWidth: irisLeadingInset)
+    }
+
+    /// The reminder's "when". An overdue one is italic; it starts with the state word only
+    /// when the word doesn't fit in the strip (owner 2026-11-12).
+    private func reminderText(_ when: String, wordOnLine: Bool) -> Text {
+        guard let stateWord else { return Text(when) }
+        guard wordOnLine else { return Text(when).italic() }
+        return Text("\(Text(stateWord).fontWeight(.semibold)) \(Text(when).italic())",
                     comment: "An overdue reminder's time line: the state word (Overdue or Snoozed), then when it was due.")
+    }
+
+    /// The time line's text. It always takes the room the version with the word needs, so
+    /// moving the word into the strip never changes the card's height, and the fit judged
+    /// from that height can't flip back.
+    private func reminderLine(_ when: String) -> some View {
+        let line = { (wordOnLine: Bool) in
+            reminderText(when, wordOnLine: wordOnLine)
+                .ckBody(.medium, size: 11, relativeTo: .caption)
+                .monospacedDigit()   // a time: tabular digits
+                .multilineTextAlignment(.leading)
+        }
+        return ZStack(alignment: .topLeading) {
+            line(true).hidden()
+            line(stripScale == nil)
+        }
     }
 
     var body: some View {
@@ -731,10 +765,7 @@ struct TakeCardSurface: View {
                         .ckBody(.medium, size: 11, relativeTo: .caption)
                         .foregroundStyle(reminderLabelColor)
                         .accessibilityHidden(true)
-                    reminderText(reminderLabel)
-                        .ckBody(.medium, size: 11, relativeTo: .caption)
-                        .monospacedDigit()   // a time: tabular digits
-                        .multilineTextAlignment(.leading)
+                    reminderLine(reminderLabel)
                         .foregroundStyle(reminderLabelColor)
                 }
             }
@@ -763,6 +794,13 @@ struct TakeCardSurface: View {
             RoundedRectangle(cornerRadius: TakeCardStyle.cornerRadius, style: .continuous)
                 .strokeBorder(style.border, lineWidth: TakeCardStyle.borderWidth)
         )
+        .overlay(alignment: .leading) {
+            if let stateWord, let stripScale {
+                TakeStateWordLabel(word: stateWord, scale: stripScale, stripWidth: irisLeadingInset)
+                    .padding(.bottom, extraBottomPadding)
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeight = $0 }
     }
 }
 
