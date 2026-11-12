@@ -1100,8 +1100,9 @@ struct SettingsView: View {
         // dotted bell — one bell language across the two reminder rows (owner 2026-06-29).
         SettingsRow(icon: "bell.badge", label: "Notifications") {
             HStack(spacing: 6) {
+                // Enabled: a filled dot in the Scene's action colour (owner 2026-11-12).
                 Circle()
-                    .fill(Color.green)
+                    .fill(Color.ckAdd)
                     .frame(width: 8, height: 8)
                     .accessibilityHidden(true)
                 Text("Enabled")
@@ -1119,8 +1120,10 @@ struct SettingsView: View {
                     chevron: true,
                     action: { openSystemSettings() }) {
             HStack(spacing: 6) {
+                // Disabled: an empty ring in the Scene's muted colour, the same 8pt across as the
+                // Enabled dot, so fill against ring tells them apart without colour (owner 2026-11-12).
                 Circle()
-                    .fill(Color.orange)
+                    .strokeBorder(Color.ckTextSecondary, lineWidth: 1.5)
                     .frame(width: 8, height: 8)
                     .accessibilityHidden(true)
                 Text("Disabled")
