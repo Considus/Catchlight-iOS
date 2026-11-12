@@ -64,6 +64,10 @@ struct EditorKeyboardBar: View {
     var config: EditorToolbarConfig
     var onDismiss: () -> Void
 
+    /// The plus turns into the cross once, as the bar appears (Reduce Motion: it fades in turned).
+    @State private var turned = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     /// Matches the dock's 44pt button.
     private let buttonSize: CGFloat = 44
 
@@ -78,7 +82,12 @@ struct EditorKeyboardBar: View {
             // word for word — the button throws the edit away, and "Close keyboard"
             // announced a dismissal while performing a discard.
             slot(enabled: true, label: "Discard changes", action: onDismiss) {
-                dockSymbol("plus", tint: .ckAccent, enabled: true).rotationEffect(.degrees(45))
+                dockSymbol("plus", tint: .ckAccent, enabled: true)
+                    .rotationEffect(.degrees(turned || reduceMotion ? 45 : 0))
+                    .opacity(reduceMotion && !turned ? 0 : 1)
+                    .onAppear {
+                        withAnimation(reduceMotion ? CatchlightMotion.reduced : CatchlightMotion.turn) { turned = true }
+                    }
             }
             .frame(maxWidth: .infinity)
 

@@ -418,7 +418,10 @@ struct RootView: View {
                             ui.closeFocusRow()
                             return
                         }
+                        // The row's Iris already morphed, so the card's switches under the fade
+                        // (`IrisMorphHold`), held only once the change is going ahead.
                         if ui.editingTakeID == take.id {
+                            IrisMorphHold.hold(take.id)
                             // Edit-in-place: the Take is being edited inline. Hand the
                             // selection to that editor's draft so it rides the inline
                             // save — routing to the store here lets the stale draft
@@ -445,6 +448,7 @@ struct RootView: View {
                                 ui.closeFocusRow()
                                 return
                             }
+                            IrisMorphHold.hold(take.id)
                             app.dailiesVM.applyActivityTypes(
                                 to: take,
                                 isNote: isNote, isTask: isTask,

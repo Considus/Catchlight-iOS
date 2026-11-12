@@ -688,7 +688,11 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
 
     @objc private func stepShift() {
         let p = min(max((CACurrentMediaTime() - shiftStart) / shiftDuration, 0), 1)
-        setShift(shiftFrom + (shiftTo - shiftFrom) * CGFloat(FocusRowView.easeInOutCubic(p)))
+        // On the drop's curve: forwards as the card grows, and backwards as it shrinks, since the
+        // close plays the open backwards.
+        let growing = abs(shiftTo) > abs(shiftFrom)
+        let eased = growing ? FocusRowView.Timing.dropCurve(p) : 1 - FocusRowView.Timing.dropCurve(1 - p)
+        setShift(shiftFrom + (shiftTo - shiftFrom) * CGFloat(eased))
         if p >= 1 { shiftLink?.invalidate(); shiftLink = nil }
     }
 

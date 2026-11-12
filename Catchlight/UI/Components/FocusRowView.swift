@@ -15,14 +15,15 @@
 //  row the gap shrinks evenly so the last mark stays 8pt inside the screen; the marks
 //  never shrink or overlap (`slotX`).
 //
-//  MOTION (`Timing`): the marks start stacked under the Iris at 85% size, invisible.
-//  They drop straight down to the card's grown bottom edge over 340ms (easeInOutCubic),
-//  while the card grows on the same curve, reaching full size with the drop and fading
-//  in over its first 80ms. The far marks peel off first and slide right to their slots while still
-//  dropping (Important at 120ms, Reminder 185, Task 250, Note 340), each slide lasting
-//  3.9ms per point travelled and at least 280ms, with a small easeOutBack overshoot:
-//  about 1.06s in all. Closing plays the whole open backwards, 1.25 times faster. Reduce
-//  Motion and UI tests skip straight to the end state.
+//  MOTION (`Timing`): every mark takes the same L-shaped path, one axis at a time (Art
+//  Director 2026-11-11, after Mark saw the far mark cut across the card). The marks start
+//  stacked under the Iris at 85% size, invisible. All four drop straight down together to the
+//  card's grown bottom edge over 220ms on an ease-out, while the card grows on the same curve,
+//  fading in over its first 80ms. Then all four leave together at one speed, sliding right on
+//  the same small overshoot-and-settle curve, sideways only, the farthest taking 560ms, so Note
+//  settles first and Important last: 780ms in all. Closing plays the whole open backwards, 1.25
+//  times faster, left then up, except that the slide left eases in with no settle.
+//  Reduce Motion and UI tests skip straight to the end state.
 //
 //  STYLE: an off mark is a ground-coloured square with a half-strength lit border and a
 //  lit line glyph; an on mark is filled with the Scene accent and its glyph takes the
@@ -292,9 +293,9 @@ struct FocusRowView: View {
     /// When each part of the open happens, in seconds from the tap. The close plays the
     /// whole open backwards, `closeSpeed` times faster.
     enum Timing {
-        /// All four marks drop together from under the Iris to the card's grown bottom edge,
-        /// and the card grows, on easeInOutCubic.
-        static let drop: Double = 0.340
+        /// All four marks drop together, straight down from under the Iris to the card's grown
+        /// bottom edge, and the card grows, on an ease-out (`dropCurve`).
+        static let drop: Double = 0.220
         /// The marks fade in, linearly, over this first part of the drop.
         static let fadeIn: Double = 0.080
         /// Size the marks start at, under the Iris; they reach full size with the drop.
@@ -302,29 +303,21 @@ struct FocusRowView: View {
         /// The close plays the open backwards this much faster.
         static let closeSpeed: Double = 1.25
 
-        /// When a mark starts sliding right to its slot: the far marks peel off first, while
-        /// the drop is still running, and Note last, as the drop ends.
-        static func spreadStart(_ kind: MarkKind) -> Double {
-            switch kind {
-            case .important: return 0.120
-            case .remind: return 0.185
-            case .task: return 0.250
-            case .note: return 0.340
-            }
+        /// The farthest mark's slide, start to settled. The others take less in proportion to
+        /// their travel, so all four leave at the same speed.
+        static let farSlide: Double = 0.560
+
+        /// How long a mark takes to slide `travel` points, when the farthest of `slots` takes
+        /// `farSlide`.
+        static func spreadDuration(travel: CGFloat, slots: [CGFloat]) -> Double {
+            let far = slots.map { abs($0) }.max() ?? 0
+            guard far > 0 else { return 0 }
+            return farSlide * Double(abs(travel) / far)
         }
-        /// The shortest slide.
-        static let minSpread: Double = 0.280
-        /// A slide lasts this long per point travelled, so far marks travel at the pace of
-        /// near ones (Note 280, Task 468, Reminder 702, Important 936ms at the phone slots).
-        static let spreadPerPoint: Double = 0.0039
-        /// How long a mark takes to slide `travel` points to its slot.
-        static func spreadDuration(travel: CGFloat) -> Double {
-            max(minSpread, Double(abs(travel)) * spreadPerPoint)
-        }
-        /// When the open ends: the last mark lands. `slots` are the marks' x offsets from the
+        /// When the open ends: the farthest mark stops. `slots` are the marks' x offsets from the
         /// Iris centre, in `MarkKind` order.
         static func openDuration(slots: [CGFloat]) -> Double {
-            MarkKind.allCases.map { spreadStart($0) + spreadDuration(travel: slots[$0.rawValue]) }.max() ?? drop
+            drop + (slots.map { spreadDuration(travel: $0, slots: slots) }.max() ?? 0)
         }
         static func closeDuration(slots: [CGFloat]) -> Double { openDuration(slots: slots) / closeSpeed }
         /// The point of the open every mark shows `elapsed` seconds into the close: the whole
@@ -337,13 +330,40 @@ struct FocusRowView: View {
         static func markOpacity(at t: Double) -> Double { clamp(t / fadeIn) }
         /// The marks' scale at time t of the open.
         static func markScale(at t: Double) -> CGFloat {
-            startScale + (1 - startScale) * CGFloat(easeInOutCubic(clamp(t / drop)))
+            startScale + (1 - startScale) * CGFloat(dropCurve(clamp(t / drop)))
         }
         /// How far the marks have dropped, and the card grown, at time t of the open (0 to 1).
-        static func dropProgress(at t: Double) -> Double { easeInOutCubic(clamp(t / drop)) }
-        /// How far a mark has slid to its slot at time t of the open (0 to 1, overshooting a little).
-        static func spreadProgress(_ kind: MarkKind, at t: Double, travel: CGFloat) -> Double {
-            easeOutBack(clamp((t - spreadStart(kind)) / spreadDuration(travel: travel)))
+        static func dropProgress(at t: Double) -> Double { dropCurve(clamp(t / drop)) }
+        /// The drop's ease-out (cubic). The timeline's cards below the grown one move on it too.
+        static func dropCurve(_ p: Double) -> Double { 1 - pow(1 - p, 3) }
+
+        /// How far a mark has slid to its slot at time t of the open (0 to 1, settling a little
+        /// past 1 and back). Every mark waits for the drop to end, so none moves down and across at
+        /// once, and the settle is sideways only. Then all four leave together at one speed, each
+        /// on the same overshoot curve over its own slide, so the nearest settles first and the
+        /// farthest last (Mark kept the settle, 2026-11-11).
+        static func spreadProgress(_ kind: MarkKind, at t: Double, slots: [CGFloat]) -> Double {
+            let duration = spreadDuration(travel: slots[kind.rawValue], slots: slots)
+            guard duration > 0, t > drop else { return 0 }
+            return easeOutBack(clamp((t - drop) / duration))
+        }
+
+        /// How far a mark has slid at time t of the open, as the CLOSE shows it. The close plays
+        /// the open backwards except for the settle: reversed, it would twitch right before
+        /// heading left. So each mark eases in on its slide left, with no settle under the Iris
+        /// (Art Director, 2026-11-11).
+        static func closingSpreadProgress(_ kind: MarkKind, at t: Double, slots: [CGFloat]) -> Double {
+            let duration = spreadDuration(travel: slots[kind.rawValue], slots: slots)
+            guard duration > 0, t > drop else { return 0 }
+            let u = clamp((t - drop) / duration)
+            return 1 - pow(1 - u, 3)
+        }
+
+        /// The settle: past the slot by about 4.9% of the travel, a third of the way in, then
+        /// back. The curve the slides had before the one-axis path.
+        static func easeOutBack(_ p: Double) -> Double {
+            let s = 1.15
+            return 1 + (s + 1) * pow(p - 1, 3) + s * pow(p - 1, 2)
         }
 
         private static func clamp(_ x: Double) -> Double { min(max(x, 0), 1) }
@@ -355,10 +375,6 @@ struct FocusRowView: View {
     }
 
     // Easings — identical curves to the prototype.
-    static func easeOutBack(_ p: Double) -> Double {
-        let s = 1.15
-        return 1 + (s + 1) * pow(p - 1, 3) + s * pow(p - 1, 2)
-    }
     static func easeInOutCubic(_ p: Double) -> Double {
         p < 0.5 ? 4 * p * p * p : 1 - pow(-2 * p + 2, 3) / 2
     }
@@ -379,9 +395,11 @@ struct FocusRowView: View {
         static let hidden = MarkProgress(rise: 0, spread: 0, opacity: 0, scale: Timing.startScale)
     }
 
-    private func openProgress(_ kind: MarkKind, at t: Double) -> MarkProgress {
+    private func openProgress(_ kind: MarkKind, at t: Double, closing: Bool = false) -> MarkProgress {
         MarkProgress(rise: Timing.dropProgress(at: t),
-                     spread: Timing.spreadProgress(kind, at: t, travel: slots[kind.rawValue]),
+                     spread: closing
+                        ? Timing.closingSpreadProgress(kind, at: t, slots: slots)
+                        : Timing.spreadProgress(kind, at: t, slots: slots),
                      opacity: Timing.markOpacity(at: t),
                      scale: Timing.markScale(at: t))
     }
@@ -395,7 +413,7 @@ struct FocusRowView: View {
             return .rest
         case .closing(let start, _):
             let elapsed = now.timeIntervalSince(start) / Self.timeScale
-            return openProgress(kind, at: Timing.closeTime(elapsed: elapsed, slots: slots))
+            return openProgress(kind, at: Timing.closeTime(elapsed: elapsed, slots: slots), closing: true)
         case .dismissed:
             return .hidden
         }
@@ -456,7 +474,7 @@ struct FocusRowView: View {
 
     /// The lit card copy's opacity. Solid while the row opens: it lands exactly over the real
     /// card, so only its growth shows, in step with the drop. Fading it in with the veil hid
-    /// that growth for the first 340ms and then faded it in once the cards below had moved,
+    /// that growth for the whole drop and then faded it in once the cards below had moved,
     /// which read as the card popping taller. Fades out with the veil on close.
     private func litCardOpacity(now: Date) -> Double {
         switch phase {
@@ -752,7 +770,7 @@ struct FocusRowView: View {
     // MARK: - Toggle (Note is the floor)
 
     private func toggle(_ kind: MarkKind) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(CatchlightMotion.press) {
             switch kind {
             case .note:   isNote.toggle()
             case .task:   isTask.toggle()

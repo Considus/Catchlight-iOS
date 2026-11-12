@@ -11,9 +11,9 @@ import XCTest
 
 final class FocusRowMotionUITests: XCTestCase {
 
-    /// Seconds into the open the row is held at (230ms: the marks are past half their drop,
-    /// and the far marks have started to slide away).
-    private let freezeAt = 0.23
+    /// Seconds into the open the row is held at (150ms: the marks are past half their 220ms
+    /// drop, still stacked, since none slides until the drop ends).
+    private let freezeAt = 0.15
 
     override func setUp() {
         super.setUp()
@@ -26,11 +26,10 @@ final class FocusRowMotionUITests: XCTestCase {
     }
 
     /// Before the redesign Note was drawn on top of the gathered marks, so a tap on the stack,
-    /// once the marks are past half their drop (170ms) and before Note slides away (340ms),
-    /// toggles Note. With the old order it toggled Task, the next mark down (Important and
-    /// Reminder have slid off the stack by then).
+    /// once the marks are past half their drop and before they slide apart, toggles Note. With
+    /// the old order it toggled Task, the next mark down.
     ///
-    /// The first open plays instantly, to make the Take a Task. The second is held at 230ms by
+    /// The first open plays instantly, to make the Take a Task. The second is held at 150ms by
     /// the freeze hook, so the tap is judged against the layout at that instant however slowly
     /// the runner delivers it.
     func testTapOnTheGatheredMarks_togglesNote() throws {
@@ -55,8 +54,8 @@ final class FocusRowMotionUITests: XCTestCase {
         dim.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
         XCTAssertTrue(task.waitForNonExistence(timeout: 5), "The row did not close")
 
-        // Open again, held at 230ms. The layout is frozen, so read where Note and Task overlap
-        // (Task has not started to slide) and tap the centre of that overlap, the deepest point of
+        // Open again, held at 150ms. The layout is frozen, so read where Note and Task overlap
+        // (no mark has started to slide) and tap the centre of that overlap, the deepest point of
         // the stack, whatever the screen width.
         tap(app, at: hub)
         XCTAssertTrue(note.waitForExistence(timeout: 5), "Focus row did not open again")
