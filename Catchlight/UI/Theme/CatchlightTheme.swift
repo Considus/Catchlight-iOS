@@ -1106,10 +1106,6 @@ enum CatchlightLayout {
     /// wide as the toolbar (owner 2026-11-11: "The Take card needs to exactly match the width of
     /// the menu bar"; art director, option a).
     static let cardMargin: CGFloat = dockInset
-    /// The same margin, for the onboarding's Basics cards, which are drawn as Take cards and
-    /// still call it with the dock's column (OnboardingView). Remove once that call reads
-    /// `cardMargin` (the iPhone Engineer is switching it).
-    static func cardMargin(addColumnX _: CGFloat) -> CGFloat { cardMargin }
     /// How far the Iris sits in from its card's leading edge: whatever puts the Iris's centre
     /// exactly on `addColumnX`, under Add, so it changes with the screen width, (width − 34) / 8
     /// − 22: 20.6 on a 375pt phone, 24 on 402, 28.75 on 440 (art director 2026-11-11: not rounded,
