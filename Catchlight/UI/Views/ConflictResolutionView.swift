@@ -31,6 +31,8 @@ struct ConflictResolutionView: View {
     /// Local-vs-remote selection per conflict (keyed by the pair's local.id).
     /// `true` = keep local ("Local"); `false` = keep remote ("Cloud"); missing = no choice yet.
     @State private var selection: [UUID: Bool] = [:]
+    /// The screen's width, for the heading's inset: the guidance lines up under the heading.
+    @State private var pageWidth: CGFloat = 0
 
     /// When the queue empties, the empty state auto-dismisses after this delay so
     /// the user briefly sees "All caught up." rather than the sheet snapping shut.
@@ -90,7 +92,6 @@ struct ConflictResolutionView: View {
                 }
                 if !queue.unverified.isEmpty {
                     guidance("The copies of these Takes in your cloud folder didn't pass their check. Nothing changes on this phone until you choose.")
-                        .padding(.horizontal, 20)
                         .padding(.top, queue.pending.isEmpty ? 0 : 8)
                     ForEach(queue.unverified, id: \.id) { item in
                         unverifiedCard(item)
@@ -100,6 +101,7 @@ struct ConflictResolutionView: View {
             }
             .padding(.bottom, 24)
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pageWidth = $0 }
         .scrollIndicators(.hidden)
     }
 
@@ -112,7 +114,6 @@ struct ConflictResolutionView: View {
             // About choosing between two versions, which a converted pair doesn't offer.
             if queue.pending.contains(where: { !queue.isConverted($0.local.id) }) {
                 guidance("These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed.")
-                    .padding(.horizontal, 20)
             }
         }
         .frame(maxWidth: .infinity)
@@ -120,13 +121,16 @@ struct ConflictResolutionView: View {
         .padding(.bottom, 4)
     }
 
+    /// Guidance under the heading: left-aligned on the heading's left edge, as wide as the
+    /// heading's column (Art Director, 2026-11-12).
     private func guidance(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .ckBody(.light, size: 16, relativeTo: .body)
             .foregroundStyle(Color.ckTextSecondary)
-            .multilineTextAlignment(.center)
+            .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, CatchlightLayout.dailiesHeadingInset(containerWidth: pageWidth))
     }
 
     // MARK: - Unverified cloud copies (2026-09-30)

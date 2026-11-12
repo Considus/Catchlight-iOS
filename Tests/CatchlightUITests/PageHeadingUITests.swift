@@ -159,4 +159,47 @@ final class PageHeadingUITests: XCTestCase {
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         XCTAssertEqual(row.frame.minY, sheet.frame.minY, accuracy: 0.5, "Settings title row's top")
     }
+
+    /// Where the first letter's ink starts, in points from the top: the first row with dark
+    /// ink in a band from `x` to `x + 20`, below the status bar and clear of the camera.
+    private func inkTop(_ app: XCUIApplication, x: CGFloat) -> CGFloat? {
+        guard let cg = app.screenshot().image.cgImage else { return nil }
+        let scale = CGFloat(cg.width) / app.windows.firstMatch.frame.width
+        let width = cg.width, height = cg.height
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        guard let context = CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8,
+                                      bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        context.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
+        for y in Int(45 * scale)..<Int(200 * scale) {
+            for px in Int(x * scale)..<Int((x + 20) * scale) {
+                let o = (y * width + px) * 4
+                let luma = (Int(pixels[o]) * 3 + Int(pixels[o + 1]) * 6 + Int(pixels[o + 2])) / 10
+                if luma < 100 { return CGFloat(y) / scale }
+            }
+        }
+        return nil
+    }
+
+    /// Sequence and Search draw their title in Dailies' own slot. Their title isn't an element
+    /// of its own (it carries the way back to Dailies), so its first letter's ink is measured
+    /// against the Dailies title's, in Daylight. "D" and "S" differ by under half a point.
+    func testSequenceAndSearchTitles_sitWhereTheDailiesTitleDoes() {
+        let app = launch("UICTContentSizeCategoryL")
+        let dailies = headingText(app, "Dailies")
+        XCTAssertTrue(dailies.waitForExistence(timeout: 8))
+        sleep(1)
+        let x = dailies.frame.minX
+        guard let reference = inkTop(app, x: x) else { return XCTFail("no ink for the Dailies title") }
+        for (tab, title) in [("sequence-tab", "Sequence"), ("search-tab", "Search")] {
+            tapWhenReady(app.buttons[tab])
+            XCTAssertTrue(headingText(app, title).waitForExistence(timeout: 5), "\(title) heading not shown")
+            sleep(1)
+            guard let top = inkTop(app, x: x) else { XCTFail("no ink for \(title)"); continue }
+            XCTAssertEqual(top, reference, accuracy: 1, "\(title)'s first letter starts at \(top), Dailies' at \(reference)")
+            app.terminate()
+            app.launch()
+            XCTAssertTrue(dailies.waitForExistence(timeout: 8))
+        }
+    }
 }
