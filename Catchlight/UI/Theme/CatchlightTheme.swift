@@ -1255,13 +1255,15 @@ struct PageHeadingWithButton<Trailing: View>: View {
 struct PageHeading: View {
     let title: String
 
-    init(_ title: LocalizedStringResource, trailingReserve: CGFloat = 0) {
+    init(_ title: LocalizedStringResource, trailingReserve: CGFloat = 0, centred: Bool = false) {
         self.title = String(localized: title)
         self.trailingReserve = trailingReserve
+        self.centred = centred
     }
-    init(verbatim title: String, trailingReserve: CGFloat = 0) {
+    init(verbatim title: String, trailingReserve: CGFloat = 0, centred: Bool = false) {
         self.title = title
         self.trailingReserve = trailingReserve
+        self.centred = centred
     }
 
     /// `title` split onto two lines at a word boundary, the split that makes the longer
@@ -1392,6 +1394,10 @@ struct PageHeading: View {
     /// Room kept clear at the trailing edge for a button on the heading's line (the ×), on top
     /// of the inset.
     var trailingReserve: CGFloat = 0
+    /// Centred rather than left-aligned (owner 2026-11-12: Settings, Sync Conflicts and the
+    /// Settings sub-screens "should be centred"). A reserve is then kept on both sides, so the
+    /// title stays on the true centre.
+    var centred: Bool = false
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var width: CGFloat = 0
@@ -1399,21 +1405,22 @@ struct PageHeading: View {
     var body: some View {
         // The text column: the full width less the Dailies inset each side and any reserve.
         let inset = CatchlightLayout.dailiesHeadingInset(containerWidth: width)
-        let column = width - 2 * inset - trailingReserve
+        let reserve = centred ? 2 * trailingReserve : trailingReserve
+        let column = width - 2 * inset - reserve
         let category = CatchlightFont.contentSizeCategory(min(dynamicTypeSize, .accessibility1))
         let fit = column > 0 ? Self.fit(title, width: column, category: category) : nil
         Text(fit?.text ?? title.replacingOccurrences(of: Self.softHyphen, with: ""))
             .ckDisplay(size: fit?.points ?? CatchlightLayout.pageHeadingSize, relativeTo: fit == nil ? .largeTitle : nil)
             .lineLimit(fit.map { $0.text.components(separatedBy: "\n").count } ?? 1)
-            .multilineTextAlignment(.leading)
+            .multilineTextAlignment(centred ? .center : .leading)
             .kerning(CatchlightLayout.pageHeadingKerning)
             .foregroundStyle(Color.ckTextPrimary)
             .fixedSize(horizontal: true, vertical: true)
-            .padding(.leading, inset)
+            .padding(.leading, inset + (centred ? trailingReserve : 0))
             .padding(.trailing, inset + trailingReserve)
             // minWidth 0 makes the frame take the offered width even while the one-line text
             // is wider, so the width measured is the container's, not the text's.
-            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: centred ? .center : .leading)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             .accessibilityLabel(title.replacingOccurrences(of: Self.softHyphen, with: ""))

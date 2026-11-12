@@ -243,9 +243,10 @@ struct SettingsView: View {
 
     /// The "Settings" heading as a scrolling list row (owner 2026-06-21) — clear
     /// background, no section chrome, so it reads as a title and scrolls away.
-    /// Drawn as the Dailies title (owner 2026-11-12), at Dailies' left inset and top gap.
+    /// Drawn as the Dailies title but centred, as on every sheet (owner 2026-11-12), at Dailies'
+    /// top gap.
     private var titleRow: some View {
-        PageHeading("Settings")
+        PageHeading("Settings", centred: true)
             .padding(.horizontal, -titleRowInset)
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.listSpace)).minX } action: {
                 titleRowInset = max(0, $0)

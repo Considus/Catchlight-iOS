@@ -125,32 +125,31 @@ final class PageHeadingUITests: XCTestCase {
         }
     }
 
-    /// The page headings start where the Dailies title does (owner 2026-11-12: "the various
-    /// page headings need to be changed to match Dailies"): the same left edge, and the same
-    /// distance below the safe area on a full page or below the sheet's top edge in a sheet.
-    /// Sequence and Search draw in Dailies' own heading slot; Storyboard is checked in its
-    /// own test above.
-    func testPageHeadings_startWhereTheDailiesTitleDoes() {
+    /// On a sheet the heading is centred (owner 2026-11-12: Settings and Sync Conflicts "should
+    /// be centred"), at the same height as the Dailies title: the same distance below the
+    /// sheet's top edge as Dailies' below the safe area. On an iPhone 16 the sheets start at
+    /// the safe area, so that is the same number.
+    func testSheetHeadings_areCentred_atTheDailiesTitlesHeight() {
         let plain = launch("UICTContentSizeCategoryL")
         let dailies = headingText(plain, "Dailies")
         XCTAssertTrue(dailies.waitForExistence(timeout: 8))
         let origin = dailies.frame.origin
         plain.terminate()
 
-        // Sync Conflicts is a sheet whose top edge is the safe area's on this phone. (Its
-        // banner pushes Dailies down, so Dailies is measured without it, above.)
+        // Sync Conflicts. (Its banner pushes Dailies down, so Dailies is measured without it.)
         let app = launch("UICTContentSizeCategoryL", extra: ["--uitesting-unverified"])
         let banner = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "3 Takes need a decision")).firstMatch
         XCTAssertTrue(banner.waitForExistence(timeout: 10))
         banner.tap()
         let conflicts = headingText(app, "Sync Conflicts")
         XCTAssertTrue(conflicts.waitForExistence(timeout: 5))
-        XCTAssertEqual(conflicts.frame.minX, origin.x, accuracy: 0.5, "Sync Conflicts heading's left edge")
+        let centre = app.windows.firstMatch.frame.midX
+        XCTAssertEqual(conflicts.frame.midX, centre, accuracy: 1, "Sync Conflicts heading's centre")
         XCTAssertEqual(conflicts.frame.minY, origin.y, accuracy: 0.5, "Sync Conflicts heading's top")
         app.terminate()
 
-        // Settings: the title row starts at the sheet's top edge, with no list margin above
-        // it, and spans the sheet; the heading inside carries Dailies' own gap and inset.
+        // Settings: the title row starts at the sheet's top edge with no list margin above it;
+        // the title is a list row, so its centre is measured by its ink.
         let settings = launch("UICTContentSizeCategoryL")
         swipeUpWhenReady(anyElement(in: settings, id: "angle-tab"))
         let sheet = anyElement(in: settings, id: "settings-sheet")
@@ -158,6 +157,33 @@ final class PageHeadingUITests: XCTestCase {
         let row = headingText(settings, "Settings")
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         XCTAssertEqual(row.frame.minY, sheet.frame.minY, accuracy: 0.5, "Settings title row's top")
+        sleep(1)
+        guard let span = inkSpan(settings, top: row.frame.minY + 10, bottom: row.frame.minY + 40) else {
+            return XCTFail("no ink for the Settings title")
+        }
+        XCTAssertEqual((span.lowerBound + span.upperBound) / 2, centre, accuracy: 1.5,
+                       "Settings title's ink runs \(span), not centred on \(centre)")
+    }
+
+    /// The left and right edges of the dark ink between `top` and `bottom`, in points.
+    private func inkSpan(_ app: XCUIApplication, top: CGFloat, bottom: CGFloat) -> ClosedRange<CGFloat>? {
+        guard let cg = app.screenshot().image.cgImage else { return nil }
+        let scale = CGFloat(cg.width) / app.windows.firstMatch.frame.width
+        let width = cg.width, height = cg.height
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        guard let context = CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8,
+                                      bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        context.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
+        var low = Int.max, high = Int.min
+        for y in Int(top * scale)..<Int(bottom * scale) {
+            for x in 0..<width {
+                let o = (y * width + x) * 4
+                let luma = (Int(pixels[o]) * 3 + Int(pixels[o + 1]) * 6 + Int(pixels[o + 2])) / 10
+                if luma < 100 { low = min(low, x); high = max(high, x) }
+            }
+        }
+        return low <= high ? CGFloat(low) / scale...CGFloat(high) / scale : nil
     }
 
     /// Where the first letter's ink starts, in points from the top: the first row with dark
