@@ -100,7 +100,11 @@ final class ButtonRowPlaceUITests: XCTestCase {
         XCTAssertTrue(hold.waitForExistence(timeout: 12))
         Thread.sleep(forTimeInterval: 1)
         let holdInset = bottomCornerInset(of: hold)
-        XCTAssertGreaterThan(revealInset, 8, "the Reveal button's corner should follow the screen's curve")
+        // The screen-following edge shape needs iOS 26. Below it the edge panel draws the plain
+        // surface radius (`flatEdgePanel`), so only the match between the two is checked there.
+        if #available(iOS 26, *) {
+            XCTAssertGreaterThan(revealInset, 8, "the Reveal button's corner should follow the screen's curve")
+        }
         XCTAssertEqual(holdInset, revealInset, accuracy: 1, "the hold button's bottom corner")
     }
 
