@@ -52,6 +52,8 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             field: 0x1C2356,
             onField: 0xF6F7FF,
             fieldMuted: 0xAEB4E3,
+            iconBg: 0x2C41E8,
+            iconRing: 0xFFFFFF,
             iconDot: 0xFF8AD0
         )
         case (.cobalt, false): return ScenePalette(
@@ -72,6 +74,8 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             field: 0x2C41E8,
             onField: 0xFFFFFF,
             fieldMuted: 0xDCE1FF,
+            iconBg: 0x2C41E8,
+            iconRing: 0xFFFFFF,
             iconDot: 0xFF8AD0
         )
         case (.graphite, true): return ScenePalette(
@@ -92,6 +96,8 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             field: 0x26292D,
             onField: 0xF2F3F5,
             fieldMuted: 0xA3A8B0,
+            iconBg: 0x26292D,
+            iconRing: 0xF2F3F5,
             iconDot: 0xFFD21F
         )
         case (.graphite, false): return ScenePalette(
@@ -112,6 +118,8 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             field: 0x1A1C1F,
             onField: 0xF2F3F5,
             fieldMuted: 0xA3A8B0,
+            iconBg: 0x26292D,
+            iconRing: 0xF2F3F5,
             iconDot: 0xFFD21F
         )
         case (.onyx, true): return ScenePalette(
@@ -132,6 +140,8 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             field: 0x161B22,
             onField: 0xF3F6FA,
             fieldMuted: 0x9AA3AF,
+            iconBg: 0x161B22,
+            iconRing: 0xF3F6FA,
             iconDot: 0x8FE3F5
         )
         case (.onyx, false): return ScenePalette(
@@ -152,6 +162,8 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             field: 0x0A0D12,
             onField: 0xF5F7F9,
             fieldMuted: 0x9AA3AF,
+            iconBg: 0x161B22,
+            iconRing: 0xF3F6FA,
             iconDot: 0x8FE3F5
         )
         case (.jade, true): return ScenePalette(
@@ -172,6 +184,8 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             field: 0x1C2D25,
             onField: 0xEEF4EF,
             fieldMuted: 0x9DB1A6,
+            iconBg: 0x1F4A38,
+            iconRing: 0xF6F8F5,
             iconDot: 0xC8F06A
         )
         case (.jade, false): return ScenePalette(
@@ -192,6 +206,8 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             field: 0x1F4A38,
             onField: 0xF6F8F5,
             fieldMuted: 0xC9D9CF,
+            iconBg: 0x1F4A38,
+            iconRing: 0xF6F8F5,
             iconDot: 0xC8F06A
         )
         case (.tanzanite, true): return ScenePalette(
@@ -212,6 +228,8 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             field: 0x24254D,
             onField: 0xF5F3FF,
             fieldMuted: 0xB0ACD9,
+            iconBg: 0x3D3AB8,
+            iconRing: 0xFFFFFF,
             iconDot: 0xFFB98C
         )
         case (.tanzanite, false): return ScenePalette(
@@ -232,6 +250,8 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             field: 0x3D3AB8,
             onField: 0xFFFFFF,
             fieldMuted: 0xE0DEFA,
+            iconBg: 0x3D3AB8,
+            iconRing: 0xFFFFFF,
             iconDot: 0xFFB98C
         )
         }
@@ -257,5 +277,7 @@ struct ScenePalette: Equatable, Sendable {
     let field: UInt32
     let onField: UInt32
     let fieldMuted: UInt32
+    let iconBg: UInt32
+    let iconRing: UInt32
     let iconDot: UInt32
 }

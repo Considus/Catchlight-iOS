@@ -25,13 +25,12 @@ import SwiftUI
 
 struct IntroBrandMark: View {
     @Environment(\.deviceTopInset) private var deviceTopInset
+    /// On the colour field the icon is the ring and dot alone; on a page ground it is the tile.
+    @Environment(\.onColourField) private var onField
 
     var body: some View {
         VStack(spacing: CatchlightWordmark.iconGap) {
-            Image("catchlight-icon")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 72, height: 72)
+            CatchlightMark(style: onField ? .bare : .tile)
             CatchlightWordmark()
         }
         .frame(height: CatchlightWordmark.lockupHeight, alignment: .top)

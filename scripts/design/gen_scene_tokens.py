@@ -18,7 +18,7 @@ SOURCE = os.path.join(ROOT, 'design', 'tokens.json')
 OUTPUT = os.path.join(ROOT, 'Catchlight', 'UI', 'Theme', 'SceneTokens.generated.swift')
 ROLES = ['ground', 'surface', 'card', 'raised', 'line', 'outline', 'text', 'muted', 'faint',
          'accent', 'accentText', 'onAccent', 'lit', 'unlit',
-         'field', 'onField', 'fieldMuted', 'iconDot']
+         'field', 'onField', 'fieldMuted', 'iconBg', 'iconRing', 'iconDot']
 HEX = re.compile(r'^#[0-9A-Fa-f]{6}$')
 IDENT = re.compile(r'^[a-z][A-Za-z0-9]*$')
 
