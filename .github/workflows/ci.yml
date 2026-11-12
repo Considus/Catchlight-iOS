@@ -14,12 +14,22 @@ name: CI
 #
 # Both jobs must pass before this commit is mergeable — these are the status
 # checks wired into branch protection in 6.18.
+#
+# What runs where (2026-11-12). The UI tests are about 47 of a job's 52 minutes, so a PR run
+# keeps them to the latest iOS and runs only the unit tests on the iOS 18.5 floor. The merge
+# queue (`merge_group`), a push to main and a manual dispatch run every test on both runtimes,
+# so nothing reaches main without the full matrix. Both legs keep their check names whatever
+# they run, because those names are what branch protection requires.
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  # The merge queue builds each queued PR on top of main (and of the PRs ahead of it) and
+  # runs this workflow on that merge group. The same check names must report there, or the
+  # queue waits for ever. Added 2026-11-12 with the queue.
+  merge_group:
   # The Core pin workflow dispatches this on its bump branch, because a PR it
   # opens with GITHUB_TOKEN starts no pull_request run.
   workflow_dispatch:
@@ -248,8 +258,23 @@ jobs:
         # introduction covers the keyboard and the editor toolbar on a fresh simulator, and the
         # retry passed because iOS shows it once. The tests now dismiss it
         # (`dismissKeyboardIntroductionIfPresent` in UITestSupport), and a failure fails the check.
+        #
+        # SCOPE (2026-11-12): on a pull request the iOS 18.5 floor runs the unit tests only
+        # (CatchlightTests); every other leg and event runs the whole scheme. The check name
+        # does not change, so the required checks need no edit. The UI tests on the floor run
+        # in the merge queue and on main.
+        env:
+          EVENT: ${{ github.event_name }}
+          DESTINATION: ${{ matrix.destination }}
         run: |
+          SCOPE=()
+          case "$DESTINATION" in
+            *OS=latest) ;;
+            *) if [ "$EVENT" = "pull_request" ]; then SCOPE=(-only-testing:CatchlightTests); fi ;;
+          esac
+          echo "event=$EVENT destination=$DESTINATION scope=${SCOPE[*]:-all tests}"
           xcodebuild test \
             -project Catchlight.xcodeproj \
             -scheme Catchlight \
-            -destination '${{ matrix.destination }}'
+            -destination "$DESTINATION" \
+            ${SCOPE[@]+"${SCOPE[@]}"}
