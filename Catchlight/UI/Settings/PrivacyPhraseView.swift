@@ -61,8 +61,7 @@ struct PrivacyPhraseView: View {
                 // view lays out under. Laying out under it here too puts the bottom row at the
                 // Dailies toolbar's place, as on the full-screen views.
                 .ignoresSafeArea(.container, edges: .bottom)
-                .navigationTitle("Privacy phrase")
-                .navigationBarTitleDisplayMode(.inline)
+                .sheetPageHeading("Privacy phrase")
                 // No Done button — dismiss by swiping down (owner 2026-06-29),
                 // matching About / Cloud Storage. The drag indicator shows it.
                 .background(Color.ckBackground.ignoresSafeArea())

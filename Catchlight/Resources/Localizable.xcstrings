@@ -38417,8 +38417,8 @@
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hinweisverlauf"
+            "state" : "needs_review",
+            "value" : "Hinweis\u00ADverlauf"
           }
         },
         "fr" : {
@@ -38447,8 +38447,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Meldingsgeschiedenis"
+            "state" : "needs_review",
+            "value" : "Meldings\u00ADgeschiedenis"
           }
         },
         "pt-PT" : {
@@ -38465,26 +38465,26 @@
         },
         "sv" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aviseringshistorik"
+            "state" : "needs_review",
+            "value" : "Aviserings\u00ADhistorik"
           }
         },
         "da" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notifikationshistorik"
+            "state" : "needs_review",
+            "value" : "Notifikations\u00ADhistorik"
           }
         },
         "nb" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Varslingshistorikk"
+            "state" : "needs_review",
+            "value" : "Varslings\u00ADhistorikk"
           }
         },
         "fi" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ilmoitushistoria"
+            "state" : "needs_review",
+            "value" : "Ilmoitus\u00ADhistoria"
           }
         },
         "tr" : {

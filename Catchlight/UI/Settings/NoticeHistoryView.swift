@@ -78,23 +78,15 @@ struct NoticeHistoryView: View {
                 }
             }
             .background(Color.ckBackground)
-            .navigationTitle("Notice History")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                // No Done button — dismiss by swiping down (owner 2026-06-29).
-                if !entries.isEmpty {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("Clear") {
-                            // Scoped to the notices this view SHOWS (2026-07-01):
-                            // the full clear() also erased the lifecycle
-                            // breadcrumbs, silently emptying Export diagnostics.
-                            DiagnosticsLog.shared.clearUserFacing()
-                            entries = []
-                        }
-                        .accessibilityIdentifier("notice-history-clear")
-                    }
-                }
-            }
+            // The page heading, with Clear on its first line while there are notices
+            // (owner 2026-11-12). No Done button: dismiss by swiping down (owner 2026-06-29).
+            .sheetPageHeading("Notice History", action: entries.isEmpty ? nil : SheetHeadingAction(
+                label: "Clear", identifier: "notice-history-clear") {
+                    // Scoped to the notices this view SHOWS (2026-07-01): the full clear()
+                    // also erased the lifecycle breadcrumbs, silently emptying Export diagnostics.
+                    DiagnosticsLog.shared.clearUserFacing()
+                    entries = []
+                })
         }
         .presentationDragIndicator(.visible)
         .onAppear { entries = DiagnosticsLog.shared.userFacingEntries() }

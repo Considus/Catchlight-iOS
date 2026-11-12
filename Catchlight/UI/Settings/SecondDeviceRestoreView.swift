@@ -60,8 +60,7 @@ struct SecondDeviceRestoreView: View {
             .scrollIndicators(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
-            .navigationTitle("Second device")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetPageHeading("Second device")
         }
         .presentationDragIndicator(.visible)
         // Announce the restore error (audit 2026-08, V14): the status line turns

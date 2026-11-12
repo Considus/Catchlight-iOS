@@ -69,11 +69,8 @@ struct CloudStorageView: View {
             // view lays out under. Laying out under it here too puts the bottom row at the
             // Dailies toolbar's place, as on the full-screen views.
             .ignoresSafeArea(.container, edges: .bottom)
-            // System inline nav title, matching the other Settings sub-pages
-            // (About / Notice History / Privacy phrase) — owner 2026-06-29; the
-            // bespoke cloud-glyph hero was the only sub-page that differed.
-            .navigationTitle("Cloud Storage")
-            .navigationBarTitleDisplayMode(.inline)
+            // The page heading, as on the other Settings sub-pages (owner 2026-11-12).
+            .sheetPageHeading("Cloud Storage")
         }
         .presentationDragIndicator(.visible)
         .sheet(isPresented: $pickerPresented) {
