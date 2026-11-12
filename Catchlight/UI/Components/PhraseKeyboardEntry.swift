@@ -52,17 +52,31 @@ final class RestoreKeyboardAccessory: UIView {
     private static let textPrimary = UITheme.textPrimary // Back button
     private static let pageBackground = UITheme.background
 
-    private static let pad: CGFloat = 12       // toolbarHorizontalPadding
-    private static let buttonSize: CGFloat = 44    // minTouchTarget, the dock grid's slot unit
-    /// The pills' height: half the Dailies toolbar, like every bottom button row outside it.
+    /// The pair takes the size of the onboarding pairs (owner 2026-11-12): `dockInset` in from
+    /// each side, `chipGap` apart, half the toolbar's height. Plain corners, since the bar sits on
+    /// the keyboard, not at the screen edge. Above Large text the two stack, full width.
+    private static let inset: CGFloat = CatchlightLayout.dockInset
+    private static let gap: CGFloat = DailiesToolbarMetrics.chipGap
     private static let buttonHeight: CGFloat = CatchlightLayout.buttonRowHeight
     private static let topPad: CGFloat = 10
-    private static let barHeight: CGFloat = topPad + buttonHeight + 8
+    private static let bottomPad: CGFloat = 8
+
+    private var stacked: Bool { traitCollection.preferredContentSizeCategory > .large }
+
+    /// A stacked button's height: its label's line plus padding, never under the touch minimum.
+    private func stackedHeight(_ button: UIButton) -> CGFloat {
+        max(CatchlightLayout.minTouchTarget, ceil(button.titleLabel?.font.lineHeight ?? 0) + 20)
+    }
+
+    private var barHeight: CGFloat {
+        stacked ? Self.topPad + stackedHeight(restoreButton) + Self.gap + stackedHeight(backButton) + Self.bottomPad
+                : Self.topPad + Self.buttonHeight + Self.bottomPad
+    }
 
     init(onRestore: @escaping () -> Void, onBack: @escaping () -> Void) {
         self.onRestore = onRestore
         self.onBack = onBack
-        super.init(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: Self.barHeight))
+        super.init(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: Self.topPad + Self.buttonHeight + Self.bottomPad))
         autoresizingMask = [.flexibleWidth]
         backgroundColor = .clear
         fade.startPoint = CGPoint(x: 0.5, y: 0)
@@ -78,26 +92,30 @@ final class RestoreKeyboardAccessory: UIView {
         registerForTraitChanges([UITraitUserInterfaceStyle.self, SceneTrait.self]) { (bar: RestoreKeyboardAccessory, _) in
             bar.refreshDynamicColors()
         }
+        // A text size change can switch the pair between side by side and stacked.
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (bar: RestoreKeyboardAccessory, _) in
+            bar.invalidateIntrinsicContentSize()
+            bar.setNeedsLayout()
+        }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: Self.barHeight) }
+    override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: barHeight) }
 
-    /// Position the two pills on the EXACT dock grid `DockPillRow` uses (owner
-    /// 2026-07-02): four equal slots inside the 12pt horizontal padding, the leading
-    /// pill covering slots 1+2 and the trailing pill slots 3+4 — so if the bottom dock
-    /// were slid up under this bar, the pills would obscure it precisely.
     override func layoutSubviews() {
         super.layoutSubviews()
         fade.frame = bounds
-        let slotW = (bounds.width - 2 * Self.pad) / 4
-        let d = Self.buttonSize                       // 44 — the dock button size
-        let pillW = slotW + d                     // a pill spans two slots
-        let gap = slotW - d                       // the dock's inter-button gap
-        let restoreX = Self.pad + (slotW / 2 - d / 2)
-        restoreButton.frame = CGRect(x: restoreX, y: Self.topPad, width: pillW, height: Self.buttonHeight)
-        backButton.frame = CGRect(x: restoreX + pillW + gap, y: Self.topPad, width: pillW, height: Self.buttonHeight)
+        let width = bounds.width - 2 * Self.inset
+        if stacked {
+            let h1 = stackedHeight(restoreButton), h2 = stackedHeight(backButton)
+            restoreButton.frame = CGRect(x: Self.inset, y: Self.topPad, width: width, height: h1)
+            backButton.frame = CGRect(x: Self.inset, y: Self.topPad + h1 + Self.gap, width: width, height: h2)
+        } else {
+            let each = (width - Self.gap) / 2
+            restoreButton.frame = CGRect(x: Self.inset, y: Self.topPad, width: each, height: Self.buttonHeight)
+            backButton.frame = CGRect(x: Self.inset + each + Self.gap, y: Self.topPad, width: each, height: Self.buttonHeight)
+        }
     }
 
     /// Disabled shows the shared disabled pair (a readable label on a neutral fill), not a
