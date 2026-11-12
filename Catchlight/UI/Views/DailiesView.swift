@@ -57,9 +57,9 @@ struct DailiesView: View {
 
     /// The heading's clearance (owner device report 2026-09-04, item 5).
     ///
-    /// `CatchlightLayout.headingClearance` is a constant tuned for the 24pt heading, but
-    /// `PageHeading` is `relativeTo: .title3` and grows with the text size, so above
-    /// Large the heading came down into the pinned Obie and the two overlapped.
+    /// `CatchlightLayout.headingClearance` was a constant tuned for the then 24pt heading, but
+    /// the heading grows with the text size (now 34pt relative to Large Title, capped at AX1),
+    /// so above Large the heading came down into the pinned Obie and the two overlapped.
     ///
     /// Round 2 first tried SCALING the constant on `.title3`, and it overshot badly: the whole
     /// 68 scaled, including the fixed gap below the text, leaving a large empty band at max
