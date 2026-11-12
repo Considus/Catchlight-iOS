@@ -23,9 +23,10 @@ struct SheetHeadingAction {
 extension View {
     /// Pins `title` as the sheet's page heading, with `action` on its first line if given,
     /// and hides the navigation bar.
-    func sheetPageHeading(_ title: LocalizedStringResource, action: SheetHeadingAction? = nil) -> some View {
+    func sheetPageHeading(_ title: LocalizedStringResource, centred: Bool = true,
+                          action: SheetHeadingAction? = nil) -> some View {
         safeAreaInset(edge: .top, spacing: 0) {
-            SheetPageHeading(title: title, action: action)
+            SheetPageHeading(title: title, centred: centred, action: action)
                 .padding(.top, CatchlightLayout.pageHeadingTopGap)
                 .background(Color.ckBackground)
                 .overlay(alignment: .bottom) {
@@ -45,6 +46,7 @@ extension View {
 /// Without an action the heading takes the full width (Art Director, 2026-11-12).
 struct SheetPageHeading: View {
     let title: LocalizedStringResource
+    var centred = true
     let action: SheetHeadingAction?
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -62,7 +64,7 @@ struct SheetPageHeading: View {
     var body: some View {
         let category = CatchlightFont.contentSizeCategory(min(dynamicTypeSize, .accessibility1))
         let reserve = action.map { Self.reserve(for: String(localized: $0.label), category: category) } ?? 0
-        PageHeading(title, trailingReserve: reserve)
+        PageHeading(title, trailingReserve: reserve, centred: centred)
             .accessibilityAddTraits(.isHeader)
             .overlay(alignment: .topTrailing) {
                 if let action {
@@ -78,7 +80,8 @@ struct SheetPageHeading: View {
         let traits = UITraitCollection(preferredContentSizeCategory: category)
         let body = UIFont.preferredFont(forTextStyle: .body, compatibleWith: traits)
         let inset = CatchlightLayout.dailiesHeadingInset(containerWidth: width)
-        let fit = PageHeading.fit(String(localized: title), width: width - 2 * inset - reserve, category: category)
+        let fit = PageHeading.fit(String(localized: title), width: width - 2 * inset - (centred ? 2 : 1) * reserve,
+                                  category: category)
         let heading = CatchlightFont.uiDisplay(size: fit.points, relativeTo: nil)
         // The label sits centred in a 44pt-tall tap area; move it so its baseline meets the
         // heading's first baseline.
