@@ -124,7 +124,7 @@ struct DailiesToolbar: View {
         VStack(spacing: 3) {
             icon.frame(height: DailiesToolbarMetrics.addSquare)
             Text(label)
-                .ckBody(.medium, size: 11, relativeTo: .caption2)
+                .ckBody(.medium, size: DailiesToolbarMetrics.labelSize, relativeTo: .caption2)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 // Like the system tab bar: the label stops growing at the second size
@@ -141,7 +141,7 @@ struct DailiesToolbar: View {
     }
 
     private func panelIcon(_ glyph: ToolbarGlyph) -> some View {
-        glyph.stroke(style: StrokeStyle(lineWidth: 1.7, lineCap: .round, lineJoin: .round))
+        glyph.stroke(style: StrokeStyle(lineWidth: DailiesToolbarMetrics.iconStroke, lineCap: .round, lineJoin: .round))
             .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
     }
 
@@ -151,7 +151,7 @@ struct DailiesToolbar: View {
         } label: {
             toolbarItem(
                 icon: ToolbarGlyph.plus
-                    .stroke(Color.ckOnAccent, style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+                    .stroke(Color.ckOnAccent, style: StrokeStyle(lineWidth: DailiesToolbarMetrics.iconStroke, lineCap: .round))
                     .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
                     .frame(width: DailiesToolbarMetrics.addSquare, height: DailiesToolbarMetrics.addSquare)
                     .background(CatchlightShape.control.fill(Color.ckAdd)),
@@ -397,8 +397,12 @@ struct DailiesToolbar: View {
 /// The toolbar's sizes, shared with the timeline's bottom clearance.
 enum DailiesToolbarMetrics {
     /// The filled square behind Add's icon; every column's icon slot is this tall.
-    static let addSquare: CGFloat = 34
-    static let iconSize: CGFloat = 22
+    static let addSquare: CGFloat = 40
+    static let iconSize: CGFloat = 26
+    /// The icons' line weight, and the + in Add's square.
+    static let iconStroke: CGFloat = 1.9
+    /// The label under each icon, before Dynamic Type scales it (relative to caption2).
+    static let labelSize: CGFloat = 13
     /// Between the filter chips and the panel.
     static let chipGap: CGFloat = 8
     /// Between two filter chips.
@@ -422,7 +426,7 @@ private struct SequenceIcon: View {
     var body: some View {
         ZStack {
             SequenceLines(progress: open ? 1 : 0)
-                .stroke(style: StrokeStyle(lineWidth: 1.7, lineCap: .round, lineJoin: .round))
+                .stroke(style: StrokeStyle(lineWidth: DailiesToolbarMetrics.iconStroke, lineCap: .round, lineJoin: .round))
                 .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
                 .id(reduceMotion ? open : false)
                 .transition(reduceMotion ? .opacity : .identity)
