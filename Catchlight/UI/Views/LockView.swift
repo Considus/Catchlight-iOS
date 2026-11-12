@@ -51,7 +51,7 @@ struct LockView: View {
             .animation(.easeInOut(duration: 0.2), value: app.lockState)
         }
         .safeAreaInset(edge: .bottom) {
-            DockGridPillRow {
+            DockPillRow {
                 DockPill(title: buttonTitle) { Task { await app.attemptUnlock() } }
             }
             .frame(maxWidth: .infinity)

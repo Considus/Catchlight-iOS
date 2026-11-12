@@ -1158,6 +1158,10 @@ enum CatchlightLayout {
     /// side and from the bottom edge, and about 103pt tall.
     static let dockInset: CGFloat = 17
     static let dockHeight: CGFloat = 103
+    /// Every bottom button row outside the Dailies toolbar is half its height, with its bottom
+    /// edge where the toolbar's is (owner 2026-11-11: "half height buttons generally, except
+    /// for the menubar on Dailies"). Phrase entry's buttons above the keyboard take it too.
+    static let buttonRowHeight: CGFloat = dockHeight / 2
     /// x of the centre of the toolbar's first column (Add), for a given container width.
     /// The toolbar lays out four equal columns inside `dockInset`, so the first column's
     /// centre sits at inset + (width − 2·inset) / 8. Every card's Iris is centred on it

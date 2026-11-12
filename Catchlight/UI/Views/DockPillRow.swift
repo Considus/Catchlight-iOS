@@ -3,10 +3,11 @@
 //  Catchlight (iOS app target)
 //
 //  The bottom buttons of every screen that puts them in this row take the Dailies toolbar's place
-//  and size (owner 2026-11-11: "make them all match the size
-//  and shape of the new dailies menu"): in from each side by `dockInset`, up from the bottom
-//  by the dock's gap, `dockHeight` tall, and corners that follow the screen's curve where
-//  they reach the bottom edge (`CatchlightShape.edgeSurface`, never under the surface radius).
+//  (owner 2026-11-11: "make them all match the size and shape of the new dailies menu", then
+//  "half height buttons generally, except for the menubar on Dailies"): in from each side by
+//  `dockInset`, up from the bottom by the dock's gap, `buttonRowHeight` tall (half the
+//  toolbar), and corners that follow the screen's curve where they reach the bottom edge
+//  (`CatchlightShape.edgeSurface`, never under the surface radius).
 //  A single button spans the toolbar's width. A pair splits it in two with a gap between.
 //
 
@@ -65,6 +66,14 @@ private struct DockPillFace: ViewModifier {
         } else {
             content.flatPrimaryFace()
         }
+    }
+}
+
+extension View {
+    /// The `DockPill` face for a control that isn't a plain button, such as the Privacy phrase's
+    /// hold-to-reveal control, so it draws the same shape and colours in a `DockPillRow`.
+    func dockPillFace(secondary: Bool = false) -> some View {
+        modifier(DockPillFace(secondary: secondary))
     }
 }
 
@@ -160,7 +169,7 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
     // CTA growth (Default is the floor): above the default text size (.xLarge and up) the
     // toolbar's fixed height would force the CTA labels to shrink below their default size.
     // There the pills grow with their text instead, full width and stacked, never under 44pt,
-    // at the same place, inset and shape. At the default size and below, each is `dockHeight` tall.
+    // at the same place, inset and shape. At the default size and below, each is `buttonRowHeight` tall.
     @Environment(\.dynamicTypeSize) private var dynamicSize
     /// The home-indicator inset alone: the row stands where the Dailies toolbar does.
     @Environment(\.homeIndicatorInset) private var homeIndicatorInset
@@ -188,7 +197,7 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .frame(height: CatchlightLayout.dockHeight)
+                .frame(height: CatchlightLayout.buttonRowHeight)
             }
         }
         .environment(\.dockAtScreenEdge, true)
@@ -199,73 +208,3 @@ struct DockPillRow<Primary: View, Trailing: View>: View {
     }
 }
 
-/// The bottom row as it stood before it took the Dailies toolbar's place: 44pt pills on the dock's
-/// four-slot grid. Only the lock screen and the Privacy phrase screen use it, until they move to
-/// `DockPillRow` in their own change, where a test can reach them. No test seam reaches either
-/// screen today, so their layout stays exactly as it was here.
-struct DockGridPillRow<Primary: View, Trailing: View>: View {
-    private let primary: Primary
-    private let trailing: Trailing?
-
-    init(@ViewBuilder primary: () -> Primary) where Trailing == EmptyView {
-        self.primary = primary()
-        self.trailing = nil
-    }
-
-    init(@ViewBuilder primary: () -> Primary,
-         @ViewBuilder trailing: () -> Trailing) {
-        self.primary = primary()
-        self.trailing = trailing()
-    }
-
-    // CTA growth (Default is the floor): above the default text
-    // size (.xLarge and up) the locked dock-slot grid (fixed 44pt height,
-    // slot-aligned widths) would force the CTA labels to shrink below their
-    // default size. Abandon exact dock alignment there and let the pills grow
-    // full-width instead. At the default size and below, the grid is unchanged.
-    @Environment(\.dynamicTypeSize) private var dynamicSize
-    /// Bottom safe-area inset. The onboarding/paywall pill
-    /// row mirrors the resting dock's geometry, so it must lift by the same
-    /// home-indicator inset to line up with the dock at rest.
-    @Environment(\.deviceBottomInset) private var deviceBottomInset
-
-    var body: some View {
-        if dynamicSize > .large {
-            // Full-width layout: a single primary pill spans the width; a primary
-            // plus a trailing pill stack vertically, each full width and ≥44pt.
-            VStack(spacing: 10) {
-                primary
-                    .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-                if let trailing {
-                    trailing
-                        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
-                }
-            }
-            .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
-            .padding(.top, 10)
-            .padding(.bottom, deviceBottomInset + 8)
-        } else {
-            GeometryReader { geo in
-                // slot-i button centre = slotW·(i+0.5); pill edges = centre ∓ d/2.
-                // Single: slot-1 leading edge → slot-4 trailing edge (3·slotW + d).
-                // Pair: each slotW + d wide; gap = slotW − d (the inter-button gap).
-                let slotW = geo.size.width / 4
-                let d = CatchlightLayout.minTouchTarget
-                HStack(spacing: slotW - d) {
-                    primary
-                        .frame(width: trailing == nil ? slotW * 3 + d : slotW + d)
-                    if let trailing {
-                        trailing
-                            .frame(width: slotW + d)
-                    }
-                }
-                .padding(.leading, slotW / 2 - d / 2)
-                .frame(height: d)
-            }
-            .frame(height: CatchlightLayout.minTouchTarget)
-            .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
-            .padding(.top, 10)
-            .padding(.bottom, deviceBottomInset + 8)
-        }
-    }
-}

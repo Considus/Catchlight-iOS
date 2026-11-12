@@ -63,20 +63,20 @@ final class OnboardingConsistencyUITests: XCTestCase {
         }
     }
 
-    func testPrimaryButtonsTakeTheDailiesToolbarSizeAndInsets() {
+    func testPrimaryButtonsTakeHalfTheDailiesToolbarHeightAtItsPlace() {
         continueAfterFailure = true
         let toolbar = dailiesToolbarFrame()
         walkOnboarding { step, app in
             guard let label = Self.primaryLabels[step] else { return }
             let frame = app.buttons[label].frame
-            XCTAssertEqual(frame.height, toolbar.height, accuracy: 0.5, "\(step): height")
+            XCTAssertEqual(frame.height, toolbar.height / 2, accuracy: 0.5, "\(step): height")
             XCTAssertEqual(frame.maxY, toolbar.maxY, accuracy: 0.5, "\(step): bottom edge")
             XCTAssertEqual(frame.minX, toolbar.minX, accuracy: 0.5, "\(step): leading inset")
             switch step {
             case .restore, .localWarning:
                 let back = app.buttons["Back"].frame
                 XCTAssertEqual(back.maxX, toolbar.maxX, accuracy: 0.5, "\(step): trailing inset of the pair")
-                XCTAssertEqual(back.height, toolbar.height, accuracy: 0.5, "\(step): Back height")
+                XCTAssertEqual(back.height, toolbar.height / 2, accuracy: 0.5, "\(step): Back height")
                 XCTAssertEqual(back.minY, frame.minY, accuracy: 0.5, "\(step): the pair shares a top edge")
             default:
                 XCTAssertEqual(frame.maxX, toolbar.maxX, accuracy: 0.5, "\(step): trailing inset")
