@@ -6,14 +6,13 @@
 //  follows the Iris prototype's `openMarks` and `.mk` styles.
 //
 //  LAYOUT: four 44pt rounded-square marks, Note, Task, Reminder and Important from
-//  left to right, 16pt apart, their centres 60, 120, 180 and 240pt right of the Iris
-//  centre. While the row is open the tapped card grows 22pt (half a mark) at the
+//  left to right, 16pt apart, as a group centred on the screen. While the row is open the tapped card grows 22pt (half a mark) at the
 //  bottom, and the cards below move down with it; the marks' centres sit exactly on the
 //  grown bottom edge, so they clear its last line of text (`rowY`). Where that would put
 //  the row below the visible area (behind the dock, or above the bottom of the screen
-//  while editing), the row lifts to stay on screen. On a screen too narrow for the full
-//  row the gap shrinks evenly so the last mark stays 8pt inside the screen; the marks
-//  never shrink or overlap (`slotX`).
+//  while editing), the row lifts to stay on screen. The four marks sit as a group
+//  centred on the screen (and so on the card); on a screen too narrow for the full row the
+//  gap shrinks evenly to keep 8pt each side, and the marks never shrink or overlap (`slotX`).
 //
 //  MOTION (`Timing`): every mark takes the same L-shaped path, one axis at a time (Art
 //  Director 2026-11-11, after Mark saw the far mark cut across the card). The marks start
@@ -276,21 +275,21 @@ struct FocusRowView: View {
         return max(0, min(y, lowest))
     }
 
-    /// A mark's resting x offset from the Iris centre. Marks sit `markSpacing` apart;
-    /// when the last one would cross `screenMargin`, the spacing shrinks evenly so it
-    /// lands on the margin, but never below `markSize`, so the marks never overlap. With
-    /// the Iris at its real place that starts below about 319pt wide, narrower than any
-    /// supported phone. `containerWidth` 0 means unknown (previews): no squeeze.
+    /// A mark's resting x offset from the Iris centre. The four marks sit `markSpacing` apart,
+    /// as a group centred on the screen, which is the card's centre too, since every card has
+    /// the same margin each side (owner 2026-11-12: "centered on the X axis"; they sat 12pt right
+    /// of centre on a 402pt phone, measured). The Iris is under Add, left of the group, so
+    /// every mark still slides right to its place. Only on a screen too narrow for the full row
+    /// (under 240pt) does the spacing shrink evenly to keep `screenMargin` each side, never
+    /// below `markSize`, so the marks never overlap. With no width yet, they sit `markSpacing`
+    /// apart from the Iris.
     static func slotX(for index: Int, hubX: CGFloat, containerWidth: CGFloat) -> CGFloat {
         let count = CGFloat(MarkKind.allCases.count)
-        var spacing = markSpacing
-        if containerWidth > 0 {
-            let limit = containerWidth - screenMargin - markSize / 2
-            if hubX + count * markSpacing > limit {
-                spacing = max(markSize, (limit - hubX) / count)
-            }
-        }
-        return CGFloat(index + 1) * spacing
+        guard containerWidth > 0 else { return CGFloat(index + 1) * markSpacing }
+        let room = containerWidth - 2 * screenMargin - markSize
+        let spacing = max(markSize, min(markSpacing, room / (count - 1)))
+        let centre = containerWidth / 2 + (CGFloat(index) - (count - 1) / 2) * spacing
+        return centre - hubX
     }
 
     // MARK: - Choreography (the Iris prototype's `openMarks`)
