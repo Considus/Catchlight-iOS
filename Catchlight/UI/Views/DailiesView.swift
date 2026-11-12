@@ -739,11 +739,7 @@ struct DailiesView: View {
                 // top, exactly like the no-Obie timeline, instead of vanishing at the
                 // Obie heading's hard mid-screen edge. (The pinned Obie + insets stay
                 // put, so the focused Take's position doesn't jump.)
-                LinearGradient(
-                    colors: [Color.ckBackground, Color.ckBackground.opacity(0)],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .frame(height: 12)
+                Self.headingFade()
             }
         }
         // ONLY when an Obie is pinned, the solid mask extends down to NEAR the Obie's
@@ -754,18 +750,30 @@ struct DailiesView: View {
         // up 12px from the true bottom (owner 2026-06-17: a 6px nudge up from the prior
         // −6 to clear a small scroll-edge ugliness). Natural height when there's no Obie.
         .frame(height: (vm.obie != nil && !ui.isEditingInPlace)
-                       ? deviceTopInset + headingClearance + max(0, pinnedObieZoneHeight - 12)
+                       ? deviceTopInset + headingClearance + max(0, pinnedObieZoneHeight - Self.obieMaskLift)
                        : nil,
                alignment: .top)
-        // Below the pinned Obie, the same fade as under the bottom toolbar, one card gap deep, so
-        // a Take scrolling up fades away as it reaches the Obie instead of showing its lower half
-        // sliced against it (owner 2026-11-11). It ends just above where the first Take rests,
-        // so a resting Take is untouched, and it takes no touches.
+        // Below the pinned Obie, a barely-there fade (`obieFade`), starting right at the
+        // Obie card's bottom edge, so a Take scrolling up fades away as it reaches the Obie
+        // instead of showing its lower half sliced against it. It was the toolbar's fade, a card
+        // gap deep, which read as harsh and too low (owner 2026-11-11). The mask stops
+        // `obieMaskLift` above the Obie zone's bottom edge: the page colour carries on behind the
+        // card to the card's own bottom edge, so nothing shows past its rounded corners, and the
+        // fade starts there. It never reaches a resting Take: at the compact spacing the gap is 10, so it
+        // stops there. It takes no touches.
         .overlay(alignment: .bottom) {
             if vm.obie != nil && !ui.isEditingInPlace {
-                EdgeFade.gradient(solid: .top)
-                    .frame(height: cardGap)
-                    .offset(y: cardGap)
+                // The measured Obie zone includes the row's own space below its card, so the card's
+                // bottom edge is `rowVerticalInset` above the zone's. The page colour runs to that
+                // edge exactly and the fade starts there. Running it to the zone's edge drew a hard
+                // line 6pt below the card once the fade was light (measured 2026-11-11).
+                let solid = Self.obieMaskLift - Self.rowVerticalInset
+                let depth = min(Self.obieFadeHeight, cardGap)
+                VStack(spacing: 0) {
+                    Color.ckBackground.frame(height: solid)
+                    Self.obieFade(height: depth)
+                }
+                    .offset(y: solid + depth)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
@@ -1374,6 +1382,44 @@ struct DailiesView: View {
         commitReorder(of: take.id, displayOrder: ids)
     }
 
+    /// The fade a Take goes into under the heading: the page colour to clear, 24pt deep, eased
+    /// so neither end shows a line (owner 2026-11-11: "could it be a bit more gradual?"; values
+    /// from the Art Director). 24 fits the clear space between the heading and a resting first
+    /// Take, measured at 29pt on an iPhone 17 and an iPhone 16.
+    static let headingFadeHeight: CGFloat = 24
+    /// The page colour's strength down the heading fade, top to bottom, evenly spaced.
+    static let headingFadeStops: [Double] = [1, 0.8, 0.45, 0.15, 0]
+
+    /// The fade under the pinned Obie: barely there, so a Take only softens as it passes under
+    /// the Obie's edge (owner 2026-11-11: "ever so subtle, just barely visible"). The opaque
+    /// Obie card does the hiding; this only takes the hard edge off. Up to 16pt deep (never more
+    /// than a card gap), starting at 30% of the page colour, on the same eased shape.
+    static let obieFadeHeight: CGFloat = 16
+    static let obieFadeStops: [Double] = [0.30, 0.22, 0.12, 0.04, 0]
+
+    static func headingFade(height: CGFloat = headingFadeHeight) -> some View {
+        pageFade(stops: headingFadeStops, height: height)
+    }
+    static func obieFade(height: CGFloat = obieFadeHeight) -> some View {
+        pageFade(stops: obieFadeStops, height: height)
+    }
+    /// The page colour at each strength in `stops`, evenly spaced from top to bottom.
+    private static func pageFade(stops: [Double], height: CGFloat) -> some View {
+        LinearGradient(stops: stops.enumerated().map { i, a in
+                           .init(color: Color.ckBackground.opacity(a),
+                                 location: CGFloat(i) / CGFloat(max(stops.count - 1, 1)))
+                       },
+                       startPoint: .top, endPoint: .bottom)
+            .frame(height: height)
+    }
+
+    /// How far above the pinned Obie card's bottom edge the solid mask stops (see the mask's
+    /// frame), so its rounded corners are always covered.
+    static let obieMaskLift: CGFloat = 12
+    /// The space a timeline row keeps above and below its card (`SwipeActionRow`'s
+    /// `contentVerticalInset`).
+    static let rowVerticalInset: CGFloat = 6
+
     private func timelineBackgroundTap() {
         if ui.isEditingInPlace { saveInlineEdit(); return }
         if ui.toolbarMode == .filtering || ui.toolbarMode == .searching { ui.exitToResting() }
@@ -1469,7 +1515,7 @@ struct DailiesView: View {
             openRowID: $openSwipeRowID,
             leadingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
             trailingInset: CatchlightLayout.cardMargin(addColumnX: addColumnX),
-            contentVerticalInset: 6
+            contentVerticalInset: Self.rowVerticalInset
         ) { swipeOffset in
             // BOTH margins live inside the content so the wrapper spans the full
             // screen width — letting each action fill reach its screen edge. The

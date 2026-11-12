@@ -11,10 +11,17 @@
 import SwiftUI
 
 struct DailiesHeading: View {
-    /// The title's point size at the default text size (the drawing's 28).
-    static let titleSize: CGFloat = 28
-    /// The date's point size at the default text size (the drawing's 12).
-    static let dateSize: CGFloat = 12
+    /// The title's point size at the default text size. 34, Apple's Large Title size: the
+    /// website's phone draws "Dailies" at twice its Take text, and the app's Take text is 17
+    /// (owner 2026-11-11: "Dailies looks too small, compared with what is on the website";
+    /// art director: 34, scaled as a Large Title).
+    static let titleSize: CGFloat = 34
+    /// The date's point size at the default text size: 13, so the longest date in any language
+    /// ("segunda-feira, 28 de dezembro") still fits beside the title on the iPhone SE (art
+    /// director 2026-11-11; 14, the website's 0.8 of its Take text, left a 2.75pt gap there).
+    static let dateSize: CGFloat = 13
+    /// The website's letter-spacing for the heading, -0.025 em.
+    static let titleKerning: CGFloat = -0.025 * titleSize
     /// In from each screen edge: the Take cards' margin (`CatchlightLayout.cardMargin`), so the
     /// title and the date line up with the cards' edges below (art director 2026-11-11).
     var horizontalInset: CGFloat
@@ -48,8 +55,8 @@ struct DailiesHeading: View {
 
     private var title: some View {
         Text("Dailies")
-            .ckDisplay(size: Self.titleSize, relativeTo: .title2)
-            .kerning(-0.7)
+            .ckDisplay(size: Self.titleSize, relativeTo: .largeTitle)
+            .kerning(Self.titleKerning)
             .foregroundStyle(Color.ckTextPrimary)
             .lineLimit(1)
             // Never wraps inside the word; at the very largest sizes it shrinks a little.
