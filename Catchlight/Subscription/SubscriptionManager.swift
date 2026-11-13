@@ -237,14 +237,19 @@ final class SubscriptionManager {
     /// Apple's refund sheet for one transaction id.
     typealias RefundSheet = (UInt64) async throws -> Transaction.RefundRequestStatus
 
+    /// The id of the latest verified Annual transaction, or nil when there is none.
+    static func latestAnnualTransactionID() async -> UInt64? {
+        guard case .verified(let txn)? = await Transaction.latest(for: annualProductID) else { return nil }
+        return txn.id
+    }
+
     /// Ask Apple for a refund of the current subscription charge, in the app. Uses the
     /// latest verified Annual transaction; with none, the sheet never opens.
-    func requestRefund(sheet: RefundSheet) async -> RefundOutcome {
-        guard case .verified(let txn)? = await Transaction.latest(for: Self.annualProductID) else {
-            return .noPurchase
-        }
+    func requestRefund(latestTransactionID: () async -> UInt64? = SubscriptionManager.latestAnnualTransactionID,
+                       sheet: RefundSheet) async -> RefundOutcome {
+        guard let id = await latestTransactionID() else { return .noPurchase }
         do {
-            switch try await sheet(txn.id) {
+            switch try await sheet(id) {
             case .success: return .submitted
             case .userCancelled: return .cancelled
             @unknown default: return .failed
