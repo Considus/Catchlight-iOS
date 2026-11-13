@@ -13,23 +13,17 @@
 //
 //  Owner spec 2026-06-18 — two independent axes:
 //
-//    • SURFACE = emphasis. Dark (`ckCardObieSurface`) if the Take is Important (the
-//      Obie always is, sticky); else the standard light `ckSurface`.
+//    • SURFACE = emphasis. Every Important Take, the Obie included, takes
+//      `ckCardImportantSurface` (its own shade in Daylight, owner 2026-11-12: "an Obie, by
+//      its very nature, is the most important"); else the standard `ckSurface`.
 //
-//    • BORDER = state, by precedence (first match wins):
-//        overdue            → ruby   (`ckCardOverdueBorder`; the ONLY override of gold)
-//        Obie               → gold   (`ckCardObieBorder`; Obie identity, persists in
-//                                      every state except an overdue reminder)
-//        done               → grey   (`ckCardDoneBorder` == `ckTextComplete` grey)
-//        active task        → Task-quadrant colour   (same source as the Iris)
-//        active reminder    → Remind-quadrant colour  (same source as the Iris)
-//        else (plain note)  → the `line` token (a quiet edge, the same 0.75pt stroke, so
-//                                      every card is one size)
-//
-//  The active borders read straight from `Quadrant`, so the card edge is the SAME
-//  colour the Iris uses for that activity, by construction (owner: "use the colour
-//  we use in the Iris"). A done Take is never "overdue" (done suppresses overdue), so
-//  a done Obie keeps its gold border and only greys its text.
+//    • BORDER, by precedence (first match wins; owner 2026-11-12, "Option 1"):
+//        overdue            → ruby   (`ckCardOverdueBorder`)
+//        Obie               → lit    (`ckCardObieBorder`, the strongest edge)
+//        Important          → `ckCardImportantBorder`, a mid edge between line and lit
+//        else               → the `line` token: notes, Tasks, reminders and done Takes
+//  Every edge is the same 0.75pt stroke, so every card is one size. A done Take is never
+//  "overdue" (done suppresses overdue), so a done Obie keeps its edge and only greys its text.
 //
 
 import SwiftUI
@@ -68,22 +62,15 @@ struct TakeCardStyle {
         let overdue = take.timeReminder?.isOverdue(now: now) ?? false
         let done = take.isMarkedDone
 
-        let surfaceColor: Color = take.isImportant ? .ckCardObieSurface : .ckSurface
+        let surfaceColor: Color = take.isImportant ? .ckCardImportantSurface : .ckSurface
         self.surface = surfaceColor
 
         if overdue {
             self.border = .ckCardOverdueBorder
         } else if take.isObie {
             self.border = .ckCardObieBorder
-        } else if done {
-            self.border = .ckCardDoneBorder
-        } else if take.isTask {
-            self.border = Quadrant.task(scheme)
-        } else if take.timeReminder != nil || take.locationReminder != nil {
-            // A "where" gets the Remind border exactly like a "when" (2026-07-01,
-            // place/time parity). Places never go OVERDUE — a geofence has no due
-            // instant to be past — so the ruby branch above stays time-only.
-            self.border = Quadrant.reminder(scheme)
+        } else if take.isImportant {
+            self.border = .ckCardImportantBorder
         } else {
             self.border = .ckLine
         }

@@ -33,17 +33,6 @@ final class DoneTextContrastTests: XCTestCase {
         assertContrast(done, on: resolved(SceneToken.ground, .light), "Light page")
     }
 
-    /// "Done" recedes by the same amount whether it's the edge or the words (owner
-    /// 2026-06-18, reaffirmed 2026-10-03): the done card border is the done-text grey.
-    func testDoneBorderIsTheDoneTextGrey() {
-        for scheme in [ColorScheme.dark, .light] {
-            var env = EnvironmentValues()
-            env.colorScheme = scheme
-            XCTAssertEqual(Color.ckCardDoneBorder.resolve(in: env), Color.ckTextComplete.resolve(in: env),
-                           "done border and done text differ in \(scheme == .dark ? "Night" : "Daylight")")
-        }
-    }
-
     // MARK: - Helpers
 
     private func resolved(_ color: UIColor, _ style: UIUserInterfaceStyle) -> UIColor {
