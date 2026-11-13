@@ -139,7 +139,7 @@ def settle_timing(frames, a, b, eps=0.35):
             "frames_between": sum(1 for t, _ in inside if began <= t <= settled)}
 
 
-def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=0, max_crf=39):
+def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=0, max_crf=39, ceiling=MAX_MP4):
     taps = json.load(open(taps_json))
     colour, fill = DOT[appearance]
     with tempfile.TemporaryDirectory() as tmp:
@@ -197,7 +197,7 @@ def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=
         if fixed_crf is None:
             for crf in range(20, max_crf + 1):
                 size = make(mp4, graph, last, crf)
-                if size <= MAX_MP4:
+                if size <= ceiling:
                     break
             else:
                 if max_crf >= 39:
@@ -209,7 +209,7 @@ def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=
             # What it would take to fit 200 KB, for the report only.
             probe = os.path.join(tmp, "probe.mp4")
             for c in range(crf, 45):
-                if make(probe, graph, last, c) <= MAX_MP4:
+                if make(probe, graph, last, c) <= ceiling:
                     fit_crf = c
                     break
         # Poster: the final held frame, without a dot.
@@ -230,8 +230,8 @@ def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=
         res = {"file": os.path.basename(mp4), "seconds": round(duration(mp4), 2), "bytes": size, "crf": crf,
                "poster": os.path.basename(webp), "poster_bytes": os.path.getsize(webp), "poster_q": q,
                "tap_times_s": [round(t - start, 2) for t in times], "taps": len(taps["taps"])}
-        if size > MAX_MP4:
-            res["over_200KB"] = True
+        if size > ceiling:
+            res["over_ceiling"] = ceiling
         if fit_crf:
             res["crf_to_fit_200KB"] = fit_crf
         if len(times) > focus_tap + 1:
@@ -253,9 +253,13 @@ if __name__ == "__main__":
     if "--max-crf" in args:
         i = args.index("--max-crf")
         max_crf = int(args[i + 1]); del args[i:i + 2]
+    ceiling = MAX_MP4
+    if "--ceiling" in args:
+        i = args.index("--ceiling")
+        ceiling = int(args[i + 1]); del args[i:i + 2]
     focus = 0
     if "--focus-tap" in args:
         i = args.index("--focus-tap")
         focus = int(args[i + 1]); del args[i:i + 2]
     raw, taps_json, out_dir, stem, appearance = args
-    print(json.dumps(encode(raw, taps_json, out_dir, stem, appearance, crf, focus, max_crf)))
+    print(json.dumps(encode(raw, taps_json, out_dir, stem, appearance, crf, focus, max_crf, ceiling)))

@@ -1,12 +1,12 @@
 # Site clips
 
 Records the three phone clips on catchlight.app from the real app, so they stay identical to it:
-**Shaping a Take**, **Setting a reminder** and **Sequence**, in the Cobalt Scene, in Daylight and
+**Shaping a Take** (a note becomes a task and a line is typed), **Setting a reminder**, **Sequence** and **Reordering a list** (the Shot List), in the Cobalt Scene, in Daylight and
 Night. Nothing is redrawn.
 
 ```bash
 scripts/site-clips/record.sh --draft          # six clips, labelled DRAFT
-scripts/site-clips/record.sh                  # the final six
+scripts/site-clips/record.sh                  # the finals: four clips, Daylight and Night (Setting a reminder three times each)
 scripts/site-clips/record.sh --clip sequence --appearance night   # one clip
 ```
 
@@ -31,9 +31,10 @@ dot (at most 30 KB) and a contact sheet, with `RECORDED.txt` naming the app comm
 - **Tap dot:** drawn by `encode.py` at encode time from the logged tap places. Each tap's time is
   where the screen first reacts to it. Size, colour and pulse are the constants at the top of
   `encode.py` (the Art Director owns them). The app and the recording are untouched.
-- **Loop and timing:** the last 250 ms cross-fade into the first frame. Shaping a Take waits for a minute that is a multiple of five, so its reminder reads like 07:40. A final run (no `--draft`) refuses uncommitted changes, so `RECORDED.txt` names a clean commit.
-- **Size:** `encode.py` raises the CRF until the MP4 is within 200 KB, and lowers the WebP quality
+- **Loop and timing:** the last 250 ms cross-fade into the first frame. A final run (no `--draft`) refuses uncommitted changes, so `RECORDED.txt` names a clean commit.
+- **Size:** `encode.py` raises the CRF to at most 34 until the MP4 is within the clip's ceiling (250 KB Shaping a Take, 300 KB Setting a reminder, 200 KB the others; the quality is never lowered further, so a clip can be flagged `over_ceiling`), and lowers the WebP quality
   until it is within 30 KB.
+- **Before a final run:** `main` must hold the card outline, the Important shade and the Dailies-style Sequence and Shot List headings; look at a recording of each before trusting the build.
 
 ## Changing a flow
 
