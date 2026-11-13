@@ -261,7 +261,14 @@ final class SubscriptionManager {
 
     /// Apple's own sheet, in the foreground window scene.
     func requestRefund() async -> RefundOutcome {
-        await requestRefund { id in
+        #if DEBUG
+        // A UI test run has no purchase, and the message only appears once StoreKit answers.
+        // With the lookup slowed by 8 s the UI test's 5 s wait fails; on CI a StoreKit call
+        // has taken 336 s (a unit test's first call, run 43302423757). Answer "no purchase"
+        // at once here; the lookup itself is covered by the unit tests.
+        if statusIsForcedForTesting { return await requestRefund(latestTransactionID: { nil }) { _ in .success } }
+        #endif
+        return await requestRefund { id in
             guard let scene = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
                 .first(where: { $0.activationState == .foregroundActive }) else {
