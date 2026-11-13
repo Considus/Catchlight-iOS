@@ -10,6 +10,11 @@
 //  the keyboard, then samples the Iris's outline ring on screen: a drawn ring
 //  differs from the card fill just inside it, a covered one does not.
 //
+//  Four scenarios, not eight (2026-11-12). Breaking the code one way at a time showed the other
+//  four caught nothing these four miss: the plain long Take, the long and short Takes with the
+//  stamp at the largest size, and the default-size stamp without the notice strip. The notice
+//  tests also set the stamp on, so they cover those cases.
+//
 
 import XCTest
 
@@ -24,23 +29,8 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
     private static let largestStandardSize = "UICTContentSizeCategoryXXXL"
     private static let defaultSize = "UICTContentSizeCategoryL"
 
-    func testEditorIris_isVisible_atMaxTextSize_withKeyboardUp_onLongExistingTake() throws {
-        try runScenario(lineCount: 14, name: "long")
-    }
-
     func testEditorIris_isVisible_atMaxTextSize_withKeyboardUp_onShortExistingTake() throws {
         try runScenario(lineCount: 1, name: "short")
-    }
-
-    /// With the "Created on" stamp showing (the owner's setting), it wraps onto several large lines
-    /// at accessibility sizes and there is no room for it with the keyboard up, so it stands down
-    /// while typing and the Iris must stay clear of the heading fade.
-    func testEditorIris_isVisible_atMaxTextSize_withKeyboardUp_onLongExistingTake_withStamp() throws {
-        try runScenario(lineCount: 14, name: "long-stamp", stamp: "editor", expectStamp: false)
-    }
-
-    func testEditorIris_isVisible_atMaxTextSize_withKeyboardUp_onShortExistingTake_withStamp() throws {
-        try runScenario(lineCount: 1, name: "short-stamp", stamp: "editor", expectStamp: false)
     }
 
     /// Below the accessibility range the stamp keeps showing while typing.
@@ -60,12 +50,6 @@ final class EditorIrisMaxTextSizeUITests: XCTestCase {
     func testEditorIris_isVisible_atDefaultSize_withKeyboardUp_onLongExistingTake_withNoticeStrip() throws {
         try runScenario(lineCount: 14, name: "default-long-stamp-notice", size: Self.defaultSize,
                         stamp: "editor", expectStamp: true, notice: true, expectNotice: true)
-    }
-
-    /// Default size: the reference screenshot for "nothing moved" before and after the fix.
-    func testEditorIris_isVisible_atDefaultSize_withKeyboardUp_onLongExistingTake_withStamp() throws {
-        try runScenario(lineCount: 14, name: "default-long-stamp", size: Self.defaultSize,
-                        stamp: "editor", expectStamp: true)
     }
 
     /// The Take is created during the test, so its "Created on" time is the test's clock. In US
