@@ -12,6 +12,8 @@ import json, subprocess, sys, os, tempfile, math
 W, H, FPS = 600, 1304, 30
 MAX_MP4, MAX_WEBP = 200_000, 30_000
 LEAD = 0.8            # seconds of still Dailies before the first tap
+LEAD_FOR = {"setting-a-reminder": 0.6}   # the Art Director shortened this clip's opening hold
+FADE = 0.25           # seconds the last frames cross-fade into the first, so the loop doesn't snap
 STILL_THRESHOLD = 0.06  # mean 0-255 difference between frames that counts as movement (a still screen reads 0.03 or less)
 
 # Tap dot (Art Director, 13 Nov 2026). Sizes in points; the screen is 402 pt wide.
@@ -91,7 +93,8 @@ def encode(raw, taps_json, out_dir, name, appearance, draft):
         cfr, diffs = frame_diffs(raw, tmp)
         times = reactions(diffs, taps["taps"])
         v1 = times[0]
-        start = max(0.0, v1 - LEAD)
+        lead = LEAD_FOR.get(name, LEAD)
+        start = max(0.0, v1 - lead)
         length = (times[-1] - start) + (taps["end"] - taps["taps"][-1]["t"])
         total = duration(cfr)
         length = min(length, total - start)
@@ -99,7 +102,11 @@ def encode(raw, taps_json, out_dir, name, appearance, draft):
         label = "-DRAFT" if draft else ""
         base = os.path.join(out_dir, f"{name}-{appearance}{label}")
         chains, inputs, last = [], [], "[bg]"
-        chains.append(f"[0:v]scale={W}:{H}:flags=lanczos,setsar=1[bg]")
+        fade_at = length - FADE
+        p = f"clip((T-{fade_at:.3f})/{FADE},0,1)"
+        chains.append(f"[0:v]scale={W}:{H}:flags=lanczos,setsar=1,split[a][b]")
+        chains.append("[b]select=eq(n\\,0),loop=loop=-1:size=1:start=0,setpts=N/FRAME_RATE/TB[first]")
+        chains.append(f"[a][first]blend=all_expr='A*(1-{p})+B*{p}':shortest=1,setsar=1[bg]")
         for i, tap in enumerate(taps["taps"]):
             at = (times[i] - start) - PRESS_S
             src = dot_source(tap["x"], tap["y"], k, colour, fill, max(at, 0))

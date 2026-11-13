@@ -107,11 +107,27 @@ final class SiteClipFlows: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: go), "The recorder never started")
     }
 
+    /// Wait until 3.5 s before the next minute that is a multiple of five. From the recorder's
+    /// go the editor opens about 5.5 s later, just after that minute starts.
+    private func waitForNearestFive() {
+        let cal = Calendar.current
+        let now = Date()
+        let minute = cal.component(.minute, from: now)
+        let next = cal.nextDate(after: now, matching: DateComponents(minute: (minute / 5 + 1) * 5 % 60, second: 0),
+                                matchingPolicy: .nextTime) ?? now
+        let wait = next.addingTimeInterval(-3.5).timeIntervalSinceNow
+        if wait > 0 { Thread.sleep(forTimeInterval: wait) }
+    }
+
     /// Run a flow twice. The scouting pass finds each tap's place, which costs a second or two
     /// of accessibility lookup per tap and would make the pacing the runner's, not a person's;
     /// it also proves every step is reachable. The recorded pass relaunches and only taps the
     /// found points, on the beats given, so the pacing is the flow's own.
-    private func flow(_ clip: String, hold: Double, steps: [Step]) throws {
+    ///
+    /// `onTheFives` holds the recorded pass until the clock is a few seconds before a minute
+    /// that is a multiple of five, for a clip whose Take shows the default reminder time (the
+    /// minute the editor opens): it then reads 07:40, not an arbitrary 07:36.
+    private func flow(_ clip: String, hold: Double, onTheFives: Bool = false, steps: [Step]) throws {
         var points: [CGPoint] = []
         let scout = launchDemo()
         for step in steps {
@@ -123,6 +139,7 @@ final class SiteClipFlows: XCTestCase {
         scout.terminate()
 
         let app = launchDemo()
+        if onTheFives { waitForNearestFive() }
         waitForRecorder()
         Thread.sleep(forTimeInterval: 1.6)   // still Dailies before the first tap; the encoder trims to the first change
         log.start()
@@ -182,7 +199,7 @@ final class SiteClipFlows: XCTestCase {
     /// Clip 1: tap a Take's Iris, the Focus row opens, Task then Reminder are chosen, the row
     /// closes and the Take shows both. The Take is "Book the lake swim", the first card.
     func testClip1_shapingATake() throws {
-        try flow("shaping-a-take", hold: 2.0, steps: [
+        try flow("shaping-a-take", hold: 2.0, onTheFives: true, steps: [
             Step(name: "iris", beat: 0, find: irisOf(row: 0)),
             Step(name: "task", beat: 1.4, find: centre(ofID: "focus-row-mark-task")),
             Step(name: "remind", beat: 1.3, find: centre(ofID: "focus-row-mark-remind")),

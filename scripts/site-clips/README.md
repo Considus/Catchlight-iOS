@@ -31,6 +31,7 @@ dot (at most 30 KB) and a contact sheet, with `RECORDED.txt` naming the app comm
 - **Tap dot:** drawn by `encode.py` at encode time from the logged tap places. Each tap's time is
   where the screen first reacts to it. Size, colour and pulse are the constants at the top of
   `encode.py` (the Art Director owns them). The app and the recording are untouched.
+- **Loop and timing:** the last 250 ms cross-fade into the first frame. Shaping a Take waits for a minute that is a multiple of five, so its reminder reads like 07:40. A final run (no `--draft`) refuses uncommitted changes, so `RECORDED.txt` names a clean commit.
 - **Size:** `encode.py` raises the CRF until the MP4 is within 200 KB, and lowers the WebP quality
   until it is within 30 KB.
 

@@ -28,6 +28,9 @@ if [[ -z "$OUT" ]]; then
   OUT="$HOME/Library/Caches/considus/handover/$(date +%F)_site-clips$([[ $DRAFT == 1 ]] && echo -draft)"
 fi
 mkdir -p "$OUT" "$WORK"
+if [[ $DRAFT == 0 && -n "$(git -C "$ROOT" status --porcelain -- Catchlight Tests project.yml scripts/site-clips)" ]]; then
+  echo "refusing a final run with uncommitted changes: the note beside the files names the commit" >&2; exit 1
+fi
 
 for tool in xcodegen ffmpeg cwebp xcrun; do command -v $tool >/dev/null || { echo "missing $tool" >&2; exit 1; }; done
 
