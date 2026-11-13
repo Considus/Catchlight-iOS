@@ -43,7 +43,10 @@ final class LapsedReadOnlyUITests: XCTestCase {
         swipeUpWhenReady(anyElement(in: app, id: "angle-tab"))
         XCTAssertTrue(anyElement(in: app, id: "settings-sheet").waitForExistence(timeout: 5), "Settings did not open")
         let export = anyElement(in: app, id: "settings-export-takes")
-        scrollUntilHittable(export, in: app)
+        // Tap only once the row is in the top three quarters of the screen. On the iOS 18.5
+        // simulator the scroll could stop with the row below the bottom edge while XCUITest
+        // still called it hittable, and the tap opened nothing.
+        scrollUntilHittable(export, in: app, above: app.frame.height * 0.75)
         export.tap()
         let share = app.otherElements["ActivityListView"]
         XCTAssertTrue(share.waitForExistence(timeout: 5), "Export did not open the share sheet")
