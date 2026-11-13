@@ -15,19 +15,6 @@ struct NoticeHistoryView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var entries: [DiagnosticEntry] = []
 
-    /// Where Clear sits, while Mark picks between two layouts (Art Director, 2026-11-12):
-    /// on its own row under the centred heading (A), or on the heading's first line with the
-    /// same room kept on both sides (B). A debug build can show B with
-    /// `-noticeClearLayout besideTitle`; a release build always shows A.
-    enum ClearPlacement: String { case ownRow, besideTitle }
-    static var clearPlacement: ClearPlacement {
-        #if DEBUG
-        ClearPlacement(rawValue: UserDefaults.standard.string(forKey: "noticeClearLayout") ?? "") ?? .ownRow
-        #else
-        .ownRow
-        #endif
-    }
-
     /// Scoped to the notices this view SHOWS (2026-07-01): the full clear() also erased the
     /// lifecycle breadcrumbs, silently emptying Export diagnostics.
     private func clearNotices() {
@@ -64,9 +51,8 @@ struct NoticeHistoryView: View {
                     .accessibilityElement(children: .combine)
                 } else {
                     List {
-                        if Self.clearPlacement == .ownRow {
-                            // Clear on its own row under the heading, its right edge on the
-                            // notice card's (Art Director's option A, 2026-11-12).
+                        // Clear on its own row under the heading, its right edge on the
+                            // notice card's (Art Director, 2026-11-12).
                             Section {
                                 HStack {
                                     Spacer(minLength: 0)
@@ -85,7 +71,6 @@ struct NoticeHistoryView: View {
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
                             }
-                        }
                         Section {
                         ForEach(entries) { entry in
                             HStack(alignment: .top, spacing: 12) {
@@ -117,7 +102,7 @@ struct NoticeHistoryView: View {
                         }
                     }
                     // Clear's row sits 8 below the heading, and the notices straight under it.
-                    .contentMargins(.top, Self.clearPlacement == .ownRow ? 8 - CatchlightLayout.minTouchTarget / 2 + 10 : nil,
+                    .contentMargins(.top, 8 - CatchlightLayout.minTouchTarget / 2 + 10,
                                     for: .scrollContent)
                     .listSectionSpacing(0)
                     .scrollContentBackground(.hidden)
@@ -125,12 +110,9 @@ struct NoticeHistoryView: View {
                 }
             }
             .background(Color.ckBackground)
-            // The page heading, with Clear on its first line while there are notices
-            // (owner 2026-11-12). No Done button: dismiss by swiping down (owner 2026-06-29).
-            .sheetPageHeading(LocalizedStringResource("notice-history.heading", defaultValue: "Notice History"),
-                              centred: true,
-                              action: entries.isEmpty || Self.clearPlacement == .ownRow ? nil
-                                  : SheetHeadingAction(label: "Clear", identifier: "notice-history-clear", perform: clearNotices))
+            // The page heading (owner 2026-11-12). No Done button: dismiss by swiping down
+            // (owner 2026-06-29).
+            .sheetPageHeading(LocalizedStringResource("notice-history.heading", defaultValue: "Notice History"))
         }
         .presentationDragIndicator(.visible)
         .onAppear { entries = DiagnosticsLog.shared.userFacingEntries() }

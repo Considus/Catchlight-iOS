@@ -223,10 +223,13 @@ struct CloudStorageView: View {
     /// the one provider with no app to install and no Files extension that can regress.
     /// A recommendation, not a requirement: every provider in the fine print still works.
     private var recommendation: some View {
+        // Centred with the lines above it (Art Director, 2026-11-12); the ⓘ note under it stays left.
         Text("Easiest to set up is iCloud Drive, it's built in.")
             .sheetBody()
             .foregroundStyle(Color.ckTextPrimary)
+            .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
             .accessibilityIdentifier("cloud-icloud-recommendation")
     }
 
