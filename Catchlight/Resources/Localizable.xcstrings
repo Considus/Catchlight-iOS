@@ -44297,8 +44297,8 @@
         },
         "sv" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anteckningar och påminnelser med integriteten i första rummet"
+            "state" : "needs_review",
+            "value" : "Anteckningar och påminnelser, integritet först"
           }
         },
         "da" : {
