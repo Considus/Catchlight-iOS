@@ -371,7 +371,7 @@ final class SiteClipFlows: XCTestCase {
                  },
                  dragTo: { app in
                      let top = handles(app).element(boundBy: 0)
-                     return CGPoint(x: top.frame.midX, y: top.frame.minY - 6)
+                     return CGPoint(x: top.frame.midX, y: top.frame.midY - 10)   // over the first row's handle
                  }),
         ])
     }

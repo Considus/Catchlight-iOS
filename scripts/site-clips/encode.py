@@ -167,9 +167,15 @@ def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=
             chains.append(f"{src}[d{i}]")
             x, y = round(tap["x"] * k - 90), round(tap["y"] * k - 90)
             if "x1" in tap:
-                # The dot follows the finger: linear from the drag's start to its end.
+                # The dot follows the finger from where it presses to where it lets go. The
+                # movement runs from the row lifting (the screen's first reaction) to the end of
+                # the screen's motion, less the 0.25 s the other rows take to settle.
                 down = max(at, 0) + LEAD_S
-                m0, m1 = down + tap["moveStart"], down + tap["moveEnd"]
+                m0 = down + tap["moveStart"]
+                still = int(times[i] * FPS)
+                while still < len(diffs) - 6 and any(d > STILL_THRESHOLD for d in diffs[still:still + 6]):
+                    still += 1
+                m1 = max(m0 + 0.3, (still / FPS - start) - 0.25)
                 f = f"clip((t-{m0:.3f})/{m1 - m0:.3f},0,1)"
                 ox = f"{x}+{round((tap['x1'] - tap['x']) * k)}*{f}"
                 oy = f"{y}+{round((tap['y1'] - tap['y']) * k)}*{f}"

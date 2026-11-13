@@ -3,7 +3,8 @@
 # and Night: six MP4s, six WebP stills and a contact sheet per clip, with the app commit noted.
 #
 #   scripts/site-clips/record.sh [--draft] [--clip shaping-a-take|setting-a-reminder|sequence]
-#                                [--appearance daylight|night] [--out DIR]
+#                                [--appearance daylight|night] [--out DIR] [--runs N]
+#   --runs N records each clip N times (files end -run1, -run2, ...) when a clip varies run to run.
 #
 # Needs xcodegen, ffmpeg (libx264) and cwebp. Uses the simulator "Claude iPhone 17" (created if
 # missing, never deleted, shut down at the end). Debug build only: the demo Takes and the flows
@@ -13,13 +14,14 @@ set -euo pipefail
 ROOT="${0:A:h:h:h}"
 WORK="$HOME/CatchlightBuild/site-clips-work"
 DEVICE_NAME="${CLIP_DEVICE:-Claude iPhone 17}"
-DRAFT=0; ONLY_CLIP=""; ONLY_APPEARANCE=""; OUT=""
+DRAFT=0; ONLY_CLIP=""; ONLY_APPEARANCE=""; OUT=""; RUNS=1
 while (( $# )); do
   case "$1" in
     --draft) DRAFT=1 ;;
     --clip) ONLY_CLIP="$2"; shift ;;
     --appearance) ONLY_APPEARANCE="$2"; shift ;;
     --out) OUT="$2"; shift ;;
+    --runs) RUNS="$2"; shift ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
   shift
@@ -74,7 +76,9 @@ APPEARANCES=(daylight night)
 RESULTS="$WORK/results.jsonl"; : > "$RESULTS"
 for clip in $CLIPS; do
   for look in $APPEARANCES; do
+   for run_n in {1..$RUNS}; do
     run="$WORK/$clip-$look"; rm -rf "$run"; mkdir -p "$run"
+    suffix=""; [[ $RUNS -gt 1 ]] && suffix="-run$run_n"
     echo "== $clip / $look"
     xcrun simctl terminate "$UDID" com.considus.catchlight 2>/dev/null || true
     (
@@ -99,7 +103,8 @@ for clip in $CLIPS; do
     if [[ "$clip" == *-B2-typed ]]; then stem="${clip%-B2-typed}-$look-DRAFT3-typed"; extra=(--crf 34 --focus-tap 1)
     elif [[ "$clip" == *-B2 ]]; then stem="${clip%-B?}-$look-DRAFT2-${clip##*-}"; extra=(--crf 34 --focus-tap 1)
     elif [[ $DRAFT == 1 ]]; then stem="$stem-DRAFT"; extra=(--max-crf 34); fi
-    "$ROOT/scripts/site-clips/encode.py" "$run/raw.mov" "$run/$clip.taps.json" "$OUT" "$stem" "$look" $extra | tee -a "$RESULTS"
+    "$ROOT/scripts/site-clips/encode.py" "$run/raw.mov" "$run/$clip.taps.json" "$OUT" "$stem$suffix" "$look" $extra | tee -a "$RESULTS"
+   done
   done
 done
 
