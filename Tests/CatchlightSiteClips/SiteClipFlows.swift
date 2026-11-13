@@ -14,6 +14,13 @@ import XCTest
 /// Logs each tap's place (points, window coordinates) and wall-clock time.
 final class TapLog {
     struct Tap: Codable { let t: Double; let x: Double; let y: Double }
+    /// A press-and-drag: where it ends, and when the finger moves, in seconds from touch-down.
+    struct Drag { let x1: Double; let y1: Double; let moveStart: Double; let moveEnd: Double; let total: Double }
+    private(set) var drags: [Int: Drag] = [:]
+    private(set) var returned: [Double] = []
+    /// Wall-clock time of each key press while typing (not drawn with a dot: the keyboard shows them).
+    private(set) var keyTimes: [Double] = []
+    var typed = ""
     private(set) var taps: [Tap] = []
     private(set) var begin = 0.0
     private(set) var end = 0.0
@@ -46,6 +53,29 @@ final class TapLog {
         app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: x, dy: y)).tap()
     }
 
+    /// Press at (x, y), hold, drag to (x1, y1) at `speed` points a second, hold, and log it.
+    func drag(_ app: XCUIApplication, from: CGPoint, to: CGPoint, hold: Double = 0.35, speed: Double = 140, settle: Double = 0.25) {
+        let travel = Double(hypot(to.x - from.x, to.y - from.y)) / speed
+        drags[taps.count] = Drag(x1: Double(to.x), y1: Double(to.y), moveStart: hold, moveEnd: hold + travel,
+                                 total: hold + travel + settle)
+        log(from.x, from.y)
+        let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: from.x, dy: from.y))
+        let end = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: to.x, dy: to.y))
+        start.press(forDuration: hold, thenDragTo: end, withVelocity: XCUIGestureVelocity(rawValue: CGFloat(speed)),
+                    thenHoldForDuration: settle)
+        returned.append(Self.now)
+    }
+
+    /// Press a software keyboard key at `p`, without a dot.
+    func key(_ app: XCUIApplication, at p: CGPoint, char: Character? = nil) {
+        keyTimes.append(Self.now)
+        if let char, ProcessInfo.processInfo.environment["CLIP_TYPE_MODE"] == "typeText" {
+            app.typeText(String(char))
+            return
+        }
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: p.x, dy: p.y)).tap()
+    }
+
     private func log(_ x: CGFloat, _ y: CGFloat) {
         taps.append(Tap(t: Self.now, x: Double(x), y: Double(y)))
     }
@@ -54,9 +84,15 @@ final class TapLog {
         guard let dir = ProcessInfo.processInfo.environment["CLIP_OUT_DIR"] else { return }
         let size = app.windows.firstMatch.frame.size
         let json: [String: Any] = [
-            "clip": clip, "begin": begin, "end": end,
+            "clip": clip, "begin": begin, "end": end, "dragReturned": returned, "keyTimes": keyTimes, "typed": typed,
             "screenWidth": size.width, "screenHeight": size.height,
-            "taps": taps.map { ["t": $0.t, "x": $0.x, "y": $0.y] },
+            "taps": taps.enumerated().map { i, tap -> [String: Any] in
+                var e: [String: Any] = ["t": tap.t, "x": tap.x, "y": tap.y]
+                if let d = drags[i] {
+                    e["x1"] = d.x1; e["y1"] = d.y1; e["moveStart"] = d.moveStart; e["moveEnd"] = d.moveEnd; e["total"] = d.total
+                }
+                return e
+            },
         ]
         let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
         try data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(clip).taps.json"))
@@ -70,6 +106,19 @@ private struct Step {
     /// Seconds from the previous tap: the screen's reaction plus about 0.8 s of looking.
     let beat: Double
     let find: (XCUIApplication) -> CGPoint
+    /// Where a press-and-drag ends; nil for a plain tap.
+    var dragTo: ((XCUIApplication) -> CGPoint)? = nil
+    /// Text typed on the software keyboard, key by key, instead of a tap.
+    var typing: String? = nil
+}
+
+/// Seconds before each key of `text`: about 140 to 200 ms, uneven, a little longer around a space.
+private func typingGaps(for text: String) -> [Double] {
+    let rhythm = [0.17, 0.14, 0.19, 0.15, 0.18, 0.16, 0.14, 0.2]
+    let chars = Array(text)
+    return chars.indices.dropFirst().map { i in
+        rhythm[(i - 1) % rhythm.count] + ((chars[i] == " " || chars[i - 1] == " ") ? 0.08 : 0)
+    }
 }
 
 final class SiteClipFlows: XCTestCase {
@@ -83,12 +132,12 @@ final class SiteClipFlows: XCTestCase {
 
     /// Launch on the demo Takes in the Cobalt Scene, Daylight or Night (`$CLIP_APPEARANCE`),
     /// with every animation at its real speed. Returns once the timeline shows.
-    private func launchDemo() -> XCUIApplication {
+    private func launchDemo(extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         let mode = ProcessInfo.processInfo.environment["CLIP_APPEARANCE"] ?? "daylight"
         app.launchArguments = ["--uitesting", "--uitesting-demo",
                                "-catchlight.focusRowTimeScale", "1",
-                               "-appearanceMode", mode, "-catchlight.creationStamp", "off"]
+                               "-appearanceMode", mode, "-catchlight.creationStamp", "off"] + extra
         app.launch()
         XCTAssertTrue(anyElement(in: app, id: "take-iris").waitForExistence(timeout: 15), "No Take on the timeline")
         return app
@@ -127,18 +176,35 @@ final class SiteClipFlows: XCTestCase {
     /// `onTheFives` holds the recorded pass until the clock is a few seconds before a minute
     /// that is a multiple of five, for a clip whose Take shows the default reminder time (the
     /// minute the editor opens): it then reads 07:40, not an arbitrary 07:36.
-    private func flow(_ clip: String, hold: Double, onTheFives: Bool = false, steps: [Step]) throws {
+    private func flow(_ clip: String, hold: Double, onTheFives: Bool = false, extra: [String] = [], steps: [Step]) throws {
         var points: [CGPoint] = []
-        let scout = launchDemo()
+        var ends: [CGPoint?] = []
+        var typedKeys: [CGPoint] = []
+        let scout = launchDemo(extra: extra)
         for step in steps {
+            if let text = step.typing {
+                typedKeys = keyPoints(for: text, in: scout)
+                for p in typedKeys { TapLog().key(scout, at: p); Thread.sleep(forTimeInterval: 0.3) }
+                Thread.sleep(forTimeInterval: 0.8)
+                XCTAssertTrue(scout.textViews.matching(NSPredicate(format: "value == %@", text)).firstMatch.exists,
+                              "Typing \(text) did not give exactly that text; the text views read \(scout.textViews.allElementsBoundByIndex.map { $0.value as? String ?? "" })")
+                points.append(.zero); ends.append(nil)
+                continue
+            }
             let p = step.find(scout)
             points.append(p)
-            scout.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: p.x, dy: p.y)).tap()
+            let end = step.dragTo?(scout)
+            ends.append(end)
+            if let end {
+                TapLog().drag(scout, from: p, to: end)
+            } else {
+                scout.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: p.x, dy: p.y)).tap()
+            }
             Thread.sleep(forTimeInterval: 1.5)   // let the screen settle before the next lookup
         }
         scout.terminate()
 
-        let app = launchDemo()
+        let app = launchDemo(extra: extra)
         if onTheFives { waitForNearestFive() }
         waitForRecorder()
         Thread.sleep(forTimeInterval: 1.6)   // still Dailies before the first tap; the encoder trims to the first change
@@ -150,17 +216,40 @@ final class SiteClipFlows: XCTestCase {
         let began = Date()
         var due = 0.0
         var previousCall = began
-        for (step, p) in zip(steps, points) {
+        for (i, step) in steps.enumerated() {
+            let p = points[i]
             due += step.beat
             let fire = max(began.addingTimeInterval(due - 0.15), previousCall.addingTimeInterval(step.beat - 0.15))
             let wait = fire.timeIntervalSinceNow
             if wait > 0 { Thread.sleep(forTimeInterval: wait) }
             previousCall = Date()
-            log.tap(app, x: p.x, y: p.y)
+            if let text = step.typing {
+                let gaps = typingGaps(for: text)
+                for (n, kp) in typedKeys.enumerated() {
+                    if n > 0 { Thread.sleep(forTimeInterval: gaps[n - 1]) }
+                    log.key(app, at: kp, char: Array(text)[n])
+                }
+                continue
+            }
+            if let end = ends[i] { log.drag(app, from: p, to: end) } else { log.tap(app, x: p.x, y: p.y) }
         }
         Thread.sleep(forTimeInterval: hold)
         log.finish()
+        if steps.contains(where: { $0.typing != nil }) {
+            log.typed = app.textViews.allElementsBoundByIndex.map { $0.value as? String ?? "" }.joined(separator: " | ")
+        }
         try log.write(clip: clip, app: app)
+    }
+
+    /// Where each key of `text` sits on the software keyboard that is up now: the keys read the
+    /// same shifted or not, so the place is the same whatever the shift state is when it is pressed.
+    private func keyPoints(for text: String, in app: XCUIApplication) -> [CGPoint] {
+        text.map { ch in
+            let key = ch == " " ? app.keyboards.keys["space"]
+                : app.keyboards.keys.matching(NSPredicate(format: "label ==[c] %@", String(ch))).firstMatch
+            XCTAssertTrue(key.waitForExistence(timeout: 5), "No key for \(ch)")
+            return CGPoint(x: key.frame.midX, y: key.frame.midY)
+        }
     }
 
     // MARK: Finding where to tap
@@ -263,6 +352,38 @@ final class SiteClipFlows: XCTestCase {
             Step(name: "iris", beat: 2.6, find: centre(ofID: "editor-shape")),
             Step(name: "task", beat: 2.6, find: centre(ofID: "focus-row-mark-task")),
             Step(name: "close", beat: 2.5, find: dimLow),
+        ])
+    }
+
+    /// A possible fourth clip: reorder a shopping list by hand in the Shot List. A rough draft.
+    func testClip4_reorderingAShoppingList() throws {
+        let handles = { (app: XCUIApplication) in
+            app.descendants(matching: .any).matching(identifier: "angle-reorder")
+        }
+        try flow("reordering-a-list", hold: 3.2, extra: ["--uitesting-demo-shop"], steps: [
+            Step(name: "open", beat: 0, find: rowCentre(startingWith: "Weekend shop")),
+            Step(name: "shotlist", beat: 2.6, find: centre(ofID: "angle-button")),
+            Step(name: "drag", beat: 3.2,
+                 find: { app in
+                     let h = handles(app).element(boundBy: 4)
+                     XCTAssertTrue(h.waitForExistence(timeout: 10), "No reorder handle on the fifth item")
+                     return CGPoint(x: h.frame.midX, y: h.frame.midY)
+                 },
+                 dragTo: { app in
+                     let top = handles(app).element(boundBy: 0)
+                     return CGPoint(x: top.frame.midX, y: top.frame.minY - 6)
+                 }),
+        ])
+    }
+
+    /// B2 with text typed into the new checkbox line, key by key on the software keyboard.
+    func testClip1B2Typed_shapingATakeInTheEditorTyped() throws {
+        try flow("shaping-a-take-B2-typed", hold: 3.5, steps: [
+            Step(name: "open", beat: 0, find: rowCentre(startingWith: "Idea from the walk")),
+            Step(name: "iris", beat: 2.6, find: centre(ofID: "editor-shape")),
+            Step(name: "task", beat: 2.6, find: centre(ofID: "focus-row-mark-task")),
+            Step(name: "close", beat: 2.5, find: dimLow),
+            Step(name: "type", beat: 2.8, find: { _ in .zero }, typing: "Check sunset time"),
         ])
     }
 }

@@ -67,7 +67,7 @@ def reactions(diffs, taps):
     return times
 
 
-def dot_source(cx, cy, k, colour, fill, start):
+def dot_source(cx, cy, k, colour, fill, start, hold=0.0):
     """An ffmpeg filter chain drawing one tap dot centred on a 180 px square, then placed.
     Its clock T starts when the dot appears; the press lands at T = LEAD_S."""
     r, g, b = (int(colour[i:i + 2], 16) for i in (0, 2, 4))
@@ -75,7 +75,7 @@ def dot_source(cx, cy, k, colour, fill, start):
     u = f"clip(T/{IN_S},0,1)"
     eo = f"(1-pow(1-{u},2))"
     dot_r = f"({DOT_PT / 2}*({DOT_FROM_PT / DOT_PT}-({DOT_FROM_PT / DOT_PT}-1)*{eo})*{k})"
-    t2 = f"(T-{LEAD_S})"
+    t2 = f"(T-{LEAD_S}-{hold:.3f})"      # a drag holds the dot until its release
     fade = f"(1-clip({t2}/{FADE_S},0,1))"
     dist = f"hypot(X-{c},Y-{c})"
     dot_a = f"{fill}*{eo}*{fade}*clip({dot_r}+0.5-{dist},0,1)"
@@ -83,7 +83,7 @@ def dot_source(cx, cy, k, colour, fill, start):
     ring_r = f"(({RING_FROM_PT / 2}+({RING_TO_PT - RING_FROM_PT}/2)*(1-pow(1-{v},2)))*{k})"
     ring_a = (f"if(gte({t2},0),{RING_OPACITY}*(1-{v})*clip({RING_STROKE_PT * k / 2}+0.5-abs({dist}-{ring_r}),0,1),0)")
     alpha = f"255*max({dot_a},{ring_a})"
-    total = LEAD_S + RING_S + 0.05
+    total = LEAD_S + hold + RING_S + 0.05
     return (f"color=c=black:s=180x180:r={FPS}:d={total},format=gbrap,"
             f"geq=r={r}:g={g}:b={b}:a='{alpha}',setpts=PTS+{start:.3f}/TB")
 
@@ -161,10 +161,19 @@ def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=
         plain = ";".join(chains)          # the same picture without the dots, for measuring
         for i, tap in enumerate(taps["taps"]):
             at = (times[i] - start) - LEAD_S
-            src = dot_source(tap["x"], tap["y"], k, colour, fill, max(at, 0))
+            src = dot_source(tap["x"], tap["y"], k, colour, fill, max(at, 0), tap.get("total", 0.0))
             chains.append(f"{src}[d{i}]")
             x, y = round(tap["x"] * k - 90), round(tap["y"] * k - 90)
-            chains.append(f"{last}[d{i}]overlay=x={x}:y={y}:eof_action=pass:format=auto[o{i}]")
+            if "x1" in tap:
+                # The dot follows the finger: linear from the drag's start to its end.
+                down = max(at, 0) + LEAD_S
+                m0, m1 = down + tap["moveStart"], down + tap["moveEnd"]
+                f = f"clip((t-{m0:.3f})/{m1 - m0:.3f},0,1)"
+                ox = f"{x}+{round((tap['x1'] - tap['x']) * k)}*{f}"
+                oy = f"{y}+{round((tap['y1'] - tap['y']) * k)}*{f}"
+                chains.append(f"{last}[d{i}]overlay=x='{ox}':y='{oy}':eof_action=pass:format=auto[o{i}]")
+            else:
+                chains.append(f"{last}[d{i}]overlay=x={x}:y={y}:eof_action=pass:format=auto[o{i}]")
             last = f"[o{i}]"
         graph = ";".join(chains)
 

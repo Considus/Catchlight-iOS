@@ -65,7 +65,7 @@ xcodebuild build-for-testing -scheme CatchlightSiteClips -derivedDataPath "$DD" 
 XCTESTRUN="$(ls "$DD"/Build/Products/*.xctestrun | head -1)"
 
 # --- record each clip --------------------------------------------------------------------
-typeset -A TESTS=( shaping-a-take-B2 testClip1B2_shapingATakeInTheEditor shaping-a-take testClip1_shapingATake setting-a-reminder testClip2_settingAReminder sequence testClip3_sequence )
+typeset -A TESTS=( shaping-a-take-B2-typed testClip1B2Typed_shapingATakeInTheEditorTyped reordering-a-list testClip4_reorderingAShoppingList shaping-a-take-B2 testClip1B2_shapingATakeInTheEditor shaping-a-take testClip1_shapingATake setting-a-reminder testClip2_settingAReminder sequence testClip3_sequence )
 CLIPS=(shaping-a-take setting-a-reminder sequence)
 [[ -n "$ONLY_CLIP" ]] && CLIPS=("$ONLY_CLIP")
 APPEARANCES=(daylight night)
@@ -78,7 +78,7 @@ for clip in $CLIPS; do
     echo "== $clip / $look"
     xcrun simctl terminate "$UDID" com.considus.catchlight 2>/dev/null || true
     (
-      export TEST_RUNNER_CLIP_OUT_DIR="$run" TEST_RUNNER_CLIP_APPEARANCE="$look"
+      export TEST_RUNNER_CLIP_OUT_DIR="$run" TEST_RUNNER_CLIP_APPEARANCE="$look" TEST_RUNNER_CLIP_TYPE_MODE="${CLIP_TYPE_MODE:-}"
       xcodebuild test-without-building -xctestrun "$XCTESTRUN" \
         -destination "platform=iOS Simulator,id=$UDID" \
         -only-testing:"CatchlightSiteClips/SiteClipFlows/${TESTS[$clip]}" >"$run/test.log" 2>&1
@@ -96,7 +96,8 @@ for clip in $CLIPS; do
     grep -E "Executed [0-9]+ test" "$run/test.log" | tail -1
     # A slow-pace variant (B1, B2) is a draft for Mark to judge: named -DRAFT2-<variant>, fixed quality.
     stem="$clip-$look"; extra=()
-    if [[ "$clip" == *-B2 ]]; then stem="${clip%-B?}-$look-DRAFT2-${clip##*-}"; extra=(--crf 34 --focus-tap 1)
+    if [[ "$clip" == *-B2-typed ]]; then stem="${clip%-B2-typed}-$look-DRAFT3-typed"; extra=(--crf 34 --focus-tap 1)
+    elif [[ "$clip" == *-B2 ]]; then stem="${clip%-B?}-$look-DRAFT2-${clip##*-}"; extra=(--crf 34 --focus-tap 1)
     elif [[ $DRAFT == 1 ]]; then stem="$stem-DRAFT"; fi
     "$ROOT/scripts/site-clips/encode.py" "$run/raw.mov" "$run/$clip.taps.json" "$OUT" "$stem" "$look" $extra | tee -a "$RESULTS"
   done

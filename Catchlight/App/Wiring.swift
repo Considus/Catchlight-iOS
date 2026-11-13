@@ -194,7 +194,8 @@ enum Wiring {
             // `--uitesting-demo` seeds the believable Takes the site's motion clips are recorded
             // on (scripts/site-clips), in place of the two fixture Takes.
             if ProcessInfo.processInfo.arguments.contains("--uitesting-demo") {
-                DemoTakes.seed(into: store, base: base)
+                DemoTakes.seed(into: store, base: base,
+                               shop: ProcessInfo.processInfo.arguments.contains("--uitesting-demo-shop"))
             } else {
                 try? store.upsert(Take(createdAt: base.addingTimeInterval(-1),
                                        blocks: [.textLine("Buy film for the weekend shoot")]))
