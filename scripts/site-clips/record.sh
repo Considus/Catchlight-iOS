@@ -50,6 +50,8 @@ cleanup() {
 trap cleanup EXIT
 xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b >/dev/null
+# Never show the one-time "slide to type" introduction over the keyboard (CI does the same).
+xcrun simctl spawn "$UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
 xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100 \
   --cellularMode active --cellularBars 4 --wifiMode active --wifiBars 3 --operatorName ""
 
@@ -63,7 +65,7 @@ xcodebuild build-for-testing -scheme CatchlightSiteClips -derivedDataPath "$DD" 
 XCTESTRUN="$(ls "$DD"/Build/Products/*.xctestrun | head -1)"
 
 # --- record each clip --------------------------------------------------------------------
-typeset -A TESTS=( shaping-a-take testClip1_shapingATake setting-a-reminder testClip2_settingAReminder sequence testClip3_sequence )
+typeset -A TESTS=( shaping-a-take-B2 testClip1B2_shapingATakeInTheEditor shaping-a-take testClip1_shapingATake setting-a-reminder testClip2_settingAReminder sequence testClip3_sequence )
 CLIPS=(shaping-a-take setting-a-reminder sequence)
 [[ -n "$ONLY_CLIP" ]] && CLIPS=("$ONLY_CLIP")
 APPEARANCES=(daylight night)
@@ -92,8 +94,11 @@ for clip in $CLIPS; do
     wait $TEST_PID || { tail -40 "$run/test.log"; echo "flow failed: $clip / $look" >&2; exit 1; }
     kill -INT $RECORDER_PID; wait $RECORDER_PID 2>/dev/null || true; RECORDER_PID=""
     grep -E "Executed [0-9]+ test" "$run/test.log" | tail -1
-    "$ROOT/scripts/site-clips/encode.py" "$run/raw.mov" "$run/$(echo $clip).taps.json" "$OUT" "$clip" "$look" \
-      $([[ $DRAFT == 1 ]] && echo --draft) | tee -a "$RESULTS"
+    # A slow-pace variant (B1, B2) is a draft for Mark to judge: named -DRAFT2-<variant>, fixed quality.
+    stem="$clip-$look"; extra=()
+    if [[ "$clip" == *-B2 ]]; then stem="${clip%-B?}-$look-DRAFT2-${clip##*-}"; extra=(--crf 34 --focus-tap 1)
+    elif [[ $DRAFT == 1 ]]; then stem="$stem-DRAFT"; fi
+    "$ROOT/scripts/site-clips/encode.py" "$run/raw.mov" "$run/$clip.taps.json" "$OUT" "$stem" "$look" $extra | tee -a "$RESULTS"
   done
 done
 

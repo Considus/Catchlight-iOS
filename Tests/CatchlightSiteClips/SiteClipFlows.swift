@@ -107,15 +107,15 @@ final class SiteClipFlows: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: go), "The recorder never started")
     }
 
-    /// Wait until 3.5 s before the next minute that is a multiple of five. From the recorder's
-    /// go the editor opens about 5.5 s later, just after that minute starts.
+    /// Wait until 1.5 s before the next minute that is a multiple of five. The reminder's default
+    /// time is fixed when the Focus row opens, about 3.2 s after the recorder's go.
     private func waitForNearestFive() {
         let cal = Calendar.current
         let now = Date()
         let minute = cal.component(.minute, from: now)
         let next = cal.nextDate(after: now, matching: DateComponents(minute: (minute / 5 + 1) * 5 % 60, second: 0),
                                 matchingPolicy: .nextTime) ?? now
-        let wait = next.addingTimeInterval(-3.5).timeIntervalSinceNow
+        let wait = next.addingTimeInterval(-1.5).timeIntervalSinceNow
         if wait > 0 { Thread.sleep(forTimeInterval: wait) }
     }
 
@@ -143,15 +143,19 @@ final class SiteClipFlows: XCTestCase {
         waitForRecorder()
         Thread.sleep(forTimeInterval: 1.6)   // still Dailies before the first tap; the encoder trims to the first change
         log.start()
-        // Each tap has a due time on a running schedule, so a slow tap (a sheet or menu the
-        // runner waits to settle) eats into the next beat instead of adding to it. The runner
-        // takes about 0.15 s to deliver a tap (more for a sheet or menu), so each call starts that much early.
+        // Each tap is due on a running schedule, and never sooner than its beat after the call
+        // before it: a tap the runner is slow to return from (a sheet, the keyboard) pushes the
+        // next one back instead of squeezing it. The runner takes about 0.15 s to deliver a tap,
+        // so each call starts that much early.
         let began = Date()
         var due = 0.0
+        var previousCall = began
         for (step, p) in zip(steps, points) {
             due += step.beat
-            let wait = began.addingTimeInterval(due - 0.15).timeIntervalSinceNow
+            let fire = max(began.addingTimeInterval(due - 0.15), previousCall.addingTimeInterval(step.beat - 0.15))
+            let wait = fire.timeIntervalSinceNow
             if wait > 0 { Thread.sleep(forTimeInterval: wait) }
+            previousCall = Date()
             log.tap(app, x: p.x, y: p.y)
         }
         Thread.sleep(forTimeInterval: hold)
@@ -185,6 +189,25 @@ final class SiteClipFlows: XCTestCase {
         }
     }
 
+    /// The centre of the Take card whose text starts with `prefix`.
+    private func rowCentre(startingWith prefix: String) -> (XCUIApplication) -> CGPoint {
+        { app in
+            let e = takeRow(in: app, withLabelStarting: prefix)
+            XCTAssertTrue(e.waitForExistence(timeout: 10), "No Take starting \(prefix)")
+            return CGPoint(x: e.frame.midX, y: e.frame.midY)
+        }
+    }
+
+    /// A tap on the dimmed Dailies low on the screen, well away from the top card, which closes
+    /// the open Focus row.
+    private var dimLow: (XCUIApplication) -> CGPoint {
+        { app in
+            let dim = anyElement(in: app, id: "focus-row-dim")
+            XCTAssertTrue(dim.waitForExistence(timeout: 10), "The Focus row is not open")
+            return CGPoint(x: dim.frame.minX + dim.frame.width * 0.85, y: dim.frame.minY + dim.frame.height * 0.62)
+        }
+    }
+
     /// A tap on the dimmed Dailies above the open Focus row, which closes it.
     private var dimAbove: (XCUIApplication) -> CGPoint {
         { app in
@@ -197,7 +220,7 @@ final class SiteClipFlows: XCTestCase {
     // MARK: The three clips
 
     /// Clip 1: tap a Take's Iris, the Focus row opens, Task then Reminder are chosen, the row
-    /// closes and the Take shows both. The Take is "Book the lake swim", the first card.
+    /// closes and the Take shows both. The Take is the two-line note "Idea from the walk", the first card.
     func testClip1_shapingATake() throws {
         try flow("shaping-a-take", hold: 2.0, onTheFives: true, steps: [
             Step(name: "iris", beat: 0, find: irisOf(row: 0)),
@@ -227,6 +250,19 @@ final class SiteClipFlows: XCTestCase {
         try flow("sequence", hold: 2.0, steps: [
             Step(name: "sequence", beat: 0, find: centre(ofButton: "sequence-tab")),
             Step(name: "tasks", beat: 1.5, find: centre(ofButton: "filter-tasks")),
+        ])
+    }
+
+    // MARK: Slow-pace drafts of Shaping a Take (Art Director, 13 Nov): 1.5 s of still screen,
+    // each dot 0.4 s before its press (the encoder), 1.4 s on each result, 3 s on the end.
+
+    /// B2, in the editor: open the Take, tap the editor's Iris, tap Task, close the row.
+    func testClip1B2_shapingATakeInTheEditor() throws {
+        try flow("shaping-a-take-B2", hold: 3.6, steps: [
+            Step(name: "open", beat: 0, find: rowCentre(startingWith: "Idea from the walk")),
+            Step(name: "iris", beat: 2.6, find: centre(ofID: "editor-shape")),
+            Step(name: "task", beat: 2.6, find: centre(ofID: "focus-row-mark-task")),
+            Step(name: "close", beat: 2.5, find: dimLow),
         ])
     }
 }
