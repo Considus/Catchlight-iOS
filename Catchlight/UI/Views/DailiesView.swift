@@ -1017,7 +1017,7 @@ struct DailiesView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
-                Text("Read-only. Your data is still yours.")
+                Text("Read-only. Your Takes are still yours.")
                     .ckBody(.regular, size: 14, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(2)

@@ -7445,6 +7445,119 @@
         }
       }
     },
+    "Add Take, locked" : {
+      "comment" : "VoiceOver label for the Add button while read-only after a subscription or trial ends. It opens the subscription screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilføj Take, låst"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take hinzufügen, gesperrt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir Take, bloqueado"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lisää Take, lukittu"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un Take, verrouillé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi Take, bloccato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takeを追加、ロック中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take 추가, 잠김"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til Take, låst"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take toevoegen, vergrendeld"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj Take, zablokowane"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar Take, bloqueado"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar Take, bloqueado"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lägg till Take, låst"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่ม Take, ล็อกอยู่"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take Ekle, kilitli"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加 Take，已锁定"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增 Take，已鎖定"
+          }
+        }
+      }
+    },
     "Add this device to your account?" : {
       "localizations" : {
         "de" : {
@@ -23354,6 +23467,119 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "แตะสองครั้งเพื่อค้นหา Take ของคุณ"
+          }
+        }
+      }
+    },
+    "Double-tap to see subscription options." : {
+      "comment" : "VoiceOver hint for the locked Add button while read-only.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dobbelttryk for at se abonnementsmulighederne."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppeltippen, um die Abo-Optionen zu sehen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca dos veces para ver las opciones de suscripción."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Näytä tilausvaihtoehdot kaksoisnapauttamalla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double-cliquez pour voir les options d’abonnement."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocca due volte per vedere le opzioni di abbonamento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダブルタップしてサブスクリプションのオプションを表示します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이중 탭하여 구독 옵션을 봅니다."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dobbelttrykk for å se abonnementsvalgene."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dubbeltik om de abonnementsopties te zien."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kliknij dwukrotnie, aby zobaczyć opcje subskrypcji."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toque duas vezes para ver as opções de assinatura."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toque duas vezes para ver as opções de subscrição."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dubbeltryck för att se prenumerationsalternativen."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แตะสองครั้งเพื่อดูตัวเลือกการสมัครรับ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonelik seçeneklerini görmek için çift dokunun."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "双击以查看订阅选项。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點兩下以查看訂閱選項。"
           }
         }
       }
@@ -44797,114 +45023,114 @@
         }
       }
     },
-    "Read-only. Your data is still yours." : {
+    "Read-only. Your Takes are still yours." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schreibgeschützt. Deine Daten gehören weiterhin dir."
+            "value" : "Schreibgeschützt. Deine Takes gehören weiterhin dir."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lecture seule. Vos données vous appartiennent toujours."
+            "value" : "Lecture seule. Vos Takes vous appartiennent toujours."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Solo lectura. Tus datos siguen siendo tuyos."
+            "value" : "Solo lectura. Tus Takes siguen siendo tuyos."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sola lettura. I tuoi dati restano tuoi."
+            "value" : "Sola lettura. I tuoi Take restano tuoi."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Somente leitura. Seus dados ainda são seus."
+            "value" : "Somente leitura. Seus Takes ainda são seus."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alleen-lezen. Je gegevens blijven van jou."
+            "value" : "Alleen-lezen. Je Takes blijven van jou."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apenas leitura. Os seus dados continuam a ser seus."
+            "value" : "Apenas leitura. Os seus Takes continuam a ser seus."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tylko do odczytu. Twoje dane nadal należą do Ciebie."
+            "value" : "Tylko do odczytu. Twoje Takes nadal należą do Ciebie."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skrivskyddad. Dina data är fortfarande dina."
+            "value" : "Skrivskyddad. Dina Takes är fortfarande dina."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skrivebeskyttet. Dine data er stadig dine."
+            "value" : "Skrivebeskyttet. Dine Takes er stadig dine."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skrivebeskyttet. Dataene dine tilhører fortsatt deg."
+            "value" : "Skrivebeskyttet. Take-ene dine tilhører fortsatt deg."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vain luku. Tietosi ovat silti omiasi."
+            "value" : "Vain luku. Takesi ovat silti omiasi."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salt okunur. Verileriniz hâlâ size ait."
+            "value" : "Salt okunur. Take'leriniz hâlâ size ait."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "読み取り専用です。データは引き続きあなたのものです。"
+            "value" : "読み取り専用です。Takeは引き続きあなたのものです。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "읽기 전용입니다. 데이터는 계속 사용자의 것입니다."
+            "value" : "읽기 전용입니다. Take는 계속 사용자의 것입니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "只读。你的数据仍归你所有。"
+            "value" : "只读。你的 Takes 仍归你所有。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "唯讀。你的資料仍屬於你。"
+            "value" : "唯讀。你的 Takes 仍屬於你。"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "อ่านได้อย่างเดียว ข้อมูลของคุณยังคงเป็นของคุณ"
+            "value" : "อ่านได้อย่างเดียว Take ของคุณยังคงเป็นของคุณ"
           }
         }
       }
