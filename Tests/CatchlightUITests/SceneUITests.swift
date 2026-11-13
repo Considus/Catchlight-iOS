@@ -42,8 +42,10 @@ final class SceneUITests: XCTestCase {
         assertMarginIs(0x0B0E2A, "Cobalt Dark ground", in: app, sheet: sheet)
     }
 
-    /// Thirty switches in one launch, cycling every Scene, with no pause beyond the
+    /// Ten switches in one launch, cycling every Scene twice, with no pause beyond the
     /// colour check: each must repaint the open sheet. Every miss is listed, not only the first.
+    /// Ten, not thirty: the first cycle shows each Scene repaints and the second shows a repeat
+    /// switch does too, and the last twenty switches took 80 s of every CI run to say the same.
     func testManySwitches_eachRepaintsTheOpenSheet() {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting", "-appearanceMode", "night"]
@@ -59,7 +61,7 @@ final class SceneUITests: XCTestCase {
         let grounds: [(String, UInt32)] = [("Jade", 0x0C1511), ("Cobalt", 0x0B0E2A), ("Onyx", 0x05070A),
                                            ("Graphite", 0x111214), ("Tanzanite", 0x101028)]
         var misses: [String] = []
-        for i in 0..<30 {
+        for i in 0..<10 {
             let (name, ground) = grounds[i % grounds.count]
             choose(name, from: picker, in: app)
             if let miss = marginMismatch(ground, sheet: sheet) {
@@ -67,7 +69,7 @@ final class SceneUITests: XCTestCase {
             }
         }
         choose("Cobalt", from: picker, in: app)
-        XCTAssertTrue(misses.isEmpty, "\(misses.count) of 30 switches left the sheet stale:\n" + misses.joined(separator: "\n"))
+        XCTAssertTrue(misses.isEmpty, "\(misses.count) of 10 switches left the sheet stale:\n" + misses.joined(separator: "\n"))
     }
 
     /// The editor's keyboard toolbar draws the chosen Scene, including after a switch made
