@@ -47,12 +47,11 @@ struct NoticeHistoryView: View {
                             .foregroundStyle(Color.ckTextSecondary)
                             .accessibilityHidden(true)
                         Text("No notices yet")
-                            .ckDisplay(size: 28, relativeTo: .title2)
-                            .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                            .sheetLead()
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                         Text("Sync, storage and conflict notices will appear here.")
-                            .ckBody(.regular, size: 15, relativeTo: .subheadline)
+                            .sheetBody()
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
@@ -73,7 +72,7 @@ struct NoticeHistoryView: View {
                                     Spacer(minLength: 0)
                                     Button(action: clearNotices) {
                                         Text("Clear")
-                                            .font(.body)
+                                            .sheetRow()
                                             .foregroundStyle(Color.ckAccent)
                                             .frame(minWidth: CatchlightLayout.minTouchTarget,
                                                    minHeight: CatchlightLayout.minTouchTarget, alignment: .trailing)
@@ -98,10 +97,10 @@ struct NoticeHistoryView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     // The reference code is for the export only.
                                     Text(Notice.displayText(of: entry.message))
-                                        .ckBody(.regular, size: 15, relativeTo: .body)
+                                        .sheetBody()
                                         .foregroundStyle(Color.ckTextPrimary)
                                     Text(entry.timestamp, format: .relative(presentation: .named))
-                                        .ckBody(.regular, size: 12, relativeTo: .caption)
+                                        .sheetSmall()
                                         .monospacedDigit()   // a time: tabular digits
                                         .foregroundStyle(Color.ckTextSecondary)
                                 }

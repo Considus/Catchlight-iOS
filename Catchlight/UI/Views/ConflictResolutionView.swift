@@ -58,18 +58,23 @@ struct ConflictResolutionView: View {
     // MARK: - Empty state
 
     private var emptyState: some View {
+        // The heading stays, with the lead line 60 under it, as on the other sheets' lone
+        // centred states (Art Director, 2026-11-12).
         VStack(spacing: 0) {
-            Spacer()
+            PageHeading("Sync Conflicts", centred: true)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.top, CatchlightLayout.pageHeadingTopGap)
             Text("All caught up.")
-                .ckBody(.light, size: 17, relativeTo: .body)
-                .foregroundStyle(Color.ckTextSecondary)
+                .sheetLead()
+                .foregroundStyle(Color.ckTextPrimary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+                .padding(.top, 60)
+                // VoiceOver says the fuller phrase, as before; the heading stays its own element.
+                .accessibilityLabel("All conflicts resolved.")
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Audit 2026-08, V17: a label on a non-combined container is a no-op —
-        // combine first so the label lands on a real element.
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("All conflicts resolved.")
     }
 
     // MARK: - Conflict list
@@ -111,19 +116,25 @@ struct ConflictResolutionView: View {
             PageHeading("Sync Conflicts", centred: true)
                 .accessibilityAddTraits(.isHeader)
             // About choosing between two versions, which a converted pair doesn't offer.
-            if queue.pending.contains(where: { !queue.isConverted($0.local.id) }) {
+            if showsGuidance {
                 guidance("These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed.")
                     .padding(.horizontal, 20)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, CatchlightLayout.pageHeadingTopGap)
-        .padding(.bottom, 4)
+        // 16 from the heading to the first item, as on every sheet; the guidance keeps 20
+        // above the first card.
+        .padding(.bottom, showsGuidance ? 4 : 0)
+    }
+
+    private var showsGuidance: Bool {
+        queue.pending.contains(where: { !queue.isConverted($0.local.id) })
     }
 
     private func guidance(_ text: LocalizedStringKey) -> some View {
         Text(text)
-            .ckBody(.light, size: 16, relativeTo: .body)
+            .sheetBody()
             .foregroundStyle(Color.ckTextSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -166,7 +177,7 @@ struct ConflictResolutionView: View {
                 }
             case let (nil, cloud?):
                 Text("Recover this Take?")
-                    .ckBody(.regular, size: 15, relativeTo: .body)
+                    .sheetBody()
                     .foregroundStyle(Color.ckTextPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 versionPanel(.theirs, take: cloud, selected: false,
@@ -185,7 +196,7 @@ struct ConflictResolutionView: View {
 
     private func footnote(_ text: String) -> some View {
         Text(text)
-            .ckBody(.light, size: 16, relativeTo: .body)
+            .sheetBody()
             .foregroundStyle(Color.ckTextSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -249,7 +260,7 @@ struct ConflictResolutionView: View {
     private func convertedCard(_ local: Take) -> some View {
         VStack(spacing: 12) {
             Text("This Take was turned into a Script on another device.")
-                .ckBody(.regular, size: 15, relativeTo: .body)
+                .sheetBody()
                 .foregroundStyle(Color.ckTextPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)

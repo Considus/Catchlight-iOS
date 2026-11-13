@@ -240,6 +240,8 @@ struct SettingsView: View {
     // MARK: - Title (scrolls with the list)
 
     private static let listSpace = "settings-list"
+    /// The space the title row keeps under the heading.
+    static let titleRowBottomInset: CGFloat = 10
 
     /// The "Settings" heading as a scrolling list row (owner 2026-06-21) — clear
     /// background, no section chrome, so it reads as a title and scrolls away.
@@ -252,7 +254,9 @@ struct SettingsView: View {
                 titleRowInset = max(0, $0)
             }
             .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: CatchlightLayout.pageHeadingTopGap, leading: 0, bottom: 4, trailing: 0))
+            // 10 here and the 6 above the section label make the 16 under the heading every sheet keeps.
+            .listRowInsets(EdgeInsets(top: CatchlightLayout.pageHeadingTopGap, leading: 0,
+                                      bottom: Self.titleRowBottomInset, trailing: 0))
             .listRowSeparator(.hidden)
             .accessibilityLabel("Settings")
             .accessibilityAddTraits(.isHeader)
@@ -528,10 +532,10 @@ struct SettingsView: View {
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Follow-up reminders")
-                            .ckBody(.regular, size: 17, relativeTo: .body)
+                            .sheetRow()
                             .foregroundStyle(Color.ckTextPrimary)
                         Text("Re-nudge until you mark it done")
-                            .ckBody(.regular, size: 13, relativeTo: .caption)
+                            .sheetSmall()
                             .foregroundStyle(Color.ckTextSecondary)
                     }
                 }
@@ -609,10 +613,10 @@ struct SettingsView: View {
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Confirm before deleting")
-                            .ckBody(.regular, size: 17, relativeTo: .body)
+                            .sheetRow()
                             .foregroundStyle(Color.ckTextPrimary)
                         Text("A deleted Take cannot be recovered")
-                            .ckBody(.regular, size: 13, relativeTo: .caption)
+                            .sheetSmall()
                             .foregroundStyle(Color.ckTextSecondary)
                     }
                 }
@@ -677,7 +681,7 @@ struct SettingsView: View {
                 .accessibilityValue(spotlightExposureBinding.wrappedValue.label)
 
                 Text("On-device search only. Considus can never read your Takes. Text levels are greyed out by an iOS limitation.")
-                    .ckBody(.regular, size: 13, relativeTo: .caption)
+                    .sheetSmall()
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("spotlight-exposure-description")
@@ -723,7 +727,7 @@ struct SettingsView: View {
                 .accessibilityValue(writingToolsBinding.wrappedValue.localizedLabel)
 
                 Text("Panel suggests, you accept. Inline rewrites in place. Both send that Take to Apple. Your Privacy phrase never goes.")
-                    .ckBody(.regular, size: 13, relativeTo: .caption)
+                    .sheetSmall()
                     .foregroundStyle(Color.ckTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("writing-tools-description")
@@ -1215,7 +1219,7 @@ struct SettingsView: View {
     /// case and wrapping — it carries a warning, not a label.
     private func sectionFooter(_ text: LocalizedStringKey) -> some View {
         Text(text)
-            .ckBody(.regular, size: 13, relativeTo: .caption)
+            .sheetSmall()
             .foregroundStyle(Color.ckTextSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.leading, 4)
@@ -1224,9 +1228,7 @@ struct SettingsView: View {
 
     private func sectionHeader(_ text: LocalizedStringKey) -> some View {
         Text(text)
-            .ckBody(.medium, size: 13, relativeTo: .caption)
-            .foregroundStyle(Color.ckTextSecondary)
-            .textCase(.uppercase)
+            .sheetSectionLabel()
             .padding(.leading, 4)
             .padding(.top, 6)
     }
