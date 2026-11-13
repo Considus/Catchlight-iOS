@@ -69,10 +69,6 @@ final class TapLog {
     /// Press a software keyboard key at `p`, without a dot.
     func key(_ app: XCUIApplication, at p: CGPoint, char: Character? = nil) {
         keyTimes.append(Self.now)
-        if let char, ProcessInfo.processInfo.environment["CLIP_TYPE_MODE"] == "typeText" {
-            app.typeText(String(char))
-            return
-        }
         app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: p.x, dy: p.y)).tap()
     }
 
@@ -156,27 +152,11 @@ final class SiteClipFlows: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: go), "The recorder never started")
     }
 
-    /// Wait until 1.5 s before the next minute that is a multiple of five. The reminder's default
-    /// time is fixed when the Focus row opens, about 3.2 s after the recorder's go.
-    private func waitForNearestFive() {
-        let cal = Calendar.current
-        let now = Date()
-        let minute = cal.component(.minute, from: now)
-        let next = cal.nextDate(after: now, matching: DateComponents(minute: (minute / 5 + 1) * 5 % 60, second: 0),
-                                matchingPolicy: .nextTime) ?? now
-        let wait = next.addingTimeInterval(-1.5).timeIntervalSinceNow
-        if wait > 0 { Thread.sleep(forTimeInterval: wait) }
-    }
-
     /// Run a flow twice. The scouting pass finds each tap's place, which costs a second or two
     /// of accessibility lookup per tap and would make the pacing the runner's, not a person's;
     /// it also proves every step is reachable. The recorded pass relaunches and only taps the
     /// found points, on the beats given, so the pacing is the flow's own.
-    ///
-    /// `onTheFives` holds the recorded pass until the clock is a few seconds before a minute
-    /// that is a multiple of five, for a clip whose Take shows the default reminder time (the
-    /// minute the editor opens): it then reads 07:40, not an arbitrary 07:36.
-    private func flow(_ clip: String, hold: Double, onTheFives: Bool = false, extra: [String] = [], steps: [Step]) throws {
+    private func flow(_ clip: String, hold: Double, extra: [String] = [], steps: [Step]) throws {
         var points: [CGPoint] = []
         var ends: [CGPoint?] = []
         var typedKeys: [CGPoint] = []
@@ -205,7 +185,6 @@ final class SiteClipFlows: XCTestCase {
         scout.terminate()
 
         let app = launchDemo(extra: extra)
-        if onTheFives { waitForNearestFive() }
         waitForRecorder()
         Thread.sleep(forTimeInterval: 1.6)   // still Dailies before the first tap; the encoder trims to the first change
         log.start()
@@ -308,15 +287,16 @@ final class SiteClipFlows: XCTestCase {
 
     // MARK: The three clips
 
-    /// Clip 1: tap a Take's Iris, the Focus row opens, Task then Reminder are chosen, the row
-    /// closes and the Take shows both. The Take is the two-line note "Idea from the walk", the first card.
+    /// Clip 1, Shaping a Take, in the editor: open the two-line note, tap the editor's Iris, tap
+    /// Task, tap away; the empty checkbox appears under the note; then type a line into it, key by
+    /// key on the real software keyboard. No Return, so no second checkbox.
     func testClip1_shapingATake() throws {
-        try flow("shaping-a-take", hold: 2.0, onTheFives: true, steps: [
-            Step(name: "iris", beat: 0, find: irisOf(row: 0)),
-            Step(name: "task", beat: 1.4, find: centre(ofID: "focus-row-mark-task")),
-            Step(name: "remind", beat: 1.3, find: centre(ofID: "focus-row-mark-remind")),
-            Step(name: "done", beat: 1.6, find: centre(ofButton: "Done")),
-            Step(name: "close", beat: 1.4, find: dimAbove),
+        try flow("shaping-a-take", hold: 3.5, steps: [
+            Step(name: "open", beat: 0, find: rowCentre(startingWith: "Idea from the walk")),
+            Step(name: "iris", beat: 2.6, find: centre(ofID: "editor-shape")),
+            Step(name: "task", beat: 2.6, find: centre(ofID: "focus-row-mark-task")),
+            Step(name: "close", beat: 2.5, find: dimLow),
+            Step(name: "type", beat: 2.8, find: { _ in .zero }, typing: "Check sunset"),
         ])
     }
 
@@ -342,20 +322,8 @@ final class SiteClipFlows: XCTestCase {
         ])
     }
 
-    // MARK: Slow-pace drafts of Shaping a Take (Art Director, 13 Nov): 1.5 s of still screen,
-    // each dot 0.4 s before its press (the encoder), 1.4 s on each result, 3 s on the end.
-
-    /// B2, in the editor: open the Take, tap the editor's Iris, tap Task, close the row.
-    func testClip1B2_shapingATakeInTheEditor() throws {
-        try flow("shaping-a-take-B2", hold: 3.6, steps: [
-            Step(name: "open", beat: 0, find: rowCentre(startingWith: "Idea from the walk")),
-            Step(name: "iris", beat: 2.6, find: centre(ofID: "editor-shape")),
-            Step(name: "task", beat: 2.6, find: centre(ofID: "focus-row-mark-task")),
-            Step(name: "close", beat: 2.5, find: dimLow),
-        ])
-    }
-
-    /// A possible fourth clip: reorder a shopping list by hand in the Shot List. A rough draft.
+    /// Clip 4: reorder a shopping list by hand in the Shot List. Open the Take, open its Shot List,
+    /// hold, drag Coffee from fifth to first by its handle, hold. Nothing is ticked.
     func testClip4_reorderingAShoppingList() throws {
         let handles = { (app: XCUIApplication) in
             app.descendants(matching: .any).matching(identifier: "angle-reorder")
