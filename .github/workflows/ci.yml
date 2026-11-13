@@ -266,6 +266,9 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           DESTINATION: ${{ matrix.destination }}
+          # xcodebuild passes only TEST_RUNNER_-prefixed variables to the tests, minus the
+          # prefix. RefundRequestTests fail, not skip, when StoreKit isn't connected.
+          TEST_RUNNER_CI: "true"
         run: |
           SCOPE=()
           case "$DESTINATION" in

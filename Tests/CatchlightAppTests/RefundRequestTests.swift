@@ -47,7 +47,14 @@ final class RefundRequestTests: XCTestCase {
             if await Transaction.latest(for: SubscriptionManager.annualProductID) != nil { return }
             try await Task.sleep(for: .milliseconds(100))
         }
-        throw XCTSkip("StoreKit isn't connected to the testing session yet (first run on a new simulator). Run again.")
+        let message = "StoreKit isn't connected to the testing session yet (first run on a new simulator)."
+        // CI sets CI=true (ci.yml passes it as TEST_RUNNER_CI), and there a refund test that
+        // can't run is a failure, never a green skip. On a Mac it skips: run again.
+        if ProcessInfo.processInfo.environment["CI"] == "true" {
+            XCTFail(message)
+            throw CancellationError()
+        }
+        throw XCTSkip(message + " Run again.")
     }
 
     func testRefund_withPurchase_asksAppleAboutThatTransaction_andReportsSubmitted() async throws {
