@@ -47,18 +47,20 @@ final class FocusRowMotionUITests: XCTestCase {
 
         // Make the Take a Task too, so the Note mark can turn off: on a plain Note it is the
         // floor and a tap leaves it on.
-        tap(app, at: hub)
-        XCTAssertTrue(task.waitForExistence(timeout: 5), "Focus row did not open")
+        tapPointWhenHittable(app, at: hub, after: iris)
+        XCTAssertTrue(waitUntilHittable(task), "Focus row did not open")
         task.tap()
         XCTAssertEqual(task.value as? String, "active", "Task did not turn on")
         dim.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
-        XCTAssertTrue(task.waitForNonExistence(timeout: 5), "The row did not close")
+        XCTAssertTrue(task.waitForNonExistence(timeout: slowRunnerTimeout), "The row did not close")
 
         // Open again, held at 150ms. The layout is frozen, so read where Note and Task overlap
         // (no mark has started to slide) and tap the centre of that overlap, the deepest point of
         // the stack, whatever the screen width.
-        tap(app, at: hub)
-        XCTAssertTrue(note.waitForExistence(timeout: 5), "Focus row did not open again")
+        // Existence, not hittable: held at 150ms the marks are stacked, so a mark's centre can be
+        // another mark's, and `isHittable` would say no for a row that is open.
+        tapPointWhenHittable(app, at: hub, after: iris)
+        XCTAssertTrue(note.waitForExistence(timeout: slowRunnerTimeout), "Focus row did not open again")
         XCTAssertEqual(note.value as? String, "active", "Note should start on")
         let overlap = note.frame.intersection(task.frame)
         let point = CGPoint(x: overlap.midX, y: overlap.midY)

@@ -25,28 +25,32 @@ final class FocusRowKeyboardUITests: XCTestCase {
         let body = app.textViews["take-edit-body"]
         tapUntil(addButton, appears: body)
         typeWhenReady(body, text)
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
-                      "Software keyboard did not appear")
-        sleep(1) // let the card settle on the keyboard
+        waitForKeyboardReady(app, "Software keyboard did not appear")
         return body
+    }
+
+    /// The keyboard is up and has finished sliding in: it exists while it is still moving, and a
+    /// keystroke sent then is dropped (a run typed " now" and only the space landed).
+    private func waitForKeyboardReady(_ app: XCUIApplication, _ message: String,
+                                      file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(waitUntilStill(app.keyboards.firstMatch), message, file: file, line: line)
     }
 
     /// Commits the open row with one tap on its dimmed area near the top of the screen,
     /// clear of the marks and the card.
     private func commitRow(_ app: XCUIApplication, closing mark: XCUIElement) {
         let dim = anyElement(in: app, id: "focus-row-dim")
-        XCTAssertTrue(dim.waitForExistence(timeout: 3), "focus-row-dim not in the tree")
+        XCTAssertTrue(dim.waitForExistence(timeout: slowRunnerTimeout), "focus-row-dim not in the tree")
         dim.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
-        XCTAssertTrue(mark.waitForNonExistence(timeout: 5), "The Focus row did not close")
+        XCTAssertTrue(mark.waitForNonExistence(timeout: slowRunnerTimeout), "The Focus row did not close")
     }
 
     /// The keyboard is back and its caret is in the block it left: typing carries on the text.
     private func assertKeyboardBackInBlock(_ app: XCUIApplication, _ body: XCUIElement,
                                            continuing text: String,
                                            file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5),
-                      "The keyboard did not come back after the row committed", file: file, line: line)
-        sleep(1)
+        waitForKeyboardReady(app, "The keyboard did not come back after the row committed",
+                             file: file, line: line)
         app.typeText(" now")
         assertBodyValue(body, becomes: text + " now",
                         "The caret did not return to the end of the block it was in", file: file, line: line)
@@ -57,7 +61,7 @@ final class FocusRowKeyboardUITests: XCTestCase {
     /// assert it exactly. A timeout fails with the last value seen.
     private func assertBodyValue(_ body: XCUIElement, becomes expected: String, _ message: String,
                                  file: StaticString = #filePath, line: UInt = #line) {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = Date().addingTimeInterval(slowRunnerTimeout)
         var last = body.value as? String
         while last != expected && Date() < deadline {
             Thread.sleep(forTimeInterval: 0.1)
@@ -94,12 +98,14 @@ final class FocusRowKeyboardUITests: XCTestCase {
 
         tapWhenReady(anyElement(in: app, id: "editor-shape"))
         let remind = anyElement(in: app, id: "focus-row-mark-remind")
-        XCTAssertTrue(remind.waitForExistence(timeout: 5), "Focus row did not open")
-        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5),
+        // The row's marks slide in: wait for the mark to stop moving rather than to be hittable
+        // (a mark under the dim layer's gesture reports not hittable on iOS 27 while it takes taps).
+        XCTAssertTrue(waitUntilStill(remind), "Focus row did not open")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: slowRunnerTimeout),
                       "The keyboard stayed up when the editor's Iris was tapped")
         remind.tap()
         let cancel = app.buttons["Cancel"]
-        XCTAssertTrue(cancel.waitForExistence(timeout: 5), "Reminder picker did not open")
+        XCTAssertTrue(cancel.waitForExistence(timeout: slowRunnerTimeout), "Reminder picker did not open")
         XCTAssertEqual(app.keyboards.count, 0, "The keyboard covers the reminder picker")
         cancel.tap()
         XCTAssertTrue(cancel.waitForNonExistence(timeout: 5), "Reminder picker did not close")
