@@ -98,7 +98,7 @@ for clip in $CLIPS; do
     stem="$clip-$look"; extra=()
     if [[ "$clip" == *-B2-typed ]]; then stem="${clip%-B2-typed}-$look-DRAFT3-typed"; extra=(--crf 34 --focus-tap 1)
     elif [[ "$clip" == *-B2 ]]; then stem="${clip%-B?}-$look-DRAFT2-${clip##*-}"; extra=(--crf 34 --focus-tap 1)
-    elif [[ $DRAFT == 1 ]]; then stem="$stem-DRAFT"; fi
+    elif [[ $DRAFT == 1 ]]; then stem="$stem-DRAFT"; extra=(--max-crf 34); fi
     "$ROOT/scripts/site-clips/encode.py" "$run/raw.mov" "$run/$clip.taps.json" "$OUT" "$stem" "$look" $extra | tee -a "$RESULTS"
   done
 done

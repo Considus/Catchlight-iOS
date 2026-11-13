@@ -323,22 +323,22 @@ final class SiteClipFlows: XCTestCase {
     /// Clip 2: from the Focus row tap Reminder, the editor opens on Time, a time is picked and
     /// saved, the Take shows it. The Take is "Water the studio plants", the third card.
     func testClip2_settingAReminder() throws {
-        try flow("setting-a-reminder", hold: 1.8, steps: [
+        try flow("setting-a-reminder", hold: 3.6, steps: [
             Step(name: "iris", beat: 0, find: irisOf(row: 2)),
-            Step(name: "remind", beat: 1.3, find: centre(ofID: "focus-row-mark-remind")),
-            Step(name: "quickset", beat: 1.4, find: centre(ofID: "reminder-quickset")),
-            Step(name: "tomorrow", beat: 1.1, find: centre(ofButton: "Tomorrow")),
-            Step(name: "done", beat: 1.2, find: centre(ofButton: "Done")),
-            Step(name: "close", beat: 1.3, find: dimAbove),
+            Step(name: "remind", beat: 2.6, find: centre(ofID: "focus-row-mark-remind")),
+            Step(name: "quickset", beat: 2.8, find: centre(ofID: "reminder-quickset")),
+            Step(name: "tomorrow", beat: 2.4, find: centre(ofButton: "Tomorrow")),
+            Step(name: "done", beat: 2.6, find: centre(ofButton: "Done")),
+            Step(name: "close", beat: 2.6, find: dimLow),
         ])
     }
 
     /// Clip 3: tap Sequence, the choices open above the toolbar, Tasks is picked, the
     /// timeline narrows.
     func testClip3_sequence() throws {
-        try flow("sequence", hold: 2.0, steps: [
+        try flow("sequence", hold: 3.6, steps: [
             Step(name: "sequence", beat: 0, find: centre(ofButton: "sequence-tab")),
-            Step(name: "tasks", beat: 1.5, find: centre(ofButton: "filter-tasks")),
+            Step(name: "tasks", beat: 2.6, find: centre(ofButton: "filter-tasks")),
         ])
     }
 

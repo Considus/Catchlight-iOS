@@ -139,7 +139,7 @@ def settle_timing(frames, a, b, eps=0.35):
             "frames_between": sum(1 for t, _ in inside if began <= t <= settled)}
 
 
-def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=0):
+def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=0, max_crf=39):
     taps = json.load(open(taps_json))
     colour, fill = DOT[appearance]
     with tempfile.TemporaryDirectory() as tmp:
@@ -147,7 +147,9 @@ def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=
         times = reactions(diffs, taps["taps"])
         v1 = times[0]
         start = max(0.0, v1 - LEAD)
-        length = (times[-1] - start) + (taps["end"] - taps["taps"][-1]["t"])
+        # A drag's first screen change is when the finger starts to move, after its press-and-hold.
+        lead_in = [tap.get("moveStart", 0.0) for tap in taps["taps"]]
+        length = (times[-1] - start) + (taps["end"] - taps["taps"][-1]["t"] - lead_in[-1])
         total = duration(cfr)
         length = min(length, total - start)
         k = W / taps["screenWidth"]
@@ -160,7 +162,7 @@ def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=
         chains.append(f"[a][first]blend=all_expr='A*(1-{p})+B*{p}':shortest=1,setsar=1[bg]")
         plain = ";".join(chains)          # the same picture without the dots, for measuring
         for i, tap in enumerate(taps["taps"]):
-            at = (times[i] - start) - LEAD_S
+            at = (times[i] - lead_in[i] - start) - LEAD_S
             src = dot_source(tap["x"], tap["y"], k, colour, fill, max(at, 0), tap.get("total", 0.0))
             chains.append(f"{src}[d{i}]")
             x, y = round(tap["x"] * k - 90), round(tap["y"] * k - 90)
@@ -187,12 +189,14 @@ def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=
         mp4 = base + ".mp4"
         fit_crf = None
         if fixed_crf is None:
-            for crf in range(20, 40):
+            for crf in range(20, max_crf + 1):
                 size = make(mp4, graph, last, crf)
                 if size <= MAX_MP4:
                     break
             else:
-                raise SystemExit(f"{mp4}: still {size} bytes at crf 39")
+                if max_crf >= 39:
+                    raise SystemExit(f"{mp4}: still {size} bytes at crf 39")
+                # A draft is not made worse to fit: keep it and say it is over.
         else:
             crf = fixed_crf
             size = make(mp4, graph, last, crf)
@@ -220,6 +224,8 @@ def encode(raw, taps_json, out_dir, stem, appearance, fixed_crf=None, focus_tap=
         res = {"file": os.path.basename(mp4), "seconds": round(duration(mp4), 2), "bytes": size, "crf": crf,
                "poster": os.path.basename(webp), "poster_bytes": os.path.getsize(webp), "poster_q": q,
                "tap_times_s": [round(t - start, 2) for t in times], "taps": len(taps["taps"])}
+        if size > MAX_MP4:
+            res["over_200KB"] = True
         if fit_crf:
             res["crf_to_fit_200KB"] = fit_crf
         if len(times) > focus_tap + 1:
@@ -237,9 +243,13 @@ if __name__ == "__main__":
     if "--crf" in args:
         i = args.index("--crf")
         crf = int(args[i + 1]); del args[i:i + 2]
+    max_crf = 39
+    if "--max-crf" in args:
+        i = args.index("--max-crf")
+        max_crf = int(args[i + 1]); del args[i:i + 2]
     focus = 0
     if "--focus-tap" in args:
         i = args.index("--focus-tap")
         focus = int(args[i + 1]); del args[i:i + 2]
     raw, taps_json, out_dir, stem, appearance = args
-    print(json.dumps(encode(raw, taps_json, out_dir, stem, appearance, crf, focus)))
+    print(json.dumps(encode(raw, taps_json, out_dir, stem, appearance, crf, focus, max_crf)))
