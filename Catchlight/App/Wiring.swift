@@ -191,9 +191,16 @@ enum Wiring {
             // sort is unstable, flipping which row is on top between launches
             // (UI tests assume "Call the framer back" is the top row).
             let base = Date()
-            try? store.upsert(Take(createdAt: base.addingTimeInterval(-1),
-                                   blocks: [.textLine("Buy film for the weekend shoot")]))
-            try? store.upsert(Take(createdAt: base, blocks: [.textLine("Call the framer back")]))
+            // `--uitesting-demo` seeds the believable Takes the site's motion clips are recorded
+            // on (scripts/site-clips), in place of the two fixture Takes.
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-demo") {
+                DemoTakes.seed(into: store, base: base,
+                               shop: ProcessInfo.processInfo.arguments.contains("--uitesting-demo-shop"))
+            } else {
+                try? store.upsert(Take(createdAt: base.addingTimeInterval(-1),
+                                       blocks: [.textLine("Buy film for the weekend shoot")]))
+                try? store.upsert(Take(createdAt: base, blocks: [.textLine("Call the framer back")]))
+            }
             // `--uitesting-fill` adds ten older two-line Takes below those two, so the timeline
             // runs under the toolbar and a Take sits just above it (the Focus row placement test).
             if ProcessInfo.processInfo.arguments.contains("--uitesting-fill") {

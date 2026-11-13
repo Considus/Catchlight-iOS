@@ -461,6 +461,22 @@ targets:
       - package: CatchlightCore
         product: CatchlightCore
 
+  # Recording flows for the catchlight.app motion clips. Not in the Catchlight scheme: only
+  # scripts/site-clips/record.sh runs them, through the CatchlightSiteClips scheme below.
+  CatchlightSiteClips:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/CatchlightSiteClips
+      - path: Tests/CatchlightUITests/UITestSupport.swift
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.considus.catchlight.siteclips
+        TARGETED_DEVICE_FAMILY: "1"
+    dependencies:
+      - target: Catchlight
+
 # XcodeGen auto-discovery puts `CatchlightTests` into the Catchlight scheme's
 # test action but does NOT add the `bundle.ui-testing` target. We declare the
 # scheme so a single `xcodebuild test -scheme Catchlight` invocation runs both
@@ -489,6 +505,16 @@ schemes:
       targets:
         - CatchlightTests
         - CatchlightUITests
+  # Records the site's motion clips (scripts/site-clips/record.sh). Not run by CI.
+  CatchlightSiteClips:
+    build:
+      targets:
+        Catchlight: all
+        CatchlightSiteClips: [test]
+    test:
+      language: en
+      targets:
+        - CatchlightSiteClips
 
 # WidgetKit + App Intents landed 2026-06-23 (the New Take capture surfaces) — see the
 # CatchlightWidgets target above and Catchlight/Intents. The Share Extension followed on
