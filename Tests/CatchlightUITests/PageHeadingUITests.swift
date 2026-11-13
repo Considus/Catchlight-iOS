@@ -127,16 +127,14 @@ final class PageHeadingUITests: XCTestCase {
 
     /// On a sheet the heading is centred (owner 2026-11-12: Settings and Sync Conflicts "should
     /// be centred"), at the same height as the Dailies title: the same distance below the
-    /// sheet's top edge as Dailies' below the safe area. On an iPhone 16 the sheets start at
-    /// the safe area, so that is the same number.
+    /// sheet's top edge as Dailies' below the safe area, 14pt (`pageHeadingTopGap`). Where a
+    /// sheet starts depends on the iOS version: on an iPhone 16 it is the safe area (59) on
+    /// iOS 27, and 10pt lower (69) on iOS 18.5, which shrinks the page behind it (measured on
+    /// both, 2026-11-13). So the sheet's top is measured, never taken as the safe area's.
     func testSheetHeadings_areCentred_atTheDailiesTitlesHeight() {
-        let plain = launch("UICTContentSizeCategoryL")
-        let dailies = headingText(plain, "Dailies")
-        XCTAssertTrue(dailies.waitForExistence(timeout: 8))
-        let origin = dailies.frame.origin
-        plain.terminate()
+        let topGap: CGFloat = 14
 
-        // Sync Conflicts. (Its banner pushes Dailies down, so Dailies is measured without it.)
+        // Sync Conflicts.
         let app = launch("UICTContentSizeCategoryL", extra: ["--uitesting-unverified"])
         let banner = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "3 Takes need a decision")).firstMatch
         XCTAssertTrue(banner.waitForExistence(timeout: 10))
@@ -145,7 +143,10 @@ final class PageHeadingUITests: XCTestCase {
         XCTAssertTrue(conflicts.waitForExistence(timeout: 5))
         let centre = app.windows.firstMatch.frame.midX
         XCTAssertEqual(conflicts.frame.midX, centre, accuracy: 1, "Sync Conflicts heading's centre")
-        XCTAssertEqual(conflicts.frame.minY, origin.y, accuracy: 0.5, "Sync Conflicts heading's top")
+        // The sheet's scroll view fills it, so its top is the sheet's.
+        let sheetTop = app.scrollViews.firstMatch.frame.minY
+        XCTAssertEqual(conflicts.frame.minY - sheetTop, topGap, accuracy: 0.5,
+                       "Sync Conflicts heading's top, below the sheet's top at \(sheetTop)")
         app.terminate()
 
         // Settings: the title row starts at the sheet's top edge with no list margin above it;
