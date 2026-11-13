@@ -9351,118 +9351,6 @@
         }
       }
     },
-    "Ask Apple to refund your subscription." : {
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bed Apple om at refundere dit abonnement."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bitte Apple, dein Abo zu erstatten."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pide a Apple que reembolse tu suscripción."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pyydä Applea hyvittämään tilauksesi."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Demandez à Apple de rembourser votre abonnement."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chiedi ad Apple di rimborsare il tuo abbonamento."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Appleにサブスクリプションの返金を依頼します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple에 구독 환불을 요청합니다."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Be Apple om å refundere abonnementet ditt."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vraag Apple om je abonnement terug te betalen."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Poproś Apple o zwrot za subskrypcję."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Peça à Apple o reembolso da sua assinatura."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Peça à Apple o reembolso da sua subscrição."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Be Apple återbetala din prenumeration."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ขอให้ Apple คืนเงินค่าสมัครสมาชิกของคุณ"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple'dan aboneliğinizi iade etmesini isteyin."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请求 Apple 退还你的订阅费用。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請求 Apple 退還你的訂閱費用。"
-          }
-        }
-      }
-    },
     "Authenticate to open your Takes." : {
       "localizations" : {
         "de" : {
@@ -17865,114 +17753,114 @@
         }
       }
     },
-    "Couldn't send the request. Please try again in a moment." : {
+    "Couldn't send the request. Please try again, or request a refund at reportaproblem.apple.com." : {
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anmodningen kunne ikke sendes. Prøv igen om lidt."
+            "state" : "needs_review",
+            "value" : "Anmodningen kunne ikke sendes. Prøv igen, eller anmod om refusion på reportaproblem.apple.com."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Anfrage konnte nicht gesendet werden. Versuche es gleich noch einmal."
+            "state" : "needs_review",
+            "value" : "Die Anfrage konnte nicht gesendet werden. Versuche es noch einmal oder fordere die Rückerstattung auf reportaproblem.apple.com an."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se pudo enviar la solicitud. Inténtalo de nuevo en un momento."
+            "state" : "needs_review",
+            "value" : "No se pudo enviar la solicitud. Inténtalo de nuevo o solicita el reembolso en reportaproblem.apple.com."
           }
         },
         "fi" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pyyntöä ei voitu lähettää. Yritä hetken kuluttua uudelleen."
+            "state" : "needs_review",
+            "value" : "Pyyntöä ei voitu lähettää. Yritä uudelleen tai pyydä hyvitystä osoitteessa reportaproblem.apple.com."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible d’envoyer la demande. Réessayez dans un instant."
+            "state" : "needs_review",
+            "value" : "Impossible d’envoyer la demande. Réessayez ou demandez un remboursement sur reportaproblem.apple.com."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile inviare la richiesta. Riprova tra un attimo."
+            "state" : "needs_review",
+            "value" : "Impossibile inviare la richiesta. Riprova oppure richiedi il rimborso su reportaproblem.apple.com."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "リクエストを送信できませんでした。しばらくしてからもう一度お試しください。"
+            "state" : "needs_review",
+            "value" : "リクエストを送信できませんでした。もう一度お試しいただくか、reportaproblem.apple.com から返金をリクエストしてください。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "요청을 보내지 못했습니다. 잠시 후 다시 시도해 주세요."
+            "state" : "needs_review",
+            "value" : "요청을 보내지 못했습니다. 다시 시도하거나 reportaproblem.apple.com 에서 환불을 요청해 주세요."
           }
         },
         "nb" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kunne ikke sende forespørselen. Prøv igjen om litt."
+            "state" : "needs_review",
+            "value" : "Kunne ikke sende forespørselen. Prøv igjen, eller be om refusjon på reportaproblem.apple.com."
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "De aanvraag kon niet worden verstuurd. Probeer het zo opnieuw."
+            "state" : "needs_review",
+            "value" : "De aanvraag kon niet worden verstuurd. Probeer het opnieuw of vraag een terugbetaling aan via reportaproblem.apple.com."
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nie udało się wysłać prośby. Spróbuj ponownie za chwilę."
+            "state" : "needs_review",
+            "value" : "Nie udało się wysłać prośby. Spróbuj ponownie lub poproś o zwrot pieniędzy na reportaproblem.apple.com."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível enviar a solicitação. Tente novamente em instantes."
+            "state" : "needs_review",
+            "value" : "Não foi possível enviar a solicitação. Tente novamente ou solicite o reembolso em reportaproblem.apple.com."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível enviar o pedido. Tente novamente dentro de momentos."
+            "state" : "needs_review",
+            "value" : "Não foi possível enviar o pedido. Tente novamente ou peça o reembolso em reportaproblem.apple.com."
           }
         },
         "sv" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Det gick inte att skicka begäran. Försök igen om en stund."
+            "state" : "needs_review",
+            "value" : "Det gick inte att skicka begäran. Försök igen eller begär återbetalning på reportaproblem.apple.com."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "ส่งคำขอไม่สำเร็จ โปรดลองอีกครั้งในอีกสักครู่"
+            "state" : "needs_review",
+            "value" : "ส่งคำขอไม่สำเร็จ โปรดลองอีกครั้ง หรือขอคืนเงินที่ reportaproblem.apple.com"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "İstek gönderilemedi. Lütfen birazdan tekrar deneyin."
+            "state" : "needs_review",
+            "value" : "İstek gönderilemedi. Lütfen tekrar deneyin veya geri ödemeyi reportaproblem.apple.com adresinden talep edin."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法发送请求。请稍后再试。"
+            "state" : "needs_review",
+            "value" : "无法发送请求。请重试，或前往 reportaproblem.apple.com 申请退款。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法送出請求。請稍後再試。"
+            "state" : "needs_review",
+            "value" : "無法送出請求。請重試，或前往 reportaproblem.apple.com 申請退款。"
           }
         }
       }
@@ -41215,6 +41103,118 @@
         }
       }
     },
+    "Opens Apple's refund request for your subscription." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Åbner Apples refusionsanmodning for dit abonnement."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Öffnet Apples Rückerstattungsanfrage für dein Abo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre la solicitud de reembolso de Apple para tu suscripción."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Avaa Applen hyvityspyynnön tilauksellesi."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ouvre la demande de remboursement d’Apple pour votre abonnement."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apre la richiesta di rimborso di Apple per il tuo abbonamento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サブスクリプションについて、Appleの返金リクエストを開きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "구독에 대한 Apple 환불 요청을 엽니다."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Åpner Apples refusjonsforespørsel for abonnementet ditt."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Opent Apples terugbetalingsaanvraag voor je abonnement."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Otwiera prośbę o zwrot pieniędzy w Apple dla Twojej subskrypcji."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre a solicitação de reembolso da Apple para a sua assinatura."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre o pedido de reembolso da Apple para a sua subscrição."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Öppnar Apples begäran om återbetalning för din prenumeration."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "เปิดคำขอคืนเงินของ Apple สำหรับการสมัครสมาชิกของคุณ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aboneliğiniz için Apple’ın geri ödeme talebini açar."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开 Apple 针对你的订阅的退款申请。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "開啟 Apple 針對你的訂閱的退款申請。"
+          }
+        }
+      }
+    },
     "Opens in your browser." : {
       "localizations" : {
         "de" : {
@@ -47483,118 +47483,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "申請退款"
-          }
-        }
-      }
-    },
-    "Request sent. Apple usually replies within 48 hours." : {
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anmodningen er sendt. Apple svarer normalt inden for 48 timer."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anfrage gesendet. Apple antwortet meist innerhalb von 48 Stunden."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Solicitud enviada. Apple suele responder en un plazo de 48 horas."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pyyntö lähetetty. Apple vastaa yleensä 48 tunnin kuluessa."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Demande envoyée. Apple répond généralement sous 48 heures."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Richiesta inviata. Apple di solito risponde entro 48 ore."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "リクエストを送信しました。Appleからの返信は通常48時間以内です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "요청을 보냈습니다. Apple은 보통 48시간 이내에 답변합니다."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Forespørselen er sendt. Apple svarer vanligvis innen 48 timer."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aanvraag verstuurd. Apple antwoordt meestal binnen 48 uur."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prośba wysłana. Apple zwykle odpowiada w ciągu 48 godzin."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Solicitação enviada. A Apple costuma responder em até 48 horas."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pedido enviado. A Apple costuma responder em 48 horas."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Begäran skickad. Apple svarar vanligtvis inom 48 timmar."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ส่งคำขอแล้ว โดยปกติ Apple จะตอบกลับภายใน 48 ชั่วโมง"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "İstek gönderildi. Apple genellikle 48 saat içinde yanıt verir."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请求已发送。Apple 通常会在 48 小时内回复。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請求已送出。Apple 通常會在 48 小時內回覆。"
           }
         }
       }
@@ -59381,118 +59269,6 @@
         }
       }
     },
-    "There's nothing to refund yet. A free trial isn't charged." : {
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der er intet at refundere endnu. En gratis prøveperiode koster ikke noget."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Es gibt noch nichts zu erstatten. Eine kostenlose Testphase wird nicht berechnet."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todavía no hay nada que reembolsar. Una prueba gratuita no se cobra."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hyvitettävää ei vielä ole. Ilmaisjaksosta ei veloiteta."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Il n’y a encore rien à rembourser. Un essai gratuit n’est pas facturé."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Non c’è ancora nulla da rimborsare. Una prova gratuita non viene addebitata."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "返金できる請求はまだありません。無料トライアルには課金されません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "아직 환불할 내역이 없습니다. 무료 체험은 결제되지 않습니다."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Det er ingenting å refundere ennå. En gratis prøveperiode belastes ikke."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Er is nog niets terug te betalen. Een gratis proefperiode wordt niet in rekening gebracht."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nie ma jeszcze nic do zwrotu. Bezpłatny okres próbny nie jest płatny."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ainda não há nada a reembolsar. Um teste gratuito não é cobrado."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ainda não há nada a reembolsar. Um período de teste gratuito não é cobrado."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Det finns inget att återbetala än. En gratis provperiod debiteras inte."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ยังไม่มีรายการที่ขอคืนเงินได้ การทดลองใช้ฟรีไม่มีการเรียกเก็บเงิน"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Henüz iade edilecek bir şey yok. Ücretsiz deneme için ücret alınmaz."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目前没有可退款的费用。免费试用不收费。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目前沒有可退款的費用。免費試用不收費。"
-          }
-        }
-      }
-    },
     "These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed." : {
       "localizations" : {
         "de" : {
@@ -66001,6 +65777,118 @@
         }
       }
     },
+    "You can't request a refund for this subscription. During a free trial, nothing has been charged." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Du kan ikke anmode om refusion for dette abonnement. I en gratis prøveperiode er der ikke trukket noget."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Für dieses Abo kannst du keine Rückerstattung anfordern. Während einer kostenlosen Testphase wurde nichts berechnet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No puedes solicitar un reembolso por esta suscripción. Durante una prueba gratuita no se ha cobrado nada."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tälle tilaukselle ei voi pyytää hyvitystä. Ilmaisjakson aikana mitään ei ole veloitettu."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vous ne pouvez pas demander de remboursement pour cet abonnement. Pendant un essai gratuit, rien n’a été facturé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Non puoi richiedere un rimborso per questo abbonamento. Durante una prova gratuita non è stato addebitato nulla."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このサブスクリプションの返金はリクエストできません。無料トライアル中は何も請求されていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 구독에 대해서는 환불을 요청할 수 없습니다. 무료 체험 기간에는 아무것도 청구되지 않았습니다."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Du kan ikke be om refusjon for dette abonnementet. I en gratis prøveperiode er ingenting belastet."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Voor dit abonnement kun je geen terugbetaling aanvragen. Tijdens een gratis proefperiode is er niets in rekening gebracht."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nie możesz poprosić o zwrot pieniędzy za tę subskrypcję. W czasie bezpłatnego okresu próbnego nic nie zostało pobrane."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Você não pode solicitar reembolso desta assinatura. Durante um teste gratuito, nada foi cobrado."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Não pode pedir o reembolso desta subscrição. Durante um período de teste gratuito, nada foi cobrado."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Du kan inte begära återbetalning för den här prenumerationen. Under en gratis provperiod har inget debiterats."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "คุณไม่สามารถขอคืนเงินสำหรับการสมัครสมาชิกนี้ได้ ระหว่างการทดลองใช้ฟรี ยังไม่มีการเรียกเก็บเงินใดๆ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bu abonelik için geri ödeme talep edemezsiniz. Ücretsiz deneme sırasında hiçbir şey tahsil edilmedi."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你无法为此订阅申请退款。免费试用期间不会产生任何扣费。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你無法為此訂閱申請退款。免費試用期間不會產生任何扣費。"
+          }
+        }
+      }
+    },
     "You don't need to choose privacy, it's yours and you never have to ask for it." : {
       "localizations" : {
         "de" : {
@@ -66225,114 +66113,114 @@
         }
       }
     },
-    "You've already asked Apple for a refund. They usually reply within 48 hours." : {
+    "You've already asked Apple to refund this subscription. Apple's update can take 24 to 48 hours." : {
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Du har allerede bedt Apple om en refusion. De svarer normalt inden for 48 timer."
+            "state" : "needs_review",
+            "value" : "Du har allerede bedt Apple om at refundere dette abonnement. Apples opdatering kan tage 24 til 48 timer."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Du hast Apple bereits um eine Rückerstattung gebeten. Die Antwort kommt meist innerhalb von 48 Stunden."
+            "state" : "needs_review",
+            "value" : "Du hast Apple bereits gebeten, dieses Abo zu erstatten. Apples Antwort kann 24 bis 48 Stunden dauern."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ya has pedido un reembolso a Apple. Suelen responder en un plazo de 48 horas."
+            "state" : "needs_review",
+            "value" : "Ya le has pedido a Apple que reembolse esta suscripción. La actualización de Apple puede tardar de 24 a 48 horas."
           }
         },
         "fi" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Olet jo pyytänyt Applelta hyvitystä. Vastaus tulee yleensä 48 tunnin kuluessa."
+            "state" : "needs_review",
+            "value" : "Olet jo pyytänyt Applea hyvittämään tämän tilauksen. Applen päivitys voi kestää 24–48 tuntia."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vous avez déjà demandé un remboursement à Apple. Elle répond généralement sous 48 heures."
+            "state" : "needs_review",
+            "value" : "Vous avez déjà demandé à Apple de rembourser cet abonnement. La réponse d’Apple peut prendre 24 à 48 heures."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hai già chiesto un rimborso ad Apple. Di solito risponde entro 48 ore."
+            "state" : "needs_review",
+            "value" : "Hai già chiesto ad Apple di rimborsare questo abbonamento. L’aggiornamento di Apple può richiedere da 24 a 48 ore."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Appleにはすでに返金をリクエスト済みです。返信は通常48時間以内です。"
+            "state" : "needs_review",
+            "value" : "このサブスクリプションの返金はすでにAppleにリクエスト済みです。Appleからの連絡には24〜48時間かかることがあります。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "이미 Apple에 환불을 요청하셨습니다. 보통 48시간 이내에 답변합니다."
+            "state" : "needs_review",
+            "value" : "이미 Apple에 이 구독의 환불을 요청하셨습니다. Apple의 업데이트까지 24~48시간이 걸릴 수 있습니다."
           }
         },
         "nb" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Du har allerede bedt Apple om refusjon. De svarer vanligvis innen 48 timer."
+            "state" : "needs_review",
+            "value" : "Du har allerede bedt Apple om å refundere dette abonnementet. Apples oppdatering kan ta 24 til 48 timer."
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Je hebt Apple al om een terugbetaling gevraagd. Ze antwoorden meestal binnen 48 uur."
+            "state" : "needs_review",
+            "value" : "Je hebt Apple al gevraagd dit abonnement terug te betalen. De update van Apple kan 24 tot 48 uur duren."
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prośba o zwrot została już wysłana do Apple. Odpowiedź zwykle przychodzi w ciągu 48 godzin."
+            "state" : "needs_review",
+            "value" : "Prośba o zwrot pieniędzy za tę subskrypcję została już wysłana do Apple. Informacja od Apple może przyjść w ciągu 24–48 godzin."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Você já pediu um reembolso à Apple. Ela costuma responder em até 48 horas."
+            "state" : "needs_review",
+            "value" : "Você já pediu à Apple o reembolso desta assinatura. A atualização da Apple pode levar de 24 a 48 horas."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Já pediu um reembolso à Apple. Costuma responder em 48 horas."
+            "state" : "needs_review",
+            "value" : "Já pediu à Apple o reembolso desta subscrição. A atualização da Apple pode demorar 24 a 48 horas."
           }
         },
         "sv" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Du har redan bett Apple om återbetalning. De svarar vanligtvis inom 48 timmar."
+            "state" : "needs_review",
+            "value" : "Du har redan bett Apple återbetala den här prenumerationen. Apples besked kan ta 24 till 48 timmar."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "คุณขอคืนเงินกับ Apple ไปแล้ว โดยปกติ Apple จะตอบกลับภายใน 48 ชั่วโมง"
+            "state" : "needs_review",
+            "value" : "คุณขอให้ Apple คืนเงินค่าสมัครสมาชิกนี้ไปแล้ว การอัปเดตจาก Apple อาจใช้เวลา 24 ถึง 48 ชั่วโมง"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple'dan zaten geri ödeme istediniz. Genellikle 48 saat içinde yanıt verirler."
+            "state" : "needs_review",
+            "value" : "Apple’dan bu aboneliği iade etmesini zaten istediniz. Apple’ın güncellemesi 24 ile 48 saat sürebilir."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "你已向 Apple 申请退款。他们通常会在 48 小时内回复。"
+            "state" : "needs_review",
+            "value" : "你已请求 Apple 退还此订阅的费用。Apple 的更新可能需要 24 到 48 小时。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "你已向 Apple 申請退款。他們通常會在 48 小時內回覆。"
+            "state" : "needs_review",
+            "value" : "你已請求 Apple 退還此訂閱的費用。Apple 的更新可能需要 24 到 48 小時。"
           }
         }
       }
@@ -67565,6 +67453,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "การซื้อของคุณกำลังรอการอนุมัติ คุณจะได้รับสิทธิ์เข้าถึงทันทีที่ได้รับการยืนยัน"
+          }
+        }
+      }
+    },
+    "Your request was sent to Apple. Apple decides. Expect an update in 24 to 48 hours." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Din anmodning er sendt til Apple. Apple afgør sagen. Forvent en opdatering inden for 24 til 48 timer."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Deine Anfrage wurde an Apple gesendet. Apple entscheidet. Rechne mit einer Antwort in 24 bis 48 Stunden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu solicitud se ha enviado a Apple. Apple decide. Espera una actualización en 24 a 48 horas."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pyyntösi on lähetetty Applelle. Apple päättää. Odota päivitystä 24–48 tunnin kuluessa."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Votre demande a été envoyée à Apple. C’est Apple qui décide. Attendez-vous à une réponse sous 24 à 48 heures."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La tua richiesta è stata inviata ad Apple. Decide Apple. Aspettati un aggiornamento entro 24-48 ore."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リクエストをAppleに送信しました。判断するのはAppleです。24〜48時間以内に連絡があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "요청을 Apple에 보냈습니다. 결정은 Apple이 합니다. 24~48시간 안에 업데이트가 있을 예정입니다."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Forespørselen din er sendt til Apple. Apple avgjør. Regn med en oppdatering innen 24 til 48 timer."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Je aanvraag is naar Apple gestuurd. Apple beslist. Verwacht binnen 24 tot 48 uur een update."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Twoja prośba została wysłana do Apple. Decyzję podejmuje Apple. Spodziewaj się informacji w ciągu 24–48 godzin."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sua solicitação foi enviada à Apple. Quem decide é a Apple. Espere uma atualização em 24 a 48 horas."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "O seu pedido foi enviado à Apple. A decisão é da Apple. Espere uma atualização em 24 a 48 horas."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Din begäran har skickats till Apple. Apple avgör. Räkna med besked inom 24 till 48 timmar."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ส่งคำขอของคุณไปยัง Apple แล้ว Apple เป็นผู้ตัดสินใจ คาดว่าจะมีการอัปเดตภายใน 24 ถึง 48 ชั่วโมง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "İsteğiniz Apple’a gönderildi. Kararı Apple verir. 24 ile 48 saat içinde bir güncelleme bekleyin."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的请求已发送给 Apple。由 Apple 决定。请在 24 到 48 小时内留意更新。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的請求已送交 Apple。由 Apple 決定。請在 24 到 48 小時內留意更新。"
           }
         }
       }

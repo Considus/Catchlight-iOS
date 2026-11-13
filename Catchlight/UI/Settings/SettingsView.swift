@@ -816,7 +816,7 @@ struct SettingsView: View {
                         disabled: isRequestingRefund,
                         action: { requestRefund() })
                 .accessibilityIdentifier("settings-request-refund")
-                .accessibilityHint("Ask Apple to refund your subscription.")
+                .accessibilityHint("Opens Apple's refund request for your subscription.")
         } header: {
             sectionHeader("Subscription")
         }
@@ -835,13 +835,13 @@ struct SettingsView: View {
     static func refundMessage(for outcome: SubscriptionManager.RefundOutcome) -> String? {
         switch outcome {
         case .submitted:
-            return String(localized: "Request sent. Apple usually replies within 48 hours.")
+            return String(localized: "Your request was sent to Apple. Apple decides. Expect an update in 24 to 48 hours.")
         case .alreadyRequested:
-            return String(localized: "You've already asked Apple for a refund. They usually reply within 48 hours.")
+            return String(localized: "You've already asked Apple to refund this subscription. Apple's update can take 24 to 48 hours.")
         case .noPurchase:
-            return String(localized: "There's nothing to refund yet. A free trial isn't charged.")
+            return String(localized: "You can't request a refund for this subscription. During a free trial, nothing has been charged.")
         case .failed:
-            return String(localized: "Couldn't send the request. Please try again in a moment.")
+            return String(localized: "Couldn't send the request. Please try again, or request a refund at reportaproblem.apple.com.")
         case .cancelled:
             return nil
         }

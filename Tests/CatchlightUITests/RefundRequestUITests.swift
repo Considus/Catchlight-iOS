@@ -40,7 +40,7 @@ final class RefundRequestUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(row.frame.width, 44)
 
         row.tap()
-        let message = app.staticTexts["There's nothing to refund yet. A free trial isn't charged."]
+        let message = app.staticTexts["You can't request a refund for this subscription. During a free trial, nothing has been charged."]
         XCTAssertTrue(message.waitForExistence(timeout: 5),
                       "With no purchase, the row should say there is nothing to refund.")
     }
