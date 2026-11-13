@@ -17,8 +17,11 @@ name: CI
 #
 # What runs where (2026-11-12). The UI tests are about 47 of a job's 52 minutes, so a PR run
 # keeps them to the latest iOS and runs only the unit tests on the iOS 18.5 floor. The merge
-# queue (`merge_group`), a push to main and a manual dispatch run every test on both runtimes,
-# so nothing reaches main without the full matrix. Both legs keep their check names whatever
+# queue (`merge_group`) and a manual dispatch run every test on both runtimes, so nothing
+# reaches main without the full matrix. A push to main runs only the Release build: the merge
+# queue has already tested that exact commit (it fast-forwards main to the merge group's head),
+# and the full matrix again took two of the five macOS runners an hour per merge.
+# Both legs keep their check names whatever
 # they run, because those names are what branch protection requires.
 
 on:
@@ -115,6 +118,8 @@ jobs:
 
   xcode-tests:
     name: iOS (xcodebuild test)
+    # Not on a push to main: the merge group that produced this commit has run these tests.
+    if: github.event_name != 'push'
     runs-on: macos-15
     strategy:
       # The deployment floor is iOS 18, so test the FLOOR
@@ -262,7 +267,7 @@ jobs:
         # SCOPE (2026-11-12): on a pull request the iOS 18.5 floor runs the unit tests only
         # (CatchlightTests); every other leg and event runs the whole scheme. The check name
         # does not change, so the required checks need no edit. The UI tests on the floor run
-        # in the merge queue and on main.
+        # in the merge queue.
         env:
           EVENT: ${{ github.event_name }}
           DESTINATION: ${{ matrix.destination }}
