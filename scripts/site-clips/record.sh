@@ -27,7 +27,8 @@ while (( $# )); do
   shift
 done
 if [[ -z "$OUT" ]]; then
-  OUT="$HOME/Library/Caches/considus/handover/$(date +%F)_site-clips$([[ $DRAFT == 1 ]] && echo -draft)"
+  OUT="$HOME/Library/Caches/considus/handover/$(date +%F)_site-clips"
+  [[ $DRAFT == 1 ]] && OUT="$OUT-draft"
 fi
 mkdir -p "$OUT" "$WORK"
 if [[ $DRAFT == 0 && -n "$(git -C "$ROOT" status --porcelain -- Catchlight Tests project.yml scripts/site-clips)" ]]; then
@@ -67,22 +68,26 @@ xcodebuild build-for-testing -scheme CatchlightSiteClips -derivedDataPath "$DD" 
 XCTESTRUN="$(ls "$DD"/Build/Products/*.xctestrun | head -1)"
 
 # --- record each clip --------------------------------------------------------------------
-typeset -A TESTS=( shaping-a-take-B2-typed testClip1B2Typed_shapingATakeInTheEditorTyped reordering-a-list testClip4_reorderingAShoppingList shaping-a-take-B2 testClip1B2_shapingATakeInTheEditor shaping-a-take testClip1_shapingATake setting-a-reminder testClip2_settingAReminder sequence testClip3_sequence )
-CLIPS=(shaping-a-take setting-a-reminder sequence)
+typeset -A TESTS=( shaping-a-take testClip1_shapingATake setting-a-reminder testClip2_settingAReminder sequence testClip3_sequence reordering-a-list testClip4_reorderingAShoppingList )
+# The size ceiling for each clip, in bytes (agreed with the Webmaster).
+typeset -A CEILING=( shaping-a-take 250000 setting-a-reminder 300000 sequence 200000 reordering-a-list 200000 )
+CLIPS=(shaping-a-take setting-a-reminder sequence reordering-a-list)
 [[ -n "$ONLY_CLIP" ]] && CLIPS=("$ONLY_CLIP")
 APPEARANCES=(daylight night)
 [[ -n "$ONLY_APPEARANCE" ]] && APPEARANCES=("$ONLY_APPEARANCE")
 
 RESULTS="$WORK/results.jsonl"; : > "$RESULTS"
 for clip in $CLIPS; do
+  # Setting a reminder varies run to run with the app and XCUITest: a final run records it three times.
+  clip_runs=$RUNS; [[ $DRAFT == 0 && $RUNS == 1 && "$clip" == setting-a-reminder ]] && clip_runs=3
   for look in $APPEARANCES; do
-   for run_n in {1..$RUNS}; do
+   for run_n in {1..$clip_runs}; do
     run="$WORK/$clip-$look"; rm -rf "$run"; mkdir -p "$run"
-    suffix=""; [[ $RUNS -gt 1 ]] && suffix="-run$run_n"
+    suffix=""; [[ $clip_runs -gt 1 ]] && suffix="-run$run_n"
     echo "== $clip / $look"
     xcrun simctl terminate "$UDID" com.considus.catchlight 2>/dev/null || true
     (
-      export TEST_RUNNER_CLIP_OUT_DIR="$run" TEST_RUNNER_CLIP_APPEARANCE="$look" TEST_RUNNER_CLIP_TYPE_MODE="${CLIP_TYPE_MODE:-}"
+      export TEST_RUNNER_CLIP_OUT_DIR="$run" TEST_RUNNER_CLIP_APPEARANCE="$look"
       xcodebuild test-without-building -xctestrun "$XCTESTRUN" \
         -destination "platform=iOS Simulator,id=$UDID" \
         -only-testing:"CatchlightSiteClips/SiteClipFlows/${TESTS[$clip]}" >"$run/test.log" 2>&1
@@ -98,11 +103,10 @@ for clip in $CLIPS; do
     wait $TEST_PID || { tail -40 "$run/test.log"; echo "flow failed: $clip / $look" >&2; exit 1; }
     kill -INT $RECORDER_PID; wait $RECORDER_PID 2>/dev/null || true; RECORDER_PID=""
     grep -E "Executed [0-9]+ test" "$run/test.log" | tail -1
-    # A slow-pace variant (B1, B2) is a draft for Mark to judge: named -DRAFT2-<variant>, fixed quality.
-    stem="$clip-$look"; extra=()
-    if [[ "$clip" == *-B2-typed ]]; then stem="${clip%-B2-typed}-$look-DRAFT3-typed"; extra=(--crf 34 --focus-tap 1)
-    elif [[ "$clip" == *-B2 ]]; then stem="${clip%-B?}-$look-DRAFT2-${clip##*-}"; extra=(--crf 34 --focus-tap 1)
-    elif [[ $DRAFT == 1 ]]; then stem="$stem-DRAFT"; extra=(--max-crf 34); fi
+    stem="$clip-$look"; [[ $DRAFT == 1 ]] && stem="$stem-DRAFT"
+    # Quality is never lowered past crf 34 to fit: a clip over its ceiling is kept and flagged.
+    extra=(--max-crf 34 --ceiling "${CEILING[$clip]}")
+    [[ "$clip" == shaping-a-take ]] && extra+=(--focus-tap 1)   # the editor's Iris is its second tap
     "$ROOT/scripts/site-clips/encode.py" "$run/raw.mov" "$run/$clip.taps.json" "$OUT" "$stem$suffix" "$look" $extra | tee -a "$RESULTS"
    done
   done
