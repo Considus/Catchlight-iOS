@@ -1084,6 +1084,8 @@ struct DailiesView: View {
                     Text("Turn on")
                         .ckBody(.medium, size: 14, relativeTo: .body)
                         .foregroundStyle(Color.ckAccent)
+                        .frame(minWidth: CatchlightLayout.minTouchTarget, minHeight: CatchlightLayout.minTouchTarget)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("reminders-silenced-turn-on")
@@ -1147,6 +1149,8 @@ struct DailiesView: View {
                     Text("Review")
                         .ckBody(.medium, size: 14, relativeTo: .body)
                         .foregroundStyle(Color.ckAccent)
+                        .frame(minWidth: CatchlightLayout.minTouchTarget, minHeight: CatchlightLayout.minTouchTarget)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(message) Double-tap to review.")
@@ -1188,8 +1192,8 @@ struct DailiesView: View {
                 Text("Dismiss")
                     .ckBody(.medium, size: 14, relativeTo: .body)
                     .foregroundStyle(tint)
-                    .padding(.vertical, 6)
                     .padding(.horizontal, 4)
+                    .frame(minHeight: CatchlightLayout.minTouchTarget)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
