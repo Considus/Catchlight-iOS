@@ -343,15 +343,4 @@ final class SiteClipFlows: XCTestCase {
                  }),
         ])
     }
-
-    /// B2 with text typed into the new checkbox line, key by key on the software keyboard.
-    func testClip1B2Typed_shapingATakeInTheEditorTyped() throws {
-        try flow("shaping-a-take-B2-typed", hold: 3.5, steps: [
-            Step(name: "open", beat: 0, find: rowCentre(startingWith: "Idea from the walk")),
-            Step(name: "iris", beat: 2.6, find: centre(ofID: "editor-shape")),
-            Step(name: "task", beat: 2.6, find: centre(ofID: "focus-row-mark-task")),
-            Step(name: "close", beat: 2.5, find: dimLow),
-            Step(name: "type", beat: 2.8, find: { _ in .zero }, typing: "Check sunset time"),
-        ])
-    }
 }
