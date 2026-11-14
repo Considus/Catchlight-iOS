@@ -64,23 +64,45 @@ struct MenuFieldRow: View {
     let value: String
 
     var body: some View {
-        HStack {
-            if let icon {
-                Label(title, systemImage: icon)
-                    .foregroundStyle(Color.ckTextPrimary)
-            } else {
-                Text(title)
-                    .foregroundStyle(Color.ckTextPrimary)
+        // When the title and value don't fit on one line (large text sizes, a narrow card),
+        // stack them: the title above, the value and chevron below. The value stays on
+        // one line in both, so it is never broken mid-word.
+        ViewThatFits(in: .horizontal) {
+            HStack {
+                titleView
+                Spacer()
+                valueView
             }
-            Spacer()
-            Text(value)
-                .foregroundStyle(Color.ckTextSecondary)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.caption2)
-                .foregroundStyle(Color.ckTextSecondary)
+            VStack(alignment: .leading, spacing: 4) {
+                titleView
+                valueView
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 6)
         }
         .multilineTextAlignment(.leading)   // as `SelectorRow`: a Menu centres a wrapped label
         .frame(minHeight: 44)
         .contentShape(Rectangle())
+    }
+
+    @ViewBuilder private var titleView: some View {
+        if let icon {
+            Label(title, systemImage: icon)
+                .foregroundStyle(Color.ckTextPrimary)
+        } else {
+            Text(title)
+                .foregroundStyle(Color.ckTextPrimary)
+        }
+    }
+
+    private var valueView: some View {
+        HStack(spacing: 8) {
+            Text(value)
+                .foregroundStyle(Color.ckTextSecondary)
+                .lineLimit(1)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption2)
+                .foregroundStyle(Color.ckTextSecondary)
+        }
     }
 }
