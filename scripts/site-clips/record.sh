@@ -27,7 +27,8 @@ while (( $# )); do
   shift
 done
 if [[ -z "$OUT" ]]; then
-  OUT="$HOME/Library/Caches/considus/handover/$(date +%F)_site-clips$([[ $DRAFT == 1 ]] && echo -draft)"
+  OUT="$HOME/Library/Caches/considus/handover/$(date +%F)_site-clips"
+  [[ $DRAFT == 1 ]] && OUT="$OUT-draft"
 fi
 mkdir -p "$OUT" "$WORK"
 if [[ $DRAFT == 0 && -n "$(git -C "$ROOT" status --porcelain -- Catchlight Tests project.yml scripts/site-clips)" ]]; then
