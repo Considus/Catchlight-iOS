@@ -59,10 +59,12 @@ final class ControlTouchAreaUITests: XCTestCase {
             let button = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
             if button.exists { assertTouchArea(button, name) }
         }
-        // Every button in the bar band, found by its position above the keyboard.
+        // Every button in the bar: the buttons whose top edge lines up with the reminder
+        // button's. The bar's columns are as wide as the Dailies toolbar's, so they are found
+        // by their row, not by an icon button's width.
+        let row = anyElement(in: app, id: "reminder-button").frame
         let bar = app.buttons.allElementsBoundByIndex.filter {
-            $0.exists && $0.frame.height > 0 && $0.frame.width <= 60 && $0.frame.minY > app.frame.height * 0.4
-                && $0.frame.minY < app.frame.height * 0.7
+            $0.exists && $0.frame.height > 0 && abs($0.frame.minY - row.minY) < 1
         }
         XCTAssertGreaterThanOrEqual(bar.count, 3, "found \(bar.count) editor bar buttons")
         for button in bar { assertTouchArea(button, "editor bar button \(button.identifier) \(button.label)") }
