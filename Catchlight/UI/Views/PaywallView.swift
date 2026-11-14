@@ -61,9 +61,16 @@ struct PaywallView: View {
                         hero
                         eyebrow
                         valueProps
-                        Spacer(minLength: 20)
+                        // Least gap that keeps the Redeem Code line clear of the fold on the small iPhone.
+                        Spacer(minLength: 8)
                         pricingLine
-                        primaryCTA
+                        // Subscribe, then Redeem Code with its line, as one group so the
+                        // gap between them is tighter than the page rhythm (the small
+                        // iPhone has to show the whole line without scrolling).
+                        VStack(spacing: 12) {
+                            primaryCTA
+                            redeemCode
+                        }
                         // Owner 2026-06-21: one row less space below the button, and a
                         // trailing spacer so the auto-renews note and everything below
                         // lift up off the bottom a little rather than pinning there.
@@ -179,7 +186,19 @@ struct PaywallView: View {
     }
 
     private var priceCopy: String {
-        manager.annual.map { String(localized: "\($0.displayPrice)/year") } ?? "—"
+        manager.annual.map { price in
+            let text = String(localized: "\(price.displayPrice)/year")
+            // At accessibility sizes the price is wider than the screen, so it has to be
+            // allowed to break at the slash instead of in the middle of "year".
+            return dynamicSize.isAccessibilitySize ? text : Self.unbreakable(text)
+        } ?? "—"
+    }
+
+    /// Keeps the price and its period together on one line: a WORD JOINER after each
+    /// slash removes the break the line breaker allows there, which on the small
+    /// iPhone left "$14.99/" at the end of a line and "year" alone on the next.
+    nonisolated static func unbreakable(_ price: String) -> String {
+        price.replacingOccurrences(of: "/", with: "/\u{2060}")
     }
 
     // MARK: - CTAs
@@ -247,26 +266,54 @@ struct PaywallView: View {
             // hit-only expansion as T1's point(inside:). Neighbours are the
             // Spacer gap and the non-interactive terms paragraph, so the
             // invisible overspill lands on nothing tappable.
-            HStack {
-                Button("Restore Purchases") {
-                    // A successful restore now confirms itself by dismissing
-                    // the paywall (the user is entitled; there is nothing left
-                    // to do here). Failure surfaces via `manager.lastError`
-                    // above — previously success and failure looked identical.
-                    Task { if await manager.restore() { dismiss() } }
-                }
-                .contentShape(Rectangle().inset(by: -14))
-                .accessibilityIdentifier("paywall-restore")
-                Spacer()
-                Button("Redeem Code") {
-                    redeemOfferCode()
-                }
-                .contentShape(Rectangle().inset(by: -14))
-                .accessibilityIdentifier("paywall-redeem")
+            // Restore Purchases has its own centred line, so at the largest text
+            // size it wraps between words rather than inside one.
+            Button("Restore Purchases") {
+                // A successful restore now confirms itself by dismissing
+                // the paywall (the user is entitled; there is nothing left
+                // to do here). Failure surfaces via `manager.lastError`
+                // above — previously success and failure looked identical.
+                Task { if await manager.restore() { dismiss() } }
             }
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .contentShape(Rectangle().inset(by: -14))
+            .accessibilityIdentifier("paywall-restore")
             .ckBody(.regular, size: 15, relativeTo: .subheadline)
             .foregroundStyle(Color.ckAccent)
             .disabled(manager.isWorking)
+        }
+    }
+
+    /// An offer code only works if it is redeemed before subscribing, so Redeem Code is
+    /// an outlined button right under Subscribe now, with one line saying why. It is a
+    /// second choice, not a step: Subscribe works the same with or without it.
+    private var redeemCode: some View {
+        VStack(spacing: 8) {
+            Button {
+                redeemOfferCode()
+            } label: {
+                Text("Redeem Code")
+                    .ckBody(.medium, size: 16, relativeTo: .body)
+                    .lineLimit(dynamicSize > .large ? 2 : 1)
+                    .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Color.ckTextPrimary)
+                    .frame(maxWidth: .infinity, minHeight: CatchlightLayout.minTouchTarget)
+                    .padding(.vertical, dynamicSize > .large ? 8 : 0)
+                    .background(CatchlightShape.control.fill(Color.ckSurface))
+                    .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
+                    .contentShape(CatchlightShape.control)
+            }
+            .buttonStyle(.plain)
+            .disabled(manager.isWorking)
+            .accessibilityIdentifier("paywall-redeem")
+            Text("Have a code for an extra free month? Redeem it first.")
+                .ckBody(.regular, size: 13, relativeTo: .footnote)
+                .foregroundStyle(Color.ckTextSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("paywall-redeem-note")
         }
     }
 
