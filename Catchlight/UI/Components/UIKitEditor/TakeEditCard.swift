@@ -340,12 +340,16 @@ struct KeyboardTakeEditor: View {
         return max(0, UIScreen.main.bounds.height - keyboardTopY) + bottomLift
     }
 
-    /// How much taller the editor's bar above the keyboard is than the ringed 62pt bar this view
-    /// was tuned with. The keyboard's last frame report leaves that bar out (measured on an
-    /// iPhone 16 simulator: 430 with the bar, then 524 without), and the 8pt between the card
-    /// and the old bar came from the lift and home-indicator room below. The card rises by the
-    /// extra height, so it keeps that 8pt above the taller bar.
-    static let barGrowth: CGFloat = EditorKeyboardBar.panelHeight + 18 - 62
+    /// How far above the keyboard's reported top the card's bottom has to sit to clear the
+    /// editor's bar by 8pt, on top of this view's own bottom room (the home-indicator inset and the
+    /// full descent lift). The keyboard's last frame report leaves the bar out (measured on an
+    /// iPhone 16 simulator: 430 with it, then 524 without). With the old ringed 62pt bar the room
+    /// below happened to clear it on a phone with a home indicator (34 + 36 = 70) and not on an
+    /// iPhone SE (0 + 36), where the card ran 26pt under the buttons, hidden by the fade.
+    private var barClearance: CGFloat {
+        max(0, EditorKeyboardBar.panelHeight + 18 + 8
+               - Self.lineH * Self.downExpandLines - homeIndicatorInset)
+    }
 
     /// The card's last reported RAW content height — drives the bottom drop.
     @State private var editorContentHeight: CGFloat = 30
@@ -466,7 +470,7 @@ struct KeyboardTakeEditor: View {
             guard let rawFrame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
             else { return }
             var frame = rawFrame
-            if frame.origin.y < UIScreen.main.bounds.height { frame.origin.y -= Self.barGrowth }
+            if frame.origin.y < UIScreen.main.bounds.height { frame.origin.y -= barClearance }
             if holdsPlace() && frame.origin.y > keyboardTopY {
                 if heldCardBottom == nil {
                     edge.atHold = edge.maxY
