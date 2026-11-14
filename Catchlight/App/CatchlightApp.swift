@@ -628,11 +628,6 @@ struct JailbreakBanner: View {
     }
 }
 
-/// Branded curtain shown over content when the app is inactive/backgrounded so the
-/// system snapshot never captures decrypted Take content (Encryption Architecture
-/// §12.2). Mirrors the splash / lock screen — the brand mark centred on the adaptive
-/// Paper/Ink background — so the app-switcher card reads as Catchlight, on-brand in
-/// both appearances.
 /// The same curtain in a window of its own above every other, so it also covers a sheet
 /// (Settings, the Privacy phrase, a refund sheet). The overlay in the root view sits under
 /// any presented sheet, and the app-switcher card then showed the sheet.
@@ -661,6 +656,11 @@ enum PrivacyCurtainWindow {
     }
 }
 
+/// Branded curtain shown over content when the app is inactive/backgrounded so the
+/// system snapshot never captures decrypted Take content (Encryption Architecture
+/// §12.2). Mirrors the splash / lock screen — the brand mark centred on the adaptive
+/// Paper/Ink background — so the app-switcher card reads as Catchlight, on-brand in
+/// both appearances.
 struct PrivacyOverlay: View {
     var body: some View {
         ZStack {
