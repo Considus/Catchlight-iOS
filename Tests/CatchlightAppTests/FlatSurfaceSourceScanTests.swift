@@ -31,8 +31,6 @@ final class FlatSurfaceSourceScanTests: XCTestCase {
               line: "LinearGradient(stops: stops.enumerated().map { i, a in", count: 1, reason: fadeReason),
         .init(file: "Catchlight/UI/Views/OnboardingView.swift",
               line: "LinearGradient(colors: [Color.ckBackground, Color.ckBackground.opacity(0)],", count: 1, reason: fadeReason),
-        .init(file: "Catchlight/UI/Storyboard/StoryboardView.swift", line: "LinearGradient(", count: 1, reason: fadeReason),
-        .init(file: "Catchlight/UI/Angles/ShotListView.swift", line: "LinearGradient(", count: 1, reason: fadeReason),
         .init(file: "CatchlightWidgets/WidgetSupport.swift", line: "RoundedRectangle(cornerRadius: radius, style: .continuous)", count: 2,
               reason: "Widget shapes are set by the widgets slice, sized to the widget's own corners."),
         .init(file: "CatchlightWidgets/WidgetSupport.swift", line: "let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)", count: 1,

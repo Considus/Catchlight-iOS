@@ -641,8 +641,8 @@ struct DailiesView: View {
     private var headingTitle: String {
         switch ui.toolbarMode {
         case .resting:   return "Dailies"
-        case .filtering: return String(localized: "SEQUENCE")
-        case .searching: return String(localized: "SEARCH")
+        case .filtering: return String(localized: "Sequence")
+        case .searching: return String(localized: "Search")
         }
     }
 
@@ -669,8 +669,7 @@ struct DailiesView: View {
                         DailiesHeading(horizontalInset: CatchlightLayout.dailiesHeadingInset(
                             containerWidth: containerWidth > 0 ? containerWidth : UIScreen.main.bounds.width))
                     } else {
-                        // Shared page heading (Archivo expanded 24, kerned, centred,
-                        // with the kerning-centring fix).
+                        // The shared page heading, drawn as the Dailies title.
                         PageHeading(verbatim: headingTitle)
                     }
                 }
@@ -1417,16 +1416,18 @@ struct DailiesView: View {
     static let obieFadeHeight: CGFloat = 16
     static let obieFadeStops: [Double] = [0.30, 0.22, 0.12, 0.04, 0]
 
-    static func headingFade(height: CGFloat = headingFadeHeight) -> some View {
-        pageFade(stops: headingFadeStops, height: height)
+    /// The heading fade, in `color` for a page that isn't the page colour (the Shot List's).
+    /// Every page heading over scrolling content uses it (owner 2026-11-12).
+    static func headingFade(height: CGFloat = headingFadeHeight, color: Color = .ckBackground) -> some View {
+        pageFade(stops: headingFadeStops, height: height, color: color)
     }
     static func obieFade(height: CGFloat = obieFadeHeight) -> some View {
-        pageFade(stops: obieFadeStops, height: height)
+        pageFade(stops: obieFadeStops, height: height, color: .ckBackground)
     }
-    /// The page colour at each strength in `stops`, evenly spaced from top to bottom.
-    private static func pageFade(stops: [Double], height: CGFloat) -> some View {
+    /// `color` at each strength in `stops`, evenly spaced from top to bottom.
+    private static func pageFade(stops: [Double], height: CGFloat, color: Color) -> some View {
         LinearGradient(stops: stops.enumerated().map { i, a in
-                           .init(color: Color.ckBackground.opacity(a),
+                           .init(color: color.opacity(a),
                                  location: CGFloat(i) / CGFloat(max(stops.count - 1, 1)))
                        },
                        startPoint: .top, endPoint: .bottom)

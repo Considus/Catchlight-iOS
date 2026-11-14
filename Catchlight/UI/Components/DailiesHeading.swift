@@ -15,13 +15,13 @@ struct DailiesHeading: View {
     /// website's phone draws "Dailies" at twice its Take text, and the app's Take text is 17
     /// (owner 2026-11-11: "Dailies looks too small, compared with what is on the website";
     /// art director: 34, scaled as a Large Title).
-    static let titleSize: CGFloat = 34
+    static let titleSize: CGFloat = CatchlightLayout.pageHeadingSize
     /// The date's point size at the default text size: 14, the website's 0.8 of its Take text
     /// (art director 2026-11-11). With the cards at the toolbar's 17pt margin the longest date in
     /// any language ("segunda-feira, 28 de dezembro") still fits beside the title on the iPhone SE.
     static let dateSize: CGFloat = 14
     /// The website's letter-spacing for the heading, -0.025 em.
-    static let titleKerning: CGFloat = -0.025 * titleSize
+    static let titleKerning: CGFloat = CatchlightLayout.pageHeadingKerning
     /// In from each screen edge: the Take cards' margin (`CatchlightLayout.cardMargin`), so the
     /// title and the date line up with the cards' edges below (art director 2026-11-11).
     var horizontalInset: CGFloat

@@ -23,7 +23,7 @@ final class TypographyTests: XCTestCase {
         let fonts: [(String, UIFont)] = [
             ("display scaled", CatchlightFont.uiDisplay(size: 28, relativeTo: .title2)),
             ("display fixed", CatchlightFont.uiDisplay(size: 28, relativeTo: nil)),
-            ("page heading", CatchlightFont.uiDisplay(size: 24, relativeTo: .title3)),
+            ("page heading", CatchlightFont.uiDisplay(size: 34, relativeTo: .largeTitle)),
             ("paywall hero", CatchlightFont.uiDisplay(size: 38, relativeTo: nil)),
         ]
         for (name, font) in fonts {
@@ -250,8 +250,8 @@ extension TypographyTests {
 
     private func catalogTitle(_ language: String) -> String {
         guard let path = Bundle.main.path(forResource: language, ofType: "lproj"),
-              let bundle = Bundle(path: path) else { return "SYNC CONFLICTS" }
-        return bundle.localizedString(forKey: "SYNC CONFLICTS", value: "SYNC CONFLICTS", table: nil)
+              let bundle = Bundle(path: path) else { return "Sync Conflicts" }
+        return bundle.localizedString(forKey: "Sync Conflicts", value: "Sync Conflicts", table: nil)
     }
 
     private func headingHeight(_ title: String, width: CGFloat, category: UIContentSizeCategory) -> CGFloat {
@@ -266,14 +266,14 @@ extension TypographyTests {
     }
 
     func testMultiWordHeadings_wrapBetweenWords_neverInsideOne_andNeverTruncate() {
-        let available: CGFloat = 402 - 2 * 56   // the Conflict header's width with the close-button slots
+        let available = Self.narrowestColumn
         for language in ["en", "it", "es", "fr"] {
             let title = catalogTitle(language)
             XCTAssertTrue(title.contains(" "), "\(language): \(title)")
-            for category in [UIContentSizeCategory.large, .accessibilityExtraExtraExtraLarge] {
+            for category in [UIContentSizeCategory.large, .accessibilityMedium] {
                 let height = headingHeight(title, width: available, category: category)
                 let traits = UITraitCollection(preferredContentSizeCategory: category)
-                let line = CatchlightFont.uiDisplay(size: 24, relativeTo: .title3, compatibleWith: traits).lineHeight
+                let line = CatchlightFont.uiDisplay(size: 34, relativeTo: .largeTitle, compatibleWith: traits).lineHeight
                 XCTAssertLessThanOrEqual(height, line * 2.2, "\(language) \(category.rawValue): \(title) is \(height)pt tall, more than two lines")
             }
         }
@@ -281,11 +281,16 @@ extension TypographyTests {
 
     private static let catalogLanguages = ["en", "de", "fr", "es", "it", "pt-BR", "nl", "pt-PT", "pl", "sv", "da", "nb",
                                            "fi", "tr", "ja", "ko", "zh-Hans", "zh-Hant", "th"]
-    private static let headingKeys = ["SETTINGS", "STORYBOARD", "SHOT LIST", "SYNC CONFLICTS", "SEQUENCE", "SEARCH"]
+    private static let headingKeys = ["Settings", "Storyboard", "Shot List", "Sync Conflicts", "Sequence", "Search"]
+
+    /// The narrowest heading column: a 375pt phone, less the Dailies inset each side and the
+    /// room kept for the × on Storyboard and Shot List.
+    private static let narrowestColumn: CGFloat =
+        375 - 2 * CatchlightLayout.dailiesHeadingInset(containerWidth: 375) - (CatchlightLayout.minTouchTarget + 12)
 
     /// The headings whose single long word needs a soft hyphen at its compound join.
-    private static let hyphenated: Set<String> = ["de|SYNC CONFLICTS", "nl|SYNC CONFLICTS", "da|SYNC CONFLICTS",
-                                                  "nb|SYNC CONFLICTS", "fi|SYNC CONFLICTS"]
+    private static let hyphenated: Set<String> = ["de|Sync Conflicts", "nl|Sync Conflicts", "da|Sync Conflicts",
+                                                  "nb|Sync Conflicts", "fi|Sync Conflicts"]
 
     func testLongCompoundHeadings_carryASoftHyphenAtTheJoin() {
         for entry in Self.hyphenated {
@@ -293,7 +298,7 @@ extension TypographyTests {
             let title = localized(parts[1], parts[0])
             XCTAssertEqual(title.components(separatedBy: PageHeading.softHyphen).count, 2, "\(entry): \(title)")
         }
-        XCTAssertEqual(localized("SYNC CONFLICTS", "de"), "SYNCHRONISIERUNGS\u{00AD}KONFLIKTE")
+        XCTAssertEqual(localized("Sync Conflicts", "de"), "Synchronisierungs\u{00AD}konflikte")
     }
 
     private func localized(_ key: String, _ language: String) -> String {
@@ -302,34 +307,33 @@ extension TypographyTests {
         return bundle.localizedString(forKey: key, value: key, table: nil)
     }
 
-    /// Every page heading in every catalog language, at the default size and AX5, in the
-    /// narrowest header (the Conflicts header with its close-button slots). The drawn size
+    /// Every page heading in every catalog language, at the default size and the largest it
+    /// draws (AX1, where headings stop growing), in the narrowest column. The drawn size
     /// is never below the body size at that Dynamic Type size, and no line breaks inside a
     /// word except at a soft hyphen.
     func testEveryHeadingInEveryLanguage_neverBelowBodySize_andNeverBreaksInsideAWord() {
-        // The instrument must see a translation: German SYNC CONFLICTS differs from English.
-        XCTAssertTrue(localized("SYNC CONFLICTS", "de").hasPrefix("SYNCHRONISIERUNGS"))
-        let width: CGFloat = 402 - 2 * 56
-        let available = width - CatchlightLayout.pageHeadingKerningComp - 1
+        // The instrument must see a translation: German Sync Conflicts differs from English.
+        XCTAssertTrue(localized("Sync Conflicts", "de").hasPrefix("Synchronisierungs"))
+        let width = Self.narrowestColumn
+        let available = width - 1
         var report: [String] = []
         for language in Self.catalogLanguages {
             for key in Self.headingKeys {
                 let title = localized(key, language)
-                for category in [UIContentSizeCategory.large, .accessibilityExtraExtraExtraLarge] {
+                for category in [UIContentSizeCategory.large, .accessibilityMedium] {
                     let traits = UITraitCollection(preferredContentSizeCategory: category)
                     let body = UIFont.preferredFont(forTextStyle: .body, compatibleWith: traits).pointSize
                     let fit = PageHeading.fit(title, width: width, category: category, language: language)
-                    let label = "\(language) \(key) \(category.rawValue == "UICTContentSizeCategoryL" ? "default" : "AX5")"
-                    // The floor holds at the default size for every heading. At AX5 a word with
-                    // no break point (STORYBOARD) can only shrink to fit, and a compound with
-                    // a soft hyphen wraps at it and is larger than it could be on one line.
+                    let label = "\(language) \(key) \(category.rawValue == "UICTContentSizeCategoryL" ? "default" : "AX1")"
+                    // The floor holds at the default size for every heading. At AX1 a word with
+                    // no break point can only shrink to fit, and a compound with a soft hyphen
+                    // that wraps is larger than it could be on one line.
                     if category == .large {
                         XCTAssertGreaterThanOrEqual(fit.points, body - 0.01, "\(label): \(title) draws at \(fit.points), below body \(body)")
-                    } else if Self.hyphenated.contains("\(language)|\(key)") {
+                    } else if Self.hyphenated.contains("\(language)|\(key)"), fit.wraps {
                         let oneLine = PageHeading.fit(title.replacingOccurrences(of: PageHeading.softHyphen, with: ""),
                                                       width: width, category: category, language: language)
-                        XCTAssertTrue(fit.wraps, "\(label): \(title) did not wrap at its hyphen")
-                        XCTAssertGreaterThan(fit.points, oneLine.points * 1.3, "\(label): \(title) is no larger than on one line (\(fit.points) against \(oneLine.points))")
+                        XCTAssertGreaterThan(fit.points, oneLine.points + 1, "\(label): \(title) is no larger than on one line (\(fit.points) against \(oneLine.points))")
                     }
                     let font = CatchlightFont.uiDisplay(size: fit.points, relativeTo: nil, language: language)
                     func measure(_ s: String) -> CGFloat {
@@ -346,29 +350,77 @@ extension TypographyTests {
         print("HEADING REPORT\n" + report.joined(separator: "\n"))
     }
 
-    /// The German heading at AX5 breaks at the soft hyphen onto more than one line.
-    func testGermanSyncConflicts_atAX5_breaksAtTheHyphen() {
-        let title = "SYNCHRONISIERUNGS\u{00AD}KONFLIKTE"
+    /// The German heading at AX1, in the narrowest column, breaks at the soft hyphen onto
+    /// more than one line.
+    func testGermanSyncConflicts_atAX1_breaksAtTheHyphen() {
+        let title = "Synchronisierungs\u{00AD}konflikte"
         let host = UIHostingController(rootView: PageHeading(verbatim: title))
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 290, height: 900))
         host.safeAreaRegions = []
         window.rootViewController = host
         window.makeKeyAndVisible()
-        host.traitOverrides.preferredContentSizeCategory = .accessibilityExtraExtraExtraLarge
+        host.traitOverrides.preferredContentSizeCategory = .accessibilityMedium
         for _ in 0..<5 { host.view.layoutIfNeeded(); RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
         let height = host.view.systemLayoutSizeFitting(CGSize(width: 290, height: UIView.layoutFittingExpandedSize.height),
                                                        withHorizontalFittingPriority: .required,
                                                        verticalFittingPriority: .fittingSizeLevel).height
-        let fit = PageHeading.fit(title, width: 290, category: .accessibilityExtraExtraExtraLarge, language: "de")
+        let fit = PageHeading.fit(title, width: 290, category: .accessibilityMedium, language: "de")
         let line = CatchlightFont.uiDisplay(size: fit.points, relativeTo: nil, language: "de").lineHeight
         XCTAssertGreaterThan(height, line * 1.6, "expected two lines of \(line), got \(height)pt")
         XCTAssertLessThan(height, line * 3.2, "expected two or three lines of \(line), got \(height)pt")
     }
 
+    /// The column a heading gets on a phone `width` wide: less the Dailies inset each side,
+    /// and the room for the × where the page has one.
+    private static func column(_ width: CGFloat, withButton: Bool) -> CGFloat {
+        width - 2 * CatchlightLayout.dailiesHeadingInset(containerWidth: width)
+            - (withButton ? CatchlightLayout.minTouchTarget + 12 : 0)
+    }
+
+    /// A single compound breaks at its join before it shrinks (Art Director, 2026-11-12:
+    /// "wrap before shrink"). On a 393pt phone at the default size, Danish, Norwegian and
+    /// Dutch fit on two lines at the full 34pt, and German breaks and shrinks only a little.
+    /// The first line ends in the hyphen.
+    func testCompoundHeading_breaksAtItsJoin_beforeShrinking() {
+        let width = Self.column(393, withButton: false)
+        for language in ["de", "da", "nb", "nl", "fi"] {
+            let title = localized("Sync Conflicts", language)
+            let fit = PageHeading.fit(title, width: width, category: .large, language: language)
+            let lines = fit.text.components(separatedBy: "\n")
+            XCTAssertEqual(lines.count, 2, "\(language): \(fit.text) at \(fit.points)pt")
+            XCTAssertTrue(lines.first?.hasSuffix("-") ?? false, "\(language): no hyphen at the break in \(fit.text)")
+            XCTAssertTrue(fit.wraps, "\(language)")
+            XCTAssertGreaterThanOrEqual(fit.points, 33, "\(language): \(fit.points)pt")
+        }
+        for language in ["da", "nb", "nl"] {
+            let fit = PageHeading.fit(localized("Sync Conflicts", language), width: width, category: .large, language: language)
+            XCTAssertEqual(fit.points, 34, accuracy: 0.01, "\(language) should sit at the full size")
+        }
+    }
+
+    /// No heading draws under 28pt in the columns it really gets: Sync Conflicts, Settings,
+    /// Sequence and Search on the full width, Storyboard and Shot List beside the ×. Phones
+    /// from 375 to 440pt, every catalog language, from the smallest text size to AX1.
+    func testEveryHeading_neverBelow28_inItsOwnColumn() {
+        let withButton: Set<String> = ["Storyboard", "Shot List"]
+        for phone in [CGFloat(375), 393, 440] {
+            for language in Self.catalogLanguages {
+                for key in Self.headingKeys {
+                    let width = Self.column(phone, withButton: withButton.contains(key))
+                    for category in [UIContentSizeCategory.extraSmall, .large, .extraExtraExtraLarge, .accessibilityMedium] {
+                        let fit = PageHeading.fit(localized(key, language), width: width, category: category, language: language)
+                        XCTAssertGreaterThanOrEqual(fit.points, 28 - 0.01,
+                            "\(language) \(key) \(Int(phone)) \(category.rawValue): \(fit.text) at \(fit.points)pt")
+                    }
+                }
+            }
+        }
+    }
+
     func testSplit_isAtAWordBoundary_andBalanced() {
-        XCTAssertEqual(PageHeading.twoLines("SHOT LIST"), "SHOT\nLIST")
-        XCTAssertEqual(PageHeading.twoLines("SYNC CONFLICTS"), "SYNC\nCONFLICTS")
-        XCTAssertEqual(PageHeading.twoLines("CONFLITTI DI SINCRONIZZAZIONE"), "CONFLITTI DI\nSINCRONIZZAZIONE")
-        XCTAssertNil(PageHeading.twoLines("SETTINGS"))
+        XCTAssertEqual(PageHeading.twoLines("Shot List"), "Shot\nList")
+        XCTAssertEqual(PageHeading.twoLines("Sync Conflicts"), "Sync\nConflicts")
+        XCTAssertEqual(PageHeading.twoLines("Conflitti di sincronizzazione"), "Conflitti di\nsincronizzazione")
+        XCTAssertNil(PageHeading.twoLines("Settings"))
     }
 }

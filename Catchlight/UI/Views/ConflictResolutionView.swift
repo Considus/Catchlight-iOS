@@ -103,21 +103,21 @@ struct ConflictResolutionView: View {
         .scrollIndicators(.hidden)
     }
 
-    /// Brand heading + guidance: the shared page-heading treatment (upright
-    /// Archivo expanded, kerned, UPPER-CASE (§2.3, matching DAILIES/SETTINGS) over
-    /// system-font Light subtext (owner 2026-07-02).
+    /// The page heading, drawn as the Dailies title but centred, as on every sheet (owner
+    /// 2026-11-12), over centred system-font Light guidance (owner 2026-07-02). The heading
+    /// runs edge to edge and sets its own inset.
     private var header: some View {
-        VStack(spacing: 16) {
-            PageHeading("SYNC CONFLICTS")
+        VStack(alignment: .leading, spacing: 16) {
+            PageHeading("Sync Conflicts", centred: true)
                 .accessibilityAddTraits(.isHeader)
             // About choosing between two versions, which a converted pair doesn't offer.
             if queue.pending.contains(where: { !queue.isConverted($0.local.id) }) {
                 guidance("These Takes may have been edited on different devices, so we can't resolve which to keep. Tap on the version you'd like to remain. The other will be removed.")
+                    .padding(.horizontal, 20)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.top, 24)
+        .padding(.top, CatchlightLayout.pageHeadingTopGap)
         .padding(.bottom, 4)
     }
 

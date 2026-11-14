@@ -1169,30 +1169,61 @@ enum CatchlightLayout {
     /// one value so the mark→hero rhythm is identical and can't drift (owner
     /// 2026-06-16 "set position"; shared 2026-06-29).
     static let introHeroTopGap: CGFloat = 112
-    /// Letter-spacing for the page heading (DAILIES / SEQUENCE / STORYBOARD / SHOT
-    /// LIST / SETTINGS).
-    static let pageHeadingKerning: CGFloat = 1.6
-    /// Leading inset `PageHeading` adds to optically centre the kerned title.
-    /// `.kerning` adds trailing space after the last glyph (~half a glyph more than
-    /// the kern value itself), pulling a plainly-centred title left; 3.0 lands the
-    /// ink dead-centre — measured on DAILIES, 601→603px (owner 2026-06-29).
-    static let pageHeadingKerningComp: CGFloat = 3.0
+    /// Letter-spacing for every page heading: the Dailies title's (owner 2026-11-12, "the
+    /// various page headings need to be changed to match Dailies").
+    static let pageHeadingKerning: CGFloat = -0.025 * pageHeadingSize
+    /// Every page heading's point size at the default text size, Dailies' included: 34, Apple's
+    /// Large Title size, scaled as a Large Title (owner 2026-11-11 for Dailies, 2026-11-12 for all).
+    static let pageHeadingSize: CGFloat = 34
+    /// The space a page heading leaves under it before the page's content or fade, as on Dailies.
+    static let pageHeadingTopGap: CGFloat = 14
 }
 
-/// The page heading: Archivo expanded 24, kerned, centred, `ckTextPrimary`. Shared by
-/// every screen's heading so they can't drift. A one-word title stays on one line and
-/// scales down to fit. A title of several words wraps between words onto two balanced
-/// lines when one line is too wide, and only scales down when a single word still does
-/// not fit. Nothing breaks inside a word.
-///
-/// `.kerning` adds its spacing AFTER the last glyph too, so a plainly-centred kerned
-/// title sits about half a kern left of true centre. The matching leading padding
-/// cancels that trailing space so the letters read dead-centre (owner 2026-06-29).
+/// A page heading with a button at the right end of its first line (the Storyboard's and the
+/// Shot List's ×), centred on that line however many lines the title takes (art director
+/// 2026-11-12). The heading keeps the button's room clear.
+struct PageHeadingWithButton<Trailing: View>: View {
+    let title: LocalizedStringResource
+    @ViewBuilder let trailing: () -> Trailing
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let traits = UITraitCollection(preferredContentSizeCategory:
+            CatchlightFont.contentSizeCategory(min(dynamicTypeSize, .accessibility1)))
+        let line = CatchlightFont.uiDisplay(size: CatchlightLayout.pageHeadingSize, relativeTo: .largeTitle,
+                                            compatibleWith: traits).lineHeight
+        // An overlay, so the button never moves the heading: the heading's top stays where
+        // Dailies' is, and the button is centred on its first line, overhanging it.
+        PageHeading(title, trailingReserve: CatchlightLayout.minTouchTarget + 12)
+            .accessibilityAddTraits(.isHeader)
+            .overlay(alignment: .topTrailing) {
+                trailing()
+                    .frame(height: line)
+                    .padding(.trailing, 12)
+            }
+    }
+}
+
+/// The page heading, drawn exactly as the Dailies title (`DailiesHeading`): Archivo expanded
+/// 34, scaled as a Large Title and capped at the first accessibility size, Dailies' kerning,
+/// `ckTextPrimary`, left-aligned, in from each edge by the Dailies inset (owner 2026-11-12:
+/// "the various page headings need to be changed to match Dailies"). It measures its own
+/// width, so place it edge to edge. A title that doesn't fit on one line wraps onto two
+/// balanced lines (between words, or at a compound's soft hyphen), then shrinks, never below
+/// 28pt. Nothing is cut and nothing breaks inside a word.
 struct PageHeading: View {
     let title: String
 
-    init(_ title: LocalizedStringResource) { self.title = String(localized: title) }
-    init(verbatim title: String) { self.title = title }
+    init(_ title: LocalizedStringResource, trailingReserve: CGFloat = 0, centred: Bool = false) {
+        self.title = String(localized: title)
+        self.trailingReserve = trailingReserve
+        self.centred = centred
+    }
+    init(verbatim title: String, trailingReserve: CGFloat = 0, centred: Bool = false) {
+        self.title = title
+        self.trailingReserve = trailingReserve
+        self.centred = centred
+    }
 
     /// `title` split onto two lines at a word boundary, the split that makes the longer
     /// line shortest. Nil for a one-word title.
@@ -1212,6 +1243,26 @@ struct PageHeading: View {
     /// long for the line can break there with a hyphen.
     static let softHyphen = "\u{00AD}"
 
+    /// The smallest a heading draws at any text size, unless even one piece of it is wider
+    /// than the line at this size (Art Director, 2026-11-12).
+    static let minimumPoints: CGFloat = 28
+
+    /// A one-word `title` split onto two lines at a soft hyphen, the split that makes the
+    /// longer line shortest, with the hyphen drawn at the end of the first line. Nil when the
+    /// title has a space or no soft hyphen.
+    static func compoundTwoLines(_ title: String) -> String? {
+        guard !title.contains(" ") else { return nil }
+        let parts = title.components(separatedBy: softHyphen)
+        guard parts.count > 1 else { return nil }
+        var best: (Int, Int)?
+        for k in 1..<parts.count {
+            let longest = max(parts[..<k].joined().count + 1, parts[k...].joined().count)
+            if best == nil || longest < best!.1 { best = (k, longest) }
+        }
+        let k = best!.0
+        return parts[..<k].joined() + "-\n" + parts[k...].joined()
+    }
+
     /// What a heading draws: the text (newlines where it breaks, with a hyphen at a soft
     /// hyphen break), the point size, and whether it broke at soft hyphens.
     struct Fit: Equatable {
@@ -1220,20 +1271,20 @@ struct PageHeading: View {
         var wraps: Bool
     }
 
-    /// How a heading fits `width` at `category`: one line, then two balanced lines at a
-    /// word boundary, then shrinking to fit, but never below the body text size at that
-    /// Dynamic Type size. Past that floor a word breaks at a soft hyphen, and a title with
-    /// no soft hyphen that still does not fit keeps shrinking, so nothing is cut and
-    /// nothing breaks inside a word. The floor can give way only when even half a
-    /// compound, at the body size, is wider than the line.
+    /// How a heading fits `width` at `category`: one line, then two balanced lines (at a
+    /// word boundary, or for a single compound at its soft hyphen), then shrinking to fit,
+    /// but never below `minimumPoints`. Past that floor a title breaks at every soft hyphen,
+    /// and a title with no soft hyphen that still does not fit keeps shrinking, so nothing
+    /// is cut and nothing breaks inside a word. The floor gives way only when even one
+    /// piece, at the floor size, is wider than the line.
     static func fit(_ title: String, width: CGFloat, category: UIContentSizeCategory,
                     language: String? = CatchlightFont.appLanguage) -> Fit {
         let traits = UITraitCollection(preferredContentSizeCategory: category)
-        let font = CatchlightFont.uiDisplay(size: 24, relativeTo: .title3, compatibleWith: traits, language: language)
+        let font = CatchlightFont.uiDisplay(size: CatchlightLayout.pageHeadingSize, relativeTo: .largeTitle,
+                                            compatibleWith: traits, language: language)
         let full = font.pointSize
-        let bodyPoints = UIFont.preferredFont(forTextStyle: .body, compatibleWith: traits).pointSize
-        let floorScale = min(1, bodyPoints / full)
-        let available = width - CatchlightLayout.pageHeadingKerningComp - 1
+        let floorScale = min(1, minimumPoints / full)
+        let available = width - 1
 
         // The kerning is a fixed number of points per character and does not shrink with
         // the font, so a line at scale `s` is `glyphs * s + kern * characters` wide.
@@ -1252,12 +1303,15 @@ struct PageHeading: View {
 
         let plain = title.replacingOccurrences(of: softHyphen, with: "")
         if widest(plain, scale: 1) <= available { return Fit(text: plain, points: full, wraps: false) }
-        let two = twoLines(plain)
-        if let two, widest(two, scale: 1) <= available { return Fit(text: two, points: full, wraps: false) }
+        // Wrap before shrink: two lines between words, or for a single compound at its join.
+        let compound = twoLines(plain) == nil ? compoundTwoLines(title) : nil
+        let two = twoLines(plain) ?? compound
+        let atJoin = compound != nil
+        if let two, widest(two, scale: 1) <= available { return Fit(text: two, points: full, wraps: atJoin) }
 
         let shrinkable = two ?? plain
         let need = scaleToFit(shrinkable)
-        if need >= floorScale { return Fit(text: shrinkable, points: full * need, wraps: false) }
+        if need >= floorScale { return Fit(text: shrinkable, points: full * need, wraps: atJoin) }
 
         // Past the floor, a title with a soft hyphen breaks there (and at spaces). It draws
         // at the floor size, or smaller only when even its longest piece, with its hyphen,
@@ -1296,22 +1350,38 @@ struct PageHeading: View {
         return Fit(text: shrinkable, points: full * max(need, 0.05), wraps: false)
     }
 
+    /// Room kept clear at the trailing edge for a button on the heading's line (the ×), on top
+    /// of the inset.
+    var trailingReserve: CGFloat = 0
+    /// Centred rather than left-aligned (owner 2026-11-12: Settings, Sync Conflicts and the
+    /// Settings sub-screens "should be centred"). A reserve is then kept on both sides, so the
+    /// title stays on the true centre.
+    var centred: Bool = false
+
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var width: CGFloat = 0
 
     var body: some View {
-        let category = CatchlightFont.contentSizeCategory(dynamicTypeSize)
-        let fit = width > 0 ? Self.fit(title, width: width, category: category) : nil
+        // The text column: the full width less the Dailies inset each side and any reserve.
+        let inset = CatchlightLayout.dailiesHeadingInset(containerWidth: width)
+        let reserve = centred ? 2 * trailingReserve : trailingReserve
+        let column = width - 2 * inset - reserve
+        let category = CatchlightFont.contentSizeCategory(min(dynamicTypeSize, .accessibility1))
+        let fit = column > 0 ? Self.fit(title, width: column, category: category) : nil
         Text(fit?.text ?? title.replacingOccurrences(of: Self.softHyphen, with: ""))
-            .ckDisplay(size: fit?.points ?? 24, relativeTo: fit == nil ? .title3 : nil)
+            .ckDisplay(size: fit?.points ?? CatchlightLayout.pageHeadingSize, relativeTo: fit == nil ? .largeTitle : nil)
             .lineLimit(fit.map { $0.text.components(separatedBy: "\n").count } ?? 1)
-            .multilineTextAlignment(.center)
+            .multilineTextAlignment(centred ? .center : .leading)
             .kerning(CatchlightLayout.pageHeadingKerning)
             .foregroundStyle(Color.ckTextPrimary)
-            .padding(.leading, CatchlightLayout.pageHeadingKerningComp)
             .fixedSize(horizontal: true, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.leading, inset + (centred ? trailingReserve : 0))
+            .padding(.trailing, inset + trailingReserve)
+            // minWidth 0 makes the frame take the offered width even while the one-line text
+            // is wider, so the width measured is the container's, not the text's.
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: centred ? .center : .leading)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             .accessibilityLabel(title.replacingOccurrences(of: Self.softHyphen, with: ""))
     }
 }

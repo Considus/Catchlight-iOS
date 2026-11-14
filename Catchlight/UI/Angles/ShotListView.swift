@@ -65,10 +65,10 @@ struct ShotListView: View {
     private let rowTrailingInset: CGFloat = 16
 
     var body: some View {
-        // The chrome is a `.safeAreaInset` top band — an OPAQUE X-row + a 12pt fade —
+        // The chrome is a `.safeAreaInset` top band — an OPAQUE heading row + the heading fade —
         // exactly like the Dailies heading (owner 2026-06-18). Content scrolls UNDER
         // the opaque band (so it's truly masked, not just behind a translucent gradient
-        // that let it peek above), and the 12pt gradient softens the dissolve edge.
+        // that let it peek above), and the fade softens the dissolve edge.
         itemList
             .background(surface.ignoresSafeArea())
             .safeAreaInset(edge: .top, spacing: 0) { topChrome }
@@ -77,45 +77,29 @@ struct ShotListView: View {
         // ("angle-close" / "angle-checkbox" / "angle-reorder") are the contract.
     }
 
-    // MARK: - Chrome (fullscreen, Dailies-style mask: opaque band + 12pt fade + an X;
+    // MARK: - Chrome (fullscreen, Dailies-style mask: opaque band + the heading fade + an X;
     // scroll-only, no sheet grabber — owner 2026-06-18)
 
     private var topChrome: some View {
         VStack(spacing: 0) {
-            ZStack {
-                // Explicit view heading, DAILIES house style (Archivo expanded, kerned
-                // caps) — owner 2026-06-19: named as an Angle, sibling to PLANNER ANGLE.
-                // CENTRED at 24pt (owner 2026-06-29) to match the timeline page heading;
-                // full-width frame centres it on screen, × floated at the right edge.
-                PageHeading("SHOT LIST")
-                    .accessibilityAddTraits(.isHeader)
-                    // Reserve the close button's slot on both sides, as the Storyboard does,
-                    // so a scaled-up heading never runs into the ×.
-                    .padding(.horizontal, CatchlightLayout.minTouchTarget + 12)
-                HStack {
-                    Spacer()
-                    Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(Color.ckTextSecondary)
-                            .frame(width: CatchlightLayout.minTouchTarget,
-                                   height: CatchlightLayout.minTouchTarget)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("angle-close")
-                    .accessibilityLabel("Close Shot List")
+            // The page heading, drawn as the Dailies title at the Dailies inset, with the ×
+            // on the right of its first line (owner 2026-11-12).
+            PageHeadingWithButton(title: "Shot List") {
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .frame(width: CatchlightLayout.minTouchTarget,
+                               height: CatchlightLayout.minTouchTarget)
+                        .contentShape(Rectangle())
                 }
-                .padding(.trailing, 12)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("angle-close")
+                .accessibilityLabel("Close Shot List")
             }
-            .padding(.top, 4)
-            .background(surface)   // OPAQUE — content scrolls under and is hidden
-            // The soft dissolve edge (matches the Dailies no-Obie heading fade).
-            LinearGradient(
-                colors: [surface, surface.opacity(0)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .frame(height: 12)
+            .padding(.top, CatchlightLayout.pageHeadingTopGap)
+            .background(surface)
+            DailiesView.headingFade(color: surface)
         }
     }
 
