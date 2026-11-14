@@ -680,7 +680,23 @@ struct FlatSegmentedControl<Value: Hashable>: View {
     @Binding var selection: Value
 
     var body: some View {
-        HStack(spacing: 0) {
+        // Side by side when every title fits in full. Otherwise one above the other at full
+        // width, so a title is never cut short (large text sizes).
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 0) { segmentButtons }
+            VStack(spacing: 0) { segmentButtons }
+        }
+        .background(CatchlightShape.control.fill(Color.ckSurface))
+        .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
+        // Our own segment buttons are the accessibility elements: each is a button of 44pt
+        // with the selected trait, and the group is a contained element with its label.
+        // (A native segmented `Picker` as the accessibility representation reported its own
+        // hidden frames on iOS 18.5: 32pt high, and the second segment 0pt wide.)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+    }
+
+    private var segmentButtons: some View {
             ForEach(segments.indices, id: \.self) { index in
                 let segment = segments[index]
                 let selected = segment.value == selection
@@ -705,15 +721,6 @@ struct FlatSegmentedControl<Value: Hashable>: View {
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(selected ? [.isSelected] : [])
             }
-        }
-        .background(CatchlightShape.control.fill(Color.ckSurface))
-        .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
-        // Our own segment buttons are the accessibility elements: each is a button of 44pt
-        // with the selected trait, and the group is a contained element with its label.
-        // (A native segmented `Picker` as the accessibility representation reported its own
-        // hidden frames on iOS 18.5: 32pt high, and the second segment 0pt wide.)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(label)
     }
 }
 

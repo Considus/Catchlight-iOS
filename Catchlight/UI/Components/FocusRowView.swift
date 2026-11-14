@@ -1064,13 +1064,27 @@ struct ReminderPickerSheet: View {
     @ViewBuilder
     private var timeSection: some View {
         if !allDay {
-            DatePicker(selection: $date, displayedComponents: [.hourAndMinute]) {
-                Label("Time", systemImage: "clock")
-                    .foregroundStyle(Color.ckTextPrimary)
+            // When "Time" and the picker don't fit on one line (large text sizes), the picker
+            // goes under the title, so "Time" never breaks inside itself.
+            ViewThatFits(in: .horizontal) {
+                DatePicker(selection: $date, displayedComponents: [.hourAndMinute]) {
+                    timeLabel.fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    timeLabel
+                    DatePicker("Time", selection: $date, displayedComponents: [.hourAndMinute])
+                        .labelsHidden()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .accessibilityIdentifier("reminder-time")
             .cardSurface()
         }
+    }
+
+    private var timeLabel: some View {
+        Label("Time", systemImage: "clock")
+            .foregroundStyle(Color.ckTextPrimary)
     }
 
     /// The Time | Place switch (owner 2026-06-24): a reminder is either time-based or

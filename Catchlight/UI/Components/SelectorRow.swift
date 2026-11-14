@@ -20,19 +20,51 @@ struct SelectorRow: View {
     let value: String
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .regular))
-                .foregroundStyle(Color.ckAccent)
-                .frame(width: 26)
-                .accessibilityHidden(true)
-            Text(label)
-                .ckBody(.regular, size: 17, relativeTo: .body)
-                .foregroundStyle(Color.ckTextPrimary)
-                // A `Menu` centres a label that wraps; a long translation (or a large
-                // text size) wraps here, so keep it flush left like every other row.
-                .multilineTextAlignment(.leading)
-            Spacer(minLength: 8)
+        // When the label and the value don't fit on one line (large text sizes, long
+        // translations), the value and chevron go under the label, so the value is never cut
+        // short and the label never breaks inside a word.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 14) {
+                iconView
+                labelView
+                Spacer(minLength: 8)
+                valueView
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 14) {
+                iconView
+                VStack(alignment: .leading, spacing: 4) {
+                    labelView
+                    valueView
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 6)
+        }
+        // The shared selector height (owner 2026-06-29). Grows for larger Dynamic
+        // Type rather than clipping.
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
+    private var iconView: some View {
+        Image(systemName: icon)
+            .font(.system(size: 20, weight: .regular))
+            .foregroundStyle(Color.ckAccent)
+            .frame(width: 26)
+            .accessibilityHidden(true)
+    }
+
+    private var labelView: some View {
+        Text(label)
+            .ckBody(.regular, size: 17, relativeTo: .body)
+            .foregroundStyle(Color.ckTextPrimary)
+            // A `Menu` centres a label that wraps; a long translation (or a large
+            // text size) wraps here, so keep it flush left like every other row.
+            .multilineTextAlignment(.leading)
+    }
+
+    private var valueView: some View {
+        HStack(spacing: 8) {
             Text(value)
                 .ckBody(.regular, size: 15, relativeTo: .subheadline)
                 .foregroundStyle(Color.ckTextSecondary)
@@ -43,10 +75,6 @@ struct SelectorRow: View {
                 .foregroundStyle(Color.ckTextSecondary)
                 .accessibilityHidden(true)
         }
-        // The shared selector height (owner 2026-06-29). Grows for larger Dynamic
-        // Type rather than clipping.
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
     }
 }
 
