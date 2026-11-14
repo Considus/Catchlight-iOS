@@ -40,11 +40,13 @@ struct PrivacyPhraseView: View {
         #if DEBUG
         // Test seam: the UI-test run has no phrase in the Keychain, so `--uitesting-phrase`
         // shows the reveal prompt, and `--uitesting-phrase-revealed` shows twelve fixed
-        // placeholder words. The Keychain is never read for either.
+        // placeholder words (`--uitesting-phrase-wide` swaps in the twelve widest list words).
+        // The Keychain is never read for either.
         let args = ProcessInfo.processInfo.arguments
         if args.contains("--uitesting-phrase") {
+            let words = args.contains("--uitesting-phrase-wide") ? Self.wideTestWords : Self.testWords
             _stage = State(initialValue: args.contains("--uitesting-phrase-revealed")
-                ? .revealed(Self.testWords) : .authenticate)
+                ? .revealed(words) : .authenticate)
         }
         #endif
     }
@@ -52,6 +54,9 @@ struct PrivacyPhraseView: View {
     #if DEBUG
     private static let testWords = ["abandon", "ability", "able", "about", "above", "absent",
                                     "absorb", "abstract", "absurd", "abuse", "access", "accident"]
+    /// The twelve widest words of the BIP-39 English list in the body face at 15pt.
+    private static let wideTestWords = ["mushroom", "remember", "hedgehog", "document", "december", "announce",
+                                        "champion", "cinnamon", "maximum", "mechanic", "exchange", "awesome"]
     #endif
 
     var body: some View {
@@ -195,7 +200,12 @@ private struct PhraseRevealGrid: View {
     /// latched the reveal on via its named action.
     private var revealed: Bool { isHeld || voRevealed }
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
+    /// Three columns at default sizes, fewer at large text sizes, as on onboarding's phrase step.
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 12), count: phraseColumnCount(for: dynamicSize))
+    }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -240,11 +250,20 @@ private struct PhraseRevealGrid: View {
                 .sheetSmall()
                 .foregroundStyle(Color.ckTextSecondary)
                 .frame(width: 22, alignment: .trailing)
-            Text(word)
-                .ckBody(.medium, size: 15, relativeTo: .body)
-                .foregroundStyle(Color.ckTextPrimary)
-                .blur(radius: revealed ? 0 : 7)
-                .animation(.easeInOut(duration: 0.12), value: revealed)
+            ZStack(alignment: .leading) {
+                // Holds a full line's height, so a cell whose word shrank is as tall as the rest.
+                Text(verbatim: " ")
+                    .ckBody(.medium, size: 15, relativeTo: .body)
+                    .hidden()
+                Text(word)
+                    .ckBody(.medium, size: 15, relativeTo: .body)
+                    .foregroundStyle(Color.ckTextPrimary)
+                    // A word never breaks across two lines: a long one shrinks a little instead.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .blur(radius: revealed ? 0 : 7)
+                    .animation(.easeInOut(duration: 0.12), value: revealed)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
