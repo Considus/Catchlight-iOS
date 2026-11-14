@@ -132,7 +132,7 @@ struct CloudStorageView: View {
             Spacer(minLength: 16)
         }
         .padding(.horizontal, 22)
-        .padding(.top, 24)
+        .padding(.top, 16)
         .padding(.bottom, 16)
     }
 
