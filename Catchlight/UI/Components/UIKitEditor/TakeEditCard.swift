@@ -444,8 +444,8 @@ struct KeyboardTakeEditor: View {
             edge.maxY = newEdge
             // The keyboard is back and the edge has returned to where the hold began: the usual
             // padding now puts the card exactly where it is held, so let go.
-            if heldCardBottom != nil, heldKeyboardTopY == nil, !holdsPlace(), newEdge == edge.atHold,
-               keyboardTopY == edge.keyboardAtHold {
+            if heldCardBottom != nil, heldKeyboardTopY == nil, !holdsPlace(), abs(newEdge - edge.atHold) < 0.5,
+               abs(keyboardTopY - edge.keyboardAtHold) < 0.5 {
                 heldCardBottom = nil
             }
         }
@@ -471,11 +471,16 @@ struct KeyboardTakeEditor: View {
             keyboardTopY = frame.origin.y
             // The returning keyboard can first report a top that is too high (462, then 524 a frame
             // later, measured), so the hold lasts until it reports the top it had when held.
-            if heldCardBottom != nil, !holdsPlace(), edge.maxY == edge.atHold,
-               keyboardTopY == edge.keyboardAtHold { heldCardBottom = nil }
+            if heldCardBottom != nil, !holdsPlace(), abs(edge.maxY - edge.atHold) < 0.5,
+               abs(keyboardTopY - edge.keyboardAtHold) < 0.5 { heldCardBottom = nil }
         }
         .onChange(of: holdsPlace()) { _, holds in
-            guard !holds, heldKeyboardTopY != nil else { return }
+            guard !holds else { return }
+            // The keyboard came back while the row was still open: nothing is held any more.
+            guard heldKeyboardTopY != nil else {
+                heldCardBottom = nil
+                return
+            }
             // The keyboard usually comes back as the row closes, and its show then clears the
             // held hide. Applying the hide here first parked the card at the bottom of the
             // screen for the few frames before the show arrived. Apply it only if no show came.
