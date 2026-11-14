@@ -36,6 +36,17 @@ on:
   # The Core pin workflow dispatches this on its bump branch, because a PR it
   # opens with GITHUB_TOKEN starts no pull_request run.
   workflow_dispatch:
+    inputs:
+      nightly:
+        description: 'Run what the nightly runs (the iOS 18.5 floor only, every test), to try it by hand'
+        type: boolean
+        default: false
+  # Once a night, the iOS 18.5 floor with every test. The queue runs the UI tests on the latest
+  # iOS only, so without this an 18.5-only UI fault could reach main unseen (it happened on
+  # 2026-11-13). 02:47 UTC is the quietest hour of the org's five macOS runners, and off the
+  # :00 mark when scheduled runs bunch up. A failed run shows as a failed CI run on main.
+  schedule:
+    - cron: '47 2 * * *'
 
 # Least privilege for the GITHUB_TOKEN, declared once at the top so it applies to
 # every job (2026-09-12). Without this block the token inherits the repository
@@ -56,7 +67,8 @@ permissions:
 # Cancel an in-flight run for the same branch / PR when a new commit arrives —
 # saves runner minutes without losing the final-commit signal.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # The nightly has its own group: it runs on main's ref, and a push to main would cancel it.
+  group: ci-${{ github.workflow }}-${{ (github.event_name == 'schedule' || inputs.nightly) && 'nightly' || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -68,6 +80,8 @@ jobs:
     # archive failed. A generic-simulator build needs no signing identities
     # and no simulator runtime boot, so this job is cheap.
     name: iOS (Release build)
+    # Not in the nightly, which is only the iOS 18.5 tests.
+    if: ${{ !(github.event_name == 'schedule' || inputs.nightly) }}
     runs-on: macos-15
     steps:
       - name: Checkout
@@ -127,7 +141,6 @@ jobs:
       # off so a failure on one runtime still reports the other.
       fail-fast: false
       matrix:
-        destination:
           # The floor leg just needs SOME iOS 18 runtime. The macos-15 image
           # dropped the exact 18.0 runtime (2026-06-15: now ships 18.5 / 18.6 +
           # 26.x), so this is pinned to the lowest available 18.x. Bump again if a
@@ -138,8 +151,9 @@ jobs:
           # OS=18.5)"). Editing one renames its check, and the old name stays
           # required and never reports — which blocks every merge to main until
           # branch protection is updated to match. Change both together.
-          - 'platform=iOS Simulator,name=iPhone 16,OS=18.5'
-          - 'platform=iOS Simulator,name=iPhone 16,OS=latest'
+          # The nightly runs only the 18.5 leg. Both lists hold the same strings, so the check
+          # names do not change on a PR or in the queue.
+        destination: ${{ fromJSON((github.event_name == 'schedule' || inputs.nightly) && '["platform=iOS Simulator,name=iPhone 16,OS=18.5"]' || '["platform=iOS Simulator,name=iPhone 16,OS=18.5","platform=iOS Simulator,name=iPhone 16,OS=latest"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
