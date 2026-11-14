@@ -15,6 +15,13 @@ struct NoticeHistoryView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var entries: [DiagnosticEntry] = []
 
+    /// Scoped to the notices this view SHOWS (2026-07-01): the full clear() also erased the
+    /// lifecycle breadcrumbs, silently emptying Export diagnostics.
+    private func clearNotices() {
+        DiagnosticsLog.shared.clearUserFacing()
+        entries = []
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -27,12 +34,11 @@ struct NoticeHistoryView: View {
                             .foregroundStyle(Color.ckTextSecondary)
                             .accessibilityHidden(true)
                         Text("No notices yet")
-                            .ckDisplay(size: 28, relativeTo: .title2)
-                            .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                            .sheetLead()
                             .foregroundStyle(Color.ckTextPrimary)
                             .multilineTextAlignment(.center)
                         Text("Sync, storage and conflict notices will appear here.")
-                            .ckBody(.regular, size: 15, relativeTo: .subheadline)
+                            .sheetBody()
                             .foregroundStyle(Color.ckTextSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
@@ -45,6 +51,27 @@ struct NoticeHistoryView: View {
                     .accessibilityElement(children: .combine)
                 } else {
                     List {
+                        // Clear on its own row under the heading, its right edge on the
+                            // notice card's (Art Director, 2026-11-12).
+                            Section {
+                                HStack {
+                                    Spacer(minLength: 0)
+                                    Button(action: clearNotices) {
+                                        Text("Clear")
+                                            .sheetRow()
+                                            .foregroundStyle(Color.ckAccent)
+                                            .frame(minWidth: CatchlightLayout.minTouchTarget,
+                                                   minHeight: CatchlightLayout.minTouchTarget, alignment: .trailing)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .accessibilityIdentifier("notice-history-clear")
+                                }
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                            }
+                        Section {
                         ForEach(entries) { entry in
                             HStack(alignment: .top, spacing: 12) {
                                 Image(systemName: Self.icon(entry.category))
@@ -55,10 +82,10 @@ struct NoticeHistoryView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     // The reference code is for the export only.
                                     Text(Notice.displayText(of: entry.message))
-                                        .ckBody(.regular, size: 15, relativeTo: .body)
+                                        .sheetBody()
                                         .foregroundStyle(Color.ckTextPrimary)
                                     Text(entry.timestamp, format: .relative(presentation: .named))
-                                        .ckBody(.regular, size: 12, relativeTo: .caption)
+                                        .sheetSmall()
                                         .monospacedDigit()   // a time: tabular digits
                                         .foregroundStyle(Color.ckTextSecondary)
                                 }
@@ -72,29 +99,20 @@ struct NoticeHistoryView: View {
                             // value so VoiceOver still speaks it after the message.
                             .accessibilityValue(entry.timestamp.formatted(.relative(presentation: .named)))
                         }
+                        }
                     }
+                    // Clear's row sits 8 below the heading, and the notices straight under it.
+                    .contentMargins(.top, 8 - CatchlightLayout.minTouchTarget / 2 + 10,
+                                    for: .scrollContent)
+                    .listSectionSpacing(0)
                     .scrollContentBackground(.hidden)
                     .scrollIndicators(.hidden)
                 }
             }
             .background(Color.ckBackground)
-            .navigationTitle("Notice History")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                // No Done button — dismiss by swiping down (owner 2026-06-29).
-                if !entries.isEmpty {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("Clear") {
-                            // Scoped to the notices this view SHOWS (2026-07-01):
-                            // the full clear() also erased the lifecycle
-                            // breadcrumbs, silently emptying Export diagnostics.
-                            DiagnosticsLog.shared.clearUserFacing()
-                            entries = []
-                        }
-                        .accessibilityIdentifier("notice-history-clear")
-                    }
-                }
-            }
+            // The page heading (owner 2026-11-12). No Done button: dismiss by swiping down
+            // (owner 2026-06-29).
+            .sheetPageHeading(LocalizedStringResource("notice-history.heading", defaultValue: "Notice History"))
         }
         .presentationDragIndicator(.visible)
         .onAppear { entries = DiagnosticsLog.shared.userFacingEntries() }

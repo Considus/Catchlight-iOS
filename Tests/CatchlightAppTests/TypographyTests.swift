@@ -417,6 +417,33 @@ extension TypographyTests {
         }
     }
 
+    /// Notice History's heading, centred with Clear on its own row below (Art Director,
+    /// 2026-11-12). The heading has its own string, so the Settings row that opens the screen
+    /// is untouched. The six compound translations carry a soft hyphen at the join, so where
+    /// they don't fit on one line they break there, and never draw under 28pt, on the 375 and
+    /// 393pt phones at the default size and AX1. German stays on one line wherever it fits.
+    func testNoticeHistory_neverBelow28_andCompoundsBreakAtTheJoin() {
+        for language in ["de", "da", "nb", "nl", "fi", "sv"] {
+            XCTAssertEqual(localized("notice-history.heading", language).components(separatedBy: PageHeading.softHyphen).count, 2,
+                           "\(language) has no soft hyphen at its join")
+            XCTAssertFalse(localized("Notice History", language).contains(PageHeading.softHyphen),
+                           "\(language): the Settings row's string should be unchanged")
+        }
+        for phone in [CGFloat(375), 393] {
+            for category in [UIContentSizeCategory.large, .accessibilityMedium] {
+                for language in Self.catalogLanguages {
+                    let fit = PageHeading.fit(localized("notice-history.heading", language), width: Self.column(phone, withButton: false),
+                                              category: category, language: language)
+                    XCTAssertGreaterThanOrEqual(fit.points, 28 - 0.01,
+                        "\(language) \(Int(phone)) \(category.rawValue): \(fit.text) at \(fit.points)pt")
+                }
+            }
+        }
+        let german = PageHeading.fit(localized("notice-history.heading", "de"), width: Self.column(393, withButton: false),
+                                     category: .large, language: "de")
+        XCTAssertEqual(german.text, "Hinweisverlauf", "German should stay on one line where it fits")
+    }
+
     func testSplit_isAtAWordBoundary_andBalanced() {
         XCTAssertEqual(PageHeading.twoLines("Shot List"), "Shot\nList")
         XCTAssertEqual(PageHeading.twoLines("Sync Conflicts"), "Sync\nConflicts")

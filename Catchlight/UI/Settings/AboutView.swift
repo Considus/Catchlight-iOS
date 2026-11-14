@@ -36,14 +36,13 @@ struct AboutView: View {
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 16)
+                .padding(.top, 16)   // 16 under the heading, as on every sheet
                 .padding(.bottom, 16)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollIndicators(.hidden)
             .background(Color.ckBackground)
-            .navigationTitle("About")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetPageHeading("About")
             // No Done button — dismiss by swiping down, matching the Settings sheet
             // (owner 2026-06-16). VoiceOver dismisses via the two-finger scrub
             // (escape) gesture; the drag indicator shows the swipe affordance.
@@ -61,7 +60,6 @@ struct AboutView: View {
             CatchlightWordmark()
         }
         .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.top, 6)
         // Clear space below the wordmark is the same gap as above it (at least the h
         // height), on top of the section spacing.
         .padding(.bottom, CatchlightWordmark.iconGap - Self.sectionGap)
@@ -72,8 +70,7 @@ struct AboutView: View {
     private var taglineBlock: some View {
         VStack(spacing: 6) {
             Text("Privacy-first notes and reminders")
-                .ckDisplay(size: 28, relativeTo: nil)
-                .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                .sheetLead()
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
             // Not a link — a plain label that long-press copies as a short,
@@ -81,7 +78,7 @@ struct AboutView: View {
             // no content or personal data), so it can be dropped into a support
             // email without retyping. Long-press surfaces the standard Copy menu.
             Text(Self.versionString)
-                .ckBody(.regular, size: 14, relativeTo: .subheadline)
+                .sheetSmall()
                 .foregroundStyle(Color.ckTextSecondary)
                 .contextMenu {
                     Button {
@@ -106,17 +103,15 @@ struct AboutView: View {
     private var licences: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Open Source Licences")
-                .ckBody(.medium, size: 15, relativeTo: .subheadline)
-                .foregroundStyle(Color.ckTextSecondary)
-                .textCase(.uppercase)
+                .sheetSectionLabel()
             // The Package.swift dependency set is empty — Catchlight ships with
             // only Apple system frameworks. We state that honestly here so the
             // section never lies about what's in the binary.
             Text("Catchlight uses only Apple system frameworks (CryptoKit, LocalAuthentication, Security, SQLite3). No third-party libraries are bundled.")
-                .ckBody(.regular, size: 14, relativeTo: .subheadline)
+                .sheetBody()
                 .foregroundStyle(Color.ckTextPrimary)
             Text("The BIP-39 English wordlist is sourced from the Trezor project and bundled under the MIT licence. See Resources/bip39-english.txt.")
-                .ckBody(.regular, size: 13, relativeTo: .footnote)
+                .sheetSmall()
                 .foregroundStyle(Color.ckTextSecondary)
         }
         .padding(.vertical, 16)
@@ -150,7 +145,7 @@ struct AboutView: View {
             Link(destination: destination) {
                 HStack(spacing: 12) {
                     Text(title)
-                        .ckBody(.regular, size: 15, relativeTo: .subheadline)
+                        .sheetRow()
                         .foregroundStyle(Color.ckTextPrimary)
                     Spacer()
                     Image(systemName: "arrow.up.right")
@@ -178,7 +173,7 @@ struct AboutView: View {
 
     private var madeBy: some View {
         Text("Made by Considus")
-            .ckBody(.regular, size: 13, relativeTo: .footnote)
+            .sheetSmall()
             .foregroundStyle(Color.ckTextSecondary)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.top, 8)

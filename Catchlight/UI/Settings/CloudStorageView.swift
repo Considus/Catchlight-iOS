@@ -69,11 +69,8 @@ struct CloudStorageView: View {
             // view lays out under. Laying out under it here too puts the bottom row at the
             // Dailies toolbar's place, as on the full-screen views.
             .ignoresSafeArea(.container, edges: .bottom)
-            // System inline nav title, matching the other Settings sub-pages
-            // (About / Notice History / Privacy phrase) — owner 2026-06-29; the
-            // bespoke cloud-glyph hero was the only sub-page that differed.
-            .navigationTitle("Cloud Storage")
-            .navigationBarTitleDisplayMode(.inline)
+            // The page heading, as on the other Settings sub-pages (owner 2026-11-12).
+            .sheetPageHeading("Cloud Storage")
         }
         .presentationDragIndicator(.visible)
         .sheet(isPresented: $pickerPresented) {
@@ -126,7 +123,7 @@ struct CloudStorageView: View {
 
             if let errorText {
                 Text(errorText)
-                    .ckBody(.regular, size: 13, relativeTo: .footnote)
+                    .sheetSmall()
                     .foregroundStyle(Color.ckRuby)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -145,24 +142,28 @@ struct CloudStorageView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Choose a cloud folder you own")
-                .ckDisplay(size: 28, relativeTo: .title2)
-                .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                .sheetLead()
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.bottom, 18)   // 1 line break after "Choose from…"
 
+            // Centred: it sits straight under the centred lead line, with no card around it.
             Text("Select an empty folder, or create a new one, and we'll take care of the rest.")
-                .ckBody(.regular, size: 17, relativeTo: .body)
+                .sheetBody()
                 .foregroundStyle(Color.ckTextPrimary)
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.bottom, 18)   // 1 line break after "Select an empty…"
 
             Text("Catchlight never sees your files. Only you can read them.")
-                .ckBody(.regular, size: 14, relativeTo: .subheadline)
+                .sheetSmall()
                 .foregroundStyle(Color.ckTextSecondary)
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
@@ -187,7 +188,7 @@ struct CloudStorageView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Color.ckAccent)
                     Text(folderDisplayPath)
-                        .ckBody(.regular, size: 13, relativeTo: .footnote)
+                        .sheetSmall()
                         .foregroundStyle(Color.ckTextSecondary)
                         .lineLimit(2)
                         .truncationMode(.middle)
@@ -204,7 +205,7 @@ struct CloudStorageView: View {
                 HStack {
                     Spacer()
                     Button("Remove") { removeFolder() }
-                        .ckBody(.medium, size: 14, relativeTo: .body)
+                        .sheetRow()
                         .foregroundStyle(Color.ckRuby)
                         // T4 (audit 2026-08): a destructive control tapped at its
                         // ~19pt line. Inset −13 reaches the 44pt hit floor; the
@@ -222,10 +223,13 @@ struct CloudStorageView: View {
     /// the one provider with no app to install and no Files extension that can regress.
     /// A recommendation, not a requirement: every provider in the fine print still works.
     private var recommendation: some View {
+        // Centred with the lines above it (Art Director, 2026-11-12); the ⓘ note under it stays left.
         Text("Easiest to set up is iCloud Drive, it's built in.")
-            .ckBody(.regular, size: 14, relativeTo: .subheadline)
+            .sheetBody()
             .foregroundStyle(Color.ckTextPrimary)
+            .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
             .accessibilityIdentifier("cloud-icloud-recommendation")
     }
 
@@ -241,11 +245,11 @@ struct CloudStorageView: View {
     private var finePrint: some View {
         HStack(alignment: .top, spacing: 7) {
             Image(systemName: "info.circle")
-                .font(.system(size: 12))
+                .font(.footnote)
                 .foregroundStyle(Color.ckTextSecondary)
                 .accessibilityHidden(true)
             Text("Tested with iCloud Drive, Dropbox, Internxt, Koofr and Filen. Others may work, and a provider that greys out in the picker can't hand an app a whole folder. You'll need its app installed and signed in.")
-                .ckBody(.regular, size: 12, relativeTo: .caption)
+                .sheetSmall()
                 .foregroundStyle(Color.ckTextSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -281,13 +285,13 @@ struct CloudStorageView: View {
             .accessibilityLabel("Sync \(syncMode.label)")
 
             Text(syncModeDescription)
-                .ckBody(.regular, size: 12, relativeTo: .caption)
+                .sheetSmall()
                 .foregroundStyle(Color.ckTextSecondary)
 
             if syncMode == .manual {
                 Button { fireManualSync() } label: {
                     Text(syncFeedback ?? String(localized: "Sync Now"))
-                        .ckBody(.medium, size: 14, relativeTo: .body)
+                        .sheetRow()
                         .foregroundStyle(hasFolderConfigured ? Color.ckAccent : Color.ckTextComplete)
                 }
                 // T4: same 44pt hit floor as Remove above.

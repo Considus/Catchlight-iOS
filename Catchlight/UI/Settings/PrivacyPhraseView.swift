@@ -61,8 +61,7 @@ struct PrivacyPhraseView: View {
                 // view lays out under. Laying out under it here too puts the bottom row at the
                 // Dailies toolbar's place, as on the full-screen views.
                 .ignoresSafeArea(.container, edges: .bottom)
-                .navigationTitle("Privacy phrase")
-                .navigationBarTitleDisplayMode(.inline)
+                .sheetPageHeading("Privacy phrase")
                 // No Done button — dismiss by swiping down (owner 2026-06-29),
                 // matching About / Cloud Storage. The drag indicator shows it.
                 .background(Color.ckBackground.ignoresSafeArea())
@@ -99,20 +98,19 @@ struct PrivacyPhraseView: View {
                 // Audit 2026-08, V21: decorative — the heading below carries the meaning.
                 .accessibilityHidden(true)
             Text("Reveal your Privacy phrase")
-                .ckDisplay(size: 28, relativeTo: .title2)
-                .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                .sheetLead()
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
                 // Audit 2026-08, V23: the screen's hero is a heading.
                 .accessibilityAddTraits(.isHeader)
             Text("Authenticate with Face ID or your device passcode to view the 12 words. They're the only way to recover your account, so reveal them somewhere private.")
-                .ckBody(.regular, size: 15, relativeTo: .subheadline)
+                .sheetBody()
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             if let errorText {
                 Text(errorText)
-                    .ckBody(.regular, size: 13, relativeTo: .caption)
+                    .sheetSmall()
                     // Audit 2026-08, C9: every sibling error speaks Ruby — the
                     // accent token here cost "error" its colour semantics.
                     .foregroundStyle(Color.ckRuby)
@@ -165,12 +163,11 @@ struct PrivacyPhraseView: View {
                 // Audit 2026-08, V21: decorative — the title below carries the meaning.
                 .accessibilityHidden(true)
             Text(title)
-                .ckDisplay(size: 28, relativeTo: .title2)
-                .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                .sheetLead()
                 .foregroundStyle(Color.ckTextPrimary)
                 .multilineTextAlignment(.center)
             Text(body)
-                .ckBody(.regular, size: 15, relativeTo: .subheadline)
+                .sheetBody()
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -203,7 +200,7 @@ private struct PhraseRevealGrid: View {
     var body: some View {
         VStack(spacing: 24) {
             Text("Write these 12 words down somewhere safe, on paper. They're the only way back into your Takes on a new phone. They don't travel in an iPhone backup, and neither do your Takes, so restoring a backup won't bring either of them back.")
-                .ckBody(.regular, size: 14, relativeTo: .subheadline)
+                .sheetBody()
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
@@ -226,7 +223,7 @@ private struct PhraseRevealGrid: View {
 
             Spacer()
         }
-        .padding(.top, 24)
+        .padding(.top, 16)   // 16 under the heading, as on every sheet
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.ckBackground)
         // Dock-geometry position for the hold control (the pill button system,
@@ -240,7 +237,7 @@ private struct PhraseRevealGrid: View {
     private func wordCell(index: Int, word: String) -> some View {
         HStack(spacing: 8) {
             Text("\(index + 1).")
-                .ckBody(.regular, size: 13, relativeTo: .caption)
+                .sheetSmall()
                 .foregroundStyle(Color.ckTextSecondary)
                 .frame(width: 22, alignment: .trailing)
             Text(word)

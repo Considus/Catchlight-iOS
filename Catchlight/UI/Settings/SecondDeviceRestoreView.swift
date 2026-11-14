@@ -35,15 +35,16 @@ struct SecondDeviceRestoreView: View {
                     warningCard
 
                     Text("Enter your Privacy phrase")
-                        .ckDisplay(size: 28, relativeTo: .title2)
-                        .lineSpacing(CatchlightFont.tightLeading(size: 28))
+                        .sheetLead()
                         .foregroundStyle(Color.ckTextPrimary)
+                        .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .accessibilityAddTraits(.isHeader)
 
                     Text("The 12 words from your other device, in order.")
-                        .ckBody(.light, size: 16, relativeTo: .body)
+                        .sheetBody()
                         .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -54,14 +55,13 @@ struct SecondDeviceRestoreView: View {
                     restoreButton
                 }
                 .padding(.horizontal, 22)
-                .padding(.top, 8)
+                .padding(.top, 16)   // 16 under the heading, as on every sheet
                 .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color.ckBackground)
-            .navigationTitle("Second device")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetPageHeading("Second device")
         }
         .presentationDragIndicator(.visible)
         // Announce the restore error (audit 2026-08, V14): the status line turns
@@ -77,7 +77,7 @@ struct SecondDeviceRestoreView: View {
     /// already warned once). Ruby-toned, matching the app's "state precedence" accent.
     private var warningCard: some View {
         Text("This replaces the account on this device. Takes stored only here will be removed and can't be recovered. If you haven't already, close this and use Export Takes (Markdown) to keep a copy first.")
-            .ckBody(.regular, size: 14, relativeTo: .footnote)
+            .sheetBody()
             .foregroundStyle(Color.ckRuby)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -93,7 +93,7 @@ struct SecondDeviceRestoreView: View {
         else if ready { message = String(localized: "Ready to restore."); isError = false }
         else { message = String(localized: "\(filledCount) of 12 words"); isError = false }
         return Text(message)
-            .ckBody(.regular, size: 14, relativeTo: .caption)
+            .sheetSmall()
             .foregroundStyle(isError ? Color.ckRuby : Color.ckTextSecondary)
             .frame(maxWidth: .infinity, alignment: .center)
             .fixedSize(horizontal: false, vertical: true)

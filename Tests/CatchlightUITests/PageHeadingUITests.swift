@@ -40,11 +40,15 @@ final class PageHeadingUITests: XCTestCase {
         return points * 1.7
     }
 
-    private func assertOneLine(_ element: XCUIElement, _ name: String, _ size: (name: String, category: String, ui: UIContentSizeCategory)) {
+    /// `rowInsets` is the space a list row adds above and below the heading's line, which
+    /// VoiceOver's frame for a row includes.
+    private func assertOneLine(_ element: XCUIElement, _ name: String, _ size: (name: String, category: String, ui: UIContentSizeCategory),
+                               rowInsets: CGFloat = 0) {
         XCTAssertTrue(element.waitForExistence(timeout: 8), "\(name) heading not found at \(size.name)")
         let ceiling = singleLineCeiling(size.ui)
-        XCTAssertLessThan(element.frame.height, ceiling,
-                          "\(name) heading at \(size.name) is \(element.frame.height)pt tall, a single line is under \(ceiling)")
+        let height = element.frame.height - rowInsets
+        XCTAssertLessThan(height, ceiling,
+                          "\(name) heading at \(size.name) is \(height)pt tall, a single line is under \(ceiling)")
     }
 
     private func headingText(_ app: XCUIApplication, _ label: String) -> XCUIElement {
@@ -103,7 +107,8 @@ final class PageHeadingUITests: XCTestCase {
             XCTAssertTrue(tab.waitForExistence(timeout: 8))
             tab.swipeUp()
             XCTAssertTrue(anyElement(in: app, id: "settings-sheet").waitForExistence(timeout: 5))
-            assertOneLine(headingText(app, "Settings"), "Settings", size)
+            // The title row's 14 above the line and 10 below it (SettingsView.titleRowBottomInset).
+            assertOneLine(headingText(app, "Settings"), "Settings", size, rowInsets: 14 + 10)
             app.terminate()
         }
     }
