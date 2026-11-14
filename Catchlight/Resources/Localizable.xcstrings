@@ -37180,7 +37180,7 @@
         }
       }
     },
-    "No privacy phrase on this device. Export now, then Settings > Start over." : {
+    "No Privacy phrase on this device. Export now, then Settings > Start over." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -48831,114 +48831,114 @@
         }
       }
     },
-    "Saves a readable copy. Not a recovery phrase." : {
+    "Saves a readable copy. Not a Privacy phrase." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Speichert eine lesbare Kopie. Keine Wiederherstellungsphrase."
+            "value" : "Speichert eine lesbare Kopie. Keine Datenschutz-Phrase."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enregistre une copie lisible. Il ne s'agit pas d'une phrase de récupération."
+            "value" : "Enregistre une copie lisible. Il ne s'agit pas d'une phrase de confidentialité."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Guarda una copia legible. No es una frase de recuperación."
+            "value" : "Guarda una copia legible. No es una frase de privacidad."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salva una copia leggibile. Non è una frase di recupero."
+            "value" : "Salva una copia leggibile. Non è una frase di riservatezza."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salva uma cópia legível. Não é uma frase de recuperação."
+            "value" : "Salva uma cópia legível. Não é uma frase de privacidade."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Slaat een leesbare kopie op. Geen herstelzin."
+            "value" : "Slaat een leesbare kopie op. Geen privacyzin."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Guarda uma cópia legível. Não é uma frase de recuperação."
+            "value" : "Guarda uma cópia legível. Não é uma frase de privacidade."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zapisuje czytelną kopię. To nie jest fraza odzyskiwania."
+            "value" : "Zapisuje czytelną kopię. To nie jest fraza prywatności."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sparar en läsbar kopia. Inte en återställningsfras."
+            "value" : "Sparar en läsbar kopia. Inte en integritetsfras."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemmer en læsbar kopi. Ikke en gendannelsesfrase."
+            "value" : "Gemmer en læsbar kopi. Ikke en privatfrase."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lagrer en lesbar kopi. Ikke en gjenopprettingsfrase."
+            "value" : "Lagrer en lesbar kopi. Ikke en personvernfrase."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tallentaa luettavan kopion. Ei palautuslausetta."
+            "value" : "Tallentaa luettavan kopion. Ei yksityisyyslausetta."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Okunabilir bir kopya kaydeder. Bir kurtarma ifadesi değildir."
+            "value" : "Okunabilir bir kopya kaydeder. Bir gizlilik ifadesi değildir."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "読み取り可能なコピーを保存します。リカバリーフレーズではありません。"
+            "value" : "読み取り可能なコピーを保存します。プライバシーフレーズではありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "읽을 수 있는 사본을 저장합니다. 복구 문구가 아닙니다."
+            "value" : "읽을 수 있는 사본을 저장합니다. 개인정보 보호 문구가 아닙니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存一份可读副本。它不是恢复短语。"
+            "value" : "保存一份可读副本。它不是隐私短语。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "儲存可讀副本。非恢復詞組。"
+            "value" : "儲存可讀副本。非隱私密語。"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "บันทึกสำเนาที่อ่านได้ ไม่ใช่วลีสำหรับกู้คืน"
+            "value" : "บันทึกสำเนาที่อ่านได้ ไม่ใช่วลีความเป็นส่วนตัว"
           }
         }
       }
@@ -58934,114 +58934,114 @@
         }
       }
     },
-    "The file is readable text and it does not contain a recovery phrase. Use Start over and Import from a file to re-import your Takes. Delete the export once your Takes are back." : {
+    "The file is readable text and it does not contain a Privacy phrase. Use Start over and Import from a file to re-import your Takes. Delete the export once your Takes are back." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Datei ist lesbarer Text und enthält keine Wiederherstellungsphrase. Wähle „Von vorn beginnen“ und „Aus Datei importieren“, um deine Takes erneut zu importieren. Lösche den Export, sobald deine Takes wiederhergestellt sind."
+            "value" : "Die Datei ist lesbarer Text und enthält keine Datenschutz-Phrase. Wähle „Von vorn beginnen“ und „Aus Datei importieren“, um deine Takes erneut zu importieren. Lösche den Export, sobald deine Takes wiederhergestellt sind."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le fichier est un texte lisible et ne contient pas de phrase de récupération. Utilisez Recommencer et Importer depuis un fichier pour réimporter vos Takes. Supprimez l'exportation une fois vos Takes récupérés."
+            "value" : "Le fichier est un texte lisible et ne contient pas de phrase de confidentialité. Utilisez Recommencer et Importer depuis un fichier pour réimporter vos Takes. Supprimez l'exportation une fois vos Takes récupérés."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El archivo es texto legible y no contiene una frase de recuperación. Usa Empezar de nuevo e Importar desde un archivo para volver a importar tus Takes. Elimina la exportación una vez que hayas recuperado tus Takes."
+            "value" : "El archivo es texto legible y no contiene una frase de privacidad. Usa Empezar de nuevo e Importar desde un archivo para volver a importar tus Takes. Elimina la exportación una vez que hayas recuperado tus Takes."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il file è in testo leggibile e non contiene una frase di recupero. Usa Ricomincia e Importa da un file per importare di nuovo i tuoi Take. Elimina il file esportato una volta ripristinati i Take."
+            "value" : "Il file è in testo leggibile e non contiene una frase di riservatezza. Usa Ricomincia e Importa da un file per importare di nuovo i tuoi Take. Elimina il file esportato una volta ripristinati i Take."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O arquivo é um texto legível e não contém uma frase de recuperação. Use Recomeçar e Importar de um arquivo para reimportar seus Takes. Exclua a exportação assim que seus Takes estiverem de volta."
+            "value" : "O arquivo é um texto legível e não contém uma frase de privacidade. Use Recomeçar e Importar de um arquivo para reimportar seus Takes. Exclua a exportação assim que seus Takes estiverem de volta."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het bestand is leesbare tekst en bevat geen herstelzin. Gebruik Opnieuw beginnen en Importeren uit bestand om je Takes opnieuw te importeren. Verwijder het exportbestand zodra je Takes weer terug zijn."
+            "value" : "Het bestand is leesbare tekst en bevat geen privacyzin. Gebruik Opnieuw beginnen en Importeren uit bestand om je Takes opnieuw te importeren. Verwijder het exportbestand zodra je Takes weer terug zijn."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O ficheiro é texto legível e não contém uma frase de recuperação. Use Começar de novo e Importar de um ficheiro para voltar a importar os seus Takes. Elimine a exportação assim que os seus Takes estejam de volta."
+            "value" : "O ficheiro é texto legível e não contém uma frase de privacidade. Use Começar de novo e Importar de um ficheiro para voltar a importar os seus Takes. Elimine a exportação assim que os seus Takes estejam de volta."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plik zawiera czytelny tekst i nie zawiera frazy odzyskiwania. Użyj opcji Zacznij od nowa oraz Importuj z pliku, aby ponownie zaimportować swoje Takes. Usuń eksport, gdy Twoje Takes wrócą."
+            "value" : "Plik zawiera czytelny tekst i nie zawiera frazy prywatności. Użyj opcji Zacznij od nowa oraz Importuj z pliku, aby ponownie zaimportować swoje Takes. Usuń eksport, gdy Twoje Takes wrócą."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Filen innehåller läsbar text och ingen återställningsfras. Använd Börja om och Importera från en fil för att importera dina Takes igen. Radera exportfilen när dina Takes är tillbaka."
+            "value" : "Filen innehåller läsbar text och ingen integritetsfras. Använd Börja om och Importera från en fil för att importera dina Takes igen. Radera exportfilen när dina Takes är tillbaka."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Filen er læsbar tekst og indeholder ikke en gendannelsesfrase. Brug Start forfra og Importér fra en fil for at importere dine Takes igen. Slet eksporten, når dine Takes er tilbage."
+            "value" : "Filen er læsbar tekst og indeholder ikke en privatfrase. Brug Start forfra og Importér fra en fil for at importere dine Takes igen. Slet eksporten, når dine Takes er tilbage."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Filen er lesbar tekst og inneholder ikke en gjenopprettingsfrase. Bruk Start på nytt og Importer fra en fil for å importere Take-ene dine på nytt. Slett eksportfilen når Take-ene er tilbake."
+            "value" : "Filen er lesbar tekst og inneholder ikke en personvernfrase. Bruk Start på nytt og Importer fra en fil for å importere Take-ene dine på nytt. Slett eksportfilen når Take-ene er tilbake."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tiedosto on luettavaa tekstiä, eikä se sisällä palautuslausetta. Käytä valintoja Aloita alusta ja Tuo tiedostosta tuodaksesi Takesi uudelleen. Poista vientitiedosto, kun Takesi ovat palautuneet."
+            "value" : "Tiedosto on luettavaa tekstiä, eikä se sisällä yksityisyyslausetta. Käytä valintoja Aloita alusta ja Tuo tiedostosta tuodaksesi Takesi uudelleen. Poista vientitiedosto, kun Takesi ovat palautuneet."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dosya okunabilir bir metindir ve kurtarma ifadesi içermez. Take'lerinizi yeniden içe aktarmak için Baştan Başla ve Dosyadan İçe Aktar seçeneklerini kullanın. Take'leriniz geri geldiğinde dışa aktarılan dosyayı silin."
+            "value" : "Dosya okunabilir bir metindir ve gizlilik ifadesi içermez. Take'lerinizi yeniden içe aktarmak için Baştan Başla ve Dosyadan İçe Aktar seçeneklerini kullanın. Take'leriniz geri geldiğinde dışa aktarılan dosyayı silin."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このファイルは読み取り可能なテキストで、リカバリーフレーズは含まれていません。「最初からやり直す」と「ファイルから読み込む」を使って、Takeを再読み込みしてください。Takeが戻ったら、エクスポートファイルを削除してください。"
+            "value" : "このファイルは読み取り可能なテキストで、プライバシーフレーズは含まれていません。「最初からやり直す」と「ファイルから読み込む」を使って、Takeを再読み込みしてください。Takeが戻ったら、エクスポートファイルを削除してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "파일은 읽을 수 있는 텍스트이며 복구 문구는 포함되어 있지 않습니다. 처음부터 다시 시작을 선택한 다음 파일에서 가져오기를 사용해 Take를 다시 가져오세요. Take가 복원되면 내보낸 파일을 삭제하세요."
+            "value" : "파일은 읽을 수 있는 텍스트이며 개인정보 보호 문구는 포함되어 있지 않습니다. 처음부터 다시 시작을 선택한 다음 파일에서 가져오기를 사용해 Take를 다시 가져오세요. Take가 복원되면 내보낸 파일을 삭제하세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "该文件是可读文本，不包含恢复短语。使用“重新开始”和“从文件导入”重新导入 Takes。Takes 恢复后，请删除导出文件。"
+            "value" : "该文件是可读文本，不包含隐私短语。使用“重新开始”和“从文件导入”重新导入 Takes。Takes 恢复后，请删除导出文件。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此檔案是可讀取的文字，不含復原密語。請使用「重新開始」和「從檔案匯入」重新匯入 Takes。Takes 復原後，請刪除匯出的檔案。"
+            "value" : "此檔案是可讀取的文字，不含隱私密語。請使用「重新開始」和「從檔案匯入」重新匯入 Takes。Takes 復原後，請刪除匯出的檔案。"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ไฟล์นี้เป็นข้อความที่อ่านได้และไม่มีวลีการกู้คืน ใช้ \"เริ่มต้นใหม่\" และ \"นำเข้าไฟล์\" เพื่อนำเข้า Take ของคุณอีกครั้ง ลบการส่งออกเมื่อ Take ของคุณกลับมาแล้ว"
+            "value" : "ไฟล์นี้เป็นข้อความที่อ่านได้และไม่มีวลีความเป็นส่วนตัว ใช้ \"เริ่มต้นใหม่\" และ \"นำเข้าไฟล์\" เพื่อนำเข้า Take ของคุณอีกครั้ง ลบการส่งออกเมื่อ Take ของคุณกลับมาแล้ว"
           }
         }
       }

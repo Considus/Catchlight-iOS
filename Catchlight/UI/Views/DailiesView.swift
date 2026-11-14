@@ -964,7 +964,7 @@ struct DailiesView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckRuby)
                     .accessibilityHidden(true)
-                Text("No privacy phrase on this device. Export now, then Settings > Start over.")
+                Text("No Privacy phrase on this device. Export now, then Settings > Start over.")
                     .ckBody(.regular, size: 14, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextPrimary)
                     // Stacked, the text owns the full width and must not be clipped: the
@@ -981,7 +981,7 @@ struct DailiesView: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("missing-phrase-banner-export")
                 .accessibilityLabel("Export your Takes")
-                .accessibilityHint("Saves a readable copy. Not a recovery phrase.")
+                .accessibilityHint("Saves a readable copy. Not a Privacy phrase.")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -999,7 +999,7 @@ struct DailiesView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("The file is readable text and it does not contain a recovery phrase. Use Start over and Import from a file to re-import your Takes. Delete the export once your Takes are back.")
+                Text("The file is readable text and it does not contain a Privacy phrase. Use Start over and Import from a file to re-import your Takes. Delete the export once your Takes are back.")
             }
         }
     }
