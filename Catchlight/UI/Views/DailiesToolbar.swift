@@ -124,28 +124,11 @@ struct DailiesToolbar: View {
 
     /// One labelled column of the panel: the icon over its label, a quarter of the width.
     private func toolbarItem(icon: some View, label: LocalizedStringKey) -> some View {
-        VStack(spacing: 3) {
-            icon.frame(height: DailiesToolbarMetrics.addSquare)
-            Text(label)
-                .ckBody(.medium, size: DailiesToolbarMetrics.labelSize, relativeTo: .caption2)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                // Like the system tab bar: the label stops growing at the second size
-                // above the default, and a long press shows it large instead.
-                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-        }
-        // Each column fills the panel's full height, so a tap anywhere in it counts.
-        .frame(maxWidth: .infinity, minHeight: CatchlightLayout.dockHeight)
-        .contentShape(Rectangle())
-        .accessibilityShowsLargeContentViewer {
-            icon
-            Text(label)
-        }
+        ToolbarColumn(icon: icon, label: label, minHeight: CatchlightLayout.dockHeight)
     }
 
     private func panelIcon(_ glyph: ToolbarGlyph) -> some View {
-        glyph.stroke(style: StrokeStyle(lineWidth: DailiesToolbarMetrics.iconStroke, lineCap: .round, lineJoin: .round))
-            .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
+        ToolbarColumn.panelIcon(glyph)
     }
 
     /// Read-only after a subscription or trial ends: Add keeps its place and still opens the
@@ -415,6 +398,43 @@ struct DailiesToolbar: View {
         .accessibilityHint("Double-tap to toggle. Use the actions rotor for expired reminders only.")
         .accessibilityAction(named: "Expired reminders only") { ui.longPressRemindersFilter() }
         .accessibilityAddTraits(ui.filterReminders ? [.isSelected, .isButton] : [.isButton])
+    }
+}
+
+/// One labelled column of a toolbar panel: the icon over its label, filling its share of the
+/// width and the panel's height. Shared by the Dailies bar and the editor's bar above the
+/// keyboard, so the two can't drift apart.
+struct ToolbarColumn<Icon: View>: View {
+    let icon: Icon
+    let label: LocalizedStringKey
+    /// The panel's height: each column fills it, so a tap anywhere in it counts.
+    let minHeight: CGFloat
+
+    var body: some View {
+        VStack(spacing: 3) {
+            icon.frame(height: DailiesToolbarMetrics.addSquare)
+            Text(label)
+                .ckBody(.medium, size: DailiesToolbarMetrics.labelSize, relativeTo: .caption2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                // Like the system tab bar: the label stops growing at the second size
+                // above the default, and a long press shows it large instead.
+                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        }
+        .frame(maxWidth: .infinity, minHeight: minHeight)
+        .contentShape(Rectangle())
+        .accessibilityShowsLargeContentViewer {
+            icon
+            Text(label)
+        }
+    }
+}
+
+extension ToolbarColumn where Icon == AnyView {
+    /// A panel glyph at the toolbar's icon size and line weight.
+    static func panelIcon(_ glyph: ToolbarGlyph) -> some View {
+        glyph.stroke(style: StrokeStyle(lineWidth: DailiesToolbarMetrics.iconStroke, lineCap: .round, lineJoin: .round))
+            .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
     }
 }
 

@@ -68,101 +68,83 @@ struct EditorKeyboardBar: View {
     @State private var turned = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Matches the dock's 44pt button.
-    private let buttonSize: CGFloat = 44
+    /// The panel's height. Lower than the Dailies bar's (`dockHeight`, 103): this one sits over
+    /// the keyboard and the Take needs the room (Art Director, 2026-11-14).
+    static let panelHeight: CGFloat = 76
 
     var body: some View {
-        // FOUR EQUAL SLOTS, each glyph centred — same layout as the dock (`slotW =
-        // width/4`), so the buttons sit on the dock's exact column centres (owner
-        // 2026-06-19: spacing must match the bottom toolbar).
+        // The Dailies bar's format (owner 2026-11-14: "the same format and look as the main
+        // toolbar"): a panel of four equal columns, each an icon over its label, no rings.
         HStack(spacing: 0) {
-            // 1 — Dismiss: the dock's Add button with its "+" rotated 45° so it
-            // reads as an × (owner: "the add button rotates to an X"). Spoken as
-            // "Discard changes" (owner 2026-08-16), matching the row's long-press item
-            // word for word — the button throws the edit away, and "Close keyboard"
-            // announced a dismissal while performing a discard.
-            slot(enabled: true, label: "Discard changes", action: onDismiss) {
-                dockSymbol("plus", tint: .ckAccent, enabled: true)
+            // 1 — Cancel: the plus turned into a cross, in the outlined square the Dailies bar
+            // gives a locked Add. Quiet on purpose: it throws the edit away. Spoken as "Discard
+            // changes" (owner 2026-08-16), matching the row's long-press item word for word.
+            column(enabled: true, label: "Discard changes", visibleLabel: "Cancel",
+                   tint: .ckTextSecondary, action: onDismiss) {
+                ToolbarGlyph.plus
+                    .stroke(Color.ckTextSecondary,
+                            style: StrokeStyle(lineWidth: DailiesToolbarMetrics.iconStroke, lineCap: .round))
+                    .frame(width: DailiesToolbarMetrics.iconSize, height: DailiesToolbarMetrics.iconSize)
                     .rotationEffect(.degrees(turned || reduceMotion ? 45 : 0))
                     .opacity(reduceMotion && !turned ? 0 : 1)
                     .onAppear {
                         withAnimation(reduceMotion ? CatchlightMotion.reduced : CatchlightMotion.turn) { turned = true }
                     }
+                    .frame(width: DailiesToolbarMetrics.addSquare, height: DailiesToolbarMetrics.addSquare)
+                    .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1.5))
             }
-            .frame(maxWidth: .infinity)
 
-            // 2 — the REMINDER bell, on BOTH editors (audit round 9): edit
-            // the time on a reminder Take, or add one, without the Focus row
-            // detour. A task previously had NO route to its reminder at all — the
-            // Angle sat here, and the ring's Reminders blade TOGGLES (one tap turns
-            // the reminder off, a second creates a new one at the default offset,
-            // silently discarding the time the user set), so it never edited.
-            // Falls back to the greyed Angle only where the host can't present the
-            // picker (`onReminder == nil`).
-            //
-            // NO state tint (audit C10): the
-            // Ember-vs-accent distinction never existed in Night — the two tokens
-            // are the SAME hex there (1.00:1, photographed). The LABEL still
-            // carries the state ("Add" vs "Edit").
+            // 2 — Remind, on both editors (audit round 9): edit the time on a reminder Take, or
+            // add one, without the Focus row detour. The clock, as on the Focus row and the
+            // Sequence filters. No state tint (audit C10): the label says Add or Edit. Falls back
+            // to a greyed Shot List only where the host can't present the picker.
             if let onReminder = config.onReminder {
-                slot(enabled: true, identifier: "reminder-button",
-                     label: config.hasReminder ? "Edit reminder" : "Add reminder",
-                     action: onReminder) {
-                    dockSymbol("bell", tint: .ckAccent, enabled: true, size: 22)
+                column(enabled: true, identifier: "reminder-button",
+                       label: config.hasReminder ? "Edit reminder" : "Add reminder", visibleLabel: "Remind",
+                       tint: .ckTextSecondary, action: onReminder) {
+                    ToolbarColumn.panelIcon(.clock)
                 }
-                .frame(maxWidth: .infinity)
             } else {
-                // No picker host — keep the neutral, greyed Angle.
-                slot(enabled: false, identifier: "angle-button",
-                     label: "Open Shot List", action: config.onOpenAngle) {
-                    dockSymbol("angle", tint: .ckAccent, enabled: false, size: 24)
+                column(enabled: false, identifier: "angle-button",
+                       label: "Open Shot List", visibleLabel: "Shot List",
+                       tint: .ckTextComplete, action: config.onOpenAngle) {
+                    shotListIcon
                 }
-                .frame(maxWidth: .infinity)
             }
 
-            // 3 — a TASK gets the Shot List here (Discard · bell · Shot
-            // List · Done); a note keeps Important. Important LEAVES the task
-            // toolbar — it stays reachable from the Focus row and the row's
-            // long-press menu, and the four-slot bar has no fifth slot to give.
+            // 3 — a task gets the Shot List here; a note keeps Important. Important leaves the
+            // task bar: it stays on the Focus row and the row's long-press menu.
             if config.angleEnabled {
-                slot(enabled: true, identifier: "angle-button",
-                     label: "Open Shot List", action: config.onOpenAngle) {
-                    // The checklist glyph (it opens the checklist — owner 2026-06-19,
-                    // matching the Angle's registered icon); sized down as it renders
-                    // heavier than ∠ at the same point size.
-                    dockSymbol("checklist", tint: .ckAccent, enabled: true, size: 22)
+                column(enabled: true, identifier: "angle-button",
+                       label: "Open Shot List", visibleLabel: "Shot List",
+                       tint: .ckTextSecondary, action: config.onOpenAngle) {
+                    shotListIcon
                 }
-                .frame(maxWidth: .infinity)
             } else {
-                // Important: the app's Important glyph, an exclamation "!".
-                // NO state tint (C10) — the VALUE below carries on/off.
                 // Disabled on the Obie, with a hint saying why (the SettingsRow pattern).
-                slot(enabled: !config.importantLocked, label: "Important",
-                     value: config.isImportant ? "on" : "off",
-                     selected: config.isImportant,
-                     hint: config.importantLocked ? "An Obie is always Important." : nil,
-                     action: config.onToggleImportant) {
-                    ImportantGlyph(size: 24)
-                        .foregroundStyle(config.importantLocked ? Color.ckTextComplete : Color.ckAccent)
+                column(enabled: !config.importantLocked, label: "Important", visibleLabel: "Important",
+                       value: config.isImportant ? "on" : "off",
+                       selected: config.isImportant,
+                       hint: config.importantLocked ? "An Obie is always Important." : nil,
+                       tint: config.importantLocked ? .ckTextComplete
+                           : (config.isImportant ? .ckAccent : .ckTextSecondary),
+                       action: config.onToggleImportant) {
+                    ToolbarColumn.panelIcon(.important)
                 }
-                .frame(maxWidth: .infinity)
             }
 
-            // 4 — Done: marks the whole Take done (all checklist items + the
-            // reminder). Greyed for a pure note (nothing to complete). Was Search
-            // (owner 2026-06-19 — Search did nothing useful while inside one Take).
-            slot(enabled: config.doneEnabled,
-                 label: config.isDone ? "Mark not done" : "Mark done",
-                 action: config.onToggleDone) {
-                // A plain tick (no circle), NO state tint (C10) — the
-                // LABEL above carries done/not-done.
-                dockSymbol("checkmark",
-                           tint: .ckAccent,
-                           enabled: config.doneEnabled,
-                           size: 24)
+            // 4 — Mark done: the whole Take (every checklist item and the reminder). Greyed for
+            // a pure note. The spoken label says what the tap will do; the visible one stays.
+            column(enabled: config.doneEnabled,
+                   label: config.isDone ? "Mark not done" : "Mark done", visibleLabel: "Mark done",
+                   tint: !config.doneEnabled ? .ckTextComplete
+                       : (config.isDone ? .ckAccent : .ckTextSecondary),
+                   action: config.onToggleDone) {
+                ToolbarColumn.panelIcon(.task)
             }
-            .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity, minHeight: Self.panelHeight)
+        .flatEdgePanel(fill: Color.ckPanel)
         .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
         .padding(.top, 10)
         .padding(.bottom, 8)
@@ -170,42 +152,31 @@ struct EditorKeyboardBar: View {
         .dockFadeBackground()
     }
 
-    /// A dock-spec SF Symbol glyph: 24pt, .light, Ember (`ckAccent`); greys when disabled.
-    private func dockSymbol(_ systemImage: String, tint: Color, enabled: Bool, size: CGFloat = 24) -> some View {
-        Image(systemName: systemImage)
-            .font(.system(size: size, weight: .light))
-            .foregroundStyle(enabled ? tint : Color.ckTextComplete)
-            // The ∠ symbol's mass sits low-left, so nudge it up to optically centre —
-            // matching the main dock's Angle glyph (owner 2026-06-19).
-            .offset(y: systemImage == "angle" ? -2 : 0)
+    /// The checklist symbol: there is no `ToolbarGlyph` for the Shot List yet.
+    private var shotListIcon: some View {
+        Image(systemName: "checklist")
+            .font(.system(size: 22, weight: .regular))
     }
 
-    /// One toolbar slot: the ring the old Dailies toolbar used (uniform Ember @ 0.55,
-    /// 1.5pt, owner 2026-06-19) with a centred glyph, in a
-    /// 44pt button.
-    @ViewBuilder
-    /// `value`/`selected` (V11, audit 2026-08): a STATE toggle keeps its fixed
-    /// label and speaks its state as a value + the selected trait — the dock
-    /// filters' pattern. (The bell and the tick change their LABEL instead,
-    /// deliberately: a changing label says what the button will DO next; a value
-    /// says what the state IS. Important is a state.)
-    private func slot<Glyph: View>(enabled: Bool,
-                                   identifier: String? = nil,
-                                   label: LocalizedStringKey,
-                                   value: LocalizedStringKey? = nil,
-                                   selected: Bool = false,
-                                   hint: LocalizedStringKey? = nil,
-                                   action: @escaping () -> Void,
-                                   @ViewBuilder glyph: () -> Glyph) -> some View {
+    /// One column: `ToolbarColumn` (the Dailies bar's) in a button. `label` is what VoiceOver
+    /// says and is unchanged from the ringed bar; `visibleLabel` is the short word under the icon.
+    ///
+    /// `value`/`selected` (V11, audit 2026-08): a state toggle keeps its fixed label and speaks
+    /// its state as a value and the selected trait. The reminder and the tick change their label
+    /// instead, on purpose: a changing label says what the button will do next.
+    private func column<Glyph: View>(enabled: Bool,
+                                     identifier: String? = nil,
+                                     label: LocalizedStringKey,
+                                     visibleLabel: LocalizedStringKey,
+                                     value: LocalizedStringKey? = nil,
+                                     selected: Bool = false,
+                                     hint: LocalizedStringKey? = nil,
+                                     tint: Color,
+                                     action: @escaping () -> Void,
+                                     @ViewBuilder glyph: () -> Glyph) -> some View {
         Button(action: action) {
-            ZStack {
-                CatchlightShape.control
-                    .strokeBorder(Color.ckAccent.opacity(0.55), lineWidth: 1.5)
-                    .frame(width: buttonSize, height: buttonSize)
-                glyph()
-            }
-            .frame(width: buttonSize, height: buttonSize)
-            .contentShape(CatchlightShape.control)
+            ToolbarColumn(icon: glyph(), label: visibleLabel, minHeight: Self.panelHeight)
+                .foregroundStyle(tint)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
