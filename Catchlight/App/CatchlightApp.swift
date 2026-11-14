@@ -491,8 +491,13 @@ struct CatchlightApp: App {
                 .ignoresSafeArea(.keyboard)
             )
         }
+        .onChange(of: session.isObscured && app.lockState == .unlocked) { _, shown in
+            PrivacyCurtainWindow.show(shown)
+        }
         .onChange(of: scenePhase) { _, newPhase in
             session.handleScenePhase(newPhase)
+            // Raise the curtain in this same pass, before the system snapshot.
+            PrivacyCurtainWindow.show(session.isObscured && app.lockState == .unlocked)
             if newPhase == .background {
                 // Mark an ORDERLY exit: if this flag is still set at the next launch, the run died
                 // (crash / watchdog / jetsam) and `recordLaunch` logs it. The diagnostics log is
@@ -628,6 +633,34 @@ struct JailbreakBanner: View {
 /// §12.2). Mirrors the splash / lock screen — the brand mark centred on the adaptive
 /// Paper/Ink background — so the app-switcher card reads as Catchlight, on-brand in
 /// both appearances.
+/// The same curtain in a window of its own above every other, so it also covers a sheet
+/// (Settings, the Privacy phrase, a refund sheet). The overlay in the root view sits under
+/// any presented sheet, and the app-switcher card then showed the sheet.
+@MainActor
+enum PrivacyCurtainWindow {
+    private static var window: UIWindow?
+
+    static func show(_ shown: Bool) {
+        guard shown else {
+            window?.isHidden = true
+            return
+        }
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        guard let scene = scenes.first(where: { $0.activationState != .unattached }) ?? scenes.first else { return }
+        let curtain = window ?? {
+            let made = UIWindow(windowScene: scene)
+            made.windowLevel = .alert + 1
+            made.rootViewController = UIHostingController(rootView: PrivacyOverlay())
+            return made
+        }()
+        // Match the app's chosen appearance, which the root view sets on its own window.
+        let appWindow = scene.windows.first { $0 !== curtain && !$0.isHidden }
+        curtain.overrideUserInterfaceStyle = appWindow?.traitCollection.userInterfaceStyle ?? .unspecified
+        curtain.isHidden = false
+        window = curtain
+    }
+}
+
 struct PrivacyOverlay: View {
     var body: some View {
         ZStack {
