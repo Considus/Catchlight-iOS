@@ -18,7 +18,8 @@ name: CI
 # What runs where (2026-11-12). The UI tests are about 47 of a job's 52 minutes, so a PR run
 # keeps them to the latest iOS and runs only the unit tests on the iOS 18.5 floor, and the
 # merge queue (`merge_group`) does the same: the unit tests run on both runtimes, the UI tests
-# on the latest only. A manual dispatch runs every test on both. A push to main runs only the Release build: the merge
+# on the latest only. A manual dispatch runs every test on both, and a nightly run (02:47 UTC, or a
+# manual dispatch with `nightly` ticked) runs every test on the 18.5 floor alone. A push to main runs only the Release build: the merge
 # queue has already tested that exact commit (it fast-forwards main to the merge group's head),
 # and the full matrix again took two of the five macOS runners an hour per merge.
 # Both legs keep their check names whatever
@@ -281,7 +282,8 @@ jobs:
         # SCOPE (2026-11-12): on a pull request or in the merge queue the iOS 18.5 floor runs the unit tests only
         # (CatchlightTests); every other leg and event runs the whole scheme. The check name
         # does not change, so the required checks need no edit. The UI tests on the floor run
-        # only in a manual dispatch.
+        # in a manual dispatch and in the nightly. A manual `nightly` run shares the nightly's concurrency
+        # group, so it cancels a scheduled run still going.
         env:
           EVENT: ${{ github.event_name }}
           DESTINATION: ${{ matrix.destination }}
