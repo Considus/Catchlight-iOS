@@ -409,19 +409,29 @@ struct ToolbarColumn<Icon: View>: View {
     let label: LocalizedStringKey
     /// The panel's height: each column fills it, so a tap anywhere in it counts.
     let minHeight: CGFloat
+    /// The editor's bar sets a top inset to align its columns to the top, so the icons line up
+    /// across the columns when a label wraps. Nil centres the icon and label (the Dailies bar).
+    var topInset: CGFloat? = nil
 
     var body: some View {
         VStack(spacing: 3) {
             icon.frame(height: DailiesToolbarMetrics.addSquare)
             Text(label)
                 .ckBody(.medium, size: DailiesToolbarMetrics.labelSize, relativeTo: .caption2)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                // A long label takes a second line and shrinks before it reaches the column's
+                // edge, and never ends in "…" (Art Director 2026-11-14: "Mark done" runs 17 to
+                // 26 characters in most of the 18 languages).
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
                 // Like the system tab bar: the label stops growing at the second size
                 // above the default, and a long press shows it large instead.
                 .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         }
-        .frame(maxWidth: .infinity, minHeight: minHeight)
+        .padding(.top, topInset ?? 0)
+        .frame(maxWidth: .infinity, minHeight: minHeight, alignment: topInset == nil ? .center : .top)
         .contentShape(Rectangle())
         .accessibilityShowsLargeContentViewer {
             icon

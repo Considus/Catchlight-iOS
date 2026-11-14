@@ -394,7 +394,9 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
             host.view.backgroundColor = .clear
             // The panel plus the 10pt above it and 8pt below it (`EditorKeyboardBar`).
             host.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width,
-                                     height: EditorKeyboardBar.panelHeight + 18)
+                                     height: EditorKeyboardBar.panelHeight(
+                                        for: DynamicTypeSize(traitCollection.preferredContentSizeCategory) ?? .large,
+                                        screenWidth: UIScreen.main.bounds.width) + 18)
             host.view.autoresizingMask = [.flexibleWidth]
             addChild(host)
             host.didMove(toParent: self)

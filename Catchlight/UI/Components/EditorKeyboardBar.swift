@@ -67,15 +67,45 @@ struct EditorKeyboardBar: View {
     /// The plus turns into the cross once, as the bar appears (Reduce Motion: it fades in turned).
     @State private var turned = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var height: CGFloat {
+        Self.panelHeight(for: dynamicTypeSize, screenWidth: UIScreen.main.bounds.width)
+    }
 
     /// The panel's height. Lower than the Dailies bar's (`dockHeight`, 103): this one sits over
     /// the keyboard and the Take needs the room (Art Director, 2026-11-14).
     static let panelHeight: CGFloat = 76
+    /// Top-aligned columns, so the icons line up when a label wraps onto a second line (Art
+    /// Director 2026-11-14). This inset centres a one-line column (40 icon, 3 gap, a 16pt label)
+    /// in the 76pt panel.
+    static let columnTopInset: CGFloat = 8
+
+    /// The panel's height for this text size and screen width: 76, or taller by a label line when
+    /// any of the bar's labels is wider than its column in the current language ("Mark done" runs
+    /// to 26 characters). The bar's host above the keyboard has a fixed height, and the editor
+    /// clears the bar by it, so both read this one figure rather than the drawn panel.
+    static func panelHeight(for size: DynamicTypeSize, screenWidth: CGFloat) -> CGFloat {
+        // The label caps at .xxLarge (`ToolbarColumn`), and has 4pt either side in its column.
+        let capped = min(size, .xxLarge)
+        let traits = UITraitCollection(preferredContentSizeCategory: CatchlightFont.contentSizeCategory(capped))
+        let font = UIFont.systemFont(ofSize: CatchlightFont.scaledPoints(DailiesToolbarMetrics.labelSize,
+                                                                         relativeTo: .caption2,
+                                                                         compatibleWith: traits),
+                                     weight: .medium)
+        let column = (screenWidth - 2 * CatchlightLayout.toolbarHorizontalPadding) / 4 - 8
+        let labels = [String(localized: "Cancel"), String(localized: "Remind"), String(localized: "Shot List"),
+                      String(localized: "Important"), String(localized: "Mark done")]
+        let widest = labels.map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
+        let lines: CGFloat = widest > column ? 2 : 1
+        let content = columnTopInset + DailiesToolbarMetrics.addSquare + 3 + lines * ceil(font.lineHeight) + columnTopInset
+        return max(panelHeight, ceil(content))
+    }
 
     var body: some View {
         // The Dailies bar's format (owner 2026-11-14: "the same format and look as the main
         // toolbar"): a panel of four equal columns, each an icon over its label, no rings.
-        HStack(spacing: 0) {
+        HStack(alignment: .top, spacing: 0) {
             // 1 — Cancel: the plus turned into a cross, in the outlined square the Dailies bar
             // gives a locked Add. Quiet on purpose: it throws the edit away. Spoken as "Discard
             // changes" (owner 2026-08-16), matching the row's long-press item word for word.
@@ -96,12 +126,14 @@ struct EditorKeyboardBar: View {
 
             // 2 — Remind, on both editors (audit round 9): edit the time on a reminder Take, or
             // add one, without the Focus row detour. The clock, as on the Focus row and the
-            // Sequence filters. No state tint (audit C10): the label says Add or Edit. Falls back
-            // to a greyed Shot List only where the host can't present the picker.
+            // Sequence filters. Accent when the Take has a reminder, as Important and Mark done
+            // are when on (Art Director 2026-11-14: accent against secondary differs in both
+            // looks, unlike the Ember-against-accent tint audit C10 removed). Falls back to a
+            // greyed Shot List only where the host can't present the picker.
             if let onReminder = config.onReminder {
                 column(enabled: true, identifier: "reminder-button",
                        label: config.hasReminder ? "Edit reminder" : "Add reminder", visibleLabel: "Remind",
-                       tint: .ckTextSecondary, action: onReminder) {
+                       tint: config.hasReminder ? .ckAccent : .ckTextSecondary, action: onReminder) {
                     ToolbarColumn.panelIcon(.clock)
                 }
             } else {
@@ -143,7 +175,7 @@ struct EditorKeyboardBar: View {
                 ToolbarColumn.panelIcon(.task)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: Self.panelHeight)
+        .frame(maxWidth: .infinity, minHeight: height, alignment: .top)
         .flatEdgePanel(fill: Color.ckPanel)
         .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
         .padding(.top, 10)
@@ -175,7 +207,8 @@ struct EditorKeyboardBar: View {
                                      action: @escaping () -> Void,
                                      @ViewBuilder glyph: () -> Glyph) -> some View {
         Button(action: action) {
-            ToolbarColumn(icon: glyph(), label: visibleLabel, minHeight: Self.panelHeight)
+            ToolbarColumn(icon: glyph(), label: visibleLabel, minHeight: height,
+                          topInset: Self.columnTopInset)
                 .foregroundStyle(tint)
         }
         .buttonStyle(.plain)

@@ -337,18 +337,22 @@ struct KeyboardTakeEditor: View {
     /// The bottom padding that puts the card where it belongs for a bottom edge at `edgeMaxY`.
     private func bottomPadding(edgeMaxY: CGFloat) -> CGFloat {
         if let heldCardBottom { return max(0, edgeMaxY - heldCardBottom) }
-        return max(0, UIScreen.main.bounds.height - keyboardTopY) + bottomLift
+        return max(0, UIScreen.main.bounds.height - keyboardTopY) + bottomLift + barRoom
     }
 
-    /// How far above the keyboard's reported top the card's bottom has to sit to clear the
-    /// editor's bar by 8pt, on top of this view's own bottom room (the home-indicator inset and the
-    /// full descent lift). The keyboard's last frame report leaves the bar out (measured on an
-    /// iPhone 16 simulator: 430 with it, then 524 without). With the old ringed 62pt bar the room
-    /// below happened to clear it on a phone with a home indicator (34 + 36 = 70) and not on an
-    /// iPhone SE (0 + 36), where the card ran 26pt under the buttons, hidden by the fade.
-    private var barClearance: CGFloat {
-        max(0, EditorKeyboardBar.panelHeight + 18 + 8
-               - Self.lineH * Self.downExpandLines - homeIndicatorInset)
+    /// The extra room under the card, on top of `bottomLift`, that keeps the card's bottom 8pt
+    /// above the editor's bar while the keyboard is up, whatever the lift (Art Director
+    /// 2026-11-14: the card always shows its own bottom edge above the solid panel).
+    ///
+    /// The keyboard's last frame report leaves the bar out (measured on an iPhone 16 simulator:
+    /// 430 with it, then 524 without), and this view's bottom edge sits the home-indicator inset
+    /// above the screen's. With the old ringed 62pt bar that room happened to clear the bar on a
+    /// phone with a home indicator at full lift (34 + 36 = 70), but not once the lift closed, and
+    /// never on an iPhone SE (0 + 36), where the card ran under the buttons behind the fade.
+    private var barRoom: CGFloat {
+        guard keyboardTopY < UIScreen.main.bounds.height else { return 0 }
+        let bar = EditorKeyboardBar.panelHeight(for: dynamicTypeSize, screenWidth: UIScreen.main.bounds.width)
+        return max(0, bar + 18 + 8 - homeIndicatorInset - bottomLift)
     }
 
     /// The card's last reported RAW content height — drives the bottom drop.
@@ -408,7 +412,7 @@ struct KeyboardTakeEditor: View {
         // pushes the card past its own cap and its Iris under the heading fade (a notice
         // strip on an iPhone 16 left 114pt of room). With ample room, the usual case, the cap is
         // the room itself and the floor never applies.
-        return max(Self.editorFloor, kbTop - topLimit
+        return max(Self.editorFloor, kbTop - barRoom - topLimit
                                      - TakeEditCard.chrome(stampRow: showsStamp ? stampRowHeight : 0))
     }
 
@@ -469,8 +473,7 @@ struct KeyboardTakeEditor: View {
             for: UIResponder.keyboardWillChangeFrameNotification)) { note in
             guard let rawFrame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
             else { return }
-            var frame = rawFrame
-            if frame.origin.y < UIScreen.main.bounds.height { frame.origin.y -= barClearance }
+            let frame = rawFrame
             if holdsPlace() && frame.origin.y > keyboardTopY {
                 if heldCardBottom == nil {
                     edge.atHold = edge.maxY
