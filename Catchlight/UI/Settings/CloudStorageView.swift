@@ -59,7 +59,14 @@ struct CloudStorageView: View {
                     }
                     .scrollIndicators(.hidden)
                 } else {
-                    sheetContent
+                    // On a short phone with a folder and Sync Now the three groups can be taller
+                    // than the sheet (an iPhone SE pushed the heading and the button off it), so
+                    // the sheet scrolls then. Where it fits it stays still, with the groups spread.
+                    ViewThatFits(in: .vertical) {
+                        sheetContent
+                        ScrollView { sheetContent }
+                            .scrollIndicators(.hidden)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -102,24 +109,53 @@ struct CloudStorageView: View {
         }
     }
 
-    /// The sheet's content column — static at default sizes (owner 2026-06-21:
-    /// the content fits, so it sits still like About), scrolled above `.large`
-    /// (DT13).
+    /// The sheet's content column: three groups spread down the sheet (owner 2026-11-14: "page
+    /// looks cramped, everything looks pushed towards the top"). The intro, the folder card and
+    /// the sync card, with the spare height shared by the Spacers between them, so they close up
+    /// to their minimums on a short phone. Above `.large` it scrolls (DT13), where the Spacers
+    /// stay at their minimums.
     private var sheetContent: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 0) {
             intro
 
-            if folderDisplayPath != nil {
-                pickerSection
-            }
+            Spacer(minLength: 24)
 
-            recommendation
+            folderGroup
 
-            finePrint
-
-            divider
+            Spacer(minLength: 24)
 
             syncModeSection
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .flatPanel()
+
+            Spacer(minLength: 16)
+        }
+        .padding(.horizontal, 22)
+        .padding(.top, 24)
+        .padding(.bottom, 16)
+    }
+
+    /// The folder card, then the recommendation (when a folder is set), the fine print and any
+    /// connect error under it.
+    private var folderGroup: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Group {
+                if folderDisplayPath != nil {
+                    pickerSection
+                } else {
+                    recommendation
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .flatPanel()
+
+            if folderDisplayPath != nil {
+                recommendation
+            }
+
+            finePrint
 
             if let errorText {
                 Text(errorText)
@@ -127,12 +163,7 @@ struct CloudStorageView: View {
                     .foregroundStyle(Color.ckRuby)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 22)
-        .padding(.top, 16)
-        .padding(.bottom, 16)
     }
 
     // MARK: - Sections
@@ -180,43 +211,56 @@ struct CloudStorageView: View {
         .dockFadeBackground()
     }
 
-    // The chosen folder and its Remove action.
+    // The chosen folder on one row: the tick, its name with the place under it, and Remove.
     private var pickerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        HStack(spacing: 10) {
             if let folderDisplayPath {
-                HStack(spacing: 6) {
+                let folder = Self.folderLabel(forPath: folderDisplayPath)
+                HStack(spacing: 10) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Color.ckAccent)
-                    Text(folderDisplayPath)
-                        .sheetSmall()
-                        .foregroundStyle(Color.ckTextSecondary)
-                        .lineLimit(2)
-                        .truncationMode(.middle)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: folder.name)
+                            .sheetBody()
+                            .foregroundStyle(Color.ckTextPrimary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        if let place = folder.place {
+                            Text(verbatim: place)
+                                .sheetSmall()
+                                .foregroundStyle(Color.ckTextSecondary)
+                                .lineLimit(1)
+                        }
+                    }
                 }
-                .padding(.top, 2)
                 // Audit 2026-08, V17: a label on a non-combined container is a
                 // no-op — combine first so the label lands on a real element.
                 // The checkmark glyph folds in with it (V21's inconsistency).
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(String(localized: "Current folder: \(folderDisplayPath)"))
+                .accessibilityLabel(String(localized: "Current folder: \(folder.spoken)"))
+
+                Spacer(minLength: 8)
 
                 // Remove clears the bookmark and returns the app to local-only mode.
-                // Centred under the folder path (owner 2026-06-22).
-                HStack {
-                    Spacer()
-                    Button("Remove") { removeFolder() }
-                        .sheetRow()
-                        .foregroundStyle(Color.ckRuby)
-                        // T4 (audit 2026-08): a destructive control tapped at its
-                        // ~19pt line. Inset −13 reaches the 44pt hit floor; the
-                        // Spacers either side make the overspill safe.
-                        .contentShape(Rectangle().inset(by: -13))
-                        .accessibilityIdentifier("cloud-remove-folder")
-                        .accessibilityHint("Return to local-only mode.")
-                    Spacer()
-                }
+                Button("Remove") { removeFolder() }
+                    .sheetRow()
+                    .foregroundStyle(Color.ckRuby)
+                    // T4 (audit 2026-08): a destructive control tapped at its
+                    // ~19pt line. Inset −13 reaches the 44pt hit floor.
+                    .contentShape(Rectangle().inset(by: -13))
+                    .accessibilityIdentifier("cloud-remove-folder")
+                    .accessibilityHint("Return to local-only mode.")
             }
         }
+    }
+
+    /// What the folder row shows for a folder path: its own name, never the path, and where it
+    /// lives when that is known. A path starting /private/var means nothing to anyone (owner
+    /// 2026-11-14). "iCloud Drive" is Apple's product name, not translated.
+    nonisolated static func folderLabel(forPath path: String) -> (name: String, place: String?, spoken: String) {
+        let name = URL(fileURLWithPath: path).lastPathComponent
+        let place: String? = path.contains("/com~apple~CloudDocs") ? "iCloud Drive" : nil
+        return (name, place, place.map { "\(name), \($0)" } ?? name)
     }
 
     /// iCloud Drive is the recommended default (an internal product decision). It's built into the iPhone, so it's
@@ -287,6 +331,7 @@ struct CloudStorageView: View {
             Text(syncModeDescription)
                 .sheetSmall()
                 .foregroundStyle(Color.ckTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             if syncMode == .manual {
                 Button { fireManualSync() } label: {
@@ -340,13 +385,6 @@ struct CloudStorageView: View {
         }
     }
 
-    /// Hairline separator between the destination block and the Sync controls.
-    private var divider: some View {
-        Rectangle()
-            .fill(Color.ckTextSecondary.opacity(0.18))
-            .frame(height: 1)
-    }
-
     // MARK: - Handlers
 
     private func handlePickedFolder(_ url: URL) {
@@ -366,6 +404,13 @@ struct CloudStorageView: View {
     // MARK: - Display helpers
 
     private static func currentFolderDisplayPath() -> String? {
+        #if DEBUG
+        // Test seam: a UI-test run has no bookmark, so `--uitesting-cloud-folder` shows a chosen
+        // iCloud Drive folder (the path the owner's phone showed, 2026-11-14).
+        if ProcessInfo.processInfo.arguments.contains("--uitesting-cloud-folder") {
+            return "/private/var/mobile/Library/Mobile Documents/com~apple~CloudDocs/Catchlight - iCloud"
+        }
+        #endif
         guard let data = UserDefaults(suiteName: AppGroup.identifier)?
                 .data(forKey: Wiring.bookmarkDefaultsKey) else {
             return nil
