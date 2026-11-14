@@ -81,13 +81,13 @@ struct EditorKeyboardBar: View {
     /// in the 76pt panel.
     static let columnTopInset: CGFloat = 8
 
-    /// The panel's height for this text size and screen width: 76, or taller by a label line when
-    /// any of the bar's labels is wider than its column in the current language ("Mark done" runs
-    /// to 26 characters). The bar's host above the keyboard has a fixed height, and the editor
+    /// The panel's height for this text size and screen width: 76, or taller by a label line for
+    /// each extra line the longest of the bar's labels wraps to in the current language ("Mark
+    /// done" runs to 26 characters). The bar's host above the keyboard has a fixed height, and the editor
     /// clears the bar by it, so both read this one figure rather than the drawn panel.
     static func panelHeight(for size: DynamicTypeSize, screenWidth: CGFloat) -> CGFloat {
-        // The label caps at .xxLarge (`ToolbarColumn`), and has 4pt either side in its column.
-        let capped = min(size, .xxLarge)
+        // The label stays at .large (`ToolbarColumn`), and has 4pt either side in its column.
+        let capped = min(size, .large)
         let traits = UITraitCollection(preferredContentSizeCategory: CatchlightFont.contentSizeCategory(capped))
         let font = UIFont.systemFont(ofSize: CatchlightFont.scaledPoints(DailiesToolbarMetrics.labelSize,
                                                                          relativeTo: .caption2,
@@ -96,8 +96,14 @@ struct EditorKeyboardBar: View {
         let column = (screenWidth - 2 * CatchlightLayout.toolbarHorizontalPadding) / 4 - 8
         let labels = [String(localized: "Cancel"), String(localized: "Remind"), String(localized: "Shot List"),
                       String(localized: "Important"), String(localized: "Mark done")]
-        let widest = labels.map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
-        let lines: CGFloat = widest > column ? 2 : 1
+        // How many lines the longest label wraps to in its column, as the system breaks it (Thai
+        // has no spaces), up to the label's three.
+        let lines = labels.map { label -> CGFloat in
+            let box = (label as NSString).boundingRect(with: CGSize(width: column, height: .greatestFiniteMagnitude),
+                                                       options: [.usesLineFragmentOrigin],
+                                                       attributes: [.font: font], context: nil)
+            return min(3, max(1, (box.height / font.lineHeight).rounded()))
+        }.max() ?? 1
         let content = columnTopInset + DailiesToolbarMetrics.addSquare + 3 + lines * ceil(font.lineHeight) + columnTopInset
         return max(panelHeight, ceil(content))
     }

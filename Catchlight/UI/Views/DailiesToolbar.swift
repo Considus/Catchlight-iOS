@@ -418,17 +418,20 @@ struct ToolbarColumn<Icon: View>: View {
             icon.frame(height: DailiesToolbarMetrics.addSquare)
             Text(label)
                 .ckBody(.medium, size: DailiesToolbarMetrics.labelSize, relativeTo: .caption2)
-                // A long label takes a second line and shrinks before it reaches the column's
-                // edge, and never ends in "…" (Art Director 2026-11-14: "Mark done" runs 17 to
-                // 26 characters in most of the 18 languages).
-                .lineLimit(2)
+                // A long label wraps (up to three lines, only in the longest languages at the
+                // largest sizes) and shrinks a little before it reaches the column's edge, and
+                // never ends in "…" (Art Director 2026-11-14: "Mark done" runs 17 to 26
+                // characters in most of the 18 languages). 0.8 keeps 13pt at about the system
+                // tab bar's 10pt.
+                .lineLimit(3)
                 .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.8)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 4)
-                // Like the system tab bar: the label stops growing at the second size
-                // above the default, and a long press shows it large instead.
-                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+                // Like the system tab bar: the label stays at its default size, and a long
+                // press shows it large instead (Art Director 2026-11-14: grown, a long single
+                // word such as Turkish "Tamamlandı" outgrew an iPhone SE column and broke).
+                .dynamicTypeSize(...DynamicTypeSize.large)
         }
         .padding(.top, topInset ?? 0)
         .frame(maxWidth: .infinity, minHeight: minHeight, alignment: topInset == nil ? .center : .top)
