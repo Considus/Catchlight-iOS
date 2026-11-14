@@ -332,7 +332,20 @@ struct KeyboardTakeEditor: View {
     /// This view's bottom edge, in window coordinates, as last laid out. A box, so recording it
     /// never asks for another layout.
     @State private var edge = EdgeBox()
-    final class EdgeBox { var maxY: CGFloat = 0; var atHold: CGFloat = 0; var keyboardAtHold: CGFloat = 0 }
+    /// `settled` is the edge as last laid out while nothing held the card: the edge to hold from.
+    final class EdgeBox {
+        var maxY: CGFloat = 0; var settled: CGFloat = 0; var atHold: CGFloat = 0; var keyboardAtHold: CGFloat = 0
+    }
+
+    /// Hold the card where it is now. The keyboard's hide and this view's bottom edge can arrive in
+    /// either order (iOS 27 sends the hide first, iOS 26 moves the edge first, measured on
+    /// simulators), so the hold starts from the edge as it was before either, not the latest edge.
+    private func startHold() {
+        guard heldCardBottom == nil else { return }
+        edge.atHold = edge.settled
+        edge.keyboardAtHold = keyboardTopY
+        heldCardBottom = edge.settled - bottomPadding(edgeMaxY: edge.settled)
+    }
 
     /// The bottom padding that puts the card where it belongs for a bottom edge at `edgeMaxY`.
     private func bottomPadding(edgeMaxY: CGFloat) -> CGFloat {
@@ -442,6 +455,11 @@ struct KeyboardTakeEditor: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .onGeometryChange(for: CGFloat.self) { _ in edgeMaxY } action: { newEdge in
             edge.maxY = newEdge
+            // The edge moved while the Focus row holds the card: the keyboard is leaving.
+            if holdsPlace(), heldCardBottom == nil, keyboardTopY < .greatestFiniteMagnitude, newEdge != edge.settled {
+                startHold()
+            }
+            if heldCardBottom == nil, !holdsPlace() { edge.settled = newEdge }
             // The keyboard is back and the edge has returned to where the hold began: the usual
             // padding now puts the card exactly where it is held, so let go.
             if heldCardBottom != nil, heldKeyboardTopY == nil, !holdsPlace(), abs(newEdge - edge.atHold) < 0.5,
@@ -460,9 +478,7 @@ struct KeyboardTakeEditor: View {
             else { return }
             if holdsPlace() && frame.origin.y > keyboardTopY {
                 if heldCardBottom == nil {
-                    edge.atHold = edge.maxY
-                    edge.keyboardAtHold = keyboardTopY
-                    heldCardBottom = edge.maxY - bottomPadding(edgeMaxY: edge.maxY)
+                    startHold()
                 }
                 heldKeyboardTopY = frame.origin.y
                 return
@@ -493,3 +509,4 @@ struct KeyboardTakeEditor: View {
         }
     }
 }
+
