@@ -72,7 +72,7 @@ typeset -A TESTS=( shaping-a-take testClip1_shapingATake setting-a-reminder test
 # The size ceiling for each clip, in bytes (agreed with the Webmaster).
 typeset -A CEILING=( shaping-a-take 250000 setting-a-reminder 300000 sequence 200000 reordering-a-list 200000 )
 CLIPS=(shaping-a-take setting-a-reminder sequence reordering-a-list)
-[[ -n "$ONLY_CLIP" ]] && CLIPS=("$ONLY_CLIP")
+[[ -n "$ONLY_CLIP" ]] && { [[ -n "${CEILING[$ONLY_CLIP]:-}" ]] || { echo "unknown clip: $ONLY_CLIP (one of: ${(k)CEILING})" >&2; exit 2; }; CLIPS=("$ONLY_CLIP"); }
 APPEARANCES=(daylight night)
 [[ -n "$ONLY_APPEARANCE" ]] && APPEARANCES=("$ONLY_APPEARANCE")
 

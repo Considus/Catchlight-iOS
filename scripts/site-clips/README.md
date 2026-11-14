@@ -5,7 +5,7 @@ Records the three phone clips on catchlight.app from the real app, so they stay 
 Night. Nothing is redrawn.
 
 ```bash
-scripts/site-clips/record.sh --draft          # six clips, labelled DRAFT
+scripts/site-clips/record.sh --draft          # the four clips in both looks, labelled DRAFT
 scripts/site-clips/record.sh                  # the finals: four clips, Daylight and Night (Setting a reminder three times each)
 scripts/site-clips/record.sh --clip sequence --appearance night   # one clip
 ```
