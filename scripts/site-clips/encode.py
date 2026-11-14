@@ -54,7 +54,9 @@ def reactions(diffs, taps):
     recording, which opens on a still Dailies. Each later tap is the first movement after its
     logged time, the flow having waited for the last animation to settle.
     """
-    first = next((i for i, d in enumerate(diffs) if d > STILL_THRESHOLD), None)
+    # The first tap cannot come before 3 s into the recording: the script starts the recorder, waits
+    # 1.5 s, says go, and the flow then waits 1.6 s. Anything earlier is the recorder settling.
+    first = next((i for i, d in enumerate(diffs) if i >= int(2.5 * FPS) and d > STILL_THRESHOLD), None)
     if first is None:
         raise SystemExit("no movement found in the recording: the flow did not run on screen")
     times = [first / FPS]
