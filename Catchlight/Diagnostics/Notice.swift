@@ -250,7 +250,7 @@ enum Notice: Equatable {
         case .conflictResolutionFailed:
             return String(localized: "Couldn't save that resolution. Please try again.")
         case .privacyPhraseMissing:
-            return String(localized: "No privacy phrase on this device. Export now, then Settings > Start over.")
+            return String(localized: "No Privacy phrase on this device. Export now, then Settings > Start over.")
         case .readOnlyLapsed:
             return String(localized: "Read-only. Your Takes are still yours.")
         case .exportFailed:
