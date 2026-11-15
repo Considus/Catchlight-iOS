@@ -333,6 +333,9 @@ def check_against_phone(root, device, sha, args):
     if same_build(shown_stamp, sha):
         print(f"the phone already has {sha}; reinstalling it")
         return
+    if shown_stamp != stamp and same_build(stamp, sha):
+        print(f"the phone has {sha} with local changes; installing {sha} fresh over them")
+        return
     known = run(
         ["git", "-C", root, "cat-file", "-e", f"{stamp}^{{commit}}"], GIT_TIMEOUT,
         label="git cat-file", check=False)[0] == 0

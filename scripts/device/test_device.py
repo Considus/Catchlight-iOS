@@ -187,6 +187,10 @@ class AgainstThePhone(unittest.TestCase):
         self.assertIn("downgrade", str(caught.exception))
         self.check(self.a + "+dirty", self.b)                      # newer than the dirty build's base: installs fresh
 
+    def test_a_dirty_build_of_the_same_commit_is_reinstalled_not_a_downgrade(self):
+        self.check(self.a + "+dirty", self.a)
+        self.check(self.b + "+dirty", self.b)
+
     def test_a_dirty_stamp_of_an_unknown_commit_installs_fresh(self):
         self.check("deadbee+dirty", self.b)
 
