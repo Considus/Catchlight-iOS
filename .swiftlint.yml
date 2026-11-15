@@ -10,7 +10,6 @@ included:
   - Catchlight
   - CatchlightShare
   - CatchlightWidgets
-  - LintProof
 excluded:
   - .build
 
