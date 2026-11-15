@@ -223,6 +223,24 @@ final class ConflictQueueTests: XCTestCase {
                        "Recover replaced an edit the user made after the Take arrived")
     }
 
+    func testUnverified_keepCloud_forATakeThatArrivedSince_dropsTheWarningAndWritesNothing() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: false, cloud: true)
+        queue.enqueueUnverified([item])
+        try store.upsert(item.cloud!)
+        try queue.keepCloud(id: item.id, store: store)
+        XCTAssertEqual(try store.take(id: item.id), item.cloud, "nothing was written")
+        XCTAssertTrue(queue.unverified.isEmpty, "the stale warning went quietly")
+    }
+
+    func testUnverified_dropUnverified_removesOnlyTheNamedWarnings() {
+        let queue = ConflictQueue()
+        let a = makeUnverified(local: false, cloud: true), b = makeUnverified(local: true, cloud: true)
+        queue.enqueueUnverified([a, b])
+        queue.dropUnverified(ids: [a.id])
+        XCTAssertEqual(queue.unverified.map(\.id), [b.id])
+    }
+
     func testUnverified_keepCloud_withNothingReadable_isANoOp() throws {
         let queue = ConflictQueue(); let store = InMemoryTakeStore()
         let item = makeUnverified(local: true, cloud: false)

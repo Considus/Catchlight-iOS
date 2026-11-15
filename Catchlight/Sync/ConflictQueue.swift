@@ -498,9 +498,24 @@ final class ConflictQueue {
     func keepCloud(id: UUID, store: TakeStore) throws {
         guard let idx = unverified.firstIndex(where: { $0.id == id }),
               var winner = unverified[idx].cloud else { return }
+        // Recover is for a Take that is not on this phone. If it has arrived since (a later pass
+        // brought it down normally), the warning is stale: drop it quietly, and never write the
+        // old cloud copy over what is there now.
+        if unverified[idx].local == nil, try store.take(id: id) != nil {
+            unverified.remove(at: idx)
+            return
+        }
         Self.stampAsFreshEdit(&winner, after: unverified[idx].local)
         try store.upsert(winner)
         unverified.remove(at: idx)
+    }
+
+    /// Drop the warnings for Takes that a pass has since brought down normally: they no longer
+    /// apply, so they go without a word. Nothing is written.
+    func dropUnverified(ids: [UUID]) {
+        guard !ids.isEmpty else { return }
+        let gone = Set(ids)
+        unverified.removeAll { gone.contains($0.id) }
     }
 
     /// Skip for now: nothing written; the next sync re-surfaces it if still unresolved.

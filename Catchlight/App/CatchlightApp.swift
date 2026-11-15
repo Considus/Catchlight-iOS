@@ -80,6 +80,8 @@ struct CatchlightApp: App {
             // on another device kept its pending alarm here and fired a banner
             // with the deleted Take's decrypted title).
             onRemoteChanges: { report in
+                // A Take that arrived normally no longer has an unverified-copy warning.
+                app.conflictQueue.dropUnverified(ids: report.applied)
                 app.dailiesVM.applyRemoteChanges(report)
             },
             // A held Take another device made a Script has left this device: its conflict goes.
