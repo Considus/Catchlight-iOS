@@ -8,6 +8,8 @@ The device and build calls need a phone and are proved by running the commands.
 
 import os
 import sys
+import subprocess
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -144,6 +146,56 @@ class FreshInstall(unittest.TestCase):
             device.check_against_phone("/nonexistent", {}, "c6e80ac", args)
         finally:
             device.installed_build = saved
+
+
+class AgainstThePhone(unittest.TestCase):
+    """check_against_phone on a throwaway repo: A is the older commit, B the newer."""
+    @classmethod
+    def setUpClass(cls):
+        cls.repo = tempfile.mkdtemp()
+        env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
+
+        def git(*a):
+            return subprocess.run(["git", "-C", cls.repo, *a], capture_output=True, text=True, check=True, env=env).stdout.strip()
+        git("init", "-q", "-b", "main")
+        for name in ("a", "b"):
+            open(os.path.join(cls.repo, name + ".txt"), "w").write(name)
+            git("add", "-A")
+            git("commit", "-q", "-m", name)
+            setattr(cls, name, git("rev-parse", "--short", "HEAD"))
+
+    def check(self, stamp, sha, **flags):
+        saved = device.installed_build
+        device.installed_build = lambda _device: ("1.0", stamp)
+        try:
+            args = type("Args", (), {"allow_downgrade": False, "data_change_approved": False, **flags})()
+            device.check_against_phone(self.repo, {}, sha, args)
+        finally:
+            device.installed_build = saved
+
+    def test_an_older_build_than_the_phones_is_refused(self):
+        with self.assertRaises(device.Failure) as caught:
+            self.check(self.b, self.a)
+        self.assertIn("downgrade", str(caught.exception))
+
+    def test_the_downgrade_flag_lets_it_through(self):
+        self.check(self.b, self.a, allow_downgrade=True)
+
+    def test_a_dirty_stamp_is_compared_by_its_commit(self):
+        with self.assertRaises(device.Failure) as caught:
+            self.check(self.b + "+dirty", self.a)
+        self.assertIn("downgrade", str(caught.exception))
+        self.check(self.a + "+dirty", self.b)                      # newer than the dirty build's base: installs fresh
+
+    def test_a_dirty_stamp_of_an_unknown_commit_installs_fresh(self):
+        self.check("deadbee+dirty", self.b)
+
+    def test_the_pre_stamp_build_installs_fresh(self):
+        self.check("1", self.b)
+
+    def test_any_other_unknown_stamp_still_needs_marks_approval(self):
+        with self.assertRaises(device.Failure):
+            self.check("deadbee", self.b)
 
 
 class CrashFilter(unittest.TestCase):

@@ -322,13 +322,23 @@ def check_against_phone(root, device, sha, args):
     if build is None:
         print("Catchlight is not on the phone, so this install has no notes to touch")
         return
-    stamp = build[1]
-    if same_build(stamp, sha):
+    shown_stamp = build[1]
+    if shown_stamp == "1":
+        # A build from before the git-SHA stamp existed: its commit cannot be known, and guessing
+        # which one it is is worse than installing fresh (app-devices.md).
+        print(f"the phone's build is stamped {shown_stamp!r} (from before build stamps): installing fresh")
+        return
+    # A "+dirty" stamp is a commit plus local edits: compare against the commit, install fresh over the edits.
+    stamp = shown_stamp[:-len("+dirty")] if shown_stamp.endswith("+dirty") else shown_stamp
+    if same_build(shown_stamp, sha):
         print(f"the phone already has {sha}; reinstalling it")
         return
     known = run(
         ["git", "-C", root, "cat-file", "-e", f"{stamp}^{{commit}}"], GIT_TIMEOUT,
         label="git cat-file", check=False)[0] == 0
+    if not known and shown_stamp.endswith("+dirty"):
+        print(f"the phone's build {shown_stamp!r} is a local build of a commit this repo does not know: installing fresh")
+        return
     if not known:
         if not args.data_change_approved:
             raise Failure(f"the phone's build ({stamp}) is not a commit this repo "
