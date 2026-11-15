@@ -325,7 +325,7 @@ def check_against_phone(root, device, sha, args):
     shown_stamp = build[1]
     if shown_stamp == "1":
         # A build from before the git-SHA stamp existed: its commit cannot be known, and guessing
-        # which one it is is worse than installing fresh (app-devices.md).
+        # which one it is is worse than installing fresh.
         print(f"the phone's build is stamped {shown_stamp!r} (from before build stamps): installing fresh")
         return
     # A "+dirty" stamp is a commit plus local edits: compare against the commit, install fresh over the edits.
