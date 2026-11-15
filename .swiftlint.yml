@@ -6,6 +6,8 @@
 only_rules:
   - custom_rules
 
+# Only shipping code. Tests are left out on purpose: a test may use try? where a failure
+# is the thing being checked.
 included:
   - Catchlight
   - CatchlightShare
