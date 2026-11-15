@@ -183,6 +183,10 @@ struct EditorKeyboardBar: View {
         }
         .frame(maxWidth: .infinity, minHeight: height, alignment: .top)
         .flatEdgePanel(fill: Color.ckPanel)
+        // Tell the editor card where the panel's top really is, so it can keep 8pt above it.
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { top in
+            EditorBarPlacement.post(panelTop: top)
+        }
         .padding(.horizontal, CatchlightLayout.toolbarHorizontalPadding)
         .padding(.top, 10)
         .padding(.bottom, 8)
@@ -224,5 +228,17 @@ struct EditorKeyboardBar: View {
         .accessibilityValue(value ?? "")
         .accessibilityHint(hint ?? "")
         .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+}
+
+/// Where the editor bar's panel top sits on screen, posted by the bar above the keyboard and read
+/// by the editor card. The keyboard's reported frame can't stand in for it: iOS 26 reports a top
+/// that includes the bar and iOS 27's final report leaves it out (measured on simulators), so a
+/// card placed from the keyboard alone sat about 100pt above the bar on iOS 26.
+enum EditorBarPlacement {
+    static let panelTopDidChange = Notification.Name("EditorBarPanelTopDidChange")
+
+    static func post(panelTop: CGFloat) {
+        NotificationCenter.default.post(name: panelTopDidChange, object: nil, userInfo: ["top": panelTop])
     }
 }
