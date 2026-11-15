@@ -682,9 +682,15 @@ struct FlatSegmentedControl<Value: Hashable>: View {
     var body: some View {
         // Side by side when every title fits in full. Otherwise one above the other at full
         // width, so a title is never cut short (large text sizes).
+        // In order: side by side at full size; side by side shrunk, down to 75% (laid out by a
+        // hidden copy drawn at 75%, so it is chosen only when the shrunk titles fit); stacked.
+        // A title that fitted at full or shrunk size before still does, at every text size.
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 0) { segmentButtons }
-            VStack(spacing: 0) { segmentButtons }
+            HStack(spacing: 0) { segmentButtons(size: 15) }
+            HStack(spacing: 0) { segmentButtons(size: 15 * 0.75) }
+                .hidden()
+                .overlay { HStack(spacing: 0) { segmentButtons(size: 15) } }
+            VStack(spacing: 0) { segmentButtons(size: 15) }
         }
         .background(CatchlightShape.control.fill(Color.ckSurface))
         .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
@@ -696,7 +702,7 @@ struct FlatSegmentedControl<Value: Hashable>: View {
         .accessibilityLabel(label)
     }
 
-    private var segmentButtons: some View {
+    private func segmentButtons(size: CGFloat) -> some View {
             ForEach(segments.indices, id: \.self) { index in
                 let segment = segments[index]
                 let selected = segment.value == selection
@@ -704,7 +710,7 @@ struct FlatSegmentedControl<Value: Hashable>: View {
                     selection = segment.value
                 } label: {
                     Text(segment.title)
-                        .ckBody(.medium, size: 15, relativeTo: .body)
+                        .ckBody(.medium, size: size, relativeTo: .body)
                         .foregroundStyle(selected ? Color.ckChosenMark : Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)

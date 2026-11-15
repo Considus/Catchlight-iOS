@@ -297,11 +297,11 @@ struct LocationEditor: View {
             ViewThatFits(in: .horizontal) {
                 HStack {
                     placeLabel.fixedSize()
-                    placeField
+                    placeField(alignment: .trailing)
                 }
                 VStack(alignment: .leading, spacing: 6) {
                     placeLabel
-                    placeField
+                    placeField(alignment: .leading)
                 }
             }
             .padding(.vertical, 8)
@@ -320,9 +320,10 @@ struct LocationEditor: View {
         Toggle("", isOn: $alarmEnabled).labelsHidden().toggleStyle(FlatToggleStyle())
     }
 
-    private var placeField: some View {
+    /// Trailing beside its title, leading under it once stacked, lined up with "Place".
+    private func placeField(alignment: TextAlignment) -> some View {
         TextField("e.g. Home", text: $name)
-            .multilineTextAlignment(.trailing)
+            .multilineTextAlignment(alignment)
             .padding(.horizontal, 10)
             .frame(minHeight: CatchlightLayout.minTouchTarget - 8)
             .flatField(fill: .ckBackground)
