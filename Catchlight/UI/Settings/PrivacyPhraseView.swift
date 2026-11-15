@@ -40,11 +40,13 @@ struct PrivacyPhraseView: View {
         #if DEBUG
         // Test seam: the UI-test run has no phrase in the Keychain, so `--uitesting-phrase`
         // shows the reveal prompt, and `--uitesting-phrase-revealed` shows twelve fixed
-        // placeholder words. The Keychain is never read for either.
+        // placeholder words (`--uitesting-phrase-wide` swaps in the twelve widest list words).
+        // The Keychain is never read for either.
         let args = ProcessInfo.processInfo.arguments
         if args.contains("--uitesting-phrase") {
+            let words = args.contains("--uitesting-phrase-wide") ? Self.wideTestWords : Self.testWords
             _stage = State(initialValue: args.contains("--uitesting-phrase-revealed")
-                ? .revealed(Self.testWords) : .authenticate)
+                ? .revealed(words) : .authenticate)
         }
         #endif
     }
@@ -52,6 +54,9 @@ struct PrivacyPhraseView: View {
     #if DEBUG
     private static let testWords = ["abandon", "ability", "able", "about", "above", "absent",
                                     "absorb", "abstract", "absurd", "abuse", "access", "accident"]
+    /// The twelve widest words of the BIP-39 English list in the body face at 15pt.
+    private static let wideTestWords = ["mushroom", "remember", "hedgehog", "document", "december", "announce",
+                                        "champion", "cinnamon", "maximum", "mechanic", "exchange", "awesome"]
     #endif
 
     var body: some View {
@@ -91,6 +96,31 @@ struct PrivacyPhraseView: View {
     /// `MnemonicKeychain.retrieve()` forces. An explicit tap triggers it — we never
     /// auto-read the crown-jewels on appear.
     private var authenticatePrompt: some View {
+        // At large text sizes the explanation can be taller than the sheet: it wraps in
+        // full and the prompt scrolls, as Cloud Storage does, rather than cutting it short.
+        ViewThatFits(in: .vertical) {
+            authenticateStack
+            ScrollView { authenticateStack }
+                .scrollIndicators(.hidden)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color.ckBackground)
+        .safeAreaInset(edge: .bottom) {
+            DockPillRow {
+                DockPill(title: "Reveal phrase") { revealViaDeviceAuth() }
+            }
+            .dockFadeBackground()
+        }
+        // Announce the auth error (audit 2026-08, V14): it appears silently, so a
+        // VoiceOver user whose Face ID was dismissed heard nothing happen.
+        .onChange(of: errorText) { _, error in
+            if let error {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
+        }
+    }
+
+    private var authenticateStack: some View {
         VStack(spacing: 16) {
             Image(systemName: "faceid")
                 .font(.system(size: 40, weight: .regular))
@@ -107,6 +137,7 @@ struct PrivacyPhraseView: View {
                 .sheetBody()
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 32)
             if let errorText {
                 Text(errorText)
@@ -115,26 +146,13 @@ struct PrivacyPhraseView: View {
                     // accent token here cost "error" its colour semantics.
                     .foregroundStyle(Color.ckRuby)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 32)
             }
-            Spacer()
         }
         .padding(.top, 60)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.ckBackground)
-        .safeAreaInset(edge: .bottom) {
-            DockPillRow {
-                DockPill(title: "Reveal phrase") { revealViaDeviceAuth() }
-            }
-            .dockFadeBackground()
-        }
-        // Announce the auth error (audit 2026-08, V14): it appears silently, so a
-        // VoiceOver user whose Face ID was dismissed heard nothing happen.
-        .onChange(of: errorText) { _, error in
-            if let error {
-                UIAccessibility.post(notification: .announcement, argument: error)
-            }
-        }
+        .padding(.bottom, 16)
+        .frame(maxWidth: .infinity)
     }
 
     private func revealViaDeviceAuth() {
@@ -195,7 +213,12 @@ private struct PhraseRevealGrid: View {
     /// latched the reveal on via its named action.
     private var revealed: Bool { isHeld || voRevealed }
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
+    /// Three columns at default sizes, fewer at large text sizes, as on onboarding's phrase step.
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 12), count: phraseColumnCount(for: dynamicSize))
+    }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -240,11 +263,20 @@ private struct PhraseRevealGrid: View {
                 .sheetSmall()
                 .foregroundStyle(Color.ckTextSecondary)
                 .frame(width: 22, alignment: .trailing)
-            Text(word)
-                .ckBody(.medium, size: 15, relativeTo: .body)
-                .foregroundStyle(Color.ckTextPrimary)
-                .blur(radius: revealed ? 0 : 7)
-                .animation(.easeInOut(duration: 0.12), value: revealed)
+            ZStack(alignment: .leading) {
+                // Holds a full line's height, so a cell whose word shrank is as tall as the rest.
+                Text(verbatim: " ")
+                    .ckBody(.medium, size: 15, relativeTo: .body)
+                    .hidden()
+                Text(word)
+                    .ckBody(.medium, size: 15, relativeTo: .body)
+                    .foregroundStyle(Color.ckTextPrimary)
+                    // A word never breaks across two lines: a long one shrinks a little instead.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .blur(radius: revealed ? 0 : 7)
+                    .animation(.easeInOut(duration: 0.12), value: revealed)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)

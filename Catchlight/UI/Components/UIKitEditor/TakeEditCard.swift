@@ -321,14 +321,36 @@ struct KeyboardTakeEditor: View {
     @State private var keyboardTopY: CGFloat = .greatestFiniteMagnitude
     /// A keyboard hide that arrived while `holdsPlace`, applied when the hold ends.
     @State private var heldKeyboardTopY: CGFloat?
-    /// While a keyboard hide is held back the keyboard is really gone, and this view's bottom edge
-    /// moves down by the home-indicator inset: measured 2026-11-11 on an iPhone 17, the card's Iris
-    /// dropped from 392 to 426 with the hide held, and to 460 when this inset was taken off the
-    /// padding instead of added. Adding it keeps the card where it was. A fixed inset, not a
-    /// measurement of the card: measuring the card's own frame and feeding it back into its
-    /// offset hung the app.
-    private var heldHideShift: CGFloat {
-        heldKeyboardTopY == nil ? 0 : homeIndicatorInset
+    /// Where the card's bottom sits, in window coordinates, while the Focus row holds it. Set when
+    /// the hold catches a keyboard hide, cleared once the keyboard is back and this view's bottom
+    /// edge has returned to where it was. While it is set the padding is worked out from the live
+    /// bottom edge in the same layout pass, so the card stays put while the edge moves. The edge
+    /// moves in steps a frame apart as the keyboard goes (measured on an iPhone 16 simulator:
+    /// 462, 818, 852), and a fixed home-indicator shift matched only the last step, so the card
+    /// jumped 34pt up for a frame (owner report 2026-11-14, "jumpy").
+    @State private var heldCardBottom: CGFloat?
+    /// This view's bottom edge, in window coordinates, as last laid out. A box, so recording it
+    /// never asks for another layout.
+    @State private var edge = EdgeBox()
+    /// `settled` is the edge as last laid out while nothing held the card: the edge to hold from.
+    final class EdgeBox {
+        var maxY: CGFloat = 0; var settled: CGFloat = 0; var atHold: CGFloat = 0; var keyboardAtHold: CGFloat = 0
+    }
+
+    /// Hold the card where it is now. The keyboard's hide and this view's bottom edge can arrive in
+    /// either order (iOS 27 sends the hide first, iOS 26 moves the edge first, measured on
+    /// simulators), so the hold starts from the edge as it was before either, not the latest edge.
+    private func startHold() {
+        guard heldCardBottom == nil else { return }
+        edge.atHold = edge.settled
+        edge.keyboardAtHold = keyboardTopY
+        heldCardBottom = edge.settled - bottomPadding(edgeMaxY: edge.settled)
+    }
+
+    /// The bottom padding that puts the card where it belongs for a bottom edge at `edgeMaxY`.
+    private func bottomPadding(edgeMaxY: CGFloat) -> CGFloat {
+        if let heldCardBottom { return max(0, edgeMaxY - heldCardBottom) }
+        return max(0, UIScreen.main.bounds.height - keyboardTopY) + bottomLift
     }
 
     /// The card's last reported RAW content height — drives the bottom drop.
@@ -406,6 +428,8 @@ struct KeyboardTakeEditor: View {
     /// edge to set its bottom padding, adds no animation, and caps the card at the room above the
     /// keyboard (`maxHeight`) so the editor's own scrolling starts before the caret reaches it.
     var body: some View {
+        GeometryReader { proxy in
+        let edgeMaxY = proxy.frame(in: .global).maxY
         VStack(spacing: 0) {
             Spacer(minLength: 0)
             TakeEditCard(
@@ -427,8 +451,23 @@ struct KeyboardTakeEditor: View {
             .padding(.leading, leadingInset)
             .padding(.trailing, trailingInset ?? leadingInset)
         }
-        .padding(.bottom, max(0, UIScreen.main.bounds.height - keyboardTopY) + bottomLift + heldHideShift)
+        .padding(.bottom, bottomPadding(edgeMaxY: edgeMaxY))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .onGeometryChange(for: CGFloat.self) { _ in edgeMaxY } action: { newEdge in
+            edge.maxY = newEdge
+            // The edge moved while the Focus row holds the card: the keyboard is leaving.
+            if holdsPlace(), heldCardBottom == nil, keyboardTopY < .greatestFiniteMagnitude, newEdge != edge.settled {
+                startHold()
+            }
+            if heldCardBottom == nil, !holdsPlace() { edge.settled = newEdge }
+            // The keyboard is back and the edge has returned to where the hold began: the usual
+            // padding now puts the card exactly where it is held, so let go.
+            if heldCardBottom != nil, heldKeyboardTopY == nil, !holdsPlace(), abs(newEdge - edge.atHold) < 0.5,
+               abs(keyboardTopY - edge.keyboardAtHold) < 0.5 {
+                heldCardBottom = nil
+            }
+        }
+        }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .transition(.opacity)
         // Track the keyboard's top edge (incl. its docked toolbar). willHide reports
@@ -438,16 +477,41 @@ struct KeyboardTakeEditor: View {
             guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
             else { return }
             if holdsPlace() && frame.origin.y > keyboardTopY {
+                if heldCardBottom == nil {
+                    startHold()
+                }
                 heldKeyboardTopY = frame.origin.y
                 return
             }
             heldKeyboardTopY = nil
             keyboardTopY = frame.origin.y
+            // The returning keyboard can first report a top that is too high (462, then 524 a frame
+            // later, measured), so the hold lasts until it reports the top it had when held.
+            if heldCardBottom != nil, !holdsPlace(), abs(edge.maxY - edge.atHold) < 0.5,
+               abs(keyboardTopY - edge.keyboardAtHold) < 0.5 { heldCardBottom = nil }
         }
         .onChange(of: holdsPlace()) { _, holds in
-            guard !holds, let held = heldKeyboardTopY else { return }
-            heldKeyboardTopY = nil
-            keyboardTopY = held
+            guard !holds else { return }
+            // The keyboard came back while the row was still open: nothing is held any more.
+            guard heldKeyboardTopY != nil else {
+                heldCardBottom = nil
+                return
+            }
+            // The keyboard usually comes back as the row closes, and its show then clears the
+            // held hide. Applying the hide here first parked the card at the bottom of the
+            // screen for the few frames before the show arrived. Apply it only if no show came.
+            // Either way let go of the card: a keyboard that came back at a different top (the
+            // predictive bar, another keyboard, a hardware keyboard) never matches the top it
+            // was held at, and the card would otherwise stop following the keyboard.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                guard !holdsPlace() else { return }
+                if let held = heldKeyboardTopY {
+                    heldKeyboardTopY = nil
+                    keyboardTopY = held
+                }
+                heldCardBottom = nil
+            }
         }
     }
 }
+
