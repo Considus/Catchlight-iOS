@@ -680,7 +680,29 @@ struct FlatSegmentedControl<Value: Hashable>: View {
     @Binding var selection: Value
 
     var body: some View {
-        HStack(spacing: 0) {
+        // Side by side when every title fits in full. Otherwise one above the other at full
+        // width, so a title is never cut short (large text sizes).
+        // In order: side by side at full size; side by side shrunk, down to 75% (laid out by a
+        // hidden copy drawn at 75%, so it is chosen only when the shrunk titles fit); stacked.
+        // A title that fitted at full or shrunk size before still does, at every text size.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 0) { segmentButtons(size: 15) }
+            HStack(spacing: 0) { segmentButtons(size: 15 * 0.75) }
+                .hidden()
+                .overlay { HStack(spacing: 0) { segmentButtons(size: 15) } }
+            VStack(spacing: 0) { segmentButtons(size: 15) }
+        }
+        .background(CatchlightShape.control.fill(Color.ckSurface))
+        .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
+        // Our own segment buttons are the accessibility elements: each is a button of 44pt
+        // with the selected trait, and the group is a contained element with its label.
+        // (A native segmented `Picker` as the accessibility representation reported its own
+        // hidden frames on iOS 18.5: 32pt high, and the second segment 0pt wide.)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+    }
+
+    private func segmentButtons(size: CGFloat) -> some View {
             ForEach(segments.indices, id: \.self) { index in
                 let segment = segments[index]
                 let selected = segment.value == selection
@@ -688,7 +710,7 @@ struct FlatSegmentedControl<Value: Hashable>: View {
                     selection = segment.value
                 } label: {
                     Text(segment.title)
-                        .ckBody(.medium, size: 15, relativeTo: .body)
+                        .ckBody(.medium, size: size, relativeTo: .body)
                         .foregroundStyle(selected ? Color.ckChosenMark : Color.ckTextPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
@@ -705,15 +727,6 @@ struct FlatSegmentedControl<Value: Hashable>: View {
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(selected ? [.isSelected] : [])
             }
-        }
-        .background(CatchlightShape.control.fill(Color.ckSurface))
-        .overlay(CatchlightShape.control.strokeBorder(Color.ckOutline, lineWidth: 1))
-        // Our own segment buttons are the accessibility elements: each is a button of 44pt
-        // with the selected trait, and the group is a contained element with its label.
-        // (A native segmented `Picker` as the accessibility representation reported its own
-        // hidden frames on iOS 18.5: 32pt high, and the second segment 0pt wide.)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(label)
     }
 }
 

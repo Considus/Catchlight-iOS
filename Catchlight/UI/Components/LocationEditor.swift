@@ -264,12 +264,20 @@ struct LocationEditor: View {
 
             // Notify on/off (owner 2026-06-27) — model-C parity with time reminders. Off =
             // a silent place tag (no geofence registered); on = fire on arrive/leave.
-            HStack {
-                // Filled bell when on, matching the time-reminder Notify toggle
-                // (owner 2026-06-29); slash stays for the silent/off place tag.
-                Label("Notify", systemImage: alarmEnabled ? "bell.fill" : "bell.slash")
-                Spacer()
-                Toggle("", isOn: $alarmEnabled).labelsHidden().toggleStyle(FlatToggleStyle())
+            // When the title and the toggle don't fit on one line (large text sizes), the toggle
+            // goes under the title, so "Notify" is never broken inside itself.
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    notifyLabel.fixedSize()
+                    Spacer()
+                    notifyToggle
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    notifyLabel
+                    notifyToggle
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 6)
             }
             .accessibilityIdentifier("location-notify-toggle")
 
@@ -284,7 +292,45 @@ struct LocationEditor: View {
 
             Divider()
 
-            HStack {
+            // When "Place" and its name field don't fit on one line, the field goes under the
+            // title, so "Place" is never broken inside itself.
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    placeLabel.fixedSize()
+                    placeField(alignment: .trailing)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    placeLabel
+                    placeField(alignment: .leading)
+                }
+            }
+            .padding(.vertical, 8)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 4)
+        .flatPanel()
+    }
+
+    // Filled bell when on, matching the time-reminder Notify toggle
+    // (owner 2026-06-29); slash stays for the silent/off place tag.
+    private var notifyLabel: some View {
+        Label("Notify", systemImage: alarmEnabled ? "bell.fill" : "bell.slash")
+    }
+
+    private var notifyToggle: some View {
+        Toggle("", isOn: $alarmEnabled).labelsHidden().toggleStyle(FlatToggleStyle())
+    }
+
+    /// Trailing beside its title, leading under it once stacked, lined up with "Place".
+    private func placeField(alignment: TextAlignment) -> some View {
+        TextField("e.g. Home", text: $name)
+            .multilineTextAlignment(alignment)
+            .padding(.horizontal, 10)
+            .frame(minHeight: CatchlightLayout.minTouchTarget - 8)
+            .flatField(fill: .ckBackground)
+            .accessibilityIdentifier("location-name-field")
+    }
+
+    private var placeLabel: some View {
                 // The same teardrop marker that identifies a location reminder on the
                 // Dailies card (owner 2026-06-29), instead of the generic tag.
                 Label {
@@ -300,17 +346,6 @@ struct LocationEditor: View {
                             LocationPinGlyph(color: Color.ckTextPrimary, size: 18, lineWidth: 1.2)
                         }
                 }
-                TextField("e.g. Home", text: $name)
-                    .multilineTextAlignment(.trailing)
-                    .padding(.horizontal, 10)
-                    .frame(minHeight: CatchlightLayout.minTouchTarget - 8)
-                    .flatField(fill: .ckBackground)
-                    .accessibilityIdentifier("location-name-field")
-            }
-            .padding(.vertical, 8)
-        }
-        .padding(.horizontal, 14).padding(.vertical, 4)
-        .flatPanel()
     }
 
     private var permissionHint: some View {
