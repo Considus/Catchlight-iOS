@@ -204,6 +204,25 @@ final class ConflictQueueTests: XCTestCase {
         XCTAssertTrue(queue.unverified.isEmpty)
     }
 
+    /// Found by the TLC sync model (Catchlight-Core spec/). A pass reports a cloud copy for a
+    /// Take not on this device; a later pass brings the Take down normally and the user edits it.
+    /// The queue still offers the old copy, and Recover writes it over the edit, stamped as the
+    /// newest version, so the next push removes the edit everywhere.
+    func testUnverified_keepCloud_neverOverwritesATakeThatArrivedAndWasEditedSince() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: false, cloud: true)
+        queue.enqueueUnverified([item])
+
+        var arrived = try XCTUnwrap(item.cloud)
+        arrived.blocks = [.textLine("edited after it synced")]
+        arrived.modifiedAt = item.cloud!.modifiedAt.addingTimeInterval(60)
+        try store.upsert(arrived)
+
+        try? queue.keepCloud(id: item.id, store: store)
+        XCTAssertEqual(try store.take(id: item.id)?.blocks, arrived.blocks,
+                       "Recover replaced an edit the user made after the Take arrived")
+    }
+
     func testUnverified_keepCloud_withNothingReadable_isANoOp() throws {
         let queue = ConflictQueue(); let store = InMemoryTakeStore()
         let item = makeUnverified(local: true, cloud: false)
