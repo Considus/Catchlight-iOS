@@ -108,14 +108,20 @@ final class ButtonRowPlaceUITests: XCTestCase {
         XCTAssertEqual(holdInset, revealInset, accuracy: 1, "the hold button's bottom corner")
     }
 
-    /// With the button gone from the page and no folder chosen, the intro and the recommendation
-    /// sit one stack gap (24pt) apart, with no empty slot left where the button was.
-    func testCloudStorageLeavesNoGapWhereItsButtonWas() {
+    /// With no folder chosen, the sheet's groups spread down the page: the gap from the intro to
+    /// the folder card equals the gap from the fine print to the sync card, and neither closes
+    /// below 24pt. No empty slot is left where the button was. Each card's text sits 16 inside it.
+    func testCloudStorageSpreadsItsGroupsEvenly() {
         let app = launch(["--uitesting-cloud-storage"])
         let intro = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Catchlight never sees'")).firstMatch
         let recommendation = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Easiest'")).firstMatch
+        let fine = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Tested with'")).firstMatch
+        let sync = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Sync'")).firstMatch
         XCTAssertTrue(recommendation.waitForExistence(timeout: 12))
         Thread.sleep(forTimeInterval: 1)
-        XCTAssertEqual(recommendation.frame.minY - intro.frame.maxY, 24, accuracy: 1)
+        let aboveFolder = (recommendation.frame.minY - 16) - intro.frame.maxY
+        let aboveSync = (sync.frame.minY - 16) - fine.frame.maxY
+        XCTAssertGreaterThanOrEqual(aboveFolder, 24, "the folder card is closer than 24 to the intro")
+        XCTAssertEqual(aboveFolder, aboveSync, accuracy: 1, "the groups are not spread evenly")
     }
 }
