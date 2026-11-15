@@ -97,6 +97,7 @@ struct DockPill: View {
             Text(title)
                 .ckBody(.medium, size: 15, relativeTo: .body)
                 .lineLimit(dynamicSize > .large ? 2 : 1)
+                .multilineTextAlignment(.center)
                 .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)
                 .padding(.horizontal, 10)
                 .frame(maxWidth: .infinity,
