@@ -392,7 +392,11 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
         } else {
             let host = UIHostingController(rootView: bar)
             host.view.backgroundColor = .clear
-            host.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 62)
+            // The panel plus the 10pt above it and 8pt below it (`EditorKeyboardBar`).
+            host.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width,
+                                     height: EditorKeyboardBar.panelHeight(
+                                        for: DynamicTypeSize(traitCollection.preferredContentSizeCategory) ?? .large,
+                                        screenWidth: UIScreen.main.bounds.width) + 18)
             host.view.autoresizingMask = [.flexibleWidth]
             addChild(host)
             host.didMove(toParent: self)
