@@ -500,11 +500,16 @@ struct KeyboardTakeEditor: View {
             // The keyboard usually comes back as the row closes, and its show then clears the
             // held hide. Applying the hide here first parked the card at the bottom of the
             // screen for the few frames before the show arrived. Apply it only if no show came.
+            // Either way let go of the card: a keyboard that came back at a different top (the
+            // predictive bar, another keyboard, a hardware keyboard) never matches the top it
+            // was held at, and the card would otherwise stop following the keyboard.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                guard !holdsPlace(), let held = heldKeyboardTopY else { return }
-                heldKeyboardTopY = nil
+                guard !holdsPlace() else { return }
+                if let held = heldKeyboardTopY {
+                    heldKeyboardTopY = nil
+                    keyboardTopY = held
+                }
                 heldCardBottom = nil
-                keyboardTopY = held
             }
         }
     }
