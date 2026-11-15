@@ -193,6 +193,27 @@ final class ConflictQueueTests: XCTestCase {
         XCTAssertTrue(queue.unverified.isEmpty)
     }
 
+    /// The warning holds a copy of this phone's Take from the moment it was raised. An edit made
+    /// while it shows is the Take as it is now, and "keep this phone's version" must keep that.
+    func testUnverified_keepPhone_keepsAnEditMadeWhileTheWarningWasShowing() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: true, cloud: true)
+        try store.upsert(item.local!)
+        queue.enqueueUnverified([item])
+
+        var edited = item.local!
+        edited.blocks = [.textLine("typed after the warning appeared")]
+        let editedBlocks = edited.blocks
+        edited.modifiedAt = item.local!.modifiedAt.addingTimeInterval(60)
+        try store.upsert(edited)
+
+        try queue.keepPhone(id: item.id, store: store)
+        let saved = try XCTUnwrap(store.take(id: item.id))
+        XCTAssertEqual(saved.blocks, editedBlocks,
+                       "the latest edit survives keeping this phone's version")
+        XCTAssertGreaterThan(saved.modifiedAt, edited.modifiedAt)
+    }
+
     func testUnverified_keepCloud_recoversTheCopyAsAFreshEdit() throws {
         let queue = ConflictQueue(); let store = InMemoryTakeStore()
         let item = makeUnverified(local: false, cloud: true)
