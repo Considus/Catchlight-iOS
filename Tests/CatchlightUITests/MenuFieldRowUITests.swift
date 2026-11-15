@@ -20,7 +20,8 @@ final class MenuFieldRowUITests: XCTestCase {
         XCTAssertTrue(menu.waitForExistence(timeout: 12))
         Thread.sleep(forTimeInterval: 1)
         let title = menu.staticTexts["Sync"]
-        let value = menu.staticTexts["Manual"]
+        // Whichever mode is set (Disabled, Manual or Automatic): the value is the row's other text.
+        let value = menu.staticTexts.matching(NSPredicate(format: "label != 'Sync'")).firstMatch
         XCTAssertTrue(title.exists && value.exists)
         // One line of the value is no taller than one line of the title, in the same font.
         // Before the fix the value broke as "Man-ual" over two lines.
