@@ -29644,6 +29644,119 @@
         }
       }
     },
+    "Have a code for an extra free month? Redeem it first." : {
+      "comment" : "The line under the Redeem Code button on the paywall. An offer code only works if it is redeemed before subscribing.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Har du en kode til en ekstra gratis måned? Indløs den først."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Du hast einen Code für einen zusätzlichen Gratismonat? Löse ihn zuerst ein."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "¿Tienes un código para un mes gratis extra? Canjéalo primero."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Onko sinulla koodi ylimääräiseen ilmaiseen kuukauteen? Lunasta se ensin."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vous avez un code pour un mois gratuit en plus ? Utilisez-le d'abord."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hai un codice per un mese gratis in più? Riscattalo prima."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "無料期間をさらに1か月延ばせるコードをお持ちですか？先に引き換えてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "무료 한 달을 더 받을 수 있는 코드가 있나요? 먼저 사용해 보세요."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Har du en kode for en ekstra gratis måned? Løs den inn først."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Heb je een code voor een extra gratis maand? Wissel hem eerst in."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Masz kod na dodatkowy darmowy miesiąc? Zrealizuj go najpierw."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tem um código para um mês grátis extra? Resgate-o primeiro."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tem um código para um mês gratuito extra? Utilize-o primeiro."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Har du en kod för en extra gratis månad? Lös in den först."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "มีรหัสสำหรับใช้ฟรีเพิ่มอีกหนึ่งเดือนไหม แลกใช้รหัสก่อนได้เลย"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fazladan bir ücretsiz ay için kodunuz mu var? Önce onu kullanın."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有可多得一个月免费使用的代码吗？请先兑换。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有可多得一個月免費使用的代碼嗎？請先兌換。"
+          }
+        }
+      }
+    },
     "Hide phrase" : {
       "localizations" : {
         "de" : {
