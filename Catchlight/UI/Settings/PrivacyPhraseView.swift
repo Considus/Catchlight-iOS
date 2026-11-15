@@ -96,6 +96,31 @@ struct PrivacyPhraseView: View {
     /// `MnemonicKeychain.retrieve()` forces. An explicit tap triggers it — we never
     /// auto-read the crown-jewels on appear.
     private var authenticatePrompt: some View {
+        // At large text sizes the explanation can be taller than the sheet: it wraps in
+        // full and the prompt scrolls, as Cloud Storage does, rather than cutting it short.
+        ViewThatFits(in: .vertical) {
+            authenticateStack
+            ScrollView { authenticateStack }
+                .scrollIndicators(.hidden)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color.ckBackground)
+        .safeAreaInset(edge: .bottom) {
+            DockPillRow {
+                DockPill(title: "Reveal phrase") { revealViaDeviceAuth() }
+            }
+            .dockFadeBackground()
+        }
+        // Announce the auth error (audit 2026-08, V14): it appears silently, so a
+        // VoiceOver user whose Face ID was dismissed heard nothing happen.
+        .onChange(of: errorText) { _, error in
+            if let error {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
+        }
+    }
+
+    private var authenticateStack: some View {
         VStack(spacing: 16) {
             Image(systemName: "faceid")
                 .font(.system(size: 40, weight: .regular))
@@ -112,6 +137,7 @@ struct PrivacyPhraseView: View {
                 .sheetBody()
                 .foregroundStyle(Color.ckTextSecondary)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 32)
             if let errorText {
                 Text(errorText)
@@ -120,26 +146,13 @@ struct PrivacyPhraseView: View {
                     // accent token here cost "error" its colour semantics.
                     .foregroundStyle(Color.ckRuby)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 32)
             }
-            Spacer()
         }
         .padding(.top, 60)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.ckBackground)
-        .safeAreaInset(edge: .bottom) {
-            DockPillRow {
-                DockPill(title: "Reveal phrase") { revealViaDeviceAuth() }
-            }
-            .dockFadeBackground()
-        }
-        // Announce the auth error (audit 2026-08, V14): it appears silently, so a
-        // VoiceOver user whose Face ID was dismissed heard nothing happen.
-        .onChange(of: errorText) { _, error in
-            if let error {
-                UIAccessibility.post(notification: .announcement, argument: error)
-            }
-        }
+        .padding(.bottom, 16)
+        .frame(maxWidth: .infinity)
     }
 
     private func revealViaDeviceAuth() {
