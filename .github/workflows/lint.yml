@@ -1,0 +1,61 @@
+name: Lint
+
+# SwiftLint with only our own rules (.swiftlint.yml): each one turns a mistake that kept
+# turning up in review into a check whose message names the fix. Old violations sit in
+# .swiftlint-baseline.json and are cleaned up separately; a NEW violation fails this job.
+#
+# SwiftLint is not on the macos-15 image, so the job downloads a pinned release and checks
+# its SHA-256 before running it. To bump: change both values below together.
+#
+# When it fails, the log names each rule that fired. The job also uploads a fresh baseline
+# as an artifact, for refreshing .swiftlint-baseline.json after a deliberate clean-up.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SWIFTLINT_VERSION: 0.65.1
+  SWIFTLINT_SHA256: c1e429b0599cf1b516f369a2d9ec04eaf0e436f3c12b637df8851fa52ff694d0
+
+jobs:
+  swiftlint:
+    name: SwiftLint
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install SwiftLint (pinned, checksum verified)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/swiftlint"
+          curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
+          echo "${SWIFTLINT_SHA256}  $RUNNER_TEMP/swiftlint.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
+          echo "$RUNNER_TEMP/swiftlint" >> "$GITHUB_PATH"
+
+      - name: Lint (new violations fail)
+        run: swiftlint lint --strict --reporter github-actions-logging --baseline .swiftlint-baseline.json
+
+      - name: Write a fresh baseline
+        if: failure()
+        run: swiftlint lint --write-baseline "$RUNNER_TEMP/fresh-baseline.json" > /dev/null || true
+
+      - name: Upload the fresh baseline
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fresh-swiftlint-baseline
+          path: ${{ runner.temp }}/fresh-baseline.json
+          if-no-files-found: ignore
