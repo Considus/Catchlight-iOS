@@ -63,6 +63,10 @@ public final class EncryptedTakeStore: TakeStore {
     /// Test seam (R5): runs inside `applyRemote` after the tombstone check and before the write,
     /// so a test can land a delete from a second connection at exactly that moment.
     var afterTombstoneCheckForTesting: (() -> Void)?
+
+    /// Test seam: runs just after a read of one Take by id, so a test can land a write from a
+    /// second connection between a caller's read and the write it then makes.
+    var afterTakeReadForTesting: (() -> Void)?
     #endif
 
     private static let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
@@ -515,8 +519,11 @@ public final class EncryptedTakeStore: TakeStore {
             let stmt = try prepare("SELECT id, payload FROM takes WHERE id = ?1;")
             defer { sqlite3_finalize(stmt) }
             bindText(stmt, 1, id.uuidString)
-            guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
-            return try decodeTakeRow(stmt)
+            let found: Take? = sqlite3_step(stmt) == SQLITE_ROW ? try decodeTakeRow(stmt) : nil
+            #if DEBUG
+            afterTakeReadForTesting?()
+            #endif
+            return found
         }
     }
 
