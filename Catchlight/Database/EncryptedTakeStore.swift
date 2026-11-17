@@ -707,6 +707,51 @@ public final class EncryptedTakeStore: TakeStore {
         }
     }
 
+    // MARK: - TakeStore: per-Take sync records (Core 2.0, kept on this device only)
+
+    /// Each Take's `SyncRecord` (the folder version this device last agreed with, and its own
+    /// upload not yet seen) is a row of `sync_state`, the table that already holds the
+    /// watermark, keyed by the Take's id. No new table and no schema version: an older build
+    /// reads only `last_sync` and leaves these rows alone. The value is the record's JSON:
+    /// edit stamps only, no note content.
+    private static func syncRecordKey(_ id: UUID) -> String { "take-record:\(id.uuidString)" }
+
+    public func syncRecord(id: UUID) throws -> SyncRecord? {
+        try queue.sync {
+            let stmt = try prepare("SELECT value FROM sync_state WHERE key = ?1;")
+            defer { sqlite3_finalize(stmt) }
+            bindText(stmt, 1, Self.syncRecordKey(id))
+            guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
+            do {
+                return try PlatformJSON.decode(SyncRecord.self, from: Data(columnText(stmt, 0).utf8))
+            } catch {
+                // A record that no longer decodes is treated as no record: sync then takes the
+                // safe side for this Take (at worst a conflict shown once), where throwing would
+                // stop every sync for good. Nothing to log: the row holds no note content and
+                // the next sync that settles this Take writes a fresh record over it.
+                return nil
+            }
+        }
+    }
+
+    public func setSyncRecord(_ record: SyncRecord?, id: UUID) throws {
+        try queue.sync {
+            guard let record else {
+                let stmt = try prepare("DELETE FROM sync_state WHERE key = ?1;")
+                defer { sqlite3_finalize(stmt) }
+                bindText(stmt, 1, Self.syncRecordKey(id))
+                guard sqlite3_step(stmt) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
+                return
+            }
+            let json = String(decoding: try PlatformJSON.encode(record), as: UTF8.self)
+            let stmt = try prepare("INSERT OR REPLACE INTO sync_state (key, value) VALUES (?1, ?2);")
+            defer { sqlite3_finalize(stmt) }
+            bindText(stmt, 1, Self.syncRecordKey(id))
+            bindText(stmt, 2, json)
+            guard sqlite3_step(stmt) == SQLITE_DONE else { throw StorageError.writeFailed(lastError()) }
+        }
+    }
+
     // MARK: - TakeStore: tombstones
 
     public func tombstones() throws -> [Tombstone] {

@@ -178,6 +178,23 @@ final class EncryptedTakeStoreTests: XCTestCase {
                        "the sync watermark must survive a store close/reopen")
     }
 
+    /// A Take's sync record is PERSISTED like the watermark: losing it on relaunch would make
+    /// the next sync take the safe side for every Take (a conflict for each edit waiting).
+    func testEncryptedStore_syncRecord_survivesReopen_andLeavesTheWatermarkAlone() throws {
+        let stamp = try XCTUnwrap(ISO8601.date(from: "2026-06-01T12:00:00.500Z"))
+        store.setLastSyncDate(stamp)
+        let id = UUID()
+        let record = SyncRecord(agreed: "2026-06-01T11:00:00.000Z", uploaded: "2026-06-01T11:30:00.000Z")
+        try store.setSyncRecord(record, id: id)
+
+        let reopened = try reopenStore()
+        XCTAssertEqual(try reopened.syncRecord(id: id), record)
+        XCTAssertEqual(reopened.lastSyncDate(), stamp, "records share sync_state with the watermark")
+        try reopened.setSyncRecord(nil, id: id)
+        XCTAssertNil(try reopenStore().syncRecord(id: id))
+        XCTAssertEqual(try reopenStore().lastSyncDate(), stamp)
+    }
+
     // MARK: - A delete on another connection is never undone by sync (R5)
 
     /// Sync opens its own `EncryptedTakeStore` while the timeline holds another, so the two

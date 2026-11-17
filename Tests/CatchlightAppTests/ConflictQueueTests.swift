@@ -430,6 +430,8 @@ private final class UnreadableStore: TakeStore {
     func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool { try base.release(id: id, ifNotModifiedAfter: cutoff) }
     func tombstones() throws -> [Tombstone] { try base.tombstones() }
     func purgeTombstones(ids: [UUID]) throws { try base.purgeTombstones(ids: ids) }
+    func syncRecord(id: UUID) throws -> SyncRecord? { try base.syncRecord(id: id) }
+    func setSyncRecord(_ record: SyncRecord?, id: UUID) throws { try base.setSyncRecord(record, id: id) }
 }
 
 #endif

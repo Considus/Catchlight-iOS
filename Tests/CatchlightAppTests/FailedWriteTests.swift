@@ -42,6 +42,8 @@ private final class RefusingStore: TakeStore {
     func setObie(id: UUID, replaceExisting: Bool) throws { try base.setObie(id: id, replaceExisting: replaceExisting) }
     func lastSyncDate() -> Date? { base.lastSyncDate() }
     func setLastSyncDate(_ date: Date) { base.setLastSyncDate(date) }
+    func syncRecord(id: UUID) throws -> SyncRecord? { try base.syncRecord(id: id) }
+    func setSyncRecord(_ record: SyncRecord?, id: UUID) throws { try base.setSyncRecord(record, id: id) }
     func applyRemote(_ take: Take) throws -> Bool { try base.applyRemote(take) }
     func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool { try base.release(id: id, ifNotModifiedAfter: cutoff) }
     func tombstones() throws -> [Tombstone] { try base.tombstones() }

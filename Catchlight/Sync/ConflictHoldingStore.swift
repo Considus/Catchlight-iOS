@@ -179,6 +179,8 @@ final class ConflictHoldingStore: TakeStore {
     func currentObie() throws -> Take? { try base.currentObie() }
     func lastSyncDate() -> Date? { base.lastSyncDate() }
     func setLastSyncDate(_ date: Date) { base.setLastSyncDate(date) }
+    func syncRecord(id: UUID) throws -> SyncRecord? { try base.syncRecord(id: id) }
+    func setSyncRecord(_ record: SyncRecord?, id: UUID) throws { try base.setSyncRecord(record, id: id) }
     func tombstones() throws -> [Tombstone] { try base.tombstones() }
     func purgeTombstones(ids: [UUID]) throws { try base.purgeTombstones(ids: ids) }
 }
