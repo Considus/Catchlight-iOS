@@ -219,6 +219,17 @@ final class EncryptedTakeStoreTests: XCTestCase {
         XCTAssertEqual(try timeline.tombstones().map(\.id), [original.id], "the tombstone was erased")
     }
 
+    func testUpsertIfAbsent_writesWhenAbsent_andRefusesWhenPresent() throws {
+        let take = Take(blocks: [.textLine("first")])
+        XCTAssertTrue(try store.upsertIfAbsent(take))
+        XCTAssertEqual(try store.take(id: take.id)?.blocks, take.blocks)
+
+        var other = take
+        other.blocks = [.textLine("second")]
+        XCTAssertFalse(try store.upsertIfAbsent(other))
+        XCTAssertEqual(try store.take(id: take.id)?.blocks, take.blocks, "a present Take was replaced")
+    }
+
     /// Tombstones are persisted too — a deletion recorded before a relaunch is
     /// still pending propagation after it.
     func testEncryptedStore_tombstones_surviveReopen() throws {

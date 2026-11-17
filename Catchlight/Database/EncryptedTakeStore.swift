@@ -63,6 +63,10 @@ public final class EncryptedTakeStore: TakeStore {
     /// Test seam (R5): runs inside `applyRemote` after the tombstone check and before the write,
     /// so a test can land a delete from a second connection at exactly that moment.
     var afterTombstoneCheckForTesting: (() -> Void)?
+
+    /// Test seam: runs just after a read of one Take by id, so a test can land a write from a
+    /// second connection between a caller's read and the write it then makes.
+    var afterTakeReadForTesting: (() -> Void)?
     #endif
 
     private static let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
@@ -388,6 +392,26 @@ public final class EncryptedTakeStore: TakeStore {
         }
     }
 
+    /// Write `take` only when no Take with its id is stored. The check and the write are one write
+    /// transaction, so a Take that sync brings down on its own connection either lands first
+    /// (and is seen, so nothing is written) or waits for this commit. Returns whether it wrote.
+    public func upsertIfAbsent(_ take: Take) throws -> Bool {
+        try queue.sync {
+            try inWriteTransaction {
+                let stmt = try prepare("SELECT 1 FROM takes WHERE id = ?1;")
+                defer { sqlite3_finalize(stmt) }
+                bindText(stmt, 1, take.id.uuidString)
+                let present = sqlite3_step(stmt) == SQLITE_ROW
+                #if DEBUG
+                afterTakeReadForTesting?()
+                #endif
+                if present { return false }
+                try writeTakeInTransaction(take)
+                return true
+            }
+        }
+    }
+
     /// Run `body` inside `BEGIN IMMEDIATE … COMMIT`, rolling back if it throws or returns
     /// early through an error. NOT serialised — callers hold the queue.
     private func inWriteTransaction<T>(_ body: () throws -> T) throws -> T {
@@ -515,8 +539,11 @@ public final class EncryptedTakeStore: TakeStore {
             let stmt = try prepare("SELECT id, payload FROM takes WHERE id = ?1;")
             defer { sqlite3_finalize(stmt) }
             bindText(stmt, 1, id.uuidString)
-            guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
-            return try decodeTakeRow(stmt)
+            let found: Take? = sqlite3_step(stmt) == SQLITE_ROW ? try decodeTakeRow(stmt) : nil
+            #if DEBUG
+            afterTakeReadForTesting?()
+            #endif
+            return found
         }
     }
 

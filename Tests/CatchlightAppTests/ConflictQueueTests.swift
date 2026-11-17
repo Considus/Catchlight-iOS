@@ -18,6 +18,7 @@
 import XCTest
 @testable import CatchlightCore
 @testable import Catchlight
+import CryptoKit
 
 @MainActor
 final class ConflictQueueTests: XCTestCase {
@@ -236,6 +237,87 @@ final class ConflictQueueTests: XCTestCase {
         XCTAssertEqual(saved.blocks, item.cloud!.blocks)
         XCTAssertGreaterThan(saved.modifiedAt, item.cloud!.modifiedAt)
         XCTAssertTrue(queue.unverified.isEmpty)
+    }
+
+    /// Found by the TLC sync model (Catchlight-Core spec/). A pass reports a cloud copy for a
+    /// Take not on this device; a later pass brings the Take down normally and the user edits it.
+    /// The queue still offers the old copy, and Recover writes it over the edit, stamped as the
+    /// newest version, so the next push removes the edit everywhere.
+    func testUnverified_keepCloud_neverOverwritesATakeThatArrivedAndWasEditedSince() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: false, cloud: true)
+        queue.enqueueUnverified([item])
+
+        var arrived = try XCTUnwrap(item.cloud)
+        arrived.blocks = [.textLine("edited after it synced")]
+        arrived.modifiedAt = item.cloud!.modifiedAt.addingTimeInterval(60)
+        try store.upsert(arrived)
+
+        try? queue.keepCloud(id: item.id, store: store)
+        XCTAssertEqual(try store.take(id: item.id)?.blocks, arrived.blocks,
+                       "Recover replaced an edit the user made after the Take arrived")
+    }
+
+    func testUnverified_keepCloud_forATakeThatArrivedSince_dropsTheWarningAndWritesNothing() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: false, cloud: true)
+        queue.enqueueUnverified([item])
+        try store.upsert(item.cloud!)
+        try queue.keepCloud(id: item.id, store: store)
+        XCTAssertEqual(try store.take(id: item.id), item.cloud, "nothing was written")
+        XCTAssertTrue(queue.unverified.isEmpty, "the stale warning went quietly")
+    }
+
+    /// Greptile on PR 456. Sync opens its own database connection beside the timeline's, so a
+    /// Take can arrive between Recover's "is it here yet?" check and its write. The check and the
+    /// write must be one step that refuses to replace a Take.
+    func testUnverified_keepCloud_aTakeArrivingOnAnotherConnectionMidRecover_isNotOverwritten() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("catchlight-recover-race-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let keys = KeyHierarchy(masterKey: SymmetricKey(size: .bits256))
+        let timeline = try EncryptedTakeStore(keys: keys, directoryURL: dir)
+        let sync = try EncryptedTakeStore(keys: keys, directoryURL: dir)
+
+        let queue = ConflictQueue()
+        let item = makeUnverified(local: false, cloud: true)
+        queue.enqueueUnverified([item])
+        var arrived = try XCTUnwrap(item.cloud)
+        arrived.blocks = [.textLine("arrived through sync a moment ago")]
+        arrived.modifiedAt = item.cloud!.modifiedAt.addingTimeInterval(60)
+
+        let landed = DispatchGroup()
+        var fired = false
+        timeline.afterTakeReadForTesting = {
+            guard !fired else { return }
+            fired = true
+            let started = DispatchSemaphore(value: 0)
+            landed.enter()
+            DispatchQueue.global().async {
+                started.signal()
+                _ = try? sync.applyRemote(arrived)
+                landed.leave()
+            }
+            started.wait()
+            // Give it the chance to land here, as it did before the fix.
+            _ = landed.wait(timeout: .now() + 0.5)
+        }
+        try queue.keepCloud(id: item.id, store: timeline)
+        timeline.afterTakeReadForTesting = nil
+        XCTAssertEqual(landed.wait(timeout: .now() + 10), .success)
+
+        XCTAssertTrue(fired, "the seam never ran, so the race was not exercised")
+        XCTAssertEqual(try timeline.take(id: item.id)?.blocks, arrived.blocks,
+                       "Recover replaced a Take that arrived while it was running")
+    }
+
+    func testUnverified_dropUnverified_removesOnlyTheNamedWarnings() {
+        let queue = ConflictQueue()
+        let a = makeUnverified(local: false, cloud: true), b = makeUnverified(local: true, cloud: true)
+        queue.enqueueUnverified([a, b])
+        queue.dropUnverified(ids: [a.id])
+        XCTAssertEqual(queue.unverified.map(\.id), [b.id])
     }
 
     func testUnverified_keepCloud_withNothingReadable_isANoOp() throws {
