@@ -193,6 +193,40 @@ final class ConflictQueueTests: XCTestCase {
         XCTAssertTrue(queue.unverified.isEmpty)
     }
 
+    /// The warning holds a copy of this phone's Take from the moment it was raised. An edit made
+    /// while it shows is the Take as it is now, and "keep this phone's version" must keep that.
+    func testUnverified_keepPhone_keepsAnEditMadeWhileTheWarningWasShowing() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: true, cloud: true)
+        try store.upsert(item.local!)
+        queue.enqueueUnverified([item])
+
+        var edited = item.local!
+        edited.blocks = [.textLine("typed after the warning appeared")]
+        let editedBlocks = edited.blocks
+        edited.modifiedAt = item.local!.modifiedAt.addingTimeInterval(60)
+        try store.upsert(edited)
+
+        try queue.keepPhone(id: item.id, store: store)
+        let saved = try XCTUnwrap(store.take(id: item.id))
+        XCTAssertEqual(saved.blocks, editedBlocks,
+                       "the latest edit survives keeping this phone's version")
+        XCTAssertGreaterThan(saved.modifiedAt, edited.modifiedAt)
+    }
+
+    /// A failed read of the Take must not fall back to the warning's older copy: that would write
+    /// over a newer edit it could not read.
+    func testUnverified_keepPhone_withAnUnreadableTake_writesNothingAndKeepsTheWarning() throws {
+        let queue = ConflictQueue(); let store = UnreadableStore()
+        let item = makeUnverified(local: true, cloud: true)
+        try store.base.upsert(item.local!)
+        queue.enqueueUnverified([item])
+        store.unreadable = true
+        XCTAssertThrowsError(try queue.keepPhone(id: item.id, store: store))
+        XCTAssertEqual(try store.base.take(id: item.id), item.local, "nothing was written")
+        XCTAssertEqual(queue.unverified.count, 1, "still waiting, so the user can try again")
+    }
+
     func testUnverified_keepCloud_recoversTheCopyAsAFreshEdit() throws {
         let queue = ConflictQueue(); let store = InMemoryTakeStore()
         let item = makeUnverified(local: false, cloud: true)
@@ -244,4 +278,32 @@ final class ConflictQueueTests: XCTestCase {
         XCTAssertGreaterThan(kept.modifiedAt, ahead)
     }
 }
+/// Forwards to an `InMemoryTakeStore`, failing reads of one Take on cue.
+private final class UnreadableStore: TakeStore {
+    let base = InMemoryTakeStore()
+    var unreadable = false
+    struct Unreadable: Error {}
+    func take(id: UUID) throws -> Take? {
+        if unreadable { throw Unreadable() }
+        return try base.take(id: id)
+    }
+    func upsert(_ take: Take) throws { try base.upsert(take) }
+    func allTakes() throws -> [Take] { try base.allTakes() }
+    func delete(id: UUID) throws { try base.delete(id: id) }
+    func takesModified(since date: Date?) throws -> [Take] { try base.takesModified(since: date) }
+    func search(_ query: String) throws -> [Take] { try base.search(query) }
+    func upsert(_ sequence: CatchlightSequence) throws { try base.upsert(sequence) }
+    func sequence(id: UUID) throws -> CatchlightSequence? { try base.sequence(id: id) }
+    func allSequences() throws -> [CatchlightSequence] { try base.allSequences() }
+    func deleteSequence(id: UUID) throws { try base.deleteSequence(id: id) }
+    func currentObie() throws -> Take? { try base.currentObie() }
+    func setObie(id: UUID, replaceExisting: Bool) throws { try base.setObie(id: id, replaceExisting: replaceExisting) }
+    func lastSyncDate() -> Date? { base.lastSyncDate() }
+    func setLastSyncDate(_ date: Date) { base.setLastSyncDate(date) }
+    func applyRemote(_ take: Take) throws -> Bool { try base.applyRemote(take) }
+    func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool { try base.release(id: id, ifNotModifiedAfter: cutoff) }
+    func tombstones() throws -> [Tombstone] { try base.tombstones() }
+    func purgeTombstones(ids: [UUID]) throws { try base.purgeTombstones(ids: ids) }
+}
+
 #endif

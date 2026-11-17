@@ -486,8 +486,12 @@ final class ConflictQueue {
     /// could not be read is replaced when that device syncs.
     func keepPhone(id: UUID, store: TakeStore) throws {
         guard let idx = unverified.firstIndex(where: { $0.id == id }),
-              var winner = unverified[idx].local else { return }
-        Self.stampAsFreshEdit(&winner, after: unverified[idx].cloud)
+              let queued = unverified[idx].local else { return }
+        // This phone's version is the Take as it is NOW, as in `resolve`: an edit made while the
+        // warning was showing must not be replaced by the copy taken when it was raised. Only a
+        // missing Take falls back to it: a failed read throws and leaves the warning open.
+        var winner = try store.take(id: id) ?? queued
+        Self.stampAsFreshEdit(&winner, after: queued, unverified[idx].cloud)
         try store.upsert(winner)
         unverified.remove(at: idx)
     }
