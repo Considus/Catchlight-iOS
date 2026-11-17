@@ -501,7 +501,15 @@ final class ConflictQueue {
         // Recover is for a Take that is not on this phone. If it has arrived since (a later pass
         // brought it down normally), the warning is stale: drop it quietly, and never write the
         // old cloud copy over what is there now.
-        if unverified[idx].local == nil, try store.take(id: id) != nil {
+        // The check and the write must be one step: sync saves on its own database connection.
+        if unverified[idx].local == nil {
+            Self.stampAsFreshEdit(&winner, after: nil)
+            // A false result means the Take is here now: the warning is stale, nothing is written.
+            if let guarded = store as? WritesOnlyIfAbsent {
+                _ = try guarded.upsertIfAbsent(winner)
+            } else if try store.take(id: id) == nil {
+                try store.upsert(winner)
+            }
             unverified.remove(at: idx)
             return
         }
@@ -523,3 +531,10 @@ final class ConflictQueue {
         unverified.removeAll { $0.id == id }
     }
 }
+
+/// A store that can write a Take only when none with its id is stored, as one step.
+protocol WritesOnlyIfAbsent {
+    func upsertIfAbsent(_ take: Take) throws -> Bool
+}
+
+extension EncryptedTakeStore: WritesOnlyIfAbsent {}
