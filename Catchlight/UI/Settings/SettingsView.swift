@@ -7,10 +7,6 @@
 //  is fully functional (status inline, deep-link to iOS Settings when denied,
 //  inline permission prompt when not determined).
 //
-//  Stubbed rows reference work-plan items that are intentionally Blocked at the
-//  moment (6.12 Second device, 6.13 Cloud Storage) — the rows are visible so the
-//  sheet layout is complete; tapping them no-ops or shows a "Coming soon" badge.
-//
 //  Access: swipe UP on the toolbar (DailiesToolbar — owner redesign 2026-06-11;
 //  replaces the long-press on Dailies). The swipe flips UIState.isSettingsPresented.
 //

@@ -83,9 +83,6 @@ final class UIState {
     /// UIKit timeline's cells, which do not see this state's environment.
     let focusRowGrowth = FocusRowGrowth()
 
-    // Take editor — edit-in-place (the top-anchored overlay editor was retired in
-    // Phase 3, 2026-06-17; all create/edit happens in the timeline now).
-
     /// In-place editing (edit-in-place redesign 2026-06-17). When set, the matching
     /// timeline row becomes the live editable Take *in position* while every other
     /// row + the chrome masks behind it — the "Iris-touch focus" applied to editing.

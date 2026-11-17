@@ -686,7 +686,6 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func testSchedule_plainNote_titleUnchanged() {
-        // No check blocks — behaviour must be exactly as before.
         let take = takeWithReminder(at: now.addingTimeInterval(3600), body: "call the framer")
         scheduler.scheduleReminder(for: take)
         XCTAssertEqual(center.added.first?.content.title, "call the framer")

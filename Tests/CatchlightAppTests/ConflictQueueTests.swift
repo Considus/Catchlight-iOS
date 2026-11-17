@@ -154,7 +154,6 @@ final class ConflictQueueTests: XCTestCase {
     func testResolve_unknownIdIsNoOp() throws {
         let store = InMemoryTakeStore()
         let queue = ConflictQueue()
-        // Resolving an id that was never queued should not throw or write.
         try queue.resolve(id: UUID(), keepLocal: true, store: store)
         XCTAssertTrue(queue.pending.isEmpty)
         XCTAssertTrue(try store.allTakes().isEmpty)

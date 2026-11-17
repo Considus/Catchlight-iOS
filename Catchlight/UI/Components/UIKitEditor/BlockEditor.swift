@@ -76,7 +76,6 @@ struct BlockEditor: UIViewControllerRepresentable {
             if parent.focusedBlockID != id { parent.focusedBlockID = id }
         }
 
-        // Return in a check row — mirrors the current editor's `handleReturn`.
         func blockEditorReturnInCheckRow(_ vc: BlockEditorViewController, blockID id: UUID) {
             let isEmpty = (parent.draft.blocks.first { $0.id == id }?.text ?? "").isEmpty
             if isEmpty {
@@ -87,7 +86,6 @@ struct BlockEditor: UIViewControllerRepresentable {
             }
         }
 
-        // Backspace on an empty row — mirrors the current editor's `handleBackspaceEmpty`.
         func blockEditorBackspaceOnEmpty(_ vc: BlockEditorViewController, blockID id: UUID) {
             let isCheck = parent.draft.blocks.first { $0.id == id }?.isCheck ?? false
             if let previous = parent.draft.blockID(before: id) {

@@ -98,27 +98,22 @@ final class ToolbarFilterStateTests: XCTestCase {
         let ui = UIState()
         ui.enterFiltering()
 
-        // Long-press from off: on + Done.
         ui.longPressTasksFilter()
         XCTAssertTrue(ui.filterTasks)
         XCTAssertTrue(ui.filterTasksDone)
 
-        // Tap while modified: off, modifier cleared.
         ui.tapTasksFilter()
         XCTAssertFalse(ui.filterTasks)
         XCTAssertFalse(ui.filterTasksDone)
 
-        // Tap from off: plain on.
         ui.tapTasksFilter()
         XCTAssertTrue(ui.filterTasks)
         XCTAssertFalse(ui.filterTasksDone)
 
-        // Long-press while plain on: adds the modifier.
         ui.longPressTasksFilter()
         XCTAssertTrue(ui.filterTasks)
         XCTAssertTrue(ui.filterTasksDone)
 
-        // Long-press while modified: back to plain on.
         ui.longPressTasksFilter()
         XCTAssertTrue(ui.filterTasks)
         XCTAssertFalse(ui.filterTasksDone)

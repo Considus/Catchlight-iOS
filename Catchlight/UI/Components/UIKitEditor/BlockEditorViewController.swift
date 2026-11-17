@@ -241,7 +241,6 @@ final class BlockEditorViewController: UIViewController, UITextViewDelegate {
                 tv.text = block.text
             }
         }
-        // Order the stack to match the block order.
         for (index, block) in blocks.enumerated() {
             if let row = rowContainers[block.id] { stack.insertArrangedSubview(row, at: index) }
         }

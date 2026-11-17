@@ -17,9 +17,6 @@
 //    - `LockedCaptureView` → `TakeEditCard` directly, TOP-anchored under its header (proven
 //                            stable; the lock-screen capture has no timeline to sit against).
 //
-//  Replaces `InlineTakeEditCard` at the same seam. That view survives only for the OLD timeline
-//  behind the A/B toggle, and dies with it at M7.
-//
 
 import SwiftUI
 import CatchlightCore
@@ -172,7 +169,7 @@ struct TakeEditCard: View {
                     }
 
                 // Created-at stamp, gated by the setting — Editor-only + Always both show it while
-                // editing (matches `InlineTakeEditCard` so all three options stay consistent).
+                // editing.
                 if creationStamp != .off && !hidesStamp {
                     CreationStampLabel(date: draft.createdAt)
                         .padding(.top, 6)

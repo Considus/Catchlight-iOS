@@ -25,8 +25,6 @@ import SwiftUI
 struct TakeLabelLane: View {
     enum Content {
         case none
-        // FUTURE — user label: the lane filled with the colour + Take shadow, a
-        // floating chip (DEMO-wired now; a later release adds the data model + UI).
         case colourChip(Color)
     }
 
@@ -44,8 +42,6 @@ struct TakeLabelLane: View {
             // untouched).
             Color.clear.frame(width: width)
         case .colourChip(let colour):
-            // FUTURE user label (DEMO render): a slim coloured pill hugging the left
-            // edge with an EQUAL gap on left/top/bottom, flat (no shadow).
             CatchlightShape.control
                 .fill(colour)
                 .frame(width: max(0, width - Self.chipGap))

@@ -25,10 +25,10 @@ struct LocationPinShape: Shape {
         let minY = Double(rect.minY) + inset
         let width = Double(rect.width) - inset * 2
         let height = Double(rect.height) - inset * 2
-        let radius = width * 0.5                         // bulb radius = half the (inset) width
+        let radius = width * 0.5
         let cx = minX + radius
-        let cy = minY + radius                           // bulb sits at the top
-        let tipY = minY + height                         // the point, at the bottom
+        let cy = minY + radius
+        let tipY = minY + height
         let d = tipY - cy
         guard d > radius else { return p }
 
@@ -52,7 +52,6 @@ struct LocationPinShape: Shape {
         p.addLine(to: tip)
         p.closeSubpath()
 
-        // Inner ring — the marker "hole".
         let innerR = radius * 0.42
         p.addEllipse(in: CGRect(x: CGFloat(cx - innerR), y: CGFloat(cy - innerR),
                                 width: CGFloat(innerR * 2), height: CGFloat(innerR * 2)))

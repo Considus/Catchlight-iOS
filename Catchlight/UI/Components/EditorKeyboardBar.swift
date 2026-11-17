@@ -2,12 +2,11 @@
 //  EditorKeyboardBar.swift
 //  Catchlight (iOS app target) — keyboard toolbar 2026-06-19
 //
-//  The editing toolbar shown above the keyboard, styled to MATCH the bottom dock
-//  (owner 2026-06-19): Ember-ringed circular buttons + the dock's faded background
-//  (`dockFadeBackground`), so it reads as the same control family rather than a plain
-//  UIKit toolbar. Hosted as the editor text view's `inputAccessoryView` via a
-//  `UIHostingController` (`BlockEditorViewController.setToolbar`). Four buttons: ⌄ dismiss · Angle (greyed when no task) ·
-//  Important · Done (tick — marks the Take done; greyed for a pure note).
+//  The editing toolbar shown above the keyboard, styled to match the bottom dock (owner
+//  2026-06-19): the dock's faded background (`dockFadeBackground`), so it reads as the same
+//  control family rather than a plain UIKit toolbar. Hosted as the editor text view's
+//  `inputAccessoryView` via a `UIHostingController` (`BlockEditorViewController.setToolbar`).
+//  Its columns are laid out in `body`.
 //
 
 import SwiftUI

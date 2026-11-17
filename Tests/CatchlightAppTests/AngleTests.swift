@@ -28,7 +28,6 @@ final class AngleTests: XCTestCase {
     }
 
     func testShotList_appliesEqualsIsTask() {
-        // The predicate is exactly "the Take is a Task" — verify they track.
         let cases = [
             Take(blocks: [.textLine("note")]),
             Take(blocks: [.checkItem("a")]),

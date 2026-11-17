@@ -179,7 +179,6 @@ class TakeStoreContractTests: XCTestCase {
         try store.upsert(atCutoff)
         try store.upsert(after)
 
-        // Cutoff EXACTLY equal to a Take's modifiedAt → excluded (strict >).
         let changed = try store.takesModified(since: base)
         XCTAssertEqual(changed.map(\.id), [after.id],
                        "modifiedAt == cutoff must be excluded; strictly-after included")

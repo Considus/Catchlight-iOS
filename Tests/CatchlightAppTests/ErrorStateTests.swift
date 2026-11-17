@@ -107,7 +107,6 @@ final class ErrorStateTests: XCTestCase {
         app.reportQuarantined([UUID()])
         XCTAssertEqual(app.quarantinedCount, 4)
 
-        // Empty pass is a no-op.
         app.reportQuarantined([])
         XCTAssertEqual(app.quarantinedCount, 4)
 

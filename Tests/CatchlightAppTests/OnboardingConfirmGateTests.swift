@@ -43,7 +43,6 @@ final class OnboardingConfirmGateTests: XCTestCase {
         XCTAssertTrue(vm.usedBankIndices.isEmpty,
                       "the word must return to the pool — a vanished word makes the gate unwinnable")
 
-        // And the freed tile is genuinely usable again.
         vm.tapBankWord(at: 0)
         XCTAssertEqual(vm.slots[0], vm.bank[0])
     }
@@ -109,7 +108,6 @@ final class OnboardingConfirmGateTests: XCTestCase {
         vm.tapBankWord(at: wrongIndex)
         XCTAssertEqual(vm.slots[0], vm.bank[wrongIndex])
 
-        // Recover in place, then answer correctly.
         vm.deselectSlot(at: 0)
         for word in expected { vm.tapBankWord(word) }
         // `.basics` now, not `.complete`: the confirm step routes through the basics
@@ -134,7 +132,6 @@ final class OnboardingConfirmGateTests: XCTestCase {
         vm.acknowledgeBasics()
         XCTAssertEqual(vm.step, .basicsMore)
 
-        // And the first-page acknowledgement is spent.
         vm.acknowledgeBasics()
         XCTAssertEqual(vm.step, .basicsMore, "the guard must hold the second page")
 

@@ -663,7 +663,6 @@ public final class ReminderScheduler {
     }
 
     public func cancelReminder(for take: Take) {
-        // No-op when the Take carries neither a "when" nor a "where" — nothing to cancel.
         guard take.timeReminder != nil || take.locationReminder != nil else { return }
         // Fall back to the Take's UUID so a LOCATION-only Take (no `timeReminder` to read an
         // identifier from) still clears its geofence — `allIdentifiers` covers the `#loc` id.

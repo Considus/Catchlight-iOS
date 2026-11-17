@@ -861,9 +861,6 @@ struct DailiesView: View {
                 // 2026-06-17). Hidden, not removed, so it fades with the mask and its
                 // measured height (the scroll inset) is preserved — no position jump.
                 //
-                // OLD timeline: when the Obie ITSELF is the focused Take it stays bright and
-                // interactive — the pinned slot IS its inline editor (owner-agreed re-engineer
-                // 2026-06-19, back to in-place editing).
                 // NEW timeline: the floating card is the editor for EVERY Take, so the pinned slot
                 // must stand down for its own Take too — otherwise the read card sits at the top
                 // while the editor floats below it: the SAME Obie twice (device 2026-07-16).
@@ -1134,10 +1131,6 @@ struct DailiesView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
-                // L10N: pluralisation done inline via `count == 1`. Future
-                // pass should move to a Stringsdict / .xcstrings plural rule
-                // — many locales don't pluralise on the singular/plural axis
-                // alone (e.g. Polish, Arabic). Tracked but not blocking.
                 Text(message)
                     .ckBody(.regular, size: 14, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextPrimary)
@@ -1293,8 +1286,7 @@ struct DailiesView: View {
                 requestDelete(take)
             },
             // Iris tap → bloom the Focus row at the tapped Iris (window coords
-            // match RootView's full-screen overlay). No edit-in-place on the new
-            // timeline yet (M4), so the SwiftUI row's editing branches don't apply.
+            // match RootView's full-screen overlay).
             onTapCircle: { take, cardFrame in
                 // A Take waiting for a conflict choice is read-only: no Focus row.
                 guard app.ensureNotHeld(take.id) else { return }
