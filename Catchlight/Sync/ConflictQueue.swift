@@ -269,7 +269,9 @@ final class ConflictQueue {
         // This phone's version is the Take as it is NOW, as on the Mac: an edit that landed
         // in the moment before the hold took effect must not be replaced by the older copy in
         // the queue. Only if it has gone does the queued copy stand in.
-        var winner = keepLocal ? ((try? store.take(id: id)) ?? pair.local) : pair.remote
+        // A failed read throws and leaves the conflict open, never falling back to the older copy.
+        let current = try store.take(id: id)
+        var winner = keepLocal ? (current ?? pair.local) : pair.remote
         // Stamp the resolution as a FRESH edit so the chosen version wins at the cloud
         // (owner-reported 2026-06-27). Without this the winner keeps its old `modifiedAt`,
         // which is ≤ the last-sync watermark — so `pushOutbound` never re-uploads it, the
@@ -277,7 +279,7 @@ final class ConflictQueue {
         // conflict via the `(localChanged:false, remoteChanged:false)` branch. Resolving
         // then never sticks: the conflict re-surfaces on every sync. Bumping `modifiedAt`
         // makes the next sync push the winner over the remote and the pull see `keepLocal`.
-        Self.stampAsFreshEdit(&winner, after: pair.local, pair.remote)
+        Self.stampAsFreshEdit(&winner, after: pair.local, pair.remote, current)
         try store.upsert(winner)
         waiting.remove(at: idx)
         skipped.remove(id)
@@ -517,7 +519,8 @@ final class ConflictQueue {
             unverified.remove(at: idx)
             return
         }
-        Self.stampAsFreshEdit(&winner, after: unverified[idx].local)
+        // After the Take as it is now too: an edit made while the warning showed may be stamped later.
+        Self.stampAsFreshEdit(&winner, after: unverified[idx].local, try store.take(id: id))
         try store.upsert(winner)
         unverified.remove(at: idx)
     }

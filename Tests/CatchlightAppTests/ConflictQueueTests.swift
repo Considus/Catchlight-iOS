@@ -359,6 +359,50 @@ final class ConflictQueueTests: XCTestCase {
         XCTAssertEqual(kept.primaryText, "phone")
         XCTAssertGreaterThan(kept.modifiedAt, ahead)
     }
+
+    // MARK: - Weak spots next to keepPhone (a copy captured earlier, written over the Take as it is now)
+
+    /// `resolve(keepLocal: true)` read the Take with `try?`, so a failed read fell back to the
+    /// older queued copy and wrote it.
+    func testResolve_keepLocal_withAnUnreadableTake_writesNothingAndKeepsTheConflict() throws {
+        let queue = ConflictQueue(); let store = UnreadableStore()
+        let pair = makePair()
+        try store.base.upsert(pair.local)
+        queue.enqueue([pair])
+        store.unreadable = true
+        XCTAssertThrowsError(try queue.resolve(id: pair.local.id, keepLocal: true, store: store))
+        XCTAssertEqual(try store.base.take(id: pair.local.id), pair.local, "nothing was written")
+        XCTAssertEqual(queue.pending.count, 1, "still waiting, so the user can try again")
+    }
+
+    /// Recovering the cloud copy over a Take that is here, stamped after the Take as it is now
+    /// (not only the warning's older copy), so the next push makes the choice the newest version.
+    func testUnverified_keepCloud_stampsAfterTheTakeAsItIsNow() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let item = makeUnverified(local: true, cloud: true)
+        queue.enqueueUnverified([item])
+        var current = try XCTUnwrap(item.local)
+        current.blocks = [.textLine("typed on a device whose clock runs ahead")]
+        current.modifiedAt = Date().addingTimeInterval(3600)
+        try store.upsert(current)
+
+        try queue.keepCloud(id: item.id, store: store)
+        XCTAssertGreaterThan(try XCTUnwrap(store.take(id: item.id)).modifiedAt, current.modifiedAt,
+                             "the chosen copy is not the newest version, so the next sync would undo it")
+    }
+
+    /// The same for a conflict's "keep the other version".
+    func testResolve_keepRemote_stampsAfterTheTakeAsItIsNow() throws {
+        let queue = ConflictQueue(); let store = InMemoryTakeStore()
+        let pair = makePair()
+        queue.enqueue([pair])
+        var current = pair.local
+        current.modifiedAt = Date().addingTimeInterval(3600)
+        try store.upsert(current)
+
+        try queue.resolve(id: pair.local.id, keepLocal: false, store: store)
+        XCTAssertGreaterThan(try XCTUnwrap(store.take(id: pair.local.id)).modifiedAt, current.modifiedAt)
+    }
 }
 /// Forwards to an `InMemoryTakeStore`, failing reads of one Take on cue.
 private final class UnreadableStore: TakeStore {
