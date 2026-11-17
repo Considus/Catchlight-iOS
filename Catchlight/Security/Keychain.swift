@@ -322,7 +322,6 @@ public struct MasterKeyKeychain {
         //
         // This is the same defect `MnemonicKeychain.upsert` found and fixed on
         // 2026-07-01 (see its note); the fix landed on that sibling and never here.
-        // The flag stays where it IS valid, at the SecItemCopyMatching on line ~184.
         var update: [String: Any] = [kSecValueData as String: data]
         if let accessControl { update[kSecAttrAccessControl as String] = accessControl }
 

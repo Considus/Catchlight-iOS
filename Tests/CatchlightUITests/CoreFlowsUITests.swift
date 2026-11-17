@@ -49,7 +49,6 @@ final class CoreFlowsUITests: XCTestCase {
         // tapping a masked area near the top, clear of the focused card + keyboard.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
 
-        // The new Take should be visible in the Dailies list as a take-row.
         let newRow = takeRow(in: app, withLabelStarting: phrase)
         XCTAssertTrue(newRow.waitForExistence(timeout: 3), "Newly created Take is not visible in Dailies")
     }
@@ -78,7 +77,6 @@ final class CoreFlowsUITests: XCTestCase {
         let firstIris = app.descendants(matching: .any).matching(identifier: "take-iris").firstMatch
         XCTAssertTrue(firstIris.waitForExistence(timeout: 3), "No Iris found on Dailies")
 
-        // Tap 1: Iris → Focus row appears.
         assertReachableInTwoInteractions(
             "Flow 2: open Focus row",
             firstInteraction: { firstIris.tap() },

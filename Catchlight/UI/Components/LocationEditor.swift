@@ -122,7 +122,6 @@ struct LocationEditor: View {
             }
         }
         .onAppear { location.requestAuthorization() }
-        // A fresh one-shot fix drops the pin on the user's spot + names it.
         .onChange(of: location.currentLocation) { _, loc in
             guard let loc else { return }
             // Only auto-name when the user hasn't named the place (2026-07-01): the slow

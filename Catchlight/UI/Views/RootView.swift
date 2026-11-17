@@ -362,13 +362,6 @@ struct RootView: View {
             // 18% behind the fan and 0 while editing, but stayed fully present in
             // the accessibility tree — the escape hatch V5 walked through.
             .accessibilityHidden(ui.isFocusRowPresented || ui.isEditingInPlace)
-            // Read LAST (audit 2026-08, V30): the toolbar vends in the same flattened
-            // container as DailiesView's heading + pinned Obie, BEFORE the nested
-            // timeline collection — so VoiceOver read Obie, then the toolbar, then the
-            // Takes, cutting the content in half. The reading order must follow the
-            // visual order (owner 2026-08-27): heading, Obie, Takes, toolbar at the
-            // bottom. One priority on the whole toolbar keeps its four buttons
-            // contiguous in their own left-to-right order.
             // 🚨 NO SORT PRIORITY ON THE TOOLBAR — deliberately, and do not add one back.
             //
             // V30 (`a8fd291`, 2026-08-27) added `.accessibilitySortPriority(-1)` here to

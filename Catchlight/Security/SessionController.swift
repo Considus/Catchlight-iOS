@@ -93,7 +93,6 @@ public final class SessionController: ObservableObject {
     private func overlayPrivacyScreen() { isObscured = true }
 
     private func clearDecryptedCache() {
-        // Replacing the dictionary drops references to decrypted Take values.
         decryptedCache.removeAll(keepingCapacity: false)
     }
 

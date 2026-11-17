@@ -943,7 +943,6 @@ struct ReminderPickerSheet: View {
             let morning = ReminderScheduler.allDayFireHour
             switch self {
             case .thisEvening:
-                // 20:00 today, or tomorrow evening if it's already past.
                 let today8 = calendar.date(bySettingHour: 20, minute: 0, second: 0, of: now) ?? now
                 return today8 > now ? today8
                     : (calendar.date(byAdding: .day, value: 1, to: today8) ?? today8)

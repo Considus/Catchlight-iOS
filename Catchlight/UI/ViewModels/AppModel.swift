@@ -12,9 +12,6 @@
 //  trivially previewable with an InMemoryTakeStore.
 //
 
-// Task 3.9: Error and edge-case states — adds `lastSyncError` and `quarantinedCount`
-// for the non-blocking sync error / quarantine notice strips on the timeline.
-
 import SwiftUI
 import Observation
 import UserNotifications

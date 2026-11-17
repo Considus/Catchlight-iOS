@@ -826,12 +826,6 @@ final class UIKitTimelineViewController: UIViewController, UIGestureRecognizerDe
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
         collectionView.backgroundColor = .clear
         collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        // BISECT 2026-07-16: `.never` here (to stop iOS double-counting the top safe area — see
-        // `newTimelineTopInset`) correlates EXACTLY with the onset of a fatal collection-layout
-        // recursion (`_updateVisibleCellsNow` 7 deep → _assertionFailure) plus stuttery scroll:
-        // no such crash before it, three after. Reverted to the default while we confirm the cause;
-        // the top Take goes back to sitting too low until the inset is fixed another way.
-        // collectionView.contentInsetAdjustmentBehavior = .never
         // .none (not .interactive): with the new-Take overlay's keyboard up and this
         // collection behind it, interactive tracking contributed to keyboard re-placement
         // thrash (caps-flash, attempt 1). Nothing here needs scroll-to-dismiss.

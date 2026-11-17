@@ -297,7 +297,7 @@ private struct PhraseRevealGrid: View {
             // so we ALSO expose named accessibility actions below that latch the
             // reveal on/off until the user dismisses it. This means the words DO
             // stay on screen for a VO user — which is the only way they can read
-            // them out. The reveal is gated by PIN entry upstream, so this doesn't
+            // them out. The reveal is gated by the iOS authentication upstream, so this doesn't
             // weaken the security model — it just makes the words actually accessible.
             .gesture(
                 LongPressGesture(minimumDuration: 0)
