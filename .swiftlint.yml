@@ -1,0 +1,66 @@
+# SwiftLint runs only the custom rules below, not SwiftLint's own style rules. Each rule is a
+# mistake that found a real defect in review (see the swift-review checklist), with a message
+# that says how to fix the root cause. If a rule fires, fix the cause: do not add a
+# `swiftlint:disable` (that is itself a rule here) and do not explain the shortcut in a comment.
+# Old violations are in .swiftlint-baseline.json; a new one fails CI.
+only_rules:
+  - custom_rules
+
+# Only shipping code. Tests are left out on purpose: a test may use try? where a failure
+# is the thing being checked.
+included:
+  - Catchlight
+  - CatchlightShare
+  - CatchlightWidgets
+excluded:
+  - .build
+
+custom_rules:
+  try_optional:
+    name: "Swallowed error"
+    regex: '\btry\?'
+    excluded_match_kinds: [comment, comment.mark, doccomment, string]
+    message: "try? throws the error away. If the user is waiting on this (save, export, import, purchase, restore, search), use try and show the failure: a swallowed error looks like an empty result. If a quiet failure really is right, handle it in a do/catch that logs why, and say so in a comment."
+    severity: error
+
+  attributed_string_literal:
+    name: "AttributedString skips the String Catalog"
+    regex: '\bAttributedString\("'
+    excluded_match_kinds: [comment, comment.mark, doccomment]
+    message: "AttributedString(\"literal\") never looks the text up in the String Catalog, so it stays English. Use AttributedString(localized: \"...\") and add the key to Localizable.xcstrings."
+    severity: error
+
+  text_verbatim:
+    name: "Text(verbatim:) skips the String Catalog"
+    regex: '\bText\(verbatim:'
+    excluded_match_kinds: [comment, comment.mark, doccomment]
+    message: "Text(verbatim:) is never translated. For words the user reads, use Text(\"key\") with the key in Localizable.xcstrings. Keep verbatim only for text that is not copy (a number, an ID, a file name) and say so in a comment."
+    severity: error
+
+  deprecated_swiftui_api:
+    name: "Soft-deprecated API"
+    regex: '\.navigationBar(Leading|Trailing)\b|\bnavigationBarHidden\(|\bUIScreen\.main\b'
+    excluded_match_kinds: [comment, comment.mark, doccomment, string]
+    message: "Use the replacement: .navigationBarLeading/.navigationBarTrailing become .topBarLeading/.topBarTrailing (or .cancellationAction/.confirmationAction); navigationBarHidden(_:) becomes .toolbarVisibility(.hidden, for: .navigationBar); UIScreen.main becomes the view's own size (GeometryReader, or the window scene's screen)."
+    severity: error
+
+  on_tap_gesture:
+    name: "onTapGesture VoiceOver cannot see"
+    regex: '\.onTapGesture\b'
+    excluded_match_kinds: [comment, comment.mark, doccomment, string]
+    message: "A tap gesture is invisible to VoiceOver. Use a Button, or add .accessibilityAddTraits(.isButton) and an accessibilityLabel, and keep the 44pt minimum touch size."
+    severity: error
+
+  swiftlint_disable:
+    name: "SwiftLint switched off"
+    regex: 'swiftlint:(disable|enable)'
+    match_kinds: [comment]
+    message: "Do not switch a rule off with a comment. Fix what the rule found. If the rule is wrong for this code, say so in the PR and file an issue note to change the rule, instead of silencing it."
+    severity: error
+
+  shortcut_without_trigger:
+    name: "SHORTCUT without a trigger"
+    regex: '//\s*SHORTCUT:(?![^\n]*Revisit when)'
+    match_kinds: [comment]
+    message: "A SHORTCUT comment must end with the point where it stops being acceptable: '// SHORTCUT: <what was simplified, and the limit it holds to>. Revisit when <trigger>.' If you cannot name a trigger, do the full job instead of the shortcut."
+    severity: error
