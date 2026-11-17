@@ -722,10 +722,15 @@ public final class EncryptedTakeStore: TakeStore {
             defer { sqlite3_finalize(stmt) }
             bindText(stmt, 1, Self.syncRecordKey(id))
             guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
-            // A record that no longer decodes is treated as no record: sync then takes the
-            // safe side for this Take (at worst a conflict shown once), where throwing would
-            // stop every sync for good.
-            return try? PlatformJSON.decode(SyncRecord.self, from: Data(columnText(stmt, 0).utf8))
+            do {
+                return try PlatformJSON.decode(SyncRecord.self, from: Data(columnText(stmt, 0).utf8))
+            } catch {
+                // A record that no longer decodes is treated as no record: sync then takes the
+                // safe side for this Take (at worst a conflict shown once), where throwing would
+                // stop every sync for good. Nothing to log: the row holds no note content and
+                // the next sync that settles this Take writes a fresh record over it.
+                return nil
+            }
         }
     }
 
