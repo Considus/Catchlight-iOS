@@ -53,6 +53,8 @@ private final class ThrowingDeleteStore: TakeStore {
     func applyRemote(_ take: Take) throws -> Bool { try inner.applyRemote(take) }
     func release(id: UUID, ifNotModifiedAfter cutoff: Date) throws -> Bool { try inner.release(id: id, ifNotModifiedAfter: cutoff) }
     func setLastSyncDate(_ date: Date) { inner.setLastSyncDate(date) }
+    func syncRecord(id: UUID) throws -> SyncRecord? { try inner.syncRecord(id: id) }
+    func setSyncRecord(_ record: SyncRecord?, id: UUID) throws { try inner.setSyncRecord(record, id: id) }
     func tombstones() throws -> [Tombstone] { try inner.tombstones() }
     func purgeTombstones(ids: [UUID]) throws { try inner.purgeTombstones(ids: ids) }
 }

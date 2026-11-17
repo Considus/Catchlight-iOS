@@ -340,6 +340,35 @@ class TakeStoreContractTests: XCTestCase {
         XCTAssertEqual(store.lastSyncDate(), stamp)
     }
 
+    // MARK: - Sync records: what this device keeps about each Take's sync
+
+    func testContract_syncRecord_defaultsToNil_roundTrips_andNilRemovesIt() throws {
+        let id = UUID(), other = UUID()
+        XCTAssertNil(try store.syncRecord(id: id))
+        let record = SyncRecord(agreed: "2026-05-01T09:00:00.000Z",
+                                uploaded: "2026-05-01T10:00:00.000Z",
+                                shown: "2026-05-01T11:00:00.000Z",
+                                shownLocal: "2026-05-01T10:30:00.000Z")
+        try store.setSyncRecord(record, id: id)
+        XCTAssertEqual(try store.syncRecord(id: id), record)
+        XCTAssertNil(try store.syncRecord(id: other), "one Take's record is not another's")
+        try store.setSyncRecord(nil, id: id)
+        XCTAssertNil(try store.syncRecord(id: id))
+    }
+
+    func testContract_syncRecord_isIndependentOfTheTake() throws {
+        let take = Take(blocks: [.textLine("kept apart")])
+        try store.upsert(take)
+        let record = SyncRecord(agreed: "2026-05-01T09:00:00.000Z")
+        try store.setSyncRecord(record, id: take.id)
+        var edited = take
+        edited.blocks = [.textLine("edited")]
+        try store.upsert(edited)
+        XCTAssertEqual(try store.syncRecord(id: take.id), record, "an edit leaves the record alone")
+        try store.delete(id: take.id)
+        XCTAssertEqual(try store.syncRecord(id: take.id), record, "so does a deletion")
+    }
+
     // MARK: - release: let a Take go without a tombstone
 
     func testContract_release_unmodifiedTake_removesItAndRecordsNoTombstone() throws {
