@@ -27,10 +27,28 @@ final class ControlTouchAreaUITests: XCTestCase {
     private func assertTouchArea(_ element: XCUIElement, _ name: String, minimumHeight: CGFloat? = nil,
                                  file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(element.waitForExistence(timeout: 6), "\(name) did not appear", file: file, line: line)
-        let f = element.frame
         let height = minimumHeight ?? minimum
+        let f = settledFrame(of: element, minimumHeight: height)
         XCTAssertGreaterThanOrEqual(f.width, minimum - tolerance, "\(name) is \(f.width) wide", file: file, line: line)
         XCTAssertGreaterThanOrEqual(f.height, height - tolerance, "\(name) is \(f.height) high", file: file, line: line)
+    }
+
+    /// A slow CI runner once read the restore link as 14.67pt high, exactly a third of its
+    /// 44pt, after an 18-second stall in the accessibility query. Sampled from its first frame,
+    /// the link measures 44pt on iOS 26.2 and 27. A reading under the minimum is read again
+    /// until two reads agree, and the settled frame is the one judged, so a control that
+    /// really is too small still fails.
+    private func settledFrame(of element: XCUIElement, minimumHeight: CGFloat) -> CGRect {
+        var last = element.frame
+        guard last.width < minimum - tolerance || last.height < minimumHeight - tolerance else { return last }
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.25)
+            let now = element.frame
+            if now == last { return now }
+            last = now
+        }
+        return last
     }
 
     private func launch(_ extra: [String] = [], uitesting: Bool = true) -> XCUIApplication {
