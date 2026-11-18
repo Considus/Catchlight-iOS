@@ -137,6 +137,7 @@ final class SubscriptionManager {
                     && (txn.expirationDate.map { $0 > Date() } ?? true)
             ))
         }
+        await recordStoreEnvironmentOnce()
         let ever = defaults.bool(forKey: Self.everEntitledDefaultsKey)
         let derived = SubscriptionStatus.derive(from: snapshots, everSubscribed: ever)
         // Persist "has ever been entitled" the first time we see an active
@@ -160,6 +161,31 @@ final class SubscriptionManager {
         // permissive but proves nothing, so it doesn't trigger the rebuild.
         if previous == .lapsed && (derived == .subscribed || derived == .trial) {
             onRecoveredFromLapse?()
+        }
+    }
+
+    private var storeEnvironmentRecorded = false
+
+    /// Records once per launch which store the app talks to, so a device log shows
+    /// whether purchases go to Apple's sandbox or Xcode's local test store. Read from the
+    /// latest Annual transaction rather than `AppTransaction.shared`, which can raise an
+    /// App Store sign-in prompt. An unverified transaction counts too: this only labels a
+    /// log line and grants nothing.
+    private func recordStoreEnvironmentOnce() async {
+        guard !storeEnvironmentRecorded else { return }
+        storeEnvironmentRecorded = true
+        let latest = await Transaction.latest(for: Self.annualProductID)
+        DiagnosticsLog.shared.record(.storeEnvironment(Self.environmentLabel(latest?.unsafePayloadValue.environment)))
+    }
+
+    /// The environment's name for the diagnostics line.
+    nonisolated static func environmentLabel(_ environment: AppStore.Environment?) -> String {
+        switch environment {
+        case nil: return "no Annual transaction yet"
+        case .xcode?: return "Xcode"
+        case .sandbox?: return "Sandbox"
+        case .production?: return "Production"
+        case let other?: return other.rawValue
         }
     }
 
