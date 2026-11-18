@@ -161,6 +161,43 @@ final class SubscriptionManager {
         if previous == .lapsed && (derived == .subscribed || derived == .trial) {
             onRecoveredFromLapse?()
         }
+        recordStoreEnvironmentIfChanged()
+    }
+
+    private var lastRecordedStoreEnvironment: String?
+
+    /// Records which store the app talks to, so a device log shows whether purchases go
+    /// to Apple's sandbox or Xcode's local test store. Logged at the first refresh and
+    /// again whenever it changes, so a first purchase or redeemed code in the same run
+    /// shows up. Read from the latest Annual transaction rather than
+    /// `AppTransaction.shared`, which can raise an App Store sign-in prompt. An
+    /// unverified transaction counts too: this only labels a log line and grants nothing.
+    /// Runs in its own task after the status is set, so the read never delays or reorders
+    /// a status update.
+    private func recordStoreEnvironmentIfChanged() {
+        Task {
+            let latest = await Transaction.latest(for: Self.annualProductID)
+            noteStoreEnvironment(latest?.unsafePayloadValue.environment)
+        }
+    }
+
+    /// Writes the line when the store differs from the last one written this run.
+    func noteStoreEnvironment(_ environment: AppStore.Environment?, log: DiagnosticsLog = .shared) {
+        let label = Self.environmentLabel(environment)
+        guard label != lastRecordedStoreEnvironment else { return }
+        lastRecordedStoreEnvironment = label
+        log.record(.storeEnvironment(label))
+    }
+
+    /// The environment's name for the diagnostics line.
+    nonisolated static func environmentLabel(_ environment: AppStore.Environment?) -> String {
+        switch environment {
+        case nil: return "no Annual transaction yet"
+        case .xcode?: return "Xcode"
+        case .sandbox?: return "Sandbox"
+        case .production?: return "Production"
+        case let other?: return other.rawValue
+        }
     }
 
     /// Injected by AppModel (which holds the store + the Spotlight indexer):

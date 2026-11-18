@@ -10,6 +10,7 @@
 import XCTest
 @testable import Catchlight
 import CatchlightCore
+import StoreKit
 
 final class NoticeCodeTests: XCTestCase {
 
@@ -81,7 +82,8 @@ final class NoticeCodeTests: XCTestCase {
             "conflictNotKept": 923,
             "conflictFileNotRemoved": 924,
             "statusBarStyleKept": 925,
-            "cloudFolderCheckFailed": 926
+            "cloudFolderCheckFailed": 926,
+            "storeEnvironment": 927
         ]
         let current = Dictionary(uniqueKeysWithValues: NoticeCode.allCases.map { ("\($0)", $0.rawValue) })
         XCTAssertEqual(current, pinned)
@@ -133,6 +135,35 @@ final class NoticeCodeTests: XCTestCase {
         XCTAssertEqual(Notice.takesHeldBack(3).category, .sync)
         XCTAssertEqual(Notice.watermarkPrepareFailed.category, .lifecycle)
         XCTAssertEqual(Notice.libraryOpenFailed("x").category, .lifecycle)
+    }
+
+    /// The store the app talks to, so device logs show whether a purchase test is in
+    /// Apple's sandbox or Xcode's local test store.
+    func testStoreEnvironment_line() {
+        XCTAssertEqual(Notice.storeEnvironment("Sandbox").logLine,
+                       "[CCIOS-927] Store environment: Sandbox (from the latest Annual transaction)")
+        XCTAssertEqual(Notice.storeEnvironment("Sandbox").category, .lifecycle)
+        XCTAssertEqual(SubscriptionManager.environmentLabel(nil), "no Annual transaction yet")
+        XCTAssertEqual(SubscriptionManager.environmentLabel(.xcode), "Xcode")
+        XCTAssertEqual(SubscriptionManager.environmentLabel(.sandbox), "Sandbox")
+        XCTAssertEqual(SubscriptionManager.environmentLabel(.production), "Production")
+    }
+
+    /// Logged at the first refresh and again only when the store changes, so a first
+    /// purchase or redeemed code in the same run still shows which store it went to.
+    @MainActor
+    func testStoreEnvironment_loggedFirstThenOnlyOnChange() {
+        let log = DiagnosticsLog(fileURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("store-env-\(UUID().uuidString).json"))
+        let manager = SubscriptionManager()
+        manager.noteStoreEnvironment(nil, log: log)
+        manager.noteStoreEnvironment(nil, log: log)
+        manager.noteStoreEnvironment(.sandbox, log: log)
+        manager.noteStoreEnvironment(.sandbox, log: log)
+        XCTAssertEqual(log.entries().map(\.message), [
+            Notice.storeEnvironment("no Annual transaction yet").logLine,
+            Notice.storeEnvironment("Sandbox").logLine,
+        ])
     }
 
     func testDisplayText_dropsTheReference() {
