@@ -149,6 +149,23 @@ final class NoticeCodeTests: XCTestCase {
         XCTAssertEqual(SubscriptionManager.environmentLabel(.production), "Production")
     }
 
+    /// Logged at the first refresh and again only when the store changes, so a first
+    /// purchase or redeemed code in the same run still shows which store it went to.
+    @MainActor
+    func testStoreEnvironment_loggedFirstThenOnlyOnChange() {
+        let log = DiagnosticsLog(fileURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("store-env-\(UUID().uuidString).json"))
+        let manager = SubscriptionManager()
+        manager.noteStoreEnvironment(nil, log: log)
+        manager.noteStoreEnvironment(nil, log: log)
+        manager.noteStoreEnvironment(.sandbox, log: log)
+        manager.noteStoreEnvironment(.sandbox, log: log)
+        XCTAssertEqual(log.entries().map(\.message), [
+            Notice.storeEnvironment("no Annual transaction yet").logLine,
+            Notice.storeEnvironment("Sandbox").logLine,
+        ])
+    }
+
     func testDisplayText_dropsTheReference() {
         XCTAssertEqual(Notice.displayText(of: "[CCIOS-301] 2 Takes changed on another device."),
                        "2 Takes changed on another device.")
