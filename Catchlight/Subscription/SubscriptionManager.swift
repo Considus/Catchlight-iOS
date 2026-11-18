@@ -162,6 +162,12 @@ final class SubscriptionManager {
             onRecoveredFromLapse?()
         }
         recordStoreEnvironmentIfChanged()
+        #if DEBUG
+        // Development builds only (device.py installs Debug): a purchase-test aid, kept
+        // out of App Store builds so they carry nothing the reviewer can't see
+        // (App Review Guideline 2.5.19).
+        recordSubscriptionHistory()
+        #endif
     }
 
     private var lastRecordedStoreEnvironment: String?
@@ -187,6 +193,77 @@ final class SubscriptionManager {
         guard label != lastRecordedStoreEnvironment else { return }
         lastRecordedStoreEnvironment = label
         log.record(.storeEnvironment(label))
+    }
+
+    /// Transactions already written to the diagnostics log this run, by id. The ids stay
+    /// in memory only and are never logged.
+    private var loggedSubscriptionTransactions: Set<UInt64> = []
+
+    /// How many history lines the first entitlement check of a run writes at most.
+    static let historyLinesPerRun = 12
+
+    #if DEBUG
+    /// Records each Annual purchase and renewal (period, offer, price, store), so a device
+    /// log shows a trial, each offer period and each paid renewal without an App Store
+    /// Server API key. Debug builds only. Reads `Transaction.all` in its own task after the
+    /// status is set, like the store environment line; it only writes log lines and grants
+    /// nothing, so an unverified transaction is listed too.
+    private func recordSubscriptionHistory() {
+        Task {
+            var items: [(id: UInt64, entry: SubscriptionHistoryEntry)] = []
+            for await result in Transaction.all {
+                let txn = result.unsafePayloadValue
+                guard txn.productID == Self.annualProductID else { continue }
+                items.append((id: txn.id, entry: Self.historyEntry(txn)))
+            }
+            noteSubscriptionHistory(items)
+        }
+    }
+    #endif
+
+    /// Writes the transactions not yet written this run, oldest first, at most the newest
+    /// `historyLinesPerRun`. Every id handed over counts as seen, so an older one dropped
+    /// by the cap isn't written later in the run.
+    func noteSubscriptionHistory(_ items: [(id: UInt64, entry: SubscriptionHistoryEntry)],
+                                 log: DiagnosticsLog = .shared) {
+        let fresh = items.filter { !loggedSubscriptionTransactions.contains($0.id) }
+            .sorted { $0.entry.purchased < $1.entry.purchased }
+            .suffix(Self.historyLinesPerRun)
+        for item in fresh { log.record(.subscriptionTransaction(item.entry)) }
+        loggedSubscriptionTransactions.formUnion(items.map(\.id))
+    }
+
+    /// The log's view of one transaction.
+    nonisolated static func historyEntry(_ txn: Transaction) -> SubscriptionHistoryEntry {
+        SubscriptionHistoryEntry(
+            purchased: txn.purchaseDate,
+            expires: txn.expirationDate,
+            offerType: txn.offer.map { offerTypeLabel($0.type) },
+            offerID: txn.offer?.id,
+            paymentMode: txn.offer?.paymentMode.map(paymentModeLabel),
+            price: txn.price,
+            currency: txn.currency?.identifier,
+            environment: environmentLabel(txn.environment),
+            revoked: txn.revocationDate != nil)
+    }
+
+    nonisolated static func offerTypeLabel(_ type: Transaction.OfferType) -> String {
+        switch type {
+        case .introductory: return "introductory"
+        case .promotional: return "promotional"
+        case .code: return "code"
+        case .winBack: return "win-back"
+        default: return "type \(type.rawValue)"
+        }
+    }
+
+    nonisolated static func paymentModeLabel(_ mode: Transaction.Offer.PaymentMode) -> String {
+        switch mode {
+        case .freeTrial: return "free trial"
+        case .payAsYouGo: return "pay as you go"
+        case .payUpFront: return "pay up front"
+        default: return mode.rawValue
+        }
     }
 
     /// The environment's name for the diagnostics line.

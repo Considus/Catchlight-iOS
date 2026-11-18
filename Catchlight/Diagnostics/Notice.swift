@@ -99,6 +99,7 @@ enum NoticeCode: Int, CaseIterable {
     case statusBarStyleKept = 925           // Light status bar icons not applied: the root view controller is already observed (KVO), so its class was left alone.
     case cloudFolderCheckFailed = 926       // The cloud folder bookmark didn't resolve on a check, with the system error and the error under it (the user sees 106 only if every re-check fails).
     case storeEnvironment = 927             // Which store the app talks to (Xcode, Sandbox or Production), from the latest Annual transaction; at launch and whenever it changes.
+    case subscriptionTransaction = 928      // One Annual subscription purchase or renewal: period, offer type, id and payment mode, price and store; no transaction id. Newest 12 at a run's first entitlement check, then each new one. Debug builds only.
 }
 
 /// One line for the diagnostics log. Build it, then `DiagnosticsLog.shared.record(_:)`.
@@ -135,6 +136,7 @@ enum Notice: Equatable {
     case statusBarStyleKept
     case cloudFolderCheckFailed(domain: String, code: Int, underlying: String)
     case storeEnvironment(String)
+    case subscriptionTransaction(SubscriptionHistoryEntry)
 
     /// The platform part of the reference. The Mac app uses "CCMOS".
     static let platform = "CCIOS"
@@ -178,6 +180,7 @@ enum Notice: Equatable {
         case .statusBarStyleKept: return .statusBarStyleKept
         case .cloudFolderCheckFailed: return .cloudFolderCheckFailed
         case .storeEnvironment: return .storeEnvironment
+        case .subscriptionTransaction: return .subscriptionTransaction
         case .takesQuarantined: return .takesQuarantined
         case .capturesUnopenable: return .capturesUnopenable
         case .spotlightReindexSkipped: return .spotlightReindexSkipped
@@ -332,6 +335,8 @@ enum Notice: Equatable {
             return "Cloud folder bookmark didn't resolve (\(domain) \(code); under it: \(underlying))"
         case .storeEnvironment(let environment):
             return "Store environment: \(environment) (from the latest Annual transaction)"
+        case .subscriptionTransaction(let entry):
+            return "Subscription transaction: \(entry.summary)"
         }
     }
 
