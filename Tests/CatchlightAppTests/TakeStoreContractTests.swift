@@ -347,7 +347,8 @@ class TakeStoreContractTests: XCTestCase {
         let record = SyncRecord(agreed: "2026-05-01T09:00:00.000Z",
                                 uploaded: "2026-05-01T10:00:00.000Z",
                                 shown: "2026-05-01T11:00:00.000Z",
-                                shownLocal: "2026-05-01T10:30:00.000Z")
+                                shownLocal: "2026-05-01T10:30:00.000Z",
+                                published: "2026-05-01T10:00:00.000Z")
         try store.setSyncRecord(record, id: id)
         XCTAssertEqual(try store.syncRecord(id: id), record)
         XCTAssertNil(try store.syncRecord(id: other), "one Take's record is not another's")

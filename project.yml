@@ -52,12 +52,16 @@ packages:
   # the app only through a deliberate bump here.
   CatchlightCore:
     url: https://github.com/Considus/Catchlight-Core
+    # 2.1.0: each manifest entry names the upload of each device it was built on, so an upload
+    # written over by a push that never had it (two pushes past the lock at once) is shown as a
+    # conflict, not taken unseen (Catchlight-Core#58). Adds an optional field to the synced
+    # manifest; older builds read it and drop it.
     # 2.0.0: each device keeps a per-Take sync record and judges what changed against it,
     # not against its last-sync time, so an edit made offline and uploaded late is never
     # written over unseen; every TakeStore keeps the record (Catchlight-Core#57).
     # 1.7.0: Take.markModified stamps strictly forward, so an edit stamped no later than
     # the version already pushed still syncs (Catchlight-Core#33).
-    exactVersion: 2.0.0
+    exactVersion: 2.1.0
 
   # NOTE (2026-06-05): the previous `CArgon2` vendored package has been removed.
   # Master-key derivation now uses HKDF-SHA-256 via CryptoKit (see
