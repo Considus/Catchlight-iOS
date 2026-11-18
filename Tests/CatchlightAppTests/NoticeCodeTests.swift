@@ -83,7 +83,8 @@ final class NoticeCodeTests: XCTestCase {
             "conflictFileNotRemoved": 924,
             "statusBarStyleKept": 925,
             "cloudFolderCheckFailed": 926,
-            "storeEnvironment": 927
+            "storeEnvironment": 927,
+            "subscriptionTransaction": 928
         ]
         let current = Dictionary(uniqueKeysWithValues: NoticeCode.allCases.map { ("\($0)", $0.rawValue) })
         XCTAssertEqual(current, pinned)
@@ -164,6 +165,51 @@ final class NoticeCodeTests: XCTestCase {
             Notice.storeEnvironment("no Annual transaction yet").logLine,
             Notice.storeEnvironment("Sandbox").logLine,
         ])
+    }
+
+    /// One subscription purchase or renewal, so a device log shows the trial, each offer
+    /// period and each paid renewal without an App Store Server API key. No transaction id.
+    func testSubscriptionTransaction_line() {
+        let start = Date(timeIntervalSince1970: 1_795_017_660)      // 2026-11-18 16:01:00 UTC
+        let free = SubscriptionHistoryEntry(
+            purchased: start, expires: start.addingTimeInterval(3600),
+            offerType: "code", offerID: "LAUNCH-FREE-MONTH", paymentMode: "free trial",
+            price: 0, currency: "GBP", environment: "Sandbox", revoked: false)
+        XCTAssertEqual(Notice.subscriptionTransaction(free).logLine,
+                       "[CCIOS-928] Subscription transaction: 2026-11-18 16:01:00 UTC to 2026-11-18 17:01:00 UTC, offer code (LAUNCH-FREE-MONTH, free trial), price 0 GBP, Sandbox")
+        XCTAssertEqual(Notice.subscriptionTransaction(free).category, .lifecycle)
+
+        let paid = SubscriptionHistoryEntry(
+            purchased: start, expires: nil, offerType: nil, offerID: nil, paymentMode: nil,
+            price: Decimal(string: "14.99"), currency: "GBP", environment: "Sandbox", revoked: true)
+        XCTAssertEqual(Notice.subscriptionTransaction(paid).logLine,
+                       "[CCIOS-928] Subscription transaction: 2026-11-18 16:01:00 UTC to no expiry, no offer, price 14.99 GBP, Sandbox, revoked")
+    }
+
+    /// The whole history is written at the first refresh of a run (newest 12, oldest
+    /// first), then only transactions not yet written this run, so a renewal that arrives
+    /// while the app is open appears once.
+    @MainActor
+    func testSubscriptionHistory_writesEachTransactionOncePerRun() {
+        let log = DiagnosticsLog(fileURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("sub-history-\(UUID().uuidString).json"))
+        let manager = SubscriptionManager()
+        func entry(_ minute: Double) -> SubscriptionHistoryEntry {
+            SubscriptionHistoryEntry(
+                purchased: Date(timeIntervalSince1970: 1_795_017_600 + minute * 60), expires: nil,
+                offerType: nil, offerID: nil, paymentMode: nil, price: 1, currency: "GBP",
+                environment: "Sandbox", revoked: false)
+        }
+        // 14 transactions, handed over newest first: only the newest 12 are written, oldest first.
+        let first = (1...14).reversed().map { (id: UInt64($0), entry: entry(Double($0))) }
+        manager.noteSubscriptionHistory(first, log: log)
+        XCTAssertEqual(log.entries().map(\.message),
+                       (3...14).map { Notice.subscriptionTransaction(entry(Double($0))).logLine })
+
+        // Same history again plus one renewal: only the renewal is written.
+        manager.noteSubscriptionHistory(first + [(id: 15, entry: entry(15))], log: log)
+        XCTAssertEqual(log.entries().count, 13)
+        XCTAssertEqual(log.entries().last?.message, Notice.subscriptionTransaction(entry(15)).logLine)
     }
 
     func testDisplayText_dropsTheReference() {

@@ -58,3 +58,40 @@ extension SubscriptionStatus {
         return .lapsed
     }
 }
+
+/// One Annual subscription transaction (a purchase or a renewal) as the diagnostics log
+/// shows it. StoreKit-free so the line can be unit-tested; built from a `Transaction` by
+/// `SubscriptionManager.historyEntry(_:)`. Carries no transaction id or anything else that
+/// identifies the person.
+struct SubscriptionHistoryEntry: Equatable {
+    let purchased: Date
+    let expires: Date?
+    /// "introductory", "promotional", "code", "win-back", or nil for a full-price period.
+    let offerType: String?
+    /// The offer's id (an offer code's or promotional offer's reference); nil for the intro offer.
+    let offerID: String?
+    /// "free trial", "pay as you go" or "pay up front".
+    let paymentMode: String?
+    let price: Decimal?
+    let currency: String?
+    let environment: String
+    let revoked: Bool
+
+    /// "<start> to <end>, offer <type> (<id>, <mode>), price <amount> <currency>, <store>".
+    var summary: String {
+        let period = "\(Self.stamp(purchased)) to \(expires.map(Self.stamp) ?? "no expiry")"
+        let offer = offerType.map { "offer \($0) (\(offerID ?? "no id"), \(paymentMode ?? "unknown payment"))" } ?? "no offer"
+        let amount = ["price", price.map { "\($0)" } ?? "unknown", currency]
+            .compactMap { $0 }.joined(separator: " ")
+        return [period, offer, amount, environment, revoked ? "revoked" : nil]
+            .compactMap { $0 }.joined(separator: ", ")
+    }
+
+    private static func stamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss 'UTC'"
+        return formatter.string(from: date)
+    }
+}
