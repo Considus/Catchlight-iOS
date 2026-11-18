@@ -137,7 +137,6 @@ final class SubscriptionManager {
                     && (txn.expirationDate.map { $0 > Date() } ?? true)
             ))
         }
-        await recordStoreEnvironmentOnce()
         let ever = defaults.bool(forKey: Self.everEntitledDefaultsKey)
         let derived = SubscriptionStatus.derive(from: snapshots, everSubscribed: ever)
         // Persist "has ever been entitled" the first time we see an active
@@ -162,6 +161,7 @@ final class SubscriptionManager {
         if previous == .lapsed && (derived == .subscribed || derived == .trial) {
             onRecoveredFromLapse?()
         }
+        recordStoreEnvironmentOnce()
     }
 
     private var storeEnvironmentRecorded = false
@@ -170,12 +170,15 @@ final class SubscriptionManager {
     /// whether purchases go to Apple's sandbox or Xcode's local test store. Read from the
     /// latest Annual transaction rather than `AppTransaction.shared`, which can raise an
     /// App Store sign-in prompt. An unverified transaction counts too: this only labels a
-    /// log line and grants nothing.
-    private func recordStoreEnvironmentOnce() async {
+    /// log line and grants nothing. Runs in its own task after the status is set, so the
+    /// read never delays or reorders a status update.
+    private func recordStoreEnvironmentOnce() {
         guard !storeEnvironmentRecorded else { return }
         storeEnvironmentRecorded = true
-        let latest = await Transaction.latest(for: Self.annualProductID)
-        DiagnosticsLog.shared.record(.storeEnvironment(Self.environmentLabel(latest?.unsafePayloadValue.environment)))
+        Task {
+            let latest = await Transaction.latest(for: Self.annualProductID)
+            DiagnosticsLog.shared.record(.storeEnvironment(Self.environmentLabel(latest?.unsafePayloadValue.environment)))
+        }
     }
 
     /// The environment's name for the diagnostics line.
