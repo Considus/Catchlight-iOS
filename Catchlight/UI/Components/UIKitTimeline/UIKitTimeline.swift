@@ -517,12 +517,20 @@ struct TimelineSwipeCell: View {
     }
 }
 
-/// A month divider row — kerned caps at the card TEXT column, centred in the inter-card
+/// A month divider row — the month in sentence case at the card TEXT column, centred in the inter-card
 /// gap. Each adjacent card contributes a `cardGap/2` half-gap on its facing edge, so a
 /// SYMMETRIC `cardGap/2` here puts equal space (`cardGap`) above and below the label —
 /// centred on the y-axis — while keeping the overall card-to-card gap unchanged.
 struct TimelineMonthDivider: View {
     let title: String
+
+    /// The label in sentence case: the first letter a capital by the language's own rules
+    /// ("novembre 2026" becomes "Novembre 2026"), the rest as the formatter wrote it.
+    static func sentenceCase(_ text: String, locale: Locale = .current) -> String {
+        guard let first = text.first else { return text }
+        return String(first).uppercased(with: locale) + text.dropFirst()
+    }
+
     let addColumnX: CGFloat
     let cardGap: CGFloat
     /// This month is the ACTIVE filter — lit amber with an × as the clear affordance.
@@ -541,9 +549,9 @@ struct TimelineMonthDivider: View {
             // tap in the empty space to the right silently filtered the timeline. The vertical
             // padding sits INSIDE the target, so the touch height is still the full row.
             HStack(spacing: 6) {
-                Text(title.uppercased())
+                Text(Self.sentenceCase(title))
                     .ckBody(.regular, size: 14, relativeTo: .body)
-                    .kerning(0.5)
+                    .kerning(0.2)
                     .foregroundStyle(isActive ? Color.ckAccent : Color.ckTextSecondary)
                 if isActive {
                     Image(systemName: "xmark.circle.fill")
