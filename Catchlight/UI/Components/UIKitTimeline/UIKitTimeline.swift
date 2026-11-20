@@ -493,6 +493,7 @@ struct TimelineSwipeCell: View {
             trailing: SwipeAction(title: "Delete", systemImage: "trash", tint: .ckRuby,
                                   style: take.timeReminder?.repeats == true || confirmBeforeDelete
                                       ? .standard : .destructive,
+                                  isDelete: true,
                                   perform: { onDelete(take) }),
             openRowID: $swipeState.openRowID,
             leadingInset: CatchlightLayout.cardMargin,

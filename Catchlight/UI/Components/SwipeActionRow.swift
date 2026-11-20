@@ -46,7 +46,18 @@ struct SwipeAction {
     /// `ckOnAccent` content.
     var contentColor: Color = .white
     var style: Style
+    /// A Delete on the ruby fill, whatever its style.
+    var isDelete: Bool = false
     var perform: () -> Void
+
+    enum LabelInk: Equatable { case onAccent, content }
+
+    /// Which colour the glyph and label take on the fill. In Dark a destructive action or a
+    /// Delete draws on-accent: white on the Dark ruby is below 4.5:1, and a Delete that asks
+    /// first (`.standard`) is still on ruby. Everything else keeps `contentColor`.
+    func labelInk(dark: Bool) -> LabelInk {
+        dark && (style == .destructive || isDelete) ? .onAccent : .content
+    }
 }
 
 struct SwipeActionRow<Content: View>: View {
@@ -175,7 +186,7 @@ struct SwipeActionRow<Content: View>: View {
             // (small text needs 4.5). Ink on that fill measures 4.91:1; Daylight's
             // white-on-ruby already passes (6.05:1) and is unchanged. Destructive
             // fills only — the other tints were not flagged.
-            .foregroundStyle(action.style == .destructive && scheme == .dark
+            .foregroundStyle(action.labelInk(dark: scheme == .dark) == .onAccent
                              ? Color.ckOnAccent
                              : action.contentColor)
             .padding(centersActionLabel ? .horizontal : (edge == .leading ? .leading : .trailing), 8)
