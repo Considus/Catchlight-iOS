@@ -1,9 +1,9 @@
 //
 //  PaywallRedeemUITests.swift
 //
-//  "Redeem Code" is an outlined button directly under "Subscribe now", with its
+//  "Redeem code" is an outlined button directly under "Subscribe now", with its
 //  one-line explanation beneath it, both on the first screen (no scrolling) on
-//  the iPhone SE and the iPhone 17. "Restore Purchases" has its own line and
+//  the iPhone SE and the iPhone 17. "Restore purchases" has its own line and
 //  never breaks mid-word at the largest text size. Run on both phones.
 //
 
@@ -37,15 +37,15 @@ final class PaywallRedeemUITests: XCTestCase {
         let redeem = anyElement(in: app, id: "paywall-redeem")
         let note = anyElement(in: app, id: "paywall-redeem-note")
         XCTAssertTrue(redeem.waitForExistence(timeout: 5))
-        XCTAssertTrue(note.exists, "the line under Redeem Code is missing")
+        XCTAssertTrue(note.exists, "the line under Redeem code is missing")
         let screen = app.windows.firstMatch.frame
         // No scrolling: both are fully on the first screen.
-        XCTAssertLessThanOrEqual(redeem.frame.maxY, screen.height, "Redeem Code is below the first screen")
-        XCTAssertLessThanOrEqual(note.frame.maxY, screen.height - 8, "the line under Redeem Code is cut by the fold (maxY \(note.frame.maxY) of \(screen.height))")
+        XCTAssertLessThanOrEqual(redeem.frame.maxY, screen.height, "Redeem code is below the first screen")
+        XCTAssertLessThanOrEqual(note.frame.maxY, screen.height - 8, "the line under Redeem code is cut by the fold (maxY \(note.frame.maxY) of \(screen.height))")
         // A button as wide as Subscribe, directly beneath it, with its line under that.
-        XCTAssertEqual(redeem.frame.width, subscribe.frame.width, accuracy: 1, "Redeem Code is not a full-width button")
+        XCTAssertEqual(redeem.frame.width, subscribe.frame.width, accuracy: 1, "Redeem code is not a full-width button")
         XCTAssertGreaterThanOrEqual(redeem.frame.minY, subscribe.frame.maxY)
-        XCTAssertLessThanOrEqual(redeem.frame.minY - subscribe.frame.maxY, 24, "Redeem Code is not directly under Subscribe")
+        XCTAssertLessThanOrEqual(redeem.frame.minY - subscribe.frame.maxY, 24, "Redeem code is not directly under Subscribe")
         XCTAssertGreaterThanOrEqual(note.frame.minY, redeem.frame.maxY)
         XCTAssertTrue(note.label.contains("extra free month"), "line was: \(note.label)")
         // Subscribing needs no extra tap: Subscribe is still the first thing a tap reaches.
@@ -60,7 +60,7 @@ final class PaywallRedeemUITests: XCTestCase {
         XCTAssertTrue(restore.isHittable)
         // Whole words only: at this size the two words stack on two lines. A break inside
         // "Purchases" ("Purchase" over "s") is a third line: 184 high on main, 132 high as two lines.
-        XCTAssertLessThan(restore.frame.height, 160, "Restore Purchases is \(restore.frame.height) high: it broke mid-word")
+        XCTAssertLessThan(restore.frame.height, 160, "Restore purchases is \(restore.frame.height) high: it broke mid-word")
         for id in ["paywall-subscribe", "paywall-redeem", "paywall-redeem-note", "paywall-restore"] {
             let element = anyElement(in: app, id: id)
             scrollTo(element, in: app)

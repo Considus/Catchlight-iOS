@@ -216,7 +216,7 @@ final class TouchTargetUITests: XCTestCase {
         XCTAssertTrue(anyElement(in: app, id: "paywall-subscribe").waitForExistence(timeout: 8))
         settle()
         auditTouchTargets("paywall", in: app)
-        // Redeem Code is a button under Subscribe now (PaywallRedeemUITests) and is audited above.
+        // Redeem code is a button under Subscribe now (PaywallRedeemUITests) and is audited above.
         // The footer is below the fold on the small iPhone: scroll to it and measure that too.
         // Found by label whatever type the runtime gives a Link (a link on one iOS, a button or
         // text on another), so the check does not depend on it.
@@ -227,7 +227,7 @@ final class TouchTargetUITests: XCTestCase {
         for _ in 0..<8 where !(terms.exists && terms.isHittable) { app.swipeUp() }
         XCTAssertTrue(terms.exists, "the paywall footer links were not reached")
         settle()
-        for label in ["Privacy Policy", "Terms of Service", "Restore Purchases"] {
+        for label in ["Privacy Policy", "Terms of Service", "Restore purchases"] {
             let element = footer(label)
             XCTAssertTrue(element.exists, "\(label) is not on the paywall")
             XCTAssertGreaterThanOrEqual(element.frame.height, touchTargetMinimum - 0.5, "\(label) is \(element.frame.height) high")

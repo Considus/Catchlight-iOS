@@ -262,7 +262,7 @@ enum Notice: Equatable {
         case .exportFailed:
             return String(localized: "Your Takes couldn't be read, so nothing was exported. Don't start over until an export works.")
         case .remindersSilenced:
-            return String(localized: "Enable Notifications")
+            return String(localized: "Enable notifications")
         case .conflictsChanged(let n):
             return String(localized: "\(n) Takes changed on another device.")
         case .conflictsUnverified(let n):

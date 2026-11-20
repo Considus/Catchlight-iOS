@@ -57,7 +57,7 @@ final class PaywallUITests: XCTestCase {
                       "Add-while-lapsed must surface the paywall, not the editor.")
     }
 
-    /// Restore Purchases is tappable from the paywall (Apple-mandatory element).
+    /// Restore purchases is tappable from the paywall (Apple-mandatory element).
     func testPaywall_restorePurchasesIsTappable() {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting", "--uitesting-lapsed"]
@@ -74,6 +74,6 @@ final class PaywallUITests: XCTestCase {
             app.swipeUp()
             scrolls += 1
         }
-        XCTAssertTrue(restore.isHittable, "Restore Purchases must be tappable.")
+        XCTAssertTrue(restore.isHittable, "Restore purchases must be tappable.")
     }
 }

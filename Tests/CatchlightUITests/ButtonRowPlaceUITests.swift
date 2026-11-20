@@ -48,7 +48,7 @@ final class ButtonRowPlaceUITests: XCTestCase {
         let toolbar = dailiesToolbarFrame()
         let app = launch(["--uitesting-locked"])
         XCTAssertTrue(app.staticTexts["Catchlight is locked"].waitForExistence(timeout: 12))
-        let button = app.buttons.matching(NSPredicate(format: "label IN %@", ["Unlock", "Try Again", "Unlocking…"])).firstMatch
+        let button = app.buttons.matching(NSPredicate(format: "label IN %@", ["Unlock", "Try again", "Unlocking…"])).firstMatch
         assertAtToolbarPlace(button, toolbar, "lock screen")
     }
 
