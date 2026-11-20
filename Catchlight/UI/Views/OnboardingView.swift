@@ -780,9 +780,12 @@ private struct StorageOptionCard: View {
         .accessibilityLabel(accessibilityText)
     }
 
+    /// The title, description and note as VoiceOver reads them. Each part goes in as a `Text` of
+    /// its own key: a `LocalizedStringKey` dropped straight into the string reads out its code.
     private var accessibilityText: Text {
-        guard let note else { return Text("\(title). \(description)") }
-        return Text("\(title). \(description)") + Text(verbatim: " ") + Text(note)
+        let base = Text("\(Text(title)). \(Text(description))")
+        guard let note else { return base }
+        return Text("\(base) \(Text(note))")
     }
 }
 
