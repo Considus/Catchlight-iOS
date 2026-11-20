@@ -984,7 +984,7 @@ struct DailiesView: View {
             .padding(.vertical, 8)
             .frame(minHeight: 44)
             .frame(maxWidth: .infinity)
-            .background(Color.ckRuby.opacity(scheme == .dark ? 0.16 : 0.12))
+            .background(Color.ckRuby.opacity(NoticeStripBand.missingPhrase(dark: scheme == .dark)))
             .transition(.move(edge: .top).combined(with: .opacity))
             .accessibilityElement(children: .contain)
             .confirmationDialog("Export a readable copy?",
@@ -1043,7 +1043,7 @@ struct DailiesView: View {
             .padding(.horizontal, 16)
             .frame(minHeight: 44)
             .frame(maxWidth: .infinity)
-            .background(Color.ckAdd.opacity(0.15))
+            .background(Color.ckAdd.opacity(NoticeStripBand.accent))
             .transition(.move(edge: .top).combined(with: .opacity))
             .accessibilityElement(children: .contain)
         }
@@ -1107,7 +1107,7 @@ struct DailiesView: View {
             .padding(.horizontal, 16)
             .frame(minHeight: 44)
             .frame(maxWidth: .infinity)
-            .background(Color.ckAdd.opacity(0.15))
+            .background(Color.ckAdd.opacity(NoticeStripBand.accent))
             .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             .accessibilityElement(children: .contain)
         }
@@ -1151,7 +1151,7 @@ struct DailiesView: View {
             .padding(.horizontal, 16)
             .frame(minHeight: 44)
             .frame(maxWidth: .infinity)
-            .background(Color.ckAdd.opacity(0.15))
+            .background(Color.ckAdd.opacity(NoticeStripBand.accent))
             .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
@@ -1209,7 +1209,7 @@ struct DailiesView: View {
                 icon: "exclamationmark.circle",
                 text: message,
                 tint: Color.ckRuby,
-                background: Color.ckRuby.opacity(0.12),
+                background: Color.ckRuby.opacity(NoticeStripBand.ruby),
                 accessibilityLabel: "storage error",
                 onDismiss: { vm.clearError() }
             )
@@ -1230,7 +1230,7 @@ struct DailiesView: View {
                 icon: "exclamationmark.circle",
                 text: message,
                 tint: Color.ckRuby,
-                background: Color.ckRuby.opacity(0.12),
+                background: Color.ckRuby.opacity(NoticeStripBand.ruby),
                 accessibilityLabel: "sync error",
                 onDismiss: { app.clearSyncError() }
             )
@@ -1252,7 +1252,7 @@ struct DailiesView: View {
                 icon: "lock.slash",
                 text: copy,
                 tint: Color.ckRuby,
-                background: Color.ckRuby.opacity(0.12),
+                background: Color.ckRuby.opacity(NoticeStripBand.ruby),
                 accessibilityLabel: "quarantine notice",
                 onDismiss: { app.clearQuarantineNotice() }
             )
@@ -2094,4 +2094,15 @@ struct DailiesView: View {
         .environment(app.ui)
         .environment(app.conflictQueue)
         .preferredColorScheme(.dark)
+}
+
+/// How strongly each Dailies strip's band is tinted over the page. `StripActionContrastTests`
+/// measures every action word on these bands, so the strips and the test share one source.
+enum NoticeStripBand {
+    /// The storage, sync and quarantine error strips: ruby.
+    static let ruby = 0.12
+    /// The lapse, reminders-off and conflict strips: the Scene's accent.
+    static let accent = 0.15
+    /// The missing-phrase banner: ruby, a little stronger in Dark.
+    static func missingPhrase(dark: Bool) -> Double { dark ? 0.16 : 0.12 }
 }

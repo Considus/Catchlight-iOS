@@ -243,6 +243,14 @@ extension Color {
 // than re-hard-coding hex in the views. (Scene-engine Phase 1.)
 
 enum UITheme {
+    /// Ruby, the error and warning colour behind `Color.ckRuby`. `StripActionContrastTests`
+    /// measures it as the strips' action word on its own band.
+    /// Dark #E06767, Light #A72A2A (owner 2026-11-20: nudged from #DB5252 / #B82E2E so
+    /// "Dismiss" reaches 4.5:1 on its strip in every Scene).
+    static let ruby = UIColor.adaptive(
+        dark: UIColor(red: 0xE0 / 255.0, green: 0x67 / 255.0, blue: 0x67 / 255.0, alpha: 1.0),
+        light: UIColor(red: 0xA7 / 255.0, green: 0x2A / 255.0, blue: 0x2A / 255.0, alpha: 1.0)
+    )
     static let background    = SceneToken.ground
     static let surface       = SceneToken.card
     static let textPrimary   = SceneToken.text
@@ -375,10 +383,7 @@ extension Color {
     /// timeline (Task 3.9). Same hue in both modes so the strip reads as an
     /// alert regardless of theme; brightness chosen to remain WCAG AA against
     /// `ckTextPrimary`. Strips themselves use this colour at ~12–15% opacity.
-    static let ckRuby = Color(uiColor: .adaptive(
-        dark: UIColor(red: 0.86, green: 0.32, blue: 0.32, alpha: 1.0),
-        light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
-    ))
+    static let ckRuby = Color(uiColor: UITheme.ruby)
 
 }
 
