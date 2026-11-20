@@ -1524,6 +1524,7 @@ struct DailiesView: View {
                 // slide-off.
                 style: take.timeReminder?.repeats == true || confirmBeforeDelete
                     ? .standard : .destructive,
+                isDelete: true,
                 perform: {
                     guard app.ensureEditable(take.id) else { return }
                     requestDelete(take)
