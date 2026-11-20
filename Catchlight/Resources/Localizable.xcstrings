@@ -41233,19 +41233,19 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrir les licences des sources"
+            "value" : "Licences open source"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abrir licencias de código fuente"
+            "value" : "Licencias de código abierto"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apri le licenze open source"
+            "value" : "Licenze open source"
           }
         },
         "pt-BR" : {
@@ -41257,7 +41257,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bronlicenties openen"
+            "value" : "Opensourcelicenties"
           }
         },
         "pt-PT" : {
@@ -41275,7 +41275,7 @@
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öppna källkodslicenser"
+            "value" : "Licenser för öppen källkod"
           }
         },
         "da" : {
@@ -41287,13 +41287,13 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Åpne lisenser for åpen kildekode"
+            "value" : "Lisenser for åpen kildekode"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avaa lähdekoodilisenssit"
+            "value" : "Avoimen lähdekoodin lisenssit"
           }
         },
         "tr" : {
@@ -41317,13 +41317,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开“源代码许可”"
+            "value" : "开源许可证"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟開源授權"
+            "value" : "開源授權"
           }
         },
         "th" : {
