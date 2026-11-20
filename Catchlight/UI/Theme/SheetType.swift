@@ -50,10 +50,9 @@ extension View {
         ckBody(.regular, size: SheetType.smallSize, relativeTo: .footnote)
     }
 
-    /// The label above a group of rows: 13 medium, upper case, secondary.
+    /// The label above a group of rows: 13 medium, sentence case, secondary.
     func sheetSectionLabel() -> some View {
         ckBody(.medium, size: SheetType.labelSize, relativeTo: .caption)
             .foregroundStyle(Color.ckTextSecondary)
-            .textCase(.uppercase)
     }
 }
