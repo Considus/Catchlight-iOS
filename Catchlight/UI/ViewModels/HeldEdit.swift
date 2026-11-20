@@ -16,16 +16,15 @@ struct HeldEdit {
     let id: UUID
     private(set) var sealed: Data
 
-    /// Nil when the Take can't be sealed; the lock goes on regardless.
-    init?(sealing take: Take, keys: KeyHierarchy) {
-        guard let data = try? TakeCrypto(keys: keys).seal(take) else { return nil }
+    /// Throws when the Take can't be sealed; the caller says so after the unlock.
+    init(sealing take: Take, keys: KeyHierarchy) throws {
+        sealed = try TakeCrypto(keys: keys).seal(take)
         id = take.id
-        sealed = data
     }
 
-    /// The Take as typed, or nil under keys that don't open it.
-    func open(keys: KeyHierarchy) -> Take? {
-        try? TakeCrypto(keys: keys).open(sealed, takeUUID: id)
+    /// The Take as typed. Throws under keys that don't open it.
+    func open(keys: KeyHierarchy) throws -> Take {
+        try TakeCrypto(keys: keys).open(sealed, takeUUID: id)
     }
 
     /// Zeroes the sealed bytes.

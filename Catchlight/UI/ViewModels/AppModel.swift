@@ -535,15 +535,26 @@ final class AppModel {
     /// The edit held across the lock, sealed; nil when none waits. The lock screen says one waits.
     private(set) var heldEdit: HeldEdit?
     var hasHeldEdit: Bool { heldEdit != nil }
+    /// A refused edit at the lock that couldn't even be sealed: the unlock says a save failed.
+    private var heldEditLost = false
 
     /// After an unlock: the held edit is saved again quietly, and only if that save fails too does
     /// it go back to the editor with the save notice (owner 2026-11-20: "Save quietly if it
     /// works"). Either way it is wiped.
     private func giveBackHeldEdit(keys: KeyHierarchy) {
+        if heldEditLost {
+            heldEditLost = false
+            dailiesVM.reportStorageError(.saveFailed)
+        }
         guard let held = heldEdit else { return }
-        let take = held.open(keys: keys)
+        let take: Take
+        do { take = try held.open(keys: keys) } catch {
+            // The keys that sealed it should open it; if not, say a save failed (review on #475).
+            wipeHeldEdit()
+            dailiesVM.reportStorageError(.saveFailed)
+            return
+        }
         wipeHeldEdit()
-        guard let take else { return }
         guard commitEditedTake(take) == .failed else { return }
         ui.exitToResting()
         ui.isStoryboardPresented = false
@@ -911,9 +922,16 @@ final class AppModel {
     @discardableResult
     func commitEditedTake(_ draft: Take) -> EditCommit {
         let result = commitEditedTakeNow(draft)
-        if result == .failed, relocking, let keys = session.currentKeys(), let held = HeldEdit(sealing: draft, keys: keys) {
+        if result == .failed, relocking {
             wipeHeldEdit()
-            heldEdit = held
+            do {
+                guard let keys = session.currentKeys() else { throw KeychainError.notFound }
+                heldEdit = try HeldEdit(sealing: draft, keys: keys)
+            } catch {
+                // It couldn't be held, so the typing goes with the editor: the unlock says a save
+                // failed rather than let it vanish without a word (review on #475).
+                heldEditLost = true
+            }
         }
         return result
     }
