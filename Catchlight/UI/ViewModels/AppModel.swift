@@ -280,6 +280,11 @@ final class AppModel {
         // current exposure (a no-op while locked or at `.none`).
         subscription.onRecoveredFromLapse = { [weak self] in self?.reindexAllTakes() }
 
+        // Quitting wipes an edit held across the lock: it is kept in memory only (HeldEdit).
+        NotificationCenter.default.addObserver(forName: UIApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.wipeHeldEdit() }
+        }
+
         if needsOnboarding {
             self.onboardingVM = nil
             self.onboardingVM = OnboardingViewModel { [weak self] masterKeyData, isRestore in
@@ -523,6 +528,34 @@ final class AppModel {
         }
     }
 
+    // MARK: - An edit whose save failed at the lock (ISSUE-292)
+
+    /// True while `relock()` commits the open edit: a refused save then is held for the unlock.
+    private var relocking = false
+    /// The edit held across the lock, sealed; nil when none waits. The lock screen says one waits.
+    private(set) var heldEdit: HeldEdit?
+    var hasHeldEdit: Bool { heldEdit != nil }
+
+    /// After an unlock: the held edit is saved again quietly, and only if that save fails too does
+    /// it go back to the editor with the save notice (owner 2026-11-20: "Save quietly if it
+    /// works"). Either way it is wiped.
+    private func giveBackHeldEdit(keys: KeyHierarchy) {
+        guard let held = heldEdit else { return }
+        let take = held.open(keys: keys)
+        wipeHeldEdit()
+        guard let take else { return }
+        guard commitEditedTake(take) == .failed else { return }
+        ui.exitToResting()
+        ui.isStoryboardPresented = false
+        ui.pendingInlineNewTake = take
+    }
+
+    /// Zeroes and drops the held edit. Quitting calls this too: it is kept in memory only.
+    func wipeHeldEdit() {
+        heldEdit?.wipe()
+        heldEdit = nil
+    }
+
     // MARK: - App-entry lock screen
 
     /// Drive the unlock for an onboarded user: present the iOS `.userPresence`
@@ -561,6 +594,7 @@ final class AppModel {
         rebind(to: store, keys: keys)   // bind the REAL store (and load the waiting conflicts) before the UI un-gates
         session.clearObscured()  // drop the privacy curtain so it can't flash post-Face ID
         lockState = .unlocked
+        giveBackHeldEdit(keys: keys)
         if reindexAfterUnlock {
             // The body-level lock's index scrub ran at init (locked, empty store);
             // now the real store is bound, rebuild the type-label items once.
@@ -651,7 +685,11 @@ final class AppModel {
         // locking should preserve in-progress work, not discard it). Runs DailiesView's
         // own save path while the encrypted store is still bound; must precede
         // `session.lock()` / the rebind below, after which a write would be lost.
+        // An edit whose save is refused here is sealed and held for the unlock (HeldEdit,
+        // owner 2026-11-20: "Hold it, give it back"), since the editor holding it is torn down.
+        relocking = true
         ui.commitInlineEdit?()
+        relocking = false
         ui.endEditingInPlace()              // drop in-place edit focus (the draft lives in DailiesView, torn down with the locked timeline)
         session.lock()                      // zero the session's keys + decrypted cache
         Wiring.clearSessionKeys()           // drop the cached keys used by sync
@@ -872,6 +910,15 @@ final class AppModel {
     /// with the draft in it rather than closing it on the user's typing.
     @discardableResult
     func commitEditedTake(_ draft: Take) -> EditCommit {
+        let result = commitEditedTakeNow(draft)
+        if result == .failed, relocking, let keys = session.currentKeys(), let held = HeldEdit(sealing: draft, keys: keys) {
+            wipeHeldEdit()
+            heldEdit = held
+        }
+        return result
+    }
+
+    private func commitEditedTakeNow(_ draft: Take) -> EditCommit {
         var take = draft
         take.removeEmptyTextBlocks()
         // Held, or let go by a converted choice while the editor was open (its id is now

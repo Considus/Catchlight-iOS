@@ -4,9 +4,9 @@
 //
 //  ISSUE-292: the phone locks while a Take is being edited and the save that relock() makes
 //  first is refused (a full disk, say). The draft lives in the editor, which the lock tears
-//  down, so after the unlock the typing is nowhere. This test fails on main by design: it
-//  proves the issue before a fix is chosen. Any fix that brings the typing back after the
-//  unlock, into the store or handed back to an editor, makes it pass.
+//  down. The fix (owner 2026-11-20, "Hold it, give it back"): the edit is sealed and held in
+//  memory across the lock, saved again quietly after the unlock, and handed back to the editor
+//  only if that save fails too. Quitting wipes it.
 //
 
 import XCTest
@@ -63,8 +63,12 @@ final class LostEditOnLockTests: XCTestCase {
         super.tearDown()
     }
 
-    func testAnEditWhoseSaveFailsAtTheLock_isThereAfterTheUnlock() async throws {
-        let store = RefusingStore()
+    private let typed = "Typed, not saved"
+
+    /// An unlocked app over `store` holding "Written before the lock", with the editor open on it
+    /// (as DailiesView and StoryboardView register it: the relock commits through the same
+    /// `AppModel.commitEditedTake`), then a relock whose save of the typing is refused.
+    private func lockWithARefusedEdit(_ store: RefusingStore) async throws -> AppModel {
         let stored = Take(blocks: [.textLine("Written before the lock")])
         try store.upsert(stored)
         let subscription = SubscriptionManager()
@@ -82,10 +86,8 @@ final class LostEditOnLockTests: XCTestCase {
         await app.attemptUnlock()
         XCTAssertEqual(app.lockState, .unlocked)
 
-        // The editor is open on the Take, as DailiesView and StoryboardView register it: the
-        // relock commits it through the same AppModel.commitEditedTake.
         var draft = stored
-        draft.blocks = [.textLine("Typed, not saved")]
+        draft.blocks = [.textLine(typed)]
         var commit: AppModel.EditCommit?
         app.ui.commitInlineEdit = { commit = app.commitEditedTake(draft) }
 
@@ -95,13 +97,70 @@ final class LostEditOnLockTests: XCTestCase {
         XCTAssertEqual(commit, .failed, "the save at the lock was not refused, so the test proves nothing")
         XCTAssertEqual(try store.base.allTakes().map(\.plainText), ["Written before the lock"],
                        "the typing reached the store, so the test proves nothing")
+        return app
+    }
+
+    /// Owner, 2026-11-20: "Hold it, give it back", and "Save quietly if it works".
+    func testAnEditWhoseSaveFailsAtTheLock_isThereAfterTheUnlock() async throws {
+        let store = RefusingStore()
+        let app = try await lockWithARefusedEdit(store)
+        XCTAssertTrue(app.hasHeldEdit, "the refused edit is not held across the lock")
 
         store.refuseWrites = false
         await app.attemptUnlock()
         XCTAssertEqual(app.lockState, .unlocked)
 
-        let reachable = (try store.allTakes().map(\.plainText)) + [app.ui.pendingInlineNewTake?.plainText].compactMap { $0 }
-        XCTAssertTrue(reachable.contains("Typed, not saved"),
-                      "the typing is gone after the unlock (ISSUE-292); the app has \(reachable)")
+        XCTAssertEqual(try store.allTakes().map(\.plainText), [typed], "the typing was not saved again after the unlock (ISSUE-292)")
+        XCTAssertNil(app.ui.pendingInlineNewTake, "a save that worked hands nothing back")
+        XCTAssertFalse(app.hasHeldEdit, "what was held is wiped once given back")
+    }
+
+    /// While locked, what is held is sealed: the typing isn't in its bytes.
+    func testWhileLocked_theHeldEditIsSealed() async throws {
+        let app = try await lockWithARefusedEdit(RefusingStore())
+        let sealed = try XCTUnwrap(app.heldEdit?.sealed)
+        XCTAssertNil(sealed.range(of: Data(typed.utf8)), "the held edit is readable")
+    }
+
+    /// The save after the unlock is refused too: the typing goes back to the editor with the
+    /// save notice, and nothing is held any more.
+    func testAHeldEditWhoseSaveIsRefusedAgain_goesBackToTheEditor() async throws {
+        let store = RefusingStore()
+        let app = try await lockWithARefusedEdit(store)
+        app.ui.isStoryboardPresented = true
+
+        await app.attemptUnlock()
+
+        XCTAssertEqual(app.ui.pendingInlineNewTake?.plainText, typed, "the typing was not handed back")
+        XCTAssertFalse(app.ui.isStoryboardPresented, "the editor must not sit hidden under the Storyboard")
+        XCTAssertEqual(app.dailiesVM.lastError, "Couldn't save that Take.")
+        XCTAssertFalse(app.hasHeldEdit)
+        XCTAssertEqual(try store.base.allTakes().map(\.plainText), ["Written before the lock"])
+    }
+
+    /// Quitting wipes what is held: it is kept in memory only.
+    func testQuitting_wipesTheHeldEdit() async throws {
+        let app = try await lockWithARefusedEdit(RefusingStore())
+        NotificationCenter.default.post(name: UIApplication.willTerminateNotification, object: nil)
+        XCTAssertFalse(app.hasHeldEdit, "quitting did not wipe the held edit")
+    }
+
+    /// A relock whose save works holds nothing.
+    func testALockWhoseSaveWorks_holdsNothing() async throws {
+        let store = RefusingStore()
+        let stored = Take(blocks: [.textLine("Written before the lock")])
+        try store.upsert(stored)
+        let subscription = SubscriptionManager()
+        subscription.forceStatusForTesting(.subscribed)
+        let app = AppModel(needsOnboarding: false, initialStore: InMemoryTakeStore(), session: SessionController(),
+                           makeStoreFromKeys: { _ in store }, unlockKeys: { KeyHierarchy(masterKeyBytes: Data(repeating: 7, count: 32)) },
+                           lockState: .locked, subscription: subscription, conflictDirectory: conflictDirectory)
+        await app.attemptUnlock()
+        var draft = stored
+        draft.blocks = [.textLine(typed)]
+        app.ui.commitInlineEdit = { _ = app.commitEditedTake(draft) }
+        app.relock()
+        XCTAssertFalse(app.hasHeldEdit)
+        XCTAssertEqual(try store.base.allTakes().map(\.plainText), [typed])
     }
 }
