@@ -44,6 +44,7 @@ struct DailiesToolbar: View {
     @Environment(AppModel.self) private var app: AppModel?
     /// The home-indicator inset alone, never counting the keyboard (CatchlightApp).
     @Environment(\.homeIndicatorInset) private var homeIndicatorInset
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Create a Take and open the editor (gated by the paywall in RootView).
     var onNewTake: () -> Void
@@ -53,11 +54,26 @@ struct DailiesToolbar: View {
     @State private var suppressTasksTap = false
     @State private var suppressRemindersTap = false
 
+    /// How the Sequence filter chips arrive and leave.
+    enum ChipsEntrance: Equatable { case fade, fadeAndSlide }
+
+    /// With Reduce Motion on they fade in place, with no slide (owner, 2026-11-20).
+    static func chipsEntrance(reduceMotion: Bool) -> ChipsEntrance {
+        reduceMotion ? .fade : .fadeAndSlide
+    }
+
+    private var chipsTransition: AnyTransition {
+        switch Self.chipsEntrance(reduceMotion: reduceMotion) {
+        case .fade: .opacity
+        case .fadeAndSlide: .opacity.combined(with: .move(edge: .bottom))
+        }
+    }
+
     var body: some View {
         VStack(spacing: DailiesToolbarMetrics.chipGap) {
             if ui.toolbarMode == .filtering {
                 filterChips
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .transition(chipsTransition)
             }
             if ui.toolbarMode == .searching && ui.searchKeyboardUp {
                 // The search row rides the keyboard (KeyboardSearchBar). Draw nothing,

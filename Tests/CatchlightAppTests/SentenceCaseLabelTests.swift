@@ -55,8 +55,6 @@ final class SentenceCaseLabelTests: XCTestCase {
         .init(file: "Catchlight/UI/Components/TakeStateWordStrip.swift",
               line: "static func capitals(_ word: String) -> String { word.localizedUppercase }", count: 1,
               reason: "OVERDUE and SNOOZED in the card strip, in capitals by the owner's choice (2026-11-12)."),
-        .init(file: "Catchlight/UI/Views/ConflictResolutionView.swift", line: ".textCase(.uppercase)", count: 1,
-              reason: "The small side label on each conflict card, an eyebrow above the Take."),
     ]
 
     private let capitalPatterns = [".textCase(.uppercase)", "uppercased()", "localizedUppercase"]

@@ -102,7 +102,7 @@ struct AboutView: View {
 
     private var licences: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Open Source Licences")
+            Text("Open source licences")
                 .sheetSectionLabel()
             // The Package.swift dependency set is empty — Catchlight ships with
             // only Apple system frameworks. We state that honestly here so the
