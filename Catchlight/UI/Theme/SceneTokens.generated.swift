@@ -167,7 +167,7 @@ enum CatchlightScene: String, CaseIterable, Identifiable, Sendable {
             muted: 0x4F5864,
             faint: 0x636B76,
             accent: 0x0A0D12,
-            accentText: 0x1F6E86,
+            accentText: 0x1C6278,
             onAccent: 0xF5F7F9,
             lit: 0x1F6E86,
             unlit: 0xA6AAB0,
