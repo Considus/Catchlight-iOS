@@ -52,10 +52,10 @@ final class TakeStateWordStripTests: XCTestCase {
 
     // MARK: - Colour
 
-    func testOverdueText_isE17070InDark_andB82E2EInLight() {
+    func testOverdueText_isE17070InDark_andA72A2AInLight() {
         XCTAssertEqual(hex(Color.ckTextOverdue, .cobalt, .dark), "#E17070")
-        XCTAssertEqual(hex(Color.ckTextOverdue, .cobalt, .light), "#B82E2E")
-        XCTAssertEqual(hex(Color.ckCardOverdueBorder, .cobalt, .dark), "#DB5252", "the border is unchanged")
+        XCTAssertEqual(hex(Color.ckTextOverdue, .cobalt, .light), "#A72A2A")
+        XCTAssertEqual(hex(Color.ckCardOverdueBorder, .cobalt, .dark), "#E06767", "the border is ruby")
     }
 
     func testOverdueText_reaches4_5to1_onEveryCardColour() {

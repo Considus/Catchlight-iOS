@@ -363,20 +363,19 @@ extension Color {
 
     /// Overdue card BORDER (reminder date passed). RUBY (owner 2026-06-18 — the Take
     /// border/colour system): overdue now reads as an ALERT, not warm amber, and ruby
-    /// is the only state that overrides the Obie's gold border. Same hue as `ckRuby`.
-    static let ckCardOverdueBorder = Color(uiColor: .adaptive(
-        dark: UIColor(red: 0.86, green: 0.32, blue: 0.32, alpha: 1.0),
-        light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
-    ))
+    /// is the only state that overrides the Obie's gold border. Ruby itself, in both modes
+    /// (art director 2026-11-20).
+    static let ckCardOverdueBorder = Color(uiColor: UITheme.ruby)
 
     /// Overdue reminder META TEXT (`.tm.overdue`) — RUBY, matching the overdue border
     /// (owner 2026-06-18). The subtext is italic ONLY when overdue, so the ruby + slant
     /// together read as "this one's late." Same hue as `ckRuby` / `ckCardOverdueBorder`.
-    /// Dark is lighter than the border (#E17070, art director 2026-11-12) so 11pt text reaches
-    /// 4.5:1 on every dark card, raised and Important colour; the border keeps #DB5252.
+    /// Light is ruby (#A72A2A). Dark keeps its own lighter red (#E17070, art director
+    /// 2026-11-12, kept 2026-11-20) so 11pt text reaches 4.5:1 on every dark card, raised and
+    /// Important colour: ruby's #E06767 would fall under it on the Obie's surface.
     static let ckTextOverdue = Color(uiColor: .adaptive(
         dark: UIColor(red: 0xE1 / 255.0, green: 0x70 / 255.0, blue: 0x70 / 255.0, alpha: 1.0),
-        light: UIColor(red: 0.72, green: 0.18, blue: 0.18, alpha: 1.0)
+        light: UITheme.ruby.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
     ))
 
     /// Error / warning accent — used by the non-blocking error strips on the
