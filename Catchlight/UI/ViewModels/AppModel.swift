@@ -280,6 +280,11 @@ final class AppModel {
         // current exposure (a no-op while locked or at `.none`).
         subscription.onRecoveredFromLapse = { [weak self] in self?.reindexAllTakes() }
 
+        // Quitting wipes an edit held across the lock: it is kept in memory only (HeldEdit).
+        NotificationCenter.default.addObserver(forName: UIApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.wipeHeldEdit() }
+        }
+
         if needsOnboarding {
             self.onboardingVM = nil
             self.onboardingVM = OnboardingViewModel { [weak self] masterKeyData, isRestore in
@@ -505,7 +510,13 @@ final class AppModel {
     /// - Parameter keys: the unlocked keys the store opened with, which also open the
     ///   conflict queue kept on disk. nil for the locked placeholder: the queue is forgotten
     ///   from memory until the next unlock.
+    /// The keys the open store was bound with, kept until the relock rebinds. Not
+    /// `session.currentKeys()`, which drops them on every trip to the background while the app
+    /// stays unlocked: a refused edit is sealed with these at the lock (Greptile on #475).
+    private var boundKeys: KeyHierarchy?
+
     private func rebind(to store: TakeStore, keys: KeyHierarchy?) {
+        boundKeys = keys
         if let keys { conflictQueue.attach(keys: keys, directory: conflictDirectory) } else { conflictQueue.detach() }
         // Carry the same Spotlight indexer through the store swap that follows
         // onboarding completion — without this, post-onboarding Takes wouldn't
@@ -521,6 +532,45 @@ final class AppModel {
         if !conflictQueue.unreadable.isEmpty {
             dailiesVM.reportStorageError(.conflictsUnreadable(conflictQueue.unreadable.count))
         }
+    }
+
+    // MARK: - An edit whose save failed at the lock (ISSUE-292)
+
+    /// True while `relock()` commits the open edit: a refused save then is held for the unlock.
+    private var relocking = false
+    /// The edit held across the lock, sealed; nil when none waits. The lock screen says one waits.
+    private(set) var heldEdit: HeldEdit?
+    var hasHeldEdit: Bool { heldEdit != nil }
+    /// A refused edit at the lock that couldn't even be sealed: the unlock says a save failed.
+    private var heldEditLost = false
+
+    /// After an unlock: the held edit is saved again quietly, and only if that save fails too does
+    /// it go back to the editor with the save notice (owner 2026-11-20: "Save quietly if it
+    /// works"). Either way it is wiped.
+    private func giveBackHeldEdit(keys: KeyHierarchy) {
+        if heldEditLost {
+            heldEditLost = false
+            dailiesVM.reportStorageError(.saveFailed)
+        }
+        guard let held = heldEdit else { return }
+        let take: Take
+        do { take = try held.open(keys: keys) } catch {
+            // The keys that sealed it should open it; if not, say a save failed (review on #475).
+            wipeHeldEdit()
+            dailiesVM.reportStorageError(.saveFailed)
+            return
+        }
+        wipeHeldEdit()
+        guard commitEditedTake(take) == .failed else { return }
+        ui.exitToResting()
+        ui.isStoryboardPresented = false
+        ui.pendingInlineNewTake = take
+    }
+
+    /// Zeroes and drops the held edit. Quitting calls this too: it is kept in memory only.
+    func wipeHeldEdit() {
+        heldEdit?.wipe()
+        heldEdit = nil
     }
 
     // MARK: - App-entry lock screen
@@ -561,6 +611,7 @@ final class AppModel {
         rebind(to: store, keys: keys)   // bind the REAL store (and load the waiting conflicts) before the UI un-gates
         session.clearObscured()  // drop the privacy curtain so it can't flash post-Face ID
         lockState = .unlocked
+        giveBackHeldEdit(keys: keys)
         if reindexAfterUnlock {
             // The body-level lock's index scrub ran at init (locked, empty store);
             // now the real store is bound, rebuild the type-label items once.
@@ -651,7 +702,11 @@ final class AppModel {
         // locking should preserve in-progress work, not discard it). Runs DailiesView's
         // own save path while the encrypted store is still bound; must precede
         // `session.lock()` / the rebind below, after which a write would be lost.
+        // An edit whose save is refused here is sealed and held for the unlock (HeldEdit,
+        // owner 2026-11-20: "Hold it, give it back"), since the editor holding it is torn down.
+        relocking = true
         ui.commitInlineEdit?()
+        relocking = false
         ui.endEditingInPlace()              // drop in-place edit focus (the draft lives in DailiesView, torn down with the locked timeline)
         session.lock()                      // zero the session's keys + decrypted cache
         Wiring.clearSessionKeys()           // drop the cached keys used by sync
@@ -872,6 +927,22 @@ final class AppModel {
     /// with the draft in it rather than closing it on the user's typing.
     @discardableResult
     func commitEditedTake(_ draft: Take) -> EditCommit {
+        let result = commitEditedTakeNow(draft)
+        if result == .failed, relocking {
+            wipeHeldEdit()
+            do {
+                guard let keys = boundKeys else { throw KeychainError.notFound }
+                heldEdit = try HeldEdit(sealing: draft, keys: keys)
+            } catch {
+                // It couldn't be held, so the typing goes with the editor: the unlock says a save
+                // failed rather than let it vanish without a word (review on #475).
+                heldEditLost = true
+            }
+        }
+        return result
+    }
+
+    private func commitEditedTakeNow(_ draft: Take) -> EditCommit {
         var take = draft
         take.removeEmptyTextBlocks()
         // Held, or let go by a converted choice while the editor was open (its id is now

@@ -8454,6 +8454,120 @@
         }
       }
     },
+    "An unsaved edit is held until Catchlight closes. Unlock to restore it." : {
+      "comment" : "Lock screen, under the message, only while an edit whose save failed at the lock is held in memory for the unlock.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En ikke-gemt ændring opbevares, indtil Catchlight lukkes. Lås op for at gendanne den."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Eine nicht gespeicherte Bearbeitung wird aufbewahrt, bis Catchlight geschlossen wird. Entsperre, um sie wiederherzustellen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una edición sin guardar se conserva hasta que se cierre Catchlight. Desbloquea para recuperarla."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tallentamaton muokkaus säilyy, kunnes Catchlight suljetaan. Palauta se avaamalla lukitus."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Une modification non enregistrée est conservée jusqu’à la fermeture de Catchlight. Déverrouillez pour la restaurer."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una modifica non salvata viene conservata finché Catchlight non si chiude. Sblocca per ripristinarla."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存されていない編集は、Catchlightが終了するまで保持されます。ロックを解除して復元してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저장되지 않은 편집 내용은 Catchlight가 종료될 때까지 보관됩니다. 잠금을 해제하여 복원하세요."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En ulagret endring holdes av til Catchlight lukkes. Lås opp for å gjenopprette den."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Een niet-opgeslagen bewerking wordt bewaard tot Catchlight wordt gesloten. Ontgrendel om deze te herstellen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Niezapisana zmiana jest przechowywana do zamknięcia Catchlight. Odblokuj, aby ją przywrócić."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Uma edição não salva fica guardada até o Catchlight ser fechado. Desbloqueie para restaurá-la."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Uma edição não guardada fica retida até o Catchlight ser fechado. Desbloqueie para a restaurar."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En osparad ändring sparas tillfälligt tills Catchlight stängs. Lås upp för att återställa den."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "การแก้ไขที่ยังไม่ได้บันทึกจะถูกเก็บไว้จนกว่า Catchlight จะปิด ปลดล็อกเพื่อกู้คืน"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kaydedilmemiş bir düzenleme, Catchlight kapanana kadar saklanır. Geri yüklemek için kilidi açın."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有一项未保存的编辑将保留到 Catchlight 关闭为止。解锁即可恢复。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有一項未儲存的編輯將保留到 Catchlight 關閉為止。解鎖即可復原。"
+          }
+        }
+      }
+    },
     "Annually" : {
       "localizations" : {
         "de" : {

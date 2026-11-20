@@ -444,7 +444,8 @@ struct DailiesView: View {
         // Order-appropriate end and focus it.
         // The first reminder set to alert while notifications are off raises the strip now.
         .onChange(of: vm.anyAlertingReminder) { _, _ in app.refreshRemindersSilencedOnset() }
-        .onChange(of: ui.pendingInlineNewTake) { _, take in
+        // `initial`: a Take handed back by the unlock is set before this timeline exists (#475).
+        .onChange(of: ui.pendingInlineNewTake, initial: true) { _, take in
             guard let take else { return }
             beginNewInlineEdit(take)
             ui.pendingInlineNewTake = nil

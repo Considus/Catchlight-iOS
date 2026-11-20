@@ -44,6 +44,17 @@ struct LockView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 14)
                     .padding(.horizontal, 32)
+                // An edit whose save failed at the lock is held, sealed, for the unlock (HeldEdit,
+                // owner 2026-11-20); it is kept in memory only, so the line says until when.
+                if app.hasHeldEdit {
+                    Text("An unsaved edit is held until Catchlight closes. Unlock to restore it.")
+                        .ckBody(.light, size: 16, relativeTo: .body)
+                        .foregroundStyle(Color.ckTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 8)
+                        .padding(.horizontal, 32)
+                }
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
