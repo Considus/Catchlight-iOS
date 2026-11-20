@@ -326,7 +326,6 @@ struct ConflictResolutionView: View {
                     Text(side.label)
                         .ckBody(.medium, size: 11, relativeTo: .caption2)
                         .foregroundStyle(Color.ckTextSecondary)
-                        .textCase(.uppercase)
                     Spacer()
                     IrisView(take: take, diameter: 20)
                 }
