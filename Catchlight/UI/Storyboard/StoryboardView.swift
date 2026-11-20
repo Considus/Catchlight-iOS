@@ -160,7 +160,7 @@ struct StoryboardView: View {
             // Reminder editor from the keyboard's slot-2 bell: the same
             // picker Dailies presents, applied straight to this editor's draft —
             // a task previously had NO route to edit its reminder from either
-            // toolbar, and the ring's blade toggles rather than edits.
+            // toolbar, and the Focus row's Reminder mark toggles rather than edits.
             .sheet(isPresented: $editingReminder) { reminderEditorSheet }
             // Confirm before deleting (owner 2026-08-16) — the same alert the timeline
             // raises, presented from THIS screen because the Storyboard is a full-screen

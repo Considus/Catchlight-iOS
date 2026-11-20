@@ -47,47 +47,10 @@ private extension UIColor {
     }
 }
 
-// MARK: - Raw palette (the named brand swatches)
+// MARK: - Raw palette (the named brand swatch still in use)
 
 extension Color {
-    // Night-mode (dark) palette — the brand's core.
-    static let ckInk = Color(SceneColor(\.ground))
-    static let ckDusk = Color(hex: 0x1C1A16)
-    static let ckCatchlight = Color(hex: 0xF5EDD8)   // "catchlightCream"
-    static let ckGlow = Color(SceneColor(\.lit))
     static let ckEmber = Color(SceneColor(\.accent))
-    static let ckFog = Color(hex: 0xB8B0A3)
-    static let ckShadow = Color(hex: 0x0A0908)
-
-    // Daylight-only swatches.
-    static let ckPaper = Color(hex: 0xF7F4EF)
-    /// Accessible amber for text on Paper — WCAG AA (4.5:1+). Matches website `--ember-text`.
-    static let ckEmberText = Color(hex: 0x856539)
-
-    /// Accessible warm-grey for secondary text on Paper — WCAG AA. Replaces Fog in Daylight.
-    static let ckSlate = Color(hex: 0x5C5650)
-    // "Stone" is the Daylight mark fill — and the Important quadrant / dock-toggle
-    // swatch. #E0D9CE is the owner-confirmed design value (2026-07-01; replaces the
-    // provisional #E7E1D5 this shipped with while the hex was unconfirmed).
-    static let ckStone = Color(hex: 0xE0D9CE)
-}
-
-// MARK: - Raw UIColors (for dynamic providers)
-
-private enum Palette {
-    static let ink = UIColor(hex: 0x0F0E0C)
-    static let dusk = UIColor(hex: 0x1C1A16)
-    static let catchlight = UIColor(hex: 0xF5EDD8)
-    static let glow = UIColor(hex: 0xEDD9A3)
-    static let ember = UIColor(hex: 0xC9A96E)
-    static let fog = UIColor(hex: 0xB8B0A3)
-    static let shadow = UIColor(hex: 0x0A0908)
-    static let paper = UIColor(hex: 0xF7F4EF)
-    static let white = UIColor.white
-    /// Accessible secondary text on Paper — WCAG AA. Replaces fog in Daylight (fog fails on Paper at body size).
-    static let slate = UIColor(hex: 0x5C5650)
-    /// Accessible amber text on Paper — WCAG AA. Matches website `--ember-text: #856539`.
-    static let emberText = UIColor(hex: 0x856539)
 }
 
 // MARK: - The stored Scene
@@ -303,12 +266,6 @@ extension Color {
 
     /// The Add button — Ember (both).
     static let ckAdd = Color(SceneColor(\.accent))
-
-    /// Active navigation icon — Ember (both).
-    static let ckNavActive = Color(SceneColor(\.accentText))
-
-    /// Inactive navigation icon — Catchlight @ 55% (Night) / Fog (Daylight).
-    static let ckNavInactive = Color(SceneColor(\.muted))
 
     /// Amber accent for FOREGROUND content (text or iconography) drawn on a
     /// background SURFACE — Ember (Night) / Ember Text #856539 (Daylight).
