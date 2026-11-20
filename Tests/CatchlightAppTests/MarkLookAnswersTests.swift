@@ -66,4 +66,21 @@ final class MarkLookAnswersTests: XCTestCase {
         XCTAssertEqual(text["tr"], "Açık kaynak lisansları")
         XCTAssertEqual(text["de"], "Open-Source-Lizenzen", "German capitalises nouns: unchanged")
     }
+
+    /// The heading names the licences; "Open" is not the verb (reviewed wording, 2026-11-20).
+    func testLicencesHeading_translationsNameTheLicences_notTheVerbOpen() {
+        let text = translations("Open source licences")
+        let expected: [String: String] = [
+            "es": "Licencias de código abierto",
+            "fi": "Avoimen lähdekoodin lisenssit",
+            "fr": "Licences open source",
+            "it": "Licenze open source",
+            "nb": "Lisenser for åpen kildekode",
+            "nl": "Opensourcelicenties",
+            "sv": "Licenser för öppen källkod",
+            "zh-Hans": "开源许可证",
+            "zh-Hant": "開源授權",
+        ]
+        for (lang, value) in expected { XCTAssertEqual(text[lang], value, lang) }
+    }
 }
