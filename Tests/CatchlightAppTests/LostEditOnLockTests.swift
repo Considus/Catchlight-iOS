@@ -9,6 +9,7 @@
 //  only if that save fails too. Quitting wipes it.
 //
 
+import SwiftUI
 import XCTest
 @testable import Catchlight
 @testable import CatchlightCore
@@ -68,15 +69,16 @@ final class LostEditOnLockTests: XCTestCase {
     /// An unlocked app over `store` holding "Written before the lock", with the editor open on it
     /// (as DailiesView and StoryboardView register it: the relock commits through the same
     /// `AppModel.commitEditedTake`), then a relock whose save of the typing is refused.
-    private func lockWithARefusedEdit(_ store: RefusingStore) async throws -> AppModel {
+    private func lockWithARefusedEdit(_ store: RefusingStore, backgroundedFirst: Bool = false) async throws -> AppModel {
         let stored = Take(blocks: [.textLine("Written before the lock")])
         try store.upsert(stored)
         let subscription = SubscriptionManager()
         subscription.forceStatusForTesting(.subscribed)
+        let session = SessionController()
         let app = AppModel(
             needsOnboarding: false,
             initialStore: InMemoryTakeStore(),
-            session: SessionController(),
+            session: session,
             makeStoreFromKeys: { _ in store },
             unlockKeys: { KeyHierarchy(masterKeyBytes: Data(repeating: 7, count: 32)) },
             lockState: .locked,
@@ -91,6 +93,8 @@ final class LostEditOnLockTests: XCTestCase {
         var commit: AppModel.EditCommit?
         app.ui.commitInlineEdit = { commit = app.commitEditedTake(draft) }
 
+        // A trip to the background drops the session's derived keys while the app stays unlocked.
+        if backgroundedFirst { session.handleScenePhase(.background) }
         store.refuseWrites = true
         app.relock()
         XCTAssertEqual(app.lockState, .locked)
@@ -162,5 +166,48 @@ final class LostEditOnLockTests: XCTestCase {
         app.relock()
         XCTAssertFalse(app.hasHeldEdit)
         XCTAssertEqual(try store.base.allTakes().map(\.plainText), [typed])
+    }
+
+    /// The app went to the background and came back (the session drops its derived keys then,
+    /// while the app stays unlocked), and later locks with a refused save: the edit is still held
+    /// (Greptile on #475).
+    func testAfterATripToTheBackground_aRefusedEditIsStillHeld() async throws {
+        let store = RefusingStore()
+        let app = try await lockWithARefusedEdit(store, backgroundedFirst: true)
+        XCTAssertTrue(app.hasHeldEdit, "nothing was held: the keys were gone after the trip to the background")
+        store.refuseWrites = false
+        await app.attemptUnlock()
+        XCTAssertEqual(try store.allTakes().map(\.plainText), [typed], "the typing was not saved after the unlock")
+    }
+
+    /// The typing handed back after the unlock is waiting before the unlocked timeline exists:
+    /// the new Dailies opens it in the editor when it appears (Greptile on #475).
+    func testATakeHandedBackBeforeTheTimelineExists_opensWhenItAppears() throws {
+        let app = AppModel.preview(store: InMemoryTakeStore(), onboarded: true)
+        func show() -> UIWindow {
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 852))
+            window.rootViewController = UIHostingController(rootView: DailiesView()
+                .environment(app).environment(app.dailiesVM).environment(app.ui).environment(app.conflictQueue))
+            window.makeKeyAndVisible()
+            return window
+        }
+        func settle() { RunLoop.current.run(until: Date().addingTimeInterval(1)) }
+
+        // Control: one set while the timeline is up is opened, so the harness can see it.
+        var window = show()
+        settle()
+        app.ui.pendingInlineNewTake = Take(blocks: [.textLine("Set while shown")])
+        settle()
+        XCTAssertNil(app.ui.pendingInlineNewTake, "the harness can't see a Take opened, so the test proves nothing")
+        // The locked screen replaces the timeline: this one is gone before the Take is handed back.
+        window.isHidden = true
+        window.rootViewController = nil
+        settle()
+
+        app.ui.pendingInlineNewTake = Take(blocks: [.textLine(typed)])
+        window = show()
+        settle()
+        XCTAssertNil(app.ui.pendingInlineNewTake, "the Take handed back before the timeline existed was never opened")
+        window.isHidden = true
     }
 }

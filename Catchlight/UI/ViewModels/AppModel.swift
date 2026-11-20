@@ -510,7 +510,13 @@ final class AppModel {
     /// - Parameter keys: the unlocked keys the store opened with, which also open the
     ///   conflict queue kept on disk. nil for the locked placeholder: the queue is forgotten
     ///   from memory until the next unlock.
+    /// The keys the open store was bound with, kept until the relock rebinds. Not
+    /// `session.currentKeys()`, which drops them on every trip to the background while the app
+    /// stays unlocked: a refused edit is sealed with these at the lock (Greptile on #475).
+    private var boundKeys: KeyHierarchy?
+
     private func rebind(to store: TakeStore, keys: KeyHierarchy?) {
+        boundKeys = keys
         if let keys { conflictQueue.attach(keys: keys, directory: conflictDirectory) } else { conflictQueue.detach() }
         // Carry the same Spotlight indexer through the store swap that follows
         // onboarding completion — without this, post-onboarding Takes wouldn't
@@ -925,7 +931,7 @@ final class AppModel {
         if result == .failed, relocking {
             wipeHeldEdit()
             do {
-                guard let keys = session.currentKeys() else { throw KeychainError.notFound }
+                guard let keys = boundKeys else { throw KeychainError.notFound }
                 heldEdit = try HeldEdit(sealing: draft, keys: keys)
             } catch {
                 // It couldn't be held, so the typing goes with the editor: the unlock says a save
