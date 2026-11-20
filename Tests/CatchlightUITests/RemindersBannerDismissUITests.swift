@@ -2,7 +2,7 @@
 //  RemindersBannerDismissUITests.swift
 //  CatchlightUITests
 //
-//  The "Enable Notifications" banner on Dailies can be dismissed, and once dismissed it stays
+//  The "Enable notifications" banner on Dailies can be dismissed, and once dismissed it stays
 //  gone after the app is relaunched (owner 2026-11-12: "It needs a dismiss").
 //
 

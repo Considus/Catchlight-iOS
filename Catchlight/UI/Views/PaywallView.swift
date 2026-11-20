@@ -13,8 +13,8 @@
 //    • Price + billing period (live from Product.displayPrice)
 //    • Trial duration when applicable
 //    • Subscribe CTA
-//    • Restore Purchases
-//    • Redeem Code  (iOS 16+)
+//    • Restore purchases
+//    • Redeem code  (iOS 16+)
 //    • Privacy Policy + Terms of Service links
 //    • Subscription terms summary (auto-renews, cancel anytime)
 //
@@ -61,10 +61,10 @@ struct PaywallView: View {
                         hero
                         eyebrow
                         valueProps
-                        // Least gap that keeps the Redeem Code line clear of the fold on the small iPhone.
+                        // Least gap that keeps the Redeem code line clear of the fold on the small iPhone.
                         Spacer(minLength: 8)
                         pricingLine
-                        // Subscribe, then Redeem Code with its line, as one group so the
+                        // Subscribe, then Redeem code with its line, as one group so the
                         // gap between them is tighter than the page rhythm (the small
                         // iPhone has to show the whole line without scrolling).
                         VStack(spacing: 12) {
@@ -266,9 +266,9 @@ struct PaywallView: View {
             // hit-only expansion as T1's point(inside:). Neighbours are the
             // Spacer gap and the non-interactive terms paragraph, so the
             // invisible overspill lands on nothing tappable.
-            // Restore Purchases has its own centred line, so at the largest text
+            // Restore purchases has its own centred line, so at the largest text
             // size it wraps between words rather than inside one.
-            Button("Restore Purchases") {
+            Button("Restore purchases") {
                 // A successful restore now confirms itself by dismissing
                 // the paywall (the user is entitled; there is nothing left
                 // to do here). Failure surfaces via `manager.lastError`
@@ -285,7 +285,7 @@ struct PaywallView: View {
         }
     }
 
-    /// An offer code only works if it is redeemed before subscribing, so Redeem Code is
+    /// An offer code only works if it is redeemed before subscribing, so Redeem code is
     /// an outlined button right under Subscribe now, with one line saying why. It is a
     /// second choice, not a step: Subscribe works the same with or without it.
     private var redeemCode: some View {
@@ -293,7 +293,7 @@ struct PaywallView: View {
             Button {
                 redeemOfferCode()
             } label: {
-                Text("Redeem Code")
+                Text("Redeem code")
                     .ckBody(.medium, size: 16, relativeTo: .body)
                     .lineLimit(dynamicSize > .large ? 2 : 1)
                     .minimumScaleFactor(dynamicSize > .large ? 1.0 : 0.75)

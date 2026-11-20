@@ -504,7 +504,7 @@ struct SettingsView: View {
             // action defers by (owner 2026-06-20). Read by `NotificationPresenter` from
             // this preference (works while locked, when the encrypted store doesn't).
             menuPickerRow(icon: "zzz",
-                          label: "Snooze Duration",
+                          label: "Snooze duration",
                           accessibilityLabel: "Snooze duration",
                           selectionLabel: snoozeDurationBinding.wrappedValue.label,
                           accessibilityValue: snoozeDurationBinding.wrappedValue.spokenLabel) {
@@ -585,7 +585,7 @@ struct SettingsView: View {
             // The user decides the window ([[catchlight-user-decides-principle]]); only
             // done, note-free Takes are ever eligible (see Take.isAutoCleanupEligible).
             menuPickerRow(icon: "trash",
-                          label: "Auto-Delete (exc. notes)",
+                          label: "Auto-delete (exc. notes)",
                           accessibilityLabel: "Auto-delete completed Takes, excluding notes",
                           selectionLabel: autoCleanupBinding.wrappedValue.label) {
                 Picker("Auto-delete", selection: autoCleanupBinding) {
@@ -810,7 +810,7 @@ struct SettingsView: View {
     private var subscriptionSection: some View {
         Section {
             SettingsRow(icon: "calendar",
-                        label: "Manage Subscription",
+                        label: "Manage subscription",
                         chevron: true,
                         action: {
                             dismiss()

@@ -9911,7 +9911,7 @@
         }
       }
     },
-    "Auto-Delete (exc. notes)" : {
+    "Auto-delete (exc. notes)" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9988,7 +9988,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Otomatik Sil (notlar hariç)"
+            "value" : "Otomatik sil (notlar hariç)"
           }
         },
         "ja" : {
@@ -19887,7 +19887,7 @@
         }
       }
     },
-    "Delete Series" : {
+    "Delete series" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -19916,7 +19916,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Excluir Série"
+            "value" : "Excluir série"
           }
         },
         "nl" : {
@@ -19964,7 +19964,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seriyi Sil"
+            "value" : "Seriyi sil"
           }
         },
         "ja" : {
@@ -20111,7 +20111,7 @@
         }
       }
     },
-    "Delete This Occurrence" : {
+    "Delete this occurrence" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -20140,7 +20140,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Excluir Esta Ocorrência"
+            "value" : "Excluir esta ocorrência"
           }
         },
         "nl" : {
@@ -20188,7 +20188,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu Yinelemeyi Sil"
+            "value" : "Bu yinelemeyi sil"
           }
         },
         "ja" : {
@@ -25498,7 +25498,7 @@
         }
       }
     },
-    "Enable Notifications" : {
+    "Enable notifications" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -35277,7 +35277,7 @@
         }
       }
     },
-    "Manage Subscription" : {
+    "Manage subscription" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -35354,7 +35354,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aboneliği Yönet"
+            "value" : "Aboneliği yönet"
           }
         },
         "ja" : {
@@ -40549,7 +40549,7 @@
         }
       }
     },
-    "Only syncs when you tap Sync Now." : {
+    "Only syncs when you tap Sync now." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -40626,7 +40626,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yalnızca Şimdi Senkronize Et'e dokunduğunuzda senkronize edilir."
+            "value" : "Yalnızca Şimdi eşitle'ye dokunduğunuzda senkronize edilir."
           }
         },
         "ja" : {
@@ -45814,7 +45814,7 @@
         }
       }
     },
-    "Redeem Code" : {
+    "Redeem code" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -45891,7 +45891,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kodu Kullan"
+            "value" : "Kodu kullan"
           }
         },
         "ja" : {
@@ -48054,7 +48054,7 @@
         }
       }
     },
-    "Restore Purchases" : {
+    "Restore purchases" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -48131,7 +48131,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Satın Alımları Geri Yükle"
+            "value" : "Satın alımları geri yükle"
           }
         },
         "ja" : {
@@ -52553,118 +52553,6 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duración de la posposición"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Durata del posticipo"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duração do adiamento"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sluimerduur"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duração do adiamento"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Czas trwania drzemki"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hur länge påminnelsen ska skjutas upp"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Udsættelsesvarighed"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Varighet på utsettelse"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Torkun kesto"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erteleme süresi"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スヌーズ時間"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 알림 기간"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "稍后提醒时长"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "稍後提醒時長"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ระยะเวลาการเลื่อนการแจ้งเตือน"
-          }
-        }
-      }
-    },
-    "Snooze Duration" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schlummerdauer"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Durée du report"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
             "value" : "Posponer"
           }
         },
@@ -52725,7 +52613,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erteleme Süresi"
+            "value" : "Erteleme süresi"
           }
         },
         "ja" : {
@@ -55567,7 +55455,7 @@
         }
       }
     },
-    "Sync Now" : {
+    "Sync now" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -55644,7 +55532,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Şimdi Eşitle"
+            "value" : "Şimdi eşitle"
           }
         },
         "ja" : {
@@ -60508,7 +60396,7 @@
         }
       }
     },
-    "Try Again" : {
+    "Try again" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -60585,7 +60473,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tekrar Dene"
+            "value" : "Tekrar dene"
           }
         },
         "ja" : {

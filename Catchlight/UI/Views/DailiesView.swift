@@ -528,7 +528,7 @@ struct DailiesView: View {
                                  set: { if !$0 { pendingRecurringDelete = nil } }),
             titleVisibility: .visible
         ) {
-            Button("Delete This Occurrence") {
+            Button("Delete this occurrence") {
                 if let t = pendingRecurringDelete {
                     // Exit the editor first if this Take is being edited — otherwise a
                     // later save of the stale draft would overwrite (undo) the advance.
@@ -537,7 +537,7 @@ struct DailiesView: View {
                 }
                 pendingRecurringDelete = nil
             }
-            Button("Delete Series", role: .destructive) {
+            Button("Delete series", role: .destructive) {
                 if let t = pendingRecurringDelete { deleteTake(t) }
                 pendingRecurringDelete = nil
             }
@@ -1070,7 +1070,7 @@ struct DailiesView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.ckAccent)
                     .accessibilityHidden(true)
-                Text("Enable Notifications")
+                Text("Enable notifications")
                     .ckBody(.regular, size: 14, relativeTo: .subheadline)
                     .foregroundStyle(Color.ckTextPrimary)
                     .lineLimit(2)

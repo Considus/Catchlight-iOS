@@ -335,7 +335,7 @@ struct CloudStorageView: View {
 
             if syncMode == .manual {
                 Button { fireManualSync() } label: {
-                    Text(syncFeedback ?? String(localized: "Sync Now"))
+                    Text(syncFeedback ?? String(localized: "Sync now"))
                         .sheetRow()
                         .foregroundStyle(hasFolderConfigured ? Color.ckAccent : Color.ckTextComplete)
                 }
@@ -363,7 +363,7 @@ struct CloudStorageView: View {
     private var syncModeDescription: String {
         switch syncMode {
         case .auto:     return String(localized: "Syncs automatically in the background and when you open the app.")
-        case .manual:   return String(localized: "Only syncs when you tap Sync Now.")
+        case .manual:   return String(localized: "Only syncs when you tap Sync now.")
         case .disabled: return String(localized: "Never syncs. Your Takes stay on this device.")
         }
     }

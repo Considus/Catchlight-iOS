@@ -38,7 +38,7 @@ struct LockView: View {
                 Text(message)
                     .ckBody(.light, size: 16, relativeTo: .body)
                     // Always grey, matching the onboarding subtext (owner 2026-06-29) —
-                    // the error is carried by the message text + the "Try Again" button.
+                    // the error is carried by the message text + the "Try again" button.
                     .foregroundStyle(Color.ckTextSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -77,7 +77,7 @@ struct LockView: View {
         }
         // The auto-unlock is driven by RootView (after the splash has been seen, and
         // on a post-splash re-lock) rather than here — so the prompt never fires over
-        // the splash. The Unlock / Try Again button below is the manual path.
+        // the splash. The Unlock / Try again button below is the manual path.
     }
 
     private var message: String {
@@ -90,7 +90,7 @@ struct LockView: View {
 
     private var buttonTitle: LocalizedStringKey {
         switch app.lockState {
-        case .failed:    return "Try Again"
+        case .failed:    return "Try again"
         case .unlocking: return "Unlocking…"
         default:         return "Unlock"
         }
