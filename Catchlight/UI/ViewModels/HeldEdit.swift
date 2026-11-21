@@ -3,7 +3,7 @@
 //  Catchlight
 //
 //  An edit whose save failed as the app locked, kept across the lock (owner, 2026-11-20:
-//  "Hold it, give it back", ISSUE-292). Sealed by Core's `TakeCrypto` under the Take's own item
+//  "Hold it, give it back"). Sealed by Core's `TakeCrypto` under the Take's own item
 //  key, as the store seals it, and held in memory only: nothing is written to disk, and nothing
 //  is readable once the lock drops the keys. The unlock opens it and saves it again quietly, or
 //  hands it back to the editor if that save fails too; then it is wiped. Quitting wipes it too.

@@ -2,7 +2,7 @@
 //  LostEditOnLockTests.swift
 //  CatchlightAppTests
 //
-//  ISSUE-292: the phone locks while a Take is being edited and the save that relock() makes
+//  The phone locks while a Take is being edited and the save that relock() makes
 //  first is refused (a full disk, say). The draft lives in the editor, which the lock tears
 //  down. The fix (owner 2026-11-20, "Hold it, give it back"): the edit is sealed and held in
 //  memory across the lock, saved again quietly after the unlock, and handed back to the editor
@@ -114,7 +114,7 @@ final class LostEditOnLockTests: XCTestCase {
         await app.attemptUnlock()
         XCTAssertEqual(app.lockState, .unlocked)
 
-        XCTAssertEqual(try store.allTakes().map(\.plainText), [typed], "the typing was not saved again after the unlock (ISSUE-292)")
+        XCTAssertEqual(try store.allTakes().map(\.plainText), [typed], "the typing was not saved again after the unlock")
         XCTAssertNil(app.ui.pendingInlineNewTake, "a save that worked hands nothing back")
         XCTAssertFalse(app.hasHeldEdit, "what was held is wiped once given back")
     }
