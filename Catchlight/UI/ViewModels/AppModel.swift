@@ -534,7 +534,7 @@ final class AppModel {
         }
     }
 
-    // MARK: - An edit whose save failed at the lock (ISSUE-292)
+    // MARK: - An edit whose save failed at the lock
 
     /// True while `relock()` commits the open edit: a refused save then is held for the unlock.
     private var relocking = false
