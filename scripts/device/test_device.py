@@ -181,25 +181,40 @@ class AgainstThePhone(unittest.TestCase):
     def test_the_downgrade_flag_lets_it_through(self):
         self.check(self.b, self.a, allow_downgrade=True)
 
-    def test_a_dirty_stamp_is_compared_by_its_commit(self):
+    # On the iPhone a "1" or "+dirty" build is never installed over without Mark's approval:
+    # its local edits, or its whole commit, can't be checked for changes to his data.
+    # (Installing fresh over those builds is the Mac rule only.)
+
+    def needs_approval(self, stamp, sha, **flags):
         with self.assertRaises(device.Failure) as caught:
-            self.check(self.b + "+dirty", self.a)
+            self.check(stamp, sha, **flags)
+        self.assertIn("--data-change-approved", str(caught.exception))
+
+    def test_a_dirty_stamp_is_downgrade_checked_by_its_commit(self):
+        with self.assertRaises(device.Failure) as caught:
+            self.check(self.b + "+dirty", self.a, data_change_approved=True)
         self.assertIn("downgrade", str(caught.exception))
-        self.check(self.a + "+dirty", self.b)                      # newer than the dirty build's base: installs fresh
+        self.check(self.b + "+dirty", self.a, data_change_approved=True, allow_downgrade=True)
 
-    def test_a_dirty_build_of_the_same_commit_is_reinstalled_not_a_downgrade(self):
-        self.check(self.a + "+dirty", self.a)
-        self.check(self.b + "+dirty", self.b)
+    def test_a_dirty_build_needs_marks_approval(self):
+        self.needs_approval(self.a + "+dirty", self.b)
+        self.check(self.a + "+dirty", self.b, data_change_approved=True)
 
-    def test_a_dirty_stamp_of_an_unknown_commit_installs_fresh(self):
-        self.check("deadbee+dirty", self.b)
+    def test_a_dirty_build_of_the_same_commit_needs_approval_not_the_downgrade_flag(self):
+        self.needs_approval(self.a + "+dirty", self.a)
+        self.check(self.a + "+dirty", self.a, data_change_approved=True)
+        self.check(self.b + "+dirty", self.b, data_change_approved=True)
 
-    def test_the_pre_stamp_build_installs_fresh(self):
-        self.check("1", self.b)
+    def test_a_dirty_stamp_of_an_unknown_commit_needs_marks_approval(self):
+        self.needs_approval("deadbee+dirty", self.b)
+        self.check("deadbee+dirty", self.b, data_change_approved=True)
+
+    def test_the_pre_stamp_build_needs_marks_approval(self):
+        self.needs_approval("1", self.b)
+        self.check("1", self.b, data_change_approved=True)
 
     def test_any_other_unknown_stamp_still_needs_marks_approval(self):
-        with self.assertRaises(device.Failure):
-            self.check("deadbee", self.b)
+        self.needs_approval("deadbee", self.b)
 
 
 class CrashFilter(unittest.TestCase):

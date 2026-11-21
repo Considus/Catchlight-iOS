@@ -323,34 +323,30 @@ def check_against_phone(root, device, sha, args):
         print("Catchlight is not on the phone, so this install has no notes to touch")
         return
     shown_stamp = build[1]
-    if shown_stamp == "1":
-        # A build from before the git-SHA stamp existed: its commit cannot be known, and guessing
-        # which one it is is worse than installing fresh.
-        print(f"the phone's build is stamped {shown_stamp!r} (from before build stamps): installing fresh")
-        return
-    # A "+dirty" stamp is a commit plus local edits: compare against the commit, install fresh over the edits.
-    stamp = shown_stamp[:-len("+dirty")] if shown_stamp.endswith("+dirty") else shown_stamp
     if same_build(shown_stamp, sha):
         print(f"the phone already has {sha}; reinstalling it")
         return
-    if shown_stamp != stamp and same_build(stamp, sha):
-        print(f"the phone has {sha} with local changes; installing {sha} fresh over them")
-        return
-    known = run(
+    # On the iPhone, a "1" (from before build stamps) or "+dirty" build is never installed over
+    # without Mark's approval: its commit, or its local edits, can't be checked for changes to his
+    # data. Installing fresh over those builds is the Mac rule only.
+    dirty = shown_stamp.endswith("+dirty")
+    stamp = shown_stamp[:-len("+dirty")] if dirty else shown_stamp
+    known = stamp != "1" and run(
         ["git", "-C", root, "cat-file", "-e", f"{stamp}^{{commit}}"], GIT_TIMEOUT,
         label="git cat-file", check=False)[0] == 0
-    if not known and shown_stamp.endswith("+dirty"):
-        print(f"the phone's build {shown_stamp!r} is a local build of a commit this repo does not know: installing fresh")
-        return
     if not known:
         if not args.data_change_approved:
-            raise Failure(f"the phone's build ({stamp}) is not a commit this repo "
-                          "knows, so whether this install touches Mark's data cannot be checked. "
+            what = ("is stamped '1', from before build stamps, so its commit" if stamp == "1"
+                    else f"({shown_stamp}) is not a commit this repo knows, so it")
+            raise Failure(f"the phone's build {what} cannot be compared, and whether this install "
+                          "touches Mark's data cannot be checked. "
                           "Ask Mark, then run again with --data-change-approved.")
-        print(f"[approved] the phone's build {stamp!r} cannot be compared; Mark approved the install")
+        print(f"[approved] the phone's build {shown_stamp!r} cannot be compared; Mark approved the install")
         return
-    older = run(["git", "-C", root, "merge-base", "--is-ancestor", sha, stamp], GIT_TIMEOUT,
-                label="git merge-base", check=False)[0] == 0
+    # A dirty build of the target commit is not a downgrade: only its local edits differ.
+    older = not (dirty and same_build(stamp, sha)) and run(
+        ["git", "-C", root, "merge-base", "--is-ancestor", sha, stamp], GIT_TIMEOUT,
+        label="git merge-base", check=False)[0] == 0
     if older and not args.allow_downgrade:
         raise Failure(f"{sha} is older than the phone's {stamp}: installing it is a downgrade onto "
                       "Mark's real notes, and an older build may not read what a newer one wrote. "
@@ -362,6 +358,8 @@ def check_against_phone(root, device, sha, args):
     project = run(["git", "-C", root, "diff", stamp, sha, "--", "project.yml"], GIT_TIMEOUT,
                   label="git diff project.yml")
     reasons = data_affecting(changed, project)
+    if dirty:
+        reasons.insert(0, f"the phone's build has local edits on top of {stamp}, which can't be checked")
     if reasons and not args.data_change_approved:
         raise Failure(f"between the phone's {stamp} and {sha} these can touch Mark's data:\n  "
                       + "\n  ".join(reasons)
