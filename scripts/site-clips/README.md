@@ -1,6 +1,6 @@
 # Site clips
 
-Records the three phone clips on catchlight.app from the real app, so they stay identical to it:
+Records the four phone clips on catchlight.app from the real app, so they stay identical to it:
 **Shaping a Take** (a note becomes a task and a line is typed), **Setting a reminder**, **Sequence** and **Reordering a list** (the Shot List), in the Cobalt Scene, in Daylight and
 Night. Nothing is redrawn.
 
