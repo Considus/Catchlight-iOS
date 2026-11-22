@@ -78,15 +78,15 @@ func walkOnboarding(contentSize: String? = nil, appearance: String = "night", fi
     settle()
     visit(.basics, app)
 
-    next.tap()
+    // Next and Got it change the page like the taps above, so they go through `tapUntil` too: a
+    // synthesized tap is now and then swallowed, and a plain tap left the walk on the same page
+    // (CI, two runs in about two hundred). Both pages' buttons do nothing on a second tap.
     let gotIt = app.buttons["Got it"]
-    XCTAssertTrue(gotIt.waitForExistence(timeout: 6), "the second page of points did not appear", file: file, line: line)
+    tapUntil(next, appears: gotIt, timeout: 6, file: file, line: line)
     settle()
     visit(.basicsMore, app)
 
-    gotIt.tap()
-    XCTAssertTrue(app.buttons["Start using Catchlight"].waitForExistence(timeout: 6),
-                  "the closing screen did not appear", file: file, line: line)
+    tapUntil(gotIt, appears: app.buttons["Start using Catchlight"], timeout: 6, file: file, line: line)
     settle()
     visit(.complete, app)
     return app
